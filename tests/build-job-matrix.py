@@ -103,8 +103,6 @@ if len(args.only) == 0:
 else:
     test_paths = [root_path.joinpath(path) for path in args.only]
 
-test_paths = [path for path in test_paths for _ in range(args.duplicates)]
-
 configuration = []
 
 specified_defaults: Dict[Path, Dict[str, Any]] = {}
@@ -133,19 +131,23 @@ for path in test_paths:
     }
     pytest_parallel_args = {os: f" -n {count}" for os, count in process_count.items()}
 
-    for_matrix = {
-        "check_resource_usage": conf["check_resource_usage"],
-        "enable_pytest_monitor": "-p monitor" if conf["check_resource_usage"] else "",
-        "job_timeout": round(conf["job_timeout"] * args.timeout_multiplier),
-        "pytest_parallel_args": pytest_parallel_args,
-        "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
-        "install_timelord": conf["install_timelord"],
-        "test_files": paths_for_cli,
-        "name": ".".join(path.relative_to(root_path).with_suffix("").parts),
-        "legacy_keyring_required": conf.get("legacy_keyring_required", False),
-    }
-    for_matrix = dict(sorted(for_matrix.items()))
-    configuration.append(for_matrix)
+    for duplicate in range(args.duplicates):
+        for_matrix = {
+            "check_resource_usage": conf["check_resource_usage"],
+            "enable_pytest_monitor": "-p monitor" if conf["check_resource_usage"] else "",
+            "job_timeout": round(conf["job_timeout"] * args.timeout_multiplier),
+            "pytest_parallel_args": pytest_parallel_args,
+            "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
+            "install_timelord": conf["install_timelord"],
+            "test_files": paths_for_cli,
+            "name": ".".join(path.relative_to(root_path).with_suffix("").parts),
+            "legacy_keyring_required": conf.get("legacy_keyring_required", False),
+            "duplicate": duplicate,
+            "duplicate_job_name": f" - #{duplicate:03d}" if args.duplicates > 1 else "",
+            "duplicate_file_name": f"_{duplicate:03d}" if args.duplicates > 1 else "",
+        }
+        for_matrix = dict(sorted(for_matrix.items()))
+        configuration.append(for_matrix)
 
 if len(specified_defaults) > 0:
     message = f"Found {len(specified_defaults)} directories with specified defaults"
