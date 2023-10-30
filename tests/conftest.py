@@ -75,7 +75,7 @@ from chia.simulator.setup_nodes import setup_farmer_multi_harvester
 from chia.util.keyring_wrapper import KeyringWrapper
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def anyio_backend():
     return "asyncio"
 
