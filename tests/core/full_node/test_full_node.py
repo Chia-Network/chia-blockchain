@@ -146,7 +146,7 @@ async def test_sync_no_farmer(
         return p1 == p2
 
     start = time.monotonic()
-    await time_out_assert(300, check_nodes_in_sync)
+    await time_out_assert(120, check_nodes_in_sync)
     end = time.monotonic()
     duration = end - start
     record_property("platform", sys.platform)
