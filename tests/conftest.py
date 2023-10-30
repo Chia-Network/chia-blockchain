@@ -1,6 +1,7 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import datetime
 import functools
@@ -74,6 +75,17 @@ from chia.simulator.block_tools import BlockTools, create_block_tools, create_bl
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_nodes import setup_farmer_multi_harvester
 from chia.util.keyring_wrapper import KeyringWrapper
+
+
+# This is an optimization to reduce runtime by reducing setup and teardown on the
+# wallet nodes fixture below.
+# https://github.com/pytest-dev/pytest-asyncio/blob/v0.18.1/pytest_asyncio/plugin.py#L479-L484
+@pytest.fixture(scope="session")
+def event_loop(request: pytest.FixtureRequest) -> Iterator[asyncio.AbstractEventLoop]:
+    """Create an instance of the default event loop for each test case."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest.fixture(name="seeded_random")
@@ -172,7 +184,7 @@ def blockchain_constants(consensus_mode) -> ConsensusConstants:
 
 
 @pytest_asyncio.fixture(scope="session", name="bt")
-async def block_tools_fixture(get_keychain, blockchain_constants, anyio_backend) -> BlockTools:
+async def block_tools_fixture(get_keychain, blockchain_constants) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
     _shared_block_tools = await create_block_tools(constants=blockchain_constants, keychain=get_keychain)
     return _shared_block_tools
