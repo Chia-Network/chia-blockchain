@@ -2385,6 +2385,9 @@ async def test_dao_complex_spends(
             new_cat_amt,
         )
 
+        await client_1.create_wallet_for_existing_cat(new_cat_asset_id)
+        await client_1.create_wallet_for_existing_cat(new_cat_asset_id_2)
+
         # send cats to lockup
         lockup_0 = await client_0.dao_send_to_lockup(dao_id_0, cat_amt, DEFAULT_TX_CONFIG)
         assert lockup_0["success"]
@@ -2430,13 +2433,20 @@ async def test_dao_complex_spends(
         # check proposal is closed
         await rpc_state(20, client_0.dao_get_proposals, [dao_id_0], lambda x: x["proposals"][-1]["closed"], True)
         await rpc_state(20, client_1.dao_get_proposals, [dao_id_1], lambda x: x["proposals"][-1]["closed"], True)
-        # check the xch is received
+        # check the xch is received and removed from treasury
         await rpc_state(
             20,
             client_1.get_wallet_balance,
             [wallet_1.id()],
             lambda x: x["confirmed_wallet_balance"],
             initial_funds + (xch_funds / 4),
+        )
+        await rpc_state(
+            20,
+            client_0.dao_get_treasury_balance,
+            [dao_id_0],
+            lambda x: x["balances"]["xch"],
+            xch_funds / 2,
         )
 
         # Test proposal with multiple cats and multiple coins
@@ -2527,7 +2537,7 @@ async def test_dao_complex_spends(
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
-        props = await client_1.dao_get_proposals(dao_id_1)
+        props = await client_0.dao_get_proposals(dao_id_0)
         proposal_id_hex = props["proposals"][-1]["proposal_id"]
 
         close = await client_0.dao_close_proposal(
@@ -2544,36 +2554,61 @@ async def test_dao_complex_spends(
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
         # check proposal is closed
-        await rpc_state(20, client_0.dao_get_proposals, [dao_id_0], lambda x: x["proposals"][0]["closed"], True)
-        await rpc_state(20, client_1.dao_get_proposals, [dao_id_1], lambda x: x["proposals"][0]["closed"], True)
+        await rpc_state(20, client_0.dao_get_proposals, [dao_id_0], lambda x: x["proposals"][-1]["closed"], True)
+        await rpc_state(20, client_1.dao_get_proposals, [dao_id_1], lambda x: x["proposals"][-1]["closed"], True)
+
         # check cat balances
         await rpc_state(
-            20, client_0.dao_get_treasury_balance, [dao_id_0], lambda x: x["balances"][new_cat_asset_id.hex()], 0
-        )
-        await rpc_state(
-            20, client_0.get_wallet_balance, [new_cat_wallet_id], lambda x: x["confirmed_wallet_balance"], 0
-        )
-        await rpc_state(
-            20, client_0.get_wallet_balance, [new_cat_wallet_id_2], lambda x: x["confirmed_wallet_balance"], 0
-        )
-
-        # check wallet balances
-        await rpc_state(
-            20, client_0.get_wallet_balance, [new_cat_wallet_id], lambda x: x["confirmed_wallet_balance"], cat_spend_amt
+            20,
+            client_0.get_wallet_balance,
+            [new_cat_wallet_id],
+            lambda x: x["confirmed_wallet_balance"],
+            cat_spend_amt + 400000,
         )
         await rpc_state(
             20,
             client_0.get_wallet_balance,
             [new_cat_wallet_id_2],
             lambda x: x["confirmed_wallet_balance"],
-            cat_spend_amt,
+            cat_spend_amt + 400000,
         )
+        await rpc_state(
+            20, client_1.get_wallet_balance, [new_cat_wallet_id], lambda x: x["confirmed_wallet_balance"], 90000
+        )
+        await rpc_state(
+            20, client_1.get_wallet_balance, [new_cat_wallet_id_2], lambda x: x["confirmed_wallet_balance"], 90000
+        )
+
+        # check xch
         await rpc_state(
             20,
             client_1.get_wallet_balance,
             [wallet_1.id()],
             lambda x: x["confirmed_wallet_balance"],
-            initial_funds + xch_funds / 4,
+            initial_funds + (xch_funds / 2),
+        )
+
+        # check treasury balances are 0
+        await rpc_state(
+            20,
+            client_1.dao_get_treasury_balance,
+            [dao_id_0],
+            lambda x: x["balances"]["xch"] + 1,  # add 1 so result isn't 0
+            1,
+        )
+        await rpc_state(
+            20,
+            client_1.dao_get_treasury_balance,
+            [dao_id_0],
+            lambda x: x["balances"][new_cat_asset_id.hex()] + 1,  # add 1 so result isn't 0
+            1,
+        )
+        await rpc_state(
+            20,
+            client_0.dao_get_treasury_balance,
+            [dao_id_0],
+            lambda x: x["balances"][new_cat_asset_id_2.hex()] + 1,  # add 1 so result isn't 0
+            1,
         )
 
     finally:
