@@ -2143,7 +2143,7 @@ class FullNode:
                     uint8(0),
                     uint32(0) if peak is None else peak.height,
                     sp_source_data=SignagePointSourceData(
-                        vdf_data=SPSubSlotSourceData(
+                        sub_slot_data=SPSubSlotSourceData(
                             end_of_slot_bundle.challenge_chain,
                             end_of_slot_bundle.reward_chain)
                     )
