@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import random
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Coroutine, Dict, List, Optional, Tuple
 
 import pytest
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -842,6 +843,10 @@ class TestFullNodeProtocol:
             await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
             task_2.cancel()
 
+        async def suppress_value_error(coro: Coroutine) -> None:
+            with contextlib.suppress(ValueError):
+                await coro
+
         # Ignores low weight
         new_peak = fnp.NewPeak(
             blocks_reorg[-2].header_hash,
@@ -850,7 +855,7 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-2].reward_chain_block.get_unfinished().get_hash(),
         )
-        asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
 
         # Does not ignore equal weight
@@ -861,7 +866,7 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-1].reward_chain_block.get_unfinished().get_hash(),
         )
-        asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
 
     @pytest.mark.anyio
