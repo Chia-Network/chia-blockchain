@@ -54,6 +54,7 @@ from chia.util.lock import Lockfile
 from chia.util.misc import SignalHandlers
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from tests.util.db_connection import generate_in_memory_db_uri
 
 log = logging.getLogger(__name__)
 
@@ -120,17 +121,18 @@ async def setup_full_node(
     *,
     reuse_db: bool = False,
 ) -> AsyncGenerator[Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]], None]:
-    db_path = local_bt.root_path / f"{db_name}"
-    if not reuse_db and db_path.exists():
-        # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
-        gc.collect()
-        db_path.unlink()
+    if reuse_db:
+        db_path: Union[str, Path] = local_bt.root_path / f"{db_name}"
+        uri = False
+    else:
+        db_path = generate_in_memory_db_uri()
+        uri = True
 
-        if db_version > 1:
-            with sqlite3.connect(db_path) as connection:
-                connection.execute("CREATE TABLE database_version(version int)")
-                connection.execute("INSERT INTO database_version VALUES (?)", (db_version,))
-                connection.commit()
+    if not reuse_db and db_version > 1:
+        with sqlite3.connect(db_path, uri=uri) as connection:
+            connection.execute("CREATE TABLE database_version(version int)")
+            connection.execute("INSERT INTO database_version VALUES (?)", (db_version,))
+            connection.commit()
 
     if connect_to_daemon:
         assert local_bt.config["daemon_port"] is not None
@@ -180,26 +182,6 @@ async def setup_full_node(
     finally:
         service.stop()
         await service.wait_closed()
-        if not reuse_db and db_path.exists():
-            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
-
-            # 3.11 switched to using functools.lru_cache for the statement cache.
-            # See #87028. This introduces a reference cycle involving the connection
-            # object, so the connection object no longer gets immediately
-            # deallocated, not until, for example, gc.collect() is called to break
-            # the cycle.
-            gc.collect()
-            for _ in range(10):
-                try:
-                    db_path.unlink()
-                    break
-                except PermissionError as e:
-                    print(f"db_path.unlink(): {e}")
-                    time.sleep(0.1)
-                    # filesystem operations are async on windows
-                    # [WinError 32] The process cannot access the file because it is
-                    # being used by another process
-                    pass
 
 
 @asynccontextmanager

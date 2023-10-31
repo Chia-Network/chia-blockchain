@@ -69,12 +69,11 @@ async def make_empty_blockchain(constants: ConsensusConstants):
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
 
-    bc, db_wrapper, db_path = await create_blockchain(constants, 2)
+    bc, db_wrapper = await create_blockchain(constants, 2)
     yield bc
 
     await db_wrapper.close()
     bc.shut_down()
-    db_path.unlink()
 
 
 class TestGenesisBlock:
@@ -566,7 +565,7 @@ class TestBlockHeaderValidation:
             ),
             keychain=keychain,
         )
-        bc1, db_wrapper, db_path = await create_blockchain(bt_high_iters.constants, db_version)
+        bc1, db_wrapper = await create_blockchain(bt_high_iters.constants, db_version)
         blocks = bt_high_iters.get_consecutive_blocks(10)
         for block in blocks:
             if len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is not None:
@@ -640,7 +639,6 @@ class TestBlockHeaderValidation:
 
         await db_wrapper.close()
         bc1.shut_down()
-        db_path.unlink()
 
     @pytest.mark.asyncio
     async def test_invalid_icc_sub_slot_vdf(self, db_version, blockchain_constants):
@@ -2683,7 +2681,7 @@ class TestBodyValidation:
         #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
         #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
         #     )
-        #     b, db_wrapper, db_path = await create_blockchain(new_test_constants, db_version)
+        #     b, db_wrapper = await create_blockchain(new_test_constants, db_version)
         #     bt_2 = await create_block_tools_async(constants=new_test_constants, keychain=keychain)
         #     bt_2.constants = dataclasses.replace(
         #         bt_2.constants,
@@ -2721,7 +2719,6 @@ class TestBodyValidation:
         #         pass
         #     await db_wrapper.close()
         #     b.shut_down()
-        #     db_path.unlink()
 
     @pytest.mark.asyncio
     async def test_invalid_merkle_roots(self, empty_blockchain, bt):
