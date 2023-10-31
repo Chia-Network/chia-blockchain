@@ -20,6 +20,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncPlotList,
     PlotSyncStart,
     PoolDifficulty,
+    SignatureRequestSourceData,
 )
 from chia.protocols.pool_protocol import (
     PoolErrorCode,
@@ -112,12 +113,28 @@ class FarmerAPI:
 
             # If the iters are good enough to make a block, proceed with the block making flow
             if required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters):
+
+                sp_src_data: Optional[List[SignatureRequestSourceData]] = None
+                if new_proof_of_space.farmer_reward_address_overwrite:
+                    cc_data: SignatureRequestSourceData
+                    rc_data: SignatureRequestSourceData
+                    if sp.sp_source_data.vdf_data is not None:
+                        cc_data = SignatureRequestSourceData(cc_data=sp.sp_source_data.vdf_data.cc_vdf)
+                        rc_data = SignatureRequestSourceData(rc_data=sp.sp_source_data.vdf_data.rc_vdf)
+                    else:
+                        assert sp.sp_source_data.sub_slot_data
+                        cc_data = SignatureRequestSourceData(cc_sub_slot=sp.sp_source_data.sub_slot_data.cc_sub_slot)
+                        rc_data = SignatureRequestSourceData(rc_sub_slot=sp.sp_source_data.sub_slot_data.rc_sub_slot)
+
+                    sp_src_data = [cc_data, rc_data]
+
                 # Proceed at getting the signatures for this PoSpace
                 request = harvester_protocol.RequestSignatures(
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     [sp.challenge_chain_sp, sp.reward_chain_sp],
+                    message_data=sp_src_data
                 )
 
                 if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
@@ -235,11 +252,17 @@ class FarmerAPI:
 
                 # The plot key is 2/2 so we need the harvester's half of the signature
                 m_to_sign = payload.get_hash()
+                m_src_data: Optional[List[SignatureRequestSourceData]] = None
+
+                if new_proof_of_space.farmer_reward_address_overwrite:
+                    m_src_data = [SignatureRequestSourceData(partial=payload)]
+
                 request = harvester_protocol.RequestSignatures(
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     [m_to_sign],
+                    message_data=m_src_data
                 )
                 response: Any = await peer.call_api(HarvesterAPI.request_signatures, request)
                 if not isinstance(response, harvester_protocol.RespondSignatures):
@@ -521,18 +544,26 @@ class FarmerAPI:
             full_node_request.quality_string
         ]
 
-        foliage_block_data_for_harvester = None
+        foliage_block_data: Optional[SignatureRequestSourceData] = None
+        foliage_transaction_block_data: Optional[SignatureRequestSourceData] = None
+
         if full_node_request.foliage_block_data is not None:
-            # NOTE: The index provided here must match the message index
-            #       where foliage_block_data_hash is specified above
-            foliage_block_data_for_harvester = [0, full_node_request.foliage_block_data]
+            foliage_block_data = SignatureRequestSourceData(
+                foliage_block_data=full_node_request.foliage_block_data
+            )
+
+        if full_node_request.foliage_transaction_block_data is not None:
+            assert foliage_block_data
+            foliage_transaction_block_data = SignatureRequestSourceData(
+                foliage_transaction_block=full_node_request.foliage_transaction_block_data
+            )
 
         request = harvester_protocol.RequestSignatures(
             plot_identifier,
             challenge_hash,
             sp_hash,
             [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
-            foliage_block_data_for_harvester
+            message_data=None if foliage_block_data is None else [foliage_block_data, foliage_transaction_block_data]
         )
 
         response = await self.farmer.server.call_api_of_specific(HarvesterAPI.request_signatures, request, node_id)
@@ -701,7 +732,7 @@ class FarmerAPI:
                         farmer_reward_address,
                         pool_target,
                         pool_target_signature,
-                        include_foliage_block_data=harvester_overwrote_reward_address
+                        include_signature_source_data=harvester_overwrote_reward_address
                     )
         else:
             # This is a response with block signatures
