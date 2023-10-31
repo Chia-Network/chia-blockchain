@@ -55,6 +55,7 @@ class NewProofOfSpace(Streamable):
     plot_identifier: str
     proof: ProofOfSpace
     signage_point_index: uint8
+    include_source_signature_data: Optional[bool]
     farmer_reward_address_overwrite: Optional[bytes32]
 
 
