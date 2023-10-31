@@ -45,6 +45,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
+from chia.types.blockchain_format.foliage import FoliageTransactionBlock, FoliageBlockData
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -944,15 +945,19 @@ class FullNodeAPI:
                 foliage_transaction_block_hash = bytes32([0] * 32)
             assert foliage_transaction_block_hash is not None
 
-            foliage_block_data = None
-            if request.include_foliage_block_data is True:
+            foliage_block_data: Optional[FoliageBlockData] = None
+            foliage_transaction_block_data: Optional[FoliageTransactionBlock] = None
+            if request.include_signature_source_data is True:
                 foliage_block_data = unfinished_block.foliage.foliage_block_data
+                if unfinished_block.is_transaction_block():
+                    foliage_transaction_block_data = unfinished_block.foliage_transaction_block
 
             message = farmer_protocol.RequestSignedValues(
                 quality_string,
                 foliage_sb_data_hash,
                 foliage_transaction_block_hash,
-                foliage_block_data
+                foliage_block_data,
+                foliage_transaction_block_data
             )
             await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
 

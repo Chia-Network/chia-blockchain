@@ -39,6 +39,7 @@ from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import TransactionQueue
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
+from chia.protocols.farmer_protocol import SignagePointSourceData, SPVDFSourceData, SPSubSlotSourceData
 from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
@@ -1334,6 +1335,9 @@ class FullNode:
             sub_slot_iters,
             request.index_from_challenge,
             uint32(0) if peak is None else peak.height,
+            sp_source_data=SignagePointSourceData(
+                vdf_data=SPVDFSourceData(request.challenge_chain_vdf,request.reward_chain_vdf)
+            )
         )
         msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
         await self.server.send_to_all([msg], NodeType.FARMER)
@@ -2138,6 +2142,11 @@ class FullNode:
                     next_sub_slot_iters,
                     uint8(0),
                     uint32(0) if peak is None else peak.height,
+                    sp_source_data=SignagePointSourceData(
+                        vdf_data=SPSubSlotSourceData(
+                            end_of_slot_bundle.challenge_chain,
+                            end_of_slot_bundle.reward_chain)
+                    )
                 )
                 msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
                 await self.server.send_to_all([msg], NodeType.FARMER)
