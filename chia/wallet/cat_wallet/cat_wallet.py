@@ -793,6 +793,9 @@ class CATWallet:
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])
+        max_send = await self.get_max_send_amount()
+        if payment_sum > max_send:
+            raise ValueError(f" Insufficient funds. Your max amount is {max_send} mojos in a single transaction.")
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             tx_config,

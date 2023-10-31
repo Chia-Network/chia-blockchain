@@ -267,6 +267,10 @@ class Wallet:
 
         total_amount = amount + sum(primary.amount for primary in primaries) + fee
         total_balance = await self.get_spendable_balance()
+        max_send = await self.get_max_send_amount()
+        if total_amount > max_send:
+            raise ValueError(f"Can't send more than {max_send} mojos in a single transaction, got {total_amount}")
+        self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
             if total_amount > total_balance:
                 raise ValueError(

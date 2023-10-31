@@ -1308,7 +1308,12 @@ class TestWalletSimulator:
 
         await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
 
-        primaries = [Payment(ph, uint64(1000000000 + i)) for i in range(60)]
+        primaries = [
+            Payment(ph, uint64(1000000000 + i))
+            for i in range(
+                int(wallet.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 5 / wallet.cost_of_single_tx) + 1
+            )
+        ]
         [tx_split_coins] = await wallet.generate_signed_transaction(
             uint64(1), ph, DEFAULT_TX_CONFIG, uint64(0), primaries=primaries
         )
@@ -1316,9 +1321,10 @@ class TestWalletSimulator:
 
         await wallet.push_transaction(tx_split_coins)
         await full_node_1.process_transaction_records(records=[tx_split_coins])
-        await wait_for_coins_in_wallet(coins=set(tx_split_coins.additions), wallet=wallet)
+        await wait_for_coins_in_wallet(coins=set(tx_split_coins.additions), wallet=wallet, timeout=20)
 
         max_sent_amount = await wallet.get_max_send_amount()
+        assert max_sent_amount < (await wallet.get_spendable_balance())
 
         # 1) Generate transaction that is under the limit
         [transaction_record] = await wallet.generate_signed_transaction(
@@ -1341,7 +1347,10 @@ class TestWalletSimulator:
         assert transaction_record.amount == uint64(max_sent_amount)
 
         # 3) Generate transaction that is greater than limit
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=f"Can't send more than {max_sent_amount} mojos in a single transaction, got {max_sent_amount + 1}",
+        ):
             await wallet.generate_signed_transaction(
                 uint64(max_sent_amount + 1),
                 ph,
