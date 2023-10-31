@@ -4,10 +4,13 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from chia_rs import G1Element, G2Element
-from chia.types.blockchain_format.foliage import FoliageBlockData
+from chia.protocols.pool_protocol import PostPartialPayload
+from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
+from chia.types.blockchain_format.vdf import VDFInfo
 from chia.util.ints import int16, uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
@@ -52,7 +55,20 @@ class NewProofOfSpace(Streamable):
     plot_identifier: str
     proof: ProofOfSpace
     signage_point_index: uint8
-    farmer_reward_address_override: Optional[bytes32]
+    farmer_reward_address_overwrite: Optional[bytes32]
+
+
+# NOTE: Only 1 of the fields in this type will not be None
+@streamable
+@dataclass(frozen=True)
+class SignatureRequestSourceData(Streamable):
+    foliage_block_data: Optional[FoliageBlockData]
+    foliage_transaction_block: Optional[FoliageTransactionBlock]
+    cc_vdf: Optional[VDFInfo]
+    rc_vdf: Optional[VDFInfo]
+    cc_sub_slot: Optional[ChallengeChainSubSlot]
+    rc_sub_slot: Optional[RewardChainSubSlot]
+    partial: Optional[PostPartialPayload]
 
 
 @streamable
@@ -62,7 +78,8 @@ class RequestSignatures(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     messages: List[bytes32]
-    foliage_block_data: Optional[Tuple[uint8, FoliageBlockData]]
+    message_data: Optional[List[SignatureRequestSourceData]]
+
 
 @streamable
 @dataclass(frozen=True)
