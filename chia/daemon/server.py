@@ -178,8 +178,8 @@ class WebSocketServer:
 
         # Note: the minimum_version has been already set to TLSv1_2
         # in ssl_context_for_server()
-        # Daemon is internal connections, so override to TLSv1_3 only
-        if ssl.HAS_TLSv1_3:
+        # Daemon is internal connections, so override to TLSv1_3 only unless specified in the config
+        if ssl.HAS_TLSv1_3 and not self.net_config.get("daemon_allow_tls_1_2", False):
             try:
                 self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
             except ValueError:
