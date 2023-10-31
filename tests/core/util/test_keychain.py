@@ -273,7 +273,8 @@ def test_key_data_post_init(
 
 
 @pytest.mark.parametrize("include_secrets", [True, False])
-def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
+@pytest.mark.anyio
+async def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
     keychain: Keychain = get_temp_keyring
     expected_keys = []
     # Add 10 keys and validate the result `get_key` for each of them after each addition
@@ -300,7 +301,8 @@ def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
 
 
 @pytest.mark.parametrize("include_secrets", [True, False])
-def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
+@pytest.mark.anyio
+async def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
     keychain: Keychain = get_temp_keyring
     # Should be empty on start
     assert keychain.get_keys(include_secrets) == []
@@ -323,7 +325,8 @@ def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
     assert keychain.get_keys(include_secrets) == []
 
 
-def test_set_label(get_temp_keyring: Keychain) -> None:
+@pytest.mark.anyio
+async def test_set_label(get_temp_keyring: Keychain) -> None:
     keychain: Keychain = get_temp_keyring
     # Generate a key and add it without label
     key_data_0 = KeyData.generate(label=None)
@@ -365,7 +368,8 @@ def test_set_label(get_temp_keyring: Keychain) -> None:
         ("a" * 70, "label exceeds max length: 70/65"),
     ],
 )
-def test_set_label_invalid_labels(label: str, message: str, get_temp_keyring: Keychain) -> None:
+@pytest.mark.anyio
+async def test_set_label_invalid_labels(label: str, message: str, get_temp_keyring: Keychain) -> None:
     keychain: Keychain = get_temp_keyring
     key_data = KeyData.generate()
     keychain.add_private_key(key_data.mnemonic_str())
@@ -374,7 +378,8 @@ def test_set_label_invalid_labels(label: str, message: str, get_temp_keyring: Ke
     assert e.value.label == label
 
 
-def test_delete_label(get_temp_keyring: Keychain) -> None:
+@pytest.mark.anyio
+async def test_delete_label(get_temp_keyring: Keychain) -> None:
     keychain: Keychain = get_temp_keyring
     # Generate two keys and add them to the keychain
     key_data_0 = KeyData.generate(label="key_0")
@@ -413,7 +418,8 @@ def test_delete_label(get_temp_keyring: Keychain) -> None:
 
 
 @pytest.mark.parametrize("delete_all", [True, False])
-def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool) -> None:
+@pytest.mark.anyio
+async def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool) -> None:
     keychain: Keychain = get_temp_keyring
     # Generate some keys and add them to the keychain
     labels = [f"key_{i}" for i in range(5)]

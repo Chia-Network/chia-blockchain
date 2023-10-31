@@ -1,6 +1,7 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import datetime
 import functools
@@ -78,6 +79,11 @@ from chia.util.keyring_wrapper import KeyringWrapper
 @pytest.fixture(scope="session")
 def anyio_backend():
     return "asyncio"
+
+
+@pytest.fixture(name="event_loop")
+async def event_loop_fixture() -> asyncio.events.AbstractEventLoop:
+    return asyncio.get_running_loop()
 
 
 @pytest.fixture(name="seeded_random")
