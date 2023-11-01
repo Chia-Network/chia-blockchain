@@ -65,28 +65,8 @@ class RpcServiceProtocol(Protocol):
         """Called when a new connection is established to the server."""
         ...
 
-    def _close(self) -> None:
-        """Request that the service shuts down.
-
-        Initiate the shutdown procedure such that multiple activities are triggered
-        in preparation.  Follow by awaiting `._await_closed()` to wait for all tasks
-        to complete.
-        """
-        ...
-
-    async def _await_closed(self) -> None:
-        """Wait for all tasks to terminate.
-
-        To be called only after `._close()` is called to initiate the shutdown.
-        """
-        ...
-
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         """Register the callable that will process state change events."""
-        ...
-
-    async def _start(self) -> None:
-        """Launch all necessary tasks and do any setup needed to be fully running."""
         ...
 
     @contextlib.asynccontextmanager
