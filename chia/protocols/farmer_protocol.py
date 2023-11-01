@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from chia_rs import G2Element
+from chia.types.blockchain_format.classgroup import ClassgroupElement
 
 from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -29,8 +30,8 @@ class SPSubSlotSourceData(Streamable):
 @streamable
 @dataclass(frozen=True)
 class SPVDFSourceData(Streamable):
-    cc_vdf: VDFInfo
-    rc_vdf: VDFInfo
+    cc_vdf: ClassgroupElement
+    rc_vdf: ClassgroupElement
 
 
 @streamable
@@ -66,7 +67,7 @@ class DeclareProofOfSpace(Streamable):
     farmer_puzzle_hash: bytes32
     pool_target: Optional[PoolTarget]
     pool_signature: Optional[G2Element]
-    include_signature_source_data: Optional[bool]
+    include_signature_source_data: bool = False
 
 
 @streamable

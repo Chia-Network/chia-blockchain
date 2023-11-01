@@ -115,12 +115,12 @@ class FarmerAPI:
             if required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters):
 
                 sp_src_data: Optional[List[SignatureRequestSourceData]] = None
-                if new_proof_of_space.farmer_reward_address_overwrite:
+                if new_proof_of_space.farmer_reward_address_override:
                     cc_data: SignatureRequestSourceData
                     rc_data: SignatureRequestSourceData
                     if sp.sp_source_data.vdf_data is not None:
-                        cc_data = SignatureRequestSourceData(cc_data=sp.sp_source_data.vdf_data.cc_vdf)
-                        rc_data = SignatureRequestSourceData(rc_data=sp.sp_source_data.vdf_data.rc_vdf)
+                        cc_data = SignatureRequestSourceData(cc_vdf=sp.sp_source_data.vdf_data.cc_vdf)
+                        rc_data = SignatureRequestSourceData(rc_vdf=sp.sp_source_data.vdf_data.rc_vdf)
                     else:
                         assert sp.sp_source_data.sub_slot_data
                         cc_data = SignatureRequestSourceData(cc_sub_slot=sp.sp_source_data.sub_slot_data.cc_sub_slot)
@@ -254,7 +254,7 @@ class FarmerAPI:
                 m_to_sign = payload.get_hash()
                 m_src_data: Optional[List[SignatureRequestSourceData]] = None
 
-                if new_proof_of_space.farmer_reward_address_overwrite:
+                if new_proof_of_space.farmer_reward_address_override:
                     m_src_data = [SignatureRequestSourceData(partial=payload)]
 
                 request = harvester_protocol.RequestSignatures(
@@ -719,8 +719,8 @@ class FarmerAPI:
                     include_source_signature_data = response.include_source_signature_data
 
                     farmer_reward_address = self.farmer.farmer_target
-                    if response.farmer_reward_address_overwrite is not None:
-                        farmer_reward_address = response.farmer_reward_address_overwrite
+                    if response.farmer_reward_address_override is not None:
+                        farmer_reward_address = response.farmer_reward_address_override
                         include_source_signature_data = True
 
                     return farmer_protocol.DeclareProofOfSpace(
