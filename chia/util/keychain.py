@@ -102,7 +102,7 @@ def mnemonic_from_short_words(mnemonic_str: str) -> str:
     for i in range(0, len(mnemonic)):
         word = mnemonic[i]
         full_word = four_char_dict.get(word[: min(4, len(word))])
-        if not full_word:
+        if full_word is None:
             raise ValueError(f"{word!r} is not in the mnemonic dictionary; may be misspelled")
         full_words.append(full_word)
 
