@@ -64,6 +64,7 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
+from tests.util.db_connection import generate_in_memory_db_uri
 from tests.util.misc import BenchmarkRunner, GcMode, _AssertRuntime, measure_overhead
 
 multiprocessing.set_start_method("spawn")
@@ -211,12 +212,11 @@ async def empty_blockchain(latest_db_version, blockchain_constants):
     """
     from tests.util.blockchain import create_blockchain
 
-    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, latest_db_version)
+    bc1, db_wrapper = await create_blockchain(blockchain_constants, latest_db_version)
     yield bc1
 
     await db_wrapper.close()
     bc1.shut_down()
-    db_path.unlink()
 
 
 @pytest.fixture(scope="function")
@@ -1066,7 +1066,7 @@ async def harvester_farmer_environment(
 
 @pytest.fixture(name="database_uri")
 def database_uri_fixture() -> str:
-    return f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+    return generate_in_memory_db_uri()
 
 
 @pytest.fixture(name="empty_temp_file_keyring")

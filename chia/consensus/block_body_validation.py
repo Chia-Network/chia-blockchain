@@ -187,7 +187,7 @@ async def validate_block_body(
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
 
         # The generator_refs_root must be the hash of the concatenation of the List[uint32]
-        generator_refs_hash = std_hash(b"".join([bytes(i) for i in block.transactions_generator_ref_list]))
+        generator_refs_hash = std_hash(b"".join([i.stream_to_bytes() for i in block.transactions_generator_ref_list]))
         if block.transactions_info.generator_refs_root != generator_refs_hash:
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
         if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:

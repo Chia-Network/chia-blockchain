@@ -112,9 +112,11 @@ async def test_nft_mint_from_did(
 
     target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
 
-    sb = await nft_wallet_maker.mint_from_did(
+    tx_records = await nft_wallet_maker.mint_from_did(
         metadata_list, DEFAULT_TX_CONFIG, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
     )
+    sb = tx_records[0].spend_bundle
+    assert sb is not None
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
 
@@ -603,7 +605,7 @@ async def test_nft_mint_from_did_multiple_xch(
 
     target_list = [ph_taker for x in range(mint_total)]
 
-    sb = await nft_wallet_maker.mint_from_did(
+    tx_records = await nft_wallet_maker.mint_from_did(
         metadata_list,
         DEFAULT_TX_CONFIG,
         target_list=target_list,
@@ -612,6 +614,8 @@ async def test_nft_mint_from_did_multiple_xch(
         xch_coins=xch_coins,
         fee=fee,
     )
+    sb = tx_records[0].spend_bundle
+    assert sb is not None
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
 
@@ -708,9 +712,11 @@ async def test_nft_mint_from_xch(
 
     target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
 
-    sb = await nft_wallet_maker.mint_from_xch(
+    tx_records = await nft_wallet_maker.mint_from_xch(
         metadata_list, DEFAULT_TX_CONFIG, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
     )
+    sb = tx_records[0].spend_bundle
+    assert sb is not None
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
 
@@ -1015,7 +1021,7 @@ async def test_nft_mint_from_xch_multiple_xch(
 
     target_list = [ph_taker for x in range(mint_total)]
 
-    sb = await nft_wallet_maker.mint_from_xch(
+    tx_records = await nft_wallet_maker.mint_from_xch(
         metadata_list,
         DEFAULT_TX_CONFIG,
         target_list=target_list,
@@ -1024,6 +1030,8 @@ async def test_nft_mint_from_xch_multiple_xch(
         xch_coins=xch_coins,
         fee=fee,
     )
+    sb = tx_records[0].spend_bundle
+    assert sb is not None
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
 

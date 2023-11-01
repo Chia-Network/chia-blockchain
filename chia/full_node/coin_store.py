@@ -461,7 +461,7 @@ class CoinStore:
                     int(record.coinbase),
                     record.coin.puzzle_hash,
                     record.coin.parent_coin_info,
-                    bytes(uint64(record.coin.amount)),
+                    uint64(record.coin.amount).stream_to_bytes(),
                     record.timestamp,
                 )
             )

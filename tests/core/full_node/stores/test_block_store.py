@@ -30,7 +30,7 @@ from chia.util.db_wrapper import get_host_parameter_limit
 from chia.util.full_block_utils import GeneratorBlockInfo
 from chia.util.ints import uint8, uint32, uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.util.db_connection import DBConnection
+from tests.util.db_connection import DBConnection, PathDBConnection
 
 log = logging.getLogger(__name__)
 
@@ -137,7 +137,7 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cach
     """
     blocks = bt.get_consecutive_blocks(10)
 
-    async with DBConnection(db_version) as wrapper, DBConnection(db_version) as wrapper_2:
+    async with PathDBConnection(db_version) as wrapper, PathDBConnection(db_version) as wrapper_2:
         store = await BlockStore.create(wrapper, use_cache=use_cache)
         coin_store_2 = await CoinStore.create(wrapper_2)
         store_2 = await BlockStore.create(wrapper_2)
