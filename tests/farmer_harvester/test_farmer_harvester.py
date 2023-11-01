@@ -465,19 +465,6 @@ async def test_farmer_handles_farmer_reward_address_override(
     # Send a signature response message from the harvester with an overwritten farmer reward address
     farmer_reward_address = decode_puzzle_hash('xch1uf48n3f50xrs7zds0uek9wp9wmyza6crnex6rw8kwm3jnm39y82q5mvps6')
 
-    # response_signatures = RespondSignatures(
-    #     plot_identifier=full_plot_identifier,
-    #     challenge_hash=vdf_challenge_hash,
-    #     sp_hash=challenge_chain_sp,
-    #     local_pk=local_sk.get_g1(),
-    #     farmer_pk=farmer_public_key,
-    #     message_signatures=signatures,
-    #     farmer_reward_address_overwrite=farmer_reward_address
-    # )
-    #
-    # # Send message to farmer
-    # msg = make_msg(ProtocolMessageTypes.respond_signatures, response_signatures)
-
     # Make sure all the peers are connected to each other
     await wait_until_node_type_connected(farmer.server, NodeType.HARVESTER)
     await wait_until_node_type_connected(farmer.server, NodeType.FULL_NODE)
