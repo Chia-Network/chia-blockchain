@@ -1336,7 +1336,7 @@ class FullNode:
             request.index_from_challenge,
             uint32(0) if peak is None else peak.height,
             sp_source_data=SignagePointSourceData(
-                vdf_data=SPVDFSourceData(request.challenge_chain_vdf,request.reward_chain_vdf)
+                vdf_data=SPVDFSourceData(request.challenge_chain_vdf.output, request.reward_chain_vdf.output)
             )
         )
         msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
