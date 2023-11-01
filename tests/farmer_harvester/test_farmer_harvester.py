@@ -363,7 +363,6 @@ async def test_farmer_handles_farmer_reward_address_override(
     # Create fake SP
     blockchain = full_node.blockchain
     peak = blockchain.get_peak()
-    # sub_slot_total_iters = uint128(0)
     sp_index = uint8(4)
 
     sp = get_signage_point(
