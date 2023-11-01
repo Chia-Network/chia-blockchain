@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
+
 from math import floor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -20,7 +22,8 @@ from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.plotting.util import PlotsRefreshParameter, PlotInfo, parse_plot_info
 from chia.protocols import farmer_protocol, harvester_protocol
-from chia.protocols.farmer_protocol import NewSignagePoint, RequestSignedValues, DeclareProofOfSpace
+from chia.protocols.farmer_protocol import NewSignagePoint, RequestSignedValues, DeclareProofOfSpace, \
+    SignagePointSourceData, SPVDFSourceData
 from chia.protocols.harvester_protocol import RespondSignatures, RequestSignatures
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
@@ -311,7 +314,7 @@ async def test_harvester_has_no_server(
     assert harvester_server.webserver is None
 
 @pytest.mark.asyncio
-async def test_farmer_handles_farmer_reward_address_overwrite(
+async def test_farmer_handles_farmer_reward_address_override(
     caplog: pytest.LogCaptureFixture,
     farmer_one_harvester_zero_bits_plot_filter,
     mocker: MockerFixture
@@ -343,7 +346,6 @@ async def test_farmer_handles_farmer_reward_address_overwrite(
     plot: PlotInfo = next(iter(bt.plot_manager.plots.values()))
 
     plot_id_bytes = bytes32(plot.prover.get_id())
-    plot_id: str = plot_id_bytes.hex()
 
     # Go beyond the first block
     blocks = bt.get_consecutive_blocks(uint8(7))
@@ -431,7 +433,11 @@ async def test_farmer_handles_farmer_reward_address_overwrite(
         difficulty=bt.constants.DIFFICULTY_STARTING,
         sub_slot_iters=bt.constants.SUB_SLOT_ITERS_STARTING,
         signage_point_index=sp_index,
-        peak_height=0
+        peak_height=0,
+        sp_source_data=SignagePointSourceData(
+            sub_slot_data=None,
+            vdf_data=SPVDFSourceData(cc_vdf=sp.cc_vdf.output, rc_vdf=sp.rc_vdf.output)
+        )
     )]
 
     # Add fake proof of space
@@ -459,98 +465,109 @@ async def test_farmer_handles_farmer_reward_address_overwrite(
     # Send a signature response message from the harvester with an overwritten farmer reward address
     farmer_reward_address = decode_puzzle_hash('xch1uf48n3f50xrs7zds0uek9wp9wmyza6crnex6rw8kwm3jnm39y82q5mvps6')
 
-    response_signatures = RespondSignatures(
-        plot_identifier=full_plot_identifier,
-        challenge_hash=vdf_challenge_hash,
-        sp_hash=challenge_chain_sp,
-        local_pk=local_sk.get_g1(),
-        farmer_pk=farmer_public_key,
-        message_signatures=signatures,
-        farmer_reward_address_overwrite=farmer_reward_address
-    )
-
-    # Send message to farmer
-    msg = make_msg(ProtocolMessageTypes.respond_signatures, response_signatures)
+    # response_signatures = RespondSignatures(
+    #     plot_identifier=full_plot_identifier,
+    #     challenge_hash=vdf_challenge_hash,
+    #     sp_hash=challenge_chain_sp,
+    #     local_pk=local_sk.get_g1(),
+    #     farmer_pk=farmer_public_key,
+    #     message_signatures=signatures,
+    #     farmer_reward_address_overwrite=farmer_reward_address
+    # )
+    #
+    # # Send message to farmer
+    # msg = make_msg(ProtocolMessageTypes.respond_signatures, response_signatures)
 
     # Make sure all the peers are connected to each other
     await wait_until_node_type_connected(farmer.server, NodeType.HARVESTER)
     await wait_until_node_type_connected(farmer.server, NodeType.FULL_NODE)
-    full_node_peer_farmer = await wait_until_node_type_connected(full_node.server, NodeType.FARMER)
-    harvester_peer_farmer = await wait_until_node_type_connected(harvester.server, NodeType.FARMER)
 
-    request_signed_values_copy: RequestSignedValues     # FullNode -> Farmer
-    request_signatures_copy: RequestSignatures          # Farmer -> Harvester
+    # Message interception & inspection methods
     finished_message_chain: bool = False
 
-    # Intercept messages between peers
-    def inspect_message(msg: Message):
-        nonlocal request_signed_values_copy
+    async def intercept_harvester_request_signatures(*args):
+        request: harvester_protocol.RequestSignatures = harvester_protocol.RequestSignatures.from_bytes(args[0])
+        nonlocal harvester
+        nonlocal farmer_reward_address
+
+        validate_harvester_request_signatures(request)
+        result_msg: Message = await HarvesterAPI.request_signatures(harvester.server.api, request)
+
+        # Inject overridden farmer reward address
+        response: RespondSignatures = dataclasses.replace(
+            RespondSignatures.from_bytes(result_msg.data),
+            farmer_reward_address_override=farmer_reward_address
+        )
+
+        return make_msg(ProtocolMessageTypes.respond_signatures, response)
+
+    def validate_harvester_request_signatures(request: harvester_protocol.RequestSignatures):
+        nonlocal farmer_reward_address
+
+        assert len(request.messages) > 0
+        assert len(request.messages) == len(request.message_data)
+        for i in range(len(request.messages)):
+            hash = request.messages[i]
+            src = request.message_data[i]
+
+            data: Streamable = None
+            if src.foliage_block_data is not None:
+                data = src.foliage_block_data
+                assert data.farmer_reward_puzzle_hash == farmer_reward_address
+            elif src.foliage_transaction_block is not None:
+                data = src.foliage_transaction_block
+            elif src.cc_vdf is not None:
+                data = src.cc_vdf
+            elif src.rc_vdf is not None:
+                data = src.rc_vdf
+            elif src.cc_sub_slot is not None:
+                data = src.cc_sub_slot
+            elif src.rc_sub_slot is not None:
+                data = src.rc_sub_slot
+            elif src.partial is not None:
+                data = src.partial
+
+            assert data is not None
+            data_hash = data.get_hash()
+            assert data_hash == hash
+
+    async def intercept_farmer_request_signed_values(*args) -> Optional[Message]:
+        nonlocal farmer
+        nonlocal farmer_reward_address
+        request: RequestSignedValues = RequestSignedValues.from_bytes(args[0])
+
+        # Ensure the FullNode included the source data for the signatures
+        assert request.foliage_block_data is not None
+        assert request.foliage_block_data.get_hash() == request.foliage_block_data_hash
+        assert request.foliage_transaction_block_data is not None
+        assert request.foliage_transaction_block_data.get_hash() == request.foliage_transaction_block_hash
+
+        assert request.foliage_block_data.farmer_reward_puzzle_hash == farmer_reward_address
+
+        response = await FarmerAPI.request_signed_values(farmer.server.api, request)
+
         nonlocal finished_message_chain
+        finished_message_chain = True
 
-        if msg.type == ProtocolMessageTypes.request_signed_values.value:
-            data: RequestSignedValues = RequestSignedValues.from_bytes(msg.data)
-            request_signed_values_copy = data
-            assert data.foliage_block_data is not None
-            assert data.foliage_block_data.farmer_reward_puzzle_hash == farmer_reward_address
-        elif msg.type == ProtocolMessageTypes.declare_proof_of_space.value:
-            data: DeclareProofOfSpace = DeclareProofOfSpace.from_bytes(msg.data)
-            assert data.include_foliage_block_data is True
-        elif msg.type == ProtocolMessageTypes.respond_signatures.value:
-            assert request_signed_values_copy is not None
-            finished_message_chain = True
+        return response
 
-    async def send_intercept_farmer(*args, **kwargs):
-        messages: List[Message] = args[0]
-        node_type: NodeType = args[1]
-        [inspect_message(m) for m in messages]
-        await ChiaServer.send_to_all(farmer.server, messages, node_type)
-        return
+    # Intercept some messages between peers
+    mocker.patch.object(farmer.server.api, 'request_signed_values', side_effect=intercept_farmer_request_signed_values)
+    mocker.patch.object(harvester.server.api, 'request_signatures', side_effect=intercept_harvester_request_signatures)
 
-    async def intercept_farmer_call_api_of_specific(*args, **kwargs):
-        nonlocal request_signatures_copy
+    # Start the signing flow by injecting a new ProofOfSpace message
+    new_pos_msg = make_msg(ProtocolMessageTypes.new_proof_of_space, harvester_protocol.NewProofOfSpace(
+        vdf_challenge_hash,
+        challenge_chain_sp,
+        full_plot_identifier,
+        farmer_proof_of_space,
+        sp_index,
+        farmer_reward_address_override=farmer_reward_address
+    ))
 
-        fn = args[0]
-        request: Streamable = args[1]
-        node_id: bytes32 = args[2]
-
-        if isinstance(request, RequestSignatures):
-            request_signatures_copy = request
-
-        await ChiaServer.call_api_of_specific(farmer.server, fn, request, node_id)
-
-    async def send_intercept_full_node(*args, **kwargs):
-        msg: Message = args[0]
-        inspect_message(msg)
-        await WSChiaConnection.send_message(full_node_peer_farmer, msg)
-
-    async def send_intercept_harvester(*args, **kwargs):
-        msg: Message = args[0]
-        inspect_message(msg)
-        await WSChiaConnection.send_message(harvester_peer_farmer, msg)
-
-    mocker.patch.object(farmer.server, 'send_to_all', side_effect=send_intercept_farmer)
-    mocker.patch.object(farmer.server, 'call_api_of_specific', side_effect=intercept_farmer_call_api_of_specific)
-    mocker.patch.object(full_node_peer_farmer, 'send_message', side_effect=send_intercept_full_node)
-
-    # Start the message chain
-    await harvester.server.send_to_all([msg], NodeType.FARMER)
-
-    # Intercept harvester messages after the first RequestSignedValues message.
-    # We're only interested in the block signatures, not the SP signatures.
-    mocker.patch.object(harvester_peer_farmer, 'send_message', side_effect=send_intercept_harvester)
+    await harvester.server.send_to_all([new_pos_msg], NodeType.FARMER)
 
     # Wait for the all the messages to be exchanged between
     def did_finished_message_chain():
         return finished_message_chain
-    await time_out_assert(15, did_finished_message_chain, True)
-
-    # Ensure foliage block data is as expected
-    assert request_signed_values_copy is not None
-    assert request_signatures_copy is not None
-
-    foliage_block_hash_index: uint8 = request_signatures_copy.foliage_block_data[0]
-    foliage_block_data: FoliageBlockData = request_signatures_copy.foliage_block_data[1]
-    assert foliage_block_hash_index == 0
-    assert foliage_block_data.farmer_reward_puzzle_hash == farmer_reward_address
-    assert foliage_block_data.get_hash() == request_signed_values_copy.foliage_block_data_hash
-    assert foliage_block_data.get_hash() == request_signatures_copy.messages[foliage_block_hash_index]
+    await time_out_assert(16, did_finished_message_chain, True)

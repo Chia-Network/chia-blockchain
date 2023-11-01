@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple
 
 from chia_rs import G1Element, G2Element
 from chia.protocols.pool_protocol import PostPartialPayload
+from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
@@ -55,21 +56,21 @@ class NewProofOfSpace(Streamable):
     plot_identifier: str
     proof: ProofOfSpace
     signage_point_index: uint8
-    include_source_signature_data: Optional[bool]
-    farmer_reward_address_overwrite: Optional[bytes32]
+    include_source_signature_data: bool = None
+    farmer_reward_address_override: Optional[bytes32] = None
 
 
 # NOTE: Only 1 of the fields in this type will not be None
 @streamable
 @dataclass(frozen=True)
 class SignatureRequestSourceData(Streamable):
-    foliage_block_data: Optional[FoliageBlockData]
-    foliage_transaction_block: Optional[FoliageTransactionBlock]
-    cc_vdf: Optional[VDFInfo]
-    rc_vdf: Optional[VDFInfo]
-    cc_sub_slot: Optional[ChallengeChainSubSlot]
-    rc_sub_slot: Optional[RewardChainSubSlot]
-    partial: Optional[PostPartialPayload]
+    foliage_block_data: Optional[FoliageBlockData] = None
+    foliage_transaction_block: Optional[FoliageTransactionBlock] = None
+    cc_vdf: Optional[ClassgroupElement] = None
+    rc_vdf: Optional[ClassgroupElement] = None
+    cc_sub_slot: Optional[ChallengeChainSubSlot] = None
+    rc_sub_slot: Optional[RewardChainSubSlot] = None
+    partial: Optional[PostPartialPayload] = None
 
 
 @streamable
@@ -79,7 +80,7 @@ class RequestSignatures(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     messages: List[bytes32]
-    message_data: Optional[List[SignatureRequestSourceData]]
+    message_data: Optional[List[SignatureRequestSourceData]] = None
 
 
 @streamable
@@ -91,7 +92,8 @@ class RespondSignatures(Streamable):
     local_pk: G1Element
     farmer_pk: G1Element
     message_signatures: List[Tuple[bytes32, G2Element]]
-    farmer_reward_address_overwrite: Optional[bytes32]
+    include_source_signature_data: bool = False
+    farmer_reward_address_override: Optional[bytes32] = None
 
 
 @streamable
