@@ -99,8 +99,7 @@ def mnemonic_from_short_words(mnemonic_str: str) -> str:
 
     four_char_dict = {word[:4]: word for word in bip39_word_list().splitlines()}
     full_words: List[str] = []
-    for i in range(0, len(mnemonic)):
-        word = mnemonic[i]
+    for word in mnemonic:
         full_word = four_char_dict.get(word[:4])
         if full_word is None:
             raise ValueError(f"{word!r} is not in the mnemonic dictionary; may be misspelled")
