@@ -251,10 +251,11 @@ async def create_test_runner(
         farmer: Farmer = farmer_service._node
         assert len(farmer.plot_sync_receivers) == 0
         async with contextlib.AsyncExitStack() as async_exit_stack:
-            harvesters: List[Harvester] = [
+            split_harvester_managers = [
                 await async_exit_stack.enter_async_context(start_harvester_service(service, farmer_service))
                 for service in harvester_services
             ]
+            harvesters = [manager.object for manager in split_harvester_managers]
             for receiver in farmer.plot_sync_receivers.values():
                 receiver.simulate_error = 0  # type: ignore[attr-defined]
                 receiver.message_counter = 0  # type: ignore[attr-defined]

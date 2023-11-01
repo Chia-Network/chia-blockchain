@@ -17,6 +17,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16, uint64
+from chia.util.misc import SplitAsyncManager, split_async_manager
 
 
 @dataclass
@@ -41,12 +42,12 @@ def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyn
 @contextlib.asynccontextmanager
 async def start_harvester_service(
     harvester_service: Service[Harvester, HarvesterAPI], farmer_service: Service[Farmer, FarmerAPI]
-) -> AsyncIterator[Harvester]:
+) -> AsyncIterator[SplitAsyncManager[Harvester]]:
     # Set the `last_refresh_time` of the plot manager to avoid initial plot loading
     harvester: Harvester = harvester_service._node
     harvester.plot_manager.last_refresh_time = time.time()
     harvester_service.reconnect_retry_seconds = 1
-    async with harvester_service.manage():
+    async with split_async_manager(manager=harvester_service.manage(), object=harvester) as split_manager:
         harvester_service.add_peer(
             UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port())
         )
@@ -62,4 +63,4 @@ async def start_harvester_service(
 
         await time_out_assert(10, wait_for_farmer_connection, True, harvester.plot_sync_sender)
 
-        yield harvester
+        yield split_manager

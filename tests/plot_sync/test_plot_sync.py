@@ -30,6 +30,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64
+from chia.util.misc import SplitAsyncManager, split_async_manager
 from chia.util.streamable import _T_Streamable
 from tests.plot_sync.util import start_harvester_service
 from tests.plotting.test_plot_manager import Directory, MockPlotInfo
@@ -124,6 +125,8 @@ class Environment:
     dir_keys_missing: Directory
     dir_duplicates: Directory
     expected: List[ExpectedResult]
+    split_farmer_service_manager: SplitAsyncManager[Service[Farmer, FarmerAPI]]
+    split_harvester_managers: List[SplitAsyncManager[Harvester]]
 
     def get_harvester(self, peer_id: bytes32) -> Optional[Harvester]:
         for harvester in self.harvesters:
@@ -310,12 +313,13 @@ async def environment(
     harvester_services, farmer_service, bt = farmer_two_harvester_not_started
     farmer_service.reconnect_retry_seconds = 1
     farmer: Farmer = farmer_service._node
-    async with farmer_service.manage():
+    async with split_async_manager(manager=farmer_service.manage(), object=farmer_service) as split_farmer_manager:
         async with contextlib.AsyncExitStack() as async_exit_stack:
-            harvesters: List[Harvester] = [
+            split_harvester_managers = [
                 await async_exit_stack.enter_async_context(start_harvester_service(service, farmer_service))
                 for service in harvester_services
             ]
+            harvesters = [manager.object for manager in split_harvester_managers]
             for harvester in harvesters:
                 # Remove default plot directory for this tests
                 with lock_and_load_config(harvester.root_path, "config.yaml") as config:
@@ -341,6 +345,8 @@ async def environment(
                 dir_keys_missing,
                 dir_duplicates,
                 [ExpectedResult() for _ in harvesters],
+                split_farmer_service_manager=split_farmer_manager,
+                split_harvester_managers=split_harvester_managers,
             )
 
 
@@ -509,8 +515,7 @@ async def test_harvester_restart(environment: Environment) -> None:
     # Load all directories for both harvesters
     await add_and_validate_all_directories(env)
     # Stop the harvester and make sure the receiver gets dropped on the farmer and refreshing gets stopped
-    env.harvester_services[0].stop()
-    await env.harvester_services[0].wait_closed()
+    await env.split_harvester_managers[0].exit()
     assert len(env.farmer.plot_sync_receivers) == 1
     assert not env.harvesters[0].plot_manager._refreshing_enabled
     assert not env.harvesters[0].plot_manager.needs_refresh()
@@ -538,33 +543,32 @@ async def test_farmer_restart(environment: Environment) -> None:
     for i in range(0, len(env.harvesters)):
         last_sync_ids.append(env.harvesters[i].plot_sync_sender._last_sync_id)
     # Stop the farmer and make sure both receivers get dropped and refreshing gets stopped on the harvesters
-    env.farmer_service.stop()
-    await env.farmer_service.wait_closed()
+    await env.split_farmer_service_manager.exit()
     assert len(env.farmer.plot_sync_receivers) == 0
     assert not env.harvesters[0].plot_manager._refreshing_enabled
     assert not env.harvesters[1].plot_manager._refreshing_enabled
     # Start the farmer, wait for the handshake and make sure the receivers come back
-    await env.farmer_service.start()
-    await time_out_assert(5, env.handshake_done, True, 0)
-    await time_out_assert(5, env.handshake_done, True, 1)
-    assert len(env.farmer.plot_sync_receivers) == 2
-    # Do not use run_sync_test here, to have a more realistic test scenario just wait for the harvesters to be synced.
-    # The handshake should trigger re-sync.
-    for i in range(0, len(env.harvesters)):
-        harvester: Harvester = env.harvesters[i]
-        assert harvester.server is not None
-        receiver = env.farmer.plot_sync_receivers[harvester.server.node_id]
-        await time_out_assert(20, synced, True, harvester.plot_sync_sender, receiver, last_sync_ids[i])
-    # Validate the sync
-    for harvester in env.harvesters:
-        plot_manager: PlotManager = harvester.plot_manager
-        assert harvester.server is not None
-        receiver = env.farmer.plot_sync_receivers[harvester.server.node_id]
-        expected = env.expected[env.harvesters.index(harvester)]
-        assert plot_manager.plot_count() == len(receiver.plots()) == expected.valid_count
-        assert len(plot_manager.failed_to_open_filenames) == len(receiver.invalid()) == expected.invalid_count
-        assert len(plot_manager.no_key_filenames) == len(receiver.keys_missing()) == expected.keys_missing_count
-        assert len(plot_manager.get_duplicates()) == len(receiver.duplicates()) == expected.duplicates_count
+    async with env.farmer_service.manage():
+        await time_out_assert(5, env.handshake_done, True, 0)
+        await time_out_assert(5, env.handshake_done, True, 1)
+        assert len(env.farmer.plot_sync_receivers) == 2
+        # Do not use run_sync_test here, to have a more realistic test scenario just
+        # wait for the harvesters to be synced.  The handshake should trigger re-sync.
+        for i in range(0, len(env.harvesters)):
+            harvester: Harvester = env.harvesters[i]
+            assert harvester.server is not None
+            receiver = env.farmer.plot_sync_receivers[harvester.server.node_id]
+            await time_out_assert(20, synced, True, harvester.plot_sync_sender, receiver, last_sync_ids[i])
+        # Validate the sync
+        for harvester in env.harvesters:
+            plot_manager: PlotManager = harvester.plot_manager
+            assert harvester.server is not None
+            receiver = env.farmer.plot_sync_receivers[harvester.server.node_id]
+            expected = env.expected[env.harvesters.index(harvester)]
+            assert plot_manager.plot_count() == len(receiver.plots()) == expected.valid_count
+            assert len(plot_manager.failed_to_open_filenames) == len(receiver.invalid()) == expected.invalid_count
+            assert len(plot_manager.no_key_filenames) == len(receiver.keys_missing()) == expected.keys_missing_count
+            assert len(plot_manager.get_duplicates()) == len(receiver.duplicates()) == expected.duplicates_count
 
 
 @pytest.mark.asyncio

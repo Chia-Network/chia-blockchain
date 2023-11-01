@@ -100,7 +100,9 @@ async def test_harvester_handshake(
     # Handshake task and plot manager thread should not be running yet
     assert farmer.harvester_handshake_task is None
     assert harvester.plot_manager._refresh_thread is None
-    async with split_async_manager(manager=harvester_service.manage()) as split_harvester_manager:
+    async with split_async_manager(
+        manager=harvester_service.manage(), object=harvester_service
+    ) as split_harvester_manager:
         # Start both services and wait a bit
         async with farmer_service.manage():
             async with harvester_service.manage():
