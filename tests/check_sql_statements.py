@@ -14,7 +14,7 @@ def check_create(sql_type: str, cwd: str, exemptions: Set[Tuple[str, str]] = set
     # such as with worktrees, at least in particular uses of them.  i think that we could switch to letting
     # pre-commit provide the file list instead of reaching out to git to build that list ourselves.  until we
     # make time to handle that, this is an alternative to alleviate the issue.
-    exemptions = set((cwd + "/" + file, name) for file, name in exemptions)
+    exemptions = {(cwd + "/" + file, name) for file, name in exemptions}
     lines = check_output(["git", "grep", f"CREATE {sql_type}"]).decode("ascii").split("\n")
 
     ret = 0
@@ -54,24 +54,20 @@ ret += check_create("INDEX", "chia/wallet")
 ret += check_create(
     "INDEX",
     "chia/full_node",
-    set(
-        [
-            ("block_store.py", "is_fully_compactified"),
-            ("block_store.py", "height"),
-        ]
-    ),
+    {
+        ("block_store.py", "is_fully_compactified"),
+        ("block_store.py", "height"),
+    },
 )
 ret += check_create("TABLE", "chia/wallet")
 ret += check_create(
     "TABLE",
     "chia/full_node",
-    set(
-        [
-            ("block_store.py", "sub_epoch_segments_v3"),
-            ("block_store.py", "full_blocks"),
-            ("coin_store.py", "coin_record"),
-            ("hint_store.py", "hints"),
-        ]
-    ),
+    {
+        ("block_store.py", "sub_epoch_segments_v3"),
+        ("block_store.py", "full_blocks"),
+        ("coin_store.py", "coin_record"),
+        ("hint_store.py", "hints"),
+    },
 )
 sys.exit(ret)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from chia.server.start_full_node import update_testnet_overrides
+from chia.consensus.default_constants import update_testnet_overrides
 
 
 def test_testnet10() -> None:

@@ -52,7 +52,7 @@ class KeyringCase:
 def test_keyring_dump_empty(empty_keyring: Keychain, case: KeyringCase) -> None:
     keyring_path = empty_keyring.keyring_wrapper.keyring.keyring_path
     runner = CliRunner()
-    result = runner.invoke(dump, [*case.args, os.fspath(keyring_path)])
+    result = runner.invoke(dump, [*case.args, os.fspath(keyring_path)], catch_exceptions=False)
 
     regex = re.escape(output_prefix.format(path=keyring_path)) + case.regex
 

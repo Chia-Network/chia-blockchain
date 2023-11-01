@@ -46,21 +46,19 @@ class WalletTransactionStore:
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS transaction_record("
-                    " transaction_record blob,"
-                    " bundle_id text PRIMARY KEY,"  # NOTE: bundle_id is being stored as bytes, not hex
-                    " confirmed_at_height bigint,"
-                    " created_at_time bigint,"
-                    " to_puzzle_hash text,"
-                    " amount blob,"
-                    " fee_amount blob,"
-                    " confirmed int,"
-                    " sent int,"
-                    " wallet_id bigint,"
-                    " trade_id text,"
-                    " type int)"
-                )
+                "CREATE TABLE IF NOT EXISTS transaction_record("
+                " transaction_record blob,"
+                " bundle_id text PRIMARY KEY,"  # NOTE: bundle_id is being stored as bytes, not hex
+                " confirmed_at_height bigint,"
+                " created_at_time bigint,"
+                " to_puzzle_hash text,"
+                " amount blob,"
+                " fee_amount blob,"
+                " confirmed int,"
+                " sent int,"
+                " wallet_id bigint,"
+                " trade_id text,"
+                " type int)"
             )
 
             # Useful for reorg lookups
@@ -121,8 +119,8 @@ class WalletTransactionStore:
                     record.confirmed_at_height,
                     record.created_at_time,
                     record.to_puzzle_hash.hex(),
-                    bytes(record.amount),
-                    bytes(record.fee_amount),
+                    record.amount.stream_to_bytes(),
+                    record.fee_amount.stream_to_bytes(),
                     int(record.confirmed),
                     record.sent,
                     record.wallet_id,
@@ -429,14 +427,21 @@ class WalletTransactionStore:
 
     async def _get_new_tx_records_from_old(self, old_records: List[TransactionRecordOld]) -> List[TransactionRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute(
-                f"SELECT txid, valid_times from tx_times WHERE txid IN ({','.join('?' *  len(old_records))})",
-                tuple(tx.name for tx in old_records),
-            )
-            valid_times: Dict[bytes32, ConditionValidTimes] = {
-                bytes32(res[0]): ConditionValidTimes.from_bytes(res[1]) for res in await cursor.fetchall()
-            }
-            await cursor.close()
+            valid_times: Dict[bytes32, ConditionValidTimes] = {}
+            chunked_records: List[List[TransactionRecordOld]] = [
+                old_records[i : min(len(old_records), i + self.db_wrapper.host_parameter_limit)]
+                for i in range(0, len(old_records), self.db_wrapper.host_parameter_limit)
+            ]
+            for records_chunk in chunked_records:
+                cursor = await conn.execute(
+                    f"SELECT txid, valid_times from tx_times WHERE txid IN ({','.join('?' *  len(records_chunk))})",
+                    tuple(tx.name for tx in records_chunk),
+                )
+                valid_times = {
+                    **valid_times,
+                    **{bytes32(res[0]): ConditionValidTimes.from_bytes(res[1]) for res in await cursor.fetchall()},
+                }
+                await cursor.close()
         return [
             TransactionRecord(
                 valid_times=valid_times[record.name] if record.name in valid_times else ConditionValidTimes(),

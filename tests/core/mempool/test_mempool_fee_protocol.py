@@ -18,7 +18,7 @@ from chia.wallet.wallet import Wallet
 from tests.core.node_height import node_height_at_least
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_protocol_messages(
     simulator_and_wallet: Tuple[
         List[Union[FullNodeAPI, FullNodeSimulator]], List[Tuple[Wallet, ChiaServer]], BlockTools

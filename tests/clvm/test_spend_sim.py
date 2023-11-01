@@ -10,7 +10,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farming():
     async with sim_and_client(pass_prefarm=False) as (sim, _):
         for i in range(0, 5):
@@ -21,7 +21,7 @@ async def test_farming():
         assert sim.block_records[0].reward_claims_incorporated[0].amount == 18375000000000000000
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_rewind():
     async with sim_and_client() as (sim, _):
         for i in range(0, 5):
@@ -35,7 +35,7 @@ async def test_rewind():
         assert sim.blocks[-1].height == 5
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_all_endpoints():
     async with sim_and_client() as (sim, sim_client):
         for i in range(0, 5):

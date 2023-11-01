@@ -10,7 +10,6 @@ from shutil import rmtree
 from typing import Any, AsyncIterator, Dict, List, Tuple
 
 import pytest
-import pytest_asyncio
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
@@ -96,7 +95,7 @@ def fee(trusted: bool) -> uint64:
 OneWalletNodeAndRpc = Tuple[WalletRpcClient, Any, FullNodeSimulator, int, BlockTools]
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def one_wallet_node_and_rpc(
     trusted: bool, self_hostname: str, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[OneWalletNodeAndRpc]:
@@ -134,7 +133,7 @@ async def one_wallet_node_and_rpc(
 Setup = Tuple[FullNodeSimulator, WalletNode, bytes32, int, WalletRpcClient]
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def setup(
     one_wallet_and_one_simulator_services: Tuple[
         List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools
@@ -185,7 +184,7 @@ async def setup(
 
 
 class TestPoolWalletRpc:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_create_new_pool_wallet_self_farm(
         self,
         one_wallet_node_and_rpc: OneWalletNodeAndRpc,
@@ -237,7 +236,7 @@ class TestPoolWalletRpc:
         assert hexstr_to_bytes(pool_config["launcher_id"]) == launcher_id
         assert pool_config["pool_url"] == ""
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_create_new_pool_wallet_farm_to_pool(
         self,
         one_wallet_node_and_rpc: OneWalletNodeAndRpc,
@@ -290,7 +289,7 @@ class TestPoolWalletRpc:
         assert hexstr_to_bytes(pool_config["launcher_id"]) == launcher_id
         assert pool_config["pool_url"] == "http://pool.example.com"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_create_multiple_pool_wallets(
         self,
         one_wallet_node_and_rpc: OneWalletNodeAndRpc,
@@ -403,7 +402,7 @@ class TestPoolWalletRpc:
                             assert owner_sk is not None
                             assert owner_sk[0] != auth_sk
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_absorb_self(
         self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
     ) -> None:
@@ -481,7 +480,7 @@ class TestPoolWalletRpc:
             tx1 = await client.get_transactions(1)
             assert (250_000_000_000 + fee) in [tx.amount for tx in tx1]
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_absorb_self_multiple_coins(
         self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
     ) -> None:
@@ -550,7 +549,7 @@ class TestPoolWalletRpc:
             assert pool_bal["confirmed_wallet_balance"] == pool_expected_confirmed_balance
             assert main_bal["confirmed_wallet_balance"] == main_expected_confirmed_balance  # 10499999999999
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_absorb_pooling(
         self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
     ) -> None:
@@ -669,7 +668,7 @@ class TestPoolWalletRpc:
             bal2 = await client.get_wallet_balance(2)
             assert bal2["confirmed_wallet_balance"] == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_self_pooling_to_pooling(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
         """
         This tests self-pooling -> pooling
@@ -757,7 +756,7 @@ class TestPoolWalletRpc:
         await time_out_assert(20, status_is_farming_to_pool, True, wallet_id_2)
         assert len(await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_leave_pool(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
         """This tests self-pooling -> pooling -> escaping -> self pooling"""
         full_node_api, wallet_node, our_ph, total_block_rewards, client = setup
@@ -856,7 +855,7 @@ class TestPoolWalletRpc:
         await time_out_assert(timeout=MAX_WAIT_SECS, function=status_is_self_pooling)
         assert len(await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_change_pools(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
         """This tests Pool A -> escaping -> Pool B"""
         full_node_api, wallet_node, our_ph, total_block_rewards, client = setup
@@ -923,7 +922,7 @@ class TestPoolWalletRpc:
         assert pw_info.current.relative_lock_height == 10
         assert len(await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_change_pools_reorg(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
         """This tests Pool A -> escaping -> reorg -> escaping -> Pool B"""
         full_node_api, wallet_node, our_ph, total_block_rewards, client = setup

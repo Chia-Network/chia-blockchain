@@ -1185,10 +1185,8 @@ class WalletRpcApi:
                 coins[coin_record.coin] = metadata
                 if len(coins) >= batch_size:
                     tx_id_list.extend(
-                        (
-                            await self.service.wallet_state_manager.spend_clawback_coins(
-                                coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
-                            )
+                        await self.service.wallet_state_manager.spend_clawback_coins(
+                            coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
                         )
                     )
                     coins = {}
@@ -1196,10 +1194,8 @@ class WalletRpcApi:
                 log.error(f"Failed to spend clawback coin {coin_id.hex()}: %s", e)
         if len(coins) > 0:
             tx_id_list.extend(
-                (
-                    await self.service.wallet_state_manager.spend_clawback_coins(
-                        coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
-                    )
+                await self.service.wallet_state_manager.spend_clawback_coins(
+                    coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
                 )
             )
         return {
@@ -1676,7 +1672,7 @@ class WalletRpcApi:
                 memos.append([mem.encode("utf-8") for mem in request["memos"]])
         coins: Optional[Set[Coin]] = None
         if "coins" in request and len(request["coins"]) > 0:
-            coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
+            coins = {Coin.from_json_dict(coin_json) for coin_json in request["coins"]}
         fee: uint64 = uint64(request.get("fee", 0))
 
         cat_discrepancy_params: Tuple[Optional[int], Optional[str], Optional[str]] = (
@@ -2138,10 +2134,10 @@ class WalletRpcApi:
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        coin_announcements: Set[bytes] = set([])
+        coin_announcements: Set[bytes] = set()
         for ca in request.get("coin_announcements", []):
             coin_announcements.add(bytes.fromhex(ca))
-        puzzle_announcements: Set[bytes] = set([])
+        puzzle_announcements: Set[bytes] = set()
         for pa in request.get("puzzle_announcements", []):
             puzzle_announcements.add(bytes.fromhex(pa))
 
@@ -2227,7 +2223,7 @@ class WalletRpcApi:
             get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal.to_program()),
             coin_state,
         )
-        hinted_coins = compute_spend_hints_and_additions(coin_spend)
+        hinted_coins, _ = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
         hint: Optional[bytes32] = None
         for hinted_coin in hinted_coins.values():
@@ -2992,7 +2988,7 @@ class WalletRpcApi:
         did_id = request.get("did_id", None)
         if did_id is not None:
             if did_id == "":
-                did_id = bytes()
+                did_id = b""
             else:
                 did_id = decode_puzzle_hash(did_id)
 
@@ -3535,7 +3531,7 @@ class WalletRpcApi:
         xch_coin_list = request.get("xch_coins", None)
         xch_coins = None
         if xch_coin_list:
-            xch_coins = set([Coin.from_json_dict(xch_coin) for xch_coin in xch_coin_list])
+            xch_coins = {Coin.from_json_dict(xch_coin) for xch_coin in xch_coin_list}
         xch_change_target = request.get("xch_change_target", None)
         if xch_change_target is not None:
             if xch_change_target[:2] == "xch":
@@ -3560,7 +3556,7 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
 
         if mint_from_did:
-            sb = await nft_wallet.mint_from_did(
+            txs = await nft_wallet.mint_from_did(
                 metadata_list,
                 mint_number_start=mint_number_start,
                 mint_total=mint_total,
@@ -3576,7 +3572,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
         else:
-            sb = await nft_wallet.mint_from_xch(
+            txs = await nft_wallet.mint_from_xch(
                 metadata_list,
                 mint_number_start=mint_number_start,
                 mint_total=mint_total,
@@ -3587,6 +3583,8 @@ class WalletRpcApi:
                 tx_config=tx_config,
                 extra_conditions=extra_conditions,
             )
+        sb = txs[0].spend_bundle
+        assert sb is not None
         nft_id_list = []
         for cs in sb.coin_spends:
             if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
@@ -3729,7 +3727,7 @@ class WalletRpcApi:
 
         coins = None
         if "coins" in request and len(request["coins"]) > 0:
-            coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
+            coins = {Coin.from_json_dict(coin_json) for coin_json in request["coins"]}
 
         coin_announcements: Optional[Set[Announcement]] = None
         if (

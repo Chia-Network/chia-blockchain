@@ -81,7 +81,7 @@ puzzle_hash_0 = bytes32(32 * b"0")
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_dao_creation(
     self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
@@ -270,7 +270,7 @@ async def test_dao_creation(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_dao_funding(
     self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
@@ -453,7 +453,7 @@ async def test_dao_funding(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_dao_proposals(
     self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
@@ -1021,7 +1021,7 @@ async def test_dao_proposals(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_dao_proposal_partial_vote(
     self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
@@ -1271,7 +1271,7 @@ async def test_dao_proposal_partial_vote(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_dao_rpc_api(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, consensus_mode: ConsensusMode
 ) -> None:
@@ -1800,7 +1800,7 @@ async def test_dao_rpc_api(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_dao_rpc_client(
     two_wallet_nodes_services: SimulatorsAndWalletsServices,
     trusted: bool,
@@ -2215,7 +2215,7 @@ async def test_dao_rpc_client(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_dao_complex_spends(
     two_wallet_nodes_services: SimulatorsAndWalletsServices,
     trusted: bool,
@@ -2588,7 +2588,7 @@ async def test_dao_complex_spends(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_dao_concurrency(
     self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
@@ -2861,7 +2861,7 @@ async def test_dao_concurrency(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_dao_cat_exits(
     two_wallet_nodes_services: SimulatorsAndWalletsServices,
     trusted: bool,
@@ -3077,7 +3077,7 @@ async def test_dao_cat_exits(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_dao_reorgs(
     self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
@@ -3376,7 +3376,7 @@ async def test_dao_reorgs(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_dao_votes(
     self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:

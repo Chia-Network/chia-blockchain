@@ -122,7 +122,7 @@ co = ConditionOpcode
 
 
 class TestConditions:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         "opcode, expected_cost",
         [
@@ -160,7 +160,7 @@ class TestConditions:
         assert new_block.transactions_info is not None
         assert new_block.transactions_info.cost - block_base_cost == expected_cost
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         "condition, expected_cost",
         [
@@ -187,7 +187,7 @@ class TestConditions:
         assert new_block.transactions_info is not None
         assert new_block.transactions_info.cost - block_base_cost == expected_cost
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         "opcode,value,expected",
         [
@@ -275,7 +275,7 @@ class TestConditions:
         conditions = Program.to(assemble(f"(({opcode[0]} {value}))"))
         await check_conditions(bt, conditions, expected_err=expected)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_my_id(self, bt):
         blocks = await initial_blocks(bt)
         coin = list(blocks[-2].get_included_reward_coins())[0]
@@ -284,14 +284,14 @@ class TestConditions:
         conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{wrong_name.hex()}))"))
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_MY_COIN_ID_FAILED)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_valid_my_id(self, bt):
         blocks = await initial_blocks(bt)
         coin = list(blocks[-2].get_included_reward_coins())[0]
         conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{coin.name().hex()}))"))
         await check_conditions(bt, conditions)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_coin_announcement(self, bt):
         blocks = await initial_blocks(bt)
         coin = list(blocks[-2].get_included_reward_coins())[0]
@@ -304,7 +304,7 @@ class TestConditions:
         )
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_valid_coin_announcement(self, bt):
         blocks = await initial_blocks(bt)
         coin = list(blocks[-2].get_included_reward_coins())[0]
@@ -317,7 +317,7 @@ class TestConditions:
         )
         await check_conditions(bt, conditions)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_puzzle_announcement(self, bt):
         announce = Announcement(EASY_PUZZLE_HASH, b"test_bad")
         conditions = Program.to(
@@ -328,7 +328,7 @@ class TestConditions:
         )
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_valid_puzzle_announcement(self, bt):
         announce = Announcement(EASY_PUZZLE_HASH, b"test")
         conditions = Program.to(
@@ -339,7 +339,7 @@ class TestConditions:
         )
         await check_conditions(bt, conditions)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         "prefix, condition, num, expect_err",
         [

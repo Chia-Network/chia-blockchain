@@ -128,7 +128,7 @@ async def mint_cr_cat(
     ],
     indirect=True,
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     full_node_api: FullNodeSimulator = wallet_environments.full_node
     wallet_node_0 = wallet_environments.environments[0].wallet_node
@@ -243,7 +243,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         "flags_needed": cr_cat_wallet_0.info.proofs_checker.flags,
     } == (await client_0.get_wallets(wallet_type=cr_cat_wallet_0.type()))[0]
     assert await wallet_node_0.wallet_state_manager.get_wallet_for_asset_id(cr_cat_wallet_0.get_asset_id()) is not None
-    wallet_1_addr = encode_puzzle_hash(await wallet_1.get_new_puzzlehash(), "txch")
+    wallet_1_ph = await wallet_1.get_new_puzzlehash()
+    wallet_1_addr = encode_puzzle_hash(wallet_1_ph, "txch")
     tx = await client_0.cat_spend(
         cr_cat_wallet_0.id(),
         DEFAULT_TX_CONFIG,
@@ -295,6 +296,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         "asset_id": cr_cat_wallet_1.get_asset_id(),
         "fingerprint": wallet_node_1.logged_in_fingerprint,
     }
+    assert await cr_cat_wallet_1.match_hinted_coin(next(c for c in tx.additions if c.amount == 90), wallet_1_ph)
     pending_tx = await client_1.get_transactions(
         cr_cat_wallet_1.id(),
         0,
@@ -393,7 +395,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_self_revoke(
     self_hostname: str,
     one_wallet_and_one_simulator_services: Any,
@@ -472,7 +474,7 @@ async def test_self_revoke(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_cat_wallet_conversion(
     self_hostname: str,
     one_wallet_and_one_simulator_services: Any,
