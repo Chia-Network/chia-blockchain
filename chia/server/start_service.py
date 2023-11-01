@@ -209,7 +209,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                     assert self.self_hostname is not None
                     assert self.daemon_port is not None
 
-                    await async_exit_stack.enter_context(self._node.manage())
+                    await async_exit_stack.enter_async_context(self._node.manage())
                     self._node._shut_down = False
 
                     if len(self._upnp_ports) > 0:
