@@ -11,7 +11,7 @@ import pytest
 from _pytest.fixtures import SubRequest
 
 from chia.util.db_wrapper import DBWrapper2
-from tests.util.db_connection import DBConnection
+from tests.util.db_connection import DBConnection, PathDBConnection
 
 if TYPE_CHECKING:
     ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
@@ -153,7 +153,7 @@ async def test_writers_nests() -> None:
 
 @pytest.mark.asyncio
 async def test_writer_journal_mode_wal() -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with PathDBConnection(2) as db_wrapper:
         async with db_wrapper.writer() as connection:
             async with connection.execute("PRAGMA journal_mode") as cursor:
                 result = await cursor.fetchone()
@@ -162,7 +162,7 @@ async def test_writer_journal_mode_wal() -> None:
 
 @pytest.mark.asyncio
 async def test_reader_journal_mode_wal() -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with PathDBConnection(2) as db_wrapper:
         async with db_wrapper.reader_no_transaction() as connection:
             async with connection.execute("PRAGMA journal_mode") as cursor:
                 result = await cursor.fetchone()
@@ -253,7 +253,7 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
 
         assert await query_value(connection=writer) == 1
 
-    async with DBConnection(2) as db_wrapper:
+    async with PathDBConnection(2) as db_wrapper:
         get_reader = db_wrapper.reader if transactioned else db_wrapper.reader_no_transaction
 
         await setup_table(db_wrapper)
@@ -290,7 +290,7 @@ async def test_reader_nests_and_ends_transaction() -> None:
 
 @pytest.mark.asyncio
 async def test_writer_in_reader_works() -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with PathDBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.reader() as reader:
@@ -354,7 +354,7 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
 async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with PathDBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer_maybe_transaction() as connection:

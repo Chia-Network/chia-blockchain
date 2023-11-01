@@ -43,6 +43,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
+from tests.util.db_connection import generate_in_memory_db_uri
 from tests.util.misc import BenchmarkRunner, Marks, datacases
 
 log = logging.getLogger(__name__)
@@ -381,9 +382,8 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
     saved_roots: List[Root] = []
     saved_batches: List[List[Dict[str, Any]]] = []
 
-    db_path = tmp_path.joinpath("dl_server_util.sqlite")
-
-    single_op_data_store = await DataStore.create(database=db_path)
+    db_uri = generate_in_memory_db_uri()
+    single_op_data_store = await DataStore.create(database=db_uri, uri=True)
     try:
         await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
         random = Random()
@@ -1268,9 +1268,8 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
     num_batches = 10
     num_ops_per_batch = 100
 
-    db_path = tmp_path.joinpath("dl_server_util.sqlite")
-
-    data_store_server = await DataStore.create(database=db_path)
+    db_uri = generate_in_memory_db_uri()
+    data_store_server = await DataStore.create(database=db_uri, uri=True)
     try:
         await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
         random = Random()
