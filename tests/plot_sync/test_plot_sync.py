@@ -314,6 +314,7 @@ async def environment(
     farmer_service.reconnect_retry_seconds = 1
     farmer: Farmer = farmer_service._node
     async with split_async_manager(manager=farmer_service.manage(), object=farmer_service) as split_farmer_manager:
+        await split_farmer_manager.enter()
         async with contextlib.AsyncExitStack() as async_exit_stack:
             split_harvester_managers = [
                 await async_exit_stack.enter_async_context(start_harvester_service(service, farmer_service))

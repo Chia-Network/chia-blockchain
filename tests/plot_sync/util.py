@@ -48,6 +48,7 @@ async def start_harvester_service(
     harvester.plot_manager.last_refresh_time = time.time()
     harvester_service.reconnect_retry_seconds = 1
     async with split_async_manager(manager=harvester_service.manage(), object=harvester) as split_manager:
+        await split_manager.enter()
         harvester_service.add_peer(
             UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port())
         )
