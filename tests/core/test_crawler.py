@@ -22,7 +22,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_unknown_messages(
     self_hostname: str,
     one_node: SimulatorsAndWalletsServices,
@@ -46,7 +46,7 @@ async def test_unknown_messages(
         await time_out_assert(10, receiving_failed)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_valid_message(
     self_hostname: str,
     one_node: SimulatorsAndWalletsServices,
@@ -72,7 +72,7 @@ async def test_valid_message(
     await time_out_assert(10, peer_added)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_crawler_to_db(
     crawler_service: Service[Crawler, CrawlerAPI], one_node: SimulatorsAndWalletsServices
 ) -> None:

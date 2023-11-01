@@ -7,7 +7,7 @@ from chia.wallet.wallet_user_store import WalletUserStore
 from tests.util.db_connection import DBConnection
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_store():
     async with DBConnection(1) as db_wrapper:
         store = await WalletUserStore.create(db_wrapper)

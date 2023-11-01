@@ -27,7 +27,7 @@ async def wallet_balance_at_least(wallet_node: WalletNode, balance: uint128) -> 
 
 
 @pytest.mark.limit_consensus_modes(reason="benchmark")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mempool_update_performance(
     wallet_nodes_mempool_perf: SimulatorsAndWallets,
     default_400_blocks: List[FullBlock],

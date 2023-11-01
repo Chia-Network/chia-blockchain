@@ -128,7 +128,7 @@ def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]
             assert path in receiver._current_sync.delta.duplicates.additions
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
     assert receiver.current_sync().state == sync_step.state
     last_sync_time_before = receiver._last_sync.time_done
@@ -222,7 +222,7 @@ def test_default_values(seeded_random: random.Random) -> None:
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_reset(seeded_random: random.Random) -> None:
     receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
     connection_before = receiver.connection()
@@ -256,7 +256,7 @@ async def test_reset(seeded_random: random.Random) -> None:
 
 
 @pytest.mark.parametrize("counts_only", [True, False])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
     plot_sync_dict_1 = receiver.to_dict(counts_only)
@@ -337,7 +337,7 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     }
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sync_flow(seeded_random: random.Random) -> None:
     receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
 
@@ -379,7 +379,7 @@ async def test_sync_flow(seeded_random: random.Random) -> None:
     assert receiver.current_sync().state == State.idle
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_invalid_ids(seeded_random: random.Random) -> None:
     receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
     for state in State:
@@ -430,7 +430,7 @@ async def test_invalid_ids(seeded_random: random.Random) -> None:
         pytest.param(State.removed, ErrorCodes.plot_not_available, id="not available"),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_plot_errors(state_to_fail: State, expected_error_code: ErrorCodes, seeded_random: random.Random) -> None:
     receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
     for state in State:

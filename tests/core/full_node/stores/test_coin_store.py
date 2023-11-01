@@ -51,7 +51,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: BlockTools) -> None:
     wallet_a = WALLET_A
     reward_ph = wallet_a.get_new_puzzlehash()
@@ -162,7 +162,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_set_spent(db_version: int, bt: BlockTools) -> None:
     blocks = bt.get_consecutive_blocks(9, [])
 
@@ -207,7 +207,7 @@ async def test_set_spent(db_version: int, bt: BlockTools) -> None:
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_num_unspent(bt: BlockTools, db_version: int) -> None:
     blocks = bt.get_consecutive_blocks(37, [])
 
@@ -241,7 +241,7 @@ async def test_num_unspent(bt: BlockTools, db_version: int) -> None:
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_rollback(db_version: int, bt: BlockTools) -> None:
     blocks = bt.get_consecutive_blocks(20)
 
@@ -327,7 +327,7 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
                         assert record is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
     async with DBConnection(db_version) as db_wrapper:
         initial_block_count = 30
@@ -380,7 +380,7 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
     async with DBConnection(db_version) as db_wrapper:
         num_blocks = 20
@@ -410,7 +410,7 @@ async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -
         b.shut_down()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_states(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         crs = [
@@ -493,7 +493,7 @@ async def test_get_coin_states(db_version: int) -> None:
         assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(0), max_items=10000)) == 600
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_unsupported_version() -> None:
     with pytest.raises(RuntimeError, match="CoinStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:

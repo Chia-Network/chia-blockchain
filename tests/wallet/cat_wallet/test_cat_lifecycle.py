@@ -93,7 +93,7 @@ async def do_spend(
 
 class TestCATLifecycle:
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cat_mod(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             tail = Program.to([])
@@ -263,7 +263,7 @@ class TestCATLifecycle:
             )
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_complex_spend(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             tail = Program.to([])
@@ -358,7 +358,7 @@ class TestCATLifecycle:
             )
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_genesis_by_id(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
@@ -400,7 +400,7 @@ class TestCATLifecycle:
             )
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_genesis_by_puzhash(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
@@ -442,7 +442,7 @@ class TestCATLifecycle:
             )
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_everything_with_signature(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
@@ -554,7 +554,7 @@ class TestCATLifecycle:
             )
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_delegated_tail(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)

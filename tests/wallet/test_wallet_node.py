@@ -33,7 +33,7 @@ from tests.conftest import ConsensusMode
 from tests.util.misc import CoinGenerator
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_private_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
@@ -48,7 +48,7 @@ async def test_get_private_key(root_path_populated_with_config: Path, get_temp_k
     assert key.get_g1().get_fingerprint() == fingerprint
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_private_key_default_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
@@ -68,7 +68,7 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
     assert key.get_g1().get_fingerprint() == fingerprint
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
 async def test_get_private_key_missing_key(
     root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: Optional[int]
@@ -84,7 +84,7 @@ async def test_get_private_key_missing_key(
     assert key is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_private_key_missing_key_use_default(
     root_path_populated_with_config: Path, get_temp_keyring: Keychain
 ) -> None:
@@ -328,7 +328,7 @@ def test_timestamp_in_sync(root_path_populated_with_config: Path, testing: bool,
     assert wallet_node.is_timestamp_in_sync(uint64(now - offset)) == expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_timestamp_for_height_from_peer(
     simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -383,7 +383,7 @@ async def test_get_timestamp_for_height_from_peer(
     assert f"get_timestamp_for_height_from_peer use cached block for height {1}" in caplog.text
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: SimulatorsAndWallets) -> None:
     _, [(node, _)], bt = simulator_and_wallet
     puzzle_hashes = await node.get_puzzle_hashes_to_subscribe()
@@ -392,7 +392,7 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: Simulators
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_balance(
     simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
 ) -> None:
@@ -470,7 +470,7 @@ async def test_get_balance(
     assert await wallet_node.get_balance(wallet_id) == expected_more_balance
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_add_states_from_peer_reorg_failure(
     simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -488,7 +488,7 @@ async def test_add_states_from_peer_reorg_failure(
         assert "Processing reorged states failed" in caplog.text
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_add_states_from_peer_untrusted_shutdown(
     simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -507,7 +507,7 @@ async def test_add_states_from_peer_untrusted_shutdown(
 
 
 @pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_transaction_send_cache(
     self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, monkeypatch: pytest.MonkeyPatch
 ) -> None:

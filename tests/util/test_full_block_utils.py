@@ -243,7 +243,7 @@ def get_full_blocks() -> Iterator[FullBlock]:
                                         )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.skip("This test is expensive and has already convinced us the parser works")
 async def test_parser():
     # loop over every combination of Optionals being set and not set
@@ -262,7 +262,7 @@ async def test_parser():
         # assert gen == FullBlock.from_bytes(block_bytes).transactions_generator
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.skip("This test is expensive and has already convinced us the parser works")
 async def test_header_block():
     for block in get_full_blocks():

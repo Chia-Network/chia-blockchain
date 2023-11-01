@@ -53,7 +53,7 @@ def large_block_generator(size):
         return blob
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_basics(softfork_height, bt):
     wallet_tool = bt.get_pool_wallet_tool()
     ph = wallet_tool.get_new_puzzlehash()
@@ -111,7 +111,7 @@ async def test_basics(softfork_height, bt):
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mempool_mode(softfork_height, bt):
     wallet_tool = bt.get_pool_wallet_tool()
     ph = wallet_tool.get_new_puzzlehash()
@@ -173,7 +173,7 @@ async def test_mempool_mode(softfork_height, bt):
     assert spend_info.puzzle.to_program() == puzzle
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_clvm_mempool_mode(softfork_height):
     block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR.program))
     disassembly = binutils.disassemble(block)
@@ -201,7 +201,7 @@ async def test_clvm_mempool_mode(softfork_height):
     assert npc_result.error is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_tx_generator_speed(softfork_height, benchmark_runner: BenchmarkRunner):
     LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
     generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
@@ -222,7 +222,7 @@ async def test_tx_generator_speed(softfork_height, benchmark_runner: BenchmarkRu
     assert len(npc_result.conds.spends) == LARGE_BLOCK_COIN_CONSUMED_COUNT
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_clvm_max_cost(softfork_height):
     block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR.program))
     disassembly = binutils.disassemble(block)
@@ -254,7 +254,7 @@ async def test_clvm_max_cost(softfork_height):
     assert npc_result.cost > 10000000
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_standard_tx(benchmark_runner: BenchmarkRunner):
     # this isn't a real public key, but we don't care
     public_key = bytes.fromhex(
@@ -278,7 +278,7 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner):
             total_cost += cost
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: BenchmarkRunner):
     from clvm.casts import int_from_bytes
 
