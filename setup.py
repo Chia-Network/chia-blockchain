@@ -23,11 +23,11 @@ dependencies = [
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
-    "cryptography==41.0.4",  # Python cryptography library for TLS - keyring conflict
+    "cryptography==41.0.5",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.13.1",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0.1",  # Used for config file format
-    "setproctitle==1.3.2",  # Gives the chia processes readable names
+    "setproctitle==1.3.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
     "dnspython==2.4.2",  # Query DNS seeds
@@ -35,7 +35,7 @@ dependencies = [
     "dnslib==0.9.23",  # dns lib
     "typing-extensions==4.8.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
-    "packaging==23.1",
+    "packaging==23.2",
     "psutil==5.9.4",
 ]
 
@@ -51,7 +51,6 @@ dev_dependencies = [
     "py3createtorrent==1.1.0",
     "pylint==3.0.2",
     "pytest==7.4.3",
-    "pytest-asyncio==0.21.1",
     "pytest-cov==4.1.0",
     "pytest-mock==3.12.0",
     "pytest-xdist==3.3.1",

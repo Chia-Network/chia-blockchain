@@ -8,7 +8,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.util.ws_message import create_payload
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_multiple_register_same(get_daemon: WebSocketServer, bt: BlockTools) -> None:
     ws_server = get_daemon
     config = bt.config
@@ -35,7 +35,7 @@ async def test_multiple_register_same(get_daemon: WebSocketServer, bt: BlockTool
             assert len(connections) == 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_multiple_register_different(get_daemon: WebSocketServer, bt: BlockTools) -> None:
     ws_server = get_daemon
     config = bt.config
@@ -71,7 +71,7 @@ async def test_multiple_register_different(get_daemon: WebSocketServer, bt: Bloc
             assert connections == set()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_remove_connection(get_daemon: WebSocketServer, bt: BlockTools) -> None:
     ws_server = get_daemon
     config = bt.config

@@ -23,7 +23,7 @@ async def cat_name_resolver(asset_id: bytes32) -> Optional[Tuple[Optional[uint32
     return TEST_ASSET_ID_NAME_MAPPING.get(asset_id)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_print_offer_summary_xch(capsys: Any) -> None:
     summary_dict = {"xch": 1_000_000_000_000}
 
@@ -34,7 +34,7 @@ async def test_print_offer_summary_xch(capsys: Any) -> None:
     assert "XCH (Wallet ID: 1): 1.0 (1000000000000 mojos)" in captured.out
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_print_offer_summary_cat(capsys: Any) -> None:
     summary_dict = {
         TEST_DUCKSAUCE_ASSET_ID: 1_000,
@@ -47,7 +47,7 @@ async def test_print_offer_summary_cat(capsys: Any) -> None:
     assert "DuckSauce (Wallet ID: 2): 1.0 (1000 mojos)" in captured.out
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_print_offer_summary_multiple_cats(capsys: Any) -> None:
     summary_dict = {
         TEST_DUCKSAUCE_ASSET_ID: 1_000,
@@ -62,7 +62,7 @@ async def test_print_offer_summary_multiple_cats(capsys: Any) -> None:
     assert "CrunchBerries (Wallet ID: 3): 2.0 (2000 mojos)" in captured.out
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_print_offer_summary_xch_and_cats(capsys: Any) -> None:
     summary_dict = {
         "xch": 2_500_000_000_000,
@@ -81,7 +81,7 @@ async def test_print_offer_summary_xch_and_cats(capsys: Any) -> None:
     assert "UnicornTears (Wallet ID: 4): 3.333 (3333 mojos)" in captured.out
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_print_offer_summary_xch_and_cats_with_zero_values(capsys: Any) -> None:
     summary_dict = {
         "xch": 0,
@@ -100,7 +100,7 @@ async def test_print_offer_summary_xch_and_cats_with_zero_values(capsys: Any) ->
     assert "UnicornTears (Wallet ID: 4): 0.0 (0 mojos)" in captured.out
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_print_offer_summary_cat_with_fee_and_change(capsys: Any) -> None:
     summary_dict = {
         TEST_DUCKSAUCE_ASSET_ID: 1_000,
@@ -115,7 +115,7 @@ async def test_print_offer_summary_cat_with_fee_and_change(capsys: Any) -> None:
     assert "Unknown: 3456 mojos  [Typically represents change returned from the included fee]" in captured.out
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_print_offer_summary_xch_with_one_mojo(capsys: Any) -> None:
     summary_dict = {"xch": 1}
 

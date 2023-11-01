@@ -548,7 +548,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
         ),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_new_proof_of_space_for_pool_stats(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
     case: NewProofOfSpaceCase,
@@ -850,7 +850,7 @@ class PoolStateCase:
         ),
     ),
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_pool_response(
     mocker: MockerFixture,
     farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools],

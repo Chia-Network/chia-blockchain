@@ -15,7 +15,6 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
 
 import anyio
 import pytest
-import pytest_asyncio
 
 from chia.cmds.data_funcs import clear_pending_roots, wallet_log_in_cmd
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -105,7 +104,7 @@ async def init_data_layer(
         yield data_layer_service._api.data_layer
 
 
-@pytest_asyncio.fixture(name="bare_data_layer_api")
+@pytest.fixture(name="bare_data_layer_api")
 async def bare_data_layer_api_fixture(tmp_path: Path, bt: BlockTools) -> AsyncIterator[DataLayerRpcApi]:
     # we won't use this port, this fixture is for _just_ a data layer rpc
     port = uint16(1)
@@ -211,7 +210,7 @@ def create_mnemonic(seed: bytes = b"ab") -> str:
     return bytes_to_mnemonic(mnemonic_bytes=bytes(random_.randrange(256) for _ in range(32)))
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_create_insert_get(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -261,7 +260,7 @@ async def test_create_insert_get(
             await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_upsert(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -291,7 +290,7 @@ async def test_upsert(
         assert hexstr_to_bytes(res["value"]) == value
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_create_double_insert(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -328,7 +327,7 @@ async def test_create_double_insert(
             await data_rpc_api.get_value({"id": store_id.hex(), "key": key1.hex()})
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_keys_values_ancestors(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -399,7 +398,7 @@ async def test_keys_values_ancestors(
         assert len(pairs_after["keys_values"]) == len(keys_after["keys"]) == 7
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_roots(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -452,7 +451,7 @@ async def test_get_roots(
         assert roots["root_hashes"][1]["timestamp"] > 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_root_history(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -506,7 +505,7 @@ async def test_get_root_history(
         assert history2["root_history"][2]["timestamp"] > history2["root_history"][1]["timestamp"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_kv_diff(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -573,7 +572,7 @@ async def test_get_kv_diff(
         assert diff1 in diff_res["diff"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_batch_update_matches_single_operations(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -645,7 +644,7 @@ async def test_batch_update_matches_single_operations(
         assert batch_hash == expected_res_hash
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_owned_stores(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -685,7 +684,7 @@ async def test_get_owned_stores(
         assert store_ids == sorted(expected_store_ids)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_subscriptions(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -732,7 +731,7 @@ class OfferSetup:
     full_node_api: FullNodeSimulator
 
 
-@pytest_asyncio.fixture(name="offer_setup")
+@pytest.fixture(name="offer_setup")
 async def offer_setup_fixture(
     self_hostname: str,
     two_wallet_nodes_services: SimulatorsAndWalletsServices,
@@ -1478,7 +1477,7 @@ make_one_take_one_unpopulated_reference = MakeAndTakeReference(
         pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTakeReference) -> None:
     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
 
@@ -1565,7 +1564,7 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     ],
 )
 @pytest.mark.parametrize(argnames="maker_or_taker", argvalues=["maker", "taker"])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_make_and_then_take_offer_invalid_inclusion_key(
     reference: MakeAndTakeReference,
     maker_or_taker: str,
@@ -1590,7 +1589,7 @@ async def test_make_and_then_take_offer_invalid_inclusion_key(
         )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_verify_offer_rpc_valid(bare_data_layer_api: DataLayerRpcApi) -> None:
     reference = make_one_take_one_reference
 
@@ -1608,7 +1607,7 @@ async def test_verify_offer_rpc_valid(bare_data_layer_api: DataLayerRpcApi) -> N
     }
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) -> None:
     reference = make_one_take_one_reference
     broken_taker_offer = copy.deepcopy(reference.make_offer_response)
@@ -1628,7 +1627,7 @@ async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) ->
     }
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None:
     # TODO: only needs the maker and db?  wallet?
     reference = make_one_take_one_reference
@@ -1670,7 +1669,7 @@ async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None
         pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAndTakeReference) -> None:
     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
 
@@ -1746,7 +1745,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
         pytest.param(False, id="insecure"),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_make_and_cancel_offer_then_update(
     offer_setup: OfferSetup, reference: MakeAndTakeReference, secure: bool
 ) -> None:
@@ -1835,7 +1834,7 @@ async def test_make_and_cancel_offer_then_update(
         pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
     offer_setup: OfferSetup,
     reference: MakeAndTakeReference,
@@ -1877,7 +1876,7 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
 
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_sync_status(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -1934,7 +1933,7 @@ async def test_get_sync_status(
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_clear_pending_roots(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
@@ -2031,7 +2030,7 @@ async def test_clear_pending_roots(
 
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_issue_15955_deadlock(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -2087,7 +2086,7 @@ async def test_issue_15955_deadlock(
 
 
 @pytest.mark.parametrize(argnames="maximum_full_file_count", argvalues=[1, 5, 100])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_maximum_full_file_count(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
@@ -2140,7 +2139,7 @@ async def test_maximum_full_file_count(
 
 @pytest.mark.parametrize("retain", [True, False])
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_unsubscribe_removes_files(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
@@ -2190,7 +2189,7 @@ async def test_unsubscribe_removes_files(
 
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wallet_log_in_changes_active_fingerprint(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,

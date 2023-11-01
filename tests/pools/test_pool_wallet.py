@@ -50,7 +50,7 @@ class MockPoolWalletInfo:
     current: MockPoolState
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
     """
     Test that PoolWallet can create a new pool config
@@ -115,7 +115,7 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
     assert updated_configs[0].owner_public_key == owner_pubkey
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any) -> None:
     """
     Test that PoolWallet will retain existing payout_instructions when updating the pool config.

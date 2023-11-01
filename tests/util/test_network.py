@@ -11,7 +11,7 @@ from chia.util.network import IPAddress, resolve
 
 
 class TestNetwork:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_resolve4(self):
         # Run these tests forcing IPv4 resolution
         prefer_ipv6 = False
@@ -20,7 +20,7 @@ class TestNetwork:
         assert await resolve("localhost", prefer_ipv6=prefer_ipv6) == IPAddress.create("127.0.0.1")
         assert await resolve("example.net", prefer_ipv6=prefer_ipv6) == IPAddress.create("93.184.216.34")
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.skipif(
         condition=("GITHUB_ACTIONS" in os.environ) and (sys.platform in {"darwin", "win32"}),
         reason="macOS and Windows runners in GitHub Actions do not seem to support IPv6",

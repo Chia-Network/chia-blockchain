@@ -281,7 +281,7 @@ class TestConfig:
             except TimeoutError:
                 pytest.skip("Timed out waiting for reader/writer processes to complete")
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_non_atomic_writes(self, root_path_populated_with_config, default_config_dict):
         """
         Test whether one continuous writer (writing constantly, but not atomically) will interfere with many

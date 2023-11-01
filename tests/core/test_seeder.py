@@ -146,7 +146,7 @@ def assert_standard_results(
 
 
 @pytest.mark.skip(reason="Flaky test with fixes in progress")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_error_conditions(
     seeder_service: DNSServer, use_tcp: bool, target_address: str, request_type: dns.rdatatype.RdataType
@@ -237,7 +237,7 @@ async def test_error_conditions(
 
 
 @pytest.mark.skip(reason="Flaky test with fixes in progress")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_dns_queries(
     seeder_service: DNSServer, use_tcp: bool, target_address: str, request_type: dns.rdatatype.RdataType
@@ -274,7 +274,7 @@ async def test_dns_queries(
 
 
 @pytest.mark.skip(reason="Flaky test with fixes in progress")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_db_processing(
     seeder_service: DNSServer,

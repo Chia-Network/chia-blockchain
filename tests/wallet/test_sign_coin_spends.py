@@ -63,7 +63,7 @@ spend_u: CoinSpend = CoinSpend(
 )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sign_coin_spends() -> None:
     def derive_ph(pk: G1Element) -> bytes32:
         return bytes32([0] * 32)
@@ -145,7 +145,7 @@ async def test_sign_coin_spends() -> None:
     assert signature2 == signature
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wsm_sign_transaction() -> None:
     async with manage_connection("file:temp.db?mode=memory&cache=shared", uri=True, name="writer") as writer_conn:
         async with manage_connection("file:temp.db?mode=memory&cache=shared", uri=True, name="reader") as reader_conn:

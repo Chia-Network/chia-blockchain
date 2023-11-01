@@ -128,7 +128,7 @@ async def mint_cr_cat(
     ],
     indirect=True,
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     full_node_api: FullNodeSimulator = wallet_environments.full_node
     wallet_node_0 = wallet_environments.environments[0].wallet_node
@@ -395,7 +395,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_self_revoke(
     self_hostname: str,
     one_wallet_and_one_simulator_services: Any,
@@ -474,7 +474,7 @@ async def test_self_revoke(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_cat_wallet_conversion(
     self_hostname: str,
     one_wallet_and_one_simulator_services: Any,

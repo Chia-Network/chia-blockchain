@@ -53,7 +53,7 @@ async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], ti
 
 
 @pytest.mark.parametrize(argnames="signal_number", argvalues=sendable_termination_signals)
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaRoot) -> None:
     port = find_available_listen_port()
     with lock_and_load_config(root_path=chia_root.path, filename="config.yaml") as config:
@@ -91,7 +91,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
         # [, "chia.data_layer.data_layer_server", "data_layer"],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_services_terminate(
     signal_number: signal.Signals,
     chia_root: ChiaRoot,

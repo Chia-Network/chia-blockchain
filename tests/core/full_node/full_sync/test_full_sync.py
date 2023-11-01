@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 
 
 class TestFullSync:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_long_sync_from_zero(self, five_nodes, default_400_blocks, bt, self_hostname):
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks = len(default_400_blocks)
@@ -113,7 +113,7 @@ class TestFullSync:
         await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 409)
         await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 409)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_sync_from_fork_point_and_weight_proof(
         self, three_nodes, default_1000_blocks, default_400_blocks, self_hostname
     ):
@@ -186,7 +186,7 @@ class TestFullSync:
         await time_out_assert(180, node_height_exactly, True, full_node_1, 999)
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_batch_sync(self, two_nodes, self_hostname):
         # Must be below "sync_block_behind_threshold" in the config
         num_blocks = 20
@@ -209,7 +209,7 @@ class TestFullSync:
         )
         await time_out_assert(60, node_height_exactly, True, full_node_2, num_blocks - 1)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_backtrack_sync_1(self, two_nodes, self_hostname):
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(1, skip_slots=1)
@@ -226,7 +226,7 @@ class TestFullSync:
         )
         await time_out_assert(60, node_height_exactly, True, full_node_2, 2)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_backtrack_sync_2(self, two_nodes, self_hostname):
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(1, skip_slots=3)
@@ -242,7 +242,7 @@ class TestFullSync:
         )
         await time_out_assert(60, node_height_exactly, True, full_node_2, 8)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_close_height_but_big_reorg(self, three_nodes, bt, self_hostname):
         blocks_a = bt.get_consecutive_blocks(50)
         blocks_b = bt.get_consecutive_blocks(51, seed=b"B")
@@ -280,7 +280,7 @@ class TestFullSync:
         await time_out_assert(80, node_height_exactly, True, full_node_2, 89)
         await time_out_assert(80, node_height_exactly, True, full_node_3, 89)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_sync_bad_peak_while_synced(
         self, three_nodes, default_1000_blocks, default_1500_blocks, self_hostname
     ):
@@ -326,7 +326,7 @@ class TestFullSync:
 
         assert node_height_exactly(full_node_2, 999)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_block_ses_mismatch(self, two_nodes, default_1000_blocks, self_hostname, monkeypatch):
         full_node_1, full_node_2, server_1, server_2, _ = two_nodes
         blocks = default_1000_blocks
@@ -372,7 +372,7 @@ class TestFullSync:
             # assert we failed somewhere between sub epoch 0 to sub epoch 1
             assert node_height_between(full_node_2, summary_heights[0], summary_heights[1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.skip("skipping until we re-enable the capability in chia.protocols.shared_protocol")
     async def test_sync_none_wp_response_backward_comp(self, three_nodes, default_1000_blocks, self_hostname):
         num_blocks_initial = len(default_1000_blocks) - 50
@@ -418,7 +418,7 @@ class TestFullSync:
 
     @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.skip("This feature depends on (now removed) CHIP-13")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_peak_in_cache(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
@@ -445,7 +445,7 @@ class TestFullSync:
 
     @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.skip("This feature depends on (now removed) CHIP-13")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_skip_bad_peak_validation(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
@@ -470,7 +470,7 @@ class TestFullSync:
         with pytest.raises(ValueError, match="Weight proof failed bad peak cache validation"):
             await full_node_1.full_node.request_validate_wp(peak.header_hash, peak.height, peak.weight)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_peak_cache_invalidation(
         self, two_nodes, default_1000_blocks, blockchain_constants, consensus_mode
     ):

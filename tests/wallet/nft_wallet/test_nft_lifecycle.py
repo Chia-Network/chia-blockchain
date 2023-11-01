@@ -26,7 +26,7 @@ ACS = Program.to(1)
 ACS_PH = ACS.get_tree_hash()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio
 @pytest.mark.parametrize("metadata_updater", ["default"])
 async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> None:
     async with sim_and_client() as (sim, sim_client):
@@ -136,7 +136,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
             state_layer_puzzle = create_nft_layer_puzzle_with_curry_params(metadata, METADATA_UPDATER_PUZZLE_HASH, ACS)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio
 async def test_ownership_layer(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         TARGET_OWNER = bytes32([0] * 32)
@@ -244,7 +244,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         ).get_tree_hash()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio
 async def test_default_transfer_program(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         # Now make the ownership coin
