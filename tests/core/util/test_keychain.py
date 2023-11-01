@@ -7,10 +7,9 @@ from dataclasses import replace
 from typing import Callable, List, Optional, Tuple
 
 import pytest
-
-import tests
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
+import tests
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
