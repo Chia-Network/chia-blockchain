@@ -170,10 +170,10 @@ class TestKeychain:
         """
         Tests that the first 4 letters of each mnemonic phrase matches as if it were the full phrase
         """
-        with open("tests/util/bip39_test_vectors_short.json") as f:
-            all_vectors = json.loads(f.read())
+        with pathlib.Path(tests.__file__).joinpath("util", "bip39_test_vectors_short.json") as f:
+            all_vectors = json.load(f)
 
-        with open("tests/util/bip39_test_vectors.json") as f:
+        with pathlib.Path(tests.__file__).joinpath("util", "bip39_test_vectors.json") as f:
             full_vectors = json.loads(f.read())
 
         for idx, vector_list in enumerate(all_vectors["english"]):
