@@ -78,7 +78,7 @@ class StructStream(int):
         return cls.from_bytes(read_bytes)
 
     def stream(self, f: BinaryIO) -> None:
-        f.write(bytes(self))
+        f.write(self.stream_to_bytes())
 
     @classmethod
     def from_bytes(cls: Type[_T_StructStream], blob: bytes) -> _T_StructStream:  # type: ignore[override]
@@ -86,5 +86,9 @@ class StructStream(int):
             raise ValueError(f"{cls.__name__}.from_bytes() requires {cls.SIZE} bytes but got: {len(blob)}")
         return cls(int.from_bytes(blob, "big", signed=cls.SIGNED))
 
-    def __bytes__(self) -> bytes:
+    def stream_to_bytes(self) -> bytes:
         return super().to_bytes(length=self.SIZE, byteorder="big", signed=self.SIGNED)
+
+    # this is meant to avoid mixing up construcing a bytes object of a specific
+    # size (i.e. bytes(int)) vs. serializing the integer to bytes (i.e. bytes(uint32))
+    __bytes__ = None

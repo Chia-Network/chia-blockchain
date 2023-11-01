@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import pickle
-import tempfile
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -14,20 +13,18 @@ from chia.simulator.block_tools import BlockTools
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from tests.util.db_connection import generate_in_memory_db_uri
 
 
-async def create_blockchain(constants: ConsensusConstants, db_version: int) -> Tuple[Blockchain, DBWrapper2, Path]:
-    db_path = Path(tempfile.NamedTemporaryFile().name)
-
-    if db_path.exists():
-        db_path.unlink()
-    wrapper = await DBWrapper2.create(database=db_path, reader_count=1, db_version=db_version)
+async def create_blockchain(constants: ConsensusConstants, db_version: int) -> Tuple[Blockchain, DBWrapper2]:
+    db_uri = generate_in_memory_db_uri()
+    wrapper = await DBWrapper2.create(database=db_uri, uri=True, reader_count=1, db_version=db_version)
 
     coin_store = await CoinStore.create(wrapper)
     store = await BlockStore.create(wrapper)
     bc1 = await Blockchain.create(coin_store, store, constants, Path("."), 2)
     assert bc1.get_peak() is None
-    return bc1, wrapper, db_path
+    return bc1, wrapper
 
 
 def persistent_blocks(

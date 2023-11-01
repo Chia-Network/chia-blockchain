@@ -3556,7 +3556,7 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
 
         if mint_from_did:
-            sb = await nft_wallet.mint_from_did(
+            txs = await nft_wallet.mint_from_did(
                 metadata_list,
                 mint_number_start=mint_number_start,
                 mint_total=mint_total,
@@ -3572,7 +3572,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
         else:
-            sb = await nft_wallet.mint_from_xch(
+            txs = await nft_wallet.mint_from_xch(
                 metadata_list,
                 mint_number_start=mint_number_start,
                 mint_total=mint_total,
@@ -3583,6 +3583,8 @@ class WalletRpcApi:
                 tx_config=tx_config,
                 extra_conditions=extra_conditions,
             )
+        sb = txs[0].spend_bundle
+        assert sb is not None
         nft_id_list = []
         for cs in sb.coin_spends:
             if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:

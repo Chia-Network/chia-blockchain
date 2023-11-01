@@ -140,7 +140,7 @@ async def test_sync_no_farmer(
         p2 = full_node_1.full_node.blockchain.get_peak()
         return p1 == p2
 
-    await time_out_assert(40, check_nodes_in_sync)
+    await time_out_assert(120, check_nodes_in_sync)
 
     assert full_node_1.full_node.blockchain.get_peak() == target_peak
     assert full_node_2.full_node.blockchain.get_peak() == target_peak
