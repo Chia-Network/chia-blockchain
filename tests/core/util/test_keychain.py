@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import pathlib
 import random
 from dataclasses import replace
 from typing import Callable, List, Optional, Tuple
@@ -8,6 +9,7 @@ from typing import Callable, List, Optional, Tuple
 import pytest
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
+import tests
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
@@ -26,6 +28,7 @@ from chia.util.keychain import (
     bytes_from_mnemonic,
     bytes_to_mnemonic,
     generate_mnemonic,
+    mnemonic_from_short_words,
     mnemonic_to_seed,
 )
 
@@ -164,6 +167,23 @@ class TestKeychain:
             assert bytes_from_mnemonic(mnemonic) == entropy_bytes
             assert bytes_to_mnemonic(entropy_bytes) == mnemonic
             assert mnemonic_to_seed(mnemonic) == seed
+
+    def test_bip39_test_vectors_short(self):
+        """
+        Tests that the first 4 letters of each mnemonic phrase matches as if it were the full phrase
+        """
+        test_vectors_path = pathlib.Path(tests.__file__).parent.joinpath("util", "bip39_test_vectors.json")
+        with open(test_vectors_path) as f:
+            all_vectors = json.load(f)
+
+        for idx, [entropy_hex, full_mnemonic, seed, short_mnemonic] in enumerate(all_vectors["english"]):
+            entropy_bytes = bytes.fromhex(entropy_hex)
+            seed = bytes.fromhex(seed)
+
+            assert mnemonic_from_short_words(short_mnemonic) == full_mnemonic
+            assert bytes_from_mnemonic(short_mnemonic) == entropy_bytes
+            assert bytes_to_mnemonic(entropy_bytes) == full_mnemonic
+            assert mnemonic_to_seed(short_mnemonic) == seed
 
     def test_utf8_nfkd(self):
         # Test code from trezor:
