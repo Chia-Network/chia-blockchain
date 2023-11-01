@@ -41,9 +41,8 @@ from chia.data_layer.download_data import (
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
-from tests.util.db_connection import generate_in_memory_db_uri
 from tests.util.misc import BenchmarkRunner, Marks, datacases
 
 log = logging.getLogger(__name__)
