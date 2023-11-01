@@ -173,7 +173,7 @@ class TestKeychain:
         Tests that the first 4 letters of each mnemonic phrase matches as if it were the full phrase
         """
         test_vectors_path = pathlib.Path(tests.__file__).parent.joinpath("util", "bip39_test_vectors.json")
-        with open(test_vectors_path, 'r') as f:
+        with open(test_vectors_path) as f:
             all_vectors = json.load(f)
 
         for idx, [entropy_hex, full_mnemonic, seed, short_mnemonic] in enumerate(all_vectors["english"]):
