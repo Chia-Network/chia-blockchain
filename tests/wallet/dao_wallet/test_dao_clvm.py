@@ -841,7 +841,7 @@ def test_treasury() -> None:
         ]
     )
     conds = treasury_inner.run(solution)
-    assert len(conds.as_python()) == 9 + len(conditions)
+    assert len(conds.as_python()) == 10 + len(conditions)
 
 
 def test_lockup() -> None:
