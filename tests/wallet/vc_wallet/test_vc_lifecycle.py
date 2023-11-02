@@ -539,6 +539,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             Program.to([[51, ACS_2_PH, vc.coin.amount], vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)]),
             new_proof_hash=NEW_PROOF_HASH,
         )
+        assert expected_announcement is not None
         for use_did, correct_did in ((False, None), (True, False), (True, True)):
             result = await client.push_tx(
                 cost_logger.add_cost(
@@ -559,7 +560,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                                             Program.to(
                                                 [
                                                     [51, ACS_PH, did.amount if correct_did else other_did.amount],
-                                                    [62, expected_announcement],
+                                                    expected_announcement.to_program(),
                                                 ]
                                             ),
                                         ),
@@ -723,7 +724,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                             if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
                             else malicious_cr_2.expected_announcement(),
                         ],
-                        *([61, a.name()] for a in expected_announcements),
+                        *(a.to_program() for a in expected_announcements),
                         vc.standard_magic_condition(),
                     ]
                 ),
@@ -786,7 +787,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                                     if correct_did
                                     else other_lineage_proof,
                                     uint64(new_did.amount),
-                                    Program.to([[51, ACS_PH, new_did.amount], [62, expected_announcement]]),
+                                    Program.to([[51, ACS_PH, new_did.amount], expected_announcement.to_program()]),
                                 ),
                             ),
                             yoink_spend,
