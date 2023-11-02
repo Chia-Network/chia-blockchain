@@ -329,7 +329,6 @@ class DataLayerWallet:
             origin_id=launcher_parent.name(),
             coins=coins,
             primaries=None,
-            ignore_max_send_amount=False,
             extra_conditions=(*extra_conditions, announcement),
         )
         assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
@@ -636,7 +635,6 @@ class DataLayerWallet:
         fee: uint64 = uint64(0),
         coins: Set[Coin] = set(),
         memos: Optional[List[List[bytes]]] = None,  # ignored
-        ignore_max_send_amount: bool = False,  # ignored
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
@@ -747,7 +745,6 @@ class DataLayerWallet:
             fee=fee,
             primaries=[],
             memos=[launcher_id, *(url for url in urls)],
-            ignore_max_send_amount=False,
             extra_conditions=extra_conditions,
         )
         assert create_mirror_tx_record.spend_bundle is not None
