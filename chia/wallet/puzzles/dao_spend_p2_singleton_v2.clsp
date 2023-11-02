@@ -105,22 +105,15 @@
     )
   )
 
-  (defun reverse (lst output)
-    (if lst
-        (reverse (r lst) (c (f lst) output))
-        output
-    )
-  )
-
-  (defun dedupe ((@ lst ((@ first (parent amount)) . rest)) ids output)
+  (defun dedupe ((@ lst ((@ first (parent amount)) . rest)) ids)
     (if lst
         (let ((id (sha256 parent amount)))
           (if (in id ids)
-              (dedupe rest ids output)
-              (dedupe rest (c id ids) (c first output))
+              (dedupe rest ids)
+              (c first (dedupe rest (c id ids)))
           )
         )
-        (reverse output 0)
+        ()
     )
   )
 
