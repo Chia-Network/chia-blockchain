@@ -1226,7 +1226,7 @@ async def do_spend(
     return result
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio
 async def test_singleton_aggregator() -> None:
     async with sim_and_client() as (sim, sim_client):
         aggregator = P2_SINGLETON_AGGREGATOR_MOD

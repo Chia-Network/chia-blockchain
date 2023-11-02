@@ -6,7 +6,7 @@ from chia import __version__
 from chia.daemon.client import connect_to_daemon
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_version_rpc(get_daemon, bt):
     ws_server = get_daemon
     config = bt.config

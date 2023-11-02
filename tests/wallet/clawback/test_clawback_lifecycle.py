@@ -84,7 +84,7 @@ class TestClawbackLifecycle:
             signatures.append(signature)
         return AugSchemeMPL.aggregate(signatures)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.anyio
     async def test_clawback_spends(self, cost_logger: CostLogger) -> None:
         async with sim_and_client() as (sim, sim_client):
             key_lookup = KeyTool()

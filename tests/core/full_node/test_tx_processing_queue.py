@@ -25,7 +25,7 @@ def get_transaction_queue_entry(peer_id: Optional[bytes32], tx_index: int) -> Tr
     return cast(TransactionQueueEntry, FakeTransactionQueueEntry(index=tx_index, peer_id=peer_id))
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_local_txs(seeded_random: random.Random) -> None:
     transaction_queue = TransactionQueue(1000, log)
     # test 1 tx
@@ -50,7 +50,7 @@ async def test_local_txs(seeded_random: random.Random) -> None:
         assert list_txs[i] == resulting_txs[i]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_one_peer_and_await(seeded_random: random.Random) -> None:
     transaction_queue = TransactionQueue(1000, log)
     num_txs = 100
@@ -84,7 +84,7 @@ async def test_one_peer_and_await(seeded_random: random.Random) -> None:
     await asyncio.wait_for(task, 1)  # we should never time out here
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_lots_of_peers(seeded_random: random.Random) -> None:
     transaction_queue = TransactionQueue(1000, log)
     num_peers = 1000
@@ -106,7 +106,7 @@ async def test_lots_of_peers(seeded_random: random.Random) -> None:
         assert list_txs[i] == resulting_txs[i * 1000]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_full_queue(seeded_random: random.Random) -> None:
     transaction_queue = TransactionQueue(1000, log)
     num_peers = 100
@@ -128,7 +128,7 @@ async def test_full_queue(seeded_random: random.Random) -> None:
         resulting_txs.append(await transaction_queue.pop())
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_queue_cleanup_and_fairness(seeded_random: random.Random) -> None:
     transaction_queue = TransactionQueue(1000, log)
     peer_a = bytes32.random(seeded_random)

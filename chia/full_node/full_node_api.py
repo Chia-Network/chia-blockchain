@@ -375,9 +375,9 @@ class FullNodeAPI:
                 blocks_bytes.append(block_bytes)
 
             respond_blocks_manually_streamed: bytes = (
-                bytes(uint32(request.start_height))
-                + bytes(uint32(request.end_height))
-                + len(blocks_bytes).to_bytes(4, "big", signed=False)
+                uint32(request.start_height).stream_to_bytes()
+                + uint32(request.end_height).stream_to_bytes()
+                + uint32(len(blocks_bytes)).stream_to_bytes()
             )
             for block_bytes in blocks_bytes:
                 respond_blocks_manually_streamed += block_bytes
@@ -1375,9 +1375,9 @@ class FullNodeAPI:
         # we start building RespondBlockHeaders response (start_height, end_height)
         # and then need to define size of list object
         respond_header_blocks_manually_streamed: bytes = (
-            bytes(uint32(request.start_height))
-            + bytes(uint32(request.end_height))
-            + len(header_blocks_bytes).to_bytes(4, "big", signed=False)
+            uint32(request.start_height).stream_to_bytes()
+            + uint32(request.end_height).stream_to_bytes()
+            + uint32(len(header_blocks_bytes)).stream_to_bytes()
         )
         # and now stream the whole list in bytes
         respond_header_blocks_manually_streamed += b"".join(header_blocks_bytes)

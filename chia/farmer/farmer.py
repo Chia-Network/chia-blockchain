@@ -529,6 +529,8 @@ class Farmer:
                         "valid_partials_24h": [],
                         "invalid_partials_since_start": 0,
                         "invalid_partials_24h": [],
+                        "insufficient_partials_since_start": 0,
+                        "insufficient_partials_24h": [],
                         "stale_partials_since_start": 0,
                         "stale_partials_24h": [],
                         "missing_partials_since_start": 0,

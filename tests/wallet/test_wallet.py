@@ -42,7 +42,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_coinbase(
         self,
         simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -87,7 +87,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_make_transaction(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -140,7 +140,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_reuse_address(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -193,7 +193,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_clawback_claim_auto(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -301,7 +301,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_clawback_clawback(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -424,7 +424,7 @@ class TestWalletSimulator:
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_clawback_sent_self(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -510,7 +510,7 @@ class TestWalletSimulator:
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_clawback_claim_manual(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -602,7 +602,7 @@ class TestWalletSimulator:
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_clawback_reorg(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -700,7 +700,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_get_clawback_coins(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -760,7 +760,7 @@ class TestWalletSimulator:
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_clawback_resync(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -956,7 +956,7 @@ class TestWalletSimulator:
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_coinbase_reorg(
         self,
         simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -995,7 +995,7 @@ class TestWalletSimulator:
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_send_to_three_peers(
         self,
         three_sim_two_wallets: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -1062,7 +1062,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_make_transaction_hop(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -1140,7 +1140,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_make_transaction_with_fee(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -1204,7 +1204,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_make_transaction_with_memo(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -1276,7 +1276,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_create_hit_max_send_amount(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -1353,7 +1353,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_prevent_fee_theft(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -1440,7 +1440,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_tx_reorg(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -1546,7 +1546,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_address_sliding_window(
         self,
         wallet_node_100_pk: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -1609,7 +1609,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_sign_message(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -1694,7 +1694,7 @@ class TestWalletSimulator:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_transaction_options(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -1800,7 +1800,7 @@ def test_get_wallet_db_path_testnet() -> None:
     assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_testnet_1234567890.sqlite")
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wallet_has_no_server(
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:

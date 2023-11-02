@@ -29,7 +29,7 @@ from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_s
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import (
@@ -1076,7 +1076,7 @@ def _validate_sub_slot_data(
         if (not prev_ssd.is_end_of_slot()) and (not sub_slot_data.cc_slot_end.normalized_to_identity):
             assert prev_ssd.cc_ip_vdf_info
             input = prev_ssd.cc_ip_vdf_info.output
-        if not sub_slot_data.cc_slot_end.is_valid(constants, input, sub_slot_data.cc_slot_end_info):
+        if not validate_vdf(sub_slot_data.cc_slot_end, constants, input, sub_slot_data.cc_slot_end_info):
             log.error(f"failed cc slot end validation  {sub_slot_data.cc_slot_end_info}")
             return False, []
     else:
@@ -1620,7 +1620,7 @@ def _validate_vdf_batch(
         vdf = VDFProof.from_bytes(vdf_proof_bytes)
         class_group = ClassgroupElement.create(class_group_bytes)
         vdf_info = VDFInfo.from_bytes(info)
-        if not vdf.is_valid(constants, class_group, vdf_info):
+        if not validate_vdf(vdf, constants, class_group, vdf_info):
             return False
 
         if shutdown_file_path is not None and not shutdown_file_path.is_file():

@@ -261,7 +261,7 @@ async def setup_simulators_and_wallets_inner(
                     spam_filter_after_n_txs,
                     xch_spam_amount,
                     None,
-                    key_seed=std_hash(uint32(index)) if key_seed is None else key_seed,
+                    key_seed=std_hash(uint32(index).stream_to_bytes()) if key_seed is None else key_seed,
                     initial_num_public_keys=initial_num_public_keys,
                 )
             )

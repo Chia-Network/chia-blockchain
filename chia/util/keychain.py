@@ -87,10 +87,30 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
     return " ".join(mnemonics)
 
 
-def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
+def mnemonic_from_short_words(mnemonic_str: str) -> str:
+    """
+    Since the first 4 letters of each word is unique (or the full word, if less than 4 characters), and its common
+    practice to only store the first 4 letters of each word in many offline storage solutions, also support looking
+    up words by the first 4 characters
+    """
     mnemonic: List[str] = mnemonic_str.split(" ")
     if len(mnemonic) not in [12, 15, 18, 21, 24]:
         raise ValueError("Invalid mnemonic length")
+
+    four_char_dict = {word[:4]: word for word in bip39_word_list().splitlines()}
+    full_words: List[str] = []
+    for word in mnemonic:
+        full_word = four_char_dict.get(word[:4])
+        if full_word is None:
+            raise ValueError(f"{word!r} is not in the mnemonic dictionary; may be misspelled")
+        full_words.append(full_word)
+
+    return " ".join(full_words)
+
+
+def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
+    full_mnemonic_str = mnemonic_from_short_words(mnemonic_str)
+    mnemonic: List[str] = full_mnemonic_str.split(" ")
 
     word_list = {word: i for i, word in enumerate(bip39_word_list().splitlines())}
     bit_array = BitArray()
@@ -123,6 +143,10 @@ def mnemonic_to_seed(mnemonic: str) -> bytes:
     """
     Uses BIP39 standard to derive a seed from entropy bytes.
     """
+    # If there are only ASCII characters (as typically expected in a seed phrase), we can check if its just shortened
+    # 4 letter versions of each word
+    if not any(ord(c) >= 128 for c in mnemonic):
+        mnemonic = mnemonic_from_short_words(mnemonic)
     salt_str: str = "mnemonic"
     salt = unicodedata.normalize("NFKD", salt_str).encode("utf-8")
     mnemonic_normalized = unicodedata.normalize("NFKD", mnemonic).encode("utf-8")

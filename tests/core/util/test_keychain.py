@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import pathlib
 import random
 from dataclasses import replace
 from typing import Callable, List, Optional, Tuple
@@ -8,6 +9,7 @@ from typing import Callable, List, Optional, Tuple
 import pytest
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
+import tests
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
@@ -26,6 +28,7 @@ from chia.util.keychain import (
     bytes_from_mnemonic,
     bytes_to_mnemonic,
     generate_mnemonic,
+    mnemonic_from_short_words,
     mnemonic_to_seed,
 )
 
@@ -165,6 +168,23 @@ class TestKeychain:
             assert bytes_to_mnemonic(entropy_bytes) == mnemonic
             assert mnemonic_to_seed(mnemonic) == seed
 
+    def test_bip39_test_vectors_short(self):
+        """
+        Tests that the first 4 letters of each mnemonic phrase matches as if it were the full phrase
+        """
+        test_vectors_path = pathlib.Path(tests.__file__).parent.joinpath("util", "bip39_test_vectors.json")
+        with open(test_vectors_path) as f:
+            all_vectors = json.load(f)
+
+        for idx, [entropy_hex, full_mnemonic, seed, short_mnemonic] in enumerate(all_vectors["english"]):
+            entropy_bytes = bytes.fromhex(entropy_hex)
+            seed = bytes.fromhex(seed)
+
+            assert mnemonic_from_short_words(short_mnemonic) == full_mnemonic
+            assert bytes_from_mnemonic(short_mnemonic) == entropy_bytes
+            assert bytes_to_mnemonic(entropy_bytes) == full_mnemonic
+            assert mnemonic_to_seed(short_mnemonic) == seed
+
     def test_utf8_nfkd(self):
         # Test code from trezor:
         # Copyright (c) 2013 Pavol Rusnak
@@ -273,7 +293,8 @@ def test_key_data_post_init(
 
 
 @pytest.mark.parametrize("include_secrets", [True, False])
-def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
+@pytest.mark.anyio
+async def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
     keychain: Keychain = get_temp_keyring
     expected_keys = []
     # Add 10 keys and validate the result `get_key` for each of them after each addition
@@ -300,7 +321,8 @@ def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
 
 
 @pytest.mark.parametrize("include_secrets", [True, False])
-def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
+@pytest.mark.anyio
+async def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
     keychain: Keychain = get_temp_keyring
     # Should be empty on start
     assert keychain.get_keys(include_secrets) == []
@@ -323,7 +345,8 @@ def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
     assert keychain.get_keys(include_secrets) == []
 
 
-def test_set_label(get_temp_keyring: Keychain) -> None:
+@pytest.mark.anyio
+async def test_set_label(get_temp_keyring: Keychain) -> None:
     keychain: Keychain = get_temp_keyring
     # Generate a key and add it without label
     key_data_0 = KeyData.generate(label=None)
@@ -365,7 +388,8 @@ def test_set_label(get_temp_keyring: Keychain) -> None:
         ("a" * 70, "label exceeds max length: 70/65"),
     ],
 )
-def test_set_label_invalid_labels(label: str, message: str, get_temp_keyring: Keychain) -> None:
+@pytest.mark.anyio
+async def test_set_label_invalid_labels(label: str, message: str, get_temp_keyring: Keychain) -> None:
     keychain: Keychain = get_temp_keyring
     key_data = KeyData.generate()
     keychain.add_private_key(key_data.mnemonic_str())
@@ -374,7 +398,8 @@ def test_set_label_invalid_labels(label: str, message: str, get_temp_keyring: Ke
     assert e.value.label == label
 
 
-def test_delete_label(get_temp_keyring: Keychain) -> None:
+@pytest.mark.anyio
+async def test_delete_label(get_temp_keyring: Keychain) -> None:
     keychain: Keychain = get_temp_keyring
     # Generate two keys and add them to the keychain
     key_data_0 = KeyData.generate(label="key_0")
@@ -413,7 +438,8 @@ def test_delete_label(get_temp_keyring: Keychain) -> None:
 
 
 @pytest.mark.parametrize("delete_all", [True, False])
-def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool) -> None:
+@pytest.mark.anyio
+async def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool) -> None:
     keychain: Keychain = get_temp_keyring
     # Generate some keys and add them to the keychain
     labels = [f"key_{i}" for i in range(5)]

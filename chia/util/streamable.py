@@ -648,6 +648,11 @@ class Streamable:
         assert f.read() == b""
         return parsed
 
+    def stream_to_bytes(self) -> bytes:
+        f = io.BytesIO()
+        self.stream(f)
+        return bytes(f.getvalue())
+
     def __bytes__(self: Any) -> bytes:
         f = io.BytesIO()
         self.stream(f)

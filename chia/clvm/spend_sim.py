@@ -115,8 +115,8 @@ class SimBlockRecord(Streamable):
             uint32(height - 1 if height > 0 else 0),
             timestamp,
             True,
-            std_hash(bytes(height)),
-            std_hash(std_hash(height)),
+            std_hash(height.stream_to_bytes()),
+            std_hash(std_hash(height.stream_to_bytes())),
         )
 
 
