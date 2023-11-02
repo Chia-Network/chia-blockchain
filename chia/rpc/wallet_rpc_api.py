@@ -22,7 +22,6 @@ from chia.rpc.util import tx_endpoint
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -34,6 +33,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
+from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.misc import UInt32Range
@@ -45,7 +45,13 @@ from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    AssertPuzzleAnnouncement,
+    Condition,
+    CreateCoinAnnouncement,
+    CreatePuzzleAnnouncement,
+)
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_utils import (
     generate_mint_proposal_innerpuz,
@@ -2212,15 +2218,14 @@ class WalletRpcApi:
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        coin_announcements: Set[bytes] = set([])
-        for ca in request.get("coin_announcements", []):
-            coin_announcements.add(bytes.fromhex(ca))
-        puzzle_announcements: Set[bytes] = set([])
-        for pa in request.get("puzzle_announcements", []):
-            puzzle_announcements.add(bytes.fromhex(pa))
 
         tx = await wallet.create_message_spend(
-            tx_config, coin_announcements, puzzle_announcements, extra_conditions=extra_conditions
+            tx_config,
+            extra_conditions=(
+                *extra_conditions,
+                *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in request.get("coin_announcements", [])),
+                *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in request.get("puzzle_announcements", [])),
+            ),
         )
         if push:
             await self.service.wallet_state_manager.add_pending_transaction(tx)
@@ -3908,40 +3913,6 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
-        coin_announcements: Optional[Set[Announcement]] = None
-        if (
-            "coin_announcements" in request
-            and request["coin_announcements"] is not None
-            and len(request["coin_announcements"]) > 0
-        ):
-            coin_announcements = {
-                Announcement(
-                    bytes32.from_hexstr(announcement["coin_id"]),
-                    hexstr_to_bytes(announcement["message"]),
-                    hexstr_to_bytes(announcement["morph_bytes"])
-                    if "morph_bytes" in announcement and len(announcement["morph_bytes"]) > 0
-                    else None,
-                )
-                for announcement in request["coin_announcements"]
-            }
-
-        puzzle_announcements: Optional[Set[Announcement]] = None
-        if (
-            "puzzle_announcements" in request
-            and request["puzzle_announcements"] is not None
-            and len(request["puzzle_announcements"]) > 0
-        ):
-            puzzle_announcements = {
-                Announcement(
-                    bytes32.from_hexstr(announcement["puzzle_hash"]),
-                    hexstr_to_bytes(announcement["message"]),
-                    hexstr_to_bytes(announcement["morph_bytes"])
-                    if "morph_bytes" in announcement and len(announcement["morph_bytes"]) > 0
-                    else None,
-                )
-                for announcement in request["puzzle_announcements"]
-            }
-
         async def _generate_signed_transaction() -> EndpointResult:
             if isinstance(wallet, Wallet):
                 [tx] = await wallet.generate_signed_transaction(
@@ -3950,12 +3921,29 @@ class WalletRpcApi:
                     tx_config,
                     fee,
                     coins=coins,
-                    ignore_max_send_amount=True,
                     primaries=additional_outputs,
                     memos=memos_0,
-                    coin_announcements_to_consume=coin_announcements,
-                    puzzle_announcements_to_consume=puzzle_announcements,
-                    extra_conditions=extra_conditions,
+                    extra_conditions=(
+                        *extra_conditions,
+                        *(
+                            AssertCoinAnnouncement(
+                                asserted_id=bytes32.from_hexstr(ca["coin_id"]),
+                                asserted_msg=hexstr_to_bytes(ca["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"])),
+                            )
+                            for ca in request.get("coin_announcements", [])
+                        ),
+                        *(
+                            AssertPuzzleAnnouncement(
+                                asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
+                                asserted_msg=hexstr_to_bytes(pa["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"])),
+                            )
+                            for pa in request.get("puzzle_announcements", [])
+                        ),
+                    ),
                 )
                 signed_tx = tx.to_json_dict_convenience(self.service.config)
                 if push:
@@ -3972,11 +3960,28 @@ class WalletRpcApi:
                     tx_config,
                     fee,
                     coins=coins,
-                    ignore_max_send_amount=True,
                     memos=[memos_0] + [output.memos for output in additional_outputs],
-                    coin_announcements_to_consume=coin_announcements,
-                    puzzle_announcements_to_consume=puzzle_announcements,
-                    extra_conditions=extra_conditions,
+                    extra_conditions=(
+                        *extra_conditions,
+                        *(
+                            AssertCoinAnnouncement(
+                                asserted_id=bytes32.from_hexstr(ca["coin_id"]),
+                                asserted_msg=hexstr_to_bytes(ca["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"])),
+                            )
+                            for ca in request.get("coin_announcements", [])
+                        ),
+                        *(
+                            AssertPuzzleAnnouncement(
+                                asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
+                                asserted_msg=hexstr_to_bytes(pa["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"])),
+                            )
+                            for pa in request.get("puzzle_announcements", [])
+                        ),
+                    ),
                 )
                 signed_txs = [tx.to_json_dict_convenience(self.service.config) for tx in txs]
                 if push:
