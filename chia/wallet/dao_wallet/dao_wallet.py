@@ -128,7 +128,7 @@ class DAOWallet:
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
-    ) -> Tuple[DAOWallet, TransactionRecord]:
+    ) -> Tuple[DAOWallet, List[TransactionRecord]]:
         # TODO: auauaghhhhh not a tuple
         """
         Create a brand new DAO wallet
@@ -178,7 +178,7 @@ class DAOWallet:
         std_wallet_id = self.standard_wallet.wallet_id
 
         try:
-            transaction_record = await self.generate_new_dao(
+            transaction_records = await self.generate_new_dao(
                 amount_of_cats,
                 tx_config,
                 fee=fee,
@@ -203,7 +203,7 @@ class DAOWallet:
         )
         await self.save_info(dao_info)
 
-        return self, transaction_record
+        return self, transaction_records
 
     @staticmethod
     async def create_new_dao_wallet_for_existing_dao(
@@ -613,7 +613,7 @@ class DAOWallet:
         fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         """
         Create a new DAO treasury using the dao_rules object. This does the first spend to create the launcher
         and eve coins.
@@ -621,6 +621,8 @@ class DAOWallet:
         by dao_rules.oracle_spend_delay has passed.
         This must be called under the wallet state manager lock
         """
+
+        transaction_records: List[TransactionRecord] = []
 
         if amount_of_cats_to_create is not None and amount_of_cats_to_create < 0:  # pragma: no cover
             raise ValueError("amount_of_cats must be >= 0, or None")
@@ -690,7 +692,7 @@ class DAOWallet:
                 "treasury_id": launcher_coin.name(),
                 "coins": different_coins,
             }
-            new_cat_wallet = await CATWallet.create_new_cat_wallet(
+            new_cat_wallet, cat_wallet_transaction_record = await CATWallet.create_new_cat_wallet(
                 self.wallet_state_manager,
                 self.standard_wallet,
                 cat_tail_info,
@@ -699,6 +701,7 @@ class DAOWallet:
                 fee=fee_for_cat,
             )
             assert new_cat_wallet is not None
+            transaction_records.append(cat_wallet_transaction_record)
         else:  # pragma: no cover
             for wallet in self.wallet_state_manager.wallets:
                 if self.wallet_state_manager.wallets[wallet].type() == WalletType.CAT:
@@ -802,6 +805,7 @@ class DAOWallet:
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
         await self.wallet_state_manager.add_pending_transaction(regular_record)
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
+        transaction_records.append(treasury_record)
 
         funding_inner_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
         await self.wallet_state_manager.add_interested_puzzle_hashes([funding_inner_puzhash], [self.id()])
@@ -809,7 +813,8 @@ class DAOWallet:
         await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()], [self.wallet_id])
 
         await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
-        return treasury_record
+        # TODO: any more transaction records needed?
+        return transaction_records
 
     async def generate_treasury_eve_spend(
         self, inner_puz: Program, eve_coin: Coin, fee: uint64 = uint64(0)

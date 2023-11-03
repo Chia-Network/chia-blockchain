@@ -592,7 +592,8 @@ async def test_nft_offer_sell_nft_for_cat(
     cats_to_trade = uint64(10000)
     async with wallet_node_maker.wallet_state_manager.lock:
         full_node_api.full_node.log.warning(f"Mempool size: {full_node_api.full_node.mempool_manager.mempool.size()}")
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        # TODO: use the transaction record
+        cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -770,7 +771,8 @@ async def test_nft_offer_request_nft_for_cat(
     cats_to_mint = 100000
     cats_to_trade = uint64(20000)
     async with wallet_node_maker.wallet_state_manager.lock:
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        # TODO: use the transaction record
+        cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -1147,11 +1149,13 @@ async def test_complex_nft_offer(
 
     CAT_AMOUNT = uint64(100000000)
     async with wsm_maker.lock:
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        # TODO: use the transaction record
+        cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
             wsm_maker, wallet_maker, {"identifier": "genesis_by_id"}, CAT_AMOUNT, DEFAULT_TX_CONFIG
         )
     async with wsm_maker.lock:
-        cat_wallet_taker: CATWallet = await CATWallet.create_new_cat_wallet(
+        # TODO: use the transaction record
+        cat_wallet_taker, _ = await CATWallet.create_new_cat_wallet(
             wsm_taker, wallet_taker, {"identifier": "genesis_by_id"}, CAT_AMOUNT, DEFAULT_TX_CONFIG
         )
     cat_spend_bundle_maker = (
