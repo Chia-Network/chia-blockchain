@@ -128,7 +128,8 @@ class DAOWallet:
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
-    ) -> DAOWallet:
+    ) -> Tuple[DAOWallet, TransactionRecord]:
+        # TODO: auauaghhhhh not a tuple
         """
         Create a brand new DAO wallet
         This must be called under the wallet state manager lock
@@ -177,7 +178,7 @@ class DAOWallet:
         std_wallet_id = self.standard_wallet.wallet_id
 
         try:
-            await self.generate_new_dao(
+            transaction_record = await self.generate_new_dao(
                 amount_of_cats,
                 tx_config,
                 fee=fee,
@@ -202,7 +203,7 @@ class DAOWallet:
         )
         await self.save_info(dao_info)
 
-        return self
+        return self, transaction_record
 
     @staticmethod
     async def create_new_dao_wallet_for_existing_dao(
@@ -612,7 +613,7 @@ class DAOWallet:
         fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Optional[SpendBundle]:
+    ) -> TransactionRecord:
         """
         Create a new DAO treasury using the dao_rules object. This does the first spend to create the launcher
         and eve coins.
@@ -643,7 +644,8 @@ class DAOWallet:
             coins = await self.standard_wallet.select_coins(uint64(fee + 1), tx_config.coin_selection_config)
 
         if coins is None:  # pragma: no cover
-            return None
+            # TODO: review for raising a real exception
+            raise Exception("")
         # origin is normal coin which creates launcher coin
         origin = coins.copy().pop()
 
@@ -756,7 +758,8 @@ class DAOWallet:
         await self.add_parent(launcher_coin.name(), launcher_proof)
 
         if tx_record is None or tx_record.spend_bundle is None:  # pragma: no cover
-            return None
+            # TODO: review for raising a real exception
+            raise Exception("")
 
         eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
         dao_info = DAOInfo(
@@ -806,7 +809,7 @@ class DAOWallet:
         await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()], [self.wallet_id])
 
         await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
-        return full_spend
+        return treasury_record
 
     async def generate_treasury_eve_spend(
         self, inner_puz: Program, eve_coin: Coin, fee: uint64 = uint64(0)
