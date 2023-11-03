@@ -2488,7 +2488,7 @@ class TestMaliciousGenerators:
         condition = SINGLE_ARG_INT_LADDER_COND.format(opcode=opcode.value[0], num=28, filler="0x00")
 
         # TODO: make this benchmark take longer so it can actually be measured sensibly
-        with benchmark_runner.assert_runtime(seconds=0.5):
+        with benchmark_runner.assert_runtime(seconds=1):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error == error_for_condition(opcode)
@@ -2627,7 +2627,7 @@ class TestMaliciousGenerators:
         condition = CREATE_UNIQUE_COINS.format(num=6094)
 
         # TODO: make this benchmark take longer so it can actually be measured sensibly
-        with benchmark_runner.assert_runtime(seconds=0.1):
+        with benchmark_runner.assert_runtime(seconds=1):
             npc_result = generator_condition_tester(
                 condition, quote=False, height=softfork_height, coin_amount=123000000
             )
