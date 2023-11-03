@@ -669,7 +669,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def wait_for_wallet_synced(
         self,
         wallet_node: WalletNode,
-        timeout: Optional[float] = 5,
+        timeout: Optional[float] = 10,
     ) -> None:
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff_time in backoff_times():
@@ -683,7 +683,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def wait_for_wallets_synced(
         self,
         wallet_nodes: List[WalletNode],
-        timeout: Optional[float] = 5,
+        timeout: Optional[float] = 10,
     ) -> None:
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff_time in backoff_times():
