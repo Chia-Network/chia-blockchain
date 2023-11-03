@@ -87,7 +87,7 @@ async def add_dummy_connection_wsc(
         30,
         local_capabilities_for_handshake=capabilities,
     )
-    await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, type)
+    await wsc.perform_handshake(server._network_id, protocol_version[type], dummy_port, type)
     if wsc.incoming_message_task is not None:
         wsc.incoming_message_task.cancel()
     return wsc, peer_id

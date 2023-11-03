@@ -13,7 +13,7 @@ from chia.protocols.full_node_protocol import RejectBlock, RequestBlock, Request
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Error, protocol_version
 from chia.protocols.wallet_protocol import RejectHeaderRequest
-from chia.server.outbound_message import make_msg
+from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection, error_response_version
 from chia.simulator.block_tools import BlockTools
@@ -78,7 +78,7 @@ async def test_connection_versions(
     outgoing_connection = wallet_node.server.all_connections[full_node.server.node_id]
     incoming_connection = full_node.server.all_connections[wallet_node.server.node_id]
     for connection in [outgoing_connection, incoming_connection]:
-        assert connection.protocol_version == Version(protocol_version)
+        assert connection.protocol_version == Version(protocol_version[NodeType.FULL_NODE])
         assert connection.version == chia_full_version_str()
         assert connection.get_version() == chia_full_version_str()
 
