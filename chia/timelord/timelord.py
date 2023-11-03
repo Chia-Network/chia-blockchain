@@ -11,7 +11,7 @@ import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from chiavdf import create_discriminant, prove
 
@@ -36,7 +36,7 @@ from chia.types.blockchain_format.slots import (
     SubSlotProofs,
 )
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.config import process_config_start_method
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
@@ -69,6 +69,11 @@ def prove_bluebox_slow(payload: bytes) -> bytes:
 
 
 class Timelord:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Timelord", None)
+
     @property
     def server(self) -> ChiaServer:
         # This is a stop gap until the class usage is refactored such the values of
@@ -1051,7 +1056,7 @@ class Timelord:
                     self.bluebox_mode,
                 )
 
-                if not vdf_proof.is_valid(self.constants, initial_form, vdf_info):
+                if not validate_vdf(vdf_proof, self.constants, initial_form, vdf_info):
                     log.error("Invalid proof of time!")
                 if not self.bluebox_mode:
                     async with self.lock:
@@ -1186,7 +1191,7 @@ class Timelord:
                         return
                     vdf_proof = VDFProof(uint8(0), proof_part, True)
                     initial_form = ClassgroupElement.get_default_element()
-                    if not vdf_proof.is_valid(self.constants, initial_form, picked_info.new_proof_of_time):
+                    if not validate_vdf(vdf_proof, self.constants, initial_form, picked_info.new_proof_of_time):
                         log.error("Invalid compact proof of time!")
                         return
                     response = timelord_protocol.RespondCompactProofOfTime(

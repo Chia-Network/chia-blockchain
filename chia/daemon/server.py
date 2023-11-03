@@ -39,6 +39,7 @@ from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.log_exceptions import log_exceptions
 from chia.util.misc import SignalHandlers
 from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
@@ -177,8 +178,8 @@ class WebSocketServer:
 
         # Note: the minimum_version has been already set to TLSv1_2
         # in ssl_context_for_server()
-        # Daemon is internal connections, so override to TLSv1_3 only
-        if ssl.HAS_TLSv1_3:
+        # Daemon is internal connections, so override to TLSv1_3 only unless specified in the config
+        if ssl.HAS_TLSv1_3 and not self.net_config.get("daemon_allow_tls_1_2", False):
             try:
                 self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
             except ValueError:
@@ -341,26 +342,39 @@ class WebSocketServer:
         return service_names
 
     async def ping_task(self) -> None:
-        restart = True
-        await asyncio.sleep(30)
-        for service_name, connections in self.connections.items():
-            if service_name == service_plotter:
-                continue
-            for connection in connections.copy():
-                try:
-                    self.log.debug(f"About to ping: {service_name}")
-                    await connection.ping()
-                except asyncio.CancelledError:
-                    self.log.warning("Ping task received Cancel")
-                    restart = False
-                    break
-                except Exception:
-                    self.log.exception(f"Ping error to {service_name}")
-                    self.log.error(f"Ping failed, connection closed to {service_name}.")
-                    self.remove_connection(connection)
-                    await connection.close()
-        if restart is True:
-            self.ping_job = asyncio.create_task(self.ping_task())
+        with log_exceptions(
+            log=self.log,
+            consume=True,
+            message="Ping task received Cancel",
+            level=logging.DEBUG,
+            show_traceback=False,
+            exceptions_to_process=asyncio.CancelledError,
+        ):
+            while True:
+                with log_exceptions(
+                    log=self.log,
+                    consume=True,
+                    message="Unexpected exception, continuing:",
+                ):
+                    await asyncio.sleep(30)
+
+                    for service_name, connections in self.connections.items():
+                        if service_name == service_plotter:
+                            continue
+
+                        for connection in connections.copy():
+                            self.log.debug(f"About to ping: {service_name}")
+                            try:
+                                with log_exceptions(
+                                    log=self.log,
+                                    message=f"Ping error to {service_name}, closing connection.",
+                                    level=logging.WARNING,
+                                    show_traceback=False,
+                                ):
+                                    await connection.ping()
+                            except:  # noqa E722 pylint: disable=bare-except
+                                self.remove_connection(connection)
+                                await connection.close()
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage

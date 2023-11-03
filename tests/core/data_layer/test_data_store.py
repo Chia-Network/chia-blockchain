@@ -43,6 +43,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
+from tests.util.db_connection import generate_in_memory_db_uri
 from tests.util.misc import BenchmarkRunner, Marks, datacases
 
 log = logging.getLogger(__name__)
@@ -61,7 +62,7 @@ table_columns: Dict[str, List[str]] = {
 #       and with good error messages.
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_node_values: Dict[str, Any]) -> None:
     async with data_store.db_wrapper.writer() as writer:
         await writer.execute(
@@ -74,7 +75,7 @@ async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_
 
 
 @pytest.mark.parametrize(argnames=["table_name", "expected_columns"], argvalues=table_columns.items())
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_create_creates_tables_and_columns(
     database_uri: str, table_name: str, expected_columns: List[str]
 ) -> None:
@@ -101,7 +102,7 @@ async def test_create_creates_tables_and_columns(
         await db_wrapper.close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
     tree_id = bytes32(b"\0" * 32)
 
@@ -109,7 +110,7 @@ async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
 
 
 @pytest.mark.parametrize(argnames=["length"], argvalues=[[length] for length in [*range(0, 32), *range(33, 48)]])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_create_tree_fails_for_not_bytes32(raw_data_store: DataStore, length: int) -> None:
     bad_tree_id = b"\0" * length
 
@@ -119,7 +120,7 @@ async def test_create_tree_fails_for_not_bytes32(raw_data_store: DataStore, leng
         await raw_data_store.create_tree(tree_id=bad_tree_id)  # type: ignore[arg-type]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_trees(raw_data_store: DataStore) -> None:
     expected_tree_ids = set()
 
@@ -133,13 +134,13 @@ async def test_get_trees(raw_data_store: DataStore) -> None:
     assert tree_ids == expected_tree_ids
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_table_is_empty(data_store: DataStore, tree_id: bytes32) -> None:
     is_empty = await data_store.table_is_empty(tree_id=tree_id)
     assert is_empty
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_table_is_not_empty(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
@@ -157,7 +158,7 @@ async def test_table_is_not_empty(data_store: DataStore, tree_id: bytes32) -> No
     assert not is_empty
 
 
-# @pytest.mark.asyncio
+# @pytest.mark.anyio
 # async def test_create_root_provides_bytes32(raw_data_store: DataStore, tree_id: bytes32) -> None:
 #     await raw_data_store.create_tree(tree_id=tree_id)
 #     # TODO: catchup with the node_hash=
@@ -166,7 +167,7 @@ async def test_table_is_not_empty(data_store: DataStore, tree_id: bytes32) -> No
 #     assert isinstance(root_hash, bytes32)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
@@ -175,7 +176,7 @@ async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> Non
     assert insert_result.node_hash == leaf_hash(key=key, value=value)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_insert_increments_generation(data_store: DataStore, tree_id: bytes32) -> None:
     keys = [b"a", b"b", b"c", b"d"]  # efghijklmnopqrstuvwxyz")
     value = b"\x01\x02\x03"
@@ -201,7 +202,7 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
     assert generations == expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_tree_generation_returns_none_when_none_available(
     raw_data_store: DataStore,
     tree_id: bytes32,
@@ -210,7 +211,7 @@ async def test_get_tree_generation_returns_none_when_none_available(
         await raw_data_store.get_tree_generation(tree_id=tree_id)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_insert_internal_node_does_nothing_if_matching(data_store: DataStore, tree_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
@@ -231,7 +232,7 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
     assert after == before
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataStore, tree_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
@@ -250,7 +251,7 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
     assert after == before
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_build_a_tree(
     data_store: DataStore,
     tree_id: bytes32,
@@ -265,7 +266,7 @@ async def test_build_a_tree(
     assert actual == example.expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_node_by_key(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_0123_example(data_store=data_store, tree_id=tree_id)
 
@@ -277,7 +278,7 @@ async def test_get_node_by_key(data_store: DataStore, tree_id: bytes32) -> None:
     assert actual.hash == key_node_hash
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_0123_example(data_store=data_store, tree_id=tree_id)
 
@@ -296,7 +297,7 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
     assert ancestors == ancestors_2
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) -> None:
     ancestors: List[Tuple[int, bytes32, List[InternalNode]]] = []
     random = Random()
@@ -370,7 +371,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
         assert current_ancestors == expected_ancestors
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     "use_optimized",
     [True, False],
@@ -381,9 +382,8 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
     saved_roots: List[Root] = []
     saved_batches: List[List[Dict[str, Any]]] = []
 
-    db_path = tmp_path.joinpath("dl_server_util.sqlite")
-
-    single_op_data_store = await DataStore.create(database=db_path)
+    db_uri = generate_in_memory_db_uri()
+    single_op_data_store = await DataStore.create(database=db_uri, uri=True)
     try:
         await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
         random = Random()
@@ -457,7 +457,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
 
 
 @pytest.mark.parametrize(argnames="side", argvalues=list(Side))
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_insert_batch_reference_and_side(
     data_store: DataStore,
     tree_id: bytes32,
@@ -496,7 +496,7 @@ async def test_insert_batch_reference_and_side(
         raise Exception("invalid side for test")
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_ancestor_table_unique_inserts(data_store: DataStore, tree_id: bytes32) -> None:
     await add_0123_example(data_store=data_store, tree_id=tree_id)
     hash_1 = bytes32.from_hexstr("0763561814685fbf92f6ca71fbb1cb11821951450d996375c239979bd63e9535")
@@ -508,7 +508,7 @@ async def test_ancestor_table_unique_inserts(data_store: DataStore, tree_id: byt
     await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_pairs(
     data_store: DataStore,
     tree_id: bytes32,
@@ -521,7 +521,7 @@ async def test_get_pairs(
     assert [node.hash for node in pairs] == example.terminal_nodes
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_pairs_when_empty(data_store: DataStore, tree_id: bytes32) -> None:
     pairs = await data_store.get_keys_values(tree_id=tree_id)
 
@@ -533,7 +533,7 @@ async def test_get_pairs_when_empty(data_store: DataStore, tree_id: bytes32) -> 
     argvalues=[[b"\x06", b"\x06"], [b"\x06", b"\x07"]],
     ids=["same values", "different values"],
 )
-@pytest.mark.asyncio()
+@pytest.mark.anyio()
 async def test_inserting_duplicate_key_fails(
     data_store: DataStore,
     tree_id: bytes32,
@@ -573,7 +573,7 @@ async def test_inserting_duplicate_key_fails(
         )
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio()
 async def test_inserting_invalid_length_hash_raises_original_exception(
     data_store: DataStore,
 ) -> None:
@@ -589,7 +589,7 @@ async def test_inserting_invalid_length_hash_raises_original_exception(
         )
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio()
 async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
     data_store: DataStore,
     tree_id: bytes32,
@@ -604,7 +604,7 @@ async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
         )
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio()
 async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: bytes32) -> None:
     random = Random()
     random.seed(100, version=2)
@@ -623,7 +623,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
     assert 11 <= statistics.mean(heights.values()) <= 12
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio()
 async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32) -> None:
     random = Random()
     random.seed(101, version=2)
@@ -660,7 +660,7 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
     "use_hint",
     [True, False],
 )
-@pytest.mark.asyncio()
+@pytest.mark.anyio()
 async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
@@ -702,7 +702,7 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
     "use_hint",
     [True, False],
 )
-@pytest.mark.asyncio()
+@pytest.mark.anyio()
 async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
@@ -744,7 +744,7 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
     "use_hint",
     [True, False],
 )
-@pytest.mark.asyncio()
+@pytest.mark.anyio()
 async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
@@ -786,7 +786,7 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
     "use_hint",
     [True, False],
 )
-@pytest.mark.asyncio()
+@pytest.mark.anyio()
 async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
@@ -824,7 +824,7 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
     assert result == expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_proof_of_inclusion_by_hash(data_store: DataStore, tree_id: bytes32) -> None:
     """A proof of inclusion contains the expected sibling side, sibling hash, combined
     hash, key, value, and root hash values.
@@ -860,7 +860,7 @@ async def test_proof_of_inclusion_by_hash(data_store: DataStore, tree_id: bytes3
     assert proof == ProofOfInclusion(node_hash=node.hash, layers=expected_layers)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_proof_of_inclusion_by_hash_no_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
     """Check proper proof of inclusion creation when the node being proved is the root."""
     await data_store.autoinsert(key=b"\x04", value=b"\x03", tree_id=tree_id, status=Status.COMMITTED)
@@ -873,7 +873,7 @@ async def test_proof_of_inclusion_by_hash_no_ancestors(data_store: DataStore, tr
     assert proof == ProofOfInclusion(node_hash=node.hash, layers=[])
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_proof_of_inclusion_by_hash_program(data_store: DataStore, tree_id: bytes32) -> None:
     """The proof of inclusion program has the expected Python equivalence."""
 
@@ -892,7 +892,7 @@ async def test_proof_of_inclusion_by_hash_program(data_store: DataStore, tree_id
     ]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_proof_of_inclusion_by_hash_equals_by_key(data_store: DataStore, tree_id: bytes32) -> None:
     """The proof of inclusion is equal between hash and key requests."""
 
@@ -905,7 +905,7 @@ async def test_proof_of_inclusion_by_hash_equals_by_key(data_store: DataStore, t
     assert proof_by_hash == proof_by_key
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_proof_of_inclusion_by_hash_bytes(data_store: DataStore, tree_id: bytes32) -> None:
     """The proof of inclusion provided by the data store is able to be converted to a
     program and subsequently to bytes.
@@ -926,7 +926,7 @@ async def test_proof_of_inclusion_by_hash_bytes(data_store: DataStore, tree_id: 
     assert bytes(proof.as_program()) == expected
 
 
-# @pytest.mark.asyncio
+# @pytest.mark.anyio
 # async def test_create_first_pair(data_store: DataStore, tree_id: bytes) -> None:
 #     key = SExp.to([1, 2])
 #     value = SExp.to(b'abc')
@@ -950,7 +950,7 @@ valid_program_hex = Program.to((b"abc", 2)).as_bin().hex()
 invalid_program_hex = b"\xab\xcd".hex()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataStore) -> None:
     tree_id = hexstr_to_bytes("c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd")
 
@@ -976,7 +976,7 @@ async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataSto
         await raw_data_store._check_roots_are_incrementing()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> None:
     tree_id = hexstr_to_bytes("c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd")
 
@@ -1002,7 +1002,7 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
         await raw_data_store._check_roots_are_incrementing()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.writer() as writer:
         await writer.execute(
@@ -1022,7 +1022,7 @@ async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
         await raw_data_store._check_hashes()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.writer() as writer:
         await writer.execute(
@@ -1042,7 +1042,7 @@ async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
         await raw_data_store._check_hashes()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_root_state(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
@@ -1053,7 +1053,7 @@ async def test_root_state(data_store: DataStore, tree_id: bytes32) -> None:
     assert is_empty
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
@@ -1073,7 +1073,7 @@ async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> Non
     assert root.node_hash is not None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
     random = Random()
     random.seed(100, version=2)
@@ -1118,7 +1118,7 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
     assert diffs == expected_diff
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
     insert_result = await data_store.insert(
         key=b"000",
@@ -1137,7 +1137,7 @@ async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
     assert diff_3 == set()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_rollback_to_generation(data_store: DataStore, tree_id: bytes32) -> None:
     await add_0123_example(data_store, tree_id)
     expected_hashes = []
@@ -1150,7 +1150,7 @@ async def test_rollback_to_generation(data_store: DataStore, tree_id: bytes32) -
         assert root.node_hash == expected_hash
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_subscribe_unsubscribe(data_store: DataStore, tree_id: bytes32) -> None:
     await data_store.subscribe(Subscription(tree_id, [ServerInfo("http://127:0:0:1/8000", 1, 1)]))
     subscriptions = await data_store.get_subscriptions()
@@ -1197,7 +1197,7 @@ async def test_subscribe_unsubscribe(data_store: DataStore, tree_id: bytes32) ->
     ]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None:
     start_timestamp = 1000
     await data_store.subscribe(
@@ -1262,15 +1262,14 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
     "test_delta",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_delta: bool, tmp_path: Path) -> None:
     roots: List[Root] = []
     num_batches = 10
     num_ops_per_batch = 100
 
-    db_path = tmp_path.joinpath("dl_server_util.sqlite")
-
-    data_store_server = await DataStore.create(database=db_path)
+    db_uri = generate_in_memory_db_uri()
+    data_store_server = await DataStore.create(database=db_uri, uri=True)
     try:
         await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
         random = Random()
@@ -1314,7 +1313,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
         generation += 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
@@ -1346,7 +1345,7 @@ async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
     assert pending_root is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_clear_pending_roots_returns_root(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
@@ -1399,7 +1398,7 @@ class BatchInsertBenchmarkCase:
         limit=36,
     ),
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_benchmark_batch_insert_speed(
     data_store: DataStore,
     tree_id: bytes32,

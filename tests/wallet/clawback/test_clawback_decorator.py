@@ -17,7 +17,7 @@ from chia.wallet.wallet_node import WalletNode
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_missing_decorator(
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
     trusted: bool,
@@ -37,7 +37,7 @@ async def test_missing_decorator(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_unknown_decorator(
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
     trusted: bool,
@@ -57,7 +57,7 @@ async def test_unknown_decorator(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_decorator(
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
     trusted: bool,

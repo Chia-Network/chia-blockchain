@@ -65,7 +65,7 @@ async def claim_pending_approval_balance(
 # So to avoid the overhead of start up for identical tests, we only change the softfork param for the tests that use it.
 # To pin down the behavior that we intend to eventually deprecate, it only gets one test case.
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     "wallets_prefarm_services,trusted,reuse_puzhash,credential_restricted,active_softfork_height",
     [
@@ -739,7 +739,7 @@ async def test_cat_trades(
     [True, False],
 )
 class TestCATTrades:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_trade_cancellation(self, wallets_prefarm):
         (
             [wallet_node_maker, maker_funds],
@@ -864,7 +864,7 @@ class TestCATTrades:
 
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_trade_cancellation_balance_check(self, wallets_prefarm):
         (
             [wallet_node_maker, maker_funds],
@@ -918,7 +918,7 @@ class TestCATTrades:
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_trade_conflict(self, three_wallets_prefarm):
         (
             [wallet_node_maker, maker_funds],
@@ -981,7 +981,7 @@ class TestCATTrades:
         await full_node.process_transaction_records(records=offer_tx_records)
         await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_trader, tr2)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_trade_bad_spend(self, wallets_prefarm):
         (
             [wallet_node_maker, maker_funds],
@@ -1045,7 +1045,7 @@ class TestCATTrades:
         await full_node.process_transaction_records(records=offer_tx_records)
         await time_out_assert(30, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_trade_high_fee(self, wallets_prefarm):
         (
             [wallet_node_maker, maker_funds],
@@ -1100,7 +1100,7 @@ class TestCATTrades:
         await full_node.process_transaction_records(records=txs1)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, tr1)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_aggregated_trade_state(self, wallets_prefarm):
         (
             [wallet_node_maker, maker_funds],

@@ -37,7 +37,7 @@ async def get_block_path(full_node: FullNodeAPI):
 
 
 class TestPerformance:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_full_block_performance(
         self, request: pytest.FixtureRequest, wallet_nodes_perf, self_hostname, benchmark_runner: BenchmarkRunner
     ):

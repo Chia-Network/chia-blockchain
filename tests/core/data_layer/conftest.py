@@ -7,7 +7,6 @@ import time
 from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator
 
 import pytest
-import pytest_asyncio
 
 # https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
@@ -60,14 +59,14 @@ def tree_id_fixture() -> bytes32:
     return bytes32(pad + base)
 
 
-@pytest_asyncio.fixture(name="raw_data_store", scope="function")
+@pytest.fixture(name="raw_data_store", scope="function")
 async def raw_data_store_fixture(database_uri: str) -> AsyncIterable[DataStore]:
     store = await DataStore.create(database=database_uri, uri=True)
     yield store
     await store.close()
 
 
-@pytest_asyncio.fixture(name="data_store", scope="function")
+@pytest.fixture(name="data_store", scope="function")
 async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> AsyncIterable[DataStore]:
     await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
 
@@ -81,7 +80,7 @@ def node_type_fixture(request: SubRequest) -> NodeType:
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest_asyncio.fixture(name="valid_node_values")
+@pytest.fixture(name="valid_node_values")
 async def valid_node_values_fixture(
     data_store: DataStore,
     tree_id: bytes32,

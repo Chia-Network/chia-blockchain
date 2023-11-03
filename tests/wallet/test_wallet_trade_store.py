@@ -31,7 +31,7 @@ record_2 = WalletCoinRecord(coin_2, uint32(5), uint32(0), False, True, WalletTyp
 record_3 = WalletCoinRecord(coin_3, uint32(6), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coins_of_interest_with_trade_statuses(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         coin_store = await WalletCoinStore.create(db_wrapper)
@@ -117,7 +117,7 @@ async def test_get_coins_of_interest_with_trade_statuses(seeded_random: random.R
         }
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_valid_times_migration() -> None:
     async with DBConnection(1) as db_wrapper:
         async with db_wrapper.writer_maybe_transaction() as conn:
@@ -171,7 +171,7 @@ async def test_valid_times_migration() -> None:
         assert rec.valid_times == ConditionValidTimes()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_large_trade_record_query() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await TradeStore.create(db_wrapper)

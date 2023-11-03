@@ -170,7 +170,7 @@ def trigger_remove_plot(_: Path, plot_path: str):
 
 
 @pytest.mark.limit_consensus_modes(reason="not dependent on consensus, does not support parallel execution")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_plot_refreshing(environment):
     env: Environment = environment
     expected_result = PlotRefreshResult()
@@ -365,7 +365,7 @@ async def test_plot_refreshing(environment):
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_initial_refresh_flag(environment: Environment) -> None:
     env: Environment = environment
     assert env.refresh_tester.plot_manager.initial_refresh()
@@ -376,7 +376,7 @@ async def test_initial_refresh_flag(environment: Environment) -> None:
     assert env.refresh_tester.plot_manager.initial_refresh()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_invalid_plots(environment):
     env: Environment = environment
     expected_result = PlotRefreshResult()
@@ -429,7 +429,7 @@ async def test_invalid_plots(environment):
     assert retry_test_plot not in env.refresh_tester.plot_manager.failed_to_open_filenames
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_keys_missing(environment: Environment) -> None:
     env: Environment = environment
     not_in_keychain_plots: List[Path] = get_test_plots("not_in_keychain")
@@ -465,7 +465,7 @@ async def test_keys_missing(environment: Environment) -> None:
     assert len(env.refresh_tester.plot_manager.no_key_filenames) == 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_plot_info_caching(environment, bt):
     env: Environment = environment
     expected_result = PlotRefreshResult()
@@ -527,7 +527,7 @@ async def test_plot_info_caching(environment, bt):
     plot_manager.stop_refreshing()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_drop_too_large_cache_entries(environment, bt):
     env: Environment = environment
     expected_result = PlotRefreshResult(loaded=env.dir_1.plot_info_list(), processed=len(env.dir_1))
@@ -612,7 +612,7 @@ async def test_drop_too_large_cache_entries(environment, bt):
     assert_cache([plot_info for plot_info in plot_infos if plot_info.prover.get_filename() not in invalid_entries])
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_cache_lifetime(environment: Environment) -> None:
     # Load a directory to produce a cache file
     env: Environment = environment
@@ -654,7 +654,7 @@ async def test_cache_lifetime(environment: Environment) -> None:
         pytest.param(PlotRefreshEvents.done, id="done"),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_callback_event_raises(environment, event_to_raise: PlotRefreshEvents):
     last_event_fired: Optional[PlotRefreshEvents] = None
 
@@ -702,7 +702,7 @@ async def test_callback_event_raises(environment, event_to_raise: PlotRefreshEve
     await env.refresh_tester.run(expected_result)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_recursive_plot_scan(environment: Environment) -> None:
     env: Environment = environment
     # Create a directory tree with some subdirectories containing plots, others not.

@@ -11,7 +11,21 @@ import time
 import traceback
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, final
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+    final,
+)
 
 from blspy import AugSchemeMPL
 
@@ -52,13 +66,14 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof
+from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof, validate_vdf
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
@@ -100,6 +115,11 @@ class WalletUpdate:
 @final
 @dataclasses.dataclass
 class FullNode:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("FullNode", None)
+
     root_path: Path
     config: Dict[str, Any]
     constants: ConsensusConstants
@@ -534,6 +554,7 @@ class FullNode:
             self._segment_task = None
 
         try:
+            peer_info = peer.get_peer_logging()
             for height in range(start_height, target_height, batch_size):
                 end_height = min(target_height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
@@ -542,7 +563,7 @@ class FullNode:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: Optional[StateChangeSummary]
-                    success, state_change_summary, _ = await self.add_block_batch(response.blocks, peer, None)
+                    success, state_change_summary, _ = await self.add_block_batch(response.blocks, peer_info, None)
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -895,8 +916,9 @@ class FullNode:
             self.log.info("Waiting to receive peaks from peers.")
 
             # Wait until we have 3 peaks or up to a max of 30 seconds
+            max_iterations = int(self.config.get("max_sync_wait", 30)) * 10
             peaks = []
-            for i in range(300):
+            for i in range(max_iterations):
                 peaks = [peak.header_hash for peak in self.sync_store.get_peak_of_each_peer().values()]
                 if len(self.sync_store.get_peers_that_have_peak(peaks)) < 3:
                     if self._shut_down:
@@ -1066,7 +1088,7 @@ class FullNode:
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
                 success, state_change_summary, err = await self.add_block_batch(
-                    blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
+                    blocks, peer.get_peer_logging(), None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
                     await peer.close(600)
@@ -1158,7 +1180,7 @@ class FullNode:
     async def add_block_batch(
         self,
         all_blocks: List[FullBlock],
-        peer: WSChiaConnection,
+        peer_info: PeerInfo,
         fork_point: Optional[uint32],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
@@ -1189,9 +1211,7 @@ class FullNode:
         )
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
-                self.log.error(
-                    f"Invalid block from peer: {peer.get_peer_logging()} {Err(pre_validation_results[i].error)}"
-                )
+                self.log.error(f"Invalid block from peer: {peer_info} {Err(pre_validation_results[i].error)}")
                 return False, None, Err(pre_validation_results[i].error)
 
         agg_state_change_summary: Optional[StateChangeSummary] = None
@@ -1221,7 +1241,7 @@ class FullNode:
                     )
             elif result == AddBlockResult.INVALID_BLOCK or result == AddBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
-                    self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_logging()} ")
+                    self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
                 return False, agg_state_change_summary, error
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
@@ -2291,7 +2311,7 @@ class FullNode:
         if vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
             self.log.error(f"Received vdf proof is not compact: {vdf_proof}.")
             return False
-        if not vdf_proof.is_valid(self.constants, ClassgroupElement.get_default_element(), vdf_info):
+        if not validate_vdf(vdf_proof, self.constants, ClassgroupElement.get_default_element(), vdf_info):
             self.log.error(f"Received compact vdf proof is not valid: {vdf_proof}.")
             return False
         header_block = await self.blockchain.get_header_block_by_height(height, header_hash, tx_filter=False)

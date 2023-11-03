@@ -44,7 +44,7 @@ class TestCATWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cat_creation(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets, _ = two_wallet_nodes
@@ -118,7 +118,7 @@ class TestCATWallet:
         )
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 0)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cat_creation_unique_lineage_store(self, self_hostname, two_wallet_nodes):
         num_blocks = 3
         full_nodes, wallets, _ = two_wallet_nodes
@@ -170,7 +170,7 @@ class TestCATWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cat_spend(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets, _ = two_wallet_nodes
@@ -284,7 +284,7 @@ class TestCATWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cat_reuse_address(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets, _ = two_wallet_nodes
@@ -392,7 +392,7 @@ class TestCATWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_get_wallet_for_asset_id(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets, _ = two_wallet_nodes
@@ -449,7 +449,7 @@ class TestCATWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cat_doesnt_see_eve(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets, _ = two_wallet_nodes
@@ -546,7 +546,7 @@ class TestCATWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cat_spend_multiple(self, self_hostname, three_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets, _ = three_wallet_nodes
@@ -673,7 +673,7 @@ class TestCATWallet:
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cat_max_amount_send(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets, _ = two_wallet_nodes
@@ -786,7 +786,7 @@ class TestCATWallet:
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.parametrize("autodiscovery", [True, False])
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cat_hint(self, self_hostname, two_wallet_nodes, trusted, autodiscovery):
         num_blocks = 3
         full_nodes, wallets, _ = two_wallet_nodes
@@ -904,7 +904,7 @@ class TestCATWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cat_change_detection(
         self, self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, trusted: bool
     ) -> None:
@@ -1062,7 +1062,7 @@ class TestCATWallet:
         assert not full_node_api.full_node.subscriptions.has_ph_subscription(puzzlehash_unhardened)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_unacknowledged_cat_table() -> None:
     db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
     db_name.parent.mkdir(parents=True, exist_ok=True)

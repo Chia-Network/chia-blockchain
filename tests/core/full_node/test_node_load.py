@@ -9,7 +9,7 @@ from tests.util.misc import BenchmarkRunner
 
 
 class TestNodeLoad:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_blocks_load(self, two_nodes, self_hostname, benchmark_runner: BenchmarkRunner):
         num_blocks = 50
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
