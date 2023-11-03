@@ -147,7 +147,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -186,7 +186,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -229,7 +229,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -241,7 +241,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -254,7 +254,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -267,7 +267,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -319,7 +319,7 @@ class TestFullNodeBlockCompression:
             additions=new_spend_bundle.additions(),
             removals=new_spend_bundle.removals(),
         )
-        await wallet.wallet_state_manager.add_pending_transactions([new_tr])
+        [new_tr] = await wallet.wallet_state_manager.add_pending_transactions([new_tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -365,7 +365,7 @@ class TestFullNodeBlockCompression:
             additions=new_spend_bundle.additions(),
             removals=new_spend_bundle.removals(),
         )
-        await wallet.wallet_state_manager.add_pending_transactions([new_tr])
+        [new_tr] = await wallet.wallet_state_manager.add_pending_transactions([new_tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,

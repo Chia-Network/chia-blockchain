@@ -600,7 +600,7 @@ class WalletRpcApi:
                 txs.append(tx)
 
         async with self.service.wallet_state_manager.lock:
-            await self.service.wallet_state_manager.add_pending_transactions(txs)
+            await self.service.wallet_state_manager.add_pending_transactions(txs, sign=request.get("sign", False))
 
         return {}
 
@@ -912,7 +912,6 @@ class WalletRpcApi:
                             delayed_address,
                             extra_conditions=extra_conditions,
                         )
-                        await self.service.wallet_state_manager.add_pending_transactions([tr])
                     except Exception as e:
                         raise ValueError(str(e))
                     return {
@@ -3682,6 +3681,14 @@ class WalletRpcApi:
         for cs in sb.coin_spends:
             if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
                 nft_id_list.append(encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config)))
+        ###
+        # Temporary signing workaround (delete when minting functions return transaction records)
+        unsigned_tx = await self.service.wallet_state_manager._gather_signing_info(sb.coin_spends)
+        signing_responses = await self.service.wallet_state_manager.execute_signing_instructions(
+            unsigned_tx.signing_instructions, partial_allowed=False
+        )
+        sb = await self.service.wallet_state_manager.apply_signatures(unsigned_tx, signing_responses)
+        ###
         return {
             "success": True,
             "spend_bundle": sb,

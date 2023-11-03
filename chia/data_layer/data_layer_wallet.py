@@ -408,7 +408,6 @@ class DataLayerWallet:
         new_puz_hash: Optional[bytes32] = None,
         new_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
-        sign: bool = True,
         add_pending_singleton: bool = True,
         announce_new_state: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -576,10 +575,7 @@ class DataLayerWallet:
             SerializedProgram.from_program(full_sol),
         )
 
-        if sign:
-            spend_bundle = await self.sign(coin_spend)
-        else:
-            spend_bundle = SpendBundle([coin_spend], G2Element())
+        spend_bundle = SpendBundle([coin_spend], G2Element())
 
         if announce_new_state:
             spend_bundle = dataclasses.replace(spend_bundle, coin_spends=[coin_spend, second_coin_spend])
@@ -640,9 +636,6 @@ class DataLayerWallet:
     ) -> List[TransactionRecord]:
         launcher_id: Optional[bytes32] = kwargs.get("launcher_id", None)
         new_root_hash: Optional[bytes32] = kwargs.get("new_root_hash", None)
-        sign: bool = kwargs.get(
-            "sign", True
-        )  # This only prevent signing of THIS wallet's part of the tx (fee will still be signed)
         add_pending_singleton: bool = kwargs.get("add_pending_singleton", True)
         announce_new_state: bool = kwargs.get("announce_new_state", False)
         # Figure out the launcher ID
@@ -669,7 +662,6 @@ class DataLayerWallet:
             puzzle_hashes[0],
             amounts[0],
             fee,
-            sign,
             add_pending_singleton,
             announce_new_state,
             extra_conditions,
@@ -790,7 +782,7 @@ class DataLayerWallet:
                 ]
             ),
         )
-        mirror_bundle: SpendBundle = await self.sign(mirror_spend)
+        mirror_bundle: SpendBundle = SpendBundle([mirror_spend], G2Element())
         txs = [
             TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -1108,9 +1100,6 @@ class DataLayerWallet:
     async def get_max_send_amount(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
-    async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
-        return await self.wallet_state_manager.sign_transaction([coin_spend])
-
     def get_name(self) -> str:
         return self.wallet_info.name
 
@@ -1182,7 +1171,6 @@ class DataLayerWallet:
                 fee=fee_left_to_pay,
                 launcher_id=launcher,
                 new_root_hash=new_root,
-                sign=False,
                 add_pending_singleton=False,
                 announce_new_state=True,
                 extra_conditions=extra_conditions,
@@ -1208,18 +1196,16 @@ class DataLayerWallet:
                 dl_spend,
                 solution=SerializedProgram.from_program(new_solution),
             )
-            signed_bundle = await dl_wallet.sign(new_spend)
             new_bundle: SpendBundle = dataclasses.replace(
                 txs[0].spend_bundle,
-                coin_spends=all_other_spends,
+                coin_spends=[*all_other_spends, new_spend],
             )
-            agg_bundle: SpendBundle = SpendBundle.aggregate([signed_bundle, new_bundle])
-            all_bundles.append(agg_bundle)
+            all_bundles.append(new_bundle)
             all_transactions.append(
                 dataclasses.replace(
                     txs[0],
-                    spend_bundle=agg_bundle,
-                    name=agg_bundle.name(),
+                    spend_bundle=new_bundle,
+                    name=new_bundle.name(),
                 )
             )
             all_transactions.extend(txs[1:])
