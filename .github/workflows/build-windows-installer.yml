@@ -364,8 +364,8 @@ jobs:
     - name: Create Checksums
       shell: pwsh
       run: |
-         certutil.exe -hashfile "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe SHA256 > "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256
-         ls "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/
+         certutil.exe -hashfile "${{ github.workspace }}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe SHA256 > "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256
+         ls "${{ github.workspace }}"/chia-blockchain-gui/release-builds/windows-installer/
 
     - name: Create torrent
       if: env.FULL_RELEASE == 'true'
