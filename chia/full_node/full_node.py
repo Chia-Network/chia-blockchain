@@ -913,10 +913,11 @@ class FullNode:
         self.log.debug("long sync started")
         try:
             self.log.info("Starting to perform sync.")
-            self.log.info("Waiting to receive peaks from peers.")
 
             # Wait until we have 3 peaks or up to a max of 30 seconds
             max_iterations = int(self.config.get("max_sync_wait", 30)) * 10
+
+            self.log.info(f"Waiting to receive peaks from peers. (timeout: {max_iterations/10}s)")
             peaks = []
             for i in range(max_iterations):
                 peaks = [peak.header_hash for peak in self.sync_store.get_peak_of_each_peer().values()]
