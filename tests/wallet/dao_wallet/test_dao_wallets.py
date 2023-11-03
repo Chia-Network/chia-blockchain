@@ -2954,9 +2954,8 @@ async def test_dao_cat_exits(
         dao_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0["dao_cat_wallet_id"]]
         assert isinstance(dao_cat_wallet_0, DAOCATWallet)
 
-        tx = TransactionRecord.from_json_dict(dao_wallet_dict_0["tx"])
-        await full_node_api.process_transaction_records(records=[tx])
-        # TODO: do we really need a 30 second timeout just to sync the wallet?  (see all other locations as well)
+        txs = [TransactionRecord.from_json_dict(tx) for tx in dao_wallet_dict_0["txs"]]
+        await full_node_api.process_transaction_records(records=txs)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1])
         assert await cat_wallet_0.get_confirmed_balance() == uint128(amount_of_cats)
 

@@ -678,7 +678,8 @@ class WalletRpcApi:
             if request["mode"] == "new":
                 if request.get("test", False):
                     async with self.service.wallet_state_manager.lock:
-                        cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+                        # TODO: use the transaction record
+                        cat_wallet, _ = await CATWallet.create_new_cat_wallet(
                             wallet_state_manager,
                             main_wallet,
                             {"identifier": "genesis_by_id"},
@@ -783,7 +784,7 @@ class WalletRpcApi:
         elif request["wallet_type"] == "dao_wallet":
             name = request.get("name", None)
             mode = request.get("mode", None)
-            transaction_record: Optional[TransactionRecord] = None
+            transaction_records: List[TransactionRecord] = []
             if mode == "new":
                 dao_rules_json = request.get("dao_rules", None)
                 if dao_rules_json:
@@ -791,7 +792,7 @@ class WalletRpcApi:
                 else:
                     raise ValueError("DAO rules must be specified for wallet creation")
                 async with self.service.wallet_state_manager.lock:
-                    dao_wallet, transaction_record = await DAOWallet.create_new_dao_and_wallet(
+                    dao_wallet, dao_wallet_transaction_records = await DAOWallet.create_new_dao_and_wallet(
                         wallet_state_manager,
                         main_wallet,
                         uint64(request.get("amount_of_cats", None)),
@@ -802,6 +803,7 @@ class WalletRpcApi:
                         uint64(request.get("fee", 0)),
                         uint64(request.get("fee_for_cat", 0)),
                     )
+                    transaction_records.extend(dao_wallet_transaction_records)
             elif mode == "existing":
                 # async with self.service.wallet_state_manager.lock:
                 dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
@@ -818,7 +820,7 @@ class WalletRpcApi:
                 "treasury_id": dao_wallet.dao_info.treasury_id,
                 "cat_wallet_id": dao_wallet.dao_info.cat_wallet_id,
                 "dao_cat_wallet_id": dao_wallet.dao_info.dao_cat_wallet_id,
-                "tx": transaction_record,
+                "txs": transaction_records,
             }
         elif request["wallet_type"] == "nft_wallet":
             for wallet in self.service.wallet_state_manager.wallets.values():
