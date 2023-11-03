@@ -106,7 +106,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     ]
     assert utx.signing_instructions.key_hints.path_hints == [
         PathHint(
-            Program.to(wallet_state_manager.private_key.get_g1().get_fingerprint().to_bytes(4, "big")),
+            Program.to(wallet_state_manager.root_pubkey.get_fingerprint().to_bytes(4, "big")),
             [Program.to(12381), Program.to(8444), Program.to(2), Program.to(derivation_record.index)],
         )
     ]

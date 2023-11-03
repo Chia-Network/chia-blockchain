@@ -645,11 +645,27 @@ async def test_get_routes(mock_lonely_daemon):
         },
     ),
     WalletAddressCase(
-        id="missing private key",
-        request={"fingerprints": [test_key_data.fingerprint]},
+        id="missing private key hardened",
+        request={"fingerprints": [test_key_data.fingerprint], "non_observer_derivation": True},
         response={
             "success": False,
             "error": f"missing private key for key with fingerprint {test_key_data.fingerprint}",
+        },
+        pubkeys_only=True,
+    ),
+    WalletAddressCase(
+        id="missing private key unhardened",
+        request={"fingerprints": [test_key_data.fingerprint]},
+        response={
+            "success": True,
+            "wallet_addresses": {
+                test_key_data.fingerprint: [
+                    {
+                        "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
+                        "hd_path": "m/12381/8444/2/0",
+                    },
+                ],
+            },
         },
         pubkeys_only=True,
     ),

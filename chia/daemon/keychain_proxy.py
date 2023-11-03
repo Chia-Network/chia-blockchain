@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession
-from blspy import AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL, G1Element, PrivateKey
 
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
@@ -343,6 +343,42 @@ class KeychainProxy(DaemonProxy):
                     else:
                         err = "G1Elements don't match"
                         self.log.error(f"{err}")
+            else:
+                self.handle_error(response)
+
+        return key
+
+    async def get_public_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[G1Element]:
+        """
+        Locates and returns a private key matching the provided fingerprint
+        """
+        key: Optional[G1Element] = None
+        if self.use_local_keychain():
+            public_keys = self.keychain.get_all_public_keys()
+            if len(public_keys) == 0:
+                raise KeychainIsEmpty()
+            else:
+                if fingerprint is not None:
+                    for pk in public_keys:
+                        if pk.get_fingerprint() == fingerprint:
+                            key = pk
+                            break
+                    if key is None:
+                        raise KeychainKeyNotFound(fingerprint)
+                else:
+                    key = public_keys[0]
+        else:
+            response, success = await self.get_response_for_request(
+                "get_public_key_for_fingerprint", {"fingerprint": fingerprint}
+            )
+            if success:
+                pk_str = response["data"].get("pk", None)
+                if pk_str is None:
+                    err = f"Missing pk in {response.get('command')} response"
+                    self.log.error(f"{err}")
+                    raise KeychainMalformedResponse(f"{err}")
+                else:
+                    key = G1Element.from_bytes(bytes.fromhex(pk_str))
             else:
                 self.handle_error(response)
 

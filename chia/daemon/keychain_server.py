@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
-from blspy import PrivateKey
+from blspy import G1Element, PrivateKey
 
 from chia.cmds.init_funcs import check_keys
 from chia.util.errors import KeychainException, KeychainFingerprintNotFound
@@ -22,6 +22,7 @@ keychain_commands = [
     "get_all_private_keys",
     "get_first_private_key",
     "get_key_for_fingerprint",
+    "get_public_key_for_fingerprint",
     "get_key",
     "get_keys",
     "get_public_key",
@@ -350,5 +351,28 @@ class KeychainServer:
 
         if private_key is not None and entropy is not None:
             return {"success": True, "pk": bytes(private_key.get_g1()).hex(), "entropy": entropy.hex()}
+        else:
+            return {"success": False, "error": KEYCHAIN_ERR_KEY_NOT_FOUND}
+
+    async def get_public_key_for_fingerprint(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        if self.get_keychain_for_request(request).is_keyring_locked():
+            return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
+
+        public_keys = self.get_keychain_for_request(request).get_all_public_keys()
+        if len(public_keys) == 0:
+            return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
+
+        fingerprint = request.get("fingerprint", None)
+        public_key: Optional[G1Element] = None
+        if fingerprint is not None:
+            for pk in public_keys:
+                if pk.get_fingerprint() == fingerprint:
+                    public_key = pk
+                    break
+        else:
+            public_key = public_keys[0]
+
+        if public_key is not None:
+            return {"success": True, "pk": bytes(public_key).hex()}
         else:
             return {"success": False, "error": KEYCHAIN_ERR_KEY_NOT_FOUND}

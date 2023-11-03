@@ -283,13 +283,16 @@ class Keychain:
 
         public_key = G1Element.from_bytes(str_bytes[: G1Element.SIZE])
         fingerprint = public_key.get_fingerprint()
-        entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+        if len(str_bytes) == G1Element.SIZE + 32:
+            entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+        else:
+            entropy = None
 
         return KeyData(
             fingerprint=uint32(fingerprint),
             public_key=public_key,
             label=self.keyring_wrapper.get_label(fingerprint),
-            secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets else None,
+            secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
         )
 
     def _get_free_private_key_index(self) -> int:
