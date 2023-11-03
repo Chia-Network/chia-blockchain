@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from itertools import chain
-from typing import Iterator, List, Optional, Tuple
+from typing import Any, Iterator, List, Optional, Tuple
 
 from clvm.EvalError import EvalError
 
@@ -750,11 +750,17 @@ def generate_simple_proposal_innerpuz(
 ) -> Program:
     if len(recipient_puzhashes) != len(amounts) != len(asset_types):  # pragma: no cover
         raise ValueError("Mismatch in the number of recipients, amounts, or asset types")
-    xch_conds = []
-    cat_conds = []
+    xch_conds: List[Any] = []
+    cat_conds: List[Any] = []
+    seen_assets = set()
     for recipient_puzhash, amount, asset_type in zip(recipient_puzhashes, amounts, asset_types):
         if asset_type:
-            cat_conds.append([asset_type, [[51, recipient_puzhash, amount]]])
+            if asset_type in seen_assets:
+                asset_conds = [x for x in cat_conds if x[0] == asset_type][0]
+                asset_conds[1].append([51, recipient_puzhash, amount, [recipient_puzhash]])
+            else:
+                cat_conds.append([asset_type, [[51, recipient_puzhash, amount, [recipient_puzhash]]]])
+                seen_assets.add(asset_type)
         else:
             xch_conds.append([51, recipient_puzhash, amount])
     puzzle = get_spend_p2_singleton_puzzle(treasury_id, Program.to(xch_conds), Program.to(cat_conds))
