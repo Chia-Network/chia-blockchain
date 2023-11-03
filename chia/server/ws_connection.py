@@ -222,10 +222,11 @@ class WSChiaConnection:
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
+            inbound_node_type = NodeType(inbound_handshake.node_type)
             self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
-            self.connection_type = NodeType(inbound_handshake.node_type)
+            self.connection_type = inbound_node_type
             # "1" means capability is enabled
             self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
         else:
@@ -249,11 +250,13 @@ class WSChiaConnection:
             inbound_handshake = Handshake.from_bytes(message.data)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+            inbound_node_type = NodeType(inbound_handshake.node_type)
             await self._send_message(outbound_handshake)
             self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
-            self.connection_type = NodeType(inbound_handshake.node_type)
+            self.connection_type = inbound_node_type
             # "1" means capability is enabled
             self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
 

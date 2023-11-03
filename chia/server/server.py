@@ -334,7 +334,9 @@ class ChiaServer:
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
             )
-            await connection.perform_handshake(self._network_id, protocol_version, self.get_port(), self._local_type)
+            await connection.perform_handshake(
+                self._network_id, protocol_version[self._local_type], self.get_port(), self._local_type
+            )
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
 
             # Limit inbound connections to config's specifications.
@@ -485,7 +487,9 @@ class ChiaServer:
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
                 session=session,
             )
-            await connection.perform_handshake(self._network_id, protocol_version, server_port, self._local_type)
+            await connection.perform_handshake(
+                self._network_id, protocol_version[self._local_type], server_port, self._local_type
+            )
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function
