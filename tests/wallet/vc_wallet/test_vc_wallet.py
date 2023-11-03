@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from typing import Any, Awaitable, Callable, List, Optional
 
 import pytest
@@ -8,7 +9,7 @@ from typing_extensions import Literal
 
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.simulator.time_out_assert import time_out_assert_not_none
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -16,7 +17,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -29,18 +30,7 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.wallet.conftest import WalletTestFramework
-
-
-async def is_transaction_confirmed(wallet_state_manager: WalletStateManager, tx_id: bytes32) -> bool:
-    tr = await wallet_state_manager.get_transaction(tx_id)
-    if tr is None:
-        return False  # pragma: no cover
-    elif not tr.confirmed:
-        return False  # pragma: no cover
-    else:
-        return True
+from tests.wallet.conftest import WalletEnvironment, WalletStateTransition, WalletTestFramework
 
 
 async def mint_cr_cat(
@@ -113,7 +103,9 @@ async def mint_cr_cat(
         G2Element(),
     )
     spend_bundle = SpendBundle.aggregate([spend_bundle, eve_spend])
-    await client_0.push_tx(spend_bundle)  # type: ignore [no-untyped-call]
+    await wallet_node_0.wallet_state_manager.add_pending_transaction(
+        dataclasses.replace(tx, spend_bundle=spend_bundle, name=spend_bundle.name())
+    )
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
 
@@ -130,7 +122,10 @@ async def mint_cr_cat(
 )
 @pytest.mark.anyio
 async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
+    # Setup
     full_node_api: FullNodeSimulator = wallet_environments.full_node
+    env_0 = wallet_environments.environments[0]
+    env_1 = wallet_environments.environments[1]
     wallet_node_0 = wallet_environments.environments[0].wallet_node
     wallet_node_1 = wallet_environments.environments[1].wallet_node
     wallet_0 = wallet_environments.environments[0].xch_wallet
@@ -138,73 +133,147 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     client_0 = wallet_environments.environments[0].rpc_client
     client_1 = wallet_environments.environments[1].rpc_client
 
-    confirmed_balance: int = await wallet_0.get_confirmed_balance()
-    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
-    )
-    confirmed_balance -= 1
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
+    # Define wallet aliases
+    env_0.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "vc": 3,
+        "crcat": 4,
+    }
+    env_1.wallet_aliases = {
+        "xch": 1,
+        "crcat": 2,
+        "vc": 3,
+    }
 
-    spend_bundle = spend_bundle_list[0].spend_bundle
-    assert spend_bundle
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
-    await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
-    did_id = bytes32.from_hexstr(did_wallet.get_my_DID())
-    vc_record, txs = await client_0.vc_mint(
-        did_id, DEFAULT_TX_CONFIG, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+    # Generate DID as an "authorized provider"
+    did_id: bytes32 = bytes32.from_hexstr(
+        (await DIDWallet.create_new_did_wallet(wallet_node_0.wallet_state_manager, wallet_0, uint64(1))).get_my_DID()
     )
-    confirmed_balance -= 1
-    confirmed_balance -= 200
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
-    await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
-    vc_wallet = await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.VC)
-    assert len(vc_wallet) == 1
+
+    # Mint a VC
+    vc_record, _ = await client_0.vc_mint(
+        did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -202,  # 200 for VC mint fee, 1 for VC singleton, 1 for DID mint
+                        # I'm not sure incrementing pending_coin_removal_count here by 3 is the spirit of this number
+                        # One existing coin has been removed and two ephemeral coins have been removed
+                        # Does pending_coin_removal_count attempt to show the number of current pending removals
+                        # Or does it intend to just mean all pending removals that we should eventually get states for?
+                        "pending_coin_removal_count": 4,  # 3 for VC mint, 1 for DID mint
+                        "<=#spendable_balance": -202,
+                        "<=#max_send_amount": -202,
+                        "set_remainder": True,
+                    },
+                    "did": {"init": True, "set_remainder": True},
+                    "vc": {
+                        "init": True,
+                        "confirmed_wallet_balance": 0,
+                        "unconfirmed_wallet_balance": 0,
+                        "spendable_balance": 0,
+                        "pending_change": 0,
+                        "max_send_amount": 0,
+                        "unspent_coin_count": 0,
+                        "pending_coin_removal_count": 0,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -202,  # 200 for VC mint fee, 1 for VC singleton, 1 for DID mint
+                        "pending_coin_removal_count": -4,  # 3 for VC mint, 1 for DID mint
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "vc": {
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
     new_vc_record: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
     assert new_vc_record is not None
 
     # Spend VC
     proofs: VCProofs = VCProofs({"foo": "1", "bar": "1", "baz": "1", "qux": "1", "grault": "1"})
     proof_root: bytes32 = proofs.root()
-    txs = await client_0.vc_spend(
+    await client_0.vc_spend(
         vc_record.vc.launcher_id,
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
         new_proof_hash=proof_root,
         fee=uint64(100),
     )
-    confirmed_balance -= 100
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
-    await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -100,
+                        "pending_coin_removal_count": 1,
+                        "<=#spendable_balance": -100,
+                        "<=#max_send_amount": -100,
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "spendable_balance": -1,
+                        "pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "vc": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -100,
+                        "pending_coin_removal_count": -1,
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "spendable_balance": 1,
+                        "pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "vc": {
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
     vc_record_updated: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
     assert vc_record_updated is not None
     assert vc_record_updated.vc.proof_hash == proof_root
 
     # Do a mundane spend
-    txs = await client_0.vc_spend(vc_record.vc.launcher_id, DEFAULT_TX_CONFIG)
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
-    await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
-
-    async def check_vc_record_has_parent_id(
-        parent_id: bytes32, client: WalletRpcClient, launcher_id: bytes32
-    ) -> Optional[Literal[True]]:
-        vc_record = await client.vc_get(launcher_id)
-        result: Optional[Literal[True]] = None
-        if vc_record is not None:
-            result = True if vc_record.vc.coin.parent_coin_info == parent_id else None
-        return result
-
-    await time_out_assert_not_none(
-        10, check_vc_record_has_parent_id, vc_record_updated.vc.coin.name(), client_0, vc_record.vc.launcher_id
+    await client_0.vc_spend(vc_record.vc.launcher_id, wallet_environments.tx_config)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "vc": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "vc": {
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
     )
-    vc_record_updated = await client_0.vc_get(vc_record.vc.launcher_id)
-    assert vc_record_updated is not None
 
     # Add proofs to DB
     await client_0.vc_add_proofs(proofs.key_value_pairs)
@@ -214,29 +283,50 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert len(vc_records) == 1
     assert fetched_proofs[proof_root.hex()] == proofs.key_value_pairs
 
+    # Mint CR-CAT
     await mint_cr_cat(1, wallet_0, wallet_node_0, client_0, full_node_api, [did_id])
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-    confirmed_balance += 2_000_000_000_000
-    confirmed_balance -= 100  # cat mint amount
-
-    # Send CR-CAT to another wallet
-    async def check_length(length: int, func: Callable[..., Awaitable[Any]], *args: Any) -> Optional[Literal[True]]:
-        if len(await func(*args)) == length:
-            return True
-        return None  # pragma: no cover
-
-    await time_out_assert_not_none(
-        15, check_length, 1, wallet_node_0.wallet_state_manager.get_all_wallet_info_entries, WalletType.CRCAT
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -100,
+                        "<=#spendable_balance": -100,
+                        "<=#max_send_amount": -100,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -100,
+                        "set_remainder": True,
+                    },
+                    "crcat": {
+                        "init": True,
+                        "confirmed_wallet_balance": 100,
+                        "unconfirmed_wallet_balance": 100,
+                        "spendable_balance": 100,
+                        "pending_change": 0,
+                        "max_send_amount": 100,
+                        "unspent_coin_count": 1,
+                        "pending_coin_removal_count": 0,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
     )
-    cr_cat_wallet_id_0: uint32 = (
-        await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT)
-    )[0].id
-    cr_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[cr_cat_wallet_id_0]
+
+    cr_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[env_0.dealias_wallet_id("crcat")]
     assert isinstance(cr_cat_wallet_0, CRCATWallet)
+    assert await CRCATWallet.create(  # just testing the create method doesn't throw
+        wallet_node_0.wallet_state_manager,
+        wallet_node_0.wallet_state_manager.main_wallet,
+        (await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT))[0],
+    )
     assert {
         "data": bytes(cr_cat_wallet_0.info).hex(),
-        "id": cr_cat_wallet_id_0,
+        "id": env_0.dealias_wallet_id("crcat"),
         "name": cr_cat_wallet_0.get_name(),
         "type": cr_cat_wallet_0.type(),
         "authorized_providers": [p.hex() for p in cr_cat_wallet_0.info.authorized_providers],
@@ -247,58 +337,77 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     wallet_1_addr = encode_puzzle_hash(wallet_1_ph, "txch")
     tx = await client_0.cat_spend(
         cr_cat_wallet_0.id(),
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
         uint64(90),
         wallet_1_addr,
         uint64(2000000000),
         memos=["hey"],
     )
-    confirmed_balance -= 2000000000
     await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
-    assert tx.spend_bundle is not None
-    spend_bundle = tx.spend_bundle
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
-    await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
-    await time_out_assert(15, cr_cat_wallet_0.get_confirmed_balance, 10)
-
-    # Check the other wallet recieved it
-    await time_out_assert_not_none(
-        15, check_length, 1, wallet_node_1.wallet_state_manager.get_all_wallet_info_entries, WalletType.CRCAT
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -2000000000,
+                        "pending_coin_removal_count": 1,
+                        "<=#spendable_balance": -2000000000,
+                        "<=#max_send_amount": -2000000000,
+                        "set_remainder": True,
+                    },
+                    "vc": {
+                        "pending_coin_removal_count": 1,
+                    },
+                    "crcat": {
+                        "unconfirmed_wallet_balance": -90,
+                        "spendable_balance": -100,
+                        "max_send_amount": -100,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -2000000000,
+                        "pending_coin_removal_count": -1,
+                        "set_remainder": True,
+                    },
+                    "vc": {
+                        "pending_coin_removal_count": -1,
+                    },
+                    "crcat": {
+                        "confirmed_wallet_balance": -90,
+                        "spendable_balance": 10,
+                        "max_send_amount": 10,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                post_block_balance_updates={
+                    "crcat": {
+                        "init": True,
+                        "confirmed_wallet_balance": 0,
+                        "unconfirmed_wallet_balance": 0,
+                        "spendable_balance": 0,
+                        "pending_change": 0,
+                        "max_send_amount": 0,
+                        "unspent_coin_count": 0,
+                        "pending_coin_removal_count": 0,
+                    }
+                },
+                post_block_additional_balance_info={
+                    "crcat": {
+                        "pending_approval_balance": 90,
+                    },
+                },
+            ),
+        ]
     )
-    cr_cat_wallet_info = (
-        await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT)
-    )[0]
-    cr_cat_wallet_id_1: uint32 = cr_cat_wallet_info.id
-    cr_cat_wallet_1 = wallet_node_1.wallet_state_manager.wallets[cr_cat_wallet_id_1]
-    assert isinstance(cr_cat_wallet_1, CRCATWallet)
-    assert await CRCATWallet.create(  # just testing the create method doesn't throw
-        wallet_node_1.wallet_state_manager,
-        wallet_node_1.wallet_state_manager.main_wallet,
-        cr_cat_wallet_info,
+    assert await wallet_node_1.wallet_state_manager.wallets[env_1.dealias_wallet_id("crcat")].match_hinted_coin(
+        next(c for c in tx.additions if c.amount == 90), wallet_1_ph
     )
-    await time_out_assert(15, cr_cat_wallet_1.get_confirmed_balance, 0)
-    await time_out_assert(15, cr_cat_wallet_1.get_pending_approval_balance, 90)
-    await time_out_assert(15, cr_cat_wallet_1.get_unconfirmed_balance, 90)
-    assert await client_1.get_wallet_balance(cr_cat_wallet_id_1) == {
-        "confirmed_wallet_balance": 0,
-        "unconfirmed_wallet_balance": 0,
-        "spendable_balance": 0,
-        "pending_change": 0,
-        "max_send_amount": 0,
-        "unspent_coin_count": 0,
-        "pending_coin_removal_count": 0,
-        "pending_approval_balance": 90,
-        "wallet_id": cr_cat_wallet_id_1,
-        "wallet_type": cr_cat_wallet_1.type().value,
-        "asset_id": cr_cat_wallet_1.get_asset_id(),
-        "fingerprint": wallet_node_1.logged_in_fingerprint,
-    }
-    assert await cr_cat_wallet_1.match_hinted_coin(next(c for c in tx.additions if c.amount == 90), wallet_1_ph)
     pending_tx = await client_1.get_transactions(
-        cr_cat_wallet_1.id(),
+        env_1.dealias_wallet_id("crcat"),
         0,
         1,
         reverse=True,
@@ -307,162 +416,292 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert len(pending_tx) == 1
 
     # Send the VC to wallet_1 to use for the CR-CATs
-    txs = await client_0.vc_spend(
-        vc_record.vc.launcher_id, DEFAULT_TX_CONFIG, new_puzhash=await wallet_1.get_new_puzzlehash()
+    await client_0.vc_spend(
+        vc_record.vc.launcher_id, wallet_environments.tx_config, new_puzhash=await wallet_1.get_new_puzzlehash()
     )
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
-    vc_record_updated = await client_1.vc_get(vc_record.vc.launcher_id)
-    assert vc_record_updated is not None
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "vc": {
+                        "pending_coin_removal_count": 1,
+                    }
+                },
+                post_block_balance_updates={
+                    "vc": {
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": -1,
+                    }
+                },
+            ),
+            WalletStateTransition(
+                post_block_balance_updates={
+                    "vc": {"init": True, "set_remainder": True},
+                }
+            ),
+        ]
+    )
     await client_1.vc_add_proofs(proofs.key_value_pairs)
 
     # Claim the pending approval to our wallet
-    txs = await client_1.crcat_approve_pending(
-        uint32(cr_cat_wallet_id_1),
+    await client_1.crcat_approve_pending(
+        env_1.dealias_wallet_id("crcat"),
         uint64(90),
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
         fee=uint64(90),
     )
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
-    await time_out_assert(15, cr_cat_wallet_1.get_confirmed_balance, 90)
-    await time_out_assert(15, cr_cat_wallet_1.get_pending_approval_balance, 0)
-    await time_out_assert(15, cr_cat_wallet_1.get_unconfirmed_balance, 90)
-    await time_out_assert(
-        15, cr_cat_wallet_1.wallet_state_manager.get_confirmed_balance_for_wallet, 90, cr_cat_wallet_id_1
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -90,
+                        "pending_coin_removal_count": 1,
+                        "<=#spendable_balance": -90,
+                        "<=#max_send_amount": -90,
+                        "set_remainder": True,
+                    },
+                    "vc": {
+                        "pending_coin_removal_count": 1,
+                    },
+                    "crcat": {
+                        "unconfirmed_wallet_balance": 90,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -90,
+                        "pending_coin_removal_count": -1,
+                        "set_remainder": True,
+                    },
+                    "vc": {
+                        "pending_coin_removal_count": -1,
+                    },
+                    "crcat": {
+                        "confirmed_wallet_balance": 90,
+                        "spendable_balance": 90,
+                        "max_send_amount": 90,
+                        "unspent_coin_count": 1,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+                post_block_additional_balance_info={
+                    "crcat": {
+                        "pending_approval_balance": 0,
+                    },
+                },
+            ),
+        ]
     )
-    await time_out_assert_not_none(
-        10, check_vc_record_has_parent_id, vc_record_updated.vc.coin.name(), client_1, vc_record.vc.launcher_id
-    )
-    vc_record_updated = await client_1.vc_get(vc_record.vc.launcher_id)
-    assert vc_record_updated is not None
-    for tx in txs:
-        await time_out_assert(15, is_transaction_confirmed, True, cr_cat_wallet_1.wallet_state_manager, tx.name)
 
     # (Negative test) Try to spend a CR-CAT that we don't have a valid VC for
     with pytest.raises(ValueError):
-        tx = await client_0.cat_spend(
+        await client_0.cat_spend(
             cr_cat_wallet_0.id(),
-            DEFAULT_TX_CONFIG,
+            wallet_environments.tx_config,
             uint64(10),
             wallet_1_addr,
         )
 
     # Test melting a CRCAT
     tx = await client_1.cat_spend(
-        cr_cat_wallet_id_1,
-        DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
+        env_1.dealias_wallet_id("crcat"),
+        wallet_environments.tx_config,
         uint64(20),
         wallet_1_addr,
         uint64(0),
         cat_discrepancy=(-50, Program.to(None), Program.to(None)),
     )
     await wallet_node_1.wallet_state_manager.add_pending_transaction(tx)
-    assert tx.spend_bundle is not None
-    spend_bundle = tx.spend_bundle
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
-    # should go straight to confirmed because we sent to ourselves
-    await time_out_assert(15, cr_cat_wallet_1.get_confirmed_balance, 40)
-    await time_out_assert(15, cr_cat_wallet_1.get_pending_approval_balance, 0)
-    await time_out_assert(15, cr_cat_wallet_1.get_unconfirmed_balance, 40)
-
-    # Revoke VC
-    await time_out_assert_not_none(
-        10, check_vc_record_has_parent_id, vc_record_updated.vc.coin.name(), client_1, vc_record.vc.launcher_id
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": 20,
+                        "pending_coin_removal_count": 1,
+                        "<=#spendable_balance": 20,
+                        "<=#max_send_amount": 20,
+                        "set_remainder": True,
+                    },
+                    "vc": {
+                        "pending_coin_removal_count": 1,
+                    },
+                    "crcat": {
+                        "unconfirmed_wallet_balance": -50,
+                        "spendable_balance": -90,
+                        "max_send_amount": -90,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": 20,
+                        "pending_coin_removal_count": -1,
+                        "set_remainder": True,
+                    },
+                    "vc": {
+                        "pending_coin_removal_count": -1,
+                    },
+                    "crcat": {
+                        "confirmed_wallet_balance": -50,  # should go straight to confirmed because we sent to ourselves
+                        "spendable_balance": 40,
+                        "max_send_amount": 40,
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+        ]
     )
     vc_record_updated = await client_1.vc_get(vc_record_updated.vc.launcher_id)
     assert vc_record_updated is not None
-    txs = await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, DEFAULT_TX_CONFIG, uint64(1))
-    confirmed_balance -= 1
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
-    await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
-    vc_record_revoked: Optional[VCRecord] = await client_1.vc_get(vc_record.vc.launcher_id)
-    assert vc_record_revoked is None
+
+    # Revoke VC
+    await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, wallet_environments.tx_config, uint64(1))
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -1,
+                        "pending_coin_removal_count": 1,
+                        "<=#spendable_balance": -1,
+                        "<=#max_send_amount": -1,
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "spendable_balance": -1,
+                        "pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -1,
+                        "pending_coin_removal_count": -1,
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "spendable_balance": 1,
+                        "pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                post_block_balance_updates={
+                    "vc": {
+                        "unspent_coin_count": -1,
+                    },
+                },
+            ),
+        ]
+    )
     assert (
         len(await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).store.get_unconfirmed_vcs()) == 0
     )
 
 
 @pytest.mark.parametrize(
-    "trusted",
-    [True, False],
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+        }
+    ],
+    indirect=True,
 )
 @pytest.mark.anyio
-async def test_self_revoke(
-    self_hostname: str,
-    one_wallet_and_one_simulator_services: Any,
-    trusted: Any,
-) -> None:
-    num_blocks = 1
-    full_nodes, wallets, bt = one_wallet_and_one_simulator_services
-    full_node_api: FullNodeSimulator = full_nodes[0]._api
-    full_node_server = full_node_api.full_node.server
-    wallet_service_0 = wallets[0]
-    wallet_node_0 = wallet_service_0._node
-    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
+    # Setup
+    env_0: WalletEnvironment = wallet_environments.environments[0]
+    wallet_node_0 = env_0.wallet_node
+    wallet_0 = env_0.xch_wallet
+    client_0 = env_0.rpc_client
 
-    client_0 = await WalletRpcClient.create(
-        bt.config["self_hostname"],
-        wallet_service_0.rpc_server.listen_port,
-        wallet_service_0.root_path,
-        wallet_service_0.config,
-    )
+    # Aliases
+    env_0.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "vc": 3,
+    }
 
-    if trusted:
-        wallet_node_0.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_0.config["trusted_peers"] = {}
-
-    await wallet_node_0.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-
+    # Generate DID as an "authorized provider"
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
-    spend_bundle = spend_bundle_list[0].spend_bundle
-    assert spend_bundle
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+    did_id: bytes32 = bytes32.from_hexstr(did_wallet.get_my_DID())
 
-    did_id = bytes32.from_hexstr(did_wallet.get_my_DID())
-    vc_record, txs = await client_0.vc_mint(
-        did_id, DEFAULT_TX_CONFIG, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+    vc_record, _ = await client_0.vc_mint(
+        did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
     )
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    vc_wallet = await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.VC)
-    assert len(vc_wallet) == 1
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                # Balance checking for this spend covered in test_vc_lifecycle
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"init": True, "set_remainder": True},
+                    "vc": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "vc": {"set_remainder": True},
+                },
+            )
+        ]
+    )
     new_vc_record: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
     assert new_vc_record is not None
 
     # Test a negative case real quick (mostly unrelated)
     with pytest.raises(ValueError, match="at the same time"):
         await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
-            new_vc_record.vc.launcher_id, DEFAULT_TX_CONFIG, new_proof_hash=bytes32([0] * 32), self_revoke=True
+            new_vc_record.vc.launcher_id,
+            wallet_environments.tx_config,
+            new_proof_hash=bytes32([0] * 32),
+            self_revoke=True,
         )
 
-    await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, DEFAULT_TX_CONFIG)
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
-    spend_bundle = spend_bundle_list[0].spend_bundle
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+    # Send the DID to oblivion
+    await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "did": {"set_remainder": True},
+                },
+                post_block_balance_updates={},
+            )
+        ]
+    )
 
-    txs = await client_0.vc_revoke(new_vc_record.vc.coin.parent_coin_info, DEFAULT_TX_CONFIG, uint64(0))
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+    # Make sure revoking still works
+    await client_0.vc_revoke(new_vc_record.vc.coin.parent_coin_info, wallet_environments.tx_config, uint64(0))
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                # Balance checking for this spend covered in test_vc_lifecycle
+                pre_block_balance_updates={
+                    "vc": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "vc": {
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": -1,
+                    },
+                },
+            )
+        ]
+    )
     vc_record_revoked: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
     assert vc_record_revoked is None
     assert (
