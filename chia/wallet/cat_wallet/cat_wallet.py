@@ -89,7 +89,8 @@ class CATWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> CATWallet:
+    ) -> Tuple[CATWallet, TransactionRecord]:
+        # TODO: nope, no.  red light.  stop.  (with the tuple, that is)
         self = CATWallet()
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
@@ -175,7 +176,7 @@ class CATWallet:
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
         await self.standard_wallet.push_transaction(chia_tx)
         await self.standard_wallet.push_transaction(cat_record)
-        return self
+        return self, cat_record
 
     @staticmethod
     async def get_or_create_wallet_for_cat(
