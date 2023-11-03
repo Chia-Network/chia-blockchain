@@ -30,7 +30,11 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import _derive_path_unhardened, master_sk_to_wallet_sk_unhardened_intermediate
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    puzzle_hash_for_pk,
+    puzzle_hash_for_synthetic_public_key,
+)
+from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
@@ -234,7 +238,7 @@ class TestCATWallet:
             [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, fee=uint64(1)
         )
         tx_id = None
-        await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
         for tx_record in tx_records:
             if tx_record.wallet_id is cat_wallet.id():
                 tx_id = tx_record.name.hex()
@@ -266,7 +270,7 @@ class TestCATWallet:
         assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
         cat_hash = await cat_wallet.get_new_inner_hash()
         tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-        await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
 
         await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records)
 
@@ -345,7 +349,7 @@ class TestCATWallet:
         tx_records = await cat_wallet.generate_signed_transaction(
             [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG.override(reuse_puzhash=True), fee=uint64(1)
         )
-        await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
         for tx_record in tx_records:
             if tx_record.wallet_id is cat_wallet.id():
                 assert tx_record.to_puzzle_hash == cat_2_hash
@@ -373,7 +377,7 @@ class TestCATWallet:
 
         cat_hash = await cat_wallet.get_new_inner_hash()
         tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-        await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
 
         await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records)
 
@@ -508,7 +512,7 @@ class TestCATWallet:
         tx_records = await cat_wallet.generate_signed_transaction(
             [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, fee=uint64(1)
         )
-        await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
         await full_node_api.process_transaction_records(records=tx_records)
 
         await time_out_assert(30, wallet.get_confirmed_balance, funds - 101)
@@ -524,7 +528,7 @@ class TestCATWallet:
         [tx_record] = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, cc2_ph, DEFAULT_TX_CONFIG, 0
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tx_record])
+        [tx_record] = await wallet.wallet_state_manager.add_pending_transactions([tx_record])
         await full_node_api.process_transaction_records(records=[tx_record])
 
         id = cat_wallet_2.id()
@@ -612,7 +616,7 @@ class TestCATWallet:
         tx_records = await cat_wallet_0.generate_signed_transaction(
             [uint64(60), uint64(20)], [cat_1_hash, cat_2_hash], DEFAULT_TX_CONFIG
         )
-        await wallet_0.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await wallet_0.wallet_state_manager.add_pending_transactions(tx_records)
         await full_node_api.process_transaction_records(records=tx_records)
 
         await time_out_assert(20, cat_wallet_0.get_confirmed_balance, 20)
@@ -627,10 +631,10 @@ class TestCATWallet:
         cat_hash = await cat_wallet_0.get_new_inner_hash()
 
         tx_records = await cat_wallet_1.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-        await wallet_1.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await wallet_1.wallet_state_manager.add_pending_transactions(tx_records)
 
         tx_records_2 = await cat_wallet_2.generate_signed_transaction([uint64(20)], [cat_hash], DEFAULT_TX_CONFIG)
-        await wallet_2.wallet_state_manager.add_pending_transactions(tx_records_2)
+        tx_records_2 = await wallet_2.wallet_state_manager.add_pending_transactions(tx_records_2)
 
         await full_node_api.process_transaction_records(records=[*tx_records, *tx_records_2])
 
@@ -654,7 +658,7 @@ class TestCATWallet:
                 [uint64(30)], [cat_hash], DEFAULT_TX_CONFIG, memos=[[b"too"], [b"many"], [b"memos"]]
             )
 
-        await wallet_1.wallet_state_manager.add_pending_transactions(tx_records_3)
+        tx_records_3 = await wallet_1.wallet_state_manager.add_pending_transactions(tx_records_3)
         await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records_3)
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
         for tx in txs:
@@ -726,7 +730,7 @@ class TestCATWallet:
         tx_records = await cat_wallet.generate_signed_transaction(
             amounts, puzzle_hashes, DEFAULT_TX_CONFIG, coins={spent_coint}
         )
-        await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
         await full_node_api.process_transaction_records(records=tx_records)
 
         await asyncio.sleep(2)
@@ -834,7 +838,7 @@ class TestCATWallet:
             [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, memos=[[cat_2_hash]]
         )
 
-        await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
 
         await full_node_api.process_transaction_records(records=tx_records)
 
@@ -865,7 +869,7 @@ class TestCATWallet:
             [uint64(10)], [cat_2_hash], DEFAULT_TX_CONFIG, memos=[[cat_2_hash]]
         )
 
-        await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
 
         await full_node_api.process_transaction_records(records=tx_records)
 
@@ -882,7 +886,7 @@ class TestCATWallet:
 
         cat_hash = await cat_wallet.get_new_inner_hash()
         tx_records = await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash], DEFAULT_TX_CONFIG)
-        await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
 
         await full_node_api.process_transaction_records(records=tx_records)
 
@@ -977,7 +981,7 @@ class TestCATWallet:
             ).get_tree_hash(),
             cat_amount_0,
         )
-        eve_spend = await wallet_node_0.wallet_state_manager.sign_transaction(
+        eve_spend = await sign_coin_spends(
             [
                 CoinSpend(
                     cat_coin,
@@ -1036,6 +1040,11 @@ class TestCATWallet:
                     ),
                 ),
             ],
+            wallet_node_0.wallet_state_manager.get_private_key_for_pubkey,
+            wallet_node_0.wallet_state_manager.get_synthetic_private_key_for_puzzle_hash,
+            wallet_node_0.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            wallet_node_0.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            [puzzle_hash_for_synthetic_public_key],
         )
         await client_0.push_tx(eve_spend)
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, eve_spend.name())

@@ -191,7 +191,7 @@ class TestSimpleSyncProtocol:
         spent_coin = tx_record.spend_bundle.removals()[0]
         assert spent_coin.puzzle_hash == puzzle_hash
 
-        await wallet_node.wallet_state_manager.add_pending_transactions([tx_record])
+        [tx_record] = await wallet_node.wallet_state_manager.add_pending_transactions([tx_record])
 
         await full_node_api.process_transaction_records(records=[tx_record])
 
@@ -203,7 +203,7 @@ class TestSimpleSyncProtocol:
         [tx_record] = await wallet.generate_signed_transaction(
             uint64(10), SINGLETON_LAUNCHER_HASH, DEFAULT_TX_CONFIG, uint64(0)
         )
-        await wallet_node.wallet_state_manager.add_pending_transactions([tx_record])
+        [tx_record] = await wallet_node.wallet_state_manager.add_pending_transactions([tx_record])
 
         await full_node_api.process_transaction_records(records=[tx_record])
 
@@ -211,7 +211,7 @@ class TestSimpleSyncProtocol:
 
         # Send a transaction to make sure the wallet is still running
         [tx_record] = await wallet.generate_signed_transaction(uint64(10), junk_ph, DEFAULT_TX_CONFIG, uint64(0))
-        await wallet_node.wallet_state_manager.add_pending_transactions([tx_record])
+        [tx_record] = await wallet_node.wallet_state_manager.add_pending_transactions([tx_record])
 
         await full_node_api.process_transaction_records(records=[tx_record])
 
@@ -273,7 +273,7 @@ class TestSimpleSyncProtocol:
         [tx_record] = await standard_wallet.generate_signed_transaction(
             uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0), coins=coins
         )
-        await standard_wallet.wallet_state_manager.add_pending_transactions([tx_record])
+        [tx_record] = await standard_wallet.wallet_state_manager.add_pending_transactions([tx_record])
 
         await full_node_api.process_transaction_records(records=[tx_record])
 
@@ -312,7 +312,7 @@ class TestSimpleSyncProtocol:
         data_response: RespondToCoinUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
         assert len(data_response.coin_states) == 0
 
-        await standard_wallet.wallet_state_manager.add_pending_transactions([tx_record])
+        [tx_record] = await standard_wallet.wallet_state_manager.add_pending_transactions([tx_record])
 
         await full_node_api.process_transaction_records(records=[tx_record])
 
