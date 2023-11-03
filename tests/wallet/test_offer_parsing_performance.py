@@ -38,6 +38,7 @@ def test_offer_parsing_performance(benchmark_runner: BenchmarkRunner) -> None:
 def test_offered_coins_performance(benchmark_runner: BenchmarkRunner) -> None:
     offer_bytes = bytes.fromhex(test_offer)
     o = Offer.from_bytes(offer_bytes)
+    # TODO: make this benchmark take longer so it can actually be measured sensibly
     with benchmark_runner.assert_runtime(seconds=0.015):
         with enable_profiler("offered-coins"):
             for _ in range(100):
