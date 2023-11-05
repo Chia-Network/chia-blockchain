@@ -6,7 +6,6 @@ import dataclasses
 import logging
 import random
 import time
-import traceback
 from typing import Coroutine, Dict, List, Optional, Tuple
 
 import pytest
@@ -2190,16 +2189,9 @@ async def test_long_reorg_nodes(
     await full_node_2.full_node.add_block(reorg_blocks[-1])
 
     def check_nodes_in_sync():
-        try:
-            p1 = full_node_2.full_node.blockchain.get_peak()
-            p2 = full_node_1.full_node.blockchain.get_peak()
-            return p1 == p2
-        except Exception as e:
-            # TODO: understand why we get an exception here sometimes. Fix it or
-            # add comment explaining why we need to catch here
-            traceback.print_exc()
-            print(f"e: {e}")
-            return False
+        p1 = full_node_2.full_node.blockchain.get_peak()
+        p2 = full_node_1.full_node.blockchain.get_peak()
+        return p1 == p2
 
     await time_out_assert(120, check_nodes_in_sync)
     peak = full_node_2.full_node.blockchain.get_peak()
