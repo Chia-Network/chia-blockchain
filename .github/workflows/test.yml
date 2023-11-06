@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
@@ -107,7 +107,7 @@ jobs:
             matrix: '3.10'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -201,7 +201,7 @@ jobs:
           fi
 
       - name: Remove previous coverage report comment and label from PR
-        if: always()
+        if: github.base_ref != '' && always()
         shell: bash
         env:
           COV_STATUS: ${{ env.COV_STATUS }}
@@ -222,7 +222,7 @@ jobs:
           fi
 
       - name: Add diff coverage report comment to PR
-        if: always()
+        if: github.base_ref != '' && always()
         env:
           BRANCH_NAME: ${{ github.sha }}
           COV_STATUS: ${{ env.COV_STATUS }}
@@ -241,7 +241,7 @@ jobs:
             IFS=$'\n'
             for LINE in $CONTENT; do
               if [[ $LINE =~ ^(.*\.py)\ \(([0-9\.]+%)\)\:\ Missing\ lines\ (.*)$ ]]; then
-                FILE=\`"${BASH_REMATCH[1]}"\`
+                FILE="${BASH_REMATCH[1]}"
                 COVERAGE="${BASH_REMATCH[2]}"
                 MISSING="${BASH_REMATCH[3]}"
                 MISSING_TRANSFORMED="lines "
@@ -254,7 +254,7 @@ jobs:
                   fi
                 done
                 MISSING_TRANSFORMED=${MISSING_TRANSFORMED%, }
-                OUTPUT+="| [${FILE}](${BASE_URL}/${FILE}) | ${COVERAGE} | ${MISSING_TRANSFORMED} |\n"
+                OUTPUT+="| [\`${FILE}\`](${BASE_URL}/${FILE}) | ${COVERAGE} | ${MISSING_TRANSFORMED} |\n"
               elif [[ $LINE =~ ^Total:\ \ \ (.*)\ lines$ ]]; then
                 TOTAL_LINES="${BASH_REMATCH[1]} lines"
               elif [[ $LINE =~ ^Missing:\ (.*)\ lines$ ]]; then

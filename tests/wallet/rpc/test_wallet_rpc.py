@@ -177,8 +177,8 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
         wallet_node.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
-    await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_node_2.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_node_2.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     async with WalletRpcClient.create_as_context(
         hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
@@ -1346,23 +1346,23 @@ async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEn
     assert await client.get_coin_records_by_names([]) == []
     # 2. All coins
     rpc_result = await client.get_coin_records_by_names(coin_ids + coin_ids_unspent)
-    assert set(record.coin for record in rpc_result) == {*coins, *coins_unspent}
+    assert {record.coin for record in rpc_result} == {*coins, *coins_unspent}
     # 3. All spent coins
     rpc_result = await client.get_coin_records_by_names(coin_ids, include_spent_coins=True)
-    assert set(record.coin for record in rpc_result) == coins
+    assert {record.coin for record in rpc_result} == coins
     # 4. All unspent coins
     rpc_result = await client.get_coin_records_by_names(coin_ids_unspent, include_spent_coins=False)
-    assert set(record.coin for record in rpc_result) == coins_unspent
+    assert {record.coin for record in rpc_result} == coins_unspent
     # 5. Filter start/end height
     filter_records = result.records[:10]
     assert len(filter_records) == 10
     filter_coin_ids = [record.name() for record in filter_records]
-    filter_coins = set(record.coin for record in filter_records)
+    filter_coins = {record.coin for record in filter_records}
     min_height = min(record.confirmed_block_height for record in filter_records)
     max_height = max(record.confirmed_block_height for record in filter_records)
     assert min_height != max_height
     rpc_result = await client.get_coin_records_by_names(filter_coin_ids, start_height=min_height, end_height=max_height)
-    assert set(record.coin for record in rpc_result) == filter_coins
+    assert {record.coin for record in rpc_result} == filter_coins
     # 8. Test the failure case
     with pytest.raises(ValueError, match="not found"):
         await client.get_coin_records_by_names(coin_ids, include_spent_coins=False)

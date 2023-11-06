@@ -37,17 +37,17 @@ do_install_npm_locally(){
   NODEJS_VERSION="$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')"
   NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
 
-  if [ "$NODEJS_VERSION" -lt "16" ] || [ "$NPM_VERSION" -lt "7" ]; then
-    if [ "$NODEJS_VERSION" -lt "16" ]; then
-      echo "Current NodeJS version($(node -v)) is less than 16. GUI app requires NodeJS>=16."
+  if [ "$NODEJS_VERSION" -lt "18" ] || [ "$NPM_VERSION" -lt "9" ]; then
+    if [ "$NODEJS_VERSION" -lt "18" ]; then
+      echo "Current NodeJS version($(node -v)) is less than 18. GUI app requires NodeJS>=18."
     fi
-    if [ "$NPM_VERSION" -lt "7" ]; then
-      echo "Current npm version($(npm -v)) is less than 7. GUI app requires npm>=7."
+    if [ "$NPM_VERSION" -lt "9" ]; then
+      echo "Current npm version($(npm -v)) is less than 9. GUI app requires npm>=9."
     fi
 
     if [ "$(uname)" = "OpenBSD" ] || [ "$(uname)" = "FreeBSD" ]; then
       # `n` package does not support OpenBSD/FreeBSD
-      echo "Please install NodeJS>=16 and/or npm>=7 manually"
+      echo "Please install NodeJS>=18 and/or npm>=9 manually"
       exit 1
     fi
 
@@ -65,19 +65,19 @@ do_install_npm_locally(){
       npm ci
     fi
     export N_PREFIX=${SCRIPT_DIR}/.n
-    PATH="${N_PREFIX}/bin:$(npm bin):${PATH}"
+    PATH="${N_PREFIX}/bin:$(npm prefix)/node_modules/.bin:${PATH}"
     export PATH
-    # `n 16` here installs nodejs@16 under $N_PREFIX directory
-    echo "n 16"
-    n 16
+    # `n 18` here installs nodejs@18 under $N_PREFIX directory
+    echo "n 18"
+    n 18
     echo "Current NodeJS version: $(node -v)"
     echo "Current npm version: $(npm -v)"
-    if [ "$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')" -lt "16" ]; then
-      echo "Error: Failed to install NodeJS>=16"
+    if [ "$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')" -lt "18" ]; then
+      echo "Error: Failed to install NodeJS>=18"
       exit 1
     fi
-    if [ "$(npm -v | cut -d'.' -f 1)" -lt "7" ]; then
-      echo "Error: Failed to install npm>=7"
+    if [ "$(npm -v | cut -d'.' -f 1)" -lt "9" ]; then
+      echo "Error: Failed to install npm>=9"
       exit 1
     fi
     cd "${SCRIPT_DIR}"

@@ -9,14 +9,14 @@ dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.0.0",
     "blspy==2.0.2",  # Signature library
-    "boto3==1.28.25",  # AWS S3 for DL s3 plugin
-    "chiavdf==1.0.11",  # timelord and vdf verification
+    "boto3==1.28.65",  # AWS S3 for DL s3 plugin
+    "chiavdf==1.1.0",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
-    "chiapos==2.0.3rc1",  # proof of space
-    "clvm==0.9.7",
+    "chiapos==2.0.3",  # proof of space
+    "clvm==0.9.8",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
     "chia_rs==0.2.11",
-    "clvm-tools-rs==0.1.34",  # Rust implementation of clvm_tools' compiler
+    "clvm-tools-rs==0.1.38",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.5",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.1.2",  # Binary data management library
@@ -30,7 +30,7 @@ dependencies = [
     "setproctitle==1.3.2",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
-    "dnspython==2.4.1",  # Query DNS seeds
+    "dnspython==2.4.2",  # Query DNS seeds
     "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.23",  # dns lib
     "typing-extensions==4.8.0",  # typing backports like Protocol and TypedDict
@@ -44,32 +44,29 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    # pinned for https://github.com/pylint-dev/pylint/issues/9069
-    "astroid==2.15.6",
-    "build==0.10.0",
+    "build==1.0.3",
     "coverage==7.3.0",
-    "diff-cover==7.7.0",
-    "pre-commit==3.3.3",
+    "diff-cover==8.0.0",
+    "pre-commit==3.5.0",
     "py3createtorrent==1.1.0",
-    "pylint==2.17.5",
+    "pylint==3.0.2",
     "pytest==7.4.0",
     "pytest-asyncio==0.21.1",
     "pytest-cov==4.1.0",
-    "pytest-mock==3.11.1",
-    "pytest-monitor==1.6.6; sys_platform == 'linux'",
+    "pytest-mock==3.12.0",
     "pytest-xdist==3.3.1",
+    "pyupgrade==3.15.0",
     "twine==4.0.2",
     "isort==5.12.0",
     "flake8==6.1.0",
     "mypy==1.5.1",
-    "black==23.7.0",
+    "black==23.10.1",
+    "lxml==4.9.3",
     "aiohttp_cors==0.7.0",  # For blackd
-    "ipython==8.12.2",  # For asyncio debugging
     "pyinstaller==5.13.0",
-    "types-aiofiles==23.1.0.5",
+    "types-aiofiles==23.2.0.0",
     "types-cryptography==3.3.23.2",
-    "types-pkg_resources==0.1.3",
-    "types-pyyaml==6.0.12.11",
+    "types-pyyaml==6.0.12.12",
     "types-setuptools==68.0.0.3",
 ]
 

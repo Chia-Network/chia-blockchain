@@ -63,7 +63,7 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         return {"puzzle_hash": self.simulator_api.bt.farmer_ph.hex()}
 
     async def get_all_coins(self, _request: Dict[str, object]) -> EndpointResult:
-        p_request = GetAllCoinsProtocol(bool((_request.get("include_spent_coins", False))))
+        p_request = GetAllCoinsProtocol(bool(_request.get("include_spent_coins", False)))
         result: List[CoinRecord] = await self.simulator_api.get_all_coins(p_request)
         return {"coin_records": [coin_record.to_json_dict() for coin_record in result]}
 

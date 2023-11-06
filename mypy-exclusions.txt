@@ -9,9 +9,6 @@ chia.plotters.plotters
 chia.plotters.plotters_util
 chia.plotting.manager
 chia.plotting.util
-chia.pools.pool_puzzles
-chia.pools.pool_wallet
-chia.pools.pool_wallet_info
 chia.rpc.rpc_client
 chia.rpc.util
 chia.rpc.wallet_rpc_client
@@ -23,18 +20,6 @@ chia.ssl.create_ssl
 chia.timelord.timelord_api
 chia.timelord.timelord_launcher
 chia.types.blockchain_format.program
-chia.util.chia_logging
-chia.util.config
-chia.util.db_wrapper
-chia.util.hash
-chia.util.json_util
-chia.util.keychain
-chia.util.keyring_wrapper
-chia.util.merkle_set
-chia.util.partial_func
-chia.util.profiler
-chia.util.service_groups
-chia.util.ssl_check
 chia.wallet.block_record
 chia.wallet.chialisp
 chia.wallet.did_wallet.did_wallet
@@ -93,7 +78,6 @@ tests.core.full_node.test_performance
 tests.core.full_node.test_transactions
 tests.core.make_block_generator
 tests.core.mempool.test_mempool
-tests.core.mempool.test_mempool_performance
 tests.core.server.test_dos
 tests.core.server.test_rate_limits
 tests.core.ssl.test_ssl
@@ -122,7 +106,6 @@ tests.simulation.test_simulation
 tests.tools.test_run_block
 tests.util.benchmark_cost
 tests.util.generator_tools_testing
-tests.util.key_tool
 tests.util.test_full_block_utils
 tests.util.test_misc
 tests.util.test_network

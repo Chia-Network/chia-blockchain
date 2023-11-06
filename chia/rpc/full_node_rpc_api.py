@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from chia_rs import ALLOW_BACKREFS
-
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
 from chia.consensus.cost_calculator import NPCResult
@@ -73,6 +71,9 @@ async def get_average_block_time(
     older_block = await get_nearest_transaction_block(blockchain, prev_block)
 
     assert newer_block.timestamp is not None and older_block.timestamp is not None
+
+    if newer_block.height == older_block.height:  # small chain not long enough to have a block in between
+        return None
 
     average_block_time = uint32(
         (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
@@ -779,11 +780,10 @@ class FullNodeRpcApi:
 
         block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
         assert block_generator is not None
-        flags = 0
-        if height >= self.service.constants.HARD_FORK_HEIGHT:
-            flags = ALLOW_BACKREFS
 
-        spend_info = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin, flags)
+        spend_info = get_puzzle_and_solution_for_coin(
+            block_generator, coin_record.coin, block.height, self.service.constants
+        )
         return {"coin_solution": CoinSpend(coin_record.coin, spend_info.puzzle, spend_info.solution)}
 
     async def get_additions_and_removals(self, request: Dict[str, Any]) -> EndpointResult:

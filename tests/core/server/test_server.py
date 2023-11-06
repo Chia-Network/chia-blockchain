@@ -23,7 +23,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import api_request
 from chia.util.errors import ApiError, Err
-from chia.util.ints import int16, uint16, uint32
+from chia.util.ints import int16, uint32
 from tests.connection_utils import connect_and_get_peer
 
 
@@ -37,7 +37,7 @@ class TestAPI:
     # API call from FullNodeAPI
     @api_request()
     async def request_transaction(self, request: RequestTransaction) -> None:
-        raise ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, f"Some error message: {request.transaction_id}", bytes(b"ab"))
+        raise ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, f"Some error message: {request.transaction_id}", b"ab")
 
 
 @pytest.mark.asyncio
@@ -45,8 +45,8 @@ async def test_duplicate_client_connection(
     two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes
-    assert await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-    assert not await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+    assert await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+    assert not await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
 
 @pytest.mark.asyncio
@@ -73,7 +73,7 @@ async def test_connection_versions(
     wallet_node = wallet_service._node
     full_node = full_node_service._node
     await wallet_node.server.start_client(
-        PeerInfo(self_hostname, uint16(cast(FullNodeAPI, full_node_service._api).server._port)), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
     outgoing_connection = wallet_node.server.all_connections[full_node.server.node_id]
     incoming_connection = full_node.server.all_connections[wallet_node.server.node_id]
@@ -93,7 +93,7 @@ async def test_api_not_ready(
     wallet_node = wallet_service._node
     full_node = full_node_service._node
     await wallet_node.server.start_client(
-        PeerInfo(self_hostname, uint16(cast(FullNodeAPI, full_node_service._api).server._port)), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
     wallet_node.log_out()
     assert not wallet_service._api.ready()
@@ -124,7 +124,7 @@ async def test_error_response(
     full_node.server.api = TestAPI()
 
     await wallet_node.server.start_client(
-        PeerInfo(self_hostname, uint16(cast(FullNodeAPI, full_node_service._api).server._port)), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
     wallet_connection = full_node.server.all_connections[wallet_node.server.node_id]
     full_node_connection = wallet_node.server.all_connections[full_node.server.node_id]
@@ -137,7 +137,7 @@ async def test_error_response(
         error = ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, error_message)
         assert f"ApiError: {error} from {wallet_connection.peer_node_id}, {wallet_connection.peer_info}" in caplog.text
         if test_version >= error_response_version:
-            assert response == Error(int16(Err.NO_TRANSACTIONS_WHILE_SYNCING.value), error_message, bytes(b"ab"))
+            assert response == Error(int16(Err.NO_TRANSACTIONS_WHILE_SYNCING.value), error_message, b"ab")
             assert "Request timeout:" not in caplog.text
         else:
             assert response is None
@@ -158,7 +158,7 @@ async def test_error_receive(
     wallet_node = wallet_service._node
     full_node = full_node_service._node
     await wallet_node.server.start_client(
-        PeerInfo(self_hostname, uint16(cast(FullNodeAPI, full_node_service._api).server._port)), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
     wallet_connection = full_node.server.all_connections[wallet_node.server.node_id]
     full_node_connection = wallet_node.server.all_connections[full_node.server.node_id]
@@ -179,7 +179,7 @@ async def test_call_api_of_specific(
     two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes
-    assert await server_1.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+    assert await server_1.start_client(PeerInfo(self_hostname, server_2.get_port()), None)
 
     message = await server_1.call_api_of_specific(
         FullNodeAPI.request_block, RequestBlock(uint32(42), False), server_2.node_id

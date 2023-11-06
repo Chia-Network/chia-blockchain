@@ -209,4 +209,4 @@ def create_valid_node_values(
             "value": value,
         }
 
-    raise Exception(f"Unhandled node type: {node_type!r}")
+    raise Exception(f"Unhandled node type: {node_type!r}")  # pragma: no cover

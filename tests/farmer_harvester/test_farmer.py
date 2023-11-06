@@ -1,19 +1,28 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from types import TracebackType
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from pytest_mock import MockerFixture
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.farmer.farmer import increment_pool_stats, strip_old_entries
+from chia.farmer.farmer import Farmer, increment_pool_stats, strip_old_entries
+from chia.farmer.farmer_api import FarmerAPI
+from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.pools.pool_config import PoolWalletConfig
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.protocols.pool_protocol import PoolErrorCode
+from chia.server.start_service import Service
+from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
     generate_plot_public_key,
@@ -23,7 +32,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from tests.conftest import HarvesterFarmerEnvironment
-from tests.util.misc import Marks
+from tests.util.misc import Marks, datacases
 
 log = logging.getLogger(__name__)
 
@@ -341,6 +350,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 0,
                     "invalid_partials_24h": [],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 1,
@@ -370,6 +381,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 0,
                     "invalid_partials_24h": [],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 1,
@@ -397,8 +410,10 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "pool_errors_24h": [],
                     "valid_partials_since_start": 0,
                     "valid_partials_24h": [],
-                    "invalid_partials_since_start": 1,
-                    "invalid_partials_24h": [1],
+                    "invalid_partials_since_start": 0,
+                    "invalid_partials_24h": [],
+                    "insufficient_partials_since_start": 1,
+                    "insufficient_partials_24h": [1],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 0,
@@ -428,6 +443,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 0,
                     "invalid_partials_24h": [],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 1,
@@ -457,6 +474,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 1,
                     "invalid_partials_24h": [1],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 0,
@@ -486,6 +505,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 0,
                     "invalid_partials_24h": [],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 1,
@@ -515,6 +536,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 1,
                     "invalid_partials_24h": [1],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 0,
@@ -578,6 +601,8 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
         "valid_partials_24h": [],
         "invalid_partials_since_start": 0,
         "invalid_partials_24h": [],
+        "insufficient_partials_since_start": 0,
+        "insufficient_partials_24h": [],
         "stale_partials_since_start": 0,
         "stale_partials_24h": [],
         "missing_partials_since_start": 0,
@@ -619,6 +644,269 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     assert_stats_24h("valid_partials_24h")
     assert_stats_since_start("invalid_partials_since_start")
     assert_stats_24h("invalid_partials_24h")
+    assert_stats_since_start("insufficient_partials_since_start")
+    assert_stats_24h("insufficient_partials_24h")
+    assert_stats_since_start("stale_partials_since_start")
+    assert_stats_24h("stale_partials_24h")
+    assert_stats_since_start("missing_partials_since_start")
+    assert_stats_24h("missing_partials_24h")
+
+
+@dataclass
+class DummyPoolResponse:
+    ok: bool
+    status: int
+    error_code: Optional[int] = None
+    error_message: Optional[str] = None
+    new_difficulty: Optional[int] = None
+
+    async def text(self) -> str:
+        json_dict: Dict[str, Any] = dict()
+        if self.error_code:
+            json_dict["error_code"] = self.error_code
+            json_dict["error_message"] = self.error_message if self.error_message else "error-msg"
+        elif self.new_difficulty:
+            json_dict["new_difficulty"] = self.new_difficulty
+
+        return json.dumps(json_dict)
+
+    async def __aenter__(self) -> DummyPoolResponse:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        pass
+
+
+def create_valid_pos(farmer: Farmer) -> Tuple[farmer_protocol.NewSignagePoint, ProofOfSpace, NewProofOfSpace]:
+    case = NewProofOfSpaceCase.create_verified_quality_case(
+        difficulty=uint64(1),
+        sub_slot_iters=uint64(1000000000000),
+        pool_url="https://192.168.0.256",
+        pool_difficulty=uint64(1),
+        authentication_token_timeout=uint8(10),
+        use_invalid_peer_response=False,
+        has_valid_authentication_keys=True,
+        expected_pool_stats={},
+    )
+    sp = farmer_protocol.NewSignagePoint(
+        challenge_hash=case.challenge_hash,
+        challenge_chain_sp=case.sp_hash,
+        reward_chain_sp=std_hash(b"1"),
+        difficulty=case.difficulty,
+        sub_slot_iters=case.sub_slot_iters,
+        signage_point_index=case.signage_point_index,
+        peak_height=uint32(1),
+    )
+    pos = ProofOfSpace(
+        challenge=case.plot_challenge,
+        pool_public_key=case.pool_public_key,
+        pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
+        plot_public_key=case.plot_public_key,
+        size=case.plot_size,
+        proof=case.proof,
+    )
+    new_pos = NewProofOfSpace(
+        challenge_hash=case.challenge_hash,
+        sp_hash=case.sp_hash,
+        plot_identifier=case.plot_identifier,
+        proof=pos,
+        signage_point_index=case.signage_point_index,
+    )
+    p2_singleton_puzzle_hash = case.pool_contract_puzzle_hash
+    farmer.constants = dataclasses.replace(DEFAULT_CONSTANTS, POOL_SUB_SLOT_ITERS=case.sub_slot_iters)
+    farmer._private_keys = case.farmer_private_keys
+    farmer.authentication_keys = case.authentication_keys
+    farmer.sps[case.sp_hash] = [sp]
+    farmer.pool_state[p2_singleton_puzzle_hash] = {
+        "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
+        "points_found_since_start": 0,
+        "points_found_24h": [],
+        "points_acknowledged_since_start": 0,
+        "points_acknowledged_24h": [],
+        "next_farmer_update": 0,
+        "next_pool_info_update": 0,
+        "current_points": 0,
+        "current_difficulty": case.pool_difficulty,
+        "pool_errors_24h": [],
+        "valid_partials_since_start": 0,
+        "valid_partials_24h": [],
+        "invalid_partials_since_start": 0,
+        "invalid_partials_24h": [],
+        "insufficient_partials_since_start": 0,
+        "insufficient_partials_24h": [],
+        "stale_partials_since_start": 0,
+        "stale_partials_24h": [],
+        "missing_partials_since_start": 0,
+        "missing_partials_24h": [],
+        "authentication_token_timeout": case.authentication_token_timeout,
+        "plot_count": 0,
+        "pool_config": case.pool_config,
+    }
+    return sp, pos, new_pos
+
+
+def override_pool_state(overrides: Dict[str, Any]) -> Dict[str, Any]:
+    pool_state = {
+        "points_found_since_start": 0,
+        # Original item format here is (timestamp, value) but we'll ignore timestamp part
+        # so every `xxx_24h` item in this dict will be List[Any].
+        "points_found_24h": [],
+        "points_acknowledged_since_start": 0,
+        "points_acknowledged_24h": [],
+        "pool_errors_24h": [],
+        "valid_partials_since_start": 0,
+        "valid_partials_24h": [],
+        "invalid_partials_since_start": 0,
+        "invalid_partials_24h": [],
+        "insufficient_partials_since_start": 0,
+        "insufficient_partials_24h": [],
+        "stale_partials_since_start": 0,
+        "stale_partials_24h": [],
+        "missing_partials_since_start": 0,
+        "missing_partials_24h": [],
+    }
+    for key, value in overrides.items():
+        pool_state[key] = value
+    return pool_state
+
+
+@dataclass
+class PoolStateCase:
+    id: str
+    pool_response: DummyPoolResponse
+    expected_pool_state: Dict[str, Any]
+    marks: Marks = ()
+
+
+@datacases(
+    PoolStateCase(
+        "valid_response",
+        DummyPoolResponse(True, 200, new_difficulty=123),
+        override_pool_state(
+            {
+                "points_found_since_start": 1,
+                "points_found_24h": [1],
+                "points_acknowledged_since_start": 123,
+                "points_acknowledged_24h": [123],
+                "valid_partials_since_start": 1,
+                "valid_partials_24h": [1],
+            }
+        ),
+    ),
+    PoolStateCase(
+        "response_not_ok",
+        DummyPoolResponse(False, 500),
+        override_pool_state(
+            {
+                "points_found_since_start": 1,
+                "points_found_24h": [1],
+                "invalid_partials_since_start": 1,
+                "invalid_partials_24h": [1],
+            }
+        ),
+    ),
+    PoolStateCase(
+        "stale_partial",
+        DummyPoolResponse(True, 200, error_code=uint16(PoolErrorCode.TOO_LATE.value)),
+        override_pool_state(
+            {
+                "points_found_since_start": 1,
+                "points_found_24h": [1],
+                "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.TOO_LATE.value)}],
+                "stale_partials_since_start": 1,
+                "stale_partials_24h": [1],
+            }
+        ),
+    ),
+    PoolStateCase(
+        "insufficient_partial",
+        DummyPoolResponse(True, 200, error_code=uint16(PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value)),
+        override_pool_state(
+            {
+                "points_found_since_start": 1,
+                "points_found_24h": [1],
+                "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value)}],
+                "insufficient_partials_since_start": 1,
+                "insufficient_partials_24h": [1],
+            }
+        ),
+    ),
+    PoolStateCase(
+        "other_failed_partial",
+        DummyPoolResponse(True, 200, error_code=uint16(PoolErrorCode.SERVER_EXCEPTION.value)),
+        override_pool_state(
+            {
+                "points_found_since_start": 1,
+                "points_found_24h": [1],
+                "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.SERVER_EXCEPTION.value)}],
+                "invalid_partials_since_start": 1,
+                "invalid_partials_24h": [1],
+            }
+        ),
+    ),
+)
+@pytest.mark.asyncio
+async def test_farmer_pool_response(
+    mocker: MockerFixture,
+    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools],
+    case: PoolStateCase,
+) -> None:
+    _, farmer_service, _ = farmer_one_harvester
+    assert farmer_service.rpc_server is not None
+    farmer_api = farmer_service._api
+
+    sp, pos, new_pos = create_valid_pos(farmer_api.farmer)
+    assert pos.pool_contract_puzzle_hash is not None
+    p2_singleton_puzzle_hash: bytes32 = pos.pool_contract_puzzle_hash
+
+    assert (
+        verify_and_get_quality_string(
+            pos, DEFAULT_CONSTANTS, sp.challenge_hash, sp.challenge_chain_sp, height=uint32(1)
+        )
+        is not None
+    )
+
+    pool_response = case.pool_response
+    expected_pool_state = case.expected_pool_state
+
+    mock_http_post = mocker.patch("aiohttp.ClientSession.post", return_value=pool_response)
+
+    peer = cast(WSChiaConnection, DummyHarvesterPeer(False))
+    await farmer_api.new_proof_of_space(new_pos, peer)
+
+    mock_http_post.assert_called_once()
+
+    def assert_stats_since_start(name: str) -> None:
+        assert farmer_api.farmer.pool_state[p2_singleton_puzzle_hash][name] == expected_pool_state[name]
+
+    def assert_stats_24h(name: str) -> None:
+        assert len(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash][name]) == len(expected_pool_state[name])
+        for i, stat in enumerate(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash][name]):
+            assert stat[1] == expected_pool_state[name][i]
+
+    def assert_pool_errors_24h() -> None:
+        assert len(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash]["pool_errors_24h"]) == len(
+            expected_pool_state["pool_errors_24h"]
+        )
+        for i, stat in enumerate(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash]["pool_errors_24h"]):
+            assert stat[1]["error_code"] == expected_pool_state["pool_errors_24h"][i]["error_code"]
+
+    assert_stats_since_start("points_found_since_start")
+    assert_stats_24h("points_found_24h")
+    assert_stats_since_start("points_acknowledged_since_start")
+    assert_stats_24h("points_acknowledged_24h")
+    assert_pool_errors_24h()
+    assert_stats_since_start("valid_partials_since_start")
+    assert_stats_24h("valid_partials_24h")
+    assert_stats_since_start("invalid_partials_since_start")
+    assert_stats_24h("invalid_partials_24h")
+    assert_stats_since_start("insufficient_partials_since_start")
+    assert_stats_24h("insufficient_partials_24h")
     assert_stats_since_start("stale_partials_since_start")
     assert_stats_24h("stale_partials_24h")
     assert_stats_since_start("missing_partials_since_start")

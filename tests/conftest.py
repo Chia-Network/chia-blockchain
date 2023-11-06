@@ -3,13 +3,15 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
+import functools
+import math
 import multiprocessing
 import os
 import random
 import sysconfig
 import tempfile
 from enum import Enum
-from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple, Union
+from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Union
 
 import aiohttp
 import pytest
@@ -41,7 +43,6 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import (
     SimulatorsAndWallets,
     setup_full_system,
-    setup_full_system_connect_to_deamon,
     setup_n_nodes,
     setup_simulators_and_wallets,
     setup_simulators_and_wallets_service,
@@ -50,6 +51,8 @@ from chia.simulator.setup_nodes import (
 from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
+from chia.timelord.timelord import Timelord
+from chia.timelord.timelord_api import TimelordAPI
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16, uint32, uint64
@@ -61,7 +64,7 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
-from tests.util.misc import BenchmarkRunner
+from tests.util.misc import BenchmarkRunner, GcMode, _AssertRuntime, measure_overhead
 
 multiprocessing.set_start_method("spawn")
 
@@ -80,10 +83,32 @@ def seeded_random_fixture() -> random.Random:
     return seeded_random
 
 
+@pytest.fixture(name="benchmark_runner_overhead", scope="session")
+def benchmark_runner_overhead_fixture() -> float:
+    return measure_overhead(
+        manager_maker=functools.partial(
+            _AssertRuntime,
+            gc_mode=GcMode.nothing,
+            seconds=math.inf,
+            print=False,
+        ),
+        cycles=100,
+    )
+
+
 @pytest.fixture(name="benchmark_runner")
-def benchmark_runner_fixture(request: SubRequest) -> BenchmarkRunner:
+def benchmark_runner_fixture(
+    request: SubRequest,
+    benchmark_runner_overhead: float,
+    record_property: Callable[[str, object], None],
+    benchmark_repeat: int,
+) -> BenchmarkRunner:
     label = request.node.name
-    return BenchmarkRunner(label=label)
+    return BenchmarkRunner(
+        label=label,
+        overhead=benchmark_runner_overhead,
+        record_property=record_property,
+    )
 
 
 @pytest.fixture(name="node_name_for_file")
@@ -263,11 +288,19 @@ def default_10000_blocks(bt, consensus_mode):
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
-    return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}{version}.db", bt, seed=b"10000")
+    return persistent_blocks(
+        10000,
+        f"test_blocks_10000_{saved_blocks_version}{version}.db",
+        bt,
+        seed=b"10000",
+        dummy_block_references=True,
+    )
 
 
+# this long reorg chain shares the first 500 blocks with "default_10000_blocks"
+# and has heavier weight blocks
 @pytest.fixture(scope="session")
-def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
+def test_long_reorg_blocks(bt, consensus_mode, default_10000_blocks):
     version = ""
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
@@ -275,12 +308,35 @@ def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
-        758,
+        4500,
         f"test_blocks_long_reorg_{saved_blocks_version}{version}.db",
         bt,
-        block_list_input=default_1500_blocks[:320],
+        block_list_input=default_10000_blocks[:500],
         seed=b"reorg_blocks",
         time_per_block=8,
+        dummy_block_references=True,
+        include_transactions=True,
+    )
+
+
+# this long reorg chain shares the first 500 blocks with "default_10000_blocks"
+# and has the same weight blocks
+@pytest.fixture(scope="session")
+def test_long_reorg_blocks_light(bt, consensus_mode, default_10000_blocks):
+    version = ""
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
+
+    from tests.util.blockchain import persistent_blocks
+
+    return persistent_blocks(
+        4500,
+        f"test_blocks_long_reorg_light_{saved_blocks_version}{version}.db",
+        bt,
+        block_list_input=default_10000_blocks[:500],
+        seed=b"reorg_blocks2",
+        dummy_block_references=True,
+        include_transactions=True,
     )
 
 
@@ -342,8 +398,40 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
         raise excinfo.value
 
 
+def pytest_addoption(parser: pytest.Parser):
+    default_repeats = 1
+    group = parser.getgroup("chia")
+    group.addoption(
+        "--benchmark-repeats",
+        action="store",
+        default=default_repeats,
+        type=int,
+        help=f"The number of times to run each benchmark, default {default_repeats}.",
+    )
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "benchmark: automatically assigned by the benchmark_runner fixture")
+
+    benchmark_repeats = config.getoption("--benchmark-repeats")
+    if benchmark_repeats != 1:
+
+        @pytest.fixture(
+            name="benchmark_repeat",
+            params=[pytest.param(repeat, id=f"benchmark_repeat{repeat:03d}") for repeat in range(benchmark_repeats)],
+        )
+        def benchmark_repeat_fixture(request: SubRequest) -> int:
+            return request.param
+
+    else:
+
+        @pytest.fixture(
+            name="benchmark_repeat",
+        )
+        def benchmark_repeat_fixture() -> int:
+            return 1
+
+    globals()[benchmark_repeat_fixture.__name__] = benchmark_repeat_fixture
 
 
 def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
@@ -552,7 +640,7 @@ async def two_nodes_two_wallets_with_same_keys(bt) -> AsyncIterator[SimulatorsAn
         yield _
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture
 async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
     async with setup_simulators_and_wallets(
         1, 1, blockchain_constants, config_overrides={"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000}
@@ -693,29 +781,6 @@ async def farmer_three_harvester_not_started(
         yield _
 
 
-# TODO: Ideally, the db_version should be the (parameterized) db_version
-# fixture, to test all versions of the database schema. This doesn't work
-# because of a hack in shutting down the full node, which means you cannot run
-# more than one simulations per process.
-@pytest_asyncio.fixture(
-    scope="function",
-    params=[
-        pytest.param(
-            None, marks=pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
-        )
-    ],
-)
-async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
-    async with setup_full_system_connect_to_deamon(
-        test_constants_modified,
-        bt,
-        b_tools=get_b_tools,
-        b_tools_1=get_b_tools_1,
-        db_version=1,
-    ) as _:
-        yield _, get_b_tools, get_b_tools_1
-
-
 @pytest_asyncio.fixture(scope="function")
 async def get_daemon(bt):
     async with setup_daemon(btools=bt) as _:
@@ -805,8 +870,8 @@ async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, tru
         wallet_service_1.config,
     )
 
-    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_node_1.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_node_1.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
@@ -859,9 +924,9 @@ async def three_wallets_prefarm(three_wallet_nodes, self_hostname, trusted):
         wallet_node_1.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
-    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
@@ -898,7 +963,7 @@ async def timelord(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def timelord_service(bt):
+async def timelord_service(bt: BlockTools) -> AsyncIterator[Service[Timelord, TimelordAPI]]:
     async with setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path) as _:
         yield _
 
@@ -980,9 +1045,9 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation(bt):
-    async with setup_full_system(test_constants_modified, bt, db_version=1) as _:
-        yield _
+async def simulation(bt, get_b_tools):
+    async with setup_full_system(test_constants_modified, bt, get_b_tools, db_version=2) as full_system:
+        yield full_system, get_b_tools
 
 
 HarvesterFarmerEnvironment = Tuple[

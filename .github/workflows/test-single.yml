@@ -113,7 +113,7 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
-      BLOCKS_AND_PLOTS_VERSION: 0.33.0
+      BLOCKS_AND_PLOTS_VERSION: 0.35.0
 
     steps:
       - name: Configure git
@@ -121,7 +121,7 @@ jobs:
           git config --global core.autocrlf false
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 

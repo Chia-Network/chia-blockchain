@@ -85,7 +85,7 @@ jobs:
     - name: Add safe git directory
       uses: chia-network/actions/git-mark-workspace-safe@main
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
         submodules: recursive
@@ -123,7 +123,7 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: '3.8'
+          - major_dot_minor: '3.10'
         check:
           - name: black
             command: black --check --diff .
@@ -142,7 +142,7 @@ jobs:
     - name: Add safe git directory
       uses: chia-network/actions/git-mark-workspace-safe@main
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
         submodules: recursive
@@ -174,7 +174,7 @@ jobs:
       uses: chia-network/actions/git-mark-workspace-safe@main
 
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         submodules: recursive
@@ -182,7 +182,7 @@ jobs:
     - uses: Chia-Network/actions/setup-python@main
       name: Install Python
       with:
-        python-version: '3.8'
+        python-version: '3.10'
 
     - uses: ./.github/actions/install
       with:

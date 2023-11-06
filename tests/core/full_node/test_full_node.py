@@ -11,6 +11,7 @@ import pytest
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node import WalletUpdate
@@ -54,6 +55,7 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
+from chia.util.misc import to_batches
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -106,6 +108,45 @@ async def get_block_path(full_node: FullNodeAPI):
     return blocks_list
 
 
+@pytest.mark.asyncio
+async def test_sync_no_farmer(
+    setup_two_nodes_and_wallet,
+    default_1000_blocks: List[FullBlock],
+    self_hostname: str,
+    seeded_random: random.Random,
+):
+    nodes, wallets, bt = setup_two_nodes_and_wallet
+    server_1 = nodes[0].full_node.server
+    server_2 = nodes[1].full_node.server
+    full_node_1 = nodes[0]
+    full_node_2 = nodes[1]
+
+    blocks = default_1000_blocks
+
+    # full node 1 has the complete chain
+    for block_batch in to_batches(blocks, 64):
+        await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+
+    target_peak = full_node_1.full_node.blockchain.get_peak()
+
+    # full node 2 is behind by 800 blocks
+    for block_batch in to_batches(blocks[:-800], 64):
+        await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+
+    # connect the nodes and wait for node 2 to sync up to node 1
+    await connect_and_get_peer(server_1, server_2, self_hostname)
+
+    def check_nodes_in_sync():
+        p1 = full_node_2.full_node.blockchain.get_peak()
+        p2 = full_node_1.full_node.blockchain.get_peak()
+        return p1 == p2
+
+    await time_out_assert(120, check_nodes_in_sync)
+
+    assert full_node_1.full_node.blockchain.get_peak() == target_peak
+    assert full_node_2.full_node.blockchain.get_peak() == target_peak
+
+
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("tx_size", [3000000000000])
@@ -122,12 +163,7 @@ class TestFullNodeBlockCompression:
         wallet = wallet_node_1.wallet_state_manager.main_wallet
 
         # Avoid retesting the slow reorg portion, not necessary more than once
-        test_reorgs = (
-            tx_size == 10000
-            and empty_blockchain.block_store.db_wrapper.db_version >= 2
-            and full_node_1.full_node.block_store.db_wrapper.db_version >= 2
-            and full_node_2.full_node.block_store.db_wrapper.db_version >= 2
-        )
+        test_reorgs = True
         _ = await connect_and_get_peer(server_1, server_2, self_hostname)
         _ = await connect_and_get_peer(server_1, server_3, self_hostname)
 
@@ -453,14 +489,14 @@ class TestFullNodeProtocol:
         for i in range(1, 4):
             full_node_i = nodes[i]
             server_i = full_node_i.full_node.server
-            await server_i.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
+            await server_i.start_client(PeerInfo(self_hostname, server_1.get_port()))
         assert len(server_1.get_connections(NodeType.FULL_NODE)) == 2
 
     @pytest.mark.asyncio
     async def test_request_peers(self, wallet_nodes, self_hostname):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, _ = wallet_nodes
         full_node_2.full_node.full_node_peers.address_manager.make_private_subnets_valid()
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()))
 
         async def have_msgs():
             await full_node_2.full_node.full_node_peers.address_manager.add_to_new_table(
@@ -2052,7 +2088,7 @@ class TestFullNodeProtocol:
 
         initiating_server._local_capabilities_for_handshake = custom_capabilities
 
-        connected = await initiating_server.start_client(PeerInfo(self_hostname, uint16(listening_server._port)), None)
+        connected = await initiating_server.start_client(PeerInfo(self_hostname, listening_server.get_port()), None)
         assert connected == expect_success, custom_capabilities
 
 
@@ -2110,3 +2146,157 @@ async def test_wallet_sync_task_failure(
     assert "update_wallets - fork_height: 10, peak_height: 0" in caplog.text
     assert "Wallet sync task failure" not in caplog.text
     assert not full_node.wallet_sync_task.done()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("light_blocks", [True, False])
+async def test_long_reorg(
+    light_blocks: bool,
+    one_node_one_block,
+    default_10000_blocks: List[FullBlock],
+    test_long_reorg_blocks: List[FullBlock],
+    test_long_reorg_blocks_light: List[FullBlock],
+    seeded_random: random.Random,
+):
+    node, server, bt = one_node_one_block
+
+    fork_point = 499
+    blocks = default_10000_blocks[:1600]
+
+    if light_blocks:
+        # if the blocks have lighter weight, we need more height to compensate,
+        # to force a reorg
+        reorg_blocks = test_long_reorg_blocks_light[:1650]
+    else:
+        reorg_blocks = test_long_reorg_blocks[:1200]
+
+    for block_batch in to_batches(blocks, 64):
+        b = block_batch.entries[0]
+        if (b.height % 128) == 0:
+            print(f"main chain: {b.height:4} weight: {b.weight}")
+        await node.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+
+    peak = node.full_node.blockchain.get_peak()
+    chain_1_height = peak.height
+    chain_1_weight = peak.weight
+    chain_1_peak = peak.header_hash
+
+    assert reorg_blocks[fork_point] == default_10000_blocks[fork_point]
+    assert reorg_blocks[fork_point + 1] != default_10000_blocks[fork_point + 1]
+
+    # one aspect of this test is to make sure we can reorg blocks that are
+    # not in the cache. We need to explicitly prune the cache to get that
+    # effect.
+    node.full_node.blockchain.clean_block_records()
+
+    fork_info: Optional[ForkInfo] = None
+    for b in reorg_blocks:
+        if (b.height % 128) == 0:
+            peak = node.full_node.blockchain.get_peak()
+            print(f"reorg chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
+        if b.height > fork_point and fork_info is None:
+            fork_info = ForkInfo(fork_point, fork_point, reorg_blocks[fork_point].header_hash)
+        await node.full_node.add_block(b, fork_info=fork_info)
+
+    # if these asserts fires, there was no reorg
+    peak = node.full_node.blockchain.get_peak()
+    assert peak.header_hash != chain_1_peak
+    assert peak.weight > chain_1_weight
+    chain_2_weight = peak.weight
+    chain_2_peak = peak.header_hash
+
+    # if the reorg chain has lighter blocks, once we've re-orged onto it, we
+    # have a greater block height. If the reorg chain has heavier blocks, we
+    # end up with a lower height than the original chain (but greater weight)
+    if light_blocks:
+        assert peak.height > chain_1_height
+    else:
+        assert peak.height < chain_1_height
+
+    # now reorg back to the original chain
+    # this exercises the case where we have some of the blocks in the DB already
+    node.full_node.blockchain.clean_block_records()
+
+    if light_blocks:
+        blocks = default_10000_blocks[fork_point - 100 : 1800]
+    else:
+        blocks = default_10000_blocks[fork_point - 100 : 2600]
+
+    fork_block = blocks[0]
+    fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
+    for b in blocks:
+        if (b.height % 128) == 0:
+            peak = node.full_node.blockchain.get_peak()
+            print(f"original chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
+        await node.full_node.add_block(b, fork_info=fork_info)
+
+    # if these asserts fires, there was no reorg back to the original chain
+    peak = node.full_node.blockchain.get_peak()
+    assert peak.header_hash != chain_2_peak
+    assert peak.weight > chain_2_weight
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("light_blocks", [True, False])
+@pytest.mark.parametrize(
+    "chain_length",
+    [
+        0,
+        # TODO: understand why this breaks
+        #    900
+    ],
+)
+async def test_long_reorg_nodes(
+    light_blocks: bool,
+    chain_length: int,
+    setup_two_nodes_and_wallet,
+    default_10000_blocks: List[FullBlock],
+    test_long_reorg_blocks: List[FullBlock],
+    test_long_reorg_blocks_light: List[FullBlock],
+    self_hostname: str,
+    seeded_random: random.Random,
+):
+    nodes, wallets, bt = setup_two_nodes_and_wallet
+    server_1 = nodes[0].full_node.server
+    server_2 = nodes[1].full_node.server
+    full_node_1 = nodes[0]
+    full_node_2 = nodes[1]
+
+    blocks = default_10000_blocks[: 1600 - chain_length]
+
+    if light_blocks:
+        reorg_blocks = test_long_reorg_blocks_light[: 2000 - chain_length]
+    else:
+        reorg_blocks = test_long_reorg_blocks[: 1500 - chain_length]
+
+    # full node 1 has the original chain
+    for block_batch in to_batches(blocks, 64):
+        b = block_batch.entries[0]
+        if (b.height % 128) == 0:
+            print(f"main chain: {b.height:4} weight: {b.weight}")
+        await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+
+    # full node 2 has the reorg-chain
+    for block_batch in to_batches(reorg_blocks[:-1], 64):
+        b = block_batch.entries[0]
+        if (b.height % 128) == 0:
+            print(f"reorg chain: {b.height:4} weight: {b.weight}")
+        await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+
+    await connect_and_get_peer(server_1, server_2, self_hostname)
+
+    # TODO: There appears to be an issue where the node with the lighter chain
+    # fails to initiate the reorg until there's a new block farmed onto the
+    # heavier chain.
+    await full_node_2.full_node.add_block(reorg_blocks[-1])
+
+    def check_nodes_in_sync():
+        try:
+            p1 = full_node_2.full_node.blockchain.get_peak()
+            p2 = full_node_1.full_node.blockchain.get_peak()
+            return p1 == p2
+        except Exception as e:
+            print(f"e: {e}")
+            return False
+
+    await time_out_assert(300, check_nodes_in_sync)

@@ -185,7 +185,7 @@ async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
     except ValueError:
         pass
     addrset: List[
-        Tuple["socket.AddressFamily", "socket.SocketKind", int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
+        Tuple[socket.AddressFamily, socket.SocketKind, int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
     ] = await asyncio.get_event_loop().getaddrinfo(host, None)
     # The list returned by getaddrinfo is never empty, an exception is thrown or data is returned.
     ips_v4 = []

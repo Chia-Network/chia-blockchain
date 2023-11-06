@@ -45,10 +45,10 @@ log = logging.getLogger(__name__)
 
 
 def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
-    flags = ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+    flags = ENABLE_ASSERT_BEFORE
 
     if height >= constants.SOFT_FORK2_HEIGHT:
-        flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+        flags = flags | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
 
     if height >= constants.SOFT_FORK3_HEIGHT:
         # the soft-fork initiated with 2.0. To activate end of October 2023
@@ -117,7 +117,9 @@ def get_name_puzzle_conditions(
         return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None, uint64(0))
 
 
-def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin: Coin, flags: int) -> SpendInfo:
+def get_puzzle_and_solution_for_coin(
+    generator: BlockGenerator, coin: Coin, height: int, constants: ConsensusConstants
+) -> SpendInfo:
     try:
         args = bytearray(b"\xff")
         args += bytes(DESERIALIZE_MOD)
@@ -132,7 +134,7 @@ def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin: Coin, flag
             coin.parent_coin_info,
             coin.amount,
             coin.puzzle_hash,
-            flags,
+            get_flags_for_height_and_constants(height, constants),
         )
         return SpendInfo(SerializedProgram.from_bytes(puzzle), SerializedProgram.from_bytes(solution))
     except Exception as e:

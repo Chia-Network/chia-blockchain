@@ -60,18 +60,16 @@ def ssl_context_for_server(
     ssl_context.check_hostname = False
     ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
     ssl_context.set_ciphers(
-        (
-            "ECDHE-ECDSA-AES256-GCM-SHA384:"
-            "ECDHE-RSA-AES256-GCM-SHA384:"
-            "ECDHE-ECDSA-CHACHA20-POLY1305:"
-            "ECDHE-RSA-CHACHA20-POLY1305:"
-            "ECDHE-ECDSA-AES128-GCM-SHA256:"
-            "ECDHE-RSA-AES128-GCM-SHA256:"
-            "ECDHE-ECDSA-AES256-SHA384:"
-            "ECDHE-RSA-AES256-SHA384:"
-            "ECDHE-ECDSA-AES128-SHA256:"
-            "ECDHE-RSA-AES128-SHA256"
-        )
+        "ECDHE-ECDSA-AES256-GCM-SHA384:"
+        "ECDHE-RSA-AES256-GCM-SHA384:"
+        "ECDHE-ECDSA-CHACHA20-POLY1305:"
+        "ECDHE-RSA-CHACHA20-POLY1305:"
+        "ECDHE-ECDSA-AES128-GCM-SHA256:"
+        "ECDHE-RSA-AES128-GCM-SHA256:"
+        "ECDHE-ECDSA-AES256-SHA384:"
+        "ECDHE-RSA-AES256-SHA384:"
+        "ECDHE-ECDSA-AES128-SHA256:"
+        "ECDHE-RSA-AES128-SHA256"
     )
     ssl_context.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
@@ -117,7 +115,7 @@ def calculate_node_id(cert_path: Path) -> bytes32:
 @final
 @dataclass
 class ChiaServer:
-    _port: int
+    _port: Optional[int]
     _local_type: NodeType
     _local_capabilities_for_handshake: List[Tuple[uint16, str]]
     _ping_interval: int
@@ -147,7 +145,7 @@ class ChiaServer:
     @classmethod
     def create(
         cls,
-        port: int,
+        port: Optional[int],
         node: Any,
         api: ApiProtocol,
         local_type: NodeType,
@@ -278,7 +276,6 @@ class ChiaServer:
 
     async def start(
         self,
-        listen: bool,
         prefer_ipv6: bool,
         on_connect: Optional[ConnectionCallback] = None,
     ) -> None:
@@ -287,11 +284,11 @@ class ChiaServer:
         if self.gc_task is None:
             self.gc_task = asyncio.create_task(self.garbage_collect_connections_task())
 
-        if listen:
+        if self._port is not None:
             self.on_connect = on_connect
             self.webserver = await WebServer.create(
                 hostname="",
-                port=uint16(self._port),
+                port=self.get_port(),
                 routes=[web.get("/ws", self.incoming_connection)],
                 ssl_context=self.ssl_context,
                 prefer_ipv6=prefer_ipv6,
@@ -327,7 +324,7 @@ class ChiaServer:
                 local_type=self._local_type,
                 ws=ws,
                 api=self.api,
-                server_port=self._port,
+                server_port=self.get_port(),
                 log=self.log,
                 is_outbound=False,
                 received_message_callback=self.received_message_callback,
@@ -337,7 +334,7 @@ class ChiaServer:
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
             )
-            await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
+            await connection.perform_handshake(self._network_id, protocol_version, self.get_port(), self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
 
             # Limit inbound connections to config's specifications.
@@ -467,11 +464,17 @@ class ChiaServer:
                 self.log.info(f"Connected to a node with the same peer ID, disconnecting: {target_node} {peer_id}")
                 return False
 
+            server_port: uint16
+            try:
+                server_port = self.get_port()
+            except ValueError:
+                server_port = uint16(0)
+
             connection = WSChiaConnection.create(
                 local_type=self._local_type,
                 ws=ws,
                 api=self.api,
-                server_port=self._port,
+                server_port=server_port,
                 log=self.log,
                 is_outbound=True,
                 received_message_callback=self.received_message_callback,
@@ -482,7 +485,7 @@ class ChiaServer:
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
                 session=session,
             )
-            await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
+            await connection.perform_handshake(self._network_id, protocol_version, server_port, self._local_type)
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function
@@ -634,7 +637,7 @@ class ChiaServer:
 
     async def get_peer_info(self) -> Optional[PeerInfo]:
         ip = None
-        port = self._port
+        port = self.get_port()
 
         # Use chia's service first.
         try:
@@ -666,6 +669,8 @@ class ChiaServer:
             return None
 
     def get_port(self) -> uint16:
+        if self._port is None:
+            raise ValueError("Port not set")
         return uint16(self._port)
 
     def accept_inbound_connections(self, node_type: NodeType) -> bool:

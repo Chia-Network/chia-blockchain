@@ -16,7 +16,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -123,7 +123,7 @@ async def mint_cr_cat(
         {
             "num_environments": 2,
             "config_overrides": {"automatically_add_unknown_cats": True},
-            "blocks_needed": [1],
+            "blocks_needed": [1, 1],
         }
     ],
     indirect=True,
@@ -243,7 +243,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         "flags_needed": cr_cat_wallet_0.info.proofs_checker.flags,
     } == (await client_0.get_wallets(wallet_type=cr_cat_wallet_0.type()))[0]
     assert await wallet_node_0.wallet_state_manager.get_wallet_for_asset_id(cr_cat_wallet_0.get_asset_id()) is not None
-    wallet_1_addr = encode_puzzle_hash(await wallet_1.get_new_puzzlehash(), "txch")
+    wallet_1_ph = await wallet_1.get_new_puzzlehash()
+    wallet_1_addr = encode_puzzle_hash(wallet_1_ph, "txch")
     tx = await client_0.cat_spend(
         cr_cat_wallet_0.id(),
         DEFAULT_TX_CONFIG,
@@ -295,6 +296,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         "asset_id": cr_cat_wallet_1.get_asset_id(),
         "fingerprint": wallet_node_1.logged_in_fingerprint,
     }
+    assert await cr_cat_wallet_1.match_hinted_coin(next(c for c in tx.additions if c.amount == 90), wallet_1_ph)
     pending_tx = await client_1.get_transactions(
         cr_cat_wallet_1.id(),
         0,
@@ -421,7 +423,7 @@ async def test_self_revoke(
     else:
         wallet_node_0.config["trusted_peers"] = {}
 
-    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
@@ -500,7 +502,7 @@ async def test_cat_wallet_conversion(
     else:
         wallet_node_0.config["trusted_peers"] = {}
 
-    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 

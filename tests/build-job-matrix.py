@@ -108,6 +108,7 @@ test_paths = [path for path in test_paths for _ in range(args.duplicates)]
 configuration = []
 
 specified_defaults: Dict[Path, Dict[str, Any]] = {}
+pytest_monitor_enabling_paths: List[Path] = []
 
 for path in test_paths:
     if path.is_dir():
@@ -133,9 +134,18 @@ for path in test_paths:
     }
     pytest_parallel_args = {os: f" -n {count}" for os, count in process_count.items()}
 
+    enable_pytest_monitor = conf["check_resource_usage"]
+
+    if enable_pytest_monitor:
+        # NOTE: do not use until the hangs are fixed
+        #       https://github.com/CFMTech/pytest-monitor/issues/53
+        #       https://github.com/pythonprofilers/memory_profiler/issues/342
+
+        pytest_monitor_enabling_paths.append(path)
+
     for_matrix = {
         "check_resource_usage": conf["check_resource_usage"],
-        "enable_pytest_monitor": "-p monitor" if conf["check_resource_usage"] else "",
+        "enable_pytest_monitor": "-p monitor" if enable_pytest_monitor else "",
         "job_timeout": round(conf["job_timeout"] * args.timeout_multiplier),
         "pytest_parallel_args": pytest_parallel_args,
         "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
@@ -147,12 +157,24 @@ for path in test_paths:
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
 
+messages: List[str] = []
+
 if len(specified_defaults) > 0:
     message = f"Found {len(specified_defaults)} directories with specified defaults"
+    messages.append(message)
     logging.error(f"{message}:")
     for path, overlap in sorted(specified_defaults.items()):
-        logging.info(f" {path} : {overlap}")
-    raise Exception(message)
+        logging.error(f" {path} : {overlap}")
+
+if len(pytest_monitor_enabling_paths) > 0:
+    message = f"Found {len(pytest_monitor_enabling_paths)} directories with pytest-monitor enabled"
+    messages.append(message)
+    logging.error(f"{message}:")
+    for path in sorted(pytest_monitor_enabling_paths):
+        logging.error(f" {path}")
+
+if len(messages) > 0:
+    raise Exception("\n".join(messages))
 
 configuration_json = json.dumps(configuration)
 

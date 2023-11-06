@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import pytest
+
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_spend import CoinSpend
-from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
+from chia.util.errors import ValidationError
+from chia.util.ints import uint64
+from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
 from chia.wallet.util.tx_config import (
     DEFAULT_COIN_SELECTION_CONFIG,
     DEFAULT_TX_CONFIG,
@@ -25,7 +30,25 @@ def test_compute_spend_hints_and_additions() -> None:
         Program.to(create_coin_args),
     )
     expected_dict = {hinted_coin.coin.name(): hinted_coin for hinted_coin in hinted_coins}
-    assert compute_spend_hints_and_additions(coin_spend) == expected_dict
+    assert compute_spend_hints_and_additions(coin_spend)[0] == expected_dict
+
+    not_hinted_coin = HintedCoin(Coin(parent_coin.coin.name(), bytes32([0] * 32), uint64(0)), None)
+    assert compute_spend_hints_and_additions(
+        CoinSpend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32([0] * 32), 0, [["not", "a"], "hint"]]]))
+    )[0] == {not_hinted_coin.coin.name(): not_hinted_coin}
+
+    with pytest.raises(ValidationError):
+        compute_spend_hints_and_additions(
+            CoinSpend(
+                parent_coin.coin, Program.to(1), Program.to([[51, bytes32([0] * 32), 0] for _ in range(0, 10000)])
+            )
+        )
+    with pytest.raises(ValidationError):
+        compute_spend_hints_and_additions(
+            CoinSpend(
+                parent_coin.coin, Program.to(1), Program.to([[50, bytes48([0] * 48), b""] for _ in range(0, 10000)])
+            )
+        )
 
 
 def test_cs_config() -> None:

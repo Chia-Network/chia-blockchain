@@ -39,7 +39,7 @@ class SyncStore:
     batch_syncing: Set[bytes32] = field(default_factory=set)
     # Set of nodes which we are backtrack syncing from, and how many threads
     _backtrack_syncing: collections.defaultdict[bytes32, int] = field(
-        default_factory=lambda: collections.defaultdict(lambda: 0),
+        default_factory=lambda: collections.defaultdict(int),
     )
 
     def set_sync_mode(self, sync_mode: bool) -> None:
@@ -119,12 +119,6 @@ class SyncStore:
                 heaviest_peak = peak
         assert heaviest_peak is not None
         return heaviest_peak
-
-    async def clear_sync_info(self) -> None:
-        """
-        Clears the peak_to_peer info which can get quite large.
-        """
-        self.peak_to_peer = orderedDict()
 
     def peer_disconnected(self, node_id: bytes32) -> None:
         if node_id in self.peer_to_peak:

@@ -60,8 +60,8 @@ async def test_nft_mint_from_did(
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # for _ in range(1, num_blocks):
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
@@ -180,8 +180,8 @@ async def test_nft_mint_from_did_rpc(
         wallet_node_maker.config["trusted_peers"] = {}
         wallet_node_taker.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
@@ -246,11 +246,11 @@ async def test_nft_mint_from_did_rpc(
         metadata_list = [
             {
                 "hash": bytes32.random(seeded_random).hex(),
-                "uris": ["https://data.com/{}".format(i)],
+                "uris": [f"https://data.com/{i}"],
                 "meta_hash": bytes32.random(seeded_random).hex(),
-                "meta_uris": ["https://meatadata.com/{}".format(i)],
+                "meta_uris": [f"https://meatadata.com/{i}"],
                 "license_hash": bytes32.random(seeded_random).hex(),
-                "license_uris": ["https://license.com/{}".format(i)],
+                "license_uris": [f"https://license.com/{i}"],
                 "edition_number": i + 1,
                 "edition_total": n,
             }
@@ -274,7 +274,7 @@ async def test_nft_mint_from_did_rpc(
         )[0]
         did_lineage_parent = None
         spends = []
-        nft_ids = set([])
+        nft_ids = set()
         for i in range(0, n, chunk):
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_maker, timeout=20)
             resp: Dict[str, Any] = await client.nft_mint_bulk(
@@ -374,8 +374,8 @@ async def test_nft_mint_from_did_rpc_no_royalties(
         wallet_node_maker.config["trusted_peers"] = {}
         wallet_node_taker.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
@@ -439,11 +439,11 @@ async def test_nft_mint_from_did_rpc_no_royalties(
         metadata_list = [
             {
                 "hash": bytes32.random(seeded_random).hex(),
-                "uris": ["https://data.com/{}".format(i)],
+                "uris": [f"https://data.com/{i}"],
                 "meta_hash": bytes32.random(seeded_random).hex(),
-                "meta_uris": ["https://meatadata.com/{}".format(i)],
+                "meta_uris": [f"https://meatadata.com/{i}"],
                 "license_hash": bytes32.random(seeded_random).hex(),
-                "license_uris": ["https://license.com/{}".format(i)],
+                "license_uris": [f"https://license.com/{i}"],
                 "edition_number": i + 1,
                 "edition_total": n,
             }
@@ -543,8 +543,8 @@ async def test_nft_mint_from_did_multiple_xch(
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
@@ -656,8 +656,8 @@ async def test_nft_mint_from_xch(
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # for _ in range(1, num_blocks):
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
@@ -775,8 +775,8 @@ async def test_nft_mint_from_xch_rpc(
         wallet_node_maker.config["trusted_peers"] = {}
         wallet_node_taker.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
@@ -841,11 +841,11 @@ async def test_nft_mint_from_xch_rpc(
         metadata_list = [
             {
                 "hash": bytes32.random(seeded_random).hex(),
-                "uris": ["https://data.com/{}".format(i)],
+                "uris": [f"https://data.com/{i}"],
                 "meta_hash": bytes32.random(seeded_random).hex(),
-                "meta_uris": ["https://meatadata.com/{}".format(i)],
+                "meta_uris": [f"https://meatadata.com/{i}"],
                 "license_hash": bytes32.random(seeded_random).hex(),
-                "license_uris": ["https://license.com/{}".format(i)],
+                "license_uris": [f"https://license.com/{i}"],
                 "edition_number": i + 1,
                 "edition_total": n,
             }
@@ -955,8 +955,8 @@ async def test_nft_mint_from_xch_multiple_xch(
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))

@@ -10,7 +10,21 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Dict, List, Optional, Set, Tuple, Union, cast, final
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Awaitable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+    final,
+)
 
 import aiohttp
 
@@ -78,6 +92,11 @@ async def get_plugin_info(plugin_remote: PluginRemote) -> Tuple[PluginRemote, Di
 @final
 @dataclasses.dataclass
 class DataLayer:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("DataLayer", None)
+
     db_path: Path
     config: Dict[str, Any]
     root_path: Path
@@ -644,9 +663,10 @@ class DataLayer:
                 root_hash = root.node_hash if root.node_hash is not None else self.none_bytes
                 filenames.append(get_full_tree_filename(tree_id, root_hash, root.generation))
                 filenames.append(get_delta_filename(tree_id, root_hash, root.generation))
+        # stop tracking first, then unsubscribe from the data store
+        await self.wallet_rpc.dl_stop_tracking(tree_id)
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
-        await self.wallet_rpc.dl_stop_tracking(tree_id)
         self.log.info(f"Unsubscribed to {tree_id}")
         for filename in filenames:
             file_path = self.server_files_location.joinpath(filename)
@@ -711,7 +731,7 @@ class DataLayer:
 
             # Subscribe to all local tree_ids that we can find on chain.
             local_tree_ids = await self.data_store.get_tree_ids()
-            subscription_tree_ids = set(subscription.tree_id for subscription in subscriptions)
+            subscription_tree_ids = {subscription.tree_id for subscription in subscriptions}
             for local_id in local_tree_ids:
                 if local_id not in subscription_tree_ids:
                     try:

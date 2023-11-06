@@ -106,7 +106,8 @@ def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
     assert len(bit_array) == len(mnemonic) * 11
     assert ENT % 32 == 0
 
-    entropy_bytes = bit_array[:ENT].bytes
+    # mypy doesn't seem to understand the `property()` call used not as a decorator
+    entropy_bytes: bytes = bit_array[:ENT].bytes
     checksum_bytes = bit_array[ENT:]
     checksum = BitArray(std_hash(entropy_bytes))[:CS]
 
@@ -451,7 +452,7 @@ class Keychain:
                 pass
         return removed
 
-    def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]):
+    def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]) -> None:
         """
         Deletes all keys in the list.
         """

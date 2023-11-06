@@ -8,7 +8,7 @@ import traceback
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 import aiosqlite
 
@@ -32,6 +32,11 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class Crawler:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Crawler", None)
+
     config: Dict[str, Any]
     root_path: Path
     constants: ConsensusConstants
@@ -48,7 +53,7 @@ class Crawler:
     minimum_version_count: int = 0
     peers_retrieved: List[RespondPeers] = field(default_factory=list)
     host_to_version: Dict[str, str] = field(default_factory=dict)
-    versions: Dict[str, int] = field(default_factory=lambda: defaultdict(lambda: 0))
+    versions: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
     version_cache: List[Tuple[str, str]] = field(default_factory=list)
     handshake_time: Dict[str, uint64] = field(default_factory=dict)
     best_timestamp_per_peer: Dict[str, uint64] = field(default_factory=dict)
@@ -256,7 +261,7 @@ class Crawler:
                     for host, timestamp in self.best_timestamp_per_peer.items()
                     if timestamp >= now - 5 * 24 * 3600
                 }
-                self.versions = defaultdict(lambda: 0)
+                self.versions = defaultdict(int)
                 for host, version in self.host_to_version.items():
                     self.versions[version] += 1
 
