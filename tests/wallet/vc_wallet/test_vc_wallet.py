@@ -451,7 +451,9 @@ async def test_self_revoke(
             new_vc_record.vc.launcher_id, DEFAULT_TX_CONFIG, new_proof_hash=bytes32([0] * 32), self_revoke=True
         )
 
-    await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, DEFAULT_TX_CONFIG)
+    txs = await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, DEFAULT_TX_CONFIG)
+    for tx in txs:
+        await did_wallet.wallet_state_manager.add_pending_transaction(tx)
     spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())

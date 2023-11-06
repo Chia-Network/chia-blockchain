@@ -127,7 +127,7 @@ class DAOWallet:
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
-    ) -> DAOWallet:
+    ) -> Tuple[DAOWallet, List[TransactionRecord]]:
         """
         Create a brand new DAO wallet
         This must be called under the wallet state manager lock
@@ -176,7 +176,7 @@ class DAOWallet:
         std_wallet_id = self.standard_wallet.wallet_id
 
         try:
-            await self.generate_new_dao(
+            txs = await self.generate_new_dao(
                 amount_of_cats,
                 tx_config,
                 fee=fee,
@@ -201,7 +201,7 @@ class DAOWallet:
         )
         await self.save_info(dao_info)
 
-        return self
+        return self, txs
 
     @staticmethod
     async def create_new_dao_wallet_for_existing_dao(
@@ -607,7 +607,7 @@ class DAOWallet:
         fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Optional[SpendBundle]:
+    ) -> List[TransactionRecord]:
         """
         Create a new DAO treasury using the dao_rules object. This does the first spend to create the launcher
         and eve coins.
@@ -750,8 +750,7 @@ class DAOWallet:
         )
         await self.add_parent(launcher_coin.name(), launcher_proof)
 
-        if tx_record is None or tx_record.spend_bundle is None:  # pragma: no cover
-            return None
+        assert tx_record.spend_bundle is not None
 
         eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
         dao_info = DAOInfo(
@@ -792,8 +791,6 @@ class DAOWallet:
             valid_times=parse_timelock_info(extra_conditions),
         )
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
-        await self.wallet_state_manager.add_pending_transaction(regular_record)
-        await self.wallet_state_manager.add_pending_transaction(treasury_record)
 
         funding_inner_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
         await self.wallet_state_manager.add_interested_puzzle_hashes([funding_inner_puzhash], [self.id()])
@@ -801,7 +798,7 @@ class DAOWallet:
         await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()], [self.wallet_id])
 
         await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
-        return full_spend
+        return [treasury_record, regular_record]
 
     async def generate_treasury_eve_spend(
         self, inner_puz: Program, eve_coin: Coin, fee: uint64 = uint64(0)

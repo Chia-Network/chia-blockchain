@@ -352,6 +352,8 @@ async def test_cat_trades(
         tx_config,
         fee=uint64(1),
     )
+    for tx in tx_records:
+        await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
     assert trade_take is not None
     assert tx_records is not None
 
@@ -446,6 +448,8 @@ async def test_cat_trades(
         peer,
         tx_config,
     )
+    for tx in tx_records:
+        await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
     assert trade_take is not None
     assert tx_records is not None
 
@@ -497,6 +501,8 @@ async def test_cat_trades(
         peer,
         tx_config,
     )
+    for tx in tx_records:
+        await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None
     assert tx_records is not None
@@ -577,6 +583,8 @@ async def test_cat_trades(
         peer,
         tx_config,
     )
+    for tx in tx_records:
+        await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None
     assert tx_records is not None
@@ -638,6 +646,8 @@ async def test_cat_trades(
         peer,
         tx_config,
     )
+    for tx in tx_records:
+        await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None
     assert tx_records is not None
@@ -683,6 +693,8 @@ async def test_cat_trades(
         peer,
         tx_config,
     )
+    for tx in tx_records:
+        await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None
     assert tx_records is not None
@@ -803,6 +815,8 @@ class TestCATTrades:
         # trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         #     Offer.from_bytes(trade_make.offer),
         # )
+        # for tx in tx_records:
+        #     await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
         # await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         # assert trade_take is not None
         # assert tx_records is not None
@@ -819,6 +833,8 @@ class TestCATTrades:
         txs = await trade_manager_maker.cancel_pending_offers(
             [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=fee, secure=True
         )
+        for tx in txs:
+            await trade_manager_maker.wallet_state_manager.add_pending_transaction(tx)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
 
@@ -859,6 +875,8 @@ class TestCATTrades:
         txs = await trade_manager_maker.cancel_pending_offers(
             [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=uint64(0), secure=True
         )
+        for tx in txs:
+            await trade_manager_maker.wallet_state_manager.add_pending_transaction(tx)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
 
@@ -912,6 +930,8 @@ class TestCATTrades:
         txs = await trade_manager_maker.cancel_pending_offers(
             [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=uint64(0), secure=True
         )
+        for tx in txs:
+            await trade_manager_maker.wallet_state_manager.add_pending_transaction(tx)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
 
@@ -970,12 +990,16 @@ class TestCATTrades:
         peer = wallet_node_taker.get_full_node_peer()
         offer = Offer.from_bytes(trade_make.offer)
         tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
+        for tx in txs1:
+            await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
         # we shouldn't be able to respond to a duplicate offer
         with pytest.raises(ValueError):
             await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_taker, tr1)
         # pushing into mempool while already in it should fail
         tr2, txs2 = await trade_manager_trader.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
+        for tx in txs2:
+            await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
         assert await trade_manager_trader.get_coins_of_interest()
         offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
         await full_node.process_transaction_records(records=offer_tx_records)
@@ -1033,6 +1057,8 @@ class TestCATTrades:
         bundle = dataclasses.replace(offer._bundle, aggregated_signature=G2Element())
         offer = dataclasses.replace(offer, _bundle=bundle)
         tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
+        for tx in txs1:
+            await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
         wallet_node_taker.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
         for _ in range(10):
             print(await wallet_node_taker._resend_queue())
@@ -1092,5 +1118,7 @@ class TestCATTrades:
         tr1, txs1 = await trade_manager_taker.respond_to_offer(
             offer, peer, DEFAULT_TX_CONFIG, fee=uint64(1000000000000)
         )
+        for tx in txs1:
+            await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
         await full_node.process_transaction_records(records=txs1)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, tr1)

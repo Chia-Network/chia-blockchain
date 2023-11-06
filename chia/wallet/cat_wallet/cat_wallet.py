@@ -712,7 +712,7 @@ class CATWallet:
                             primaries=primaries,
                             conditions=(*extra_conditions, announcement),
                         )
-                    elif regular_chia_to_claim > fee:  # pragma: no cover
+                    elif regular_chia_to_claim > fee:
                         chia_tx, xch_announcement = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
