@@ -9,6 +9,9 @@ from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
@@ -179,6 +182,7 @@ class WalletRpcApi:
             "/send_notification": self.send_notification,
             "/sign_message_by_address": self.sign_message_by_address,
             "/sign_message_by_id": self.sign_message_by_id,
+            "/beta_sign_message_by_secp": self.beta_sign_message_by_secp,
             "/verify_signature": self.verify_signature,
             "/get_transaction_memo": self.get_transaction_memo,
             # CATs and trading
@@ -1604,6 +1608,34 @@ class WalletRpcApi:
             "signature": str(signature),
             "latest_coin_id": latest_coin_id.hex() if latest_coin_id is not None else None,
             "signing_mode": mode.value,
+        }
+
+    async def beta_sign_message_by_secp(self, request: Dict[str, Any]) -> EndpointResult:
+        """
+        Sign messages by SECP256R1 key
+        :param request:
+        :return:
+        """
+        if "private_key" not in request:
+            return {"success": False, "error": "Private key is required"}
+        if "message" not in request:
+            return {"success": False, "error": "Message is required"}
+        if "beta" not in request or not request["beta"]:
+            return {"success": False, "error": "This is an experimental API, please set beta=true."}
+        is_hex: bool = request.get("is_hex", False)
+        if is_hex:
+            data: bytes = bytes.fromhex(request["message"])
+        else:
+            data = request["message"].encode("utf-8")
+        private_key = ec.derive_private_key(int(request["private_key"], 16), ec.SECP256R1(), default_backend())
+        public_key = private_key.public_key()
+        signature = private_key.sign(data, ec.ECDSA(hashes.SHA256()))
+        return {
+            "success": True,
+            "public_key": public_key.public_bytes(
+                serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint
+            ).hex(),
+            "signature": signature.hex(),
         }
 
     ##########################################################################################
