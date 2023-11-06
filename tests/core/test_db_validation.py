@@ -149,7 +149,7 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
         await db_wrapper.close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_db_validate_default_1000_blocks(default_1000_blocks: List[FullBlock]) -> None:
     with TempFile() as db_file:
         await make_db(db_file, default_1000_blocks)

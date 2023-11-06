@@ -102,7 +102,7 @@ class Mirror:
         }
 
     @classmethod
-    def from_json_dict(cls, json_dict: Dict[str, Any]) -> "Mirror":
+    def from_json_dict(cls, json_dict: Dict[str, Any]) -> Mirror:
         return cls(
             bytes32.from_hexstr(json_dict["coin_id"]),
             bytes32.from_hexstr(json_dict["launcher_id"]),
@@ -1144,7 +1144,7 @@ class DataLayerWallet:
         ).get_tree_hash_precalc(record.inner_puzzle_hash)
         assert record.lineage_proof.parent_name is not None
         assert record.lineage_proof.amount is not None
-        return set([Coin(record.lineage_proof.parent_name, puzhash, record.lineage_proof.amount)])
+        return {Coin(record.lineage_proof.parent_name, puzhash, record.lineage_proof.amount)}
 
     @staticmethod
     async def make_update_offer(

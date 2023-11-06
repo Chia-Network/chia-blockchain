@@ -70,7 +70,7 @@ def trusted_setup_helper(
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("zero_royalties", [True, False])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_offer_sell_nft(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
 ) -> None:
@@ -210,7 +210,7 @@ async def test_nft_offer_sell_nft(
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("zero_royalties", [True, False])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_offer_request_nft(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
 ) -> None:
@@ -348,7 +348,7 @@ async def test_nft_offer_request_nft(
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("zero_royalties", [True, False])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_offer_sell_did_to_did(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
 ) -> None:
@@ -509,7 +509,7 @@ async def test_nft_offer_sell_did_to_did(
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("zero_royalties", [True, False])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_offer_sell_nft_for_cat(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
 ) -> None:
@@ -691,7 +691,7 @@ async def test_nft_offer_sell_nft_for_cat(
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("test_change", [True, False])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_offer_request_nft_for_cat(
     self_hostname: str, two_wallet_nodes: Any, trusted: bool, test_change: bool, seeded_random: random.Random
 ) -> None:
@@ -883,7 +883,7 @@ async def test_nft_offer_request_nft_for_cat(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 # @pytest.mark.skip
 async def test_nft_offer_sell_cancel(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
@@ -1001,7 +1001,7 @@ async def test_nft_offer_sell_cancel(
     "trusted",
     [True],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_offer_sell_cancel_in_batch(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
 ) -> None:
@@ -1132,7 +1132,7 @@ async def test_nft_offer_sell_cancel_in_batch(
         (100000, 10001, 10005),  # 1000% shouldn't work
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_complex_nft_offer(
     self_hostname: str,
     two_wallet_nodes: Any,

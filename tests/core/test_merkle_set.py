@@ -13,7 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_basics(bt):
     num_blocks = 20
     blocks = bt.get_consecutive_blocks(num_blocks)
@@ -49,7 +49,7 @@ def hashdown(buf: bytes) -> bytes32:
     return bytes32(sha256(bytes([0] * 30) + buf).digest())
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_merkle_set_invalid_hash_size():
     merkle_set = MerkleSet()
 
@@ -75,7 +75,7 @@ async def test_merkle_set_invalid_hash_size():
         compute_merkle_set_root([b""])
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_merkle_set_1():
     a = bytes32([0x80] + [0] * 31)
     merkle_set = MerkleSet()
@@ -84,7 +84,7 @@ async def test_merkle_set_1():
     assert merkle_set.get_root() == sha256(b"\1" + a).digest()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_merkle_set_duplicate():
     a = bytes32([0x80] + [0] * 31)
     merkle_set = MerkleSet()
@@ -94,14 +94,14 @@ async def test_merkle_set_duplicate():
     assert merkle_set.get_root() == sha256(b"\1" + a).digest()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_merkle_set_0():
     merkle_set = MerkleSet()
     assert merkle_set.get_root() == bytes32(compute_merkle_set_root([]))
     assert merkle_set.get_root() == bytes32([0] * 32)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_merkle_set_2():
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0x70] + [0] * 31)
@@ -112,7 +112,7 @@ async def test_merkle_set_2():
     assert merkle_set.get_root() == hashdown(b"\1\1" + b + a)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_merkle_set_2_reverse():
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0x70] + [0] * 31)
@@ -123,7 +123,7 @@ async def test_merkle_set_2_reverse():
     assert merkle_set.get_root() == hashdown(b"\1\1" + b + a)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_merkle_set_3():
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0x70] + [0] * 31)
@@ -144,7 +144,7 @@ async def test_merkle_set_3():
     #   b   c
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_merkle_set_4():
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0x70] + [0] * 31)
@@ -166,7 +166,7 @@ async def test_merkle_set_4():
     #   b   c a   d
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_merkle_set_5():
     BLANK = bytes32([0] * 32)
 
@@ -215,7 +215,7 @@ async def test_merkle_set_5():
     # e   c
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_merkle_left_edge():
     BLANK = bytes32([0] * 32)
     a = bytes32([0x80] + [0] * 31)
@@ -256,7 +256,7 @@ async def test_merkle_left_edge():
     #   c   d
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_merkle_right_edge():
     BLANK = bytes32([0] * 32)
     a = bytes32([0x40] + [0] * 31)
@@ -304,7 +304,7 @@ def rand_hash(rng: random.Random) -> bytes32:
     return bytes32(ret)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.skip("This test is expensive and has already convinced us there are no discrepancies")
 async def test_merkle_set_random_regression():
     rng = random.Random()

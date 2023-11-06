@@ -55,7 +55,7 @@ MOCK_SINGLETON: Program = MOCK_SINGLETON_MOD.curry(
 )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_covenant_layer(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         # Create a puzzle that will not pass the initial covenant check
@@ -185,7 +185,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_did_tp(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         # Make a mock exigent metadata layer
@@ -310,7 +310,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         assert remark_condition == Program.to([1, (MOCK_LAUNCHER_ID, new_metadata), new_tp_hash])
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_viral_backdoor(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         # Setup and farm the puzzle
@@ -395,7 +395,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
         assert len(await client.get_coin_records_by_puzzle_hashes([wrapped_brick_hash], include_spent_coins=False)) > 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("num_proofs", range(1, 6))
 async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
     async with sim_and_client() as (sim, client):
@@ -435,7 +435,7 @@ async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
             await sim.rewind(block_height)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("test_syncing", [True, False])
 async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):

@@ -9,7 +9,7 @@ from chia.util.misc import format_bytes, format_minutes, to_batches, validate_di
 
 
 class TestMisc:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_format_bytes(self):
         assert format_bytes(None) == "Invalid"
         assert format_bytes(dict()) == "Invalid"
@@ -29,7 +29,7 @@ class TestMisc:
         assert format_bytes(1024**10) == "1048576.000 YiB"
         assert format_bytes(1024**20).endswith("YiB")
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_format_minutes(self):
         assert format_minutes(None) == "Invalid"
         assert format_minutes(dict()) == "Invalid"

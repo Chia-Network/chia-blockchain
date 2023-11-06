@@ -1819,7 +1819,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
 
     if height >= constants.HARD_FORK_FIX_HEIGHT:
         blocks = [bytes(g) for g in generator.generator_refs]
-        cost, result = generator.program._run(INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, DESERIALIZE_MOD, blocks)
+        cost, result = generator.program._run(INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
 
         for spend in result.first().as_iter():
@@ -1834,7 +1834,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
 
     else:
         block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
-        clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, MEMPOOL_MODE, generator.program, block_program_args)
+        clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, MEMPOOL_MODE, [generator.program, block_program_args])
 
         for res in result.first().as_iter():
             # each condition item is:
@@ -2031,7 +2031,7 @@ def create_test_foliage(
 
         generator_refs_hash = bytes32([1] * 32)
         if generator_block_heights_list not in (None, []):
-            generator_ref_list_bytes = b"".join([bytes(i) for i in generator_block_heights_list])
+            generator_ref_list_bytes = b"".join([i.stream_to_bytes() for i in generator_block_heights_list])
             generator_refs_hash = std_hash(generator_ref_list_bytes)
 
         filter_hash: bytes32 = std_hash(encoded)

@@ -149,7 +149,7 @@ class ServeInThread:
             chia_policy.global_max_concurrent_connections = self.original_connection_limit
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_loop(tmp_path: pathlib.Path) -> None:
     logger = create_logger()
 
@@ -260,7 +260,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     argvalues=[1, 3],
     ids=lambda cycles: f"{cycles} cycle{'s' if cycles != 1 else ''}",
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_limits_connections(repetition: int, cycles: int, tmp_path: pathlib.Path) -> None:
     ip = "127.0.0.1"
     connection_limit = 10

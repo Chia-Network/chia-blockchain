@@ -98,7 +98,7 @@ def p2_singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32
     return p2_singleton_puzzle(launcher_id, launcher_puzzle_hash).get_tree_hash()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_only_odd_coins_0(bt):
     blocks = await initial_blocks(bt)
     farmed_coin = list(blocks[-1].get_included_reward_coins())[0]
@@ -118,8 +118,8 @@ async def test_only_odd_coins_0(bt):
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
     coins_added, coins_removed, _ = await check_spend_bundle_validity(bt, blocks, spend_bundle)
 
-    coin_set_added = set([_.coin for _ in coins_added])
-    coin_set_removed = set([_.coin for _ in coins_removed])
+    coin_set_added = {_.coin for _ in coins_added}
+    coin_set_removed = {_.coin for _ in coins_removed}
 
     launcher_coin = launcher_spend_bundle.coin_spends[0].coin
 

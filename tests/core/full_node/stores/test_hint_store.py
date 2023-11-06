@@ -22,7 +22,7 @@ from tests.util.db_connection import DBConnection
 log = logging.getLogger(__name__)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_basic_store(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         hint_store = await HintStore.create(db_wrapper)
@@ -48,7 +48,7 @@ async def test_basic_store(db_version: int) -> None:
         assert coins_for_non_hint == []
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_duplicate_coins(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         hint_store = await HintStore.create(db_wrapper)
@@ -66,7 +66,7 @@ async def test_duplicate_coins(db_version: int) -> None:
         assert coin_id_0 in coins_for_hint_1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_duplicate_hints(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         hint_store = await HintStore.create(db_wrapper)
@@ -86,7 +86,7 @@ async def test_duplicate_hints(db_version: int) -> None:
         assert coins_for_hint_1 == []
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_duplicates(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         hint_store = await HintStore.create(db_wrapper)
@@ -108,7 +108,7 @@ async def test_duplicates(db_version: int) -> None:
         assert rows[0][0] == 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_hints_in_blockchain(
     wallet_nodes: Tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
@@ -153,7 +153,7 @@ async def test_hints_in_blockchain(
     assert get_hint[0] == Coin(coin_spent.name(), puzzle_hash, uint64(1)).name()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_counts(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         hint_store = await HintStore.create(db_wrapper)
@@ -172,7 +172,7 @@ async def test_counts(db_version: int) -> None:
         assert count == 2
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_limits(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         hint_store = await HintStore.create(db_wrapper)
@@ -192,7 +192,7 @@ async def test_limits(db_version: int) -> None:
         assert len(await hint_store.get_coin_ids(hint, max_items=10000)) == 200
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_unsupported_version() -> None:
     with pytest.raises(RuntimeError, match="HintStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:

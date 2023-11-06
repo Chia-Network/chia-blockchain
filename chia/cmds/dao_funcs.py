@@ -463,7 +463,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
     if additions_file is None and (address is None or amount is None):
         raise ValueError("Must include a json specification or an address / amount pair.")
     if additions_file:  # pragma: no cover
-        with open(additions_file, "r") as f:
+        with open(additions_file) as f:
             additions_dict = json.load(f)
         additions = []
         for addition in additions_dict:

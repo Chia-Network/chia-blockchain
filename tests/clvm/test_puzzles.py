@@ -233,7 +233,7 @@ def do_test_spend_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(hid
 
     assert synthetic_public_key == int_to_public_key(synthetic_offset) + hidden_pub_key_point
 
-    secret_exponent = key_lookup.get(hidden_public_key)
+    secret_exponent = key_lookup.dict.get(hidden_public_key)
     assert int_to_public_key(secret_exponent) == hidden_pub_key_point
 
     synthetic_secret_exponent = secret_exponent + synthetic_offset

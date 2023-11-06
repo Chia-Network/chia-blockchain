@@ -38,7 +38,7 @@ ACS_PH = ACS.get_tree_hash()
 NIL_PH = Program.to(None).get_tree_hash()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_graftroot(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         # Create the coin we're testing

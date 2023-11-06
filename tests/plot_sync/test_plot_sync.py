@@ -8,7 +8,6 @@ from shutil import copy
 from typing import Any, Callable, List, Optional, Tuple
 
 import pytest
-import pytest_asyncio
 from blspy import G1Element
 
 from chia.farmer.farmer import Farmer
@@ -275,7 +274,7 @@ class Environment:
         )
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def environment(
     tmp_path: Path,
     farmer_two_harvester_not_started: Tuple[
@@ -341,7 +340,7 @@ async def environment(
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sync_valid(environment: Environment) -> None:
     env: Environment = environment
     env.add_directory(0, env.dir_1)
@@ -370,7 +369,7 @@ async def test_sync_valid(environment: Environment) -> None:
     await env.run_sync_test()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sync_invalid(environment: Environment) -> None:
     env: Environment = environment
     assert len(env.farmer.plot_sync_receivers) == 2
@@ -412,7 +411,7 @@ async def test_sync_invalid(environment: Environment) -> None:
     await env.run_sync_test()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sync_keys_missing(environment: Environment) -> None:
     env: Environment = environment
     env.add_directory(0, env.dir_1)
@@ -448,7 +447,7 @@ async def test_sync_keys_missing(environment: Environment) -> None:
     await env.run_sync_test()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sync_duplicates(environment: Environment) -> None:
     env: Environment = environment
     # dir_4 and then dir_duplicates contain the same plots. Load dir_4 first to make sure the plots seen as duplicates
@@ -494,13 +493,13 @@ async def remove_and_validate_all_directories(env: Environment) -> None:
     await env.run_sync_test()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_add_and_remove_all_directories(environment: Environment) -> None:
     await add_and_validate_all_directories(environment)
     await remove_and_validate_all_directories(environment)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_harvester_restart(environment: Environment) -> None:
     env: Environment = environment
     # Load all directories for both harvesters
@@ -526,7 +525,7 @@ async def test_harvester_restart(environment: Environment) -> None:
     await env.run_sync_test()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_restart(environment: Environment) -> None:
     env: Environment = environment
     # Load all directories for both harvesters
@@ -564,7 +563,7 @@ async def test_farmer_restart(environment: Environment) -> None:
         assert len(plot_manager.get_duplicates()) == len(receiver.duplicates()) == expected.duplicates_count
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sync_start_and_disconnect_while_sync_is_active(
     farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]
 ) -> None:

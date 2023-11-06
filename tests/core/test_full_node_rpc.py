@@ -31,13 +31,13 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from tests.conftest import ConsensusMode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.rpc import validate_get_routes
 
 
-@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
-@pytest.mark.asyncio
-async def test1(two_nodes_sim_and_wallets_services, self_hostname):
+@pytest.mark.anyio
+async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mode):
     num_blocks = 5
     nodes, _, bt = two_nodes_sim_and_wallets_services
     full_node_service_1, full_node_service_2 = nodes
@@ -63,7 +63,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname):
         blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
         assert len(await client.get_unfinished_block_headers()) == 0
-        assert len((await client.get_block_records(0, 100))) == 0
+        assert len(await client.get_block_records(0, 100)) == 0
         for block in blocks:
             if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
                 finished_ss = block.finished_sub_slots[:-1]
@@ -94,7 +94,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname):
 
         assert (await client.get_block_record_by_height(2)).header_hash == blocks[2].header_hash
 
-        assert len((await client.get_block_records(0, 100))) == num_blocks * 2
+        assert len(await client.get_block_records(0, 100)) == num_blocks * 2
 
         assert (await client.get_block_record_by_height(100)) is None
 
@@ -221,7 +221,10 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname):
         await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
         block: FullBlock = (await full_node_api_1.get_all_full_blocks())[-1]
 
-        assert len(block.transactions_generator_ref_list) > 0  # compression has occurred
+        if consensus_mode != ConsensusMode.HARD_FORK_2_0:
+            # after the hard fork, we don't compress blocks using
+            # block references anymore
+            assert len(block.transactions_generator_ref_list) > 0  # compression has occurred
 
         block_spends = await client.get_block_spends(block.header_hash)
 
@@ -423,7 +426,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname):
         await client.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockchain):
     nodes, _, bt = two_nodes_sim_and_wallets_services
     full_node_service_1, full_node_service_2 = nodes
@@ -554,7 +557,7 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
         await client.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_hostname):
     num_blocks = 5
     nodes, _, bt = one_wallet_and_one_simulator_services
@@ -635,7 +638,7 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         await client.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_coin_name_not_in_request(one_node, self_hostname):
     [full_node_service], _, _ = one_node
 
@@ -654,7 +657,7 @@ async def test_coin_name_not_in_request(one_node, self_hostname):
         await client.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_coin_name_not_found_in_mempool(one_node, self_hostname):
     [full_node_service], _, _ = one_node
 
@@ -676,7 +679,7 @@ async def test_coin_name_not_found_in_mempool(one_node, self_hostname):
         await client.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_coin_name_found_in_mempool(one_node, self_hostname):
     [full_node_service], _, bt = one_node
     full_node_api = full_node_service._api

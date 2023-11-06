@@ -20,7 +20,7 @@ from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farm_summary_command(
     capsys: CaptureFixture[str],
     farmer_one_harvester_simulator_wallet: Tuple[

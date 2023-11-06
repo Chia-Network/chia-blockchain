@@ -113,7 +113,6 @@ jobs:
         uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
-          force-pyenv: 'true'
 
       # This will be recreated in the next step
       # Done now and at the end of the workflow in case the last workflow fails, and this is still around
@@ -190,7 +189,7 @@ jobs:
       - uses: chia-network/actions/activate-venv@main
 
       - name: Setup Node 18.x
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18.x'
 
@@ -240,6 +239,12 @@ jobs:
         run: |
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
+      # We want to delete this no matter what happened in the previous steps (failures, success, etc)
+      - name: Delete signing keychain
+        if: always()
+        run:
+          security delete-keychain signing_temp.keychain || true
+
   publish:
     name: Publish ${{ matrix.os.name }} DMG
     runs-on: ${{ matrix.os.runs-on }}
@@ -270,7 +275,6 @@ jobs:
         uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
-          force-pyenv: 'true'
 
       - uses: chia-network/actions/create-venv@main
         id: create-venv
@@ -310,11 +314,11 @@ jobs:
           if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
           echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> "$GITHUB_OUTPUT"
 
-          if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
+          if [ -n "$GLUE_API_URL" ]; then HAS_GLUE_SECRET='true' ; fi
           echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
         env:
           AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
-          GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
+          GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
 
       - name: Install AWS CLI
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
@@ -376,21 +380,17 @@ jobs:
             $RELEASE_TAG \
             build_scripts/final_installer/*.dmg
 
+      - uses: Chia-Network/actions/github/jwt@main
+
       - name: Mark pre-release installer complete
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
         run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
+          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
 
       - name: Mark release installer complete
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
         run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
-
-      # We want to delete this no matter what happened in the previous steps (failures, success, etc)
-      - name: Delete signing keychain
-        if: always()
-        run:
-          security delete-keychain signing_temp.keychain || true
+          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
 
   test:
     name: Test ${{ matrix.os.name }} ${{ matrix.arch.name }}
@@ -455,4 +455,4 @@ jobs:
     - name: Detach .dmg
       if: always()
       run: |
-        hdiutil detach "/Volumes/Chia "*
+        hdiutil detach -force "/Volumes/Chia "*

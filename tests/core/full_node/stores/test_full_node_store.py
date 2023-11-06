@@ -6,7 +6,6 @@ import random
 from typing import AsyncIterator, List, Optional
 
 import pytest
-import pytest_asyncio
 
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.constants import ConsensusConstants
@@ -32,7 +31,7 @@ from tests.util.blockchain import create_blockchain
 log = logging.getLogger(__name__)
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncIterator[BlockTools]:
     with TempKeyring() as keychain:
         patched_constants = dataclasses.replace(
@@ -43,33 +42,31 @@ async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncI
         yield await create_block_tools_async(constants=patched_constants, keychain=keychain)
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
     patched_constants = dataclasses.replace(
         blockchain_constants,
         DISCRIMINANT_SIZE_BITS=32,
         SUB_SLOT_ITERS_STARTING=uint64(2**12),
     )
-    bc1, db_wrapper, db_path = await create_blockchain(patched_constants, db_version)
+    bc1, db_wrapper = await create_blockchain(patched_constants, db_version)
     yield bc1
     await db_wrapper.close()
     bc1.shut_down()
-    db_path.unlink()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def empty_blockchain_with_original_constants(
     db_version: int, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[Blockchain]:
-    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
+    bc1, db_wrapper = await create_blockchain(blockchain_constants, db_version)
     yield bc1
     await db_wrapper.close()
     bc1.shut_down()
-    db_path.unlink()
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("normalized_to_identity", [False, True])
 async def test_basic_store(
     empty_blockchain: Blockchain,
@@ -929,7 +926,7 @@ async def test_basic_store(
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_long_chain_slots(
     empty_blockchain_with_original_constants: Blockchain,
     default_1000_blocks: List[FullBlock],

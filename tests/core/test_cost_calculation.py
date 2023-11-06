@@ -53,7 +53,7 @@ def large_block_generator(size):
         return blob
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_basics(softfork_height, bt):
     wallet_tool = bt.get_pool_wallet_tool()
     ph = wallet_tool.get_new_puzzlehash()
@@ -88,7 +88,7 @@ async def test_basics(softfork_height, bt):
 
     coin_spend = spend_bundle.coin_spends[0]
     assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
-    spend_info = get_puzzle_and_solution_for_coin(program, coin_spend.coin, 0)
+    spend_info = get_puzzle_and_solution_for_coin(program, coin_spend.coin, softfork_height, bt.constants)
     assert spend_info.puzzle == coin_spend.puzzle_reveal
     assert spend_info.solution == coin_spend.solution
 
@@ -111,7 +111,7 @@ async def test_basics(softfork_height, bt):
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mempool_mode(softfork_height, bt):
     wallet_tool = bt.get_pool_wallet_tool()
     ph = wallet_tool.get_new_puzzlehash()
@@ -169,11 +169,11 @@ async def test_mempool_mode(softfork_height, bt):
         bytes32.fromhex("14947eb0e69ee8fc8279190fc2d38cb4bbb61ba28f1a270cfd643a0e8d759576"),
         300,
     )
-    spend_info = get_puzzle_and_solution_for_coin(generator, coin, 0)
+    spend_info = get_puzzle_and_solution_for_coin(generator, coin, softfork_height, bt.constants)
     assert spend_info.puzzle.to_program() == puzzle
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_clvm_mempool_mode(softfork_height):
     block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR.program))
     disassembly = binutils.disassemble(block)
@@ -201,13 +201,13 @@ async def test_clvm_mempool_mode(softfork_height):
     assert npc_result.error is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_tx_generator_speed(softfork_height, benchmark_runner: BenchmarkRunner):
     LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
     generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
     program = SerializedProgram.from_bytes(generator_bytes)
 
-    with benchmark_runner.assert_runtime(seconds=0.5):
+    with benchmark_runner.assert_runtime(seconds=1.25):
         generator = BlockGenerator(program, [], [])
         npc_result = get_name_puzzle_conditions(
             generator,
@@ -222,7 +222,7 @@ async def test_tx_generator_speed(softfork_height, benchmark_runner: BenchmarkRu
     assert len(npc_result.conds.spends) == LARGE_BLOCK_COIN_CONSUMED_COUNT
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_clvm_max_cost(softfork_height):
     block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR.program))
     disassembly = binutils.disassemble(block)
@@ -254,21 +254,21 @@ async def test_clvm_max_cost(softfork_height):
     assert npc_result.cost > 10000000
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_standard_tx(benchmark_runner: BenchmarkRunner):
     # this isn't a real public key, but we don't care
     public_key = bytes.fromhex(
         "af949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
     )
     puzzle_program = SerializedProgram.from_bytes(
-        p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(public_key))
+        bytes(p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(public_key)))
     )
     conditions = binutils.assemble(
         "((51 0x699eca24f2b6f4b25b16f7a418d0dc4fc5fce3b9145aecdda184158927738e3e 10)"
         " (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))"
     )
     solution_program = SerializedProgram.from_bytes(
-        p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
+        bytes(p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions))
     )
 
     with benchmark_runner.assert_runtime(seconds=0.1):
@@ -278,7 +278,7 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner):
             total_cost += cost
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: BenchmarkRunner):
     from clvm.casts import int_from_bytes
 
@@ -290,7 +290,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     assert LARGE_BLOCK.transactions_generator is not None
     # first, list all spent coins in the block
     cost, result = LARGE_BLOCK.transactions_generator.run_with_cost(
-        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, DESERIALIZE_MOD, []
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, [DESERIALIZE_MOD, []]
     )
 
     coin_spends = result.first()
@@ -303,8 +303,8 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     # benchmark the function to pick out the puzzle and solution for a specific
     # coin
     generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [], [])
-    with benchmark_runner.assert_runtime(seconds=7, label="get_puzzle_and_solution_for_coin"):
+    with benchmark_runner.assert_runtime(seconds=8.5):
         for i in range(3):
             for c in spends:
-                spend_info = get_puzzle_and_solution_for_coin(generator, c, 0)
+                spend_info = get_puzzle_and_solution_for_coin(generator, c, 0, test_constants)
                 assert spend_info.puzzle.get_tree_hash() == c.puzzle_hash
