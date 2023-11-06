@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import dataclasses
+import json
 import logging
 import os
 import random
@@ -118,6 +119,7 @@ from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.ssl_check import fix_ssl
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.derive_keys import (
+    DerivationCache,
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
     master_sk_to_pool_sk,
@@ -196,6 +198,8 @@ class BlockTools:
         plot_dir: str = "test-plots",
         log: logging.Logger = logging.getLogger(__name__),
     ) -> None:
+        self.derivation_cache: DerivationCache = {}
+        self.load_derivation_cache(Path("tests/derivation_cache.json"))
         self._block_cache_header = bytes32([0] * 32)
 
         self._tempdir = None
@@ -292,6 +296,16 @@ class BlockTools:
             match_str=str(self.plot_dir.relative_to(DEFAULT_ROOT_PATH.parent)) if not automated_testing else None,
         )
 
+    def load_derivation_cache(self, path: Path) -> None:
+        try:
+            with path.open(encoding="UTF-8") as cache_file:
+                objects = json.load(cache_file)
+                for ob in objects:
+                    a, b, c, d = ob
+                    self.derivation_cache[(bytes.fromhex(a), b, c)] = bytes.fromhex(d)
+        except Exception as e:
+            print(f"Unable to load derivation cache used for test speedup: {e}")
+
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None) -> None:
         keychain_proxy: Optional[KeychainProxy]
         try:
@@ -322,15 +336,15 @@ class BlockTools:
                 assert sk is not None
                 self.pool_master_sk = sk
 
-            self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
-            self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
+            self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk, self.derivation_cache).get_g1()
+            self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk, self.derivation_cache).get_g1()
 
             if reward_ph is None:
                 self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
-                    master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
+                    master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0), self.derivation_cache).get_g1()
                 )
                 self.pool_ph: bytes32 = create_puzzlehash_for_pk(
-                    master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
+                    master_sk_to_wallet_sk(self.pool_master_sk, uint32(0), self.derivation_cache).get_g1()
                 )
             else:
                 self.farmer_ph = reward_ph
@@ -339,9 +353,13 @@ class BlockTools:
                 self.all_sks: List[PrivateKey] = [sk for sk, _ in await keychain_proxy.get_all_private_keys()]
             else:
                 self.all_sks = [self.farmer_master_sk]  # we only want to include plots under the same fingerprint
-            self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
+            self.pool_pubkeys: List[G1Element] = [
+                master_sk_to_pool_sk(sk, self.derivation_cache).get_g1() for sk in self.all_sks
+            ]
 
-            self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
+            self.farmer_pubkeys: List[G1Element] = [
+                master_sk_to_farmer_sk(sk, self.derivation_cache).get_g1() for sk in self.all_sks
+            ]
             if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
                 raise RuntimeError("Keys not generated. Run `chia keys generate`")
 
@@ -506,7 +524,7 @@ class BlockTools:
         """
         Returns the plot signature of the header data.
         """
-        farmer_sk = master_sk_to_farmer_sk(self.all_sks[0])
+        farmer_sk = master_sk_to_farmer_sk(self.all_sks[0], self.derivation_cache)
         for plot_info in self.plot_manager.plots.values():
             if plot_pk == plot_info.plot_public_key:
                 # Look up local_sk from plot to save locked memory
@@ -520,7 +538,7 @@ class BlockTools:
                 else:
                     assert isinstance(pool_pk_or_ph, bytes32)
                     include_taproot = True
-                local_sk = master_sk_to_local_sk(local_master_sk)
+                local_sk = master_sk_to_local_sk(local_master_sk, self.derivation_cache)
                 agg_pk = generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1(), include_taproot)
                 assert agg_pk == plot_pk
                 harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
@@ -540,16 +558,16 @@ class BlockTools:
             return None
 
         for sk in self.all_sks:
-            sk_child = master_sk_to_pool_sk(sk)
+            sk_child = master_sk_to_pool_sk(sk, self.derivation_cache)
             if sk_child.get_g1() == pool_pk:
                 return AugSchemeMPL.sign(sk_child, bytes(pool_target))
         raise ValueError(f"Do not have key {pool_pk}")
 
     def get_farmer_wallet_tool(self) -> WalletTool:
-        return WalletTool(self.constants, self.farmer_master_sk)
+        return WalletTool(self.constants, self.farmer_master_sk, self.derivation_cache)
 
     def get_pool_wallet_tool(self) -> WalletTool:
-        return WalletTool(self.constants, self.pool_master_sk)
+        return WalletTool(self.constants, self.pool_master_sk, self.derivation_cache)
 
     def get_consecutive_blocks(
         self,
@@ -1346,7 +1364,7 @@ class BlockTools:
                             farmer_public_key,
                             local_master_sk,
                         ) = parse_plot_info(plot_info.prover.get_memo())
-                        local_sk = master_sk_to_local_sk(local_master_sk)
+                        local_sk = master_sk_to_local_sk(local_master_sk, self.derivation_cache)
 
                         if isinstance(pool_public_key_or_puzzle_hash, G1Element):
                             include_taproot = False

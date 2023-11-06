@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Optional, Set, Tuple
+import json
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
@@ -18,66 +19,97 @@ from chia.util.ints import uint32
 MAX_POOL_WALLETS = 100
 
 
-def _derive_path(sk: PrivateKey, path: List[int]) -> PrivateKey:
+"""
+Cache derivations during testing. This reduces the times spent in bls, and saves us about 12% of our time in pytest.
+Do not use this cache in production. BlockTools should only be used for testing.
+"""
+DerivationCache = Dict[Tuple[bytes, int, bool], bytes]
+
+
+def _derive_path_maybe_cached(
+    sk: PrivateKey,
+    path: List[int],
+    derivation_function: Callable[[PrivateKey, int], PrivateKey],
+    hardened: bool,
+    cache: Optional[DerivationCache] = None,
+) -> PrivateKey:
     for index in path:
-        sk = AugSchemeMPL.derive_child_sk(sk, index)
+        parent_sk = sk
+        if cache and (bytes(parent_sk), index, hardened) in cache:
+            sk = PrivateKey.from_bytes(cache[(bytes(parent_sk), index, True)])
+        else:
+            sk = derivation_function(sk, index)
+            # To create more DerivationCache entries for new tests, append entries to 'tests/derivation_cache.json'
+            print(f"DerivationCache miss: {json.dumps((bytes(parent_sk).hex(), index, True, bytes(sk).hex()))},")
+            if cache:
+                cache[(bytes(parent_sk), index, hardened)] = bytes(sk)
     return sk
 
 
-def _derive_path_unhardened(sk: PrivateKey, path: List[int]) -> PrivateKey:
-    for index in path:
-        sk = AugSchemeMPL.derive_child_sk_unhardened(sk, index)
-    return sk
+def _derive_path(sk: PrivateKey, path: List[int], cache: Optional[DerivationCache] = None) -> PrivateKey:
+    return _derive_path_maybe_cached(sk, path, AugSchemeMPL.derive_child_sk, True, cache)
 
 
-def master_sk_to_farmer_sk(master: PrivateKey) -> PrivateKey:
-    return _derive_path(master, [12381, 8444, 0, 0])
+def _derive_path_unhardened(sk: PrivateKey, path: List[int], cache: Optional[DerivationCache] = None) -> PrivateKey:
+    return _derive_path_maybe_cached(sk, path, AugSchemeMPL.derive_child_sk_unhardened, False, cache)
 
 
-def master_sk_to_pool_sk(master: PrivateKey) -> PrivateKey:
-    return _derive_path(master, [12381, 8444, 1, 0])
+def master_sk_to_farmer_sk(master: PrivateKey, cache: Optional[DerivationCache] = None) -> PrivateKey:
+    return _derive_path(master, [12381, 8444, 0, 0], cache)
 
 
-def master_sk_to_wallet_sk_intermediate(master: PrivateKey) -> PrivateKey:
-    return _derive_path(master, [12381, 8444, 2])
+def master_sk_to_pool_sk(master: PrivateKey, cache: Optional[DerivationCache] = None) -> PrivateKey:
+    return _derive_path(master, [12381, 8444, 1, 0], cache)
 
 
-def master_sk_to_wallet_sk(master: PrivateKey, index: uint32) -> PrivateKey:
+def master_sk_to_wallet_sk_intermediate(master: PrivateKey, cache: Optional[DerivationCache] = None) -> PrivateKey:
+    return _derive_path(master, [12381, 8444, 2], cache)
+
+
+def master_sk_to_wallet_sk(master: PrivateKey, index: uint32, cache: Optional[DerivationCache] = None) -> PrivateKey:
     intermediate = master_sk_to_wallet_sk_intermediate(master)
-    return _derive_path(intermediate, [index])
+    return _derive_path(intermediate, [index], cache)
 
 
-def master_sk_to_wallet_sk_unhardened_intermediate(master: PrivateKey) -> PrivateKey:
-    return _derive_path_unhardened(master, [12381, 8444, 2])
+def master_sk_to_wallet_sk_unhardened_intermediate(
+    master: PrivateKey, cache: Optional[DerivationCache] = None
+) -> PrivateKey:
+    return _derive_path_unhardened(master, [12381, 8444, 2], cache)
 
 
-def master_sk_to_wallet_sk_unhardened(master: PrivateKey, index: uint32) -> PrivateKey:
+def master_sk_to_wallet_sk_unhardened(
+    master: PrivateKey, index: uint32, cache: Optional[DerivationCache] = None
+) -> PrivateKey:
     intermediate = master_sk_to_wallet_sk_unhardened_intermediate(master)
-    return _derive_path_unhardened(intermediate, [index])
+    return _derive_path_unhardened(intermediate, [index], cache)
 
 
-def master_sk_to_local_sk(master: PrivateKey) -> PrivateKey:
-    return _derive_path(master, [12381, 8444, 3, 0])
+def master_sk_to_local_sk(master: PrivateKey, cache: Optional[DerivationCache] = None) -> PrivateKey:
+    return _derive_path(master, [12381, 8444, 3, 0], cache)
 
 
-def master_sk_to_backup_sk(master: PrivateKey) -> PrivateKey:
-    return _derive_path(master, [12381, 8444, 4, 0])
+def master_sk_to_backup_sk(master: PrivateKey, cache: Optional[DerivationCache] = None) -> PrivateKey:
+    return _derive_path(master, [12381, 8444, 4, 0], cache)
 
 
-def master_sk_to_singleton_owner_sk(master: PrivateKey, pool_wallet_index: uint32) -> PrivateKey:
+def master_sk_to_singleton_owner_sk(
+    master: PrivateKey, pool_wallet_index: uint32, cache: Optional[DerivationCache] = None
+) -> PrivateKey:
     """
     This key controls a singleton on the blockchain, allowing for dynamic pooling (changing pools)
     """
-    return _derive_path(master, [12381, 8444, 5, pool_wallet_index])
+    return _derive_path(master, [12381, 8444, 5, pool_wallet_index], cache)
 
 
-def master_sk_to_pooling_authentication_sk(master: PrivateKey, pool_wallet_index: uint32, index: uint32) -> PrivateKey:
+def master_sk_to_pooling_authentication_sk(
+    master: PrivateKey, pool_wallet_index: uint32, index: uint32, cache: Optional[DerivationCache] = None
+) -> PrivateKey:
     """
     This key is used for the farmer to authenticate to the pool when sending partials
     """
     assert index < 10000
     assert pool_wallet_index < 10000
-    return _derive_path(master, [12381, 8444, 6, pool_wallet_index * 10000 + index])
+    return _derive_path(master, [12381, 8444, 6, pool_wallet_index * 10000 + index], cache)
 
 
 def find_owner_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Optional[Tuple[PrivateKey, uint32]]:
