@@ -1203,6 +1203,9 @@ class DataStore:
                 if node.hash not in known_hashes:
                     await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, root.generation)
 
+            # Clean up intermediary hashes that are no longer needed, since every hash we need should be in ancestors.
+            await writer.execute("DELETE FROM node WHERE hash NOT IN (SELECT hash FROM ancestors)")
+
     async def insert_root_with_ancestor_table(
         self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING
     ) -> None:
