@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from clvm_tools.binutils import assemble
+from clvm_tools_rs.binutils import assemble
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32

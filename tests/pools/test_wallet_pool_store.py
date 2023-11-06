@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 import pytest
-from clvm_tools import binutils
+from clvm_tools_rs import binutils
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

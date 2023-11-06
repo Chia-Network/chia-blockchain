@@ -10,7 +10,7 @@ from typing import List, Optional, Tuple
 
 import pytest
 from blspy import G2Element
-from clvm_tools.binutils import assemble
+from clvm_tools_rs.binutils import assemble
 
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring

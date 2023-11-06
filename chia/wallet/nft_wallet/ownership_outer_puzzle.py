@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple, Union
 
-from clvm_tools.binutils import disassemble
+from clvm_tools_rs.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32

@@ -6,7 +6,7 @@ from typing import List
 
 import pytest
 from blspy import G1Element
-from clvm_tools import binutils
+from clvm_tools_rs import binutils
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult

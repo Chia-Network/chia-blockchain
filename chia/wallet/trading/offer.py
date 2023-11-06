@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import G2Element
-from clvm_tools.binutils import disassemble
+from clvm_tools_rs.binutils import disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.announcement import Announcement

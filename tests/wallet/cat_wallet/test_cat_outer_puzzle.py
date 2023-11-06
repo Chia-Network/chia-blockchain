@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
-from clvm_tools.binutils import disassemble
+from clvm_tools_rs.binutils import disassemble
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
