@@ -703,7 +703,10 @@ class FullNode:
                             False,
                         )
         else:
-            if request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
+            if (
+                curr_peak_height <= request.height
+                and request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]
+            ):
                 # This is the normal case of receiving the next block
                 if await self.short_sync_backtrack(
                     peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
@@ -716,11 +719,10 @@ class FullNode:
                 await self.short_sync_batch(peer, uint32(0), request.height)
                 return None
 
-            if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
-                # TODO: We get here if we encountered a heavier peak with a
-                # lower height than ours. We don't seem to handle this case
-                # right now. This ends up requesting the block at *our* peak
-                # height.
+            if (
+                curr_peak_height <= request.height
+                and request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]
+            ):
                 # This case of being behind but not by so much
                 if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return None
