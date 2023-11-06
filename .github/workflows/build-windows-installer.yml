@@ -372,29 +372,29 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe -o ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent --webseed https://download.chia.net/install/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
+        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe -o "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent --webseed https://download.chia.net/install/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
         ls
-        gh release upload $env:RELEASE_TAG ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent
+        gh release upload $env:RELEASE_TAG "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent
 
     - name: Upload Dev Installer
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
       run: |
-        aws s3 cp ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe s3://download.chia.net/latest-dev/ChiaSetup-latest-dev.exe
-        aws s3 cp ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download.chia.net/latest-dev/ChiaSetup-latest-dev.exe.sha256
+        aws s3 cp "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe s3://download.chia.net/latest-dev/ChiaSetup-latest-dev.exe
+        aws s3 cp "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download.chia.net/latest-dev/ChiaSetup-latest-dev.exe.sha256
 
     - name: Upload Release Files
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
       run: |
-        aws s3 cp ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe s3://download.chia.net/install/
-        aws s3 cp ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download.chia.net/install/
-        aws s3 cp ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent s3://download.chia.net/torrents/
+        aws s3 cp "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe s3://download.chia.net/install/
+        aws s3 cp "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download.chia.net/install/
+        aws s3 cp "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent s3://download.chia.net/torrents/
 
     - name: Upload release artifacts
       if: env.RELEASE == 'true'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        gh release upload $env:RELEASE_TAG ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
+        gh release upload $env:RELEASE_TAG "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
 
     - uses: Chia-Network/actions/github/jwt@main
 
