@@ -3687,7 +3687,7 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
         counter += 1
 
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [block1], {}, validate_signatures=False, fork_height=fork_height
+            [block1], {}, validate_signatures=False
         )
         result, err, _ = await b.add_block(block1, preval[0])
         assert not err
