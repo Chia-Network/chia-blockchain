@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json
+# import json
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, PrivateKey
@@ -40,7 +40,7 @@ def _derive_path_maybe_cached(
         else:
             sk = derivation_function(sk, index)
             # To create more DerivationCache entries for new tests, append entries to 'tests/derivation_cache.json'
-            print(f"DerivationCache miss: {json.dumps((bytes(parent_sk).hex(), index, True, bytes(sk).hex()))},")
+            # print(f"DerivationCache miss: {json.dumps((bytes(parent_sk).hex(), index, True, bytes(sk).hex()))},")
             if cache:
                 cache[(bytes(parent_sk), index, hardened)] = bytes(sk)
     return sk
