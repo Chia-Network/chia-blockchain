@@ -1176,7 +1176,7 @@ class DataStore:
             return InternalNode.from_row(row=row)
 
     async def build_ancestor_table_for_latest_root(self, tree_id: bytes32) -> None:
-        async with self.db_wrapper.writer():
+        async with self.db_wrapper.writer() as writer:
             root = await self.get_tree_root(tree_id=tree_id)
             if root.node_hash is None:
                 return
