@@ -565,7 +565,13 @@ class FullNode:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: Optional[StateChangeSummary]
-                    success, state_change_summary, _ = await self.add_block_batch(response.blocks, peer_info, start_height)
+
+                    fork_info = ForkInfo(
+                        response.blocks[0].height, response.blocks[-1].height, response.blocks[-1].header_hash
+                    )
+                    success, state_change_summary, _ = await self.add_block_batch(
+                        response.blocks, peer_info, fork_info=fork_info
+                    )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -1268,7 +1274,7 @@ class FullNode:
             {},
             wp_summaries=wp_summaries,
             validate_signatures=True,
-            fork_height=fork_point,
+            fork_height=None if fork_info is None else uint32(fork_info.fork_height),
         )
         pre_validate_end = time.monotonic()
         pre_validate_time = pre_validate_end - pre_validate_start

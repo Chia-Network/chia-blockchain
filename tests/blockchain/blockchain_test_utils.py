@@ -7,7 +7,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
 from chia.util.errors import Err
-from chia.util.ints import uint64
+from chia.util.ints import uint64, uint32
 
 
 async def check_block_store_invariant(bc: Blockchain):
@@ -63,7 +63,7 @@ async def _validate_and_add_block(
             [block],
             {},
             validate_signatures=False,
-            fork_height=fork_point_with_peak,
+            fork_height=None if fork_info is None else uint32(fork_info.fork_height),
         )
         assert pre_validation_results is not None
         results = pre_validation_results[0]

@@ -408,13 +408,12 @@ class Blockchain(BlockchainInterface):
         error_code, _ = await validate_block_body(
             self.constants,
             self,
-            self.block_store,
             self.coin_store,
             block,
             block.height,
             npc_result,
             fork_info,
-            self.get_block_generator,
+            # self.get_block_generator,
             # If we did not already validate the signature, validate it now
             validate_signature=not pre_validation_result.validated_signature,
         )
@@ -564,11 +563,11 @@ class Blockchain(BlockchainInterface):
             # We need to recompute the additions and removals, since they are not stored on DB (only generator is).
             if fetched_block_record.header_hash == block_record.header_hash:
                 tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(
-                    fetched_full_block, fork_height, npc_result
+                    fetched_full_block, fork_info.fork_height, npc_result
                 )
             else:
                 tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(
-                    fetched_full_block, fork_height
+                    fetched_full_block, fork_info.fork_height
                 )
 
             # Collect the NPC results for later post-processing
@@ -791,13 +790,11 @@ class Blockchain(BlockchainInterface):
         error_code, cost_result = await validate_block_body(
             self.constants,
             self,
-            self.block_store,
             self.coin_store,
             block,
             uint32(prev_height + 1),
             npc_result,
             fork_info,
-            self.get_block_generator,
             validate_signature=False,  # Signature was already validated before calling this method, no need to validate
         )
 
@@ -1076,7 +1073,7 @@ class Blockchain(BlockchainInterface):
         self,
         block: BlockInfo,
         fork: Optional[int] = None,
-        additional_blocks: Optional[Dict[uint32, FullBlock]] = None,
+        additional_blocks: Optional[Dict[bytes32, FullBlock]] = None,
     ) -> Optional[BlockGenerator]:
         if additional_blocks is None:
             additional_blocks = {}
