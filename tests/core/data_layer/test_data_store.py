@@ -1493,13 +1493,13 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
 async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> None:
     # Make sure inserting and deleting the same data works
     for repetition in range(2):
-        tree_ids = [bytes((0,) * 31 + (i,)) for i in range(50)]
+        tree_ids = [bytes32(bytes((0,) * 31 + (i,))) for i in range(50)]
         for tree_id in tree_ids:
             await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
         original_keys = [key.to_bytes(4, byteorder="big") for key in range(150)]
         batches = []
         for i in range(50):
-            batch = [{"action": "insert", "key": key, "value": key} for key in original_keys[i * 3:]]
+            batch = [{"action": "insert", "key": key, "value": key} for key in original_keys[i * 3 :]]
             batches.append(batch)
 
         for tree_id, batch in zip(tree_ids, batches):
@@ -1512,9 +1512,9 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
 
             keys = [node["key"] for node in nodes if node["key"] is not None]
             assert len(keys) == 150 - tree_index * 3
-            for key in original_keys[tree_index * 3:]:
+            for key in original_keys[tree_index * 3 :]:
                 assert key in keys
-            for key in original_keys[:tree_index * 3]:
+            for key in original_keys[: tree_index * 3]:
                 assert key not in keys
             await raw_data_store.delete_store_data(tree_ids[tree_index])
 
@@ -1530,7 +1530,7 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
 async def test_delete_store_data_with_common_values(raw_data_store: DataStore, common_keys_count: int) -> None:
     tree_id_1 = bytes32(b"\x00" * 31 + b"\x01")
     tree_id_2 = bytes32(b"\x00" * 31 + b"\x02")
-    
+
     await raw_data_store.create_tree(tree_id=tree_id_1, status=Status.COMMITTED)
     await raw_data_store.create_tree(tree_id=tree_id_2, status=Status.COMMITTED)
 

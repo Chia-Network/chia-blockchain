@@ -1461,7 +1461,10 @@ class DataStore:
                 FROM all_nodes
                 WHERE hash NOT IN (SELECT hash FROM ancestors WHERE tree_id != ?)
                 """,
-                (tree_id, tree_id,),
+                (
+                    tree_id,
+                    tree_id,
+                ),
             )
             to_delete: Dict[bytes, Tuple[bytes, bytes]] = {}
             ref_counts: Dict[bytes, int] = {}
