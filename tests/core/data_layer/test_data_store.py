@@ -1525,8 +1525,8 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
                 assert row_count[0] == 0
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("common_keys_count", [1, 250, 499])
+@pytest.mark.asyncio
 async def test_delete_store_data_with_common_values(raw_data_store: DataStore, common_keys_count: int) -> None:
     tree_id_1 = bytes32(b"\x00" * 31 + b"\x01")
     tree_id_2 = bytes32(b"\x00" * 31 + b"\x02")

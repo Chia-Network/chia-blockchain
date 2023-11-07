@@ -1472,7 +1472,11 @@ class DataStore:
                 hash = row["hash"]
                 left = row["left"]
                 right = row["right"]
-                assert hash not in to_delete
+                if hash in to_delete:
+                    prev_left, prev_right = to_delete[hash]
+                    assert prev_left == left
+                    assert prev_right == right
+                    continue
                 to_delete[hash] = (left, right)
                 if left is not None:
                     ref_counts[left] = ref_counts.get(left, 0) + 1
