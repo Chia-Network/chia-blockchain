@@ -200,7 +200,7 @@ def test_proposal() -> None:
     )
 
     conds_repeated = conditions_dict_for_solution(full_proposal, repeat_solution_1, INFINITE_COST)
-    assert len(conds_repeated) == 4
+    assert len(conds_repeated) == 5
 
     # Try to vote using repeated coin ids
     repeat_solution_2: Program = Program.to(
