@@ -211,11 +211,15 @@ async def test_get_peer_info(bt: BlockTools) -> None:
         bt.root_path, bt.config, bt.constants, keychain=None, connect_to_daemon=False
     )
 
-    # Wallet server should not have a peer info
+    # Wallet server should not have a port or peer info
+    with pytest.raises(ValueError, match="Port not set"):
+        local_port = wallet_service._server.get_port()
     local_peer_info = await wallet_service._server.get_peer_info()
     assert local_peer_info is None
 
-    # Full node server should have a peer info
+    # Full node server should have a local port
+    # testing get_peer_info() directly is flakey because it depends on IP lookup
+    # from either chia or aws
     node_service = await create_full_node_service(bt.root_path, bt.config, bt.constants, connect_to_daemon=False)
-    local_peer_info = await node_service._server.get_peer_info()
-    assert local_peer_info is not None
+    local_port = node_service._server.get_port()
+    assert local_port is not None
