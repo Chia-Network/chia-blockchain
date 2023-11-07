@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, fields, replace
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union, final, get_type_hints
 
-from blspy import G1Element
+from chia_rs import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.types.blockchain_format.program import Program
@@ -37,7 +37,7 @@ class AggSigParent(Condition):
     parent_id: Optional[bytes32] = None
 
     def to_program(self) -> Program:
-        condition: Program = Program.to([ConditionOpcode.AGG_SIG_PARENT, self.pubkey, self.msg])
+        condition: Program = Program.to([ConditionOpcode.AGG_SIG_PARENT, self.pubkey.to_bytes(), self.msg])
         return condition
 
     @classmethod
@@ -58,7 +58,7 @@ class AggSigPuzzle(Condition):
     puzzle_hash: Optional[bytes32] = None
 
     def to_program(self) -> Program:
-        condition: Program = Program.to([ConditionOpcode.AGG_SIG_PUZZLE, self.pubkey, self.msg])
+        condition: Program = Program.to([ConditionOpcode.AGG_SIG_PUZZLE, self.pubkey.to_bytes(), self.msg])
         return condition
 
     @classmethod
@@ -79,7 +79,7 @@ class AggSigAmount(Condition):
     amount: Optional[uint64] = None
 
     def to_program(self) -> Program:
-        condition: Program = Program.to([ConditionOpcode.AGG_SIG_AMOUNT, self.pubkey, self.msg])
+        condition: Program = Program.to([ConditionOpcode.AGG_SIG_AMOUNT, self.pubkey.to_bytes(), self.msg])
         return condition
 
     @classmethod
@@ -101,7 +101,7 @@ class AggSigPuzzleAmount(Condition):
     amount: Optional[uint64] = None
 
     def to_program(self) -> Program:
-        condition: Program = Program.to([ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT, self.pubkey, self.msg])
+        condition: Program = Program.to([ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT, self.pubkey.to_bytes(), self.msg])
         return condition
 
     @classmethod
@@ -129,7 +129,7 @@ class AggSigParentAmount(Condition):
     amount: Optional[uint64] = None
 
     def to_program(self) -> Program:
-        condition: Program = Program.to([ConditionOpcode.AGG_SIG_PARENT_AMOUNT, self.pubkey, self.msg])
+        condition: Program = Program.to([ConditionOpcode.AGG_SIG_PARENT_AMOUNT, self.pubkey.to_bytes(), self.msg])
         return condition
 
     @classmethod
@@ -157,7 +157,7 @@ class AggSigParentPuzzle(Condition):
     puzzle_hash: Optional[bytes32] = None
 
     def to_program(self) -> Program:
-        condition: Program = Program.to([ConditionOpcode.AGG_SIG_PARENT_PUZZLE, self.pubkey, self.msg])
+        condition: Program = Program.to([ConditionOpcode.AGG_SIG_PARENT_PUZZLE, self.pubkey.to_bytes(), self.msg])
         return condition
 
     @classmethod
@@ -183,7 +183,7 @@ class AggSigUnsafe(Condition):
     msg: bytes
 
     def to_program(self) -> Program:
-        condition: Program = Program.to([ConditionOpcode.AGG_SIG_UNSAFE, self.pubkey, self.msg])
+        condition: Program = Program.to([ConditionOpcode.AGG_SIG_UNSAFE, self.pubkey.to_bytes(), self.msg])
         return condition
 
     @classmethod
@@ -204,7 +204,7 @@ class AggSigMe(Condition):
     additional_data: Optional[bytes32] = None
 
     def to_program(self) -> Program:
-        condition: Program = Program.to([ConditionOpcode.AGG_SIG_ME, self.pubkey, self.msg])
+        condition: Program = Program.to([ConditionOpcode.AGG_SIG_ME, self.pubkey.to_bytes(), self.msg])
         return condition
 
     @classmethod
@@ -757,7 +757,7 @@ class AggSig(Condition):
 
     def to_program(self) -> Program:
         # We know we are an agg sig or we want to error
-        return CONDITION_DRIVERS[self.opcode](self.pubkey, self.msg).to_program()  # type: ignore[call-arg]
+        return CONDITION_DRIVERS[self.opcode](self.pubkey.to_bytes(), self.msg).to_program()  # type: ignore[call-arg]
 
     @classmethod
     def from_program(cls, program: Program, **kwargs: Optional[Union[uint64, bytes32]]) -> AggSig:

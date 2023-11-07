@@ -735,6 +735,8 @@ class Blockchain(BlockchainInterface):
         Args:
             height: Minimum height that we need to keep in the cache
         """
+        if self._peak_height is not None and height > self._peak_height - self.constants.BLOCKS_CACHE_SIZE:
+            height = self._peak_height - self.constants.BLOCKS_CACHE_SIZE
         if height < 0:
             return None
         blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from blspy import AugSchemeMPL, G1Element
+from chia_rs import AugSchemeMPL, G1Element
 
 from chia.util import cached_bls
 from chia.util.hash import std_hash

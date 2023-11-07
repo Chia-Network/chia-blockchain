@@ -6,10 +6,11 @@ import dataclasses
 import logging
 import random
 import time
+import traceback
 from typing import Coroutine, Dict, List, Optional, Tuple
 
 import pytest
-from blspy import AugSchemeMPL, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 
 from chia.consensus.pot_iterations import is_overflow_block
@@ -2150,3 +2151,91 @@ async def test_wallet_sync_task_failure(
     assert "update_wallets - fork_height: 10, peak_height: 0" in caplog.text
     assert "Wallet sync task failure" not in caplog.text
     assert not full_node.wallet_sync_task.done()
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="this test is too slow (for now)")
+async def test_long_reorg_nodes(
+    three_nodes,
+    default_10000_blocks: List[FullBlock],
+    test_long_reorg_blocks: List[FullBlock],
+    self_hostname: str,
+    seeded_random: random.Random,
+):
+    full_node_1, full_node_2, full_node_3 = three_nodes
+
+    blocks = default_10000_blocks[:1600]
+
+    reorg_blocks = test_long_reorg_blocks[:1200]
+
+    # full node 1 has the original chain
+    for block_batch in to_batches(blocks, 64):
+        b = block_batch.entries[0]
+        if (b.height % 128) == 0:
+            print(f"main chain: {b.height:4} weight: {b.weight}")
+        await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+
+    # full node 2 has the reorg-chain
+    for block_batch in to_batches(reorg_blocks[:-1], 64):
+        b = block_batch.entries[0]
+        if (b.height % 128) == 0:
+            print(f"reorg chain: {b.height:4} weight: {b.weight}")
+        await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+
+    await connect_and_get_peer(full_node_1.full_node.server, full_node_2.full_node.server, self_hostname)
+
+    # TODO: There appears to be an issue where the node with the lighter chain
+    # fails to initiate the reorg until there's a new block farmed onto the
+    # heavier chain.
+    await full_node_2.full_node.add_block(reorg_blocks[-1])
+
+    def check_nodes_in_sync():
+        try:
+            p1 = full_node_2.full_node.blockchain.get_peak()
+            p2 = full_node_1.full_node.blockchain.get_peak()
+            return p1 == p2
+        except Exception as e:
+            # TODO: understand why we get an exception here sometimes. Fix it or
+            # add comment explaining why we need to catch here
+            traceback.print_exc()
+            print(f"e: {e}")
+            return False
+
+    await time_out_assert(120, check_nodes_in_sync)
+    peak = full_node_2.full_node.blockchain.get_peak()
+    print(f"peak: {str(peak.header_hash)[:6]}")
+
+    p1 = full_node_1.full_node.blockchain.get_peak()
+    p2 = full_node_2.full_node.blockchain.get_peak()
+
+    assert p1.header_hash == reorg_blocks[-1].header_hash
+    assert p2.header_hash == reorg_blocks[-1].header_hash
+
+    blocks = default_10000_blocks[:4000]
+
+    # full node 3 has the original chain, but even longer
+    for block_batch in to_batches(blocks, 64):
+        b = block_batch.entries[0]
+        if (b.height % 128) == 0:
+            print(f"main chain: {b.height:4} weight: {b.weight}")
+        await full_node_3.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+
+    print("connecting node 3")
+    await connect_and_get_peer(full_node_3.full_node.server, full_node_1.full_node.server, self_hostname)
+    # await connect_and_get_peer(full_node_3.full_node.server, full_node_2.full_node.server, self_hostname)
+
+    def check_nodes_in_sync2():
+        p1 = full_node_1.full_node.blockchain.get_peak()
+        # p2 = full_node_2.full_node.blockchain.get_peak()
+        p3 = full_node_3.full_node.blockchain.get_peak()
+        return p1 == p3
+
+    await time_out_assert(950, check_nodes_in_sync2)
+
+    p1 = full_node_1.full_node.blockchain.get_peak()
+    # p2 = full_node_2.full_node.blockchain.get_peak()
+    p3 = full_node_3.full_node.blockchain.get_peak()
+
+    assert p1.header_hash == blocks[-1].header_hash
+    # assert p2.header_hash == blocks[-1].header_hash
+    assert p3.header_hash == blocks[-1].header_hash

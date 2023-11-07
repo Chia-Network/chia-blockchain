@@ -6,8 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
 
-from blspy import G2Element
-from chia_rs import Coin
+from chia_rs import Coin, G2Element
 
 import chia.cmds.wallet_funcs
 from chia.cmds.chia import cli as chia_cli

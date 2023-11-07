@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiosqlite
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_puzzlehash_for_pk

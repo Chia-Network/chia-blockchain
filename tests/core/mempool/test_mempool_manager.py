@@ -4,8 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import pytest
-from blspy import G1Element, G2Element
-from chia_rs import ELIGIBLE_FOR_DEDUP
+from chia_rs import ELIGIBLE_FOR_DEDUP, G1Element, G2Element
 from chiabip158 import PyBIP158
 
 from chia.consensus.constants import ConsensusConstants
@@ -1369,7 +1368,8 @@ async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(ne
     test_coin_records = {coin_id: CoinRecord(coin, uint32(0), TEST_HEIGHT, False, uint64(0))}
     block_record = create_test_block_record(height=new_height)
     npc_result = NPCResult(None, make_test_conds(spend_ids=[coin_id]), uint64(0))
-    await mempool_manager.new_peak(block_record, npc_result)
+    assert npc_result.conds is not None
+    await mempool_manager.new_peak(block_record, [bytes32(s.coin_id) for s in npc_result.conds.spends])
     # As the coin was a spend in all the mempool items we had, nothing should be left now
     assert len(mempool_manager.mempool.get_items_by_coin_id(coin_id)) == 0
     assert mempool_manager.mempool.size() == 0

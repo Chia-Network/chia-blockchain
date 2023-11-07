@@ -8,7 +8,7 @@ from types import TracebackType
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import pytest
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from pytest_mock import MockerFixture
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS

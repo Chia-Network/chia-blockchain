@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.farmer.farmer import Farmer

@@ -8,7 +8,6 @@ from setuptools import find_packages, setup
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.0.0",
-    "blspy==2.0.2",  # Signature library
     "boto3==1.28.65",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.0",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters

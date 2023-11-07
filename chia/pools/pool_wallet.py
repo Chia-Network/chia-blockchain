@@ -5,7 +5,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
-from blspy import G1Element, G2Element, PrivateKey
+from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import final
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER

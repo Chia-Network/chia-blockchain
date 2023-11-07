@@ -1,7 +1,7 @@
 # flake8: noqa: E501
 from __future__ import annotations
 
-from blspy import AugSchemeMPL, PrivateKey
+from chia_rs import AugSchemeMPL, PrivateKey
 
 from chia.pools.pool_config import PoolWalletConfig
 from chia.util.config import create_default_chia_config, load_config, lock_config, save_config

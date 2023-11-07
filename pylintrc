@@ -279,8 +279,7 @@ ignored-classes=optparse.Values,thread._local,_thread._local
 # (useful for modules/projects where namespaces are manipulated during runtime
 # and thus existing member attributes cannot be deduced by static analysis. It
 # supports qualified module names, as well as Unix pattern matching.
-ignored-modules=blspy,
-                chiabip158,
+ignored-modules=chiabip158,
                 chiapos,
                 chiavdf,
                 chia_rs,

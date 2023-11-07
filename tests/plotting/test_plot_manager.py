@@ -10,7 +10,7 @@ from shutil import copy, move
 from typing import Callable, Iterator, List, Optional, cast
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.plotting.cache import CURRENT_VERSION, CacheDataV1
 from chia.plotting.manager import Cache, PlotManager
