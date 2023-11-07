@@ -1456,9 +1456,12 @@ class FullNode:
         )
 
         # Update the mempool (returns successful pending transactions added to the mempool)
+        spent_coins: Optional[List[bytes32]] = None
         new_npc_results: List[NPCResult] = state_change_summary.new_npc_results
+        if len(new_npc_results) > 0 and new_npc_results[-1].conds is not None:
+            spent_coins = [bytes32(s.coin_id) for s in new_npc_results[-1].conds.spends]
         mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
-            self.blockchain.get_peak(), new_npc_results[-1] if len(new_npc_results) > 0 else None
+            self.blockchain.get_peak(), spent_coins
         )
 
         # Check if we detected a spent transaction, to load up our generator cache
