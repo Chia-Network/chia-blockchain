@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 
 from chia.clvm.spend_sim import sim_and_client
 from chia.types.blockchain_format.program import Program

@@ -27,7 +27,7 @@ from typing import (
     final,
 )
 
-from blspy import AugSchemeMPL
+from chia_rs import AugSchemeMPL
 
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord

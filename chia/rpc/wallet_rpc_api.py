@@ -7,7 +7,7 @@ import zlib
 from pathlib import Path
 from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
 
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward

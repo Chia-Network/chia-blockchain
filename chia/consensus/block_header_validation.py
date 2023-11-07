@@ -5,7 +5,7 @@ import logging
 import time
 from typing import Optional, Tuple
 
-from blspy import AugSchemeMPL
+from chia_rs import AugSchemeMPL
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface

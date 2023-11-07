@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Tuple
 
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 from clvm_tools import binutils
 
 from chia.types.announcement import Announcement

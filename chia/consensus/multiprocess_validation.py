@@ -7,7 +7,7 @@ from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
 
-from blspy import AugSchemeMPL, G1Element
+from chia_rs import AugSchemeMPL, G1Element
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord

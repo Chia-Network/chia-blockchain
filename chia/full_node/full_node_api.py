@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block

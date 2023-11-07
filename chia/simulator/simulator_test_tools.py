@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, Optional, Tuple
 
-from blspy import PrivateKey
+from chia_rs import PrivateKey
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path

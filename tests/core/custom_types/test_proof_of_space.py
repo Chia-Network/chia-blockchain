@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace, passes_plot_filter, verify_and_get_quality_string

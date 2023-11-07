@@ -318,7 +318,7 @@ def search_cmd(
 ) -> None:
     import sys
 
-    from blspy import PrivateKey
+    from chia_rs import PrivateKey
 
     from .keys_funcs import resolve_derivation_master_key, search_derive
 

@@ -9,7 +9,7 @@ import time
 from typing import Coroutine, Dict, List, Optional, Tuple
 
 import pytest
-from blspy import AugSchemeMPL, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 
 from chia.consensus.pot_iterations import is_overflow_block

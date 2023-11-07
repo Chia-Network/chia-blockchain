@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List
 
-from blspy import AugSchemeMPL, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 
 from chia.simulator.block_tools import test_constants
 from chia.types.coin_spend import CoinSpend

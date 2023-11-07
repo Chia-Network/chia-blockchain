@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 
 import pytest
-from blspy import AugSchemeMPL, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 
 from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client

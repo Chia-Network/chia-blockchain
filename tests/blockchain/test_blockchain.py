@@ -10,7 +10,7 @@ from dataclasses import replace
 from typing import List
 
 import pytest
-from blspy import AugSchemeMPL, G2Element
+from chia_rs import AugSchemeMPL, G2Element
 from clvm.casts import int_to_bytes
 
 from chia.consensus.block_header_validation import validate_finished_header_block

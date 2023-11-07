@@ -7,7 +7,7 @@ from dataclasses import replace
 from typing import Callable, List, Optional, Tuple
 
 import pytest
-from blspy import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
 import tests
 from chia.simulator.keyring import TempKeyring
