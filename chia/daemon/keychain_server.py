@@ -16,6 +16,7 @@ from chia.util.streamable import Streamable, streamable
 # Commands that are handled by the KeychainServer
 keychain_commands = [
     "add_private_key",
+    "add_public_key",
     "check_keys",
     "delete_all_keys",
     "delete_key_by_fingerprint",
@@ -175,6 +176,8 @@ class KeychainServer:
         try:
             if command == "add_private_key":
                 return await self.add_private_key(data)
+            elif command == "add_public_key":
+                return await self.add_public_key(data)
             elif command == "check_keys":
                 return await self.check_keys(data)
             elif command == "delete_all_keys":
@@ -187,6 +190,8 @@ class KeychainServer:
                 return await self.get_first_private_key(data)
             elif command == "get_key_for_fingerprint":
                 return await self.get_key_for_fingerprint(data)
+            elif command == "get_public_key_for_fingerprint":
+                return await self.get_public_key_for_fingerprint(data)
             elif command == "get_key":
                 return await self.run_request(data, GetKeyRequest)
             elif command == "get_keys":
@@ -234,6 +239,37 @@ class KeychainServer:
             }
 
         return {"success": True, "fingerprint": sk.get_g1().get_fingerprint()}
+
+    async def add_public_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        if self.get_keychain_for_request(request).is_keyring_locked():  # pragma: no cover
+            return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
+
+        public_key = request.get("public_key", None)
+        label = request.get("label", None)
+
+        if public_key is None:  # pragma: no cover
+            return {
+                "success": False,
+                "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
+                "error_details": {"message": "missing public_key"},
+            }
+
+        try:
+            pk = self.get_keychain_for_request(request).add_public_key(public_key, label)
+        except KeyError as e:  # pragma: no cover
+            return {
+                "success": False,
+                "error": KEYCHAIN_ERR_KEYERROR,
+                "error_details": {"message": f"The word '{e.args[0]}' is incorrect.'", "word": e.args[0]},
+            }
+        except ValueError as e:  # pragma: no cover
+            log.exception(e)
+            return {
+                "success": False,
+                "error": str(e),
+            }
+
+        return {"success": True, "fingerprint": pk.get_fingerprint()}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
@@ -355,11 +391,11 @@ class KeychainServer:
             return {"success": False, "error": KEYCHAIN_ERR_KEY_NOT_FOUND}
 
     async def get_public_key_for_fingerprint(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        if self.get_keychain_for_request(request).is_keyring_locked():
+        if self.get_keychain_for_request(request).is_keyring_locked():  # pragma: no cover
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
         public_keys = self.get_keychain_for_request(request).get_all_public_keys()
-        if len(public_keys) == 0:
+        if len(public_keys) == 0:  # pragma: no cover
             return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
 
         fingerprint = request.get("fingerprint", None)
