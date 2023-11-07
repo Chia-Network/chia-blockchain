@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 
 from chia.protocols import (
     farmer_protocol,

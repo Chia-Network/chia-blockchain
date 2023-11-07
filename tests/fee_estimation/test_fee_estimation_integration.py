@@ -215,7 +215,7 @@ def test_current_block_height_new_block_then_new_height() -> None:
     assert mempool.fee_estimator.current_block_height == height + 1  # type: ignore[attr-defined]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mm_new_peak_changes_fee_estimator_block_height() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     block2 = create_test_block_record(height=uint32(2))
@@ -223,7 +223,7 @@ async def test_mm_new_peak_changes_fee_estimator_block_height() -> None:
     assert mempool_manager.mempool.fee_estimator.block_height == uint32(2)  # type: ignore[attr-defined]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mm_calls_new_block_height() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     new_block_height_called = False

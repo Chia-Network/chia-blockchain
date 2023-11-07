@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, List, Optional, Tuple
 
 import pytest
-from blspy import AugSchemeMPL
+from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
 from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
@@ -1236,7 +1236,7 @@ async def do_spend(
     return result
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio
 async def test_singleton_aggregator() -> None:
     async with sim_and_client() as (sim, sim_client):
         aggregator = P2_SINGLETON_AGGREGATOR_MOD

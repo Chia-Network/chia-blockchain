@@ -4,7 +4,7 @@ import dataclasses
 import logging
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from blspy import G2Element
+from chia_rs import G2Element
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.announcement import Announcement

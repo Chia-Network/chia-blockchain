@@ -30,7 +30,7 @@ from chia.util.db_wrapper import get_host_parameter_limit
 from chia.util.full_block_utils import GeneratorBlockInfo
 from chia.util.ints import uint8, uint32, uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.util.db_connection import DBConnection
+from tests.util.db_connection import DBConnection, PathDBConnection
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def use_cache(request: SubRequest) -> bool:
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_cache: bool) -> None:
     assert sqlite3.threadsafety >= 1
 
@@ -129,7 +129,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cache: bool) -> None:
     """
     This test was added because the store was deadlocking in certain situations, when fetching and
@@ -137,7 +137,7 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cach
     """
     blocks = bt.get_consecutive_blocks(10)
 
-    async with DBConnection(db_version) as wrapper, DBConnection(db_version) as wrapper_2:
+    async with PathDBConnection(db_version) as wrapper, PathDBConnection(db_version) as wrapper_2:
         store = await BlockStore.create(wrapper, use_cache=use_cache)
         coin_store_2 = await CoinStore.create(wrapper_2)
         store_2 = await BlockStore.create(wrapper_2)
@@ -162,7 +162,7 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cach
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
@@ -208,7 +208,7 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool) -> None:
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_count_compactified_blocks(bt: BlockTools, tmp_dir: Path, db_version: int, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
@@ -228,7 +228,7 @@ async def test_count_compactified_blocks(bt: BlockTools, tmp_dir: Path, db_versi
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_count_uncompactified_blocks(bt: BlockTools, tmp_dir: Path, db_version: int, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
@@ -248,7 +248,7 @@ async def test_count_uncompactified_blocks(bt: BlockTools, tmp_dir: Path, db_ver
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
@@ -295,7 +295,7 @@ async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, use
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
@@ -335,7 +335,7 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int, use_cache: bool) -> None:
     assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
@@ -374,7 +374,7 @@ async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_version: int, use_cache: bool) -> None:
     assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
@@ -402,14 +402,14 @@ async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_versio
                 await store_2.get_block_bytes_in_range(0, 10)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_unsupported_version(tmp_dir: Path, use_cache: bool) -> None:
     with pytest.raises(RuntimeError, match="BlockStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:
             await BlockStore.create(db_wrapper, use_cache=use_cache)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_peak(tmp_dir: Path, db_version: int, use_cache: bool) -> None:
     async with DBConnection(db_version) as db_wrapper:
         store = await BlockStore.create(db_wrapper, use_cache=use_cache)

@@ -16,7 +16,7 @@ from tests.core.consensus.test_pot_iterations import test_constants
 from tests.util.db_connection import DBConnection
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_basics() -> None:
     fee_store = FeeStore()
     fee_tracker = FeeTracker(fee_store)
@@ -59,7 +59,7 @@ async def test_basics() -> None:
     assert long.median != -1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_fee_increase() -> None:
     async with DBConnection(db_version=2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)

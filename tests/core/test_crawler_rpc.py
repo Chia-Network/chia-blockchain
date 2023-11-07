@@ -6,7 +6,7 @@ from chia.rpc.crawler_rpc_api import CrawlerRpcApi
 from chia.seeder.crawler import Crawler
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_ips_after_timestamp(bt):
     crawler = Crawler(bt.config.get("seeder", {}), bt.root_path, constants=bt.constants)
     crawler_rpc_api = CrawlerRpcApi(crawler)

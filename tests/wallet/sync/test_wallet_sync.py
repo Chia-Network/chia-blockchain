@@ -53,7 +53,7 @@ log = getLogger(__name__)
 
 class TestWalletSync:
     @pytest.mark.limit_consensus_modes(reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_request_block_headers(self, simulator_and_wallet, default_1000_blocks):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
@@ -98,7 +98,7 @@ class TestWalletSync:
     #     [(80, 99, False, ProtocolMessageTypes.respond_block_headers)],
     #     [(10, 8, False, None)],
     # )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_request_block_headers_rejected(self, simulator_and_wallet, default_1000_blocks):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         [full_node_api], _, bt = simulator_and_wallet
@@ -155,7 +155,7 @@ class TestWalletSync:
         indirect=True,
     )
     @pytest.mark.limit_consensus_modes(reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_basic_sync_wallet(self, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -207,7 +207,7 @@ class TestWalletSync:
         indirect=True,
     )
     @pytest.mark.limit_consensus_modes(reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_almost_recent(self, two_wallet_nodes, default_400_blocks, self_hostname, blockchain_constants):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         full_nodes, wallets, bt = two_wallet_nodes
@@ -246,7 +246,7 @@ class TestWalletSync:
             await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
             await time_out_assert(30, wallet.get_confirmed_balance, 10 * calculate_pool_reward(uint32(1000)))
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_backtrack_sync_wallet(self, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -268,7 +268,7 @@ class TestWalletSync:
             await time_out_assert(100, wallet_height_at_least, True, wallet_node, 19)
 
     # Tests a reorg with the wallet
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_short_batch_sync_wallet(self, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -290,7 +290,7 @@ class TestWalletSync:
             await time_out_assert(100, wallet_height_at_least, True, wallet_node, 199)
 
     @pytest.mark.limit_consensus_modes(reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_long_sync_wallet(self, two_wallet_nodes, default_1000_blocks, default_400_blocks, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -338,7 +338,7 @@ class TestWalletSync:
             )
 
     @pytest.mark.limit_consensus_modes(reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_reorg_sync(self, two_wallet_nodes, default_400_blocks, self_hostname):
         num_blocks = 5
         full_nodes, wallets, bt = two_wallet_nodes
@@ -395,7 +395,7 @@ class TestWalletSync:
             await time_out_assert(60, wallet.get_confirmed_balance, 0)
 
     @pytest.mark.limit_consensus_modes(reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_reorg_get_coinbase(self, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -457,7 +457,7 @@ class TestWalletSync:
             await time_out_assert(20, get_tx_count, 2, wallet_node.wallet_state_manager, 1)
             await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_request_additions_errors(self, simulator_and_wallet, self_hostname):
         full_nodes, wallets, _ = simulator_and_wallet
         wallet_node, wallet_server = wallets[0]
@@ -498,7 +498,7 @@ class TestWalletSync:
         assert response.proofs[0][1] is not None
         assert response.proofs[0][2] is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_request_additions_success(self, simulator_and_wallet, self_hostname):
         full_nodes, wallets, _ = simulator_and_wallet
         wallet_node, wallet_server = wallets[0]
@@ -586,7 +586,7 @@ class TestWalletSync:
         assert response.proofs == []
         assert len(response.coins) == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_get_wp_fork_point(self, default_10000_blocks, blockchain_constants):
         blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
@@ -659,7 +659,7 @@ class TestWalletSync:
        Send the NFT to the dust wallet. The NFT should not be filtered.
     """
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         "spam_filter_after_n_txs, xch_spam_amount, dust_value",
         [
@@ -1176,7 +1176,7 @@ class TestWalletSync:
         await time_out_assert(15, get_nft_count, 0, farm_nft_wallet)
         await time_out_assert(15, get_nft_count, 1, dust_nft_wallet)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_retry_store(self, two_wallet_nodes, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -1308,7 +1308,7 @@ class TestWalletSync:
             await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
 
     @pytest.mark.limit_consensus_modes(reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_peak_mismatch(self, two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants):
         full_nodes, wallets, bt = two_wallet_nodes
         wallet_node, wallet_server = wallets[0]
@@ -1362,7 +1362,7 @@ class TestWalletSync:
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_long_sync_untrusted_break(
     setup_two_nodes_and_wallet, default_1000_blocks, default_400_blocks, self_hostname, caplog
 ):

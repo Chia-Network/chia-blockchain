@@ -4,8 +4,7 @@ from __future__ import annotations
 from typing import List
 
 import pytest
-from blspy import AugSchemeMPL
-from chia_rs import CoinSpend
+from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
 from chia.consensus.block_record import BlockRecord
@@ -36,7 +35,7 @@ from tests.connection_utils import connect_and_get_peer
 from tests.util.rpc import validate_get_routes
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mode):
     num_blocks = 5
     nodes, _, bt = two_nodes_sim_and_wallets_services
@@ -426,7 +425,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         await client.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockchain):
     nodes, _, bt = two_nodes_sim_and_wallets_services
     full_node_service_1, full_node_service_2 = nodes
@@ -557,7 +556,7 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
         await client.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_hostname):
     num_blocks = 5
     nodes, _, bt = one_wallet_and_one_simulator_services
@@ -638,7 +637,7 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         await client.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_coin_name_not_in_request(one_node, self_hostname):
     [full_node_service], _, _ = one_node
 
@@ -657,7 +656,7 @@ async def test_coin_name_not_in_request(one_node, self_hostname):
         await client.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_coin_name_not_found_in_mempool(one_node, self_hostname):
     [full_node_service], _, _ = one_node
 
@@ -679,7 +678,7 @@ async def test_coin_name_not_found_in_mempool(one_node, self_hostname):
         await client.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_coin_name_found_in_mempool(one_node, self_hostname):
     [full_node_service], _, bt = one_node
     full_node_api = full_node_service._api

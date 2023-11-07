@@ -43,7 +43,7 @@ class TestDLWallet:
             (False, False),
         ],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_initial_creation(
         self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool, reuse_puzhash: bool
     ) -> None:
@@ -93,7 +93,7 @@ class TestDLWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_get_owned_singletons(
         self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool
     ) -> None:
@@ -145,7 +145,7 @@ class TestDLWallet:
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_tracking_non_owned(
         self, self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool
     ) -> None:
@@ -230,7 +230,7 @@ class TestDLWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_lifecycle(
         self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool
     ) -> None:
@@ -333,7 +333,7 @@ class TestDLWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_rebase(
         self,
         self_hostname: str,
@@ -534,7 +534,7 @@ async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     (
         [wallet_node_1, _],

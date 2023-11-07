@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI
@@ -291,7 +291,7 @@ def create_example_plots(count: int, seeded_random: random.Random) -> List[PlotI
     ]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sync_simulated(
     farmer_three_harvester_not_started: Tuple[
         List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
@@ -373,7 +373,7 @@ async def test_sync_simulated(
         ErrorSimulation.RespondTwice,
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_error_simulation(
     farmer_one_harvester_not_started: Tuple[
         List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
@@ -401,7 +401,7 @@ async def test_farmer_error_simulation(
 
 
 @pytest.mark.parametrize("simulate_error", [ErrorSimulation.NonRecoverableError, ErrorSimulation.NotConnected])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sync_reset_cases(
     farmer_one_harvester_not_started: Tuple[
         List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
