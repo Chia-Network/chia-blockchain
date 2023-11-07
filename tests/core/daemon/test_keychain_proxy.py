@@ -10,6 +10,7 @@ import pytest_asyncio
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.setup_services import setup_daemon
+from chia.util.errors import KeychainKeyNotFound
 from chia.util.keychain import KeyData
 
 TEST_KEY_1 = KeyData.generate(label="🚽🍯")
@@ -40,6 +41,29 @@ async def test_add_private_key(keychain_proxy: KeychainProxy) -> None:
     await keychain.add_private_key(TEST_KEY_3.mnemonic_str(), TEST_KEY_3.label)
     key = await keychain.get_key(TEST_KEY_3.fingerprint, include_secrets=True)
     assert key == TEST_KEY_3
+
+
+@pytest.mark.asyncio
+async def test_add_public_key(keychain_proxy: KeychainProxy) -> None:
+    keychain = keychain_proxy
+    await keychain.add_public_key(bytes(TEST_KEY_3.public_key).hex(), TEST_KEY_3.label)
+    with pytest.raises(Exception, match="already exists"):
+        await keychain.add_public_key(bytes(TEST_KEY_3.public_key).hex(), "")
+    key = await keychain.get_key(TEST_KEY_3.fingerprint, include_secrets=False)
+    assert key is not None
+    assert key.public_key == TEST_KEY_3.public_key
+    assert key.secrets is None
+
+    pk = await keychain.get_public_key_for_fingerprint(TEST_KEY_3.fingerprint)
+    assert pk is not None
+    assert pk == TEST_KEY_3.public_key
+
+    pk = await keychain.get_public_key_for_fingerprint(None)
+    assert pk is not None
+    assert pk == TEST_KEY_3.public_key
+
+    with pytest.raises(KeychainKeyNotFound):
+        pk = await keychain.get_public_key_for_fingerprint(1234567890)
 
 
 @pytest.mark.parametrize("include_secrets", [True, False])

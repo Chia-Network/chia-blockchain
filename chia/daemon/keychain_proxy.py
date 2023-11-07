@@ -20,6 +20,7 @@ from chia.daemon.keychain_server import (
     KEYCHAIN_ERR_NO_KEYS,
 )
 from chia.server.server import ssl_context_for_client
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.errors import (
     KeychainIsEmpty,
@@ -186,6 +187,30 @@ class KeychainProxy(DaemonProxy):
             else:
                 error = response["data"].get("error", None)
                 if error == KEYCHAIN_ERR_KEYERROR:
+                    error_details = response["data"].get("error_details", {})
+                    word = error_details.get("word", "")
+                    raise KeyError(word)
+                else:
+                    self.handle_error(response)
+
+        return key
+
+    async def add_public_key(self, pubkey: str, label: Optional[str] = None) -> G1Element:
+        """
+        Forwards to Keychain.add_public_key()
+        """
+        key: G1Element
+        if self.use_local_keychain():
+            key = self.keychain.add_public_key(pubkey, label)  # pragma: no cover
+        else:
+            response, success = await self.get_response_for_request(
+                "add_public_key", {"public_key": pubkey, "label": label}
+            )
+            if success:
+                key = G1Element.from_bytes(hexstr_to_bytes(pubkey))
+            else:
+                error = response["data"].get("error", None)
+                if error == KEYCHAIN_ERR_KEYERROR:  # pragma: no cover
                     error_details = response["data"].get("error_details", {})
                     word = error_details.get("word", "")
                     raise KeyError(word)
@@ -373,7 +398,7 @@ class KeychainProxy(DaemonProxy):
             )
             if success:
                 pk_str = response["data"].get("pk", None)
-                if pk_str is None:
+                if pk_str is None:  # pragma: no cover
                     err = f"Missing pk in {response.get('command')} response"
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
