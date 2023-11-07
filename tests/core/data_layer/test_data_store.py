@@ -1481,9 +1481,81 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
             assert keys[i] not in kv_nodes_after
     assert not await raw_data_store.tree_id_exists(tree_id)
     await raw_data_store.delete_store_data(tree_id_2)
-    async with raw_data_store.db_wrapper.writer() as writer:
-        async with writer.execute("SELECT COUNT(*) FROM node") as cursor:
+    async with raw_data_store.db_wrapper.reader() as reader:
+        async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
             row_count = await cursor.fetchone()
             assert row_count is not None
             assert row_count[0] == 0
     assert not await raw_data_store.tree_id_exists(tree_id_2)
+
+
+@pytest.mark.asyncio
+async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> None:
+    # Make sure inserting and deleting the same data works
+    for repetition in range(2):
+        tree_ids = [bytes((0,) * 31 + (i,)) for i in range(50)]
+        for tree_id in tree_ids:
+            await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+        original_keys = [key.to_bytes(4, byteorder="big") for key in range(150)]
+        batches = []
+        for i in range(50):
+            batch = [{"action": "insert", "key": key, "value": key} for key in original_keys[i * 3:]]
+            batches.append(batch)
+
+        for tree_id, batch in zip(tree_ids, batches):
+            await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
+
+        for tree_index in range(50):
+            async with raw_data_store.db_wrapper.reader() as reader:
+                result = await reader.execute("SELECT * FROM node")
+                nodes = await result.fetchall()
+
+            keys = [node["key"] for node in nodes if node["key"] is not None]
+            assert len(keys) == 150 - tree_index * 3
+            for key in original_keys[tree_index * 3:]:
+                assert key in keys
+            for key in original_keys[:tree_index * 3]:
+                assert key not in keys
+            await raw_data_store.delete_store_data(tree_ids[tree_index])
+
+        async with raw_data_store.db_wrapper.reader() as reader:
+            async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
+                row_count = await cursor.fetchone()
+                assert row_count is not None
+                assert row_count[0] == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("common_keys_count", [1, 250, 499])
+async def test_delete_store_data_with_common_values(raw_data_store: DataStore, common_keys_count: int) -> None:
+    tree_id_1 = bytes32(b"\x00" * 31 + b"\x01")
+    tree_id_2 = bytes32(b"\x00" * 31 + b"\x02")
+    
+    await raw_data_store.create_tree(tree_id=tree_id_1, status=Status.COMMITTED)
+    await raw_data_store.create_tree(tree_id=tree_id_2, status=Status.COMMITTED)
+
+    common_keys = [key.to_bytes(4, byteorder="big") for key in range(common_keys_count)]
+    unique_keys_1 = [(key + 1000).to_bytes(4, byteorder="big") for key in range(500 - common_keys_count)]
+    unique_keys_2 = [(key + 2000).to_bytes(4, byteorder="big") for key in range(500 - common_keys_count)]
+
+    batch1 = []
+    batch2 = []
+    for key in common_keys + unique_keys_1:
+        batch1.append({"action": "insert", "key": key, "value": key})
+    for key in common_keys + unique_keys_2:
+        batch2.append({"action": "insert", "key": key, "value": key})
+
+    await raw_data_store.insert_batch(tree_id_1, batch1, status=Status.COMMITTED)
+    await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
+
+    await raw_data_store.delete_store_data(tree_id_1)
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+
+    keys = [node["key"] for node in nodes if node["key"] is not None]
+    assert len(keys) == 500
+    for key in unique_keys_1:
+        assert key not in keys
+    for key in common_keys + unique_keys_2:
+        assert key in keys

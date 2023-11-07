@@ -1176,7 +1176,7 @@ class DataStore:
             return InternalNode.from_row(row=row)
 
     async def build_ancestor_table_for_latest_root(self, tree_id: bytes32) -> None:
-        async with self.db_wrapper.writer():
+        async with self.db_wrapper.writer() as writer:
             root = await self.get_tree_root(tree_id=tree_id)
             if root.node_hash is None:
                 return
@@ -1202,6 +1202,9 @@ class DataStore:
                 # Don't reinsert it so we can save DB space.
                 if node.hash not in known_hashes:
                     await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, root.generation)
+
+            # Clean up intermediary hashes that are no longer needed, since every hash we need should be in ancestors.
+            await writer.execute("DELETE FROM node WHERE hash NOT IN (SELECT hash FROM ancestors)")
 
     async def insert_root_with_ancestor_table(
         self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING
@@ -1447,44 +1450,18 @@ class DataStore:
         async with self.db_wrapper.writer() as reader:
             cursor = await reader.execute(
                 """
-                WITH RECURSIVE
-                    tree_nodes AS (
-                        SELECT a.hash, n.left, n.right
-                        FROM ancestors AS a
-                        JOIN node AS n ON a.hash = n.hash
-                        WHERE a.tree_id = ?
-                    ),
-                    orphans AS (
-                        SELECT
-                            n.hash,
-                            n.left,
-                            n.right
-                        FROM node n
-                        WHERE (n.left IN (SELECT hash FROM tree_nodes)
-                        OR n.right IN (SELECT hash FROM tree_nodes))
-                        UNION ALL
+                WITH all_nodes AS (
+                    SELECT a.hash, n.left, n.right
+                    FROM ancestors AS a
+                    JOIN node AS n ON a.hash = n.hash
+                    WHERE a.tree_id = ?
+                )
 
-                        SELECT
-                            n.hash,
-                            n.left,
-                            n.right
-                        FROM node n
-                        JOIN orphans ON n.left = orphans.hash OR n.right = orphans.hash
-                    ),
-                    all_nodes AS (
-                        SELECT hash, left, right FROM tree_nodes
-                        UNION
-                        SELECT hash, left, right FROM orphans
-                    ),
-                    nodes_to_keep AS (
-                        SELECT all_nodes.hash
-                        FROM all_nodes
-                        LEFT JOIN ancestors a ON all_nodes.hash = a.hash
-                        WHERE a.tree_id != ?
-                    )
-                    SELECT hash, left, right FROM all_nodes WHERE hash NOT IN (SELECT hash FROM nodes_to_keep)
+                SELECT hash, left, right
+                FROM all_nodes
+                WHERE hash NOT IN (SELECT hash FROM ancestors WHERE tree_id != ?)
                 """,
-                (tree_id, tree_id),
+                (tree_id, tree_id,),
             )
             to_delete: Dict[bytes, Tuple[bytes, bytes]] = {}
             ref_counts: Dict[bytes, int] = {}
@@ -1492,6 +1469,7 @@ class DataStore:
                 hash = row["hash"]
                 left = row["left"]
                 right = row["right"]
+                assert hash not in to_delete
                 to_delete[hash] = (left, right)
                 if left is not None:
                     ref_counts[left] = ref_counts.get(left, 0) + 1
