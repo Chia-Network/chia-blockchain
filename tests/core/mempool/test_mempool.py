@@ -2589,12 +2589,8 @@ class TestMaliciousGenerators:
         "opcode", [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
     )
     def test_duplicate_coin_announces(self, opcode, softfork_height, benchmark_runner: BenchmarkRunner):
-        # with soft-fork3, we only allow 1024 create- or assert announcements
-        # per spend
-        if softfork_height >= test_constants.SOFT_FORK3_HEIGHT:
-            condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=1024)
-        else:
-            condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
+        # we only allow 1024 create- or assert announcements per spend
+        condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=1024)
 
         with benchmark_runner.assert_runtime(seconds=14):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
