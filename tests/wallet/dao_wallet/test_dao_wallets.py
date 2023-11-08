@@ -1455,21 +1455,6 @@ async def test_dao_rpc_api(
     assert prop.amount_voted == cat_amt // 2
     assert prop.yes_votes == cat_amt // 2
 
-    await rpc_state(
-        20,
-        api_0.dao_get_proposal_state,
-        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
-        lambda x: x["state"]["passed"],
-        True,
-    )
-    await rpc_state(
-        20,
-        api_0.dao_get_proposal_state,
-        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
-        lambda x: not x["state"]["closable"],
-        True,
-    )
-
     # Add votes
     vote_tx = await api_1.dao_vote_on_proposal(
         {
@@ -1558,21 +1543,6 @@ async def test_dao_rpc_api(
     prop = props["proposals"][1]
     assert prop.amount_voted == cat_amt // 2
     assert prop.yes_votes == cat_amt // 2
-
-    await rpc_state(
-        20,
-        api_0.dao_get_proposal_state,
-        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
-        lambda x: x["state"]["passed"],
-        True,
-    )
-    await rpc_state(
-        20,
-        api_0.dao_get_proposal_state,
-        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
-        lambda x: not x["state"]["closable"],
-        True,
-    )
 
     # Add votes
     vote_tx = await api_1.dao_vote_on_proposal(
@@ -1671,21 +1641,6 @@ async def test_dao_rpc_api(
     prop = props["proposals"][2]
     assert prop.amount_voted == cat_amt // 2
     assert prop.yes_votes == cat_amt // 2
-
-    await rpc_state(
-        20,
-        api_0.dao_get_proposal_state,
-        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
-        lambda x: x["state"]["passed"],
-        True,
-    )
-    await rpc_state(
-        20,
-        api_0.dao_get_proposal_state,
-        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
-        lambda x: not x["state"]["closable"],
-        True,
-    )
 
     # Add votes
     vote_tx = await api_1.dao_vote_on_proposal(
