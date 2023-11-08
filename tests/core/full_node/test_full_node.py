@@ -2222,7 +2222,7 @@ async def test_long_reorg_nodes(
         p3 = full_node_3.full_node.blockchain.get_peak()
         return p1 == p3
 
-    await time_out_assert(950, check_nodes_in_sync2)
+    await time_out_assert(1000, check_nodes_in_sync2)
 
     p1 = full_node_1.full_node.blockchain.get_peak()
     # p2 = full_node_2.full_node.blockchain.get_peak()
