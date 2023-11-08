@@ -170,7 +170,7 @@ def test_wallet_coin_record_json_parsed(coin_record: WalletCoinRecord) -> None:
     }
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_add_replace_get() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -187,7 +187,7 @@ async def test_add_replace_get() -> None:
         assert await store.get_coin_record(coin_1.name()) == record_replaced
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_persistance() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -197,7 +197,7 @@ async def test_persistance() -> None:
         assert await store.get_coin_record(coin_1.name()) == record_1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_set_spent() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -209,7 +209,7 @@ async def test_set_spent() -> None:
         assert (await store.get_coin_record(coin_1.name())).spent_block_height == 12
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_records_by_puzzle_hash(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -228,7 +228,7 @@ async def test_get_records_by_puzzle_hash(seeded_random: random.Random) -> None:
         assert await store.get_coin_record(bytes32.random(seeded_random)) is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_unspent_coins_for_wallet() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -266,7 +266,7 @@ async def test_get_unspent_coins_for_wallet() -> None:
         assert await store.get_unspent_coins_for_wallet(1, coin_type=CoinType.CLAWBACK) == {record_8}
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_all_unspent_coins() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -303,7 +303,7 @@ async def test_get_all_unspent_coins() -> None:
         assert await store.get_all_unspent_coins(coin_type=CoinType.CLAWBACK) == {record_8}
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_records_by_parent_id() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -325,7 +325,7 @@ async def test_get_records_by_parent_id() -> None:
         assert await store.get_coin_records_by_parent_id(coin_7.parent_coin_info) == [record_7]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_delete_coin_record() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -665,37 +665,37 @@ async def run_get_coin_records_test(
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_offset_limit_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_offset_limit(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_wallet_id_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_wallet_id(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_wallet_type_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_wallet_type(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_coin_type_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_coin_type(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_coin_id_filter_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_coin_id_filter(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_puzzle_hash_filter_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_puzzle_hash_filter(
     coins_request: GetCoinRecords, records: List[WalletCoinRecord]
 ) -> None:
@@ -703,7 +703,7 @@ async def test_get_coin_records_puzzle_hash_filter(
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_parent_coin_id_filter_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_parent_coin_id_filter(
     coins_request: GetCoinRecords, records: List[WalletCoinRecord]
 ) -> None:
@@ -711,43 +711,43 @@ async def test_get_coin_records_parent_coin_id_filter(
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_amount_filter_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_amount_filter(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_confirmed_range_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_confirmed_range(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_spent_range_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_spent_range(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_amount_range_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_amount_range(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_order_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_order(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_reverse_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_reverse(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, total_count, records", [*get_coin_records_include_total_count_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_total_count(
     coins_request: GetCoinRecords, total_count: int, records: List[WalletCoinRecord]
 ) -> None:
@@ -755,14 +755,14 @@ async def test_get_coin_records_total_count(
 
 
 @pytest.mark.parametrize("coins_request, total_count, records", [*get_coin_records_mixed_tests])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_mixed(
     coins_request: GetCoinRecords, total_count: int, records: List[WalletCoinRecord]
 ) -> None:
     await run_get_coin_records_test(coins_request, total_count, records)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_total_count_cache() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -792,7 +792,7 @@ async def test_get_coin_records_total_count_cache() -> None:
         assert (await store.get_coin_records(include_total_count=True)).total_count == 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_total_count_cache_reset() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -842,7 +842,7 @@ def record(c: Coin, *, confirmed: int, spent: int) -> WalletCoinRecord:
     return WalletCoinRecord(c, uint32(confirmed), uint32(spent), spent != 0, False, WalletType.STANDARD_WALLET, 0)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_first_coin_height() -> None:
     r1 = record(coin_1, confirmed=1, spent=0)
     r2 = record(coin_2, confirmed=2, spent=4)
@@ -867,7 +867,7 @@ async def test_get_first_coin_height() -> None:
         assert await store.get_first_coin_height() == 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_rollback_to_block() -> None:
     r1 = record(coin_1, confirmed=1, spent=0)
     r2 = record(coin_2, confirmed=2, spent=4)
@@ -924,7 +924,7 @@ async def test_rollback_to_block() -> None:
         assert new_r4 != r4
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_count_small_unspent(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -960,7 +960,7 @@ async def test_count_small_unspent(seeded_random: random.Random) -> None:
         assert await store.count_small_unspent(1) == 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_coin_records_between() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -982,7 +982,7 @@ async def test_get_coin_records_between() -> None:
         assert records[0] == record_8
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_delete_wallet(seeded_random: random.Random) -> None:
     dummy_records = DummyWalletCoinRecords(seeded_random=seeded_random)
     for i in range(5):

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from time import monotonic
 from typing import Dict, Optional
 
-from blspy import G2Element
+from chia_rs import G2Element
 from clvm.casts import int_to_bytes
 
 from chia.consensus.cost_calculator import NPCResult

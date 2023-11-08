@@ -5,8 +5,7 @@ import logging
 from typing import Callable, List, Optional, Tuple
 
 import pytest
-from blspy import G2Element
-from chia_rs import Coin
+from chia_rs import Coin, G2Element
 
 from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.consensus.constants import ConsensusConstants
@@ -78,7 +77,7 @@ async def init_test(
     return estimator, spend_coins, fee_coins  # new_reward_coins
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mempool_inclusion_filter_basic() -> None:
     async with sim_and_client(defaults=NEW_DEFAULT_CONSTANTS, pass_prefarm=False) as (sim, cli):
         estimator, spend_coins, fee_coins = await init_test(sim, cli, the_puzzle_hash, 1)
@@ -108,7 +107,7 @@ async def test_mempool_inclusion_filter_basic() -> None:
         assert mempool_item.name not in removal_ids
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mempoolitem_height_added(db_version: int) -> None:
     async with sim_and_client(defaults=NEW_DEFAULT_CONSTANTS, pass_prefarm=False) as (sim, cli):
         estimator, spend_coins, fee_coins = await init_test(sim, cli, the_puzzle_hash, 1)

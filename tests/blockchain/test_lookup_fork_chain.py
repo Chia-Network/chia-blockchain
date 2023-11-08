@@ -76,7 +76,7 @@ def BR(height: int, header_hash: bytes32, prev_hash: bytes32) -> BlockRecord:
     return ret  # type: ignore[return-value]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_no_fork() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(42), A), (uint32(42), A))
     assert chain == {}
@@ -86,7 +86,7 @@ async def test_no_fork() -> None:
     assert fork_height == 42
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_fork_left() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(42), A), (uint32(41), F))
     assert chain == {uint32(40): E, uint32(41): F}
@@ -96,7 +96,7 @@ async def test_fork_left() -> None:
     assert fork_height == 39
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_fork_left_short() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(41), B), (uint32(41), F))
     assert chain == {uint32(40): E, uint32(41): F}
@@ -106,7 +106,7 @@ async def test_fork_left_short() -> None:
     assert fork_height == 39
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_fork_right() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(41), F), (uint32(42), A))
     assert chain == {uint32(40): C, uint32(41): B, uint32(42): A}
@@ -116,7 +116,7 @@ async def test_fork_right() -> None:
     assert fork_height == 39
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_fork_right_short() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(41), F), (uint32(41), B))
     assert chain == {uint32(40): C, uint32(41): B}
@@ -126,7 +126,7 @@ async def test_fork_right_short() -> None:
     assert fork_height == 39
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_linear_long() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(39), D), (uint32(42), A))
     assert chain == {uint32(40): C, uint32(41): B, uint32(42): A}
@@ -136,7 +136,7 @@ async def test_linear_long() -> None:
     assert fork_height == 39
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_linear_short() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(42), A), (uint32(39), D))
     assert chain == {}
@@ -146,7 +146,7 @@ async def test_linear_short() -> None:
     assert fork_height == 39
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_no_shared_left() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(1), F), (uint32(1), B))
     assert chain == {uint32(0): C, uint32(1): B}
@@ -156,7 +156,7 @@ async def test_no_shared_left() -> None:
     assert fork_height == -1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_no_shared_right() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(1), B), (uint32(1), F))
     assert chain == {uint32(0): E, uint32(1): F}
@@ -166,7 +166,7 @@ async def test_no_shared_right() -> None:
     assert fork_height == -1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_root_shared_left() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(2), F), (uint32(2), B))
     assert chain == {uint32(1): C, uint32(2): B}
@@ -176,7 +176,7 @@ async def test_root_shared_left() -> None:
     assert fork_height == 0
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_root_shared_right() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(2), B), (uint32(2), F))
     assert chain == {uint32(1): E, uint32(2): F}

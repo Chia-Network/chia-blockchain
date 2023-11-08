@@ -204,7 +204,9 @@ class Blockchain(BlockchainInterface):
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return await self.block_store.get_full_block(header_hash)
 
-    async def advance_fork_info(self, block: FullBlock, fork_info: ForkInfo) -> None:
+    async def advance_fork_info(
+        self, block: FullBlock, fork_info: ForkInfo, additional_blocks: Dict[bytes32, FullBlock]
+    ) -> None:
         """
         This function is used to advance the peak_height of fork_info given the
         full block extending the chain. block is required to be the next block on
@@ -237,15 +239,17 @@ class Blockchain(BlockchainInterface):
         for height in range(fork_info.peak_height + 1, block.height):
             fork_block: Optional[FullBlock] = await self.block_store.get_full_block(chain[uint32(height)])
             assert fork_block is not None
-            await self.run_single_block(fork_block, fork_info)
+            await self.run_single_block(fork_block, fork_info, additional_blocks)
 
-    async def run_single_block(self, block: FullBlock, fork_info: ForkInfo) -> None:
+    async def run_single_block(
+        self, block: FullBlock, fork_info: ForkInfo, additional_blocks: Dict[bytes32, FullBlock]
+    ) -> None:
         assert fork_info.peak_height == block.height - 1
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
         npc: Optional[NPCResult] = None
         if block.transactions_generator is not None:
-            block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
+            block_generator: Optional[BlockGenerator] = await self.get_block_generator(block, additional_blocks)
             assert block_generator is not None
             assert block.transactions_info is not None
             assert block.foliage_transaction_block is not None
@@ -367,7 +371,7 @@ class Blockchain(BlockchainInterface):
                     assert fork_block is not None
                     assert fork_block.height - 1 == fork_info.peak_height
                     assert fork_block.height == 0 or fork_block.prev_header_hash == fork_info.peak_hash
-                    await self.run_single_block(fork_block, fork_info)
+                    await self.run_single_block(fork_block, fork_info, {})
                     counter += 1
                 end = time.monotonic()
                 log.info(
@@ -389,7 +393,7 @@ class Blockchain(BlockchainInterface):
                 # We have already validated the block, but if it's not part of the
                 # main chain, we still need to re-run it to update the additions and
                 # removals in fork_info.
-                await self.advance_fork_info(block, fork_info)
+                await self.advance_fork_info(block, fork_info, {})
                 fork_info.include_spends(npc_result, block)
                 fork_info.peak_height = int(block.height)
                 fork_info.peak_hash = header_hash
@@ -397,7 +401,7 @@ class Blockchain(BlockchainInterface):
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
             if fork_info.peak_hash != block.prev_header_hash:
-                await self.advance_fork_info(block, fork_info)
+                await self.advance_fork_info(block, fork_info, {})
 
         # if these prerequisites of the fork_info aren't met, the fork_info
         # object is invalid for this block. If the caller would have passed in
@@ -440,9 +444,14 @@ class Blockchain(BlockchainInterface):
             block,
             None,
         )
-        # Always add the block to the database
-        async with self.block_store.db_wrapper.writer():
-            try:
+
+        # in case we fail and need to restore the blockchain state, remember the
+        # peak height
+        previous_peak_height = self._peak_height
+
+        try:
+            # Always add the block to the database
+            async with self.block_store.db_wrapper.writer():
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(
@@ -452,26 +461,32 @@ class Blockchain(BlockchainInterface):
                 # Then update the memory cache. It is important that this is not cancelled and does not throw
                 # This is done after all async/DB operations, so there is a decreased chance of failure.
                 self.add_block_record(block_record)
-                if state_change_summary is not None:
-                    self.__height_map.rollback(state_change_summary.fork_height)
-                for fetched_block_record in records:
-                    self.__height_map.update_height(
-                        fetched_block_record.height,
-                        fetched_block_record.header_hash,
-                        fetched_block_record.sub_epoch_summary_included,
-                    )
-            except BaseException as e:
-                self.block_store.rollback_cache_block(header_hash)
-                log.error(
-                    f"Error while adding block {header_hash} height {block.height},"
-                    f" rolling back: {traceback.format_exc()} {e}"
-                )
-                raise
 
-        # make sure to update _peak_height after the transaction is committed,
-        # otherwise other tasks may go look for this block before it's available
-        if state_change_summary is not None:
-            self._peak_height = block_record.height
+            # there's a suspension point here, as we leave the async context
+            # manager
+
+            # make sure to update _peak_height after the transaction is committed,
+            # otherwise other tasks may go look for this block before it's available
+            if state_change_summary is not None:
+                self.__height_map.rollback(state_change_summary.fork_height)
+            for fetched_block_record in records:
+                self.__height_map.update_height(
+                    fetched_block_record.height,
+                    fetched_block_record.header_hash,
+                    fetched_block_record.sub_epoch_summary_included,
+                )
+
+            if state_change_summary is not None:
+                self._peak_height = block_record.height
+
+        except BaseException as e:
+            self.block_store.rollback_cache_block(header_hash)
+            self._peak_height = previous_peak_height
+            log.error(
+                f"Error while adding block {header_hash} height {block.height},"
+                f" rolling back: {traceback.format_exc()} {e}"
+            )
+            raise
 
         # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
         await self.__height_map.maybe_flush()
@@ -901,6 +916,8 @@ class Blockchain(BlockchainInterface):
         Args:
             height: Minimum height that we need to keep in the cache
         """
+        if self._peak_height is not None and height > self._peak_height - self.constants.BLOCKS_CACHE_SIZE:
+            height = self._peak_height - self.constants.BLOCKS_CACHE_SIZE
         if height < 0:
             return None
         blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)

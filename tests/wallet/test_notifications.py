@@ -20,7 +20,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
 # For testing backwards compatibility with a DB change to add height
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_notification_store_backwards_compat() -> None:
     # First create the DB the way it would have otheriwse been created
     db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
@@ -53,7 +53,7 @@ async def test_notification_store_backwards_compat() -> None:
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_notifications(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
 ) -> None:

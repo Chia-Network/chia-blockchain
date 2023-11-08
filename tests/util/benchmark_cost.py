@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import time
 
-from blspy import AugSchemeMPL, PrivateKey
+from chia_rs import AugSchemeMPL, PrivateKey
 from clvm_tools import binutils
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS

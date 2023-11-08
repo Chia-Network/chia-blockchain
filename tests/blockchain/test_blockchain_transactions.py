@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 
 
 class TestBlockchainTransactions:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_basic_blockchain_tx(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -94,7 +94,7 @@ class TestBlockchainTransactions:
             assert not unspent.spent
             assert not unspent.coinbase
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_with_double_spend(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -134,7 +134,7 @@ class TestBlockchainTransactions:
         next_block = new_blocks[-1]
         await _validate_and_add_block(full_node_1.blockchain, next_block, expected_error=Err.DOUBLE_SPEND)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_duplicate_output(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -174,7 +174,7 @@ class TestBlockchainTransactions:
         next_block = new_blocks[-1]
         await _validate_and_add_block(full_node_1.blockchain, next_block, expected_error=Err.DUPLICATE_OUTPUT)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_with_reorg_double_spend(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -283,7 +283,7 @@ class TestBlockchainTransactions:
             for block in new_blocks_reorg:
                 await full_node_api_1.full_node.add_block(block)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_spend_reorg_coin(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], softfork_height: uint32
     ) -> None:
@@ -371,7 +371,7 @@ class TestBlockchainTransactions:
 
         await full_node_api_1.full_node.add_block(new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_spend_reorg_cb_coin(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -416,7 +416,7 @@ class TestBlockchainTransactions:
 
         await full_node_api_1.full_node.add_block(new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_spend_reorg_since_genesis(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -467,7 +467,7 @@ class TestBlockchainTransactions:
 
         await full_node_api_1.full_node.add_block(new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_my_coin_id(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -539,7 +539,7 @@ class TestBlockchainTransactions:
         )
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_coin_announcement_consumed(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -623,7 +623,7 @@ class TestBlockchainTransactions:
         # Try to validate newly created block
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_puzzle_announcement_consumed(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -707,7 +707,7 @@ class TestBlockchainTransactions:
         # Try to validate newly created block
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_height_absolute(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -773,7 +773,7 @@ class TestBlockchainTransactions:
         )
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_height_relative(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -841,7 +841,7 @@ class TestBlockchainTransactions:
         )
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_seconds_relative(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -913,7 +913,7 @@ class TestBlockchainTransactions:
         )
         await _validate_and_add_block(full_node_1.blockchain, valid_new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_seconds_absolute(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -987,7 +987,7 @@ class TestBlockchainTransactions:
         )
         await _validate_and_add_block(full_node_1.blockchain, valid_new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_fee_condition(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:

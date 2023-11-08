@@ -59,7 +59,7 @@ class DummySpends:
 
 
 class TestWalletPoolStore:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_store(self, seeded_random: random.Random):
         async with DBConnection(1) as db_wrapper:
             store = await WalletPoolStore.create(db_wrapper)
@@ -141,7 +141,7 @@ class TestWalletPoolStore:
             assert await store.get_spends_for_wallet(1) == []
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_delete_wallet(seeded_random: random.Random) -> None:
     dummy_spends = DummySpends(seeded_random=seeded_random)
     for i in range(5):

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Dict, List, Optional, Set, Tuple, Union
 
-from blspy import G2Element
+from chia_rs import G2Element
 from clvm_tools.binutils import disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -521,7 +521,7 @@ class Offer:
                                 "0x"
                                 + sibling_coin.parent_coin_info.hex()
                                 + sibling_coin.puzzle_hash.hex()
-                                + bytes(uint64(sibling_coin.amount)).hex()
+                                + uint64(sibling_coin.amount).stream_to_bytes().hex()
                                 + " "
                             )
                             sibling_spends += "0x" + bytes(coin_to_spend_dict[sibling_coin]).hex() + " "
@@ -539,7 +539,7 @@ class Offer:
                                 "coin": "0x"
                                 + coin.parent_coin_info.hex()
                                 + coin.puzzle_hash.hex()
-                                + bytes(uint64(coin.amount)).hex(),
+                                + uint64(coin.amount).stream_to_bytes().hex(),
                                 "parent_spend": "0x" + bytes(coin_to_spend_dict[coin]).hex(),
                                 "siblings": siblings,
                                 "sibling_spends": sibling_spends,

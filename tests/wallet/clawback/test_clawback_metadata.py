@@ -19,7 +19,7 @@ from chia.wallet.wallet_node import WalletNode
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_is_recipient(
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
     trusted: bool,

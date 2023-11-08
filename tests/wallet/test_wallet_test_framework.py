@@ -20,7 +20,7 @@ from tests.wallet.conftest import BalanceCheckingError, WalletEnvironment, Walle
     ],
     indirect=True,
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_basic_functionality(wallet_environments: WalletTestFramework) -> None:
     env_0: WalletEnvironment = wallet_environments.environments[0]
     env_1: WalletEnvironment = wallet_environments.environments[1]
@@ -53,7 +53,7 @@ async def test_basic_functionality(wallet_environments: WalletTestFramework) -> 
     ],
     indirect=True,
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_balance_checking(
     wallet_environments: WalletTestFramework,
 ) -> None:

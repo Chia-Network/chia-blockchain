@@ -4,7 +4,7 @@ import warnings
 from dataclasses import dataclass
 from typing import Any, Dict, List, cast
 
-from blspy import AugSchemeMPL, G2Element
+from chia_rs import AugSchemeMPL, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin

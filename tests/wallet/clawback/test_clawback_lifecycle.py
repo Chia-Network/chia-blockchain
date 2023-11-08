@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Dict, Optional, Tuple
 
 import pytest
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -84,7 +84,7 @@ class TestClawbackLifecycle:
             signatures.append(signature)
         return AugSchemeMPL.aggregate(signatures)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.anyio
     async def test_clawback_spends(self, cost_logger: CostLogger) -> None:
         async with sim_and_client() as (sim, sim_client):
             key_lookup = KeyTool()

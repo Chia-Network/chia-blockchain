@@ -18,7 +18,7 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
 
-from blspy import G1Element
+from chia_rs import G1Element
 from typing_extensions import Protocol
 
 from chia import __version__
@@ -178,8 +178,8 @@ class WebSocketServer:
 
         # Note: the minimum_version has been already set to TLSv1_2
         # in ssl_context_for_server()
-        # Daemon is internal connections, so override to TLSv1_3 only
-        if ssl.HAS_TLSv1_3:
+        # Daemon is internal connections, so override to TLSv1_3 only unless specified in the config
+        if ssl.HAS_TLSv1_3 and not self.net_config.get("daemon_allow_tls_1_2", False):
             try:
                 self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
             except ValueError:
@@ -372,7 +372,7 @@ class WebSocketServer:
                                     show_traceback=False,
                                 ):
                                     await connection.ping()
-                            except:  # noqa E722 pylint: disable=bare-except
+                            except:  # noqa E722
                                 self.remove_connection(connection)
                                 await connection.close()
 

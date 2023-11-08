@@ -27,7 +27,7 @@ from typing import (
     final,
 )
 
-from blspy import AugSchemeMPL
+from chia_rs import AugSchemeMPL
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
@@ -710,7 +710,11 @@ class FullNode:
                             False,
                         )
         else:
-            if request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
+            if (
+                curr_peak_height
+                <= request.height
+                <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]
+            ):
                 # This is the normal case of receiving the next block
                 if await self.short_sync_backtrack(
                     peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
@@ -723,7 +727,7 @@ class FullNode:
                 await self.short_sync_batch(peer, uint32(0), request.height)
                 return None
 
-            if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
+            if curr_peak_height <= request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
                 # TODO: We get here if we encountered a heavier peak with a
                 # lower height than ours. We don't seem to handle this case
                 # right now. This ends up requesting the block at *our* peak
@@ -925,10 +929,11 @@ class FullNode:
         self.log.debug("long sync started")
         try:
             self.log.info("Starting to perform sync.")
-            self.log.info("Waiting to receive peaks from peers.")
 
             # Wait until we have 3 peaks or up to a max of 30 seconds
             max_iterations = int(self.config.get("max_sync_wait", 30)) * 10
+
+            self.log.info(f"Waiting to receive peaks from peers. (timeout: {max_iterations/10}s)")
             peaks = []
             for i in range(max_iterations):
                 peaks = [peak.header_hash for peak in self.sync_store.get_peak_of_each_peer().values()]
@@ -1151,6 +1156,11 @@ class FullNode:
                         self.subscriptions.has_ph_subscription,
                     )
                     await self.hint_store.add_hints(hints_to_add)
+                # Note that end_height is not necessarily the peak at this
+                # point. In case of a re-org, it may even be significantly
+                # higher than _peak_height, and still not be the peak.
+                # clean_block_record() will not necessarily honor this cut-off
+                # height, in that case.
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
         batch_queue_input: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]] = asyncio.Queue(
@@ -1229,6 +1239,10 @@ class FullNode:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
+        block_dict: Dict[bytes32, FullBlock] = {}
+        for block in all_blocks:
+            block_dict[block.header_hash] = block
+
         blocks_to_validate: List[FullBlock] = []
         for i, block in enumerate(all_blocks):
             header_hash = block.header_hash
@@ -1260,8 +1274,8 @@ class FullNode:
                 # We have already validated the block, but if it's not part of the
                 # main chain, we still need to re-run it to update the additions and
                 # removals in fork_info.
-                await self.blockchain.advance_fork_info(block, fork_info)
-                await self.blockchain.run_single_block(block, fork_info)
+                await self.blockchain.advance_fork_info(block, fork_info, block_dict)
+                await self.blockchain.run_single_block(block, fork_info, block_dict)
 
         if len(blocks_to_validate) == 0:
             return True, None, None

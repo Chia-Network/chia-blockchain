@@ -9,7 +9,7 @@ from threading import Lock
 from time import sleep, time
 from typing import List, Optional
 
-from blspy import G1Element
+from chia_rs import G1Element
 from chiapos import Verifier
 
 from chia.plotting.manager import PlotManager

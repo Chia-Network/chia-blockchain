@@ -24,7 +24,7 @@ from typing import (
 )
 
 import aiosqlite
-from blspy import G1Element, G2Element, PrivateKey
+from chia_rs import G1Element, G2Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id

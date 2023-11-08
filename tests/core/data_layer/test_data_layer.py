@@ -7,7 +7,6 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 
 import aiohttp
 import pytest
-import pytest_asyncio
 from aiohttp import web
 
 from chia.data_layer.data_layer import DataLayer
@@ -31,7 +30,7 @@ class SufficientWalletRpcClient:
 
 
 @pytest.mark.parametrize(argnames="enable", argvalues=[True, False], ids=["log", "do not log"])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sql_logs(enable: bool, config: Dict[str, Any], tmp_chia_root: Path) -> None:
     config["data_layer"]["log_sqlite_cmds"] = enable
 
@@ -99,7 +98,7 @@ class RecordingWebServer:
         await self.web_server.await_closed()
 
 
-@pytest_asyncio.fixture(name="recording_web_server")
+@pytest.fixture(name="recording_web_server")
 async def recording_web_server_fixture(self_hostname: str) -> AsyncIterator[RecordingWebServer]:
     server = await RecordingWebServer.create(
         hostname=self_hostname,
@@ -111,7 +110,7 @@ async def recording_web_server_fixture(self_hostname: str) -> AsyncIterator[Reco
         await server.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_plugin_requests_use_custom_headers(
     recording_web_server: RecordingWebServer,
     config: Dict[str, Any],

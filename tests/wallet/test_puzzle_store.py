@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 
 import pytest
-from blspy import AugSchemeMPL
+from chia_rs import AugSchemeMPL
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
@@ -43,7 +43,7 @@ class DummyDerivationRecords:
 
 
 class TestPuzzleStore:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_puzzle_store(self, seeded_random: random.Random):
         async with DBConnection(1) as wrapper:
             db = await WalletPuzzleStore.create(wrapper)
@@ -99,7 +99,7 @@ class TestPuzzleStore:
             assert await db.get_unused_derivation_path() == 250
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_delete_wallet(seeded_random: random.Random) -> None:
     dummy_records = DummyDerivationRecords(seeded_random=seeded_random)
     for i in range(5):

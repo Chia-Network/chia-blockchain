@@ -7,7 +7,6 @@ from typing import AsyncIterator, List, Tuple
 import aiohttp
 import pkg_resources
 import pytest
-import pytest_asyncio
 
 from chia.cmds.units import units
 from chia.consensus.block_record import BlockRecord
@@ -53,7 +52,7 @@ test_constants_modified = dataclasses.replace(
 # fixture, to test all versions of the database schema. This doesn't work
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def extra_node(self_hostname) -> AsyncIterator[FullNodeAPI | FullNodeSimulator]:
     with TempKeyring() as keychain:
         b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
@@ -69,7 +68,7 @@ async def extra_node(self_hostname) -> AsyncIterator[FullNodeAPI | FullNodeSimul
 
 class TestSimulation:
     @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_full_system(self, simulation, extra_node, self_hostname):
         full_system: FullSystem
         bt: BlockTools
@@ -186,7 +185,7 @@ class TestSimulation:
 
         assert blockchain_state_found, "Could not get blockchain state from daemon and node"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_simulator_auto_farm_and_get_coins(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -250,7 +249,7 @@ class TestSimulation:
         assert len(reorg_non_spent_coins) == 12 and len(reorg_spent_and_non_spent_coins) == 12
         assert tx.additions not in spent_and_non_spent_coins  # just double check that those got reverted.
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
     async def test_simulation_farm_blocks_to_puzzlehash(
         self,
@@ -268,7 +267,7 @@ class TestSimulation:
         expected_height = None if count == 0 else count
         assert full_node_api.full_node.blockchain.get_peak_height() == expected_height
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
     async def test_simulation_farm_blocks(
         self,
@@ -322,7 +321,7 @@ class TestSimulation:
             assert isinstance(end_time, uint64)
             assert end_time - start_time >= new_time_per_block
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         argnames=["amount", "coin_count"],
         argvalues=[
@@ -365,7 +364,7 @@ class TestSimulation:
         spendable_coins = await wallet.wallet_state_manager.get_spendable_coins_for_wallet(wallet.id())
         assert len(spendable_coins) == coin_count
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wait_transaction_records_entered_mempool(
         self,
         self_hostname: str,
@@ -404,7 +403,7 @@ class TestSimulation:
             # assert tx.is_in_mempool()
 
     @pytest.mark.parametrize(argnames="records_or_bundles_or_coins", argvalues=["records", "bundles", "coins"])
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_process_transactions(
         self,
         self_hostname: str,
@@ -470,7 +469,7 @@ class TestSimulation:
                 coin_record = await full_node_api.full_node.coin_store.get_coin_record(coin.name())
                 assert coin_record is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         argnames="amounts",
         argvalues=[

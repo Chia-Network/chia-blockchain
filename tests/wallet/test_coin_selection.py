@@ -68,7 +68,7 @@ class TestCoinSelection:
             selected_sum = sum(coin.amount for coin in list(knapsack))
             assert 265 <= selected_sum <= 281  # Selects a set of coins which does exceed by too much
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_coin_selection_randomly(self, a_hash: bytes32) -> None:
         coin_base_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
         coin_amounts = []
@@ -98,7 +98,7 @@ class TestCoinSelection:
             assert sum([coin.amount for coin in result]) >= target_amount
             assert len(result) <= 500
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_coin_selection_with_dust(self, a_hash: bytes32) -> None:
         spendable_amount = uint128(5000000000000 + 10000)
         coin_list: List[WalletCoinRecord] = [
@@ -204,7 +204,7 @@ class TestCoinSelection:
                 assert coin.amount == 5000
             assert len(dusty_below_target) <= 500
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_dust_and_one_large_coin(self, a_hash: bytes32) -> None:
         # test when we have a lot of dust and 1 large coin
         spendable_amount = uint128(50000 + 10000)
@@ -239,7 +239,7 @@ class TestCoinSelection:
             assert sum([coin.amount for coin in dusty_below_target]) >= target_amount
             assert len(dusty_below_target) <= 500
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_coin_selection_failure(self, a_hash: bytes32) -> None:
         spendable_amount = uint128(10000)
         coin_list: List[WalletCoinRecord] = []
@@ -279,7 +279,7 @@ class TestCoinSelection:
                     uint128(target_amount),
                 )
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_coin_selection(self, a_hash: bytes32) -> None:
         coin_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
         coin_list: List[WalletCoinRecord] = [
@@ -402,7 +402,7 @@ class TestCoinSelection:
         assert sum([coin.amount for coin in multiple_greater_result]) == 90000
         assert len(multiple_greater_result) == 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_coin_selection_difficult(self, a_hash: bytes32) -> None:
         num_coins = 40
         spendable_amount = uint128(num_coins * 1000)
@@ -432,7 +432,7 @@ class TestCoinSelection:
         print(sum([c.amount for c in result]))
         assert sum([coin.amount for coin in result]) >= target_amount
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_smallest_coin_over_amount(self, a_hash: bytes32) -> None:
         coin_list: List[Coin] = [
             Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64((39 - i) * 1000)) for i in range(40)
@@ -444,7 +444,7 @@ class TestCoinSelection:
         assert select_smallest_coin_over_target(uint128(39000), coin_list) == coin_list[39 - 39]
         assert select_smallest_coin_over_target(uint128(39001), coin_list) is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_sum_largest_coins(self, a_hash: bytes32) -> None:
         coin_list: List[Coin] = list(
             reversed([Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64(i)) for i in range(41)])
@@ -453,7 +453,7 @@ class TestCoinSelection:
         assert sum_largest_coins(uint128(79), coin_list) == {coin_list[0], coin_list[1]}
         assert sum_largest_coins(uint128(40000), coin_list) is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_knapsack_perf(self, a_hash: bytes32) -> None:
         start = time.time()
         coin_list: List[Coin] = [
@@ -464,7 +464,7 @@ class TestCoinSelection:
         # Just a sanity check, it's actually much faster than this time
         assert time.time() - start < 10000
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_coin_selection_min_coin(self, a_hash: bytes32) -> None:
         spendable_amount = uint128(5000000 + 500 + 40050)
         coin_list: List[WalletCoinRecord] = [
@@ -511,7 +511,7 @@ class TestCoinSelection:
                     assert not coin.amount < min_coin_amount
                 assert len(result) <= 500
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_coin_selection_with_excluded_coins(self) -> None:
         a_hash = std_hash(b"a")
         b_hash = std_hash(b"b")
@@ -555,7 +555,7 @@ class TestCoinSelection:
                 amount=target_amount,
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_coin_selection_with_zero_amount(self, a_hash: bytes32) -> None:
         coin_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
         coin_list: List[WalletCoinRecord] = [

@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Set
 
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone

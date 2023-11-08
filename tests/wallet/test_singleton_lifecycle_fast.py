@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 from clvm_tools import binutils
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Callable, SupportsBytes
 
 import pytest
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

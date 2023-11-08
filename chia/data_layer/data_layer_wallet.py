@@ -6,7 +6,7 @@ import time
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 from clvm.EvalError import EvalError
 from typing_extensions import Unpack, final
 
