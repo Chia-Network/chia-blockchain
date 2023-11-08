@@ -1455,9 +1455,20 @@ async def test_dao_rpc_api(
     assert prop.amount_voted == cat_amt // 2
     assert prop.yes_votes == cat_amt // 2
 
-    state = await api_0.dao_get_proposal_state({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
-    assert state["state"]["passed"]
-    assert not state["state"]["closable"]
+    await rpc_state(
+        20,
+        api_0.dao_get_proposal_state,
+        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
+        lambda x: x["state"]["passed"],
+        True,
+    )
+    await rpc_state(
+        20,
+        api_0.dao_get_proposal_state,
+        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
+        lambda x: not x["state"]["closable"],
+        True,
+    )
 
     # Add votes
     vote_tx = await api_1.dao_vote_on_proposal(
@@ -1479,7 +1490,8 @@ async def test_dao_rpc_api(
     )
 
     # farm blocks until we can close proposal
-    for _ in range(1, state["state"]["blocks_needed"]):
+    state = await api_0.dao_get_proposal_state({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
+    for _ in range(state["state"]["blocks_needed"] + 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
@@ -1547,9 +1559,20 @@ async def test_dao_rpc_api(
     assert prop.amount_voted == cat_amt // 2
     assert prop.yes_votes == cat_amt // 2
 
-    state = await api_0.dao_get_proposal_state({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
-    assert state["state"]["passed"]
-    assert not state["state"]["closable"]
+    await rpc_state(
+        20,
+        api_0.dao_get_proposal_state,
+        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
+        lambda x: x["state"]["passed"],
+        True,
+    )
+    await rpc_state(
+        20,
+        api_0.dao_get_proposal_state,
+        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
+        lambda x: not x["state"]["closable"],
+        True,
+    )
 
     # Add votes
     vote_tx = await api_1.dao_vote_on_proposal(
@@ -1571,7 +1594,8 @@ async def test_dao_rpc_api(
     )
 
     # farm blocks until we can close proposal
-    for _ in range(1, state["state"]["blocks_needed"]):
+    state = await api_0.dao_get_proposal_state({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
+    for _ in range(state["state"]["blocks_needed"] + 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
@@ -1648,9 +1672,20 @@ async def test_dao_rpc_api(
     assert prop.amount_voted == cat_amt // 2
     assert prop.yes_votes == cat_amt // 2
 
-    state = await api_0.dao_get_proposal_state({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
-    assert state["state"]["passed"]
-    assert not state["state"]["closable"]
+    await rpc_state(
+        20,
+        api_0.dao_get_proposal_state,
+        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
+        lambda x: x["state"]["passed"],
+        True,
+    )
+    await rpc_state(
+        20,
+        api_0.dao_get_proposal_state,
+        [{"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()}],
+        lambda x: not x["state"]["closable"],
+        True,
+    )
 
     # Add votes
     vote_tx = await api_1.dao_vote_on_proposal(
@@ -1672,7 +1707,8 @@ async def test_dao_rpc_api(
     )
 
     # farm blocks until we can close proposal
-    for _ in range(1, state["state"]["blocks_needed"]):
+    state = await api_0.dao_get_proposal_state({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
+    for _ in range(state["state"]["blocks_needed"] + 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
