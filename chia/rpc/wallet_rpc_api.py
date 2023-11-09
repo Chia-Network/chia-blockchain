@@ -100,6 +100,7 @@ from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
+from chia.wallet.util.signer_protocol import SigningResponse
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
@@ -1984,7 +1985,9 @@ class WalletRpcApi:
 
         return {
             "trade_record": trade_record.to_json_dict_convenience(),
+            "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in tx_records],
+            "signing_responses": [SigningResponse(bytes(offer._bundle.aggregated_signature), trade_record.trade_id)],
         }
 
     async def get_offer(self, request: Dict[str, Any]) -> EndpointResult:
