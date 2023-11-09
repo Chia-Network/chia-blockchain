@@ -55,6 +55,7 @@ from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
+from chia.util.db_wrapper import generate_in_memory_db_uri
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
@@ -64,7 +65,6 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
-from tests.util.db_connection import generate_in_memory_db_uri
 from tests.util.misc import BenchmarkRunner, GcMode, _AssertRuntime, measure_overhead
 
 multiprocessing.set_start_method("spawn")
