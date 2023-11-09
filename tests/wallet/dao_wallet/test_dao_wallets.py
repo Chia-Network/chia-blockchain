@@ -874,7 +874,8 @@ async def test_dao_proposals(
         prop_4.proposal_id, DEFAULT_TX_CONFIG, self_destruct=True
     )
     await wallet_0.wallet_state_manager.add_pending_transaction(close_tx_4)
-    await full_node_api.wait_transaction_records_entered_mempool(records=[close_tx_4], timeout=60)
+    if not full_node_api.txs_in_mempool([close_tx_4]):
+        await full_node_api.wait_transaction_records_entered_mempool(records=[close_tx_4], timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1, wallet_node_2], timeout=30)
 
@@ -964,7 +965,7 @@ async def test_dao_proposal_partial_vote(
     tx_record = tx_queue[0]
     await full_node_api.process_transaction_records(records=[tx_record])
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
@@ -1297,6 +1298,9 @@ async def test_dao_rpc_api(
         new_cat_amt - cat_funding_amt,
     )
 
+    await rpc_state(
+        20, api_0.dao_get_treasury_balance, [{"wallet_id": dao_wallet_1_id}], lambda x: x["balances"]["xch"]
+    )
     balances = await api_1.dao_get_treasury_balance({"wallet_id": dao_wallet_1_id})
     assert balances["balances"]["xch"] == xch_funding_amt
     assert balances["balances"][cat_id.hex()] == cat_funding_amt
@@ -1394,7 +1398,8 @@ async def test_dao_rpc_api(
 
     proposal_tx = await api_0.dao_close_proposal({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
     txs = [TransactionRecord.from_json_dict(proposal_tx["tx"])]
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    if not full_node_api.txs_in_mempool(txs):
+        await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -1479,7 +1484,8 @@ async def test_dao_rpc_api(
 
     proposal_tx = await api_0.dao_close_proposal({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
     txs = [TransactionRecord.from_json_dict(proposal_tx["tx"])]
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    if not full_node_api.txs_in_mempool(txs):
+        await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -1576,7 +1582,8 @@ async def test_dao_rpc_api(
 
     close_tx = await api_0.dao_close_proposal({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
     txs = [TransactionRecord.from_json_dict(close_tx["tx"])]
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    if not full_node_api.txs_in_mempool(txs):
+        await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -2736,7 +2743,8 @@ async def test_dao_cat_exits(
         cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0["cat_wallet_id"]]
         dao_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0["dao_cat_wallet_id"]]
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
-        await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+        if not full_node_api.txs_in_mempool(txs):
+            await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
