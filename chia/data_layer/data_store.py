@@ -1152,12 +1152,21 @@ class DataStore:
                     # No leaf to merge with, just keep this subtree as the root.
                     await self._insert_root(tree_id=tree_id, node_hash=subtree_hash, status=Status.COMMITTED)
                 else:
-                    # Use `get_keys_values` existing logic to find leftmost terminal node, at minimum height.
-                    terminal_nodes: List[TerminalNode] = await self.get_keys_values(
-                        tree_id=tree_id, root_hash=intermediate_root.node_hash
-                    )
-                    assert len(terminal_nodes) > 0
-                    leftmost_node = terminal_nodes[0]
+                    # Find leftmost node, at minimum height. Use a breadth-first-search to avoid scanning
+                    # the whole tree.
+                    root_node = await self.get_node(intermediate_root.node_hash)
+                    queue: List[Node] = [root_node]
+                    while True:
+                        assert len(queue) > 0
+                        node = queue.pop(0)
+                        if isinstance(node, InternalNode):
+                            left_node = await self.get_node(node.left_hash)
+                            right_node = await self.get_node(node.right_hash)
+                            queue.append(left_node)
+                            queue.append(right_node)
+                        elif isinstance(node, TerminalNode):
+                            leftmost_node = node
+                            break
 
                     # Use a similar logic to `insert` to attach the autoinsert subtree to `leftmost_node`.
                     # TODO: maybe factor out this common code?
