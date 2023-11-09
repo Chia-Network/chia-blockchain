@@ -637,7 +637,11 @@ class ChiaServer:
 
     async def get_peer_info(self) -> Optional[PeerInfo]:
         ip = None
-        port = self.get_port()
+
+        try:
+            port = self.get_port()
+        except ValueError:
+            return None  # server doesn't have a local port, just return None here
 
         # Use chia's service first.
         try:

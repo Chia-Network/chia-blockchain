@@ -728,10 +728,6 @@ class FullNode:
                 return None
 
             if curr_peak_height <= request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
-                # TODO: We get here if we encountered a heavier peak with a
-                # lower height than ours. We don't seem to handle this case
-                # right now. This ends up requesting the block at *our* peak
-                # height.
                 # This case of being behind but not by so much
                 if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return None
@@ -1544,9 +1540,12 @@ class FullNode:
         )
 
         # Update the mempool (returns successful pending transactions added to the mempool)
+        spent_coins: Optional[List[bytes32]] = None
         new_npc_results: List[NPCResult] = state_change_summary.new_npc_results
+        if len(new_npc_results) > 0 and new_npc_results[-1].conds is not None:
+            spent_coins = [bytes32(s.coin_id) for s in new_npc_results[-1].conds.spends]
         mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
-            self.blockchain.get_peak(), new_npc_results[-1] if len(new_npc_results) > 0 else None
+            self.blockchain.get_peak(), spent_coins
         )
 
         # Check if we detected a spent transaction, to load up our generator cache
