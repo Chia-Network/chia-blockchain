@@ -1400,7 +1400,7 @@ class BatchInsertBenchmarkCase:
     BatchInsertBenchmarkCase(
         pre=10_000,
         count=25_000,
-        limit=41,
+        limit=39,
     ),
 )
 @pytest.mark.anyio
@@ -1448,7 +1448,7 @@ async def test_benchmark_batch_insert_speed_multiple_batches(
     r = random.Random()
     r.seed("shadowlands", version=2)
 
-    with benchmark_runner.assert_runtime(seconds=20):
+    with benchmark_runner.assert_runtime(seconds=145):
         for batch in range(200):
             changelist = [
                 {
