@@ -83,10 +83,9 @@ puzzle_hash_0 = bytes32(32 * b"0")
 )
 @pytest.mark.anyio
 async def test_dao_creation(
-    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+    self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
-    num_blocks = 1
-    full_nodes, wallets, _ = three_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -110,14 +109,10 @@ async def test_dao_creation(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(0, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
-    )
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
     await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
     await time_out_assert(20, full_node_api.wallet_is_synced, True, wallet_node_0)
@@ -270,7 +265,6 @@ async def test_dao_creation(
 async def test_dao_funding(
     self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
-    num_blocks = 1
     full_nodes, wallets, _ = three_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -303,15 +297,12 @@ async def test_dao_funding(
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(0, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
-    )
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
     await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
     await time_out_assert(20, full_node_api.wallet_is_synced, True, wallet_node_0)
@@ -456,7 +447,6 @@ async def test_dao_proposals(
     P4 Bad Spend => Force Close
 
     """
-    num_blocks = 1
     full_nodes, wallets, _ = three_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -489,15 +479,11 @@ async def test_dao_proposals(
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(0, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
-    )
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
     await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
     await time_out_assert(20, full_node_api.wallet_is_synced, True, wallet_node_0)
@@ -918,21 +904,17 @@ async def test_dao_proposals(
 )
 @pytest.mark.anyio
 async def test_dao_proposal_partial_vote(
-    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+    self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
-    num_blocks = 1
-    full_nodes, wallets, _ = three_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
     wallet_node_1, server_1 = wallets[1]
-    wallet_node_2, server_2 = wallets[2]
     wallet = wallet_node_0.wallet_state_manager.main_wallet
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-    wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
     ph = await wallet.get_new_puzzlehash()
     ph_1 = await wallet_1.get_new_puzzlehash()
-    ph_2 = await wallet_2.get_new_puzzlehash()
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -941,27 +923,18 @@ async def test_dao_proposal_partial_vote(
         wallet_node_1.config["trusted_peers"] = {
             full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
         }
-        wallet_node_2.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
     else:
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
-        wallet_node_2.config["trusted_peers"] = {}
 
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(0, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
-    )
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
     await time_out_assert(20, full_node_api.wallet_is_synced, True, wallet_node_0)
@@ -1164,7 +1137,6 @@ async def test_dao_proposal_partial_vote(
 async def test_dao_rpc_api(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, consensus_mode: ConsensusMode
 ) -> None:
-    num_blocks = 2  # use 2 here so the test doesn't become flaky if things get slow
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -1190,20 +1162,17 @@ async def test_dao_rpc_api(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
-    )
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
-    await time_out_assert(30, wallet_node_0.wallet_state_manager.synced, True)
+
     api_0 = WalletRpcApi(wallet_node_0)
     api_1 = WalletRpcApi(wallet_node_1)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
 
     cat_amt = 300000
     fee = 10000
@@ -1658,7 +1627,6 @@ async def test_dao_rpc_client(
     self_hostname: str,
     consensus_mode: ConsensusMode,
 ) -> None:
-    num_blocks = 3
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
@@ -1681,15 +1649,12 @@ async def test_dao_rpc_client(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
-    initial_funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
-    )
+    initial_funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
     await time_out_assert(15, wallet_0.get_confirmed_balance, initial_funds)
     await time_out_assert(15, wallet_0.get_unconfirmed_balance, initial_funds)
@@ -2072,7 +2037,6 @@ async def test_dao_complex_spends(
     self_hostname: str,
     consensus_mode: ConsensusMode,
 ) -> None:
-    num_blocks = 3
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
@@ -2095,15 +2059,12 @@ async def test_dao_complex_spends(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
-    initial_funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
-    )
+    initial_funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
     await time_out_assert(15, wallet_0.get_confirmed_balance, initial_funds)
     await time_out_assert(15, wallet_0.get_unconfirmed_balance, initial_funds)
@@ -2468,7 +2429,6 @@ async def test_dao_complex_spends(
 async def test_dao_concurrency(
     self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
-    num_blocks = 3
     full_nodes, wallets, _ = three_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -2501,15 +2461,12 @@ async def test_dao_concurrency(
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(0, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
-    )
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
     await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
     await time_out_assert(20, full_node_api.wallet_is_synced, True, wallet_node_0)
@@ -2700,7 +2657,6 @@ async def test_dao_cat_exits(
     self_hostname: str,
     consensus_mode: ConsensusMode,
 ) -> None:
-    num_blocks = 3  # We're using the rpc client, so use 3 blocks to ensure we stay synced
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
@@ -2723,14 +2679,11 @@ async def test_dao_cat_exits(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    initial_funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
-    )
+    initial_funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
     await time_out_assert(15, wallet_0.get_confirmed_balance, initial_funds)
     await time_out_assert(15, wallet_0.get_unconfirmed_balance, initial_funds)
@@ -2895,7 +2848,6 @@ async def test_dao_cat_exits(
 async def test_dao_reorgs(
     self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
-    num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -2920,14 +2872,11 @@ async def test_dao_reorgs(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(0, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
-    )
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
     await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
     await time_out_assert(20, full_node_api.wallet_is_synced, True, wallet_node_0)
@@ -3156,7 +3105,6 @@ async def test_dao_reorgs(
 async def test_dao_votes(
     self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
-    num_blocks = 1
     full_nodes, wallets, _ = three_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -3189,15 +3137,12 @@ async def test_dao_votes(
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(0, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
-    )
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
     await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
     await time_out_assert(20, full_node_api.wallet_is_synced, True, wallet_node_0)
