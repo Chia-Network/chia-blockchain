@@ -57,14 +57,6 @@ class SpendBundle(Streamable):
     def removals(self) -> List[Coin]:
         return [_.coin for _ in self.coin_spends]
 
-    # TODO: this should be removed
-    def fees(self) -> int:
-        """Unsafe to use for fees validation!!!"""
-        amount_in = sum(coin.amount for coin in self.removals())
-        amount_out = sum(coin.amount for coin in self.additions())
-
-        return amount_in - amount_out
-
     def name(self) -> bytes32:
         return self.get_hash()
 
@@ -101,3 +93,21 @@ class SpendBundle(Streamable):
         if exclude_modern_keys:
             del d["coin_spends"]
         return cast(Dict[str, Any], recurse_jsonify(d))
+
+
+# This function executes all the puzzles to compute the difference between
+# additions and removals
+def estimate_fees(spend_bundle: SpendBundle) -> int:
+    """Unsafe to use for fees validation!!!"""
+    removed_amount = 0
+    added_amount = 0
+    max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+    for cs in spend_bundle.coin_spends:
+        removed_amount += cs.coin.amount
+        coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
+        max_cost -= cost
+        if max_cost < 0:
+            raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "estimate_fees() for SpendBundle")
+        for c in coins:
+            added_amount += c.amount
+    return removed_amount - added_amount

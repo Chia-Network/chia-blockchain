@@ -21,6 +21,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
+from chia.types.spend_bundle import estimate_fees
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
@@ -1182,7 +1183,7 @@ class TestWalletSimulator:
         )
         assert tx.spend_bundle is not None
 
-        fees = tx.spend_bundle.fees()
+        fees = estimate_fees(tx.spend_bundle)
         assert fees == tx_fee
 
         await wallet.push_transaction(tx)
@@ -1249,7 +1250,7 @@ class TestWalletSimulator:
         tx_id = tx.name.hex()
         assert tx.spend_bundle is not None
 
-        fees = tx.spend_bundle.fees()
+        fees = estimate_fees(tx.spend_bundle)
         assert fees == tx_fee
 
         await wallet.push_transaction(tx)

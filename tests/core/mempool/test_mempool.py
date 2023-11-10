@@ -41,7 +41,7 @@ from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.api_decorators import api_request
 from chia.util.errors import Err
@@ -1620,7 +1620,7 @@ class TestMempoolManager:
 
         combined = SpendBundle.aggregate([spend_bundle1, steal_fee_spendbundle])
 
-        assert combined.fees() == 4
+        assert estimate_fees(combined) == 4
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
 
