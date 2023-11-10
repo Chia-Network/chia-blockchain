@@ -67,6 +67,7 @@ def uncurry_dump(puzzle: Program, prefix: str = "") -> None:
     recursive_uncurry_dump(puzzle, 1, prefix, UncurriedPuzzle(mod, curried_args))
 
 
+# TODO: This is a test-only function, it should be moved to the tests
 def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
     """
     Print a lot of useful information about a `SpendBundle` that might help with debugging

@@ -9,15 +9,18 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 from typing_extensions import Unpack
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import compute_additions_with_cost
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -63,6 +66,24 @@ if TYPE_CHECKING:
 CAT_MOD_HASH = CAT_MOD.get_tree_hash()
 CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
+
+
+def not_ephemeral_additions(sp: SpendBundle) -> List[Coin]:
+    removals: Set[Coin] = set()
+    for cs in sp.coin_spends:
+        removals.add(cs.coin)
+
+    additions: List[Coin] = []
+    max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+    for cs in sp.coin_spends:
+        coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
+        max_cost -= cost
+        if max_cost < 0:
+            raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "non_ephemeral_additions() for SpendBundle")
+        for c in coins:
+            if c not in removals:
+                additions.append(c)
+    return additions
 
 
 class CATWallet:
@@ -139,7 +160,7 @@ class CATWallet:
             await self.set_name(name)
 
         # Change and actual CAT coin
-        non_ephemeral_coins: List[Coin] = spend_bundle.not_ephemeral_additions()
+        non_ephemeral_coins: List[Coin] = not_ephemeral_additions(spend_bundle)
         cat_coin = None
         puzzle_store = self.wallet_state_manager.puzzle_store
         for c in non_ephemeral_coins:
