@@ -80,7 +80,6 @@ tests.core.mempool.test_mempool
 tests.core.server.test_dos
 tests.core.server.test_rate_limits
 tests.core.ssl.test_ssl
-tests.core.test_cost_calculation
 tests.core.test_crawler_rpc
 tests.core.test_daemon_rpc
 tests.core.test_db_conversion
