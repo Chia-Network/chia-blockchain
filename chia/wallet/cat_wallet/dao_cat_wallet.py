@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import time
-from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, ClassVar, List, Optional, Set, Tuple, cast
 
 from chia_rs import G1Element
@@ -480,7 +479,7 @@ class DAOCATWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=full_spend.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
