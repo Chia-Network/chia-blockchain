@@ -70,7 +70,6 @@ tests.core.daemon.test_daemon
 tests.core.full_node.full_sync.test_full_sync
 tests.core.full_node.stores.test_sync_store
 tests.core.full_node.test_address_manager
-tests.core.full_node.test_conditions
 tests.core.full_node.test_full_node
 tests.core.full_node.test_node_load
 tests.core.full_node.test_peer_store_resolver
