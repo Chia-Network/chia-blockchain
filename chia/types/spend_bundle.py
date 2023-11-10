@@ -29,10 +29,6 @@ class SpendBundle(Streamable):
     coin_spends: List[CoinSpend]
     aggregated_signature: G2Element
 
-    @property
-    def coin_solutions(self) -> List[CoinSpend]:
-        return self.coin_spends
-
     @classmethod
     def aggregate(cls, spend_bundles: List[SpendBundle]) -> SpendBundle:
         coin_spends: List[CoinSpend] = []
@@ -63,7 +59,8 @@ class SpendBundle(Streamable):
     def debug(self, agg_sig_additional_data: bytes = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
         debug_spend_bundle(self, agg_sig_additional_data)
 
-    # Note that `coin_spends` used to have the bad name `coin_solutions`.
+    # Note that `coin_spends` used to have the bad name `coin_solutions`, prior
+    # to Jul 12, 2021
     # Some API still expects this name. For now, we accept both names.
     #
     # TODO: continue this deprecation. Eventually, all code below here should be removed.
