@@ -71,19 +71,6 @@ class SpendBundle(Streamable):
     def debug(self, agg_sig_additional_data: bytes = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
         debug_spend_bundle(self, agg_sig_additional_data)
 
-    # TODO: this should be removed
-    def not_ephemeral_additions(self) -> List[Coin]:
-        all_removals = self.removals()
-        all_additions = self.additions()
-        result: List[Coin] = []
-
-        for add in all_additions:
-            if add in all_removals:
-                continue
-            result.append(add)
-
-        return result
-
     # Note that `coin_spends` used to have the bad name `coin_solutions`.
     # Some API still expects this name. For now, we accept both names.
     #
