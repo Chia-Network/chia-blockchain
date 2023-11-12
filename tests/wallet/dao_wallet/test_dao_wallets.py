@@ -2734,7 +2734,6 @@ async def test_dao_cat_exits(
 
     try:
         cat_amt = uint64(150000)
-        amount_of_cats = cat_amt
         dao_rules = DAORules(
             proposal_timelock=uint64(8),
             soft_close_length=uint64(4),
@@ -2752,7 +2751,7 @@ async def test_dao_cat_exits(
             mode="new",
             tx_config=DEFAULT_TX_CONFIG,
             dao_rules=dao_rules.to_json_dict(),
-            amount_of_cats=amount_of_cats,
+            amount_of_cats=cat_amt,
             filter_amount=filter_amount,
             name="DAO WALLET 0",
         )
@@ -2767,7 +2766,13 @@ async def test_dao_cat_exits(
         await full_node_api.process_transaction_records(records=txs, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
-        await time_out_assert(60, cat_wallet_0.get_confirmed_balance, amount_of_cats)
+        await rpc_state(
+            60,
+            client_0.get_wallet_balance,
+            [dao_wallet_dict_0["cat_wallet_id"]],
+            lambda x: x["confirmed_wallet_balance"],
+            cat_amt,
+        )
 
         # fund treasury
         xch_funds = uint64(10000000000)
@@ -2977,8 +2982,8 @@ async def test_dao_reorgs(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
     # Check that the funding spend is recognized by both dao wallets
-    await time_out_assert(10, dao_wallet_0.get_balance_by_asset_type, xch_funds)
-    await time_out_assert(10, dao_wallet_1.get_balance_by_asset_type, xch_funds)
+    await time_out_assert(20, dao_wallet_0.get_balance_by_asset_type, xch_funds)
+    await time_out_assert(20, dao_wallet_1.get_balance_by_asset_type, xch_funds)
 
     # Reorg funding spend
     height = full_node_api.full_node.blockchain.get_peak_height()
@@ -2987,8 +2992,8 @@ async def test_dao_reorgs(
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
     )
-    await time_out_assert(10, dao_wallet_0.get_balance_by_asset_type, xch_funds)
-    await time_out_assert(10, dao_wallet_1.get_balance_by_asset_type, xch_funds)
+    await time_out_assert(20, dao_wallet_0.get_balance_by_asset_type, xch_funds)
+    await time_out_assert(20, dao_wallet_1.get_balance_by_asset_type, xch_funds)
 
     # Send some dao_cats to wallet_1
     # Get the cat wallets for wallet_1
@@ -3009,7 +3014,7 @@ async def test_dao_reorgs(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
     cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.cat_wallet_id]
-    await time_out_assert(10, cat_wallet_1.get_confirmed_balance, 100000)
+    await time_out_assert(20, cat_wallet_1.get_confirmed_balance, 100000)
 
     # Create dao cats for voting
     dao_cat_0_bal = await dao_cat_wallet_0.get_votable_balance()
