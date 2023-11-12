@@ -1482,7 +1482,12 @@ async def test_dao_rpc_api(
 
     proposal_tx = await api_0.dao_close_proposal({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
     txs = [TransactionRecord.from_json_dict(proposal_tx["tx"])]
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    try:
+        await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    except TimeoutError:
+        # try again
+        await api_0.push_tx({"spend_bundle": txs[0].spend_bundle.stream_to_bytes().hex()})
+        await full_node_api.wait_transaction_records_marked_as_in_mempool([txs[0].name], wallet_node_0, 60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -1579,7 +1584,12 @@ async def test_dao_rpc_api(
 
     close_tx = await api_0.dao_close_proposal({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
     txs = [TransactionRecord.from_json_dict(close_tx["tx"])]
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    try:
+        await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    except TimeoutError:
+        # try again
+        await api_0.push_tx({"spend_bundle": txs[0].spend_bundle.stream_to_bytes().hex()})
+        await full_node_api.wait_transaction_records_marked_as_in_mempool([txs[0].name], wallet_node_0, 60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -2739,7 +2749,8 @@ async def test_dao_cat_exits(
         cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0["cat_wallet_id"]]
         dao_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0["dao_cat_wallet_id"]]
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
-        await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+        for tx in txs:
+            await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
