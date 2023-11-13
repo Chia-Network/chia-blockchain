@@ -271,9 +271,14 @@ class Blockchain(BlockchainInterface):
             block,
             None,
         )
-        # Always add the block to the database
-        async with self.block_store.db_wrapper.writer():
-            try:
+
+        # in case we fail and need to restore the blockchain state, remember the
+        # peak height
+        previous_peak_height = self._peak_height
+
+        try:
+            # Always add the block to the database
+            async with self.block_store.db_wrapper.writer():
                 header_hash: bytes32 = block.header_hash
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
@@ -284,26 +289,32 @@ class Blockchain(BlockchainInterface):
                 # Then update the memory cache. It is important that this is not cancelled and does not throw
                 # This is done after all async/DB operations, so there is a decreased chance of failure.
                 self.add_block_record(block_record)
-                if state_change_summary is not None:
-                    self.__height_map.rollback(state_change_summary.fork_height)
-                for fetched_block_record in records:
-                    self.__height_map.update_height(
-                        fetched_block_record.height,
-                        fetched_block_record.header_hash,
-                        fetched_block_record.sub_epoch_summary_included,
-                    )
-            except BaseException as e:
-                self.block_store.rollback_cache_block(header_hash)
-                log.error(
-                    f"Error while adding block {block.header_hash} height {block.height},"
-                    f" rolling back: {traceback.format_exc()} {e}"
-                )
-                raise
 
-        # make sure to update _peak_height after the transaction is committed,
-        # otherwise other tasks may go look for this block before it's available
-        if state_change_summary is not None:
-            self._peak_height = block_record.height
+            # there's a suspension point here, as we leave the async context
+            # manager
+
+            # make sure to update _peak_height after the transaction is committed,
+            # otherwise other tasks may go look for this block before it's available
+            if state_change_summary is not None:
+                self.__height_map.rollback(state_change_summary.fork_height)
+            for fetched_block_record in records:
+                self.__height_map.update_height(
+                    fetched_block_record.height,
+                    fetched_block_record.header_hash,
+                    fetched_block_record.sub_epoch_summary_included,
+                )
+
+            if state_change_summary is not None:
+                self._peak_height = block_record.height
+
+        except BaseException as e:
+            self.block_store.rollback_cache_block(header_hash)
+            self._peak_height = previous_peak_height
+            log.error(
+                f"Error while adding block {block.header_hash} height {block.height},"
+                f" rolling back: {traceback.format_exc()} {e}"
+            )
+            raise
 
         # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
         await self.__height_map.maybe_flush()

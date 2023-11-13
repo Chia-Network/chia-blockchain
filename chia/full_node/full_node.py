@@ -703,7 +703,10 @@ class FullNode:
                             False,
                         )
         else:
-            if request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
+            if (
+                curr_peak_height <= request.height
+                and request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]
+            ):
                 # This is the normal case of receiving the next block
                 if await self.short_sync_backtrack(
                     peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
@@ -716,11 +719,10 @@ class FullNode:
                 await self.short_sync_batch(peer, uint32(0), request.height)
                 return None
 
-            if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
-                # TODO: We get here if we encountered a heavier peak with a
-                # lower height than ours. We don't seem to handle this case
-                # right now. This ends up requesting the block at *our* peak
-                # height.
+            if (
+                curr_peak_height <= request.height
+                and request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]
+            ):
                 # This case of being behind but not by so much
                 if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return None
@@ -1055,8 +1057,11 @@ class FullNode:
             start_height, end_height = 0, 0
             new_peers_with_peak: List[WSChiaConnection] = peers_with_peak[:]
             try:
-                for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
-                    end_height = min(target_peak_sb_height, start_height + batch_size)
+                # block request ranges are *inclusive*, this requires some
+                # gymnastics of this range (+1 to make it exclusive, like normal
+                # ranges) and then -1 when forming the request message
+                for start_height in range(fork_point_height, target_peak_sb_height + 1, batch_size):
+                    end_height = min(target_peak_sb_height, start_height + batch_size - 1)
                     request = RequestBlocks(uint32(start_height), uint32(end_height), True)
                     fetched = False
                     for peer in random.sample(new_peers_with_peak, len(new_peers_with_peak)):
