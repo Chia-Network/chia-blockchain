@@ -2765,14 +2765,8 @@ async def test_dao_cat_exits(
             await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
         await full_node_api.process_transaction_records(records=txs, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
-
-        await rpc_state(
-            60,
-            client_0.get_wallet_balance,
-            [dao_wallet_dict_0["cat_wallet_id"]],
-            lambda x: x["confirmed_wallet_balance"],
-            cat_amt,
-        )
+        await full_node_api.check_transactions_confirmed(wallet_node_0.wallet_state_manager, txs, 60)
+        await time_out_assert(60, cat_wallet_0.get_confirmed_balance, cat_amt)
 
         # fund treasury
         xch_funds = uint64(10000000000)
