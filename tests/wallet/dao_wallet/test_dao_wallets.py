@@ -1407,7 +1407,7 @@ async def test_dao_rpc_api(
     txs = [TransactionRecord.from_json_dict(proposal_tx["tx"])]
     try:
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
-    except TimeoutError:
+    except TimeoutError:  # pragma: no cover
         # try again
         await api_0.push_tx({"spend_bundle": txs[0].spend_bundle.stream_to_bytes().hex()})
         await full_node_api.wait_transaction_records_marked_as_in_mempool([txs[0].name], wallet_node_0, 60)
@@ -1497,7 +1497,7 @@ async def test_dao_rpc_api(
     txs = [TransactionRecord.from_json_dict(proposal_tx["tx"])]
     try:
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
-    except TimeoutError:
+    except TimeoutError:  # pragma: no cover
         # try again
         await api_0.push_tx({"spend_bundle": txs[0].spend_bundle.stream_to_bytes().hex()})
         await full_node_api.wait_transaction_records_marked_as_in_mempool([txs[0].name], wallet_node_0, 60)
@@ -1599,7 +1599,7 @@ async def test_dao_rpc_api(
     txs = [TransactionRecord.from_json_dict(close_tx["tx"])]
     try:
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
-    except TimeoutError:
+    except TimeoutError:  # pragma: no cover
         # try again
         await api_0.push_tx({"spend_bundle": txs[0].spend_bundle.stream_to_bytes().hex()})
         await full_node_api.wait_transaction_records_marked_as_in_mempool([txs[0].name], wallet_node_0, 60)
