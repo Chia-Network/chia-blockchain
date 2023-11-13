@@ -1122,8 +1122,8 @@ class TestWalletSync:
             ]
         )
         txs = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
+        await farm_nft_wallet.wallet_state_manager.add_pending_transactions(txs)
         for tx in txs:
-            await farm_nft_wallet.wallet_state_manager.add_pending_transaction(tx)
             if tx.spend_bundle is not None:
                 assert compute_memos(tx.spend_bundle)
                 await time_out_assert_not_none(
@@ -1157,7 +1157,7 @@ class TestWalletSync:
         )
         assert len(txs) == 1
         assert txs[0].spend_bundle is not None
-        await farm_wallet_node.wallet_state_manager.add_pending_transaction(txs[0])
+        await farm_wallet_node.wallet_state_manager.add_pending_transactions(txs)
         assert compute_memos(txs[0].spend_bundle)
 
         # Farm a new block.
@@ -1292,7 +1292,7 @@ class TestWalletSync:
             [tx] = await wallet.generate_signed_transaction(
                 1_000_000_000_000, bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
             )
-            await wallet_node.wallet_state_manager.add_pending_transaction(tx)
+            await wallet_node.wallet_state_manager.add_pending_transactions([tx])
 
             async def tx_in_mempool():
                 return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None

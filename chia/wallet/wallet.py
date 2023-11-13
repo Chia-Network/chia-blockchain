@@ -461,11 +461,6 @@ class Wallet:
         assert chia_tx.spend_bundle is not None
         return chia_tx
 
-    async def push_transaction(self, tx: TransactionRecord) -> None:
-        """Use this API to send transactions."""
-        await self.wallet_state_manager.add_pending_transaction(tx)
-        await self.wallet_state_manager.wallet_node.update_ui()
-
     async def get_coins_to_offer(
         self,
         asset_id: Optional[bytes32],

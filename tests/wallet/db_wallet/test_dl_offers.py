@@ -68,8 +68,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         maker_root, DEFAULT_TX_CONFIG, fee=fee
     )
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker) is not None
-    await wsm_maker.add_pending_transaction(dl_record)
-    await wsm_maker.add_pending_transaction(std_record)
+    await wsm_maker.add_pending_transactions([dl_record, std_record])
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
     maker_funds -= fee
     maker_funds -= 1
@@ -79,8 +78,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         taker_root, DEFAULT_TX_CONFIG, fee=fee
     )
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker) is not None
-    await wsm_taker.add_pending_transaction(dl_record)
-    await wsm_taker.add_pending_transaction(std_record)
+    await wsm_taker.add_pending_transactions([dl_record, std_record])
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
     taker_funds -= fee
     taker_funds -= 1
@@ -174,8 +172,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         ),
         fee=fee,
     )
-    for tx in tx_records:
-        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
     assert offer_taker is not None
     assert tx_records is not None
 
@@ -234,8 +231,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 2)
 
     txs = await dl_wallet_taker.create_update_state_spend(launcher_id_taker, bytes32([2] * 32), DEFAULT_TX_CONFIG)
-    for tx in txs:
-        await wallet_node_taker.wallet_state_manager.add_pending_transaction(tx)
+    await wallet_node_taker.wallet_state_manager.add_pending_transactions(txs)
     await full_node_api.process_transaction_records(records=txs)
 
 
@@ -257,13 +253,11 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
 
     dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(root, DEFAULT_TX_CONFIG)
     assert await dl_wallet.get_latest_singleton(launcher_id) is not None
-    await wsm.add_pending_transaction(dl_record)
-    await wsm.add_pending_transaction(std_record)
+    await wsm.add_pending_transactions([dl_record, std_record])
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, root)
     dl_record_2, std_record_2, launcher_id_2 = await dl_wallet.generate_new_reporter(root, DEFAULT_TX_CONFIG)
-    await wsm.add_pending_transaction(dl_record_2)
-    await wsm.add_pending_transaction(std_record_2)
+    await wsm.add_pending_transactions([dl_record_2, std_record_2])
     await full_node_api.process_transaction_records(records=[dl_record_2, std_record_2])
 
     trade_manager = wsm.trade_manager
@@ -297,8 +291,7 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     cancellation_txs = await trade_manager.cancel_pending_offers(
         [offer.trade_id], DEFAULT_TX_CONFIG, fee=uint64(2_000_000_000_000), secure=True
     )
-    for tx in cancellation_txs:
-        await trade_manager.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager.wallet_state_manager.add_pending_transactions(cancellation_txs)
     assert len(cancellation_txs) == 2
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager, offer)
     await full_node_api.process_transaction_records(records=cancellation_txs)
@@ -335,8 +328,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         maker_root, DEFAULT_TX_CONFIG, fee=fee
     )
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_1) is not None
-    await wsm_maker.add_pending_transaction(dl_record)
-    await wsm_maker.add_pending_transaction(std_record)
+    await wsm_maker.add_pending_transactions([dl_record, std_record])
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
     maker_funds -= fee
     maker_funds -= 1
@@ -345,8 +337,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         maker_root, DEFAULT_TX_CONFIG, fee=fee
     )
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_2) is not None
-    await wsm_maker.add_pending_transaction(dl_record)
-    await wsm_maker.add_pending_transaction(std_record)
+    await wsm_maker.add_pending_transactions([dl_record, std_record])
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
     maker_funds -= fee
     maker_funds -= 1
@@ -356,8 +347,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         taker_root, DEFAULT_TX_CONFIG, fee=fee
     )
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_1) is not None
-    await wsm_taker.add_pending_transaction(dl_record)
-    await wsm_taker.add_pending_transaction(std_record)
+    await wsm_taker.add_pending_transactions([dl_record, std_record])
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
     taker_funds -= fee
     taker_funds -= 1
@@ -366,8 +356,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         taker_root, DEFAULT_TX_CONFIG, fee=fee
     )
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_2) is not None
-    await wsm_taker.add_pending_transaction(dl_record)
-    await wsm_taker.add_pending_transaction(std_record)
+    await wsm_taker.add_pending_transactions([dl_record, std_record])
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
     taker_funds -= fee
     taker_funds -= 1
@@ -476,8 +465,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         ),
         fee=fee,
     )
-    for tx in tx_records:
-        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
     assert offer_taker is not None
     assert tx_records is not None
 
