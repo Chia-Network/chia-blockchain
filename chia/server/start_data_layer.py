@@ -42,7 +42,7 @@ def create_data_layer_service(
     if downloaders is None:
         downloaders = []
     service_config = config[SERVICE_NAME]
-    self_hostname = config["self_hostname"]
+    wallet_hostname = service_config["wallet_peer"]["host"]
     wallet_rpc_port = service_config["wallet_peer"]["port"]
     if wallet_service is None:
         wallet_root_path = root_path
@@ -50,7 +50,7 @@ def create_data_layer_service(
     else:
         wallet_root_path = wallet_service.root_path
         wallet_config = wallet_service.config
-    wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), wallet_root_path, wallet_config)
+    wallet_rpc_init = WalletRpcClient.create(wallet_hostname, uint16(wallet_rpc_port), wallet_root_path, wallet_config)
 
     data_layer = DataLayer.create(
         config=service_config,
