@@ -213,10 +213,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                     self._node._shut_down = False
 
                     if len(self._upnp_ports) > 0:
-                        self.upnp.setup()
-
-                        for port in self._upnp_ports:
-                            self.upnp.remap(port)
+                        async_exit_stack.enter_context(self.upnp.manage(self._upnp_ports))
 
                     await self._server.start(
                         prefer_ipv6=self.config.get("prefer_ipv6", False),
@@ -276,10 +273,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                     await self.rpc_server.await_closed()
                     self._log.info("Closed RPC server")
 
-        # this is a blocking call, waiting for the UPnP thread to exit
-        self.upnp.shutdown()
-
-        self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully stopped")
+                self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully stopped")
 
     def add_peer(self, peer: UnresolvedPeerInfo) -> None:
         self._connect_peers.add(peer)
