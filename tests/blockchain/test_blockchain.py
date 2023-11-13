@@ -31,7 +31,7 @@ from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -60,7 +60,7 @@ from tests.conftest import ConsensusMode
 from tests.util.blockchain import create_blockchain
 
 log = logging.getLogger(__name__)
-bad_element = ClassgroupElement.from_bytes(b"\x00")
+bad_element = ClassgroupElement.create(b"\x00")
 
 
 @asynccontextmanager
@@ -69,16 +69,15 @@ async def make_empty_blockchain(constants: ConsensusConstants):
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
 
-    bc, db_wrapper, db_path = await create_blockchain(constants, 2)
+    bc, db_wrapper = await create_blockchain(constants, 2)
     yield bc
 
     await db_wrapper.close()
     bc.shut_down()
-    db_path.unlink()
 
 
 class TestGenesisBlock:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_block_tools_proofs_400(self, default_400_blocks, blockchain_constants):
         vdf, proof = get_vdf_info_and_proof(
             blockchain_constants,
@@ -86,10 +85,10 @@ class TestGenesisBlock:
             blockchain_constants.GENESIS_CHALLENGE,
             uint64(231),
         )
-        if proof.is_valid(blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
+        if validate_vdf(proof, blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_block_tools_proofs_1000(self, default_1000_blocks, blockchain_constants):
         vdf, proof = get_vdf_info_and_proof(
             blockchain_constants,
@@ -97,10 +96,10 @@ class TestGenesisBlock:
             blockchain_constants.GENESIS_CHALLENGE,
             uint64(231),
         )
-        if proof.is_valid(blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
+        if validate_vdf(proof, blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_block_tools_proofs(self, blockchain_constants):
         vdf, proof = get_vdf_info_and_proof(
             blockchain_constants,
@@ -108,32 +107,32 @@ class TestGenesisBlock:
             blockchain_constants.GENESIS_CHALLENGE,
             uint64(231),
         )
-        if proof.is_valid(blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
+        if validate_vdf(proof, blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_non_overflow_genesis(self, empty_blockchain, bt):
         assert empty_blockchain.get_peak() is None
         genesis = bt.get_consecutive_blocks(1, force_overflow=False)[0]
         await _validate_and_add_block(empty_blockchain, genesis)
         assert empty_blockchain.get_peak().height == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_overflow_genesis(self, empty_blockchain, bt):
         genesis = bt.get_consecutive_blocks(1, force_overflow=True)[0]
         await _validate_and_add_block(empty_blockchain, genesis)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_genesis_empty_slots(self, empty_blockchain, bt):
         genesis = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=30)[0]
         await _validate_and_add_block(empty_blockchain, genesis)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_overflow_genesis_empty_slots(self, empty_blockchain, bt):
         genesis = bt.get_consecutive_blocks(1, force_overflow=True, skip_slots=3)[0]
         await _validate_and_add_block(empty_blockchain, genesis)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_genesis_validate_1(self, empty_blockchain, bt):
         genesis = bt.get_consecutive_blocks(1, force_overflow=False)[0]
         bad_prev = bytes([1] * 32)
@@ -143,7 +142,7 @@ class TestGenesisBlock:
 
 class TestBlockHeaderValidation:
     @pytest.mark.limit_consensus_modes(reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_long_chain(self, empty_blockchain, default_1000_blocks):
         blocks = default_1000_blocks
         for block in blocks:
@@ -268,7 +267,7 @@ class TestBlockHeaderValidation:
             )
         assert empty_blockchain.get_peak().height == len(blocks) - 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_unfinished_blocks(self, empty_blockchain, softfork_height, bt):
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(3)
@@ -318,12 +317,12 @@ class TestBlockHeaderValidation:
         validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
         assert validate_res.error is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_empty_genesis(self, empty_blockchain, bt):
         for block in bt.get_consecutive_blocks(2, skip_slots=3):
             await _validate_and_add_block(empty_blockchain, block)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_empty_slots_non_genesis(self, empty_blockchain, bt):
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(10)
@@ -335,7 +334,7 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(empty_blockchain, block)
         assert blockchain.get_peak().height == 19
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_one_sb_per_slot(self, empty_blockchain, bt):
         blockchain = empty_blockchain
         num_blocks = 20
@@ -345,7 +344,7 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(empty_blockchain, blocks[-1])
         assert blockchain.get_peak().height == num_blocks - 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_all_overflow(self, empty_blockchain, bt):
         blockchain = empty_blockchain
         num_rounds = 5
@@ -358,7 +357,7 @@ class TestBlockHeaderValidation:
                 await _validate_and_add_block(empty_blockchain, block)
         assert blockchain.get_peak().height == num_blocks - 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_unf_block_overflow(self, empty_blockchain, softfork_height, bt):
         blockchain = empty_blockchain
 
@@ -402,7 +401,7 @@ class TestBlockHeaderValidation:
 
             await _validate_and_add_block(blockchain, blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_one_sb_per_two_slots(self, empty_blockchain, bt):
         blockchain = empty_blockchain
         num_blocks = 20
@@ -412,7 +411,7 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(blockchain, blocks[-1])
         assert blockchain.get_peak().height == num_blocks - 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_one_sb_per_five_slots(self, empty_blockchain, bt):
         blockchain = empty_blockchain
         num_blocks = 10
@@ -422,14 +421,14 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(blockchain, blocks[-1])
         assert blockchain.get_peak().height == num_blocks - 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_basic_chain_overflow(self, empty_blockchain, bt):
         blocks = bt.get_consecutive_blocks(5, force_overflow=True)
         for block in blocks:
             await _validate_and_add_block(empty_blockchain, block)
         assert empty_blockchain.get_peak().height == len(blocks) - 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_one_sb_per_two_slots_force_overflow(self, empty_blockchain, bt):
         blockchain = empty_blockchain
         num_blocks = 10
@@ -439,7 +438,7 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(blockchain, blocks[-1])
         assert blockchain.get_peak().height == num_blocks - 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_prev(self, empty_blockchain, bt):
         # 1
         blocks = bt.get_consecutive_blocks(2, force_overflow=False)
@@ -448,7 +447,7 @@ class TestBlockHeaderValidation:
 
         await _validate_and_add_block(empty_blockchain, block_1_bad, expected_error=Err.INVALID_PREV_BLOCK_HASH)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_pospace(self, empty_blockchain, bt):
         # 2
         blocks = bt.get_consecutive_blocks(2, force_overflow=False)
@@ -457,7 +456,7 @@ class TestBlockHeaderValidation:
 
         await _validate_and_add_block(empty_blockchain, block_1_bad, expected_error=Err.INVALID_POSPACE)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_sub_slot_challenge_hash_genesis(self, empty_blockchain, bt):
         # 2a
         blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=1)
@@ -483,7 +482,7 @@ class TestBlockHeaderValidation:
         assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
         await _validate_and_add_block(empty_blockchain, block_0_bad, expected_result=AddBlockResult.INVALID_BLOCK)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_sub_slot_challenge_hash_non_genesis(self, empty_blockchain, bt):
         # 2b
         blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=0)
@@ -510,7 +509,7 @@ class TestBlockHeaderValidation:
         assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
         await _validate_and_add_block(empty_blockchain, block_1_bad, expected_result=AddBlockResult.INVALID_BLOCK)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_sub_slot_challenge_hash_empty_ss(self, empty_blockchain, bt):
         # 2c
         blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=0)
@@ -537,7 +536,7 @@ class TestBlockHeaderValidation:
         assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
         await _validate_and_add_block(empty_blockchain, block_1_bad, expected_result=AddBlockResult.INVALID_BLOCK)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_genesis_no_icc(self, empty_blockchain, bt):
         # 2d
         blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=1)
@@ -566,7 +565,7 @@ class TestBlockHeaderValidation:
             ),
             keychain=keychain,
         )
-        bc1, db_wrapper, db_path = await create_blockchain(bt_high_iters.constants, db_version)
+        bc1, db_wrapper = await create_blockchain(bt_high_iters.constants, db_version)
         blocks = bt_high_iters.get_consecutive_blocks(10)
         for block in blocks:
             if len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is not None:
@@ -640,14 +639,13 @@ class TestBlockHeaderValidation:
 
         await db_wrapper.close()
         bc1.shut_down()
-        db_path.unlink()
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_icc_sub_slot_vdf(self, db_version, blockchain_constants):
         with TempKeyring() as keychain:
             await self.do_test_invalid_icc_sub_slot_vdf(keychain, db_version, blockchain_constants)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_icc_into_cc(self, empty_blockchain, bt):
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(1)
@@ -738,7 +736,7 @@ class TestBlockHeaderValidation:
             # Finally, add the block properly
             await _validate_and_add_block(blockchain, block)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_empty_slot_no_ses(self, empty_blockchain, bt):
         # 2l
         blockchain = empty_blockchain
@@ -767,7 +765,7 @@ class TestBlockHeaderValidation:
         assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
         await _validate_and_add_block(blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_empty_sub_slots_epoch(self, empty_blockchain, default_400_blocks, bt):
         # 2m
         # Tests adding an empty sub slot after the sub-epoch / epoch.
@@ -786,7 +784,7 @@ class TestBlockHeaderValidation:
             empty_blockchain, blocks_2[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN, skip_prevalidation=True
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wrong_cc_hash_rc(self, empty_blockchain, bt):
         # 2o
         blockchain = empty_blockchain
@@ -805,7 +803,7 @@ class TestBlockHeaderValidation:
 
         await _validate_and_add_block(blockchain, block_1_bad, expected_error=Err.INVALID_CHALLENGE_SLOT_HASH_RC)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_cc_sub_slot_vdf(self, empty_blockchain, bt):
         # 2q
         blocks: List[FullBlock] = []
@@ -903,7 +901,7 @@ class TestBlockHeaderValidation:
 
             await _validate_and_add_block(empty_blockchain, block)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_rc_sub_slot_vdf(self, empty_blockchain, bt):
         # 2p
         blocks: List[FullBlock] = []
@@ -976,7 +974,7 @@ class TestBlockHeaderValidation:
 
             await _validate_and_add_block(empty_blockchain, block)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_genesis_bad_deficit(self, empty_blockchain, bt):
         # 2r
         block = bt.get_consecutive_blocks(1, skip_slots=2)[0]
@@ -992,7 +990,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss])
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_DEFICIT)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_reset_deficit(self, empty_blockchain, bt):
         # 2s, 2t
         blockchain = empty_blockchain
@@ -1026,7 +1024,7 @@ class TestBlockHeaderValidation:
 
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_genesis_has_ses(self, empty_blockchain, bt):
         # 3a
         block = bt.get_consecutive_blocks(1, skip_slots=1)[0]
@@ -1054,7 +1052,7 @@ class TestBlockHeaderValidation:
                 empty_blockchain, block_bad, expected_error=Err.INVALID_SUB_EPOCH_SUMMARY_HASH
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_no_ses_if_no_se(self, empty_blockchain, bt):
         # 3b
         blocks = bt.get_consecutive_blocks(1)
@@ -1097,12 +1095,12 @@ class TestBlockHeaderValidation:
                 return None
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_too_many_blocks(self, empty_blockchain):
         # 4: TODO
         pass
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_pos(self, empty_blockchain, bt):
         # 5
         blocks = bt.get_consecutive_blocks(2)
@@ -1140,7 +1138,7 @@ class TestBlockHeaderValidation:
 
         # TODO: test not passing the plot filter
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_signage_point_index(self, empty_blockchain, bt):
         # 6
         blocks = bt.get_consecutive_blocks(2)
@@ -1157,7 +1155,7 @@ class TestBlockHeaderValidation:
             )
             await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_SP_INDEX)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_sp_0_no_sp(self, empty_blockchain, bt):
         # 7
         blocks = []
@@ -1177,12 +1175,12 @@ class TestBlockHeaderValidation:
                 )
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_epoch_overflows(self, empty_blockchain):
         # 9. TODO. This is hard to test because it requires modifying the block tools to make these special blocks
         pass
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_total_iters(self, empty_blockchain, bt):
         # 10
         blocks = bt.get_consecutive_blocks(2)
@@ -1193,7 +1191,7 @@ class TestBlockHeaderValidation:
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_TOTAL_ITERS)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_rc_sp_vdf(self, empty_blockchain, bt):
         # 11
         blocks = bt.get_consecutive_blocks(1)
@@ -1227,7 +1225,7 @@ class TestBlockHeaderValidation:
                 return None
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_rc_sp_sig(self, empty_blockchain, bt):
         # 12
         blocks = bt.get_consecutive_blocks(2)
@@ -1235,7 +1233,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(blocks[-1], "reward_chain_block.reward_chain_sp_signature", G2Element.generator())
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_RC_SIGNATURE)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_cc_sp_vdf(self, empty_blockchain, bt):
         # 13. Note: does not validate fully due to proof of space being validated first
 
@@ -1270,7 +1268,7 @@ class TestBlockHeaderValidation:
                 return None
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_cc_sp_sig(self, empty_blockchain, bt):
         # 14
         blocks = bt.get_consecutive_blocks(2)
@@ -1280,12 +1278,12 @@ class TestBlockHeaderValidation:
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_CC_SIGNATURE)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_is_transaction_block(self, empty_blockchain):
         # 15: TODO
         pass
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_foliage_sb_sig(self, empty_blockchain, bt):
         # 16
         blocks = bt.get_consecutive_blocks(2)
@@ -1293,7 +1291,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(blocks[-1], "foliage.foliage_block_data_signature", G2Element.generator())
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_PLOT_SIGNATURE)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_foliage_transaction_block_sig(self, empty_blockchain, bt):
         # 17
         blocks = bt.get_consecutive_blocks(1)
@@ -1309,7 +1307,7 @@ class TestBlockHeaderValidation:
                 return None
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_unfinished_reward_chain_sb_hash(self, empty_blockchain, bt):
         # 18
         blocks = bt.get_consecutive_blocks(2)
@@ -1322,7 +1320,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_URSB_HASH)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_pool_target_height(self, empty_blockchain, bt):
         # 19
         blocks = bt.get_consecutive_blocks(3)
@@ -1334,7 +1332,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.OLD_POOL_TARGET)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_pool_target_pre_farm(self, empty_blockchain, bt):
         # 20a
         blocks = bt.get_consecutive_blocks(1)
@@ -1346,7 +1344,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_PREFARM)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_pool_target_signature(self, empty_blockchain, bt):
         # 20b
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -1370,7 +1368,7 @@ class TestBlockHeaderValidation:
                 return None
             attempts += 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_pool_target_contract(self, empty_blockchain, bt, seeded_random: random.Random):
         # 20c invalid pool target with contract
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -1394,7 +1392,7 @@ class TestBlockHeaderValidation:
                 return None
             attempts += 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_foliage_data_presence(self, empty_blockchain, bt):
         # 22
         blocks = bt.get_consecutive_blocks(1)
@@ -1421,7 +1419,7 @@ class TestBlockHeaderValidation:
                 ],
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_foliage_transaction_block_hash(self, empty_blockchain, bt):
         # 23
         blocks = bt.get_consecutive_blocks(1)
@@ -1443,7 +1441,7 @@ class TestBlockHeaderValidation:
                 return None
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_genesis_bad_prev_block(self, empty_blockchain, bt):
         # 24a
         blocks = bt.get_consecutive_blocks(1)
@@ -1458,7 +1456,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_PREV_BLOCK_HASH)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_prev_block_non_genesis(self, empty_blockchain, bt):
         # 24b
         blocks = bt.get_consecutive_blocks(1)
@@ -1479,7 +1477,7 @@ class TestBlockHeaderValidation:
                 return None
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_filter_hash(self, empty_blockchain, bt):
         # 25
         blocks = bt.get_consecutive_blocks(1)
@@ -1502,7 +1500,7 @@ class TestBlockHeaderValidation:
                 return None
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_timestamp(self, bt):
         # 26
         # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
@@ -1573,7 +1571,7 @@ class TestBlockHeaderValidation:
                     return None
                 await _validate_and_add_block(b, blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_height(self, empty_blockchain, bt):
         # 27
         blocks = bt.get_consecutive_blocks(2)
@@ -1581,14 +1579,14 @@ class TestBlockHeaderValidation:
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_block.height", 2)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_HEIGHT)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_height_genesis(self, empty_blockchain, bt):
         # 27
         blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_block.height", 1)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_PREV_BLOCK_HASH)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight(self, empty_blockchain, bt):
         # 28
         blocks = bt.get_consecutive_blocks(2)
@@ -1596,14 +1594,14 @@ class TestBlockHeaderValidation:
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_block.weight", 22131)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_WEIGHT)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_genesis(self, empty_blockchain, bt):
         # 28
         blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_block.weight", 0)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_WEIGHT)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_cc_ip_vdf(self, empty_blockchain, bt):
         # 29
         blocks = bt.get_consecutive_blocks(1)
@@ -1631,7 +1629,7 @@ class TestBlockHeaderValidation:
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_CC_IP_VDF)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_rc_ip_vdf(self, empty_blockchain, bt):
         # 30
         blocks = bt.get_consecutive_blocks(1)
@@ -1659,7 +1657,7 @@ class TestBlockHeaderValidation:
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_RC_IP_VDF)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_icc_ip_vdf(self, empty_blockchain, bt):
         # 31
         blocks = bt.get_consecutive_blocks(1)
@@ -1691,7 +1689,7 @@ class TestBlockHeaderValidation:
 
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_ICC_VDF)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_reward_block_hash(self, empty_blockchain, bt):
         # 32
         blocks = bt.get_consecutive_blocks(2)
@@ -1699,7 +1697,7 @@ class TestBlockHeaderValidation:
         block_bad: FullBlock = recursive_replace(blocks[-1], "foliage.reward_block_hash", std_hash(b""))
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_REWARD_BLOCK_HASH)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_reward_block_hash_2(self, empty_blockchain, bt):
         # 33
         blocks = bt.get_consecutive_blocks(1)
@@ -1730,7 +1728,7 @@ rbr = AddBlockResult
 
 
 class TestPreValidation:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_pre_validation_fails_bad_blocks(self, empty_blockchain, bt):
         blocks = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks[0])
@@ -1744,7 +1742,7 @@ class TestPreValidation:
         assert res[0].error is None
         assert res[1].error is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_pre_validation(self, empty_blockchain, default_1000_blocks, bt):
         blocks = default_1000_blocks[:100]
         start = time.time()
@@ -1788,7 +1786,7 @@ class TestBodyValidation:
     # CREATE_PUZZLE_ANNOUNCEMENT,
     # ASSERT_PUZZLE_ANNOUNCEMENT,
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         "opcode",
         [
@@ -1860,7 +1858,7 @@ class TestBodyValidation:
         assert err is None
         assert state_change.fork_height == 2
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
         [
@@ -1975,7 +1973,7 @@ class TestBodyValidation:
                 c = await b.coin_store.get_coin_record(coin.name())
                 assert c is not None and c.spent
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         "opcode",
         [
@@ -2067,7 +2065,7 @@ class TestBodyValidation:
         res, error, state_change = await b.add_block(blocks[-1], repl_preval_results)
         assert (res, error, state_change.fork_height if state_change else None) == expected
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize("with_garbage", [True, False])
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
@@ -2188,7 +2186,7 @@ class TestBodyValidation:
                 c = await b.coin_store.get_coin_record(coin2.name())
                 assert c is not None and not c.spent
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_not_tx_block_but_has_data(self, empty_blockchain, bt):
         # 1
         blocks = bt.get_consecutive_blocks(1)
@@ -2217,7 +2215,7 @@ class TestBodyValidation:
             empty_blockchain, block, expected_error=Err.NOT_BLOCK_BUT_HAS_DATA, skip_prevalidation=True
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_tx_block_missing_data(self, empty_blockchain, bt):
         # 2
         b = empty_blockchain
@@ -2242,7 +2240,7 @@ class TestBodyValidation:
                 b, block, [Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA, Err.INVALID_FOLIAGE_BLOCK_PRESENCE]
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_transactions_info_hash(self, empty_blockchain, bt):
         # 3
         b = empty_blockchain
@@ -2263,7 +2261,7 @@ class TestBodyValidation:
 
         await _validate_and_add_block(b, block, expected_error=Err.INVALID_TRANSACTIONS_INFO_HASH)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_transactions_block_hash(self, empty_blockchain, bt):
         # 4
         b = empty_blockchain
@@ -2277,7 +2275,7 @@ class TestBodyValidation:
 
         await _validate_and_add_block(b, block, expected_error=Err.INVALID_FOLIAGE_BLOCK_HASH)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_reward_claims(self, empty_blockchain, bt):
         # 5
         b = empty_blockchain
@@ -2345,7 +2343,7 @@ class TestBodyValidation:
 
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_REWARD_COINS, skip_prevalidation=True)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_transactions_generator_hash(self, empty_blockchain, bt):
         # 7
         b = empty_blockchain
@@ -2402,7 +2400,7 @@ class TestBodyValidation:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_transactions_ref_list(self, empty_blockchain, bt, consensus_mode: ConsensusMode):
         # No generator should have [1]s for the root
         b = empty_blockchain
@@ -2515,7 +2513,7 @@ class TestBodyValidation:
                 skip_prevalidation=True,
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cost_exceeds_max(self, empty_blockchain, softfork_height, bt):
         # 7
         b = empty_blockchain
@@ -2561,12 +2559,12 @@ class TestBodyValidation:
         assert results is not None
         assert Err(results[0].error) == Err.BLOCK_COST_EXCEEDS_MAX
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_clvm_must_not_fail(self, empty_blockchain, bt):
         # 8
         pass
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_cost_in_block(self, empty_blockchain, softfork_height, bt):
         # 9
         b = empty_blockchain
@@ -2670,7 +2668,7 @@ class TestBodyValidation:
         # when the CLVM program exceeds cost during execution, it will fail with
         # a general runtime error. The previous test tests this.
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_max_coin_amount(self, db_version, bt):
         # 10
         # TODO: fix, this is not reaching validation. Because we can't create a block with such amounts due to uint64
@@ -2683,7 +2681,7 @@ class TestBodyValidation:
         #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
         #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
         #     )
-        #     b, db_wrapper, db_path = await create_blockchain(new_test_constants, db_version)
+        #     b, db_wrapper = await create_blockchain(new_test_constants, db_version)
         #     bt_2 = await create_block_tools_async(constants=new_test_constants, keychain=keychain)
         #     bt_2.constants = dataclasses.replace(
         #         bt_2.constants,
@@ -2721,9 +2719,8 @@ class TestBodyValidation:
         #         pass
         #     await db_wrapper.close()
         #     b.shut_down()
-        #     db_path.unlink()
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_merkle_roots(self, empty_blockchain, bt):
         # 11
         blocks = bt.get_consecutive_blocks(
@@ -2771,7 +2768,7 @@ class TestBodyValidation:
 
         await _validate_and_add_block(empty_blockchain, block_2, expected_error=Err.BAD_REMOVAL_ROOT)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_filter(self, empty_blockchain, bt):
         # 12
         b = empty_blockchain
@@ -2805,7 +2802,7 @@ class TestBodyValidation:
 
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_TRANSACTIONS_FILTER_HASH)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_duplicate_outputs(self, empty_blockchain, bt):
         # 13
         b = empty_blockchain
@@ -2835,7 +2832,7 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks[-1], expected_error=Err.DUPLICATE_OUTPUT)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_duplicate_removals(self, empty_blockchain, bt):
         # 14
         b = empty_blockchain
@@ -2864,7 +2861,7 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks[-1], expected_error=Err.DOUBLE_SPEND)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_double_spent_in_coin_store(self, empty_blockchain, bt):
         # 15
         b = empty_blockchain
@@ -2898,7 +2895,7 @@ class TestBodyValidation:
 
         await _validate_and_add_block(b, blocks[-1], expected_error=Err.DOUBLE_SPEND)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_double_spent_in_reorg(self, empty_blockchain, bt):
         # 15
         b = empty_blockchain
@@ -2990,7 +2987,7 @@ class TestBodyValidation:
         farmer_coin = await b.coin_store.get_coin_record(farmer_coin.name())
         assert first_coin is not None and farmer_coin.spent
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_minting_coin(self, empty_blockchain, bt):
         # 16 Minting coin check
         b = empty_blockchain
@@ -3023,12 +3020,12 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1], expected_error=Err.MINTING_COIN)
         # 17 is tested in mempool tests
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_max_coin_amount_fee(self):
         # 18 TODO: we can't create a block with such amounts due to uint64
         pass
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_fees_in_block(self, empty_blockchain, bt):
         # 19
         b = empty_blockchain
@@ -3069,7 +3066,7 @@ class TestBodyValidation:
 
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_BLOCK_FEE_AMOUNT)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_agg_sig(self, empty_blockchain, bt):
         # 22
         b = empty_blockchain
@@ -3115,7 +3112,7 @@ class TestBodyValidation:
 
 
 class TestReorgs:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_basic_reorg(self, empty_blockchain, bt):
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(15)
@@ -3134,7 +3131,7 @@ class TestReorgs:
                 await _validate_and_add_block(b, reorg_block)
         assert b.get_peak().height == 16
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_long_reorg(self, empty_blockchain, default_1500_blocks, test_long_reorg_blocks, bt):
         # Reorg longer than a difficulty adjustment
         # Also tests higher weight chain but lower height
@@ -3178,14 +3175,14 @@ class TestReorgs:
         assert b.get_peak().weight > chain_1_weight
         assert b.get_peak().height < chain_1_height
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_long_compact_blockchain(self, empty_blockchain, default_2000_blocks_compact):
         b = empty_blockchain
         for block in default_2000_blocks_compact:
             await _validate_and_add_block(b, block, skip_prevalidation=True)
         assert b.get_peak().height == len(default_2000_blocks_compact) - 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_reorg_from_genesis(self, empty_blockchain, bt):
         b = empty_blockchain
 
@@ -3216,7 +3213,7 @@ class TestReorgs:
 
         assert b.get_peak().height == 17
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_reorg_transaction(self, empty_blockchain, bt):
         b = empty_blockchain
         wallet_a = WalletTool(b.constants)
@@ -3261,7 +3258,7 @@ class TestReorgs:
         for block in blocks_fork:
             await _validate_and_add_block_no_error(b, block)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_get_header_blocks_in_range_tx_filter(self, empty_blockchain, bt):
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
@@ -3294,7 +3291,7 @@ class TestReorgs:
         )
         assert blocks_with_filter[header_hash].header_hash == blocks_without_filter[header_hash].header_hash
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_get_blocks_at(self, empty_blockchain, default_1000_blocks):
         b = empty_blockchain
         heights = []
@@ -3308,7 +3305,7 @@ class TestReorgs:
         assert blocks[-1].height == 199
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_reorg_new_ref(empty_blockchain, bt):
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3387,7 +3384,7 @@ async def test_reorg_new_ref(empty_blockchain, bt):
 # this test doesn't reorg, but _reconsider_peak() is passed a stale
 # "fork_height" to make it look like it's in a reorg, but all the same blocks
 # are just added back.
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_reorg_stale_fork_height(empty_blockchain, bt):
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3434,7 +3431,7 @@ async def test_reorg_stale_fork_height(empty_blockchain, bt):
     assert b.get_peak().height == 13
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_chain_failed_rollback(empty_blockchain, bt):
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3490,7 +3487,7 @@ async def test_chain_failed_rollback(empty_blockchain, bt):
     assert b.get_peak().height == 19
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_reorg_flip_flop(empty_blockchain, bt):
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)

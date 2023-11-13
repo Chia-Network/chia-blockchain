@@ -80,7 +80,7 @@ async def make_and_spend_bundle(
         raise AssertionError(fail_msg)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("version", [0, 1])
 async def test_singleton_top_layer(version, cost_logger):
     async with sim_and_client() as (sim, sim_client):

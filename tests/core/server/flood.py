@@ -67,9 +67,7 @@ async def main() -> None:
         logger = create_logger(file=file)
 
         async def f() -> None:
-            await asyncio.gather(
-                *[tcp_echo_client(task_counter="{}".format(i), logger=logger) for i in range(0, NUM_CLIENTS)]
-            )
+            await asyncio.gather(*[tcp_echo_client(task_counter=f"{i}", logger=logger) for i in range(0, NUM_CLIENTS)])
 
         task = asyncio.create_task(f())
         try:

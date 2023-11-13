@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
 import pytest
-import pytest_asyncio
 
 from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
@@ -51,7 +50,7 @@ def test_filter_prefix_bits_on_blocks(
     assert passed == should_pass
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def farmer_harvester_with_filter_size_9(
     get_temp_keyring: Keychain, tmp_path: Path, self_hostname: str
 ) -> AsyncIterator[Tuple[Service[Harvester, HarvesterAPI], FarmerAPI]]:
@@ -88,7 +87,7 @@ async def farmer_harvester_with_filter_size_9(
 
 
 @pytest.mark.parametrize(argnames=["peak_height", "eligible_plots"], argvalues=[(5495999, 0), (5496000, 1)])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_filter_prefix_bits_with_farmer_harvester(
     farmer_harvester_with_filter_size_9: Tuple[Service[Harvester, HarvesterAPI], FarmerAPI],
     peak_height: uint32,

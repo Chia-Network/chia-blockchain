@@ -20,7 +20,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.misc import VersionedBlob
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CRCATInfo
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD_HASH, CAT_MOD_HASH_HASH, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
@@ -50,7 +50,7 @@ from chia.wallet.vc_wallet.cr_cat_drivers import (
     CRCATMetadata,
     CRCATVersion,
     ProofsChecker,
-    construct_cr_layer,
+    construct_cr_layer_hash,
     construct_pending_approval_state,
 )
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
@@ -88,7 +88,7 @@ class CRCATWallet(CATWallet):
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> "CATWallet":  # pragma: no cover
+    ) -> CATWallet:  # pragma: no cover
         raise NotImplementedError("create_new_cat_wallet is a legacy method and is not available on CR-CAT wallets")
 
     @staticmethod
@@ -218,7 +218,9 @@ class CRCATWallet(CATWallet):
         try:
             new_cr_cats: List[CRCAT] = CRCAT.get_next_from_coin_spend(coin_spend)
             hint_dict = {
-                id: hc.hint for id, hc in compute_spend_hints_and_additions(coin_spend).items() if hc.hint is not None
+                id: hc.hint
+                for id, hc in compute_spend_hints_and_additions(coin_spend)[0].items()
+                if hc.hint is not None
             }
             cr_cat: CRCAT = list(filter(lambda c: c.coin.name() == coin.name(), new_cr_cats))[0]
             if (
@@ -660,6 +662,8 @@ class CRCATWallet(CATWallet):
             unsigned_spend_bundle.coin_spends
         )
 
+        other_tx_removals: Set[Coin] = {removal for tx in other_txs for removal in tx.removals}
+        other_tx_additions: Set[Coin] = {removal for tx in other_txs for removal in tx.additions}
         tx_list = [
             TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -670,8 +674,8 @@ class CRCATWallet(CATWallet):
                 confirmed=False,
                 sent=uint32(0),
                 spend_bundle=signed_spend_bundle if i == 0 else None,
-                additions=signed_spend_bundle.additions() if i == 0 else [],
-                removals=signed_spend_bundle.removals() if i == 0 else [],
+                additions=list(set(signed_spend_bundle.additions()) - other_tx_additions) if i == 0 else [],
+                removals=list(set(signed_spend_bundle.removals()) - other_tx_removals) if i == 0 else [],
                 wallet_id=self.id(),
                 sent_to=[],
                 trade_id=None,
@@ -793,6 +797,12 @@ class CRCATWallet(CATWallet):
             [claim_bundle, *(tx.spend_bundle for tx in vc_txs if tx.spend_bundle is not None)]
         )
 
+        other_txs: List[TransactionRecord] = [
+            *(dataclasses.replace(tx, spend_bundle=None) for tx in vc_txs),
+            *((dataclasses.replace(chia_tx, spend_bundle=None),) if chia_tx is not None else []),
+        ]
+        other_additions: Set[Coin] = {rem for tx in other_txs for rem in tx.additions}
+        other_removals: Set[Coin] = {rem for tx in other_txs for rem in tx.removals}
         return [
             TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -803,8 +813,8 @@ class CRCATWallet(CATWallet):
                 confirmed=False,
                 sent=uint32(0),
                 spend_bundle=claim_bundle,
-                additions=claim_bundle.additions(),
-                removals=claim_bundle.removals(),
+                additions=list(set(claim_bundle.additions()) - other_additions),
+                removals=list(set(claim_bundle.removals()) - other_removals),
                 wallet_id=self.id(),
                 sent_to=[],
                 trade_id=None,
@@ -813,8 +823,7 @@ class CRCATWallet(CATWallet):
                 memos=list(compute_memos(claim_bundle).items()),
                 valid_times=parse_timelock_info(extra_conditions),
             ),
-            *(dataclasses.replace(tx, spend_bundle=None) for tx in vc_txs),
-            *((dataclasses.replace(chia_tx, spend_bundle=None),) if chia_tx is not None else []),
+            *other_txs,
         ]
 
     async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
@@ -852,28 +861,41 @@ class CRCATWallet(CATWallet):
         This matches coins that are either CRCATs with the hint as the inner puzzle, or CRCATs in the pending approval
         state that will come to us once claimed.
         """
-        return (
-            construct_cat_puzzle(
-                CAT_MOD,
-                self.info.limitations_program_hash,
-                construct_cr_layer(
-                    self.info.authorized_providers,
-                    self.info.proofs_checker.as_program(),
-                    hint,  # type: ignore
-                ),
-            ).get_tree_hash_precalc(hint)
-            == coin.puzzle_hash
-            or construct_cat_puzzle(
-                CAT_MOD,
-                self.info.limitations_program_hash,
-                construct_cr_layer(
-                    self.info.authorized_providers,
-                    self.info.proofs_checker.as_program(),
-                    construct_pending_approval_state(hint, uint64(coin.amount)),
-                ),
-            ).get_tree_hash()
-            == coin.puzzle_hash
+        authorized_providers_hash: bytes32 = Program.to(self.info.authorized_providers).get_tree_hash()
+        proofs_checker_hash: bytes32 = self.info.proofs_checker.as_program().get_tree_hash()
+        hint_inner_hash: bytes32 = construct_cr_layer_hash(
+            authorized_providers_hash,
+            proofs_checker_hash,
+            hint,
         )
+        if (
+            construct_cat_puzzle(
+                Program.to(CAT_MOD_HASH),
+                self.info.limitations_program_hash,
+                hint_inner_hash,  # type: ignore
+                mod_code_hash=CAT_MOD_HASH_HASH,
+            ).get_tree_hash_precalc(hint, CAT_MOD_HASH, CAT_MOD_HASH_HASH, hint_inner_hash)
+            == coin.puzzle_hash
+        ):
+            return True
+
+        pending_approval_inner_hash: bytes32 = construct_cr_layer_hash(
+            authorized_providers_hash,
+            proofs_checker_hash,
+            construct_pending_approval_state(hint, uint64(coin.amount)).get_tree_hash(),
+        )
+        if (
+            construct_cat_puzzle(
+                Program.to(CAT_MOD_HASH),
+                self.info.limitations_program_hash,
+                pending_approval_inner_hash,  # type: ignore
+                mod_code_hash=CAT_MOD_HASH_HASH,
+            ).get_tree_hash_precalc(CAT_MOD_HASH, CAT_MOD_HASH_HASH, pending_approval_inner_hash)
+            == coin.puzzle_hash
+        ):
+            return True
+        else:
+            return False
 
 
 if TYPE_CHECKING:

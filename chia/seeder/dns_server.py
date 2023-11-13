@@ -323,7 +323,7 @@ class DNSServer:
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
-        log.info("Starting DNS server.")
+        log.warning("Starting DNS server.")
         # Get a reference to the event loop as we plan to use low-level APIs.
         loop = asyncio.get_running_loop()
 
@@ -352,12 +352,12 @@ class DNSServer:
             lambda: TCPDNSServerProtocol(self.dns_response), ["::0", "0.0.0.0"], self.tcp_dns_port
         )
 
-        log.info("DNS server started.")
+        log.warning("DNS server started.")
         try:
             yield
         finally:  # catches any errors and properly shuts down the server
             await self.stop()
-            log.info("DNS server stopped.")
+            log.warning("DNS server stopped.")
 
     async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
         signal_handlers.setup_async_signal_handler(handler=self._accept_signal)
@@ -372,7 +372,7 @@ class DNSServer:
         await self.stop()
 
     async def stop(self) -> None:
-        log.info("Stopping DNS server...")
+        log.warning("Stopping DNS server...")
         if self.shutting_down:
             return
         self.shutting_down = True
@@ -398,7 +398,7 @@ class DNSServer:
                 log.error(f"Error loading reliable peers from database: {e}. Traceback: {traceback.format_exc()}.")
                 continue
             if len(new_reliable_peers) == 0:
-                log.info("No reliable peers found in database, waiting for db to be populated.")
+                log.warning("No reliable peers found in database, waiting for db to be populated.")
                 await asyncio.sleep(2)  # sleep for 2 seconds, because the db has not been populated yet.
                 continue
             async with self.lock:
@@ -416,7 +416,7 @@ class DNSServer:
                     except ValueError:
                         log.error(f"Invalid peer: {peer}")
                         continue
-                log.info(
+                log.warning(
                     f"Number of reliable peers discovered in dns server:"
                     f" IPv4 count - {len(self.reliable_peers_v4)}"
                     f" IPv6 count - {len(self.reliable_peers_v6)}"

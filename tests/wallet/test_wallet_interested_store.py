@@ -12,7 +12,7 @@ from tests.util.db_connection import DBConnection
 
 
 class TestWalletInterestedStore:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_store(self, seeded_random: random.Random):
         async with DBConnection(1) as db_wrapper:
             store = await WalletInterestedStore.create(db_wrapper)

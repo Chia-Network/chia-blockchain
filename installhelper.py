@@ -21,30 +21,30 @@ from pkg_resources import parse_version
 #
 def make_semver(version_str: str) -> str:
     v = parse_version(version_str)
-    major = v._version.release[0]
+    major = v._version.release[0]  # type: ignore[attr-defined]
     try:
-        minor = v._version.release[1]
+        minor = v._version.release[1]  # type: ignore[attr-defined]
     except IndexError:
         minor = 0
     try:
-        patch = v._version.release[2]
+        patch = v._version.release[2]  # type: ignore[attr-defined]
     except IndexError:
         patch = 0
 
     prerelease = []
-    if v._version.pre:
-        prerelease.append("".join(str(x) for x in v._version.pre))
-    if v._version.dev:
-        prerelease.append("".join(str(x) for x in v._version.dev))
+    if v._version.pre:  # type: ignore[attr-defined]
+        prerelease.append("".join(str(x) for x in v._version.pre))  # type: ignore[attr-defined]
+    if v._version.dev:  # type: ignore[attr-defined]
+        prerelease.append("".join(str(x) for x in v._version.dev))  # type: ignore[attr-defined]
 
     local = v.local
 
-    version = "{0}.{1}.{2}".format(major, minor, patch)
+    version = f"{major}.{minor}.{patch}"
 
     if prerelease:
-        version += "-{0}".format(".".join(prerelease))
+        version += "-{}".format(".".join(prerelease))
     if local:
-        version += "+{0}".format(local)
+        version += f"+{local}"
 
     return version
 

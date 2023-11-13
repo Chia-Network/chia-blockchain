@@ -109,7 +109,7 @@ async def _test_map_summaries(
 
 
 class TestWeightProof:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof_map_summaries_1(
         self, default_400_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
@@ -120,7 +120,7 @@ class TestWeightProof:
             default_400_blocks, header_cache, height_to_hash, sub_blocks, summaries, blockchain_constants
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof_map_summaries_2(
         self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
@@ -131,7 +131,7 @@ class TestWeightProof:
             default_1000_blocks, header_cache, height_to_hash, sub_blocks, summaries, blockchain_constants
         )
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof_summaries_1000_blocks(
         self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
@@ -151,7 +151,7 @@ class TestWeightProof:
         assert _validate_summaries_weight(blockchain_constants, sub_epoch_data_weight, summaries_here, wp)
         # assert res is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof_bad_peak_hash(
         self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
@@ -163,7 +163,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(bytes32(b"a" * 32))
         assert wp is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.skip(reason="broken")
     async def test_weight_proof_from_genesis(
         self, default_400_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
@@ -178,7 +178,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof_edge_cases(self, bt: BlockTools, default_400_blocks: List[FullBlock]) -> None:
         blocks = default_400_blocks
 
@@ -264,7 +264,7 @@ class TestWeightProof:
         assert valid
         assert fork_point == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof1000(
         self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
@@ -281,7 +281,7 @@ class TestWeightProof:
         assert valid
         assert fork_point == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof1000_pre_genesis_empty_slots(
         self, pre_genesis_empty_slots_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
@@ -299,7 +299,7 @@ class TestWeightProof:
         assert valid
         assert fork_point == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof10000__blocks_compact(
         self, default_10000_blocks_compact: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
@@ -316,7 +316,7 @@ class TestWeightProof:
         assert valid
         assert fork_point == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof1000_partial_blocks_compact(
         self, bt: BlockTools, default_10000_blocks_compact: List[FullBlock]
     ) -> None:
@@ -338,7 +338,7 @@ class TestWeightProof:
         assert valid
         assert fork_point == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof10000(
         self, default_10000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
@@ -356,7 +356,7 @@ class TestWeightProof:
         assert valid
         assert fork_point == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_check_num_of_samples(
         self, default_10000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
@@ -375,7 +375,7 @@ class TestWeightProof:
                 samples += 1
         assert samples <= wpf.MAX_SAMPLES
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof_extend_no_ses(
         self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
@@ -403,7 +403,7 @@ class TestWeightProof:
         assert valid
         assert fork_point == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof_extend_new_ses(
         self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
@@ -445,7 +445,7 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_weight_proof_extend_multiple_ses(
         self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:

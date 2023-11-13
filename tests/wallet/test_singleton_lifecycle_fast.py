@@ -363,7 +363,7 @@ def claim_p2_singleton(
         p2_singleton_solution,
     )
     expected_p2_singleton_announcement = AssertCoinAnnouncement(
-        asserted_id=p2_singleton_coin_name, asserted_msg=bytes(b"$")
+        asserted_id=p2_singleton_coin_name, asserted_msg=b"$"
     ).msg_calc
     singleton_conditions = [
         Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, p2_singleton_coin_name]),

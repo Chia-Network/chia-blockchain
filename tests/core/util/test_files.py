@@ -173,7 +173,7 @@ class TestMoveFile:
 
 
 class TestMoveFileAsync:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_move_file_async(self, tmp_path: Path):
         """
@@ -188,7 +188,7 @@ class TestMoveFileAsync:
         assert dst_path.exists() is True
         assert dst_path.read_text() == "source"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_move_file_async_failure_no_reattempts(self, tmp_path: Path, monkeypatch):
         """
@@ -213,7 +213,7 @@ class TestMoveFileAsync:
         assert src_path.exists() is True
         assert dst_path.exists() is False
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_move_file_async_success_on_reattempt(self, tmp_path: Path, monkeypatch):
         """
@@ -249,7 +249,7 @@ class TestMoveFileAsync:
         assert dst_path.exists() is True
         assert dst_path.read_text() == "source"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_move_file_async_failure_on_reattempt(self, tmp_path: Path, monkeypatch):
         """
@@ -282,7 +282,7 @@ class TestMoveFileAsync:
 
 
 class TestWriteFile:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_write_file(self, tmp_path: Path):
         """
@@ -293,7 +293,7 @@ class TestWriteFile:
         await write_file_async(dest_path, "test")
         assert dest_path.read_text() == "test"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_write_file_overwrite(self, tmp_path: Path):
         """
@@ -305,7 +305,7 @@ class TestWriteFile:
         await write_file_async(dest_path, "test2")
         assert dest_path.read_text() == "test2"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_write_file_create_intermediate_dirs(self, tmp_path: Path):
         """
@@ -316,7 +316,7 @@ class TestWriteFile:
         await write_file_async(dest_path, "test")
         assert dest_path.read_text() == "test"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_write_file_existing_intermediate_dirs(self, tmp_path: Path):
         """
@@ -329,7 +329,7 @@ class TestWriteFile:
         await write_file_async(dest_path, "test")
         assert dest_path.read_text() == "test"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_write_file_default_permissions(self, tmp_path: Path):
         """
@@ -348,7 +348,7 @@ class TestWriteFile:
         # Expect: file has default permissions of 0o600
         assert oct(dest_path.stat().st_mode)[-3:] == oct(0o600)[-3:]
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_write_file_custom_permissions(self, tmp_path: Path):
         """
@@ -364,7 +364,7 @@ class TestWriteFile:
         # Expect: file has custom permissions of 0o642
         assert oct(dest_path.stat().st_mode)[-3:] == oct(0o642)[-3:]
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_write_file_os_replace_raising_permissionerror(self, tmp_path: Path, monkeypatch):
         """

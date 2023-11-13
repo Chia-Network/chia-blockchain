@@ -86,7 +86,7 @@ async def make_new_block_with(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
     full_nodes, wallets, _ = two_wallet_nodes
@@ -184,7 +184,7 @@ async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
@@ -349,7 +349,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_wallet_rpc_creation_and_list(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
     full_nodes, wallets, _ = two_wallet_nodes
@@ -474,7 +474,7 @@ async def test_nft_wallet_rpc_creation_and_list(self_hostname: str, two_wallet_n
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_wallet_rpc_update_metadata(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -634,7 +634,7 @@ async def test_nft_wallet_rpc_update_metadata(self_hostname: str, two_wallet_nod
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_with_did_wallet_creation(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
     full_nodes, wallets, _ = two_wallet_nodes
@@ -801,7 +801,7 @@ async def test_nft_with_did_wallet_creation(self_hostname: str, two_wallet_nodes
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_rpc_mint(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
     full_nodes, wallets, _ = two_wallet_nodes
@@ -920,7 +920,7 @@ async def test_nft_rpc_mint(self_hostname: str, two_wallet_nodes: Any, trusted: 
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_transfer_nft_with_did(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
     fee = 100
@@ -1091,7 +1091,7 @@ async def test_nft_transfer_nft_with_did(self_hostname: str, two_wallet_nodes: A
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_update_metadata_for_nft_did(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
     full_nodes, wallets, _ = two_wallet_nodes
@@ -1225,7 +1225,7 @@ async def test_update_metadata_for_nft_did(self_hostname: str, two_wallet_nodes:
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
@@ -1388,7 +1388,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trust
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
@@ -1541,7 +1541,7 @@ async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_set_did(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
     full_nodes, wallets, _ = two_wallet_nodes
@@ -1714,7 +1714,7 @@ async def test_nft_set_did(self_hostname: str, two_wallet_nodes: Any, trusted: A
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_set_nft_status(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
     full_nodes, wallets, _ = two_wallet_nodes
@@ -1800,7 +1800,7 @@ async def test_set_nft_status(self_hostname: str, two_wallet_nodes: Any, trusted
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_sign_message(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
     full_nodes, wallets, _ = two_wallet_nodes

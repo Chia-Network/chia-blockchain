@@ -51,7 +51,7 @@ async def get_all_messages_in_queue(queue):
 
 
 class TestSimpleSyncProtocol:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_subscribe_for_ph(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
         full_nodes, wallets, _ = simulator_and_wallet
@@ -230,7 +230,7 @@ class TestSimpleSyncProtocol:
         assert notified_state.coin == spent_coin
         assert notified_state.spent_height is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_subscribe_for_coin_id(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
         full_nodes, wallets, _ = simulator_and_wallet
@@ -331,7 +331,7 @@ class TestSimpleSyncProtocol:
         assert notified_state.coin == added_target
         assert notified_state.spent_height is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_subscribe_for_ph_reorg(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
         long_blocks = 20
@@ -406,7 +406,7 @@ class TestSimpleSyncProtocol:
         assert second_state_coin_2.spent_height is None
         assert second_state_coin_2.created_height is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_subscribe_for_coin_id_reorg(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
         long_blocks = 20
@@ -473,7 +473,7 @@ class TestSimpleSyncProtocol:
         assert second_coin.spent_height is None
         assert second_coin.created_height is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_subscribe_for_hint(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
         full_nodes, wallets, bt = simulator_and_wallet
@@ -543,7 +543,7 @@ class TestSimpleSyncProtocol:
         # ignore the duplicate
         assert data_response.coin_states == []
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
         self, simulator_and_wallet: SimulatorsAndWallets, self_hostname: str
     ) -> None:
@@ -577,7 +577,7 @@ class TestSimpleSyncProtocol:
         assert len(response.coin_states) > 0
         assert len(set(response.coin_states)) == len(response.coin_states)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_subscribe_for_hint_long_sync(self, wallet_two_node_simulator, self_hostname):
         num_blocks = 4
         full_nodes, wallets, bt = wallet_two_node_simulator
@@ -663,7 +663,7 @@ class TestSimpleSyncProtocol:
         check_messages_for_hint(all_messages)
         check_messages_for_hint(all_messages_1)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_ph_subscribe_limits(self, simulator_and_wallet, self_hostname):
         full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
@@ -703,7 +703,7 @@ class TestSimpleSyncProtocol:
         assert not s.has_ph_subscription(phs[4])
         assert not s.has_ph_subscription(phs[5])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_coin_subscribe_limits(self, simulator_and_wallet, self_hostname):
         full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]

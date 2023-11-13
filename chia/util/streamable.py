@@ -7,6 +7,7 @@ import pprint
 import traceback
 from enum import Enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     BinaryIO,
     Callable,
@@ -23,7 +24,7 @@ from typing import (
 )
 
 from blspy import G1Element, G2Element, PrivateKey
-from typing_extensions import TYPE_CHECKING, Literal, get_args, get_origin
+from typing_extensions import Literal, get_args, get_origin
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -646,6 +647,11 @@ class Streamable:
         parsed = cls.parse(f)
         assert f.read() == b""
         return parsed
+
+    def stream_to_bytes(self) -> bytes:
+        f = io.BytesIO()
+        self.stream(f)
+        return bytes(f.getvalue())
 
     def __bytes__(self: Any) -> bytes:
         f = io.BytesIO()

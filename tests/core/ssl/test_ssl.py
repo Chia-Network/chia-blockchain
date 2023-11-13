@@ -38,7 +38,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
 
 
 class TestSSL:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_public_connections(self, simulator_and_wallet, self_hostname):
         full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
@@ -48,7 +48,7 @@ class TestSSL:
         success = await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         assert success is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_farmer(self, farmer_one_harvester, self_hostname):
         _, farmer_service, bt = farmer_one_harvester
         farmer_api = farmer_service._api
@@ -79,7 +79,7 @@ class TestSSL:
         with pytest.raises(aiohttp.ServerDisconnectedError):
             await establish_connection(farmer_server, self_hostname, ssl_context)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_full_node(self, simulator_and_wallet, self_hostname):
         full_nodes, wallets, bt = simulator_and_wallet
         full_node_api = full_nodes[0]
@@ -98,7 +98,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
         await establish_connection(full_node_server, self_hostname, ssl_context)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_introducer(self, introducer_service, self_hostname):
         introducer_server = introducer_service._node.server
         chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(introducer_service.root_path, introducer_service.config)

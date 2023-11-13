@@ -43,7 +43,7 @@ def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
     node.full_node.mempool_manager.remove_seen(sb.name())
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wallet_tx_retry(
     setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]], BlockTools],
     self_hostname: str,
