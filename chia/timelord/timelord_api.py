@@ -51,7 +51,8 @@ class TimelordAPI:
                         log.info(f"there is a heavier unfinished block that does not belong to this chain- skip peak"
                                  f" rc hash {unf_block.reward_chain_block.get_hash()} "
                                  f" unfinished reward chain block {unf_block.reward_chain_block}")
-                        log.info(f" peak previous challenges {new_peak.previous_reward_challenges} peak height {new_peak.reward_chain_block.height}")
+                        log.info(f" peak previous challenges {new_peak.previous_reward_challenges} "
+                                 f" peak reward block {new_peak.reward_chain_block}")
                         return None
 
             if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():
