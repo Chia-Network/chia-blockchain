@@ -5,6 +5,7 @@ import sysconfig
 from pathlib import Path
 from typing import Tuple, Union
 
+import pytest
 from click.testing import CliRunner
 
 from chia.cmds.chia import cli
@@ -13,7 +14,13 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 
+#
+# TODO: Note these don't run in CI because this file isn't named test_*.py
+# The script that builds the test matrix only considers files that match that pattern
+#
 
+
+@pytest.mark.skip("Bad test, needs to be rewritten")
 def test_print_fee_info_cmd(
     one_node_one_block: Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]
 ) -> None:
@@ -22,6 +29,7 @@ def test_print_fee_info_cmd(
     subprocess.run([scripts_path.joinpath("chia"), "show", "-f"], check=True)
 
 
+@pytest.mark.skip("Bad test, needs to be rewritten")
 def test_show_fee_info(
     one_node_one_block: Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]
 ) -> None:
