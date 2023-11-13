@@ -1306,9 +1306,9 @@ async def test_dao_rpc_api(
     )
 
     await rpc_state(
-        20, api_0.dao_get_treasury_balance, [{"wallet_id": dao_wallet_1_id}], lambda x: x["balances"]["xch"]
+        20, api_0.dao_get_treasury_balance, [{"wallet_id": dao_wallet_0_id}], lambda x: x["balances"]["xch"]
     )
-    balances = await api_1.dao_get_treasury_balance({"wallet_id": dao_wallet_1_id})
+    balances = await api_0.dao_get_treasury_balance({"wallet_id": dao_wallet_0_id})
     assert balances["balances"]["xch"] == xch_funding_amt
     assert balances["balances"][cat_id.hex()] == cat_funding_amt
 
