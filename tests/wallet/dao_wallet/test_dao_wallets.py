@@ -2765,6 +2765,7 @@ async def test_dao_cat_exits(
             await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
         await full_node_api.process_transaction_records(records=txs, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
         await full_node_api.check_transactions_confirmed(wallet_node_0.wallet_state_manager, txs, 60)
         await time_out_assert(60, cat_wallet_0.get_confirmed_balance, cat_amt)
 
