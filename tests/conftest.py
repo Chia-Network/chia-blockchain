@@ -774,7 +774,7 @@ def empty_keyring():
 
 
 @pytest.fixture(scope="function")
-async def get_temp_keyring():
+def get_temp_keyring():
     with TempKeyring() as keychain:
         yield keychain
 
