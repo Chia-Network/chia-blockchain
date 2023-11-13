@@ -57,11 +57,10 @@ class TransactionRecordOld(Streamable):
     memos: List[Tuple[bytes32, List[bytes]]]
 
     def is_in_mempool(self) -> bool:
-        # If one of the nodes we sent it to responded with success, we set it to success
+        # If one of the nodes we sent it to responded with success or pending, we return True
         for _, mis, _ in self.sent_to:
-            if MempoolInclusionStatus(mis) == MempoolInclusionStatus.SUCCESS:
+            if MempoolInclusionStatus(mis) in (MempoolInclusionStatus.SUCCESS, MempoolInclusionStatus.PENDING):
                 return True
-        # Note, transactions pending inclusion (pending) return false
         return False
 
     def height_farmed(self, genesis_challenge: bytes32) -> Optional[uint32]:

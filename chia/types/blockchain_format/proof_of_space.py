@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Optional, cast
 
 from bitstring import BitArray
-from blspy import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import Verifier
 
 from chia.consensus.constants import ConsensusConstants

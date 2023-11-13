@@ -9,7 +9,7 @@ import logging
 from typing import List, Optional, Tuple
 
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 from clvm_tools.binutils import assemble
 
 from chia.simulator.block_tools import BlockTools

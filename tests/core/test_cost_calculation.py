@@ -5,7 +5,7 @@ import pathlib
 from typing import List
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost

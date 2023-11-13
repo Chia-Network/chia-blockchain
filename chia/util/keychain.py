@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pkg_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
-from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from typing_extensions import final
 
 from chia.types.blockchain_format.sized_bytes import bytes32

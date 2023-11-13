@@ -28,7 +28,7 @@ from typing import (
     final,
 )
 
-from blspy import AugSchemeMPL
+from chia_rs import AugSchemeMPL
 
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
@@ -548,7 +548,8 @@ class FullNode:
             )
             if first is None or not isinstance(first, full_node_protocol.RespondBlock):
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
-                raise ValueError(f"Error short batch syncing, could not fetch block at height {start_height}")
+                self.log.error(f"Error short batch syncing, could not fetch block at height {start_height}")
+                return False
             if not self.blockchain.contains_block(first.block.prev_header_hash):
                 self.log.info("Batch syncing stopped, this is a deep chain")
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
@@ -712,7 +713,10 @@ class FullNode:
                             False,
                         )
         else:
-            if request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
+            if (
+                curr_peak_height <= request.height
+                and request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]
+            ):
                 # This is the normal case of receiving the next block
                 if await self.short_sync_backtrack(
                     peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
@@ -725,7 +729,10 @@ class FullNode:
                 await self.short_sync_batch(peer, uint32(0), request.height)
                 return None
 
-            if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
+            if (
+                curr_peak_height <= request.height
+                and request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]
+            ):
                 # This case of being behind but not by so much
                 if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return None
@@ -923,10 +930,11 @@ class FullNode:
         self.log.debug("long sync started")
         try:
             self.log.info("Starting to perform sync.")
-            self.log.info("Waiting to receive peaks from peers.")
 
             # Wait until we have 3 peaks or up to a max of 30 seconds
             max_iterations = int(self.config.get("max_sync_wait", 30)) * 10
+
+            self.log.info(f"Waiting to receive peaks from peers. (timeout: {max_iterations/10}s)")
             peaks = []
             for i in range(max_iterations):
                 peaks = [peak.header_hash for peak in self.sync_store.get_peak_of_each_peer().values()]
@@ -1059,8 +1067,11 @@ class FullNode:
             start_height, end_height = 0, 0
             new_peers_with_peak: List[WSChiaConnection] = peers_with_peak[:]
             try:
-                for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
-                    end_height = min(target_peak_sb_height, start_height + batch_size)
+                # block request ranges are *inclusive*, this requires some
+                # gymnastics of this range (+1 to make it exclusive, like normal
+                # ranges) and then -1 when forming the request message
+                for start_height in range(fork_point_height, target_peak_sb_height + 1, batch_size):
+                    end_height = min(target_peak_sb_height, start_height + batch_size - 1)
                     request = RequestBlocks(uint32(start_height), uint32(end_height), True)
                     fetched = False
                     for peer in random.sample(new_peers_with_peak, len(new_peers_with_peak)):
@@ -1119,6 +1130,11 @@ class FullNode:
                         self.subscriptions.has_ph_subscription,
                     )
                     await self.hint_store.add_hints(hints_to_add)
+                # Note that end_height is not necessarily the peak at this
+                # point. In case of a re-org, it may even be significantly
+                # higher than _peak_height, and still not be the peak.
+                # clean_block_record() will not necessarily honor this cut-off
+                # height, in that case.
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
         batch_queue_input: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]] = asyncio.Queue(
@@ -1465,9 +1481,12 @@ class FullNode:
         )
 
         # Update the mempool (returns successful pending transactions added to the mempool)
+        spent_coins: Optional[List[bytes32]] = None
         new_npc_results: List[NPCResult] = state_change_summary.new_npc_results
+        if len(new_npc_results) > 0 and new_npc_results[-1].conds is not None:
+            spent_coins = [bytes32(s.coin_id) for s in new_npc_results[-1].conds.spends]
         mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
-            self.blockchain.get_peak(), new_npc_results[-1] if len(new_npc_results) > 0 else None
+            self.blockchain.get_peak(), spent_coins
         )
 
         # Check if we detected a spent transaction, to load up our generator cache

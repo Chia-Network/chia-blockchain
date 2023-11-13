@@ -236,10 +236,17 @@ class WalletTestFramework:
                 puzzle_hash_indexes.append(ph_indexes)
 
         # Gather all pending transactions and ensure they enter mempool
-        pending_txs: List[List[TransactionRecord]] = []
-        for env in self.environments:
-            pending_txs.append(await env.wallet_state_manager.tx_store.get_all_unconfirmed())
+        pending_txs: List[List[TransactionRecord]] = [
+            await env.wallet_state_manager.tx_store.get_all_unconfirmed() for env in self.environments
+        ]
         await self.full_node.wait_transaction_records_entered_mempool([tx for txs in pending_txs for tx in txs])
+        for local_pending_txs, (i, env) in zip(pending_txs, enumerate(self.environments)):
+            try:
+                await self.full_node.wait_transaction_records_marked_as_in_mempool(
+                    [tx.name for tx in local_pending_txs], env.wallet_node
+                )
+            except TimeoutError:  # pragma: no cover
+                raise ValueError(f"All tx records from env index {i} were not marked correctly with `.is_in_mempool()`")
 
         # Check balances prior to block
         try:
@@ -247,8 +254,9 @@ class WalletTestFramework:
                 await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
             for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
                 try:
-                    await env.change_balances(transition.pre_block_balance_updates)
-                    await env.check_balances(transition.pre_block_additional_balance_info)
+                    async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
+                        await env.change_balances(transition.pre_block_balance_updates)
+                        await env.check_balances(transition.pre_block_additional_balance_info)
                 except Exception:
                     raise ValueError(f"Error with env index {i}")
         except Exception:
@@ -263,8 +271,9 @@ class WalletTestFramework:
                 await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
             for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
                 try:
-                    await env.change_balances(transition.post_block_balance_updates)
-                    await env.check_balances(transition.post_block_additional_balance_info)
+                    async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
+                        await env.change_balances(transition.post_block_balance_updates)
+                        await env.check_balances(transition.post_block_additional_balance_info)
                 except Exception:
                     raise ValueError(f"Error with env {i}")
         except Exception:

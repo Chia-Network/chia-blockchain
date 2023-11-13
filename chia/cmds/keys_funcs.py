@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.cmds.passphrase_funcs import obtain_current_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk

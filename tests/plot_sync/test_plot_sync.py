@@ -9,7 +9,7 @@ from shutil import copy
 from typing import Any, AsyncIterator, Callable, List, Optional, Tuple
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI

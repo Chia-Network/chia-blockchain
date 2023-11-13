@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from blspy import AugSchemeMPL, G1Element
+from chia_rs import AugSchemeMPL, G1Element
 from clvm import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
 

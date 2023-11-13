@@ -4,8 +4,7 @@ from __future__ import annotations
 from typing import List
 
 import pytest
-from blspy import AugSchemeMPL
-from chia_rs import CoinSpend
+from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
 from chia.consensus.block_record import BlockRecord

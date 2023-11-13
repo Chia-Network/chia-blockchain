@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import pytest
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer

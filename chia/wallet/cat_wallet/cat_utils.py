@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import Iterator, List, Optional
 
-from blspy import G2Element
+from chia_rs import G2Element
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program

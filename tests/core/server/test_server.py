@@ -15,6 +15,8 @@ from chia.protocols.shared_protocol import Error, protocol_version
 from chia.protocols.wallet_protocol import RejectHeaderRequest
 from chia.server.outbound_message import make_msg
 from chia.server.server import ChiaServer
+from chia.server.start_full_node import create_full_node_service
+from chia.server.start_wallet import create_wallet_service
 from chia.server.ws_connection import WSChiaConnection, error_response_version
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
@@ -200,3 +202,24 @@ async def test_call_api_of_specific_for_missing_peer(
     )
 
     assert message is None
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_get_peer_info(bt: BlockTools) -> None:
+    wallet_service = create_wallet_service(
+        bt.root_path, bt.config, bt.constants, keychain=None, connect_to_daemon=False
+    )
+
+    # Wallet server should not have a port or peer info
+    with pytest.raises(ValueError, match="Port not set"):
+        local_port = wallet_service._server.get_port()
+    local_peer_info = await wallet_service._server.get_peer_info()
+    assert local_peer_info is None
+
+    # Full node server should have a local port
+    # testing get_peer_info() directly is flakey because it depends on IP lookup
+    # from either chia or aws
+    node_service = await create_full_node_service(bt.root_path, bt.config, bt.constants, connect_to_daemon=False)
+    local_port = node_service._server.get_port()
+    assert local_port is not None

@@ -4,7 +4,7 @@ import itertools
 from typing import List
 
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.announcement import Announcement

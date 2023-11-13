@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 
 import pytest
-from blspy import AugSchemeMPL
+from chia_rs import AugSchemeMPL
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32

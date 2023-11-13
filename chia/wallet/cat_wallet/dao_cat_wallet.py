@@ -5,7 +5,7 @@ import time
 from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, ClassVar, List, Optional, Set, Tuple, cast
 
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
