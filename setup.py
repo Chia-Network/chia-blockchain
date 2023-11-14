@@ -57,7 +57,7 @@ dev_dependencies = [
     "twine==4.0.2",
     "isort==5.12.0",
     "flake8==6.1.0",
-    "mypy==1.5.1",
+    "mypy==1.7.0",
     "black==23.10.1",
     "lxml==4.9.3",
     "aiohttp_cors==0.7.0",  # For blackd
