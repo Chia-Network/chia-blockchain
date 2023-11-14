@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
@@ -328,6 +328,9 @@ class FullNodeAPI:
 
     @api_request(reply_types=[ProtocolMessageTypes.respond_blocks, ProtocolMessageTypes.reject_blocks])
     async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Optional[Message]:
+        # note that we treat the request range as *inclusive*, but we check the
+        # size before we bump end_height. So MAX_BLOCK_COUNT_PER_REQUESTS is off
+        # by one
         if (
             request.end_height < request.start_height
             or request.end_height - request.start_height > self.full_node.constants.MAX_BLOCK_COUNT_PER_REQUESTS

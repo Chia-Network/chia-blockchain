@@ -6,7 +6,7 @@ import time
 import traceback
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
@@ -178,7 +178,7 @@ class CATWallet:
             memos=[],
             valid_times=ConditionValidTimes(),
         )
-        chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
+        chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle, name=spend_bundle.name())
         await self.wallet_state_manager.add_pending_transactions([chia_tx, cat_record])
         return self
 

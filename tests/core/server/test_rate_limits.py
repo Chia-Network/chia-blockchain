@@ -277,11 +277,17 @@ class TestRateLimits:
     @pytest.mark.parametrize(
         "node_with_params",
         [
-            dict(
-                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+            pytest.param(
+                dict(
+                    disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+                ),
+                id="V1",
             ),
-            dict(
-                disable_capabilities=[],
+            pytest.param(
+                dict(
+                    disable_capabilities=[],
+                ),
+                id="V2",
             ),
         ],
         indirect=True,
@@ -289,16 +295,23 @@ class TestRateLimits:
     @pytest.mark.parametrize(
         "node_with_params_b",
         [
-            dict(
-                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+            pytest.param(
+                dict(
+                    disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+                ),
+                id="V1",
             ),
-            dict(
-                disable_capabilities=[],
+            pytest.param(
+                dict(
+                    disable_capabilities=[],
+                ),
+                id="V2",
             ),
         ],
         indirect=True,
     )
     @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(reason="save time")
     async def test_different_versions(self, node_with_params, node_with_params_b, self_hostname):
         node_a = node_with_params
         node_b = node_with_params_b
@@ -328,6 +341,7 @@ class TestRateLimits:
         total_tx_msg_count = len(
             get_rate_limits_to_use(a_con.local_capabilities, a_con.peer_capabilities)["rate_limits_tx"]
         )
+
         test_different_versions_results.append(total_tx_msg_count)
         if len(test_different_versions_results) >= 4:
             assert len(set(test_different_versions_results)) >= 2

@@ -9,7 +9,7 @@ import time
 from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes
 
 import chia.wallet.singleton

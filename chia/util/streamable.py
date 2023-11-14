@@ -23,7 +23,6 @@ from typing import (
     get_type_hints,
 )
 
-from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal, get_args, get_origin
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -82,16 +81,7 @@ class ConversionError(StreamableError):
         )
 
 
-# TODO: Remove hack, this allows streaming these objects from binary
-size_hints = {
-    "PrivateKey": PrivateKey.PRIVATE_KEY_SIZE,
-    "G1Element": G1Element.SIZE,
-    "G2Element": G2Element.SIZE,
-}
 unhashable_types = [
-    "PrivateKey",
-    "G1Element",
-    "G2Element",
     "Program",
     "SerializedProgram",
 ]
@@ -402,15 +392,6 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[ParseFunctionType]) -
     return tuple(full_list)
 
 
-def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int, unchecked: bool) -> Any:
-    bytes_read = f.read(bytes_to_read)
-    assert bytes_read is not None and len(bytes_read) == bytes_to_read
-    if unchecked:
-        return f_type.from_bytes_unchecked(bytes_read)
-    else:
-        return f_type.from_bytes(bytes_read)
-
-
 def parse_str(f: BinaryIO) -> str:
     str_size = parse_uint32(f)
     str_read_bytes = f.read(str_size)
@@ -445,12 +426,6 @@ def function_to_parse_one_item(f_type: Type[Any]) -> ParseFunctionType:
         inner_types = get_args(f_type)
         list_parse_inner_type_f = [function_to_parse_one_item(_) for _ in inner_types]
         return lambda f: parse_tuple(f, list_parse_inner_type_f)
-    if hasattr(f_type, "from_bytes_unchecked") and f_type.__name__ in size_hints:
-        bytes_to_read = size_hints[f_type.__name__]
-        return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=True)
-    if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
-        bytes_to_read = size_hints[f_type.__name__]
-        return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=False)
     if f_type is str:
         return parse_str
     raise UnsupportedType(f"Type {f_type} does not have parse")

@@ -4,7 +4,7 @@ import dataclasses
 from typing import Any, Awaitable, Callable, List, Optional
 
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 from typing_extensions import Literal
 
 from chia.rpc.wallet_rpc_client import WalletRpcClient

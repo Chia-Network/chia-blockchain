@@ -9,8 +9,7 @@ from dataclasses import dataclass
 from multiprocessing.context import BaseContext
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, TypeVar
 
-from blspy import GTElement
-from chia_rs import ELIGIBLE_FOR_DEDUP
+from chia_rs import ELIGIBLE_FOR_DEDUP, GTElement
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
@@ -579,7 +578,7 @@ class MempoolManager:
         return item
 
     async def new_peak(
-        self, new_peak: Optional[BlockRecordProtocol], last_npc_result: Optional[NPCResult]
+        self, new_peak: Optional[BlockRecordProtocol], spent_coins: Optional[List[bytes32]]
     ) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
@@ -600,21 +599,20 @@ class MempoolManager:
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
 
-        if use_optimization and last_npc_result is not None:
+        if use_optimization and spent_coins is not None:
             # We don't reinitialize a mempool, just kick removed items
-            if last_npc_result.conds is not None:
-                # transactions in the mempool may be spending multiple coins,
-                # when looking up transactions by all coin IDs, we're likely to
-                # find the same transaction multiple times. We put them in a set
-                # to deduplicate
-                spendbundle_ids_to_remove: Set[bytes32] = set()
-                for spend in last_npc_result.conds.spends:
-                    items: List[MempoolItem] = self.mempool.get_items_by_coin_id(bytes32(spend.coin_id))
-                    for item in items:
-                        included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
-                        self.remove_seen(item.name)
-                        spendbundle_ids_to_remove.add(item.name)
-                self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
+            # transactions in the mempool may be spending multiple coins,
+            # when looking up transactions by all coin IDs, we're likely to
+            # find the same transaction multiple times. We put them in a set
+            # to deduplicate
+            spendbundle_ids_to_remove: Set[bytes32] = set()
+            for spend in spent_coins:
+                items: List[MempoolItem] = self.mempool.get_items_by_coin_id(spend)
+                for item in items:
+                    included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
+                    self.remove_seen(item.name)
+                    spendbundle_ids_to_remove.add(item.name)
+            self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
         else:
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)

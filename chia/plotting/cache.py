@@ -8,7 +8,7 @@ from math import ceil
 from pathlib import Path
 from typing import Dict, ItemsView, KeysView, List, Optional, Tuple, ValuesView
 
-from blspy import G1Element
+from chia_rs import G1Element
 from chiapos import DiskProver
 
 from chia.plotting.util import parse_plot_info

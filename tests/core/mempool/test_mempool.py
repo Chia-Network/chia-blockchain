@@ -6,7 +6,7 @@ import random
 from typing import Callable, Dict, List, Optional, Tuple
 
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 from clvm.casts import int_to_bytes
 from clvm_tools import binutils
 

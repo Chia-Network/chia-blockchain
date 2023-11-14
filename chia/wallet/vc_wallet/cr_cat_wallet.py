@@ -6,7 +6,7 @@ import time
 import traceback
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection

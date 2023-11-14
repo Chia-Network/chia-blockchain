@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Optional, Set, Tuple, TypeVar
 
-from blspy import G1Element
+from chia_rs import G1Element
 from typing_extensions import NotRequired, Protocol, TypedDict
 
 from chia.server.ws_connection import WSChiaConnection

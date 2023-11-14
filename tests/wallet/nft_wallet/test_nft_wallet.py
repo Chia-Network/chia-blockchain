@@ -5,7 +5,7 @@ import time
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 import pytest
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
