@@ -28,6 +28,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.util.compute_hints import HintedCoin
+from tests import ether
 from tests.core.data_layer.util import ChiaRoot
 
 
@@ -305,13 +306,12 @@ class BenchmarkRunner:
     enable_assertion: bool = True
     label: Optional[str] = None
     overhead: Optional[float] = None
-    record_property: Optional[Callable[[str, object], None]] = None
 
     @functools.wraps(_AssertRuntime)
     def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
         kwargs.setdefault("enable_assertion", self.enable_assertion)
         kwargs.setdefault("overhead", self.overhead)
-        kwargs.setdefault("record_property", self.record_property)
+        kwargs.setdefault("record_property", ether.record_property)
         return _AssertRuntime(*args, **kwargs)
 
 

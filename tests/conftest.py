@@ -19,6 +19,7 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from pytest import MonkeyPatch
 
 from chia.clvm.spend_sim import CostLogger
 
@@ -62,6 +63,7 @@ from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from tests import ether
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
@@ -75,6 +77,20 @@ from chia.simulator.block_tools import BlockTools, create_block_tools, create_bl
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_nodes import setup_farmer_multi_harvester
 from chia.util.keyring_wrapper import KeyringWrapper
+
+
+@pytest.fixture(autouse=True)
+def ether_record_property_fixture(record_property: Callable[[str, object], None]) -> Iterator[None]:
+    with MonkeyPatch.context() as monkeypatch_context:
+        monkeypatch_context.setattr(ether, "record_property", record_property, raising=False)
+        yield
+
+
+@pytest.fixture(autouse=True)
+def ether_node_name_fixture(request: SubRequest) -> Iterator[None]:
+    with MonkeyPatch.context() as monkeypatch_context:
+        monkeypatch_context.setattr(ether, "node_name", request.node.name, raising=False)
+        yield
 
 
 @pytest.fixture(scope="session")
@@ -109,16 +125,12 @@ def benchmark_runner_overhead_fixture() -> float:
 
 @pytest.fixture(name="benchmark_runner")
 def benchmark_runner_fixture(
-    request: SubRequest,
     benchmark_runner_overhead: float,
-    record_property: Callable[[str, object], None],
     benchmark_repeat: int,
 ) -> BenchmarkRunner:
-    label = request.node.name
     return BenchmarkRunner(
-        label=label,
+        label=ether.node_name,
         overhead=benchmark_runner_overhead,
-        record_property=record_property,
     )
 
 
