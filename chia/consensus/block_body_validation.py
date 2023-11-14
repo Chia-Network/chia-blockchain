@@ -187,7 +187,7 @@ async def validate_block_body(
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
 
         # The generator_refs_root must be the hash of the concatenation of the List[uint32]
-        generator_refs_hash = std_hash(b"".join([bytes(i) for i in block.transactions_generator_ref_list]))
+        generator_refs_hash = std_hash(b"".join([i.stream_to_bytes() for i in block.transactions_generator_ref_list]))
         if block.transactions_info.generator_refs_root != generator_refs_hash:
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
         if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
@@ -394,7 +394,7 @@ async def validate_block_body(
     if len(unspent_records) != len(removals_from_db):
         # some coins could not be found in the DB. We need to find out which
         # ones and look for them in additions_since_fork
-        found: Set[bytes32] = set([u.name for u in unspent_records])
+        found: Set[bytes32] = {u.name for u in unspent_records}
         for rem in removals_from_db:
             if rem in found:
                 continue

@@ -37,10 +37,10 @@ class TestAPI:
     # API call from FullNodeAPI
     @api_request()
     async def request_transaction(self, request: RequestTransaction) -> None:
-        raise ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, f"Some error message: {request.transaction_id}", bytes(b"ab"))
+        raise ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, f"Some error message: {request.transaction_id}", b"ab")
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_duplicate_client_connection(
     two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
 ) -> None:
@@ -49,7 +49,7 @@ async def test_duplicate_client_connection(
     assert not await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("method", [repr, str])
 async def test_connection_string_conversion(
     two_nodes_one_block: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
@@ -65,7 +65,7 @@ async def test_connection_string_conversion(
     assert len(converted) < 1000
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_connection_versions(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices
 ) -> None:
@@ -83,7 +83,7 @@ async def test_connection_versions(
         assert connection.get_version() == chia_full_version_str()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_api_not_ready(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
@@ -110,7 +110,7 @@ async def test_api_not_ready(
 
 
 @pytest.mark.parametrize("version", ["0.0.34", "0.0.35", "0.0.36"])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_error_response(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     self_hostname: str,
@@ -137,7 +137,7 @@ async def test_error_response(
         error = ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, error_message)
         assert f"ApiError: {error} from {wallet_connection.peer_node_id}, {wallet_connection.peer_info}" in caplog.text
         if test_version >= error_response_version:
-            assert response == Error(int16(Err.NO_TRANSACTIONS_WHILE_SYNCING.value), error_message, bytes(b"ab"))
+            assert response == Error(int16(Err.NO_TRANSACTIONS_WHILE_SYNCING.value), error_message, b"ab")
             assert "Request timeout:" not in caplog.text
         else:
             assert response is None
@@ -147,7 +147,7 @@ async def test_error_response(
 @pytest.mark.parametrize(
     "error", [Error(int16(Err.UNKNOWN.value), "1", bytes([1, 2, 3])), Error(int16(Err.UNKNOWN.value), "2", None)]
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_error_receive(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     self_hostname: str,
@@ -174,7 +174,7 @@ async def test_error_receive(
         await time_out_assert(10, error_log_found, True, wallet_connection)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_call_api_of_specific(
     two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
 ) -> None:
@@ -189,7 +189,7 @@ async def test_call_api_of_specific(
     assert isinstance(message, RejectBlock)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_call_api_of_specific_for_missing_peer(
     two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
 ) -> None:

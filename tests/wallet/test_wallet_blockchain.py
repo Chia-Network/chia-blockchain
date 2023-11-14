@@ -17,7 +17,7 @@ from tests.util.db_connection import DBConnection
 
 class TestWalletBlockchain:
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_blockchain(self, simulator_and_wallet, default_1000_blocks):
         [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 

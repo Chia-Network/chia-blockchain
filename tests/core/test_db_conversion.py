@@ -26,7 +26,7 @@ def rand_bytes(num) -> bytes:
     return bytes(ret)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("with_hints", [True, False])
 @pytest.mark.skip("we no longer support DB v1")
 async def test_blocks(default_1000_blocks, with_hints: bool):

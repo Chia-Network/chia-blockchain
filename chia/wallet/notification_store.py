@@ -30,7 +30,7 @@ class NotificationStore:
     @classmethod
     async def create(
         cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
-    ) -> "NotificationStore":
+    ) -> NotificationStore:
         self = cls()
 
         if name:
@@ -72,7 +72,7 @@ class NotificationStore:
                 (
                     notification.coin_id,
                     notification.message,
-                    bytes(notification.amount),
+                    notification.amount.stream_to_bytes(),
                     notification.height,
                 ),
             )

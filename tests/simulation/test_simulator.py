@@ -47,7 +47,7 @@ def test_backoff_saturates_at_final() -> None:
     assert next(backoff) == 3
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
 @pytest.mark.parametrize(argnames="guarantee_transaction_blocks", argvalues=[False, True])
 async def test_simulation_farm_blocks_to_puzzlehash(
@@ -69,7 +69,7 @@ async def test_simulation_farm_blocks_to_puzzlehash(
     assert full_node_api.full_node.blockchain.get_peak_height() == expected_height
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
 async def test_simulation_farm_blocks_to_wallet(
     count: int,
@@ -95,7 +95,7 @@ async def test_simulation_farm_blocks_to_wallet(
     assert [unconfirmed_balance, confirmed_balance] == [rewards, rewards]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     argnames=["amount", "coin_count"],
     argvalues=[
@@ -137,7 +137,7 @@ async def test_simulation_farm_rewards_to_wallet(
     assert len(all_coin_records) == coin_count
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wait_transaction_records_entered_mempool(
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
@@ -172,7 +172,7 @@ async def test_wait_transaction_records_entered_mempool(
         assert full_node_api.full_node.mempool_manager.get_spendbundle(tx.spend_bundle.name()) is not None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_process_transaction_records(
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
@@ -206,7 +206,7 @@ async def test_process_transaction_records(
         assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     argnames="amounts",
     argvalues=[
@@ -233,7 +233,7 @@ async def test_create_coins_with_amounts(
     assert sorted(coin.amount for coin in coins) == sorted(amounts)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     argnames="amounts",
     argvalues=[

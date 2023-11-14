@@ -13,7 +13,7 @@ from tests.core.data_layer.util import add_01234567_example, create_valid_node_v
 pytestmark = pytest.mark.data_layer
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_node_update_fails(data_store: DataStore, tree_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
     node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
@@ -30,7 +30,7 @@ async def test_node_update_fails(data_store: DataStore, tree_id: bytes32) -> Non
 
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_node_hash_must_be_32(
     data_store: DataStore,
     tree_id: bytes32,
@@ -50,7 +50,7 @@ async def test_node_hash_must_be_32(
             )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_node_hash_must_not_be_null(
     data_store: DataStore,
     tree_id: bytes32,
@@ -69,7 +69,7 @@ async def test_node_hash_must_not_be_null(
             )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_node_type_must_be_valid(
     data_store: DataStore,
     node_type: NodeType,
@@ -90,7 +90,7 @@ async def test_node_type_must_be_valid(
 
 
 @pytest.mark.parametrize(argnames="side", argvalues=Side)
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_node_internal_child_not_null(data_store: DataStore, tree_id: bytes32, side: Side) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
     node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
@@ -116,7 +116,7 @@ async def test_node_internal_child_not_null(data_store: DataStore, tree_id: byte
 
 @pytest.mark.parametrize(argnames="bad_child_hash", argvalues=[b"\x01" * 32, b"\0" * 31, b""])
 @pytest.mark.parametrize(argnames="side", argvalues=Side)
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_node_internal_must_be_valid_reference(
     data_store: DataStore,
     tree_id: bytes32,
@@ -133,7 +133,7 @@ async def test_node_internal_must_be_valid_reference(
         values["left"] = bad_child_hash
     elif side == Side.RIGHT:
         values["right"] = bad_child_hash
-    else:
+    else:  # pragma: no cover
         assert False
 
     async with data_store.db_wrapper.writer() as writer:
@@ -148,7 +148,7 @@ async def test_node_internal_must_be_valid_reference(
 
 
 @pytest.mark.parametrize(argnames="key_or_value", argvalues=["key", "value"])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_node_terminal_key_value_not_null(data_store: DataStore, tree_id: bytes32, key_or_value: str) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
@@ -167,7 +167,7 @@ async def test_node_terminal_key_value_not_null(data_store: DataStore, tree_id: 
 
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_root_tree_id_must_be_32(data_store: DataStore, tree_id: bytes32, length: int) -> None:
     example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
     bad_tree_id = bytes([0] * length)
@@ -184,7 +184,7 @@ async def test_root_tree_id_must_be_32(data_store: DataStore, tree_id: bytes32, 
             )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_root_tree_id_must_not_be_null(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
     values = {"tree_id": None, "generation": 0, "node_hash": example.terminal_nodes[0], "status": Status.PENDING}
@@ -201,7 +201,7 @@ async def test_root_tree_id_must_not_be_null(data_store: DataStore, tree_id: byt
 
 
 @pytest.mark.parametrize(argnames="generation", argvalues=[-200, -2, -1])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_root_generation_must_not_be_less_than_zero(
     data_store: DataStore, tree_id: bytes32, generation: int
 ) -> None:
@@ -224,7 +224,7 @@ async def test_root_generation_must_not_be_less_than_zero(
             )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_root_generation_must_not_be_null(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
     values = {
@@ -245,7 +245,7 @@ async def test_root_generation_must_not_be_null(data_store: DataStore, tree_id: 
             )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_root_node_hash_must_reference(data_store: DataStore) -> None:
     values = {"tree_id": bytes32([0] * 32), "generation": 0, "node_hash": bytes32([0] * 32), "status": Status.PENDING}
 
@@ -261,7 +261,7 @@ async def test_root_node_hash_must_reference(data_store: DataStore) -> None:
 
 
 @pytest.mark.parametrize(argnames="bad_status", argvalues=sorted(set(range(-20, 20)) - {*Status}))
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_root_status_must_be_valid(data_store: DataStore, tree_id: bytes32, bad_status: int) -> None:
     example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
     values = {
@@ -282,7 +282,7 @@ async def test_root_status_must_be_valid(data_store: DataStore, tree_id: bytes32
             )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_root_status_must_not_be_null(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
     values = {"tree_id": bytes32([0] * 32), "generation": 0, "node_hash": example.terminal_nodes[0], "status": None}
@@ -298,7 +298,7 @@ async def test_root_status_must_not_be_null(data_store: DataStore, tree_id: byte
             )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_root_tree_id_generation_must_be_unique(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
     values = {"tree_id": tree_id, "generation": 0, "node_hash": example.terminal_nodes[0], "status": Status.COMMITTED}
@@ -315,7 +315,7 @@ async def test_root_tree_id_generation_must_be_unique(data_store: DataStore, tre
 
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_ancestors_ancestor_must_be_32(
     data_store: DataStore,
     tree_id: bytes32,
@@ -334,7 +334,7 @@ async def test_ancestors_ancestor_must_be_32(
 
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_ancestors_tree_id_must_be_32(
     data_store: DataStore,
     tree_id: bytes32,
@@ -353,7 +353,7 @@ async def test_ancestors_tree_id_must_be_32(
 
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_subscriptions_tree_id_must_be_32(
     data_store: DataStore,
     tree_id: bytes32,

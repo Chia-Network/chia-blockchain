@@ -736,7 +736,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32.secret(),
+            name=spend_bundle.name(),
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -1307,7 +1307,7 @@ class DIDWallet:
             to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
             fee_amount=fee,
             confirmed=False,
-            sent=uint32(10),
+            sent=uint32(0),
             spend_bundle=full_spend,
             additions=full_spend.additions(),
             removals=full_spend.removals(),
@@ -1315,7 +1315,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32.secret(),
+            name=full_spend.name(),
             memos=[],
             valid_times=ConditionValidTimes(),
         )

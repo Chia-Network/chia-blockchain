@@ -102,6 +102,8 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:  # pragma: no cover
         mojo_per_unit = units["chia"]
     elif wallet_type in {WalletType.CAT, WalletType.CRCAT}:
         mojo_per_unit = units["cat"]
+    elif wallet_type in {WalletType.NFT, WalletType.DECENTRALIZED_ID, WalletType.DAO_CAT}:
+        mojo_per_unit = units["mojo"]
     else:
         raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
 
@@ -690,7 +692,7 @@ async def take_offer(
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if os.path.exists(file):
             filepath = pathlib.Path(file)
-            with open(filepath, "r") as ffile:
+            with open(filepath) as ffile:
                 offer_hex: str = ffile.read()
                 ffile.close()
         else:

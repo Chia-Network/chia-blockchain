@@ -1078,7 +1078,7 @@ class WalletStateManager:
         :param fork_height: Current block height
         :return: Wallet ID & Wallet Type
         """
-        hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_state.coin.name()]
+        hinted_coin = compute_spend_hints_and_additions(coin_spend)[0][coin_state.coin.name()]
         assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
@@ -1185,7 +1185,7 @@ class WalletStateManager:
         inner_puzzle_hash = parent_data.p2_puzzle.get_tree_hash()
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
-        hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_state.coin.name()]
+        hinted_coin = compute_spend_hints_and_additions(coin_spend)[0][coin_state.coin.name()]
         assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
@@ -1382,7 +1382,7 @@ class WalletStateManager:
     async def get_dao_wallet_from_coinspend_hint(
         self, coin_spend: CoinSpend, coin_state: CoinState
     ) -> Optional[WalletIdentifier]:
-        hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_state.coin.name()]
+        hinted_coin = compute_spend_hints_and_additions(coin_spend)[0][coin_state.coin.name()]
         if hinted_coin:
             for wallet in self.wallets.values():
                 if wallet.type() == WalletType.DAO.value:
@@ -2201,7 +2201,9 @@ class WalletStateManager:
 
         await self.create_more_puzzle_hashes()
 
-    async def add_pending_transactions(self, tx_records: List[TransactionRecord], merge_spends: bool = True) -> None:
+    async def add_pending_transactions(
+        self, tx_records: List[TransactionRecord], merge_spends: bool = True
+    ) -> List[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
         Aggregates the `spend_bundle` property for each transaction onto the first transaction in the list.
@@ -2212,7 +2214,12 @@ class WalletStateManager:
         actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
         if merge_spends and actual_spend_involved:
             tx_records = [
-                dataclasses.replace(tx, spend_bundle=agg_spend if i == 0 else None) for i, tx in enumerate(tx_records)
+                dataclasses.replace(
+                    tx,
+                    spend_bundle=agg_spend if i == 0 else None,
+                    name=agg_spend.name() if i == 0 else bytes32.secret(),
+                )
+                for i, tx in enumerate(tx_records)
             ]
         all_coins_names = []
         async with self.db_wrapper.writer_maybe_transaction():
@@ -2226,9 +2233,11 @@ class WalletStateManager:
 
         if actual_spend_involved:
             self.tx_pending_changed()
-        for wallet_id in set(tx.wallet_id for tx in tx_records):
+        for wallet_id in {tx.wallet_id for tx in tx_records}:
             self.state_changed("pending_transaction", wallet_id)
         await self.wallet_node.update_ui()
+
+        return tx_records
 
     async def add_transaction(self, tx_record: TransactionRecord) -> None:
         """
@@ -2260,7 +2269,7 @@ class WalletStateManager:
                     and error not in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO)
                 ):
                     coins_removed = tx.spend_bundle.removals()
-                    trade_coins_removed = set([])
+                    trade_coins_removed = set()
                     trades = []
                     for removed_coin in coins_removed:
                         trade = await self.trade_manager.get_trade_by_coin(removed_coin)
@@ -2459,9 +2468,7 @@ class WalletStateManager:
         # but the coin_cache keeps all wallet_ids for each puzzle hash
         for puzzle_hash in puzzle_hashes:
             if puzzle_hash in self.interested_coin_cache:
-                wallet_ids_to_add = list(
-                    set([w for w in wallet_ids if w not in self.interested_coin_cache[puzzle_hash]])
-                )
+                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.interested_coin_cache[puzzle_hash]})
                 self.interested_coin_cache[puzzle_hash].extend(wallet_ids_to_add)
             else:
                 self.interested_coin_cache[puzzle_hash] = list(set(wallet_ids))
@@ -2475,7 +2482,7 @@ class WalletStateManager:
         for coin_id in coin_ids:
             if coin_id in self.interested_coin_cache:
                 # prevent repeated wallet_ids from appearing in the coin cache
-                wallet_ids_to_add = list(set([w for w in wallet_ids if w not in self.interested_coin_cache[coin_id]]))
+                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.interested_coin_cache[coin_id]})
                 self.interested_coin_cache[coin_id].extend(wallet_ids_to_add)
             else:
                 self.interested_coin_cache[coin_id] = list(set(wallet_ids))

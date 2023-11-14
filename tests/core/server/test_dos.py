@@ -38,7 +38,7 @@ class FakeRateLimiter:
 
 
 class TestDos:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_large_message_disconnect_and_ban(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
@@ -84,7 +84,7 @@ class TestDos:
             pass
         await session.close()
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_bad_handshake_and_ban(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
@@ -126,7 +126,7 @@ class TestDos:
 
         await session.close()
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_protocol_handshake(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
@@ -157,7 +157,7 @@ class TestDos:
         await session.close()
         await asyncio.sleep(1)  # give some time for cleanup to work
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_spam_tx(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
@@ -212,7 +212,7 @@ class TestDos:
 
         await time_out_assert(15, is_banned)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_spam_message_non_tx(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
@@ -261,7 +261,7 @@ class TestDos:
 
         await time_out_assert(15, is_banned)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_spam_message_too_large(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
