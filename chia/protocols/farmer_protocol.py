@@ -37,8 +37,8 @@ class SPVDFSourceData(Streamable):
 @streamable
 @dataclass(frozen=True)
 class SignagePointSourceData(Streamable):
-    sub_slot_data: Optional[SPSubSlotSourceData]
-    vdf_data: Optional[SPVDFSourceData]
+    sub_slot_data: Optional[SPSubSlotSourceData] = None
+    vdf_data: Optional[SPVDFSourceData] = None
 
 
 @streamable
@@ -51,7 +51,7 @@ class NewSignagePoint(Streamable):
     sub_slot_iters: uint64
     signage_point_index: uint8
     peak_height: uint32
-    sp_source_data: SignagePointSourceData
+    sp_source_data: Optional[SignagePointSourceData] = None
 
 
 @streamable
@@ -76,8 +76,8 @@ class RequestSignedValues(Streamable):
     quality_string: bytes32
     foliage_block_data_hash: bytes32
     foliage_transaction_block_hash: bytes32
-    foliage_block_data: Optional[FoliageBlockData]
-    foliage_transaction_block_data: Optional[FoliageTransactionBlock]
+    foliage_block_data: Optional[FoliageBlockData] = None
+    foliage_transaction_block_data: Optional[FoliageTransactionBlock] = None
 
 
 @streamable

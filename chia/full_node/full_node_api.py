@@ -947,7 +947,7 @@ class FullNodeAPI:
 
             foliage_block_data: Optional[FoliageBlockData] = None
             foliage_transaction_block_data: Optional[FoliageTransactionBlock] = None
-            if request.include_signature_source_data is True:
+            if request.include_signature_source_data:
                 foliage_block_data = unfinished_block.foliage.foliage_block_data
                 if unfinished_block.is_transaction_block():
                     foliage_transaction_block_data = unfinished_block.foliage_transaction_block
