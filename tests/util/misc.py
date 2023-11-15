@@ -352,7 +352,7 @@ class _AssertRuntime:
         if ether.record_property is not None:
             data = BenchmarkData(
                 duration=results.duration,
-                path=pathlib.Path(self.entry_file).relative_to(pathlib.Path(tests.__file__).parent.parent),
+                path=pathlib.Path(self.entry_file),
                 line=self.entry_line,
                 limit=self.seconds,
                 label=self.label,

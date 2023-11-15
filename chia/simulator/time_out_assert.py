@@ -141,7 +141,7 @@ async def time_out_assert_custom_interval(timeout: float, interval, function, va
             if ether.record_property is not None:
                 data = TimeOutAssertData(
                     duration=duration,
-                    path=pathlib.Path(entry_file).relative_to(pathlib.Path(chia.__file__).parent.parent),
+                    path=pathlib.Path(entry_file),
                     line=entry_line,
                     limit=timeout,
                     timed_out=timed_out,
