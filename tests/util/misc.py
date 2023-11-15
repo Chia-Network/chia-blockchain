@@ -43,6 +43,8 @@ import pytest
 from _pytest.nodes import Node
 from chia_rs import Coin
 
+import chia
+import tests
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
@@ -190,7 +192,12 @@ def measure_runtime(
     overhead: Optional[float] = None,
     print_results: bool = True,
 ) -> Iterator[Future[RuntimeResults]]:
-    entry_file, entry_line = caller_file_and_line()
+    entry_file, entry_line = caller_file_and_line(
+        relative_to=(
+            pathlib.Path(chia.__file__).parent.parent,
+            pathlib.Path(tests.__file__).parent.parent,
+        )
+    )
 
     results_future: Future[RuntimeResults] = Future()
 
@@ -297,7 +304,12 @@ class _AssertRuntime:
     enable_assertion: bool = True
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
-        self.entry_file, self.entry_line = caller_file_and_line()
+        self.entry_file, self.entry_line = caller_file_and_line(
+            relative_to=(
+                pathlib.Path(chia.__file__).parent.parent,
+                pathlib.Path(tests.__file__).parent.parent,
+            )
+        )
 
         self.runtime_manager = measure_runtime(
             clock=self.clock, gc_mode=self.gc_mode, overhead=self.overhead, print_results=False
@@ -337,10 +349,10 @@ class _AssertRuntime:
         if self.print:
             print(results.block(label=self.label))
 
-        if ether.record_property is not None and ether.project_root is not None:
+        if ether.record_property is not None:
             data = BenchmarkData(
                 duration=results.duration,
-                path=pathlib.Path(self.entry_file).relative_to(ether.project_root),
+                path=pathlib.Path(self.entry_file).relative_to(pathlib.Path(tests.__file__).parent.parent),
                 line=self.entry_line,
                 limit=self.seconds,
                 label=self.label,

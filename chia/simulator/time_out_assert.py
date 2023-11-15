@@ -10,6 +10,8 @@ import sys
 import time
 from typing import Any, Callable, ClassVar, Dict, Optional, Tuple, final, overload
 
+import chia
+import tests
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.misc import caller_file_and_line
 
@@ -99,7 +101,12 @@ async def time_out_assert_custom_interval(timeout: float, interval, function, va
     __tracebackhide__ = True
 
     # TODO: wrong line when not called directly but instead from the regular time_out_assert?
-    entry_file, entry_line = caller_file_and_line()
+    entry_file, entry_line = caller_file_and_line(
+        relative_to=(
+            pathlib.Path(chia.__file__).parent.parent,
+            pathlib.Path(tests.__file__).parent.parent,
+        )
+    )
 
     timeout = adjusted_timeout(timeout=timeout)
 
@@ -131,10 +138,10 @@ async def time_out_assert_custom_interval(timeout: float, interval, function, va
         except ImportError:
             pass
         else:
-            if ether.record_property is not None and ether.project_root is not None:
+            if ether.record_property is not None:
                 data = TimeOutAssertData(
                     duration=duration,
-                    path=pathlib.Path(entry_file).relative_to(ether.project_root),
+                    path=pathlib.Path(entry_file).relative_to(pathlib.Path(chia.__file__).parent.parent),
                     line=entry_line,
                     limit=timeout,
                     timed_out=timed_out,

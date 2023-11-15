@@ -84,7 +84,6 @@ from chia.util.keyring_wrapper import KeyringWrapper
 @pytest.fixture(name="ether_setup", autouse=True)
 def ether_setup_fixture(request: SubRequest, record_property: Callable[[str, object], None]) -> Iterator[None]:
     with MonkeyPatch.context() as monkeypatch_context:
-        monkeypatch_context.setattr(ether, "project_root", Path(tests.__file__).parent.parent)
         monkeypatch_context.setattr(ether, "record_property", record_property)
         monkeypatch_context.setattr(ether, "test_id", TestId.create(node=request.node))
         yield
