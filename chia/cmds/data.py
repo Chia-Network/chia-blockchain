@@ -529,3 +529,56 @@ def wallet_log_in(
             fingerprint=fingerprint,
         )
     )
+
+
+@data_cmd.command(
+    "get_proof",
+    help="Obtains a merkle proof of inclusion for a given key",
+)
+@create_data_store_id_option()
+@create_rpc_port_option()
+@click.option(
+    "-h",
+    "--key",
+    "key_strings",
+    help="str representing the key",
+    type=str,
+    required=True,
+    multiple=True,
+)
+@options.create_fingerprint()
+def get_proof(
+    id: str,
+    key_strings: List[str],
+    data_rpc_port: int,
+    fingerprint: Optional[int],
+) -> None:
+    from chia.cmds.data_funcs import get_proof_cmd
+
+    store_id = bytes32.from_hexstr(id)
+
+    run(get_proof_cmd(rpc_port=data_rpc_port, store_id=store_id, fingerprint=fingerprint, key_strings=key_strings))
+
+
+@data_cmd.command(
+    "verify_proof",
+    help="Verifies a merkle proof of inclusion",
+)
+@click.option(
+    "-p",
+    "--proof",
+    "proof_string",
+    help="Proof to validate in JSON format.",
+    type=str,
+)
+@create_rpc_port_option()
+@options.create_fingerprint()
+def verify_proof(
+    proof_string: str,
+    data_rpc_port: int,
+    fingerprint: Optional[int],
+) -> None:
+    from chia.cmds.data_funcs import verify_proof_cmd
+
+    proof_dict = json.loads(proof_string)
+    run(verify_proof_cmd(rpc_port=data_rpc_port, fingerprint=fingerprint, proof=proof_dict))

@@ -286,3 +286,24 @@ async def clear_pending_roots(
         print(json.dumps(result, indent=4, sort_keys=True))
 
     return result
+
+
+async def get_proof_cmd(
+    store_id: bytes32,
+    key_strings: List[str],
+    rpc_port: Optional[int],
+    fingerprint: Optional[int] = None,
+) -> None:
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        result = await client.get_proof(store_id=store_id, keys=[hexstr_to_bytes(key) for key in key_strings])
+        print(json.dumps(result, indent=4, sort_keys=True))
+
+
+async def verify_proof_cmd(
+    proof: Dict[str, Any],
+    rpc_port: Optional[int],
+    fingerprint: Optional[int] = None,
+) -> None:
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        result = await client.verify_proof(proof=proof)
+        print(json.dumps(result, indent=4, sort_keys=True))

@@ -725,3 +725,62 @@ class PluginStatus:
 class InsertResult:
     node_hash: bytes32
     root: Root
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class GetProofRequest:
+    store_id: bytes32
+    keys: Tuple[bytes, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> GetProofRequest:
+        return cls(
+            store_id=bytes32.from_hexstr(marshalled["store_id"]),
+            keys=tuple(hexstr_to_bytes(key) for key in marshalled["keys"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "store_id": self.store_id.hex(),
+            "keys": [key.hex() for key in self.keys],
+        }
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class GetProofResponse:
+    proof: StoreProofs
+    offer: bytes
+    success: bool
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> GetProofResponse:
+        return cls(
+            proof=StoreProofs.unmarshal(marshalled["proof"]),
+            offer=hexstr_to_bytes(marshalled["offer"]),
+            success=marshalled["success"],
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {"proof": self.proof.marshal(), "offer": self.offer.hex(), "success": self.success}
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class VerifyProofResponse:
+    verified: OfferStore
+    success: bool
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> VerifyProofResponse:
+        return cls(
+            verified=OfferStore.unmarshal(marshalled["verified"]),
+            success=marshalled["success"],
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "verified": self.verified.marshal(),
+            "success": self.success,
+        }

@@ -2,21 +2,32 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
-from chia.data_layer.data_layer_errors import OfferIntegrityError
+from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_util import (
     CancelOfferRequest,
     CancelOfferResponse,
     ClearPendingRootsRequest,
     ClearPendingRootsResponse,
+    GetProofRequest,
+    GetProofResponse,
+    KeyValue,
+    Layer,
     MakeOfferRequest,
     MakeOfferResponse,
+    OfferStore,
+    Proof,
+    ProofOfInclusion,
+    ProofOfInclusionLayer,
     Side,
+    StoreProofs,
     Subscription,
     TakeOfferRequest,
     TakeOfferResponse,
     VerifyOfferResponse,
+    VerifyProofResponse,
+    leaf_hash,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
 from chia.rpc.data_layer_rpc_util import marshal
@@ -25,10 +36,12 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.util.streamable import recurse_jsonify
 from chia.util.ws_message import WsRpcMessage
+from chia.wallet.db_wallet.db_wallet_puzzles import match_dl_singleton
 from chia.wallet.trading.offer import Offer as TradingOffer
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 if TYPE_CHECKING:
     from chia.data_layer.data_layer import DataLayer
@@ -104,6 +117,8 @@ class DataLayerRpcApi:
             "/get_sync_status": self.get_sync_status,
             "/check_plugins": self.check_plugins,
             "/clear_pending_roots": self.clear_pending_roots,
+            "/get_proof": self.get_proof,
+            "/verify_proof": self.verify_proof,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
@@ -458,3 +473,111 @@ class DataLayerRpcApi:
         root = await self.service.data_store.clear_pending_roots(tree_id=request.store_id)
 
         return ClearPendingRootsResponse(success=root is not None, root=root)
+
+    @marshal()  # type: ignore[arg-type]
+    async def get_proof(self, request: GetProofRequest) -> GetProofResponse:
+        #
+        # Make offer coins for the singleton
+        #
+        root = await self.service.get_root(store_id=request.store_id)
+        if root is None:
+            raise ValueError("no root")
+
+        offer_dict: Dict[Union[uint32, str], int] = {request.store_id.hex(): -1}
+        solver: Dict[str, Any] = {
+            "0x"
+            + request.store_id.hex(): {
+                "new_root": "0x" + root.root.hex(),
+                "dependencies": [],
+            }
+        }
+
+        wallet_offer, trade_record = await self.service.wallet_rpc.create_offer_for_ids(
+            offer_dict=offer_dict,
+            solver=solver,
+            driver_dict={},
+            fee=0,
+            validate_only=False,
+            # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+            # This is not a change in behavior, the default was already implicit.
+            tx_config=DEFAULT_TX_CONFIG,
+        )
+        if wallet_offer is None:
+            raise Exception("offer is None despite validate_only=False")
+
+        is_valid = await self.service.wallet_rpc.check_offer_validity(wallet_offer)
+        if not is_valid:
+            raise Exception("Wonky Wonky")
+
+        #
+        # create proofs
+        #
+        all_proofs: List[Proof] = []
+        for key in request.keys:
+            key_value = await self.service.get_value(store_id=request.store_id, key=key)
+            if key_value is None:
+                raise KeyNotFoundError(key=key)
+
+            pi = await self.service.data_store.get_proof_of_inclusion_by_key(tree_id=request.store_id, key=key)
+
+            proof = Proof(
+                key=key,
+                value=key_value,
+                node_hash=pi.node_hash,
+                layers=tuple(
+                    Layer(
+                        other_hash_side=layer.other_hash_side,
+                        other_hash=layer.other_hash,
+                        combined_hash=layer.combined_hash,
+                    )
+                    for layer in pi.layers
+                ),
+            )
+            all_proofs.append(proof)
+
+        store_proof = StoreProofs(store_id=request.store_id, proofs=tuple(all_proofs))
+        return GetProofResponse(proof=store_proof, offer=bytes(wallet_offer), success=True)
+
+    @marshal()  # type: ignore[arg-type]
+    async def verify_proof(self, request: GetProofResponse) -> VerifyProofResponse:
+        verified_keys: List[KeyValue] = []
+        for reference_proof in request.proof.proofs:
+            proof = ProofOfInclusion(
+                node_hash=reference_proof.node_hash,
+                layers=[
+                    ProofOfInclusionLayer(
+                        other_hash_side=layer.other_hash_side,
+                        other_hash=layer.other_hash,
+                        combined_hash=layer.combined_hash,
+                    )
+                    for layer in reference_proof.layers
+                ],
+            )
+
+            if leaf_hash(key=reference_proof.key, value=reference_proof.value) != proof.node_hash:
+                raise OfferIntegrityError("Invalid Proof: node hash does not match key and value")
+
+            if not proof.valid():
+                raise OfferIntegrityError("Invalid Proof: invalid proof of inclusion found")
+
+            request_offer = TradingOffer.from_bytes(request.offer)
+            if not await self.service.wallet_rpc.check_offer_validity(request_offer):
+                raise OfferIntegrityError("Invalid Proof: Could not validate DL singleton on-chain")
+
+            if len(request_offer.coin_spends()) > 2:
+                raise OfferIntegrityError("Invalid Proof: Too many coin spends")
+
+            for spend in request_offer.coin_spends():
+                matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
+                if not matched:
+                    raise OfferIntegrityError("Invalid Proof: invalid singleton found")
+
+                _, root_program, launcher_id_program = curried_args
+                launcher_id = bytes32(launcher_id_program.as_python())
+                root_hash = bytes32(root_program.as_python())
+                if launcher_id != request.proof.store_id or root_hash != proof.root_hash:
+                    raise OfferIntegrityError("Invalid Proof: invalid singleton found")
+
+            verified_keys.append(KeyValue(key=reference_proof.key, value=reference_proof.value))
+
+        return VerifyProofResponse(verified=OfferStore(request.proof.store_id, tuple(verified_keys)), success=True)
