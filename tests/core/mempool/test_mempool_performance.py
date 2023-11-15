@@ -4,10 +4,10 @@ from typing import List
 
 import pytest
 
-from chia.protocols import full_node_protocol
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.full_block import FullBlock
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -46,7 +46,10 @@ async def test_mempool_update_performance(
     ph = await wallet.get_new_puzzlehash()
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
-    await full_node_api_1.full_node.add_block_batch(blocks, peer.get_peer_logging(), None)
+    # We need an initialized mempool as we want to add a transaction, so we use
+    # the first block to achieve that
+    await full_node_api_1.full_node.add_block(blocks[0])
+    await full_node_api_1.full_node.add_block_batch(blocks[1:], peer.get_peer_logging(), None)
 
     await wallet_server.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
     await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
@@ -57,9 +60,12 @@ async def test_mempool_update_performance(
     [big_transaction] = await wallet.generate_signed_transaction(send_amount, ph, DEFAULT_TX_CONFIG, fee_amount)
 
     assert big_transaction.spend_bundle is not None
-    await full_node_api_1.respond_transaction(
-        full_node_protocol.RespondTransaction(big_transaction.spend_bundle), peer, test=True
+    status, err = await full_node_api_1.full_node.add_transaction(
+        big_transaction.spend_bundle, big_transaction.spend_bundle.name(), peer, test=True
     )
+    assert err is None
+    assert status == MempoolInclusionStatus.SUCCESS
+
     cons = list(server_1.all_connections.values())[:]
     for con in cons:
         await con.close()
