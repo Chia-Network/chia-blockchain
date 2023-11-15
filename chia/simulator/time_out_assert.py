@@ -133,8 +133,6 @@ async def time_out_assert_custom_interval(timeout: float, interval, function, va
             pass
         else:
             if ether.record_property is not None:
-                # name = JunitPropertyName(tag=TimeOutAssertData.tag, id=ether.test_id)
-
                 data = TimeOutAssertData(
                     duration=duration,
                     path=pathlib.Path(entry_file).relative_to(pathlib.Path(chia.__file__).parent.parent),

@@ -524,34 +524,6 @@ class TestId:
         }
 
 
-# TODO: i think this class is now unused?
-@final
-@dataclasses.dataclass(frozen=True)
-class JunitPropertyName:
-    tag: str
-    id: TestId
-    file_path: Path
-    line: int
-
-    # @classmethod
-    # def create(cls, tag: str, test_id_segments: str, platform: str = sys.platform) -> JunitPropertyName:
-    #
-    #     return cls(tag=tag, platform=platform, test_name=test_name, ids=ids)
-
-    # @classmethod
-    # def unmarshal(cls, marshalled: Dict[str, Any]) -> JunitPropertyName:
-    #     return cls(
-    #         tag=marshalled["tag"],
-    #         id=TestId.unmarshal(marshalled["id"]),
-    #     )
-    #
-    # def marshal(self) -> Dict[str, Any]:
-    #     return {
-    #         "tag": self.tag,
-    #         "id": self.id.marshal(),
-    #     }
-
-
 T = TypeVar("T")
 
 
