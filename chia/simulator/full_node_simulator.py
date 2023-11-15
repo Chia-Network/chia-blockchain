@@ -39,8 +39,6 @@ class _Default:
 
 default = _Default()
 
-timeout_per_block = 5
-
 
 def backoff_times(
     initial: float = 0.001,
@@ -303,7 +301,6 @@ class FullNodeSimulator(FullNodeAPI):
         count: int,
         farm_to: bytes32 = bytes32([0] * 32),
         guarantee_transaction_blocks: bool = False,
-        timeout: Union[None, _Default, float] = default,
     ) -> int:
         """Process the requested number of blocks including farming to the passed puzzle
         hash. Note that the rewards for the last block will not have been processed.
@@ -317,33 +314,27 @@ class FullNodeSimulator(FullNodeAPI):
         Returns:
             The total number of reward mojos for the processed blocks.
         """
-        if isinstance(timeout, _Default):
-            timeout = count * timeout_per_block
-            timeout += 1
+        rewards = 0
 
-        with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            rewards = 0
-
-            if count == 0:
-                return rewards
-
-            for _ in range(count):
-                if guarantee_transaction_blocks:
-                    await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
-                else:
-                    await self.farm_new_block(FarmNewBlockProtocol(farm_to))
-                height = self.full_node.blockchain.get_peak_height()
-                assert height is not None
-
-                rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
-
+        if count == 0:
             return rewards
+
+        for _ in range(count):
+            if guarantee_transaction_blocks:
+                await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
+            else:
+                await self.farm_new_block(FarmNewBlockProtocol(farm_to))
+            height = self.full_node.blockchain.get_peak_height()
+            assert height is not None
+
+            rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
+
+        return rewards
 
     async def farm_blocks_to_wallet(
         self,
         count: int,
         wallet: Wallet,
-        timeout: Union[None, _Default, float] = default,
     ) -> int:
         """Farm the requested number of blocks to the passed wallet. This will
         process additional blocks as needed to process the reward transactions
@@ -356,60 +347,52 @@ class FullNodeSimulator(FullNodeAPI):
         Returns:
             The total number of reward mojos farmed to the requested address.
         """
-        if isinstance(timeout, _Default):
-            timeout = (count + 1) * timeout_per_block
-            timeout += 15
 
-        with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            if count == 0:
-                return 0
+        if count == 0:
+            return 0
 
-            target_puzzlehash = await wallet.get_new_puzzlehash()
-            rewards = 0
+        target_puzzlehash = await wallet.get_new_puzzlehash()
+        rewards = 0
 
-            block_reward_coins = set()
-            expected_reward_coin_count = 2 * count
+        block_reward_coins = set()
+        expected_reward_coin_count = 2 * count
 
-            original_peak_height = self.full_node.blockchain.get_peak_height()
-            expected_peak_height = 0 if original_peak_height is None else original_peak_height
+        original_peak_height = self.full_node.blockchain.get_peak_height()
+        expected_peak_height = 0 if original_peak_height is None else original_peak_height
 
-            for to_wallet, tx_block in [*([[True, False]] * (count - 1)), [True, True], [False, True]]:
-                # This complicated application of the last two blocks being transaction
-                # blocks is due to the transaction blocks only including rewards from
-                # blocks up until, and including, the previous transaction block.
-                if to_wallet:
-                    rewards += await self.farm_blocks_to_puzzlehash(
-                        count=1,
-                        farm_to=target_puzzlehash,
-                        guarantee_transaction_blocks=tx_block,
-                        timeout=None,
-                    )
-                else:
-                    await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=tx_block, timeout=None)
-
-                expected_peak_height += 1
-                peak_height = self.full_node.blockchain.get_peak_height()
-                assert peak_height == expected_peak_height
-
-                coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
-                for record in coin_records:
-                    if record.coin.puzzle_hash == target_puzzlehash and record.coinbase:
-                        block_reward_coins.add(record.coin)
-
-            if len(block_reward_coins) != expected_reward_coin_count:
-                raise RuntimeError(
-                    f"Expected {expected_reward_coin_count} reward coins, got: {len(block_reward_coins)}"
+        for to_wallet, tx_block in [*([[True, False]] * (count - 1)), [True, True], [False, True]]:
+            # This complicated application of the last two blocks being transaction
+            # blocks is due to the transaction blocks only including rewards from
+            # blocks up until, and including, the previous transaction block.
+            if to_wallet:
+                rewards += await self.farm_blocks_to_puzzlehash(
+                    count=1,
+                    farm_to=target_puzzlehash,
+                    guarantee_transaction_blocks=tx_block,
                 )
+            else:
+                await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=tx_block)
 
-            await wait_for_coins_in_wallet(coins=block_reward_coins, wallet=wallet, timeout=None)
+            expected_peak_height += 1
+            peak_height = self.full_node.blockchain.get_peak_height()
+            assert peak_height == expected_peak_height
 
-            return rewards
+            coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
+            for record in coin_records:
+                if record.coin.puzzle_hash == target_puzzlehash and record.coinbase:
+                    block_reward_coins.add(record.coin)
+
+        if len(block_reward_coins) != expected_reward_coin_count:
+            raise RuntimeError(f"Expected {expected_reward_coin_count} reward coins, got: {len(block_reward_coins)}")
+
+        await wait_for_coins_in_wallet(coins=block_reward_coins, wallet=wallet)
+
+        return rewards
 
     async def farm_rewards_to_wallet(
         self,
         amount: int,
         wallet: Wallet,
-        timeout: Union[None, _Default, float] = default,
     ) -> int:
         """Farm at least the requested amount of mojos to the passed wallet. Extra
         mojos will be received based on the block rewards at the present block height.
@@ -440,12 +423,8 @@ class FullNodeSimulator(FullNodeAPI):
         else:
             raise Exception("internal error")
 
-        if isinstance(timeout, _Default):
-            timeout = (count + 1) * timeout_per_block
-
-        with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            await self.farm_blocks_to_wallet(count=count, wallet=wallet, timeout=None)
-            return rewards
+        await self.farm_blocks_to_wallet(count=count, wallet=wallet)
+        return rewards
 
     async def wait_transaction_records_entered_mempool(
         self,
@@ -510,7 +489,6 @@ class FullNodeSimulator(FullNodeAPI):
     async def process_transaction_records(
         self,
         records: Collection[TransactionRecord],
-        timeout: Union[None, float] = (2 * timeout_per_block) + 5,
     ) -> None:
         """Process the specified transaction records and wait until they have been
         included in a block.
@@ -518,22 +496,20 @@ class FullNodeSimulator(FullNodeAPI):
         Arguments:
             records: The transaction records to process.
         """
-        with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            coins_to_wait_for: Set[Coin] = set()
-            for record in records:
-                if record.spend_bundle is None:
-                    continue
+        coins_to_wait_for: Set[Coin] = set()
+        for record in records:
+            if record.spend_bundle is None:
+                continue
 
-                coins_to_wait_for.update(record.spend_bundle.additions())
+            coins_to_wait_for.update(record.spend_bundle.additions())
 
-            await self.wait_transaction_records_entered_mempool(records=records, timeout=None)
+        await self.wait_transaction_records_entered_mempool(records=records)
 
-            return await self.process_coin_spends(coins=coins_to_wait_for, timeout=None)
+        return await self.process_coin_spends(coins=coins_to_wait_for)
 
     async def process_spend_bundles(
         self,
         bundles: Collection[SpendBundle],
-        timeout: Union[None, float] = (2 * timeout_per_block) + 5,
     ) -> None:
         """Process the specified spend bundles and wait until they have been included
         in a block.
@@ -542,14 +518,12 @@ class FullNodeSimulator(FullNodeAPI):
             bundles: The spend bundles to process.
         """
 
-        with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            coins_to_wait_for: Set[Coin] = {addition for bundle in bundles for addition in bundle.additions()}
-            return await self.process_coin_spends(coins=coins_to_wait_for, timeout=None)
+        coins_to_wait_for: Set[Coin] = {addition for bundle in bundles for addition in bundle.additions()}
+        return await self.process_coin_spends(coins=coins_to_wait_for)
 
     async def process_coin_spends(
         self,
         coins: Collection[Coin],
-        timeout: Union[None, float] = (2 * timeout_per_block) + 5,
     ) -> None:
         """Process the specified coin names and wait until they have been created in a
         block.
@@ -558,23 +532,22 @@ class FullNodeSimulator(FullNodeAPI):
             coin_names: The coin names to process.
         """
 
-        with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            coin_set = set(coins)
-            coin_store = self.full_node.coin_store
+        coin_set = set(coins)
+        coin_store = self.full_node.coin_store
 
-            while True:
-                await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
+        while True:
+            await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
 
-                found: Set[Coin] = set()
-                for coin in coin_set:
-                    # TODO: is this the proper check?
-                    if await coin_store.get_coin_record(coin.name()) is not None:
-                        found.add(coin)
+            found: Set[Coin] = set()
+            for coin in coin_set:
+                # TODO: is this the proper check?
+                if await coin_store.get_coin_record(coin.name()) is not None:
+                    found.add(coin)
 
-                coin_set = coin_set.difference(found)
+            coin_set = coin_set.difference(found)
 
-                if len(coin_set) == 0:
-                    return
+            if len(coin_set) == 0:
+                return
 
     async def process_all_wallet_transactions(self, wallet: Wallet, timeout: Optional[float] = 5) -> None:
         # TODO: Maybe something could be done around waiting for the tx to enter the
@@ -584,7 +557,7 @@ class FullNodeSimulator(FullNodeAPI):
 
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff in backoff_times():
-                await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
+                await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
 
                 wallet_ids = wallet_state_manager.wallets.keys()
                 for wallet_id in wallet_ids:
@@ -671,7 +644,7 @@ class FullNodeSimulator(FullNodeAPI):
                 else:
                     break
 
-            await self.process_transaction_records(records=transaction_records, timeout=None)
+            await self.process_transaction_records(records=transaction_records)
 
             output_coins = {coin for transaction_record in transaction_records for coin in transaction_record.additions}
             puzzle_hashes = {output.puzzle_hash for output in outputs}
@@ -718,3 +691,6 @@ class FullNodeSimulator(FullNodeAPI):
                 if await self.wallets_are_synced(wallet_nodes=wallet_nodes):
                     break
                 await asyncio.sleep(backoff_time)
+
+
+# CI test 03
