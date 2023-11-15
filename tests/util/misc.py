@@ -43,7 +43,6 @@ import pytest
 from _pytest.nodes import Node
 from chia_rs import Coin
 
-import chia
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
@@ -342,7 +341,7 @@ class _AssertRuntime:
         if self.record_property is not None:
             data = BenchmarkData(
                 duration=results.duration,
-                path=pathlib.Path(self.entry_file).relative_to(pathlib.Path(chia.__file__).parent.parent),
+                path=pathlib.Path(self.entry_file).relative_to(ether.project_root),
                 line=self.entry_line,
                 limit=self.seconds,
                 label=self.label,

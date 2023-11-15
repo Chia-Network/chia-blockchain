@@ -10,7 +10,6 @@ import sys
 import time
 from typing import Any, Callable, ClassVar, Dict, Optional, Tuple, final, overload
 
-import chia
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.misc import caller_file_and_line
 
@@ -135,7 +134,7 @@ async def time_out_assert_custom_interval(timeout: float, interval, function, va
             if ether.record_property is not None:
                 data = TimeOutAssertData(
                     duration=duration,
-                    path=pathlib.Path(entry_file).relative_to(pathlib.Path(chia.__file__).parent.parent),
+                    path=pathlib.Path(entry_file).relative_to(ether.project_root),
                     line=entry_line,
                     limit=timeout,
                     timed_out=timed_out,
