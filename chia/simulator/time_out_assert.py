@@ -131,7 +131,7 @@ async def time_out_assert_custom_interval(timeout: float, interval, function, va
         except ImportError:
             pass
         else:
-            if ether.record_property is not None:
+            if ether.record_property is not None and ether.project_root is not None:
                 data = TimeOutAssertData(
                     duration=duration,
                     path=pathlib.Path(entry_file).relative_to(ether.project_root),
@@ -140,7 +140,7 @@ async def time_out_assert_custom_interval(timeout: float, interval, function, va
                     timed_out=timed_out,
                 )
 
-                ether.record_property(
+                ether.record_property(  # pylint: disable=E1102
                     # json.dumps(name.marshal(), ensure_ascii=True, sort_keys=True),
                     data.tag,
                     json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),

@@ -295,7 +295,6 @@ class _AssertRuntime:
     runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
     runtime_results_callable: Optional[Future[RuntimeResults]] = None
     enable_assertion: bool = True
-    record_property: Optional[Callable[[str, object], None]] = None
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
         self.entry_file, self.entry_line = caller_file_and_line()
@@ -338,7 +337,7 @@ class _AssertRuntime:
         if self.print:
             print(results.block(label=self.label))
 
-        if self.record_property is not None:
+        if ether.record_property is not None and ether.project_root is not None:
             data = BenchmarkData(
                 duration=results.duration,
                 path=pathlib.Path(self.entry_file).relative_to(ether.project_root),
@@ -347,7 +346,7 @@ class _AssertRuntime:
                 label=self.label,
             )
 
-            ether.record_property(
+            ether.record_property(  # pylint: disable=E1102
                 data.tag,
                 json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
             )
@@ -539,7 +538,7 @@ class DataTypeProtocol(Protocol):
     __match_args__: ClassVar[Tuple[str, ...]] = ()
 
     @classmethod
-    def unmarshal(self: Type[T], marshalled: Dict[str, Any]) -> T:
+    def unmarshal(cls: Type[T], marshalled: Dict[str, Any]) -> T:
         ...
 
     def marshal(self) -> Dict[str, Any]:

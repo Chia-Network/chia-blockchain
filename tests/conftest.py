@@ -91,7 +91,8 @@ def ether_setup_fixture(request: SubRequest, record_property: Callable[[str, obj
 
 
 @pytest.fixture(autouse=True)
-def record_test_id_property_fixture(ether_setup: None, record_property: Callable[[str, object], None]) -> None:
+def ether_test_id_property_fixture(ether_setup: None, record_property: Callable[[str, object], None]) -> None:
+    assert ether.test_id is not None, "ether.test_id is None, did you forget to use the ether_setup fixture?"
     record_property("test_id", json.dumps(ether.test_id.marshal(), ensure_ascii=True, sort_keys=True))
 
 
