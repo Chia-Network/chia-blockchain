@@ -265,6 +265,7 @@ class WalletRpcApi:
             "/dl_get_mirrors": self.dl_get_mirrors,
             "/dl_new_mirror": self.dl_new_mirror,
             "/dl_delete_mirror": self.dl_delete_mirror,
+            "/dl_verify_proof": self.dl_verify_proof,
             # Verified Credential
             "/vc_mint": self.vc_mint,
             "/vc_get": self.vc_get,
@@ -4153,6 +4154,19 @@ class WalletRpcApi:
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
+
+    async def dl_verify_proof(
+        self,
+        request: Dict[str, Any],
+    ) -> EndpointResult:
+        """yada yada yada"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+
+        ret = await dl_wallet.verify_proof(request, self.service.get_full_node_peer())
+        return ret
 
     ##########################################################################################
     # Verified Credential

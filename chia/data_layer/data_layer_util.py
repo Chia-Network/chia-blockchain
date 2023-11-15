@@ -751,19 +751,20 @@ class GetProofRequest:
 @dataclasses.dataclass(frozen=True)
 class GetProofResponse:
     proof: StoreProofs
-    offer: bytes
+    coin_id: bytes32
     success: bool
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> GetProofResponse:
         return cls(
             proof=StoreProofs.unmarshal(marshalled["proof"]),
-            offer=hexstr_to_bytes(marshalled["offer"]),
+            # offer=hexstr_to_bytes(marshalled["offer"]),
+            coin_id=bytes32.from_hexstr(marshalled["coin_id"]),
             success=marshalled["success"],
         )
 
     def marshal(self) -> Dict[str, Any]:
-        return {"proof": self.proof.marshal(), "offer": self.offer.hex(), "success": self.success}
+        return {"proof": self.proof.marshal(), "coin_id": self.coin_id.hex(), "success": self.success}
 
 
 @final
