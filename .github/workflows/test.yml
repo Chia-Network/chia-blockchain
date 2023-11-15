@@ -150,8 +150,7 @@ jobs:
       - name: Add time out assert results to workflow summary
         if: always()
         run: |
-          # TODO: rename the file since it is more general
-          python -m tests.process_benchmarks --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
+          python -m tests.process_junit --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
 
       - name: Download Coverage
         uses: actions/download-artifact@v3
