@@ -5,28 +5,50 @@ import dataclasses
 import enum
 import functools
 import gc
+import json
 import logging
 import os
 import pathlib
 import subprocess
 import sys
 from concurrent.futures import Future
-from inspect import getframeinfo, stack
+from pathlib import Path
 from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Any, Callable, Collection, Iterator, List, Optional, TextIO, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Collection,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Protocol,
+    TextIO,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    final,
+)
 
 import pytest
+
+# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
+from _pytest.nodes import Node
 from chia_rs import Coin
-from typing_extensions import Protocol, final
 
 import chia
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
+from chia.util.misc import caller_file_and_line
 from chia.wallet.util.compute_hints import HintedCoin
 from tests import ether
 from tests.core.data_layer.util import ChiaRoot
@@ -62,11 +84,6 @@ def manage_gc(mode: GcMode) -> Iterator[None]:
         finally:
             if not was_enabled:
                 gc.disable()
-
-
-def caller_file_and_line(distance: int = 1) -> Tuple[str, int]:
-    caller = getframeinfo(stack()[distance + 1][0])
-    return caller.filename, caller.lineno
 
 
 @dataclasses.dataclass(frozen=True)
@@ -205,6 +222,43 @@ def measure_runtime(
 
 
 @final
+@dataclasses.dataclass(frozen=True)
+class BenchmarkData:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[DataTypeProtocol] = cast("BenchmarkData", None)
+
+    tag: ClassVar[str] = "benchmark"
+
+    duration: float
+    path: pathlib.Path
+    line: int
+    limit: float
+
+    label: str
+
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> BenchmarkData:
+        return cls(
+            duration=marshalled["duration"],
+            path=pathlib.Path(marshalled["path"]),
+            line=int(marshalled["line"]),
+            limit=marshalled["limit"],
+            label=marshalled["label"],
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "duration": self.duration,
+            "path": self.path.as_posix(),
+            "line": self.line,
+            "limit": self.limit,
+            "label": self.label,
+        }
+
+
+@final
 @dataclasses.dataclass
 class _AssertRuntime:
     """Prepare for, measure, and assert about the time taken by code in the context.
@@ -230,6 +284,7 @@ class _AssertRuntime:
     # https://github.com/pytest-dev/pytest/issues/2057
 
     seconds: float
+    # TODO: Optional?
     label: str = ""
     clock: Callable[[], float] = thread_time
     gc_mode: GcMode = GcMode.disable
@@ -285,15 +340,18 @@ class _AssertRuntime:
             print(results.block(label=self.label))
 
         if self.record_property is not None:
-            self.record_property(f"duration:{self.label}", results.duration)
-
-            relative_path_str = (
-                pathlib.Path(results.entry_file).relative_to(pathlib.Path(chia.__file__).parent.parent).as_posix()
+            data = BenchmarkData(
+                duration=results.duration,
+                path=pathlib.Path(self.entry_file).relative_to(pathlib.Path(chia.__file__).parent.parent),
+                line=self.entry_line,
+                limit=self.seconds,
+                label=self.label,
             )
 
-            self.record_property(f"path:{self.label}", relative_path_str)
-            self.record_property(f"line:{self.label}", results.entry_line)
-            self.record_property(f"limit:{self.label}", self.seconds)
+            ether.record_property(
+                data.tag,
+                json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
+            )
 
         if exc_type is None and self.enable_assertion:
             __tracebackhide__ = True
@@ -304,7 +362,7 @@ class _AssertRuntime:
 @dataclasses.dataclass
 class BenchmarkRunner:
     enable_assertion: bool = True
-    label: Optional[str] = None
+    test_id: Optional[TestId] = None
     overhead: Optional[float] = None
 
     @functools.wraps(_AssertRuntime)
@@ -407,3 +465,111 @@ def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
     logger.addHandler(hdlr=stream_handler)
 
     return logger
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class TestId:
+    platform: str
+    test_path: Tuple[str, ...]
+    ids: Tuple[str, ...]
+
+    @classmethod
+    def create(cls, node: Node, platform: str = sys.platform) -> TestId:
+        test_path: List[str] = []
+        temp_node = node
+        while True:
+            name: str
+            if isinstance(temp_node, pytest.Function):
+                name = temp_node.originalname
+            elif isinstance(temp_node, pytest.Package):
+                # must check before pytest.Module since Package is a subclass
+                name = temp_node.name
+            elif isinstance(temp_node, pytest.Module):
+                name = temp_node.name[:-3]
+            else:
+                name = temp_node.name
+            test_path.insert(0, name)
+            if isinstance(temp_node.parent, pytest.Session) or temp_node.parent is None:
+                break
+            temp_node = temp_node.parent
+
+        # TODO: can we avoid parsing the id's etc from the node name?
+        test_name, delimiter, rest = node.name.partition("[")
+        ids: Tuple[str, ...]
+        if delimiter == "":
+            ids = ()
+        else:
+            ids = tuple(rest.rstrip("]").split("-"))
+
+        return cls(
+            platform=platform,
+            test_path=tuple(test_path),
+            ids=ids,
+        )
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> TestId:
+        return cls(
+            platform=marshalled["platform"],
+            test_path=tuple(marshalled["test_path"]),
+            ids=tuple(marshalled["ids"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "platform": self.platform,
+            "test_path": self.test_path,
+            "ids": self.ids,
+        }
+
+
+# TODO: i think this class is now unused?
+@final
+@dataclasses.dataclass(frozen=True)
+class JunitPropertyName:
+    tag: str
+    id: TestId
+    file_path: Path
+    line: int
+
+    # @classmethod
+    # def create(cls, tag: str, test_id_segments: str, platform: str = sys.platform) -> JunitPropertyName:
+    #
+    #     return cls(tag=tag, platform=platform, test_name=test_name, ids=ids)
+
+    # @classmethod
+    # def unmarshal(cls, marshalled: Dict[str, Any]) -> JunitPropertyName:
+    #     return cls(
+    #         tag=marshalled["tag"],
+    #         id=TestId.unmarshal(marshalled["id"]),
+    #     )
+    #
+    # def marshal(self) -> Dict[str, Any]:
+    #     return {
+    #         "tag": self.tag,
+    #         "id": self.id.marshal(),
+    #     }
+
+
+T = TypeVar("T")
+
+
+@dataclasses.dataclass(frozen=True)
+class DataTypeProtocol(Protocol):
+    tag: ClassVar[str]
+
+    line: int
+    path: Path
+    label: str
+    duration: float
+    limit: float
+
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
+
+    @classmethod
+    def unmarshal(self: Type[T], marshalled: Dict[str, Any]) -> T:
+        ...
+
+    def marshal(self) -> Dict[str, Any]:
+        ...

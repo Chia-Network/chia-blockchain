@@ -7,6 +7,7 @@ import functools
 import signal
 import sys
 from dataclasses import dataclass
+from inspect import getframeinfo, stack
 from pathlib import Path
 from types import FrameType
 from typing import (
@@ -19,6 +20,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Tuple,
     TypeVar,
     Union,
     final,
@@ -280,3 +282,8 @@ class SignalHandlers:
         self.setup_sync_signal_handler(
             handler=functools.partial(self.threadsafe_sync_signal_handler_for_async, handler=handler)
         )
+
+
+def caller_file_and_line(distance: int = 1) -> Tuple[str, int]:
+    caller = getframeinfo(stack()[distance + 1][0])
+    return caller.filename, caller.lineno

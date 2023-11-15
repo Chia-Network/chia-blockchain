@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 import random
 import re
@@ -7,10 +8,16 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import StatisticsError, mean, stdev
-from typing import Any, Dict, List, Set, TextIO, Tuple, final
+from typing import Any, Dict, List, TextIO, Tuple, Type, final
 
 import click
 import lxml.etree
+
+from chia.simulator.time_out_assert import TimeOutAssertData
+from tests.util.misc import BenchmarkData, DataTypeProtocol, TestId
+
+supported_data_types: List[Type[DataTypeProtocol]] = [TimeOutAssertData, BenchmarkData]
+supported_data_types_by_tag: Dict[str, Type[DataTypeProtocol]] = {cls.tag: cls for cls in supported_data_types}
 
 
 @final
@@ -18,6 +25,7 @@ import lxml.etree
 class Result:
     file_path: Path
     test_path: Tuple[str, ...]
+    ids: Tuple[str, ...]
     label: str
     line: int = field(compare=False)
     durations: Tuple[float, ...] = field(compare=False)
@@ -53,6 +61,17 @@ def sub(matchobj: re.Match[str]) -> str:
         result += "]"
 
     return result
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class EventId:
+    test_id: TestId
+    # TODO: this doesn't feel quite right, more a property than an identifier?  i dunno
+    tag: str
+    line: int
+    path: Path
+    label: str
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -100,6 +119,15 @@ def sub(matchobj: re.Match[str]) -> str:
     help="🍿",
     show_default=True,
 )
+# TODO: subcommands?
+@click.option(
+    "--type",
+    "tag",
+    type=click.Choice([cls.tag for cls in supported_data_types]),
+    help="The type of data to process",
+    required=True,
+    show_default=True,
+)
 def main(
     xml_file: TextIO,
     link_prefix: str,
@@ -108,71 +136,66 @@ def main(
     markdown: bool,
     percent_margin: int,
     randomoji: bool,
+    tag: str,
 ) -> None:
+    data_type = supported_data_types_by_tag[tag]
+
     tree = lxml.etree.parse(xml_file)
     root = tree.getroot()
-    benchmarks = root.find("testsuite[@name='benchmarks']")
 
-    # raw_durations: defaultdict[Tuple[str, ...], List[Result]] = defaultdict(list)
+    cases_by_test_id: defaultdict[TestId, List[lxml.etree.Element]] = defaultdict(list)
+    for suite in root.findall("testsuite"):
+        for case in suite.findall("testcase"):
+            test_id = TestId.unmarshal(json.loads(case.find("properties/property[@name='test_id']").attrib["value"]))
+            test_id = dataclasses.replace(
+                test_id, ids=tuple(id for id in test_id.ids if not id.startswith(f"{data_type.tag}_repeat"))
+            )
+            cases_by_test_id[test_id].append(case)
 
-    cases_by_test_path: defaultdict[Tuple[str, ...], List[lxml.etree.Element]] = defaultdict(list)
-    for case in benchmarks.findall("testcase"):
-        raw_name = case.attrib["name"]
-        name = re.sub(r"(?P<start>[-\[])benchmark_repeat\d{3}(?P<end>[-\])])", sub, raw_name)
-        # TODO: seems to duplicate the class and function name, though not the parametrizations
-        test_path = (
-            *case.attrib["classname"].split("."),
-            name,
-        )
-        cases_by_test_path[test_path].append(case)
+    data_by_event_id: defaultdict[EventId, List[DataTypeProtocol]] = defaultdict(list)
+    for test_id, cases in cases_by_test_id.items():
+        for case in cases:
+            for property in case.findall(f"properties/property[@name='{tag}']"):
+                tag = property.attrib["name"]
+                data = supported_data_types_by_tag[tag].unmarshal(json.loads(property.attrib["value"]))
+                event_id = EventId(test_id=test_id, tag=tag, line=data.line, path=data.path, label=data.label)
+                data_by_event_id[event_id].append(data)
 
     results: List[Result] = []
-    for test_path, cases in cases_by_test_path.items():
-        labels: Set[str] = set()
-        for case in cases:
-            properties = case.find("properties")
-            labels.update(property.attrib["name"].partition(":")[2] for property in properties)
-
-        for label in labels:
-            query = "properties/property[@name='{property}:{label}']"
-
-            durations = [
-                float(property.attrib["value"])
-                for case in cases
-                for property in case.xpath(query.format(label=label, property="duration"))
-            ]
-
-            a_case = cases[0]
-
-            file_path: Path
-            [file_path] = [
-                Path(property.attrib["value"]) for property in a_case.xpath(query.format(label=label, property="path"))
-            ]
-
-            line: int
-            [line] = [
-                int(property.attrib["value"]) for property in a_case.xpath(query.format(label=label, property="line"))
-            ]
-
-            limit: float
-            [limit] = [
-                float(property.attrib["value"])
-                for property in a_case.xpath(query.format(label=label, property="limit"))
-            ]
-
-            results.append(
-                Result(
-                    file_path=file_path,
-                    test_path=test_path,
-                    line=line,
-                    label=label,
-                    durations=tuple(durations),
-                    limit=limit,
-                )
+    # TODO: yup, datas
+    for event_id, datas in data_by_event_id.items():
+        results.append(
+            Result(
+                file_path=event_id.path,
+                test_path=event_id.test_id.test_path,
+                ids=event_id.test_id.ids,
+                line=event_id.line,
+                # label=label,
+                durations=tuple(data.duration for data in datas),
+                limit=datas[0].limit,
+                label=event_id.label,
             )
+        )
 
+    handlers = {
+        BenchmarkData.tag: output_benchmark,
+        TimeOutAssertData.tag: output_time_out_assert,
+    }
+    handler = handlers[data_type.tag]
+    handler(link_line_separator, link_prefix, markdown, output, percent_margin, randomoji, results)
+
+
+def output_benchmark(
+    link_line_separator: str,
+    link_prefix: str,
+    markdown: bool,
+    output: TextIO,
+    percent_margin: int,
+    randomoji: bool,
+    results: List[Result],
+) -> None:
     if not markdown:
-        for result in results:
+        for result in sorted(results):
             link = result.link(prefix=link_prefix, line_separator=link_line_separator)
             dumped = json.dumps(result.marshal())
             output.write(f"{link} {dumped}\n")
@@ -216,10 +239,88 @@ def main(
             percent_str = f"{percent:.0f} %"
 
             test_path_str = ".".join(result.test_path[1:])
+            if len(result.ids) > 0:
+                test_path_str += f"[{'-'.join(result.ids)}]"
 
             test_link_text: str
             if result.label == "":
                 test_link_text = f"`{test_path_str}`"
+            else:
+                test_link_text = f"`{test_path_str}` - {result.label}"
+
+            output.write(
+                f"| [{test_link_text}]({link_url})"
+                + f" | {marker}"
+                + f" | {mean_str}"
+                + f" | {max_str}"
+                + f" | {three_sigma_str}"
+                + f" | {limit_str}"
+                + f" | {percent_str}"
+                + " |\n"
+            )
+
+
+def output_time_out_assert(
+    link_line_separator: str,
+    link_prefix: str,
+    markdown: bool,
+    output: TextIO,
+    percent_margin: int,
+    randomoji: bool,
+    results: List[Result],
+) -> None:
+    if not markdown:
+        for result in sorted(results):
+            link = result.link(prefix=link_prefix, line_separator=link_line_separator)
+            dumped = json.dumps(result.marshal())
+            output.write(f"{link} {dumped}\n")
+    else:
+        output.write("| Test | 🍿 | Mean | Max | 3σ | Limit | Percent |\n")
+        output.write("| --- | --- | --- | --- | --- | --- | --- |\n")
+        for result in sorted(results):
+            link_url = result.link(prefix=link_prefix, line_separator=link_line_separator)
+
+            mean_str = "-"
+            three_sigma_str = "-"
+            if len(result.durations) > 1:
+                durations_mean = mean(result.durations)
+                mean_str = f"{durations_mean:.3f} s"
+
+                try:
+                    three_sigma_str = f"{durations_mean + 3 * stdev(result.durations):.3f} s"
+                except StatisticsError:
+                    pass
+
+            durations_max = max(result.durations)
+            max_str = f"{durations_max:.3f} s"
+
+            limit_str = f"{result.limit:.3f} s"
+
+            percent = 100 * durations_max / result.limit
+            if percent >= 100:
+                # intentionally biasing towards 🍄
+                choices = "🍄🍄🍎🍅"  # 🌶️🍉🍒🍓
+            elif percent >= (100 - percent_margin):
+                choices = "🍋🍌"  # 🍍🌽
+            else:
+                choices = "🫛🍈🍏🍐🥝🥒🥬🥦"
+
+            marker: str
+            if randomoji:
+                marker = random.choice(choices)
+            else:
+                marker = choices[0]
+
+            percent_str = f"{percent:.0f} %"
+
+            test_path_str = ".".join(result.test_path[1:])
+            if len(result.ids) > 0:
+                test_path_str += f"[{'-'.join(result.ids)}]"
+
+            test_link_text: str
+            if result.label == "":
+                # TODO: but could be in different files too
+                test_link_text = f"`{test_path_str}` - {result.line}"
             else:
                 test_link_text = f"`{test_path_str}` - {result.label}"
 

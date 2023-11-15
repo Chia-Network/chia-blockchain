@@ -5,6 +5,7 @@ import asyncio
 import dataclasses
 import datetime
 import functools
+import json
 import math
 import multiprocessing
 import os
@@ -67,7 +68,7 @@ from tests import ether
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
-from tests.util.misc import BenchmarkRunner, GcMode, _AssertRuntime, measure_overhead
+from tests.util.misc import BenchmarkRunner, GcMode, TestId, _AssertRuntime, measure_overhead
 
 multiprocessing.set_start_method("spawn")
 
@@ -79,18 +80,17 @@ from chia.simulator.setup_nodes import setup_farmer_multi_harvester
 from chia.util.keyring_wrapper import KeyringWrapper
 
 
-@pytest.fixture(autouse=True)
-def ether_record_property_fixture(record_property: Callable[[str, object], None]) -> Iterator[None]:
+@pytest.fixture(name="ether_setup", autouse=True)
+def ether_setup_fixture(request: SubRequest, record_property: Callable[[str, object], None]) -> Iterator[None]:
     with MonkeyPatch.context() as monkeypatch_context:
-        monkeypatch_context.setattr(ether, "record_property", record_property, raising=False)
+        monkeypatch_context.setattr(ether, "test_id", TestId.create(node=request.node))
+        monkeypatch_context.setattr(ether, "record_property", record_property)
         yield
 
 
 @pytest.fixture(autouse=True)
-def ether_node_name_fixture(request: SubRequest) -> Iterator[None]:
-    with MonkeyPatch.context() as monkeypatch_context:
-        monkeypatch_context.setattr(ether, "node_name", request.node.name, raising=False)
-        yield
+def record_test_id_property_fixture(ether_setup: None, record_property: Callable[[str, object], None]) -> None:
+    record_property("test_id", json.dumps(ether.test_id.marshal(), ensure_ascii=True, sort_keys=True))
 
 
 @pytest.fixture(scope="session")
@@ -129,7 +129,7 @@ def benchmark_runner_fixture(
     benchmark_repeat: int,
 ) -> BenchmarkRunner:
     return BenchmarkRunner(
-        label=ether.node_name,
+        test_id=ether.test_id,
         overhead=benchmark_runner_overhead,
     )
 
@@ -399,6 +399,13 @@ def pytest_addoption(parser: pytest.Parser):
         type=int,
         help=f"The number of times to run each benchmark, default {default_repeats}.",
     )
+    group.addoption(
+        "--time-out-assert-repeats",
+        action="store",
+        default=default_repeats,
+        type=int,
+        help=f"The number of times to run each test with time out asserts, default {default_repeats}.",
+    )
 
 
 def pytest_configure(config):
@@ -423,6 +430,22 @@ def pytest_configure(config):
             return 1
 
     globals()[benchmark_repeat_fixture.__name__] = benchmark_repeat_fixture
+
+    time_out_assert_repeats = config.getoption("--time-out-assert-repeats")
+    if time_out_assert_repeats != 1:
+
+        @pytest.fixture(
+            name="time_out_assert_repeat",
+            autouse=True,
+            params=[
+                pytest.param(repeat, id=f"time_out_assert_repeat{repeat:03d}")
+                for repeat in range(time_out_assert_repeats)
+            ],
+        )
+        def time_out_assert_repeat_fixture(request: SubRequest) -> int:
+            return request.param
+
+        globals()[time_out_assert_repeat_fixture.__name__] = time_out_assert_repeat_fixture
 
 
 def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):

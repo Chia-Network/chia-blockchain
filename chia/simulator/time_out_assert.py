@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
+import json
 import logging
 import os
+import pathlib
 import sys
 import time
-from typing import Callable, Optional, overload
+from typing import Any, Callable, ClassVar, Dict, Optional, Tuple, final, overload
 
+import chia
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.util.misc import caller_file_and_line
 
 log = logging.getLogger(__name__)
 
@@ -51,21 +56,98 @@ def adjusted_timeout(timeout: Optional[float]) -> Optional[float]:
     return timeout + _system_delay
 
 
+@final
+@dataclasses.dataclass(frozen=True)
+class TimeOutAssertData:
+    # TODO: deal with import directions etc so we can check this
+    # if TYPE_CHECKING:
+    #     _protocol_check: ClassVar[DataTypeProtocol] = cast("TimeOutAssertData", None)
+
+    tag: ClassVar[str] = "time_out_assert"
+
+    duration: float
+    path: pathlib.Path
+    line: int
+    limit: float
+    timed_out: bool
+
+    # TODO: can we make this not required maybe?
+    label: str = ""
+
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> TimeOutAssertData:
+        return cls(
+            duration=marshalled["duration"],
+            path=pathlib.Path(marshalled["path"]),
+            line=int(marshalled["line"]),
+            limit=marshalled["limit"],
+            timed_out=marshalled["timed_out"],
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "duration": self.duration,
+            "path": self.path.as_posix(),
+            "line": self.line,
+            "limit": self.limit,
+            "timed_out": self.timed_out,
+        }
+
+
 async def time_out_assert_custom_interval(timeout: float, interval, function, value=True, *args, **kwargs):
     __tracebackhide__ = True
 
+    # TODO: wrong line when not called directly but instead from the regular time_out_assert?
+    entry_file, entry_line = caller_file_and_line()
+
     timeout = adjusted_timeout(timeout=timeout)
 
-    start = time.time()
-    while time.time() - start < timeout:
-        if asyncio.iscoroutinefunction(function):
-            f_res = await function(*args, **kwargs)
+    start = time.monotonic()
+    duration = 0.0
+    timed_out = False
+    try:
+        while True:
+            if asyncio.iscoroutinefunction(function):
+                f_res = await function(*args, **kwargs)
+            else:
+                f_res = function(*args, **kwargs)
+
+            if value == f_res:
+                return None
+
+            now = time.monotonic()
+            duration = now - start
+
+            if duration > timeout:
+                timed_out = True
+                assert False, f"Timed assertion timed out after {timeout} seconds: expected {value!r}, got {f_res!r}"
+
+            await asyncio.sleep(min(interval, timeout - duration))
+    finally:
+        try:
+            # TODO: this import is going the wrong direction
+            from tests import ether
+        except ImportError:
+            pass
         else:
-            f_res = function(*args, **kwargs)
-        if value == f_res:
-            return None
-        await asyncio.sleep(interval)
-    assert False, f"Timed assertion timed out after {timeout} seconds: expected {value!r}, got {f_res!r}"
+            if ether.record_property is not None:
+                # name = JunitPropertyName(tag=TimeOutAssertData.tag, id=ether.test_id)
+
+                data = TimeOutAssertData(
+                    duration=duration,
+                    path=pathlib.Path(entry_file).relative_to(pathlib.Path(chia.__file__).parent.parent),
+                    line=entry_line,
+                    limit=timeout,
+                    timed_out=timed_out,
+                )
+
+                ether.record_property(
+                    # json.dumps(name.marshal(), ensure_ascii=True, sort_keys=True),
+                    data.tag,
+                    json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
+                )
 
 
 async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):

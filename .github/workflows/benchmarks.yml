@@ -124,4 +124,5 @@ jobs:
       - name: Add benchmark results to workflow summary
         if: always()
         run: |
-          python -m tests.process_benchmarks --xml junit-data/benchmarks.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
+          # TODO: rename the file since it is more general
+          python -m tests.process_benchmarks --type benchmark --xml junit-data/benchmarks.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
