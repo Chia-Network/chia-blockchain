@@ -146,7 +146,10 @@ def main(
     cases_by_test_id: defaultdict[TestId, List[lxml.etree.Element]] = defaultdict(list)
     for suite in root.findall("testsuite"):
         for case in suite.findall("testcase"):
-            test_id = TestId.unmarshal(json.loads(case.find("properties/property[@name='test_id']").attrib["value"]))
+            if case.find("skipped") is not None:
+                continue
+            test_id_property = case.find("properties/property[@name='test_id']")
+            test_id = TestId.unmarshal(json.loads(test_id_property.attrib["value"]))
             test_id = dataclasses.replace(
                 test_id, ids=tuple(id for id in test_id.ids if not id.startswith(f"{data_type.tag}_repeat"))
             )
