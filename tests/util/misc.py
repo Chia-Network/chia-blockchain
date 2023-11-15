@@ -367,7 +367,6 @@ class BenchmarkRunner:
     def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
         kwargs.setdefault("enable_assertion", self.enable_assertion)
         kwargs.setdefault("overhead", self.overhead)
-        kwargs.setdefault("record_property", ether.record_property)
         return _AssertRuntime(*args, **kwargs)
 
 
