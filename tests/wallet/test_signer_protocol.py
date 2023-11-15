@@ -6,7 +6,7 @@ from typing import List, Optional
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
@@ -18,6 +18,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_offset,
 )
 from chia.wallet.util.signer_protocol import (
+    Coin,
     KeyHints,
     PathHint,
     SigningInstructions,
@@ -37,7 +38,7 @@ def test_signing_serialization() -> None:
     pubkey: G1Element = G1Element()
     message: bytes = b"message"
 
-    coin: Coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+    coin: ConsensusCoin = ConsensusCoin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
     puzzle: Program = Program.to(1)
     solution: Program = Program.to([AggSigMe(pubkey, message).to_program()])
 
@@ -51,7 +52,16 @@ def test_signing_serialization() -> None:
         ),
     )
 
-    assert tx == UnsignedTransaction.from_program(tx.as_program())
+    assert tx == UnsignedTransaction.from_program(Program.from_bytes(bytes(tx.as_program())))
+
+    # Test from_json_dict with the special case where it encounters the as_program serialization in the middle of JSON
+    assert tx.transaction_info.spends[0] == Spend.from_json_dict(
+        {
+            "coin": bytes(tx.transaction_info.spends[0].coin.as_program()).hex(),
+            "puzzle": bytes(tx.transaction_info.spends[0].puzzle).hex(),
+            "solution": bytes(tx.transaction_info.spends[0].solution).hex(),
+        }
+    )
 
 
 @pytest.mark.parametrize(
@@ -70,6 +80,7 @@ def test_signing_serialization() -> None:
 async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFramework) -> None:
     wallet: Wallet = wallet_environments.environments[0].xch_wallet
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
+    wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
 
     # Test first that we can properly examine and sign a regular transaction
     puzzle: Program = await wallet.get_puzzle(new=False)
@@ -78,7 +89,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     delegated_puzzle_hash: bytes32 = delegated_puzzle.get_tree_hash()
     solution: Program = Program.to([None, None, None])
 
-    coin: Coin = Coin(
+    coin: ConsensusCoin = ConsensusCoin(
         bytes32([0] * 32),
         puzzle_hash,
         uint64(0),
@@ -97,7 +108,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     synthetic_pubkey: G1Element = G1Element.from_bytes(puzzle.uncurry()[1].at("f").atom)
     message: bytes = delegated_puzzle_hash + coin.name() + wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
 
-    utx: UnsignedTransaction = await wallet_state_manager._gather_signing_info([coin_spend])
+    utx: UnsignedTransaction = UnsignedTransaction([Spend.from_coin_spend(coin_spend)], await wallet_rpc.gather_signing_info([Spend.from_coin_spend(coin_spend)]))
     assert utx.signing_instructions.key_hints.sum_hints == [
         SumHint(
             [pubkey.get_fingerprint().to_bytes(4, "big")],
@@ -127,14 +138,14 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     not_our_private_key: PrivateKey = PrivateKey.from_bytes(bytes(32))
     not_our_pubkey: G1Element = not_our_private_key.get_g1()
     not_our_message: bytes = b"not our message"
-    not_our_coin: Coin = Coin(
+    not_our_coin: ConsensusCoin = ConsensusCoin(
         bytes32([0] * 32),
         ACS_PH,
         uint64(0),
     )
     not_our_coin_spend: CoinSpend = CoinSpend(not_our_coin, ACS, Program.to([[49, not_our_pubkey, not_our_message]]))
 
-    not_our_utx: UnsignedTransaction = await wallet_state_manager._gather_signing_info([coin_spend, not_our_coin_spend])
+    not_our_utx: UnsignedTransaction = UnsignedTransaction([Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)], await wallet_rpc.gather_signing_info([Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]))
     assert not_our_utx.signing_instructions.key_hints == utx.signing_instructions.key_hints
     assert len(not_our_utx.signing_instructions.targets) == 2
     assert not_our_utx.signing_instructions.targets[0].pubkey == Program.to(synthetic_pubkey)

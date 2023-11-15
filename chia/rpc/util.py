@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import traceback
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, Type, get_type_hints
 
 import aiohttp
 from blspy import AugSchemeMPL
@@ -17,7 +17,9 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
+from chia.util.streamable import Streamable
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
+from chia.wallet.util.signer_protocol import clvm_serialization_mode
 
 log = logging.getLogger(__name__)
 
@@ -44,12 +46,24 @@ def wrap_http_handler(f) -> Callable:
     return inner
 
 
+RpcEndpoint = Callable[..., Coroutine[Any, Any, Dict[str, Any]]]
+
+
+def marshall(func: RpcEndpoint) -> RpcEndpoint:
+    hints = get_type_hints(func)
+    request_class: Type[Streamable] = hints["request"]
+    async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
+        response_obj: Streamable = await func(self, request_class.from_json_dict(request), *args, **kwargs)
+        with clvm_serialization_mode(not request.get("full_jsonify", False)):
+            return response_obj.to_json_dict()
+
+    return rpc_endpoint
+
+
 def tx_endpoint(
     push: bool = False, merge_spends: bool = True
-) -> Callable[[Callable[..., Coroutine[Any, Any, Dict[str, Any]]]], Callable[..., Coroutine[Any, Any, Dict[str, Any]]]]:
-    def _inner(
-        func: Callable[..., Coroutine[Any, Any, Dict[str, Any]]],
-    ) -> Callable[..., Coroutine[Any, Any, Dict[str, Any]]]:
+) -> Callable[[RpcEndpoint], RpcEndpoint]:
+    def _inner(func: RpcEndpoint) -> RpcEndpoint:
         async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
@@ -109,12 +123,12 @@ def tx_endpoint(
             tx_records: List[TransactionRecord] = [
                 TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]
             ]
-            unsigned_txs = await self.service.wallet_state_manager.gather_signing_info(tx_records)
+            unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(tx_records)
 
             if request.get("jsonify_unsigned_txs", False):
-                response["unsigned_txs"] = [tx.to_json_dict() for tx in unsigned_txs]
+                response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
             else:
-                response["unsigned_txs"] = [bytes(tx.as_program()).hex() for tx in unsigned_txs]
+                response["unsigned_transactions"] = [bytes(tx.as_program()).hex() for tx in unsigned_txs]
 
             new_txs: List[TransactionRecord] = []
             if request.get("sign", self.service.config.get("auto_sign_txs", True)):

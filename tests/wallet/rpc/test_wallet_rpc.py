@@ -343,7 +343,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     )
     assert response["success"]
     tx = TransactionRecord.from_json_dict_convenience(response["transactions"][0])
-    [UnsignedTransaction.from_json_dict(utx) for utx in response["unsigned_txs"]]
+    [UnsignedTransaction.from_json_dict(utx) for utx in response["unsigned_transactions"]]
     assert tx == dataclasses.replace(tx_no_push, created_at_time=tx.created_at_time)
     transaction_id = tx.name
     spend_bundle = tx.spend_bundle

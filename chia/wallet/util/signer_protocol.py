@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass, fields
-from typing import Any, List, Type, TypeVar
+from typing import Any, Dict, List, Type, TypeVar, Iterator
 
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
 from typing_extensions import dataclass_transform
@@ -12,7 +13,19 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
-from chia.util.streamable import Streamable, streamable
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.streamable import Streamable, streamable, ConversionError
+
+
+USE_CLVM_SERIALIZATION = False
+@contextmanager
+def clvm_serialization_mode(use: bool) -> Iterator[None]:
+    global USE_CLVM_SERIALIZATION
+    old_mode = USE_CLVM_SERIALIZATION
+    USE_CLVM_SERIALIZATION = use
+    yield
+    USE_CLVM_SERIALIZATION = old_mode
+
 
 
 @dataclass_transform()
@@ -41,6 +54,31 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
     @classmethod
     def from_program(cls: Type[_T_ClvmStreamable], prog: Program) -> _T_ClvmStreamable:
         raise NotImplementedError()
+
+    def override_json_serialization(self, default_recurse_jsonify: Callable[Any, Dict[str, Any]]) -> Dict[str, Any]:
+        global USE_CLVM_SERIALIZATION
+        if USE_CLVM_SERIALIZATION:
+            return bytes(self.as_program()).hex()
+        else:
+            new_dict = {}
+            for field in fields(self):
+                new_dict[field.name] = default_recurse_jsonify(getattr(self, field.name))
+            return new_dict
+
+    @classmethod
+    def from_json_dict(cls: Type[_T_ClvmStreamable], json_dict: Any) -> _T_ClvmStreamable:
+        if isinstance(json_dict, str):
+            try:
+                byts = hexstr_to_bytes(json_dict)
+            except ValueError as e:
+                raise ConversionError(json_dict, cls, e)
+
+            try:
+                return cls.from_program(Program.from_bytes(byts))
+            except Exception as e:
+                raise ConversionError(json_dict, cls, e)
+        else:
+            return super().from_json_dict(json_dict)
 
 
 class Coin(ClvmStreamable):
@@ -109,7 +147,7 @@ class SigningInstructions(ClvmStreamable):
 
 
 class UnsignedTransaction(ClvmStreamable):
-    tx_info: TransactionInfo
+    transaction_info: TransactionInfo
     signing_instructions: SigningInstructions
 
 
@@ -119,7 +157,7 @@ class SigningResponse(ClvmStreamable):
 
 
 class Signature(ClvmStreamable):
-    signature_type: bytes
+    type: str
     signature: bytes
 
 

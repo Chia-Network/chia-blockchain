@@ -112,13 +112,9 @@ async def mint_cr_cat(
         ],
         G2Element(),
     )
-    unsigned_tx = await wallet_node_0.wallet_state_manager._gather_signing_info(
+    spend_bundle, _ = await wallet_node_0.wallet_state_manager.sign_bundle(
         [*spend_bundle.coin_spends, *eve_spend.coin_spends]
     )
-    signing_responses = await wallet_node_0.wallet_state_manager.execute_signing_instructions(
-        unsigned_tx.signing_instructions, partial_allowed=False
-    )
-    spend_bundle = await wallet_node_0.wallet_state_manager.apply_signatures(unsigned_tx, signing_responses)
     await client_0.push_tx(spend_bundle)  # type: ignore [no-untyped-call]
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 

@@ -18,7 +18,8 @@ from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletIn
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
-from chia.rpc.util import tx_endpoint
+from chia.rpc.util import marshall, tx_endpoint
+from chia.rpc.wallet_request_types import GatherSigningInfo, ApplySignatures, SubmitTransactions, GatherSigningInfoResponse, ApplySignaturesResponse, SubmitTransactionsResponse
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -282,6 +283,10 @@ class WalletRpcApi:
             "/vc_revoke": self.vc_revoke,
             # CR-CATs
             "/crcat_approve_pending": self.crcat_approve_pending,
+            # Signer Protocol
+            "/gather_signing_info": self.gather_signing_info,
+            "/apply_signatures": self.apply_signatures,
+            "/submit_transactions": self.submit_transactions,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -2048,7 +2053,7 @@ class WalletRpcApi:
     @tx_endpoint(push=True)
     async def cancel_offer(
         self,
-        request: Dict[str, Any],
+        request: CancelOffer,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
@@ -3679,11 +3684,7 @@ class WalletRpcApi:
                 nft_id_list.append(encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config)))
         ###
         # Temporary signing workaround (delete when minting functions return transaction records)
-        unsigned_tx = await self.service.wallet_state_manager._gather_signing_info(sb.coin_spends)
-        signing_responses = await self.service.wallet_state_manager.execute_signing_instructions(
-            unsigned_tx.signing_instructions, partial_allowed=False
-        )
-        sb = await self.service.wallet_state_manager.apply_signatures(unsigned_tx, signing_responses)
+        sb, _ = await self.service.wallet_state_manager.sign_bundle(sb.coin_spends)
         ###
         return {
             "success": True,
@@ -4503,3 +4504,24 @@ class WalletRpcApi:
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
+
+    @marshall
+    async def gather_signing_info(
+        self,
+        request: GatherSigningInfo,
+    ) -> GatherSigningInfoResponse:
+        return GatherSigningInfoResponse(await self.service.wallet_state_manager.gather_signing_info(request.spends))
+
+    @marshall
+    async def apply_signatures(
+        self,
+        request: ApplySignatures,
+    ) -> ApplySignaturesResponse:
+        return ApplySignaturesResponse(await self.service.wallet_state_manager.apply_signatures(request.spends, request.signing_responses))
+
+    @marshall
+    async def submit_transactions(
+        self,
+        request: SubmitTransactions,
+    ) -> SubmitTransactionsResponse:
+        return SubmitTransactionsResponse(await self.service.wallet_state_manager.submit_transactions(request.signed_transactions))

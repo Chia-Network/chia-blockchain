@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple, Union
+from typing_extensions import Unpack
 
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
@@ -22,6 +23,7 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
+from chia.rpc.wallet_request_types import GatherSigningInfo, ApplySignatures, SubmitTransactions, GatherSigningInfoResponse, ApplySignaturesResponse, SubmitTransactionsResponse
 
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -1681,3 +1683,21 @@ class WalletRpcClient(RpcClient):
             },
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+
+    async def gather_signing_info(
+        self,
+        *args: Unpack[GatherSigningInfo],
+    ) -> GatherSigningInfoResponse:
+        return GatherSigningInfoResponse.from_json_dict(temp)
+
+    async def apply_signatures(
+        self,
+        *args: Unpack[ApplySignatures],
+    ) -> ApplySignaturesResponse:
+        return ApplySignaturesResponse.from_json_dict(await self.fetch("apply_signatures", ApplySignatures(*args).to_json_dict()))
+
+    async def submit_transactions(
+        self,
+        *args: Unpack[SubmitTransactions],
+    ) -> SubmitTransactionsResponse:
+        return SubmitTransactionsResponse.from_json_dict(await self.fetch("submit_transactions", SubmitTransactions(*args).to_json_dict()))

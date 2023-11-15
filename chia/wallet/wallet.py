@@ -48,6 +48,9 @@ from chia.wallet.util.signer_protocol import (
     SigningResponse,
     SumHint,
     UnsignedTransaction,
+    SignedTransaction,
+    Signature,
+    TransactionInfo,
 )
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
@@ -624,11 +627,16 @@ class Wallet:
         return responses
 
     async def apply_signatures(
-        self, unsigned_tx: UnsignedTransaction, signing_responses: Iterable[SigningResponse]
-    ) -> SpendBundle:
-        return SpendBundle(
-            [spend.as_coin_spend() for spend in unsigned_tx.tx_info.spends],
-            AugSchemeMPL.aggregate(
-                [G2Element.from_bytes(signing_response.signature) for signing_response in signing_responses]
-            ),
+        self, spends: List[Spend], signing_responses: List[SigningResponse]
+    ) -> SignedTransaction:
+        return SignedTransaction(
+            TransactionInfo([spend.as_coin_spend() for spend in spends]),
+            [
+                Signature(
+                    "bls_12381_aug_scheme",
+                    bytes(AugSchemeMPL.aggregate(
+                        [G2Element.from_bytes(signing_response.signature) for signing_response in signing_responses]
+                    )),
+                )
+            ],
         )
