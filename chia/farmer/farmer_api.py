@@ -115,10 +115,10 @@ class FarmerAPI:
             if required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters):
 
                 sp_src_data: Optional[List[SignatureRequestSourceData]] = None
-                if new_proof_of_space.farmer_reward_address_override:
+                if new_proof_of_space.include_source_signature_data or new_proof_of_space.farmer_reward_address_override:
                     cc_data: SignatureRequestSourceData
                     rc_data: SignatureRequestSourceData
-                    if sp.sp_source_data.vdf_data is not None:
+                    if sp.sp_source_data.vdf_data:
                         cc_data = SignatureRequestSourceData(cc_vdf=sp.sp_source_data.vdf_data.cc_vdf)
                         rc_data = SignatureRequestSourceData(rc_vdf=sp.sp_source_data.vdf_data.rc_vdf)
                     else:
@@ -254,7 +254,7 @@ class FarmerAPI:
                 m_to_sign = payload.get_hash()
                 m_src_data: Optional[List[SignatureRequestSourceData]] = None
 
-                if new_proof_of_space.farmer_reward_address_override:
+                if new_proof_of_space.include_source_signature_data or new_proof_of_space.farmer_reward_address_override:
                     m_src_data = [SignatureRequestSourceData(partial=payload)]
 
                 request = harvester_protocol.RequestSignatures(
@@ -546,14 +546,17 @@ class FarmerAPI:
 
         foliage_block_data: Optional[SignatureRequestSourceData] = None
         foliage_transaction_block_data: Optional[SignatureRequestSourceData] = None
+        include_source_data = False
 
-        if full_node_request.foliage_block_data is not None:
+        if full_node_request.foliage_block_data:
+            include_source_data = True
             foliage_block_data = SignatureRequestSourceData(
                 foliage_block_data=full_node_request.foliage_block_data
             )
 
-        if full_node_request.foliage_transaction_block_data is not None:
+        if full_node_request.foliage_transaction_block_data:
             assert foliage_block_data
+            include_source_data = True
             foliage_transaction_block_data = SignatureRequestSourceData(
                 foliage_transaction_block=full_node_request.foliage_transaction_block_data
             )
@@ -563,7 +566,7 @@ class FarmerAPI:
             challenge_hash,
             sp_hash,
             [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
-            message_data=None if foliage_block_data is None else [foliage_block_data, foliage_transaction_block_data]
+            message_data=[foliage_block_data, foliage_transaction_block_data] if include_source_data else None
         )
 
         response = await self.farmer.server.call_api_of_specific(HarvesterAPI.request_signatures, request, node_id)
