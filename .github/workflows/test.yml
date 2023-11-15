@@ -147,11 +147,6 @@ jobs:
           path: junit-results/*
           if-no-files-found: error
 
-      - name: Add time out assert results to workflow summary
-        if: always()
-        run: |
-          python -m tests.process_junit --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
-
       - name: Download Coverage
         uses: actions/download-artifact@v3
         with:
@@ -169,6 +164,11 @@ jobs:
           development: true
 
       - uses: chia-network/actions/activate-venv@main
+
+      - name: Add time out assert results to workflow summary
+        if: always()
+        run: |
+          python -m tests.process_junit --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
 
       - name: Coverage Processing
         run: |
