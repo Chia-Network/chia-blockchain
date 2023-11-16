@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 import aiosqlite as aiosqlite
 from typing_extensions import final
 
+from chia.data_layer.data_layer_errors import ProofIntegrityError
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
@@ -18,9 +20,11 @@ from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import match_dl_singleton
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 
 if TYPE_CHECKING:
     from chia.data_layer.data_store import DataStore
+    from chia.wallet.wallet_node import WalletNode
 
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
@@ -822,3 +826,67 @@ async def get_dl_root_from_parent_spend(
                 return root_hash, launcher_id
 
     return None, None
+
+
+async def dl_verify_proof(
+    request: Dict[str, Any],
+    wallet_node: WalletNode,
+    max_cost: int,
+    peer: WSChiaConnection,
+) -> Dict[str, Any]:
+    """Verify a proof of inclusion for a DL singleton"""
+
+    get_proof_response = GetProofResponse.unmarshal(request)
+    verified_keys: List[KeyValue] = []
+
+    coin_id = get_proof_response.coin_id
+    coin_states = await wallet_node.get_coin_state([coin_id], peer=peer)
+    if len(coin_states) == 0:
+        raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
+
+    parent_coin_states = await wallet_node.get_coin_state([coin_states[0].coin.parent_coin_info], peer=peer)
+    if len(parent_coin_states) == 0:
+        raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
+
+    coin_spend = await fetch_coin_spend_for_coin_state(coin_state=parent_coin_states[0], peer=peer)
+    root_hash, launcher_id = await get_dl_root_from_parent_spend(coin_spend, max_cost=max_cost)
+
+    if root_hash is None or launcher_id is None:
+        raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
+
+    if get_proof_response.proof.store_id != launcher_id:
+        raise ProofIntegrityError(
+            f"Invalid Proof: store id {get_proof_response.proof.store_id.hex()} "
+            "does not match launcher id {launcher_id.hex()}"
+        )
+
+    for reference_proof in get_proof_response.proof.proofs:
+        proof = ProofOfInclusion(
+            node_hash=reference_proof.node_hash,
+            layers=[
+                ProofOfInclusionLayer(
+                    other_hash_side=layer.other_hash_side,
+                    other_hash=layer.other_hash,
+                    combined_hash=layer.combined_hash,
+                )
+                for layer in reference_proof.layers
+            ],
+        )
+
+        if leaf_hash(key=reference_proof.key, value=reference_proof.value) != proof.node_hash:
+            raise ProofIntegrityError("Invalid Proof: node hash does not match key and value")
+
+        if not proof.valid():
+            raise ProofIntegrityError("Invalid Proof: invalid proof of inclusion found")
+
+        if proof.root_hash != root_hash:
+            raise ProofIntegrityError(
+                f"Invalid Proof: invalid root hash found. got {root_hash.hex()}, expected {proof.root_hash.hex()}"
+            )
+
+        verified_keys.append(KeyValue(key=reference_proof.key, value=reference_proof.value))
+
+    response = VerifyProofResponse(
+        verified=OfferStore(get_proof_response.proof.store_id, tuple(verified_keys)), success=True
+    )
+    return response.marshal()
