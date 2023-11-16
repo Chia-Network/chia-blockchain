@@ -66,8 +66,6 @@ from chia.plotting.util import (
     parse_plot_info,
 )
 from chia.server.server import ssl_context_for_client
-from chia.simulator.adjusted_timeout import adjusted_timeout
-from chia.simulator.full_node_simulator import backoff_times
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.ssl_certs import (
     SSLTestCACertAndPrivateKey,
@@ -125,6 +123,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.ssl_check import fix_ssl
+from chia.util.timing import adjusted_timeout, backoff_times
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,

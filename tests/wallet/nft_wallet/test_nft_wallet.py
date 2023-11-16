@@ -10,7 +10,6 @@ from clvm_tools.binutils import disassemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.simulator.adjusted_timeout import adjusted_timeout
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.program import Program
@@ -21,6 +20,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
+from chia.util.timing import adjusted_timeout
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.address_type import AddressType

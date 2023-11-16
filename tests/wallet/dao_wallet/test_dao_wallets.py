@@ -9,7 +9,6 @@ import pytest
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.simulator.adjusted_timeout import adjusted_timeout
 from chia.simulator.setup_nodes import SimulatorsAndWallets, SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.program import Program
@@ -18,6 +17,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.timing import adjusted_timeout
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_info import DAORules

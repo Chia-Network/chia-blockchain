@@ -6,7 +6,7 @@ import time
 from typing import Callable
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.simulator.adjusted_timeout import adjusted_timeout
+from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)
 

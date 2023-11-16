@@ -21,9 +21,8 @@ from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
-from chia.simulator.adjusted_timeout import adjusted_timeout
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
-from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import (
     setup_daemon,
@@ -44,6 +43,7 @@ from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
+from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 

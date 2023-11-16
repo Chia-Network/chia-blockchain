@@ -18,11 +18,11 @@ from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.simulator.adjusted_timeout import adjusted_timeout
 from chia.simulator.socket import find_available_listen_port
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
 from chia.util.misc import sendable_termination_signals
+from chia.util.timing import adjusted_timeout
 from tests.core.data_layer.util import ChiaRoot
 from tests.util.misc import closing_chia_root_popen
 
