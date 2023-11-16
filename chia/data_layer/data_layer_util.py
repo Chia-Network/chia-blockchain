@@ -11,10 +11,13 @@ from typing_extensions import final
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.db_wallet.db_wallet_puzzles import match_dl_singleton
 
 if TYPE_CHECKING:
     from chia.data_layer.data_store import DataStore
@@ -785,3 +788,37 @@ class VerifyProofResponse:
             "verified": self.verified.marshal(),
             "success": self.success,
         }
+
+
+async def get_dl_root_from_parent_spend(
+    parent_spend: CoinSpend, max_cost: int
+) -> Tuple[Optional[bytes32], Optional[bytes32]]:
+    matched, curried_args = match_dl_singleton(parent_spend.puzzle_reveal.to_program())
+    if not matched:
+        return None, None
+
+    _, _, launcher_id_program = curried_args
+    launcher_id = bytes32(launcher_id_program.as_atom())
+
+    _, result = parent_spend.puzzle_reveal.run_with_cost(max_cost, parent_spend.solution)
+
+    #
+    # expected condition structure
+    # condition[0] is the OpCode
+    # condition[1] is puzzle hash
+    # condition[2] is amount
+    # condition[3] is a list (memos)
+    # condition[3][0] is the hint
+    # condition[3][1] is root_hash
+    #
+    for condition in Program.to(result).as_iter():
+        atom_list = list(condition.as_iter())
+        op = atom_list[0].atom
+        if op == ConditionOpcode.CREATE_COIN:
+            amount = int.from_bytes(atom_list[2].atom, "big")
+            if amount % 2 == 1:
+                memos = list(atom_list[3].as_iter())
+                root_hash = memos[1].atom
+                return root_hash, launcher_id
+
+    return None, None

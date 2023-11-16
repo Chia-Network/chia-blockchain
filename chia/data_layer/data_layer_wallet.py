@@ -12,16 +12,7 @@ from typing_extensions import Unpack, final
 
 from chia.consensus.block_record import BlockRecord
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError, OfferIntegrityError
-from chia.data_layer.data_layer_util import (
-    GetProofResponse,
-    KeyValue,
-    OfferStore,
-    ProofOfInclusion,
-    ProofOfInclusionLayer,
-    StoreProofs,
-    VerifyProofResponse,
-    leaf_hash,
-)
+from chia.data_layer.data_layer_util import OfferStore, ProofOfInclusion, ProofOfInclusionLayer, StoreProofs, leaf_hash
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
@@ -954,41 +945,6 @@ class DataLayerWallet:
         elif parent_spend.coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
             await self.wallet_state_manager.dl_store.delete_mirror(parent_name)
 
-    async def get_dl_root_from_parent_spend(
-        self, parent_spend: CoinSpend
-    ) -> Tuple[Optional[bytes32], Optional[bytes32]]:
-        matched, curried_args = match_dl_singleton(parent_spend.puzzle_reveal.to_program())
-        if not matched:
-            return None, None
-
-        _, _, launcher_id_program = curried_args
-        launcher_id = bytes32(launcher_id_program.as_atom())
-
-        _, result = parent_spend.puzzle_reveal.run_with_cost(
-            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, parent_spend.solution
-        )
-
-        #
-        # expected condition structure
-        # condition[0] is the OpCode
-        # condition[1] is puzzle hash
-        # condition[2] is amount
-        # condition[3] is a list (memos)
-        # condition[3][0] is the hint
-        # condition[3][1] is root_hash
-        #
-        for condition in Program.to(result).as_iter():
-            atom_list = list(condition.as_iter())
-            op = atom_list[0].atom
-            if op == ConditionOpcode.CREATE_COIN:
-                amount = int.from_bytes(atom_list[2].atom, "big")
-                if amount % 2 == 1:
-                    memos = list(atom_list[3].as_iter())
-                    root_hash = memos[1].atom
-                    return root_hash, launcher_id
-
-        return None, None
-
     # This function, though in use, is currently untested because it never runs due to other design choices
     async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:  # pragma: no cover
         """
@@ -1398,67 +1354,6 @@ class DataLayerWallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return coin.amount % 2 == 1 and await self.wallet_state_manager.dl_store.get_launcher(hint) is not None
-
-    async def verify_proof(self, request: Dict[str, Any], peer: WSChiaConnection) -> Dict[str, Any]:
-        get_proof_response = GetProofResponse.unmarshal(request)
-        verified_keys: List[KeyValue] = []
-
-        coin_id = get_proof_response.coin_id
-        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state([coin_id], peer=peer)
-        if len(coin_states) == 0:
-            raise OfferIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
-
-        parent_coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_states[0].coin.parent_coin_info], peer=peer
-        )
-        if len(parent_coin_states) == 0:
-            raise OfferIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
-
-        coin_spend = await fetch_coin_spend_for_coin_state(coin_state=parent_coin_states[0], peer=peer)
-        root_hash, launcher_id = await self.get_dl_root_from_parent_spend(coin_spend)
-
-        if root_hash is None or launcher_id is None:
-            raise OfferIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
-
-        if get_proof_response.proof.store_id != launcher_id:
-            raise OfferIntegrityError(
-                f"Invalid Proof: store id {get_proof_response.proof.store_id.hex()} "
-                "does not match launcher id {launcher_id.hex()}"
-            )
-
-        for reference_proof in get_proof_response.proof.proofs:
-            proof = ProofOfInclusion(
-                node_hash=reference_proof.node_hash,
-                layers=[
-                    ProofOfInclusionLayer(
-                        other_hash_side=layer.other_hash_side,
-                        other_hash=layer.other_hash,
-                        combined_hash=layer.combined_hash,
-                    )
-                    for layer in reference_proof.layers
-                ],
-            )
-
-            if leaf_hash(key=reference_proof.key, value=reference_proof.value) != proof.node_hash:
-                raise OfferIntegrityError("Invalid Proof: node hash does not match key and value")
-
-            if not proof.valid():
-                raise OfferIntegrityError("Invalid Proof: invalid proof of inclusion found")
-
-            if proof.root_hash != root_hash:
-                self.log.error(
-                    f"EMLEMLEMLEMLE: proof.root_hash: {proof.root_hash.hex()}, coin_root_hash: {root_hash.hex()}"
-                )
-                raise OfferIntegrityError(
-                    f"Invalid Proof: invalid root hash found. got {root_hash.hex()}, expected {proof.root_hash.hex()}"
-                )
-
-            verified_keys.append(KeyValue(key=reference_proof.key, value=reference_proof.value))
-
-        response = VerifyProofResponse(
-            verified=OfferStore(get_proof_response.proof.store_id, tuple(verified_keys)), success=True
-        )
-        return response.marshal()
 
 
 def verify_offer(

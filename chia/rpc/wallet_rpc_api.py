@@ -11,7 +11,17 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
+from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError, ProofIntegrityError
+from chia.data_layer.data_layer_util import (
+    GetProofResponse,
+    KeyValue,
+    OfferStore,
+    ProofOfInclusion,
+    ProofOfInclusionLayer,
+    VerifyProofResponse,
+    get_dl_root_from_parent_spend,
+    leaf_hash,
+)
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
@@ -4163,10 +4173,66 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        peer = self.service.get_full_node_peer()
 
-        ret = await dl_wallet.verify_proof(request, self.service.get_full_node_peer())
-        return ret
+        get_proof_response = GetProofResponse.unmarshal(request)
+        verified_keys: List[KeyValue] = []
+
+        coin_id = get_proof_response.coin_id
+        coin_states = await self.service.wallet_state_manager.wallet_node.get_coin_state([coin_id], peer=peer)
+        if len(coin_states) == 0:
+            raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
+
+        parent_coin_states = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+            [coin_states[0].coin.parent_coin_info], peer=peer
+        )
+        if len(parent_coin_states) == 0:
+            raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
+
+        coin_spend = await fetch_coin_spend_for_coin_state(coin_state=parent_coin_states[0], peer=peer)
+        root_hash, launcher_id = await get_dl_root_from_parent_spend(
+            coin_spend, self.service.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
+        )
+
+        if root_hash is None or launcher_id is None:
+            raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
+
+        if get_proof_response.proof.store_id != launcher_id:
+            raise ProofIntegrityError(
+                f"Invalid Proof: store id {get_proof_response.proof.store_id.hex()} "
+                "does not match launcher id {launcher_id.hex()}"
+            )
+
+        for reference_proof in get_proof_response.proof.proofs:
+            proof = ProofOfInclusion(
+                node_hash=reference_proof.node_hash,
+                layers=[
+                    ProofOfInclusionLayer(
+                        other_hash_side=layer.other_hash_side,
+                        other_hash=layer.other_hash,
+                        combined_hash=layer.combined_hash,
+                    )
+                    for layer in reference_proof.layers
+                ],
+            )
+
+            if leaf_hash(key=reference_proof.key, value=reference_proof.value) != proof.node_hash:
+                raise ProofIntegrityError("Invalid Proof: node hash does not match key and value")
+
+            if not proof.valid():
+                raise ProofIntegrityError("Invalid Proof: invalid proof of inclusion found")
+
+            if proof.root_hash != root_hash:
+                raise ProofIntegrityError(
+                    f"Invalid Proof: invalid root hash found. got {root_hash.hex()}, expected {proof.root_hash.hex()}"
+                )
+
+            verified_keys.append(KeyValue(key=reference_proof.key, value=reference_proof.value))
+
+        response = VerifyProofResponse(
+            verified=OfferStore(get_proof_response.proof.store_id, tuple(verified_keys)), success=True
+        )
+        return response.marshal()
 
     ##########################################################################################
     # Verified Credential

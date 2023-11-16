@@ -42,5 +42,9 @@ class OfferIntegrityError(Exception):
     pass
 
 
+class ProofIntegrityError(Exception):
+    pass
+
+
 class LauncherCoinNotFoundError(Exception):
     pass
