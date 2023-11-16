@@ -40,7 +40,7 @@ class RequestNotCompleteError(Exception):
 class TestPriorityMutex:
     @pytest.mark.anyio
     async def test_priority_mutex(self) -> None:
-        mutex = PriorityMutex.create(priority_type=MutexPriority)
+        mutex = PriorityMutex.create(priority_type=MutexPriority, log=log, label="")
 
         async def slow_func() -> None:
             for i in range(100):
@@ -54,14 +54,14 @@ class TestPriorityMutex:
             for i in range(10):
                 log.warning("Starting high")
                 t1 = time.time()
-                async with mutex.acquire(priority=MutexPriority.high):
+                async with mutex.acquire(priority=MutexPriority.high, hang_time=15):
                     log.warning(f"Spend {time.time() - t1} waiting for high")
                     await slow_func()
 
         async def do_low(i: int) -> None:
             log.warning(f"Starting low {i}")
             t1 = time.time()
-            async with mutex.acquire(priority=MutexPriority.low):
+            async with mutex.acquire(priority=MutexPriority.low, hang_time=15):
                 log.warning(f"Spend {time.time() - t1} waiting for low {i}")
                 await kind_of_slow_func()
 
@@ -140,7 +140,7 @@ class Request:
             raise Exception("attempting to reacquire a request")
 
         try:
-            async with mutex.acquire(priority=self.priority):
+            async with mutex.acquire(priority=self.priority, hang_time=15):
                 self.acquisition_order = self.order_counter()
                 await wait_for.wait()
                 self.release_order = self.order_counter()
@@ -197,7 +197,7 @@ def test_comparisons_fail_for_incomplete_requests(
 
 @pytest.mark.anyio
 async def test_reacquisition_fails() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log, label="")
     request = Request(id="again!", priority=MutexPriority.low)
     event = asyncio.Event()
     event.set()
@@ -254,7 +254,7 @@ async def test_reacquisition_fails() -> None:
 )
 @pytest.mark.anyio
 async def test_order(case: OrderCase) -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log, label="")
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -278,14 +278,14 @@ def expected_acquisition_order(requests: List[Request]) -> List[Request]:
 
 @pytest.mark.anyio
 async def test_sequential_acquisitions() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log, label="")
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
 
-    for _ in range(1000):
+    for i in range(1000):
         with anyio.fail_after(delay=adjusted_timeout(timeout=10)):
-            async with mutex.acquire(priority=random_instance.choice(mutex_priorities)):
+            async with mutex.acquire(priority=random_instance.choice(mutex_priorities), hang_time=15):
                 pass
 
     # just testing that we can get through a bunch of miscellaneous acquisitions
@@ -293,23 +293,23 @@ async def test_sequential_acquisitions() -> None:
 
 @pytest.mark.anyio
 async def test_nested_acquisition_raises() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log, label="")
 
-    async with mutex.acquire(priority=MutexPriority.high):
+    async with mutex.acquire(priority=MutexPriority.high, hang_time=15):
         with pytest.raises(NestedLockUnsupportedError):
-            async with mutex.acquire(priority=MutexPriority.high):
+            async with mutex.acquire(priority=MutexPriority.high, hang_time=15):
                 # No coverage required since we're testing that this is not reached
                 assert False  # pragma: no cover
 
 
 async def to_be_cancelled(mutex: PriorityMutex[MutexPriority]) -> None:
-    async with mutex.acquire(priority=MutexPriority.high):
+    async with mutex.acquire(priority=MutexPriority.high, hang_time=15):
         assert False
 
 
 @pytest.mark.anyio
 async def test_to_be_cancelled_fails_if_not_cancelled() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log, label="")
 
     with pytest.raises(AssertionError):
         await to_be_cancelled(mutex=mutex)
@@ -317,7 +317,7 @@ async def test_to_be_cancelled_fails_if_not_cancelled() -> None:
 
 @pytest.mark.anyio
 async def test_cancellation_while_waiting() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log, label="")
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -326,12 +326,12 @@ async def test_cancellation_while_waiting() -> None:
     blocker_acquired_event = asyncio.Event()
 
     async def block() -> None:
-        async with mutex.acquire(priority=MutexPriority.high):
+        async with mutex.acquire(priority=MutexPriority.high, hang_time=15):
             blocker_acquired_event.set()
             await blocker_continue_event.wait()
 
     async def queued_after() -> None:
-        async with mutex.acquire(priority=MutexPriority.high):
+        async with mutex.acquire(priority=MutexPriority.high, hang_time=15):
             pass
 
     block_task = asyncio.create_task(block())
@@ -359,7 +359,7 @@ async def test_cancellation_while_waiting() -> None:
 @pytest.mark.parametrize(argnames="seed", argvalues=range(100), ids=lambda seed: f"random seed {seed}")
 @pytest.mark.anyio
 async def test_retains_request_order_for_matching_priority(seed: int) -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log, label="")
 
     random_instance = random.Random()
     random_instance.seed(a=seed, version=2)
@@ -452,20 +452,20 @@ async def create_acquire_tasks_in_controlled_order(
 
 @pytest.mark.anyio
 async def test_multiple_tasks_track_active_task_accurately() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log, label="")
 
     other_task_allow_release_event = asyncio.Event()
 
     async def other_task_function() -> None:
-        async with mutex.acquire(priority=MutexPriority.high):
+        async with mutex.acquire(priority=MutexPriority.high, hang_time=15):
             await other_task_allow_release_event.wait()
 
-    async with mutex.acquire(priority=MutexPriority.high):
+    async with mutex.acquire(priority=MutexPriority.high, hang_time=15):
         other_task = asyncio.create_task(other_task_function())
         await wait_queued(mutex=mutex, task=other_task)
 
     async def another_task_function() -> None:
-        async with mutex.acquire(priority=MutexPriority.high):
+        async with mutex.acquire(priority=MutexPriority.high, hang_time=15):
             pass
 
     another_task = asyncio.create_task(another_task_function())
@@ -478,10 +478,10 @@ async def test_multiple_tasks_track_active_task_accurately() -> None:
 @pytest.mark.anyio
 async def test_no_task_fails_as_expected(monkeypatch: pytest.MonkeyPatch) -> None:
     """Note that this case is not expected to be possible in reality"""
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log, label="")
 
     with pytest.raises(Exception, match="unable to check current task, got: None"):
         with monkeypatch.context() as monkeypatch_context:
             monkeypatch_context.setattr(asyncio, "current_task", lambda: None)
-            async with mutex.acquire(priority=MutexPriority.high):
+            async with mutex.acquire(priority=MutexPriority.high, hang_time=15):
                 pass

@@ -737,7 +737,11 @@ class FullNodeAPI:
             block_generator: Optional[BlockGenerator] = None
             additions: Optional[List[Coin]] = []
             removals: Optional[List[Coin]] = []
-            async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+            # TODO: review hang time
+            async with self.full_node.blockchain.priority_mutex.acquire(
+                priority=BlockchainMutexPriority.high,
+                hang_time=15,
+            ):
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
 
                 # Checks that the proof of space is valid

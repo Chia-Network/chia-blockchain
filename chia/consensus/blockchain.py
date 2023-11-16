@@ -133,7 +133,7 @@ class Blockchain(BlockchainInterface):
         self = Blockchain()
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
-        self.priority_mutex = PriorityMutex.create(priority_type=BlockchainMutexPriority)
+        self.priority_mutex = PriorityMutex.create(priority_type=BlockchainMutexPriority, log=log, label="Blockchain")
         self.compact_proof_lock = asyncio.Lock()
         if single_threaded:
             self.pool = InlineExecutor()

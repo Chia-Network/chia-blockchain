@@ -10,6 +10,8 @@ from typing import AsyncIterator, Dict, Generic, Optional, Type, TypeVar
 
 from typing_extensions import final
 
+from chia.util.misc import log_after
+
 log = logging.getLogger(__name__)
 
 
@@ -46,18 +48,24 @@ class PriorityMutex(Generic[_T_Priority]):
     """
 
     _deques: Dict[_T_Priority, collections.deque[_Element]]
+    _log: logging.Logger
+    _label: str
     _active: Optional[_Element] = None
 
     @classmethod
-    def create(cls, priority_type: Type[_T_Priority]) -> PriorityMutex[_T_Priority]:
+    def create(cls, priority_type: Type[_T_Priority], log: logging.Logger, label: str) -> PriorityMutex[_T_Priority]:
         return cls(
             _deques={priority: collections.deque() for priority in sorted(priority_type)},
+            _log=log,
+            _label=label,
         )
 
     @contextlib.asynccontextmanager
     async def acquire(
         self,
         priority: _T_Priority,
+        hang_time: float,
+        label: Optional[str] = None,
     ) -> AsyncIterator[None]:
         task = asyncio.current_task()
         if task is None:
@@ -74,7 +82,17 @@ class PriorityMutex(Generic[_T_Priority]):
                 self._active = element
             else:
                 await element.ready_event.wait()
-            yield
+            # TODO: lazy and not configurable since we presently have just one use, kinda
+            if label is None:
+                label = self._label
+            else:
+                label = f"{self._label} - {label}"
+            async with log_after(
+                message=f"{type(self).__name__} ({label}) held by {task}",
+                delay=hang_time,
+                log=self._log,
+            ):
+                yield
         finally:
             # another element might be active if the wait is cancelled
             if self._active is element:
