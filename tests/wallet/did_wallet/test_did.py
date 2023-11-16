@@ -10,7 +10,6 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
@@ -25,6 +24,7 @@ from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
+from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
 async def get_wallet_num(wallet_manager):

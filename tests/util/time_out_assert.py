@@ -4,57 +4,17 @@ import asyncio
 import dataclasses
 import json
 import logging
-import os
 import pathlib
-import sys
 import time
-from typing import Any, Callable, ClassVar, Dict, Optional, Tuple, final, overload
+from typing import Any, Callable, ClassVar, Dict, Tuple, final
 
 import chia
 import tests
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.misc import caller_file_and_line
+from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)
-
-system_delays = {
-    # based on data from https://github.com/Chia-Network/chia-blockchain/pull/13724
-    "github": {
-        "darwin": 20,
-        "linux": 1,
-        "win32": 10,
-    },
-    # arbitrarily selected
-    "local": {
-        "darwin": 2,
-        "linux": 1,
-        "win32": 1,
-    },
-}
-
-
-if os.environ.get("GITHUB_ACTIONS") == "true":
-    # https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
-    _system_delay = system_delays["github"][sys.platform]
-else:
-    _system_delay = system_delays["local"][sys.platform]
-
-
-@overload
-def adjusted_timeout(timeout: float) -> float:
-    ...
-
-
-@overload
-def adjusted_timeout(timeout: None) -> None:
-    ...
-
-
-def adjusted_timeout(timeout: Optional[float]) -> Optional[float]:
-    if timeout is None:
-        return None
-
-    return timeout + _system_delay
 
 
 @final

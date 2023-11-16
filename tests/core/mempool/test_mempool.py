@@ -25,7 +25,6 @@ from chia.server.outbound_message import Message
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -60,6 +59,7 @@ from tests.core.mempool.test_mempool_manager import (
 )
 from tests.core.node_height import node_height_at_least
 from tests.util.misc import BenchmarkRunner
+from tests.util.time_out_assert import time_out_assert
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
