@@ -23,7 +23,7 @@ system_delays = {
 
 if os.environ.get("GITHUB_ACTIONS") == "true":
     # https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
-    pass
+    _system_delay = system_delays["github"][sys.platform]
 else:
     _system_delay = system_delays["local"][sys.platform]
 
