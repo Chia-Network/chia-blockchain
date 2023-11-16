@@ -4,7 +4,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from typing_extensions import Unpack
 
 from chia.types.blockchain_format.coin import Coin
@@ -20,19 +20,38 @@ from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoinAnnouncement, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.derive_keys import (
+    MAX_POOL_WALLETS,
+    _derive_path,
+    _derive_path_unhardened,
+    master_sk_to_singleton_owner_sk,
+)
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
+    GROUP_ORDER,
+    calculate_synthetic_offset,
     calculate_synthetic_secret_key,
     puzzle_for_pk,
     puzzle_hash_for_pk,
+    puzzle_hash_for_synthetic_public_key,
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition, make_reserve_fee_condition
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
+from chia.wallet.util.signer_protocol import (
+    PathHint,
+    Signature,
+    SignedTransaction,
+    SigningInstructions,
+    SigningResponse,
+    Spend,
+    SumHint,
+    TransactionInfo,
+)
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
@@ -491,3 +510,125 @@ class Wallet:
             if wallet_identifier is not None and wallet_identifier.id == self.id():
                 return True
         return False
+
+    async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
+        pk_parsed: G1Element = G1Element.from_bytes(pk)
+        dr: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            puzzle_hash_for_synthetic_public_key(pk_parsed)
+        )
+        if dr is None:
+            return None
+        return SumHint(
+            [dr.pubkey.get_fingerprint().to_bytes(4, "big")],
+            calculate_synthetic_offset(dr.pubkey, DEFAULT_HIDDEN_PUZZLE_HASH).to_bytes(32, "big"),
+        )
+
+    async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:
+        pk_parsed: G1Element = G1Element.from_bytes(pk)
+        index: Optional[uint32] = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pk_parsed)
+        if index is None:
+            index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
+                puzzle_hash_for_synthetic_public_key(pk_parsed)
+            )
+        root_pubkey: bytes = self.wallet_state_manager.private_key.get_g1().get_fingerprint().to_bytes(4, "big")
+        if index is None:
+            # Pool wallet may have a secret key here
+            for pool_wallet_index in range(MAX_POOL_WALLETS):
+                try_owner_sk = master_sk_to_singleton_owner_sk(
+                    self.wallet_state_manager.private_key, uint32(pool_wallet_index)
+                )
+                if try_owner_sk.get_g1() == pk_parsed:
+                    return PathHint(
+                        root_pubkey,
+                        [uint64(12381), uint64(8444), uint64(5), uint64(pool_wallet_index)],
+                    )
+            return None
+        return PathHint(
+            root_pubkey,
+            [uint64(12381), uint64(8444), uint64(2), uint64(index)],
+        )
+
+    async def execute_signing_instructions(
+        self, signing_instructions: SigningInstructions, partial_allowed: bool = False
+    ) -> List[SigningResponse]:
+        root_pubkey: G1Element = self.wallet_state_manager.private_key.get_g1()
+        pk_lookup: Dict[int, G1Element] = {root_pubkey.get_fingerprint(): root_pubkey}
+        sk_lookup: Dict[int, PrivateKey] = {root_pubkey.get_fingerprint(): self.wallet_state_manager.private_key}
+
+        for path_hint in signing_instructions.key_hints.path_hints:
+            if int.from_bytes(path_hint.root_fingerprint, "big") != root_pubkey.get_fingerprint():
+                if not partial_allowed:
+                    raise ValueError(f"No root pubkey for fingerprint {root_pubkey.get_fingerprint()}")
+                else:
+                    continue
+            else:
+                path = [int(step) for step in path_hint.path]
+                derive_child_sk = _derive_path(self.wallet_state_manager.private_key, path)
+                derive_child_sk_unhardened = _derive_path_unhardened(self.wallet_state_manager.private_key, path)
+                derive_child_pk = derive_child_sk.get_g1()
+                derive_child_pk_unhardened = derive_child_sk_unhardened.get_g1()
+                pk_lookup[derive_child_pk.get_fingerprint()] = derive_child_pk
+                pk_lookup[derive_child_pk_unhardened.get_fingerprint()] = derive_child_pk_unhardened
+                sk_lookup[derive_child_pk.get_fingerprint()] = derive_child_sk
+                sk_lookup[derive_child_pk_unhardened.get_fingerprint()] = derive_child_sk_unhardened
+
+        for sum_hint in signing_instructions.key_hints.sum_hints:
+            final_sk: PrivateKey = PrivateKey.from_bytes(bytes(32))
+            for fingerprint in sum_hint.fingerprints:
+                fingerprint_as_int = int.from_bytes(fingerprint, "big")
+                if fingerprint_as_int not in pk_lookup:
+                    if not partial_allowed:
+                        raise ValueError(
+                            "No pubkey found (or path hinted to) for "
+                            f"fingerprint {int.from_bytes(fingerprint, 'big')}"
+                        )
+                    else:
+                        break
+                else:
+                    final_sk = PrivateKey.aggregate([final_sk, sk_lookup[fingerprint_as_int]])
+            else:  # Only do this if we don't break
+                secret_exponent = int.from_bytes(bytes(final_sk), "big")
+                synthetic_secret_exponent = (
+                    secret_exponent + int.from_bytes(sum_hint.synthetic_offset, "big")
+                ) % GROUP_ORDER
+                blob = synthetic_secret_exponent.to_bytes(32, "big")
+                synthetic_sk = PrivateKey.from_bytes(blob)
+                synthetic_pk = synthetic_sk.get_g1()
+                pk_lookup[synthetic_pk.get_fingerprint()] = synthetic_pk
+                sk_lookup[synthetic_pk.get_fingerprint()] = synthetic_sk
+
+        responses: List[SigningResponse] = []
+        for target in signing_instructions.targets:
+            pk_fingerprint: int = G1Element.from_bytes(target.pubkey).get_fingerprint()
+            if pk_fingerprint not in sk_lookup:
+                if not partial_allowed:
+                    raise ValueError(f"Pubkey {pk_fingerprint} not found (or path/sum hinted to)")
+                else:
+                    continue
+            responses.append(
+                SigningResponse(
+                    bytes(AugSchemeMPL.sign(sk_lookup[pk_fingerprint], target.message)),
+                    target.hook,
+                )
+            )
+
+        return responses
+
+    async def apply_signatures(
+        self, spends: List[Spend], signing_responses: List[SigningResponse]
+    ) -> SignedTransaction:
+        return SignedTransaction(
+            TransactionInfo(spends),
+            [
+                Signature(
+                    "bls_12381_aug_scheme",
+                    bytes(
+                        AugSchemeMPL.aggregate(
+                            [G2Element.from_bytes(signing_response.signature) for signing_response in signing_responses]
+                        )
+                    ),
+                )
+            ],
+        )
