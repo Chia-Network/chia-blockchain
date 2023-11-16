@@ -362,7 +362,7 @@ async def clear_pending_roots(
             result = await client.clear_pending_roots(store_id=store_id)
         except ValueError as e:
             print(f"An error occurred: {str(e)}")
-            return
+            return {}
         print(json.dumps(result, indent=4, sort_keys=True))
 
     return result
