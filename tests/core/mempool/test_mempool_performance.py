@@ -5,7 +5,6 @@ from typing import List
 import pytest
 
 from chia.simulator.setup_nodes import SimulatorsAndWallets
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
@@ -14,6 +13,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.misc import BenchmarkRunner
+from tests.util.time_out_assert import time_out_assert
 
 
 async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:

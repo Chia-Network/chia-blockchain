@@ -15,6 +15,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import anyio
 from chia_rs import (
     ALLOW_BACKREFS,
     MEMPOOL_MODE,
@@ -65,6 +66,8 @@ from chia.plotting.util import (
     parse_plot_info,
 )
 from chia.server.server import ssl_context_for_client
+from chia.simulator.adjusted_timeout import adjusted_timeout
+from chia.simulator.full_node_simulator import backoff_times
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.ssl_certs import (
     SSLTestCACertAndPrivateKey,
@@ -73,7 +76,6 @@ from chia.simulator.ssl_certs import (
     get_next_nodes_certs_and_keys,
     get_next_private_ca_cert_and_key,
 )
-from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.simulator.wallet_tools import WalletTool
 from chia.ssl.create_ssl import create_all_ssl
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -491,7 +493,14 @@ class BlockTools:
         self.plot_manager.trigger_refresh()
         assert self.plot_manager.needs_refresh()
         self.plot_manager.start_refreshing(sleep_interval_ms=1)
-        await time_out_assert_custom_interval(120, 0.001, self.plot_manager.needs_refresh, value=False)
+
+        with anyio.fail_after(delay=adjusted_timeout(120)):
+            for backoff in backoff_times():
+                if not self.plot_manager.needs_refresh():
+                    break
+
+                await asyncio.sleep(backoff)
+
         self.plot_manager.stop_refreshing()
         assert not self.plot_manager.needs_refresh()
 

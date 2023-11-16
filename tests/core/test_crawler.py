@@ -16,10 +16,10 @@ from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.outbound_message import make_msg
 from chia.server.start_service import Service
 from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
+from tests.util.time_out_assert import time_out_assert
 
 
 @pytest.mark.anyio

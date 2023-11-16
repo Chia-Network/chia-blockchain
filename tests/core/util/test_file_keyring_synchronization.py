@@ -8,8 +8,8 @@ from pathlib import Path
 from sys import platform
 from time import sleep
 
+from chia.simulator.adjusted_timeout import adjusted_timeout
 from chia.simulator.keyring import TempKeyring
-from chia.simulator.time_out_assert import adjusted_timeout
 from chia.util.keyring_wrapper import KeyringWrapper
 from tests.core.util.test_lockfile import wait_for_enough_files_in_directory
 

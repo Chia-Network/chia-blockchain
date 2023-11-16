@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import AsyncIterator, Dict, List, Optional, Tuple, Union
+
+import anyio
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
@@ -18,8 +21,9 @@ from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
+from chia.simulator.adjusted_timeout import adjusted_timeout
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
-from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import (
     setup_daemon,
@@ -33,7 +37,6 @@ from chia.simulator.setup_services import (
     setup_wallet_node,
 )
 from chia.simulator.socket import find_available_listen_port
-from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -445,11 +448,12 @@ async def setup_full_system_inner(
             )
         )
 
-        async def num_connections() -> int:
-            count = len(harvester.server.all_connections.items())
-            return count
+        with anyio.fail_after(delay=adjusted_timeout(10)):
+            for backoff in backoff_times():
+                if len(harvester.server.all_connections.items()) > 0:
+                    break
 
-        await time_out_assert_custom_interval(10, 3, num_connections, 1)
+                await asyncio.sleep(backoff)
 
         full_system = FullSystem(
             node_1=node_1,

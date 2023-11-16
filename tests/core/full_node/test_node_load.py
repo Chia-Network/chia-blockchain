@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from tests.connection_utils import connect_and_get_peer
 from tests.util.misc import BenchmarkRunner
+from tests.util.time_out_assert import time_out_assert
 
 
 class TestNodeLoad:
