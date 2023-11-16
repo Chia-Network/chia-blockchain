@@ -30,6 +30,7 @@ from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
+from chia.protocols import full_node_protocol
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
