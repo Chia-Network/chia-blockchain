@@ -45,6 +45,7 @@
     "p2_delegated_conditions": "0ff94726f1a8dea5c3f70d3121945190778d3b2b3fcda3735a1f290977e98341",
     "p2_delegated_puzzle": "542cde70d1102cd1b763220990873efc8ab15625ded7eae22cc11e21ef2e2f7c",
     "p2_delegated_puzzle_or_hidden_puzzle": "e9aaa49f45bad5c889b86ee3341550c155cfdd10c3a6757de618d20612fffd52",
+    "p2_delegated_secp": "f02d79588cbfea39018c8e4e9defd6edf17eca7f47f8df8a433702c406e3c47a",
     "p2_m_of_n_delegate_direct": "0f199d5263ac1a62b077c159404a71abd3f9691cc57520bf1d4c5cb501504457",
     "p2_parent": "b10ce2d0b18dcf8c21ddfaf55d9b9f0adcbf1e0beb55b1a8b9cad9bbff4e5f22",
     "p2_puzzle_hash": "13e29a62b42cd2ef72a79e4bacdc59733ca6310d65af83d349360d36ec622363",
@@ -61,5 +62,8 @@
     "singleton_top_layer_v1_1": "7faa3253bfddd1e0decb0906b2dc6247bbc4cf608f58345d173adb63e8b47c9f",
     "standard_vc_backdoor_puzzle": "fbce76408ebaf9b3d0b8cd90cc68607755eeca67cd7432d5eea85f3f498cc002",
     "std_parent_morpher": "8c3f1dc2e46c0d7ec4c2cbd007e23c0368ff8f80c5bc0101647a5c27626ebce6",
+    "vault_recovery": "dba16216348c39fed35fde431c9ad5b0f81e8f7cf9bd6d470ccabc235fa04b14",
+    "vault_recovery_escape": "0b2d3925e9a5097d95734f80f9205b4f6e37d69c317907cbc01a208f37fa9b40",
+    "vault_recovery_finish": "14cb5fba485853fee53316849e52948916cc5893657632f431e367a889fd37c7",
     "viral_backdoor": "00848115554ea674131f89f311707a959ad3f4647482648f3fe91ba289131f51"
 }

@@ -1,0 +1,76 @@
+; Recovery spend path for vault
+; This puzzle is included in the vault puzzle (p2_1_of_n) merkle root
+; when executed it creates a new p2_1_of_n of the timelocked p2_conditions and the escape puzzle
+; the escape puzzle sends funds back to the vault (my_puzzlehash)
+
+(mod
+  (
+    P2_1_OF_N_MOD_HASH
+    ESCAPE_RECOVERY_MOD_HASH
+    FINISH_RECOVERY_MOD_HASH
+    BLS_PK
+    TIMELOCK
+    my_puzzlehash
+    my_amount
+    recovery_conditions
+  )
+
+  (include *standard-cl-21*)
+  (include condition_codes.clib)
+  (include sha256tree.clib)
+  (include curry.clib)
+
+  (defconstant ONE 1)
+
+  (defun create_recovery_puzzlehash
+    (
+      P2_1_OF_N_MOD_HASH
+      ESCAPE_RECOVERY_MOD_HASH
+      FINISH_RECOVERY_MOD_HASH
+      BLS_PK
+      TIMELOCK
+      my_puzzlehash
+      my_amount
+      recovery_conditions
+    )
+    (curry_hashes P2_1_OF_N_MOD_HASH
+      (sha256 ONE
+        ; calculate the merkle root of the two puzzles
+        (sha256
+          TWO
+          (sha256 ONE
+            (curry_hashes ESCAPE_RECOVERY_MOD_HASH
+              (sha256 ONE BLS_PK) (sha256 ONE my_puzzlehash) (sha256 ONE my_amount)
+            )
+          )
+          (sha256 ONE
+            (curry_hashes FINISH_RECOVERY_MOD_HASH
+              (sha256 ONE TIMELOCK) (sha256tree recovery_conditions)
+            )
+          )
+        )
+      )
+    )
+  )
+
+  (list
+    (list AGG_SIG_ME BLS_PK (sha256tree recovery_conditions))
+    (list CREATE_COIN
+      (create_recovery_puzzlehash
+        P2_1_OF_N_MOD_HASH
+        ESCAPE_RECOVERY_MOD_HASH
+        FINISH_RECOVERY_MOD_HASH
+        BLS_PK
+        TIMELOCK
+        my_puzzlehash
+        my_amount
+        recovery_conditions
+      )
+      my_amount
+    )
+    (list ASSERT_MY_AMOUNT my_amount)
+    (list ASSERT_MY_PUZZLEHASH my_puzzlehash)
+  )
+
+
+)
