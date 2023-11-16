@@ -67,7 +67,6 @@ def sub(matchobj: re.Match[str]) -> str:
 @dataclasses.dataclass(frozen=True)
 class EventId:
     test_id: TestId
-    # TODO: this doesn't feel quite right, more a property than an identifier?  i dunno
     tag: str
     line: int
     path: Path
@@ -165,17 +164,16 @@ def main(
                 data_by_event_id[event_id].append(data)
 
     results: List[Result] = []
-    # TODO: yup, datas
     for event_id, datas in data_by_event_id.items():
+        [limit] = {data.limit for data in datas}
         results.append(
             Result(
                 file_path=event_id.path,
                 test_path=event_id.test_id.test_path,
                 ids=event_id.test_id.ids,
                 line=event_id.line,
-                # label=label,
                 durations=tuple(data.duration for data in datas),
-                limit=datas[0].limit,
+                limit=limit,
                 label=event_id.label,
             )
         )
