@@ -127,6 +127,11 @@ class WalletRpcApi:
         self.service_name = "chia_wallet"
 
     def get_routes(self) -> Dict[str, Endpoint]:
+        reveal_type(WalletRpcApi.create_new_wallet)
+        reveal_type(self.create_new_wallet)
+        from typing import cast
+
+        reveal_type(cast(Endpoint, None))
         return {
             # Key management
             "/log_in": self.log_in,
@@ -661,7 +666,7 @@ class WalletRpcApi:
     @tx_endpoint
     async def create_new_wallet(
         self,
-        request: Dict[str, Any],
+        request: Dict[str, object],
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:

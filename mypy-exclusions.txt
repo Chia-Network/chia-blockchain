@@ -10,7 +10,6 @@ chia.plotters.plotters_util
 chia.plotting.manager
 chia.plotting.util
 chia.rpc.rpc_client
-chia.rpc.util
 chia.rpc.wallet_rpc_client
 chia.simulator.full_node_simulator
 chia.simulator.keyring

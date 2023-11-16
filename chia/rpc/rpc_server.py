@@ -7,7 +7,7 @@ import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final
@@ -28,8 +28,21 @@ log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
 
 
+EndpointRequest = Dict[str, object]
 EndpointResult = Dict[str, Any]
-Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
+# class EndpointBase(Protocol):
+#     async def __call__(self, request: EndpointRequest) -> EndpointResult:
+#         ...
+# class EndpointHoldLock(Protocol):
+#     async def __call__(self, request: EndpointRequest, hold_lock: bool = ...) -> EndpointResult:
+#         ...
+#
+# Endpoint = Union[EndpointBase, EndpointHoldLock]
+
+
+class Endpoint(Protocol):
+    async def __call__(self, request: EndpointRequest) -> EndpointResult:
+        ...
 
 
 class StateChangedProtocol(Protocol):
@@ -263,7 +276,7 @@ class RpcServer:
             "routes": list(self._get_routes().keys()),
         }
 
-    async def get_connections(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_connections(self, request: Dict[str, object]) -> EndpointResult:
         request_node_type: Optional[NodeType] = None
         if "node_type" in request:
             request_node_type = NodeType(request["node_type"])
