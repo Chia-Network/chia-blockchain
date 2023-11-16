@@ -14,7 +14,7 @@ from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 log = logging.getLogger(__name__)
 
 
-def wrap_http_handler(f) -> Callable:
+def wrap_http_handler(f, use_traceback: bool = True) -> Callable:
     async def inner(request) -> aiohttp.web.Response:
         request_data = await request.json()
         try:
@@ -27,7 +27,10 @@ def wrap_http_handler(f) -> Callable:
             tb = traceback.format_exc()
             log.warning(f"Error while handling message: {tb}")
             if len(e.args) > 0:
-                res_object = {"success": False, "error": f"{e.args[0]}", "traceback": f"{tb}"}
+                if use_traceback:
+                    res_object = {"success": False, "error": f"{e.args[0]}", "traceback": f"{tb}"}
+                else:
+                    res_object = {"success": False, "error": f"{e.args[0]}"}
             else:
                 res_object = {"success": False, "error": f"{e}"}
 

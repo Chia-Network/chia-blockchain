@@ -210,6 +210,11 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
             f"at port {self._advertised_port}"
         )
 
+        # Don't use traceback for data layer in order to keep cmd output cleaner.
+        use_traceback: bool = True
+        if self._service_name == "data_layer":
+            use_traceback = False
+
         if self._rpc_info:
             rpc_api, rpc_port = self._rpc_info
             self.rpc_server = await start_rpc_server(
@@ -222,6 +227,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                 self.config,
                 self._connect_to_daemon,
                 max_request_body_size=self.max_request_body_size,
+                use_traceback=use_traceback,
             )
 
     async def run(self) -> None:

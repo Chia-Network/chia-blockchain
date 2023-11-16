@@ -181,14 +181,18 @@ class RpcServer:
             prefer_ipv6=prefer_ipv6,
         )
 
-    async def start(self, self_hostname: str, rpc_port: uint16, max_request_body_size: int) -> None:
+    async def start(
+        self, self_hostname: str, rpc_port: uint16, max_request_body_size: int, use_traceback: bool = True
+    ) -> None:
         if self.webserver is not None:
             raise RuntimeError("RpcServer already started")
         self.webserver = await WebServer.create(
             hostname=self_hostname,
             port=rpc_port,
             max_request_body_size=max_request_body_size,
-            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self._get_routes().items()],
+            routes=[
+                web.post(route, wrap_http_handler(func, use_traceback)) for (route, func) in self._get_routes().items()
+            ],
             ssl_context=self.ssl_context,
             prefer_ipv6=self.prefer_ipv6,
         )
@@ -420,6 +424,7 @@ async def start_rpc_server(
     net_config: Dict[str, object],
     connect_to_daemon: bool = True,
     max_request_body_size: Optional[int] = None,
+    use_traceback: bool = True,
 ) -> RpcServer:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
@@ -435,7 +440,7 @@ async def start_rpc_server(
             rpc_api, rpc_api.service_name, stop_cb, root_path, net_config, prefer_ipv6=prefer_ipv6
         )
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-        await rpc_server.start(self_hostname, rpc_port, max_request_body_size)
+        await rpc_server.start(self_hostname, rpc_port, max_request_body_size, use_traceback)
 
         if connect_to_daemon:
             rpc_server.connect_to_daemon(self_hostname, daemon_port)
