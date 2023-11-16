@@ -426,8 +426,7 @@ class Wallet:
             extra_conditions=extra_conditions,
         )
         assert len(transaction) > 0
-        self.log.info("About to sign a transaction: %s", transaction)
-        spend_bundle: SpendBundle = await self.wallet_state_manager.sign_transaction(transaction)
+        spend_bundle: SpendBundle = SpendBundle(transaction, G2Element())
 
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
@@ -513,9 +512,7 @@ class Wallet:
 
     async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
         pk_parsed: G1Element = G1Element.from_bytes(pk)
-        dr: Optional[
-            DerivationRecord
-        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+        dr: Optional[DerivationRecord] = await self.wallet_state_manager.puzzle_store.record_for_puzzle_hash(
             puzzle_hash_for_synthetic_public_key(pk_parsed)
         )
         if dr is None:

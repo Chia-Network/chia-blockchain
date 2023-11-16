@@ -648,7 +648,7 @@ class FullNodeSimulator(FullNodeAPI):
                             tx_config=DEFAULT_TX_CONFIG,
                             primaries=outputs_group[1:],
                         )
-                    await wallet.wallet_state_manager.add_pending_transactions([tx])
+                    [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
                     transaction_records.append(tx)
                 else:
                     break

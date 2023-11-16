@@ -151,17 +151,20 @@ def tx_endpoint(push: bool = False, merge_spends: bool = True) -> Callable[[RpcE
 
             new_txs: List[TransactionRecord] = []
             if request.get("sign", self.service.config.get("auto_sign_txs", True)):
-                new_txs, _ = await self.service.wallet_state_manager.sign_transactions(
+                new_txs, signing_responses = await self.service.wallet_state_manager.sign_transactions(
                     tx_records, response.get("signing_responses", []), "signing_responses" in response
                 )
                 response["transactions"] = [
                     TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
                 ]
+                response["signing_responses"] = [bytes(r.as_program()).hex() for r in signing_responses]
             else:
-                new_txs = tx_records
+                new_txs = tx_records  # pragma: no cover
 
             if request.get("push", push):
-                await self.service.wallet_state_manager.add_pending_transactions(new_txs, merge_spends=merge_spends)
+                await self.service.wallet_state_manager.add_pending_transactions(
+                    new_txs, merge_spends=merge_spends, sign=False
+                )
 
             # Some backwards compatibility code
             if "transaction" in response:

@@ -118,9 +118,10 @@ async def test_nft_mint_from_did(
     sb = tx_records[0].spend_bundle
     assert sb is not None
 
-    await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
+    bundle = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb.coin_spends)
+    await api_0.push_tx({"spend_bundle": bytes(bundle).hex()})
 
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, bundle.name())
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
     await time_out_assert(30, nft_count, mint_total, nft_wallet_taker)
@@ -617,9 +618,10 @@ async def test_nft_mint_from_did_multiple_xch(
     sb = tx_records[0].spend_bundle
     assert sb is not None
 
-    await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
+    bundle = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb.coin_spends)
+    await api_0.push_tx({"spend_bundle": bytes(bundle).hex()})
 
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, bundle.name())
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
     await time_out_assert(30, nft_count, mint_total, nft_wallet_taker)
@@ -718,9 +720,10 @@ async def test_nft_mint_from_xch(
     sb = tx_records[0].spend_bundle
     assert sb is not None
 
-    await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
+    bundle = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb.coin_spends)
+    await api_0.push_tx({"spend_bundle": bytes(bundle).hex()})
 
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, bundle.name())
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
     await time_out_assert(30, nft_count, mint_total, nft_wallet_taker)
@@ -1033,9 +1036,10 @@ async def test_nft_mint_from_xch_multiple_xch(
     sb = tx_records[0].spend_bundle
     assert sb is not None
 
-    await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
+    bundle = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb)
+    await api_0.push_tx({"spend_bundle": bytes(bundle).hex()})
 
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, bundle.name())
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
     await time_out_assert(30, nft_count, mint_total, nft_wallet_taker)

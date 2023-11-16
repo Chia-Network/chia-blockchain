@@ -158,7 +158,14 @@ async def test_wsm_sign_transaction() -> None:
             wsm.private_key = top_sk
 
             with pytest.raises(ValueError, match="no secret key"):
-                await wsm.sign_transaction([spend_h])
+                await sign_coin_spends(
+                    [spend_h],
+                    wsm.get_private_key_for_pubkey,
+                    wsm.get_synthetic_private_key_for_puzzle_hash,
+                    wsm.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+                    wsm.constants.MAX_BLOCK_COST_CLVM,
+                    [puzzle_hash_for_synthetic_public_key],
+                )
 
             await wsm.puzzle_store.add_derivation_paths(
                 [
@@ -186,7 +193,16 @@ async def test_wsm_sign_transaction() -> None:
                 ]
             )
 
-            signature: G2Element = (await wsm.sign_transaction([spend_h])).aggregated_signature
+            signature: G2Element = (
+                await sign_coin_spends(
+                    [spend_h],
+                    wsm.get_private_key_for_pubkey,
+                    wsm.get_synthetic_private_key_for_puzzle_hash,
+                    wsm.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+                    wsm.constants.MAX_BLOCK_COST_CLVM,
+                    [puzzle_hash_for_synthetic_public_key],
+                )
+            ).aggregated_signature
             assert signature == AugSchemeMPL.aggregate(
                 [
                     AugSchemeMPL.sign(sk1_h, msg1),
@@ -195,7 +211,14 @@ async def test_wsm_sign_transaction() -> None:
             )
 
             with pytest.raises(ValueError, match="no secret key"):
-                await wsm.sign_transaction([spend_u])
+                await sign_coin_spends(
+                    [spend_u],
+                    wsm.get_private_key_for_pubkey,
+                    wsm.get_synthetic_private_key_for_puzzle_hash,
+                    wsm.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+                    wsm.constants.MAX_BLOCK_COST_CLVM,
+                    [puzzle_hash_for_synthetic_public_key],
+                )
 
             await wsm.puzzle_store.add_derivation_paths(
                 [
@@ -222,7 +245,16 @@ async def test_wsm_sign_transaction() -> None:
                     )
                 ]
             )
-            signature2: G2Element = (await wsm.sign_transaction([spend_u])).aggregated_signature
+            signature2: G2Element = (
+                await sign_coin_spends(
+                    [spend_u],
+                    wsm.get_private_key_for_pubkey,
+                    wsm.get_synthetic_private_key_for_puzzle_hash,
+                    wsm.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+                    wsm.constants.MAX_BLOCK_COST_CLVM,
+                    [puzzle_hash_for_synthetic_public_key],
+                )
+            ).aggregated_signature
             assert signature2 == AugSchemeMPL.aggregate(
                 [
                     AugSchemeMPL.sign(sk1_u, msg1),
