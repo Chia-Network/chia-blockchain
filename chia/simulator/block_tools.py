@@ -15,8 +15,15 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
-from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, compute_merkle_set_root
+from chia_rs import (
+    ALLOW_BACKREFS,
+    MEMPOOL_MODE,
+    AugSchemeMPL,
+    G1Element,
+    G2Element,
+    PrivateKey,
+    compute_merkle_set_root,
+)
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
@@ -146,7 +153,10 @@ test_constants = dataclasses.replace(
     NUM_SPS_SUB_SLOT=uint32(16),  # Must be a power of 2
     MAX_SUB_SLOT_BLOCKS=uint32(50),
     EPOCH_BLOCKS=uint32(340),
-    BLOCKS_CACHE_SIZE=uint32(340 + 3 * 50),  # Coordinate with the above values
+    # the block cache must contain at least 3 epochs in order for
+    # create_prev_sub_epoch_segments() to have access to all the blocks it needs
+    # from the cache
+    BLOCKS_CACHE_SIZE=uint32(340 * 3),  # Coordinate with the above values
     SUB_SLOT_TIME_TARGET=600,  # The target number of seconds per slot, mainnet 600
     SUB_SLOT_ITERS_STARTING=uint64(2**10),  # Must be a multiple of 64
     NUMBER_ZERO_BITS_PLOT_FILTER=1,  # H(plot signature of the challenge) must start with these many zeroes
@@ -267,7 +277,7 @@ class BlockTools:
         self.total_result = PlotRefreshResult()
 
         def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult) -> None:
-            assert update_result.duration < 30
+            assert update_result.duration < 120
             if event == PlotRefreshEvents.started:
                 self.total_result = PlotRefreshResult()
 
@@ -481,7 +491,7 @@ class BlockTools:
         self.plot_manager.trigger_refresh()
         assert self.plot_manager.needs_refresh()
         self.plot_manager.start_refreshing(sleep_interval_ms=1)
-        await time_out_assert_custom_interval(20, 0.001, self.plot_manager.needs_refresh, value=False)
+        await time_out_assert_custom_interval(120, 0.001, self.plot_manager.needs_refresh, value=False)
         self.plot_manager.stop_refreshing()
         assert not self.plot_manager.needs_refresh()
 

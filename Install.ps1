@@ -10,11 +10,9 @@ param(
 $ErrorActionPreference = "Stop"
 
 $extras = @()
-$blspy = $False
 if ($d)
 {
     $extras += "dev"
-    $blspy = $True
 }
 
 $editable_cli = "--editable"
@@ -117,11 +115,6 @@ py -$pythonVersion -m venv venv
 venv\scripts\python -m pip install --upgrade pip setuptools wheel
 venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
 venv\scripts\pip install $editable_cli ".$extras_cli" --extra-index-url https://pypi.chia.net/simple/
-
-if ($blspy)
-{
-    venv\scripts\pip install $editable_cli .\blspy-stubs
-}
 
 if ($p)
 {

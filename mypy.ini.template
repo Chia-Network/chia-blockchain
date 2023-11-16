@@ -16,7 +16,6 @@ warn_return_any = True
 no_implicit_reexport = True
 strict_equality = True
 warn_redundant_casts = True
-enable_incomplete_feature = Unpack
 
 [mypy-chia-exclusions]
 disable_error_code = annotation-unchecked

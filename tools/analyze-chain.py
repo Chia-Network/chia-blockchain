@@ -11,8 +11,7 @@ from typing import Callable, List, Optional, Tuple, Union
 
 import click
 import zstd
-from blspy import AugSchemeMPL, G1Element
-from chia_rs import MEMPOOL_MODE, SpendBundleConditions, run_block_generator
+from chia_rs import MEMPOOL_MODE, AugSchemeMPL, G1Element, SpendBundleConditions, run_block_generator
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.block_protocol import BlockInfo

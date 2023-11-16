@@ -1036,7 +1036,13 @@ class DataLayer:
         coros = [get_plugin_info(plugin_remote=plugin) for plugin in {*self.uploaders, *self.downloaders}]
         results = dict(await asyncio.gather(*coros))
 
-        uploader_status = {uploader.url: results.get(uploader.url, "unknown") for uploader in self.uploaders}
-        downloader_status = {downloader.url: results.get(downloader.url, "unknown") for downloader in self.downloaders}
+        unknown = {
+            "name": "unknown",
+            "version": "unknown",
+            "instance": "unknown",
+        }
+
+        uploader_status = {uploader.url: results.get(uploader, unknown) for uploader in self.uploaders}
+        downloader_status = {downloader.url: results.get(downloader, unknown) for downloader in self.downloaders}
 
         return PluginStatus(uploaders=uploader_status, downloaders=downloader_status)

@@ -6,7 +6,7 @@ import time
 import traceback
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 from clvm.casts import int_to_bytes
 from typing_extensions import Unpack
 

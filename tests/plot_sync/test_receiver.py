@@ -7,7 +7,7 @@ import time
 from typing import Any, Callable, List, Tuple, Type, Union
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plot_sync.delta import Delta

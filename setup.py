@@ -8,8 +8,7 @@ from setuptools import find_packages, setup
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.0.0",
-    "blspy==2.0.2",  # Signature library
-    "boto3==1.28.65",  # AWS S3 for DL s3 plugin
+    "boto3==1.28.79",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.0",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
     "chiapos==2.0.3",  # proof of space
@@ -45,7 +44,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build==1.0.3",
-    "coverage==7.3.0",
+    "coverage==7.3.2",
     "diff-cover==8.0.0",
     "pre-commit==3.5.0",
     "py3createtorrent==1.1.0",
@@ -58,7 +57,7 @@ dev_dependencies = [
     "twine==4.0.2",
     "isort==5.12.0",
     "flake8==6.1.0",
-    "mypy==1.5.1",
+    "mypy==1.7.0",
     "black==23.10.1",
     "lxml==4.9.3",
     "aiohttp_cors==0.7.0",  # For blackd
@@ -66,7 +65,7 @@ dev_dependencies = [
     "types-aiofiles==23.2.0.0",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.12",
-    "types-setuptools==68.0.0.3",
+    "types-setuptools==68.2.0.0",
 ]
 
 legacy_keyring_dependencies = [

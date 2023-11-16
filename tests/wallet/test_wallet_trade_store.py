@@ -4,7 +4,7 @@ import random
 import time
 
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32

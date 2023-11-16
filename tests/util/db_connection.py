@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import random
 import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
 
-from chia.util.db_wrapper import DBWrapper2
-
-
-def generate_in_memory_db_uri() -> str:
-    # We need to use shared cache as our DB wrapper uses different types of connections
-    return f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 
 
 @asynccontextmanager

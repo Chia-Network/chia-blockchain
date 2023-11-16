@@ -6,8 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
 
-from blspy import G2Element
-from chia_rs import Coin
+from chia_rs import Coin, G2Element
 
 import chia.cmds.wallet_funcs
 from chia.cmds.chia import cli as chia_cli
@@ -418,7 +417,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     # For more information, read the docstring of this function.
     chia.cmds.cmds_util.get_any_service_client = test_get_any_service_client
     chia.cmds.cmds_util.get_wallet_client = test_get_wallet_client  # type: ignore[assignment]
-    chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[attr-defined]
+    chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[assignment,attr-defined]
     # Monkey patches the confirm function to not ask for confirmation
     chia.cmds.cmds_util.cli_confirm = cli_confirm
     chia.cmds.wallet_funcs.cli_confirm = cli_confirm  # type: ignore[attr-defined]

@@ -5,7 +5,7 @@ import json
 from typing import Optional
 
 import pytest
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.setup_nodes import SimulatorsAndWallets
