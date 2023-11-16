@@ -201,6 +201,8 @@ def output_benchmark(
             dumped = json.dumps(result.marshal())
             output.write(f"{link} {dumped}\n")
     else:
+        output.write("# Benchmark Metrics\n\n")
+
         output.write("| Test | 🍿 | Mean | Max | 3σ | Limit | Percent |\n")
         output.write("| --- | --- | --- | --- | --- | --- | --- |\n")
         for result in sorted(results):
@@ -276,6 +278,8 @@ def output_time_out_assert(
             dumped = json.dumps(result.marshal())
             output.write(f"{link} {dumped}\n")
     else:
+        output.write("# Time Out Assert Metrics\n\n")
+
         output.write("| Test | 🍿 | Mean | Max | 3σ | Limit | Percent |\n")
         output.write("| --- | --- | --- | --- | --- | --- | --- |\n")
         for result in sorted(results):
