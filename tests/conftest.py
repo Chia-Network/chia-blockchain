@@ -71,7 +71,7 @@ multiprocessing.set_start_method("spawn")
 
 from pathlib import Path
 
-from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
+from chia.simulator.block_tools import BlockTools, create_block_tools, create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_nodes import setup_farmer_multi_harvester
 from chia.util.keyring_wrapper import KeyringWrapper
