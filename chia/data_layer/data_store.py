@@ -1454,17 +1454,14 @@ class DataStore:
                     SELECT a.hash, n.left, n.right
                     FROM ancestors AS a
                     JOIN node AS n ON a.hash = n.hash
-                    WHERE a.tree_id = ?
+                    WHERE a.tree_id = :tree_id
                 )
 
                 SELECT hash, left, right
                 FROM all_nodes
-                WHERE hash NOT IN (SELECT hash FROM ancestors WHERE tree_id != ?)
+                WHERE hash NOT IN (SELECT hash FROM ancestors WHERE tree_id != :tree_id)
                 """,
-                (
-                    tree_id,
-                    tree_id,
-                ),
+                {"tree_id": tree_id},
             )
             to_delete: Dict[bytes, Tuple[bytes, bytes]] = {}
             ref_counts: Dict[bytes, int] = {}

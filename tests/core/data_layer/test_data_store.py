@@ -1534,16 +1534,14 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
     await raw_data_store.create_tree(tree_id=tree_id_1, status=Status.COMMITTED)
     await raw_data_store.create_tree(tree_id=tree_id_2, status=Status.COMMITTED)
 
+    key_offset = 1000
+    assert common_keys_count < key_offset
     common_keys = [key.to_bytes(4, byteorder="big") for key in range(common_keys_count)]
-    unique_keys_1 = [(key + 1000).to_bytes(4, byteorder="big") for key in range(500 - common_keys_count)]
-    unique_keys_2 = [(key + 2000).to_bytes(4, byteorder="big") for key in range(500 - common_keys_count)]
+    unique_keys_1 = [(key + key_offset).to_bytes(4, byteorder="big") for key in range(500 - common_keys_count)]
+    unique_keys_2 = [(key + (2 * key_offset)).to_bytes(4, byteorder="big") for key in range(500 - common_keys_count)]
 
-    batch1 = []
-    batch2 = []
-    for key in common_keys + unique_keys_1:
-        batch1.append({"action": "insert", "key": key, "value": key})
-    for key in common_keys + unique_keys_2:
-        batch2.append({"action": "insert", "key": key, "value": key})
+    batch1 = [{"action": "insert", "key": key, "value": key} for key in common_keys + unique_keys_1]
+    batch2 = [{"action": "insert", "key": key, "value": key} for key in common_keys + unique_keys_2]
 
     await raw_data_store.insert_batch(tree_id_1, batch1, status=Status.COMMITTED)
     await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
