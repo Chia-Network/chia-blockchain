@@ -72,7 +72,6 @@ class TimeOutAssertData:
     limit: float
     timed_out: bool
 
-    # TODO: can we make this not required maybe?
     label: str = ""
 
     __match_args__: ClassVar[Tuple[str, ...]] = ()
@@ -97,15 +96,18 @@ class TimeOutAssertData:
         }
 
 
-async def time_out_assert_custom_interval(timeout: float, interval, function, value=True, *args, **kwargs):
+async def time_out_assert_custom_interval(
+    timeout: float, interval, function, value=True, *args, stack_distance=0, **kwargs
+):
     __tracebackhide__ = True
 
     # TODO: wrong line when not called directly but instead from the regular time_out_assert?
     entry_file, entry_line = caller_file_and_line(
+        distance=stack_distance + 1,
         relative_to=(
             pathlib.Path(chia.__file__).parent.parent,
             pathlib.Path(tests.__file__).parent.parent,
-        )
+        ),
     )
 
     timeout = adjusted_timeout(timeout=timeout)
@@ -156,10 +158,20 @@ async def time_out_assert_custom_interval(timeout: float, interval, function, va
 
 async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
     __tracebackhide__ = True
-    await time_out_assert_custom_interval(timeout, 0.05, function, value, *args, **kwargs)
+    await time_out_assert_custom_interval(
+        timeout,
+        0.05,
+        function,
+        value,
+        *args,
+        **kwargs,
+        stack_distance=1,
+    )
 
 
 async def time_out_assert_not_none(timeout: float, function, *args, **kwargs):
+    # TODO: rework to leverage time_out_assert_custom_interval() such as by allowing
+    #       value to be a callable
     __tracebackhide__ = True
 
     timeout = adjusted_timeout(timeout=timeout)
