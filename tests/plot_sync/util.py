@@ -13,11 +13,11 @@ from chia.plot_sync.sender import Sender
 from chia.protocols.harvester_protocol import PlotSyncIdentifier
 from chia.server.outbound_message import Message, NodeType
 from chia.server.start_service import Service
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16, uint64
 from chia.util.misc import SplitAsyncManager, split_async_manager
+from tests.util.time_out_assert import time_out_assert
 
 
 @dataclass
@@ -29,6 +29,9 @@ class WSChiaConnectionDummy:
 
     async def send_message(self, message: Message) -> None:
         self.last_sent_message = message
+
+    def get_peer_logging(self) -> PeerInfo:
+        return self.peer_info
 
 
 def get_dummy_connection(node_type: NodeType, peer_id: bytes32) -> WSChiaConnectionDummy:

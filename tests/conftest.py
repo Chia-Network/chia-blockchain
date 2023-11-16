@@ -49,7 +49,6 @@ from chia.simulator.setup_nodes import (
     setup_two_nodes,
 )
 from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord
-from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
@@ -66,6 +65,7 @@ from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
 from tests.util.misc import BenchmarkRunner, GcMode, _AssertRuntime, measure_overhead
+from tests.util.time_out_assert import time_out_assert
 
 multiprocessing.set_start_method("spawn")
 
@@ -237,7 +237,7 @@ def softfork_height(request) -> int:
     return request.param
 
 
-saved_blocks_version = "rc5"
+saved_blocks_version = "2.0"
 
 
 @pytest.fixture(scope="session")
@@ -298,11 +298,19 @@ def default_10000_blocks(bt, consensus_mode):
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
-    return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}{version}.db", bt, seed=b"10000")
+    return persistent_blocks(
+        10000,
+        f"test_blocks_10000_{saved_blocks_version}{version}.db",
+        bt,
+        seed=b"10000",
+        dummy_block_references=True,
+    )
 
 
+# this long reorg chain shares the first 500 blocks with "default_10000_blocks"
+# and has heavier weight blocks
 @pytest.fixture(scope="session")
-def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
+def test_long_reorg_blocks(bt, consensus_mode, default_10000_blocks):
     version = ""
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
@@ -310,12 +318,35 @@ def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
-        758,
+        4500,
         f"test_blocks_long_reorg_{saved_blocks_version}{version}.db",
         bt,
-        block_list_input=default_1500_blocks[:320],
+        block_list_input=default_10000_blocks[:500],
         seed=b"reorg_blocks",
         time_per_block=8,
+        dummy_block_references=True,
+        include_transactions=True,
+    )
+
+
+# this long reorg chain shares the first 500 blocks with "default_10000_blocks"
+# and has the same weight blocks
+@pytest.fixture(scope="session")
+def test_long_reorg_blocks_light(bt, consensus_mode, default_10000_blocks):
+    version = ""
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
+
+    from tests.util.blockchain import persistent_blocks
+
+    return persistent_blocks(
+        4500,
+        f"test_blocks_long_reorg_light_{saved_blocks_version}{version}.db",
+        bt,
+        block_list_input=default_10000_blocks[:500],
+        seed=b"reorg_blocks2",
+        dummy_block_references=True,
+        include_transactions=True,
     )
 
 
