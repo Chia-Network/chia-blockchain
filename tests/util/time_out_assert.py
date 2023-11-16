@@ -6,13 +6,15 @@ import json
 import logging
 import pathlib
 import time
-from typing import Any, Callable, ClassVar, Dict, Tuple, final
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, Tuple, cast, final
 
 import chia
 import tests
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.misc import caller_file_and_line
 from chia.util.timing import adjusted_timeout
+from tests import ether
+from tests.util.misc import DataTypeProtocol
 
 log = logging.getLogger(__name__)
 
@@ -20,9 +22,8 @@ log = logging.getLogger(__name__)
 @final
 @dataclasses.dataclass(frozen=True)
 class TimeOutAssertData:
-    # TODO: deal with import directions etc so we can check this
-    # if TYPE_CHECKING:
-    #     _protocol_check: ClassVar[DataTypeProtocol] = cast("TimeOutAssertData", None)
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[DataTypeProtocol] = cast("TimeOutAssertData", None)
 
     tag: ClassVar[str] = "time_out_assert"
 
@@ -61,7 +62,6 @@ async def time_out_assert_custom_interval(
 ):
     __tracebackhide__ = True
 
-    # TODO: wrong line when not called directly but instead from the regular time_out_assert?
     entry_file, entry_line = caller_file_and_line(
         distance=stack_distance + 1,
         relative_to=(
@@ -94,26 +94,19 @@ async def time_out_assert_custom_interval(
 
             await asyncio.sleep(min(interval, timeout - duration))
     finally:
-        try:
-            # TODO: this import is going the wrong direction
-            from tests import ether
-        except ImportError:
-            pass
-        else:
-            if ether.record_property is not None:
-                data = TimeOutAssertData(
-                    duration=duration,
-                    path=pathlib.Path(entry_file),
-                    line=entry_line,
-                    limit=timeout,
-                    timed_out=timed_out,
-                )
+        if ether.record_property is not None:
+            data = TimeOutAssertData(
+                duration=duration,
+                path=pathlib.Path(entry_file),
+                line=entry_line,
+                limit=timeout,
+                timed_out=timed_out,
+            )
 
-                ether.record_property(  # pylint: disable=E1102
-                    # json.dumps(name.marshal(), ensure_ascii=True, sort_keys=True),
-                    data.tag,
-                    json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
-                )
+            ether.record_property(  # pylint: disable=E1102
+                data.tag,
+                json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
+            )
 
 
 async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):

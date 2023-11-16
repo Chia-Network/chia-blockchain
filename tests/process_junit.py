@@ -13,8 +13,8 @@ from typing import Any, Dict, List, TextIO, Tuple, Type, final
 import click
 import lxml.etree
 
-from chia.simulator.time_out_assert import TimeOutAssertData
 from tests.util.misc import BenchmarkData, DataTypeProtocol, TestId
+from tests.util.time_out_assert import TimeOutAssertData
 
 supported_data_types: List[Type[DataTypeProtocol]] = [TimeOutAssertData, BenchmarkData]
 supported_data_types_by_tag: Dict[str, Type[DataTypeProtocol]] = {cls.tag: cls for cls in supported_data_types}
