@@ -183,14 +183,6 @@ class DataLayer:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        await self._start()
-        try:
-            yield
-        finally:
-            self._close()
-            await self._await_closed()
-
-    async def _start(self) -> None:
         sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
@@ -200,23 +192,23 @@ class DataLayer:
         self._wallet_rpc = await self.wallet_rpc_init
 
         self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
+        try:
+            yield
+        finally:
+            # TODO: review for anything else we need to do here
+            self._shut_down = True
+            if self._wallet_rpc is not None:
+                self.wallet_rpc.close()
 
-    def _close(self) -> None:
-        # TODO: review for anything else we need to do here
-        self._shut_down = True
-        if self._wallet_rpc is not None:
-            self.wallet_rpc.close()
-
-    async def _await_closed(self) -> None:
-        if self.periodically_manage_data_task is not None:
-            try:
-                self.periodically_manage_data_task.cancel()
-            except asyncio.CancelledError:
-                pass
-        if self._data_store is not None:
-            await self.data_store.close()
-        if self._wallet_rpc is not None:
-            await self.wallet_rpc.await_closed()
+            if self.periodically_manage_data_task is not None:
+                try:
+                    self.periodically_manage_data_task.cancel()
+                except asyncio.CancelledError:
+                    pass
+            if self._data_store is not None:
+                await self.data_store.close()
+            if self._wallet_rpc is not None:
+                await self.wallet_rpc.await_closed()
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
