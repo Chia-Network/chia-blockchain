@@ -1516,7 +1516,7 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
                 result = await reader.execute("SELECT * FROM node")
                 nodes = await result.fetchall()
 
-            keys = set(node["key"] for node in nodes if node["key"] is not None)
+            keys = {node["key"] for node in nodes if node["key"] is not None}
             assert len(keys) == total_keys - tree_index * keys_deleted_per_store
             keys_after_index = set(original_keys[tree_index * keys_deleted_per_store :])
             keys_before_index = set(original_keys[: tree_index * keys_deleted_per_store])
@@ -1543,13 +1543,13 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
     key_offset = 1000
     total_keys_per_store = 500
     assert common_keys_count < key_offset
-    common_keys = set(key.to_bytes(4, byteorder="big") for key in range(common_keys_count))
-    unique_keys_1 = set(
+    common_keys = {key.to_bytes(4, byteorder="big") for key in range(common_keys_count)}
+    unique_keys_1 = {
         (key + key_offset).to_bytes(4, byteorder="big") for key in range(total_keys_per_store - common_keys_count)
-    )
-    unique_keys_2 = set(
+    }
+    unique_keys_2 = {
         (key + (2 * key_offset)).to_bytes(4, byteorder="big") for key in range(total_keys_per_store - common_keys_count)
-    )
+    }
 
     batch1 = [{"action": "insert", "key": key, "value": key} for key in common_keys.union(unique_keys_1)]
     batch2 = [{"action": "insert", "key": key, "value": key} for key in common_keys.union(unique_keys_2)]
@@ -1562,7 +1562,7 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
         result = await reader.execute("SELECT * FROM node")
         nodes = await result.fetchall()
 
-    keys = set(node["key"] for node in nodes if node["key"] is not None)
+    keys = {node["key"] for node in nodes if node["key"] is not None}
     # Since one store got all its keys deleted, we're left only with the keys of the other store.
     assert len(keys) == total_keys_per_store
     assert keys.intersection(unique_keys_1) == set()
