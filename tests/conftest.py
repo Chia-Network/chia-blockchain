@@ -1167,27 +1167,18 @@ async def farmer_harvester_full_node_timelord_zero_bits_plot_filter(
         NUM_SPS_SUB_SLOT=4,
     )
 
-    vdf1_port = uint16(find_available_listen_port("vdf1"))
+    bt = await create_block_tools_async(
+        zero_bit_plot_filter_consts,
+        keychain=get_temp_keyring,
+        num_og_plots=0,
+        num_pool_plots=20,
+        num_non_keychain_plots=0,
+    )
 
-    bt = await create_block_tools_async(zero_bit_plot_filter_consts, keychain=get_temp_keyring)
-
-    async with setup_simulators_and_wallets_service(1, 0, bt.constants) as ([full_node], _, bt):
+    async with setup_full_system(bt.constants, bt, bt, bt) as full_system:
         async with setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as (
                 [harvester_service],
                 farmer_service,
                 _,
         ):
-
-            async with setup_vdf_clients(bt=bt, self_hostname=self_hostname, port=vdf1_port):
-
-                async with setup_timelord(
-                    full_node_port=full_node._api.full_node.server.get_port(),
-                    sanitizer=False,
-                    consensus_constants=zero_bit_plot_filter_consts,
-                    config=bt.config,
-                    root_path=bt.root_path,
-                    vdf_port=vdf1_port,
-                ) as timelord_service:
-
-                    yield harvester_service, farmer_service, full_node, timelord_service, bt
-
+            yield harvester_service, farmer_service, full_system.node_1, full_system.timelord, bt
