@@ -51,6 +51,7 @@ CLI_RPM_BASE="chia-blockchain-cli-$CHIA_INSTALLER_VERSION-1.$REDHAT_PLATFORM"
 mkdir -p "dist/$CLI_RPM_BASE/opt/chia"
 mkdir -p "dist/$CLI_RPM_BASE/usr/bin"
 cp -r dist/daemon/* "dist/$CLI_RPM_BASE/opt/chia/"
+cp systemd/*.service "dist/$CLI_RPM_BASE/etc/systemd/system/"
 
 ln -s ../../opt/chia/chia "dist/$CLI_RPM_BASE/usr/bin/chia"
 # This is built into the base build image
