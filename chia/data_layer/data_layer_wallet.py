@@ -22,7 +22,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, UnknownCondition, parse_timelock_info
@@ -1009,7 +1009,8 @@ class DataLayerWallet:
                     for tx in relevant_dl_txs:
                         if any(c.name() == singleton.coin_id for c in tx.additions):
                             if tx.spend_bundle is not None:
-                                fee = uint64(tx.spend_bundle.fees())
+                                # This executes the puzzles
+                                fee = uint64(estimate_fees(tx.spend_bundle))
                             else:
                                 fee = uint64(0)
 

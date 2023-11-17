@@ -49,7 +49,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
@@ -965,7 +965,7 @@ class TestFullNodeProtocol:
                 )
             ]
             spend_bundle = SpendBundle.aggregate(spend_bundles)
-            assert spend_bundle.fees() == fee
+            assert estimate_fees(spend_bundle) == fee
             respond_transaction = wallet_protocol.SendTransaction(spend_bundle)
 
             await full_node_1.send_transaction(respond_transaction)
