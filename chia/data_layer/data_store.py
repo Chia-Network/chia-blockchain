@@ -1073,6 +1073,28 @@ class DataStore:
 
         return new_root
 
+    async def clean_node_table(self, writer: aiosqlite.Connection) -> None:
+        await writer.execute(
+            """
+            WITH RECURSIVE pending_nodes AS (
+                SELECT node_hash AS hash FROM root
+                WHERE status = ?
+                UNION ALL
+                SELECT n.left FROM node n
+                INNER JOIN pending_nodes pn ON n.hash = pn.hash
+                WHERE n.left IS NOT NULL
+                UNION ALL
+                SELECT n.right FROM node n
+                INNER JOIN pending_nodes pn ON n.hash = pn.hash
+                WHERE n.right IS NOT NULL
+            )
+            DELETE FROM node
+            WHERE hash NOT IN (SELECT hash FROM ancestors)
+            AND hash NOT IN (SELECT hash FROM pending_nodes)
+            """,
+            (Status.PENDING.value,)
+        )
+
     async def insert_batch(
         self,
         tree_id: bytes32,
@@ -1146,6 +1168,8 @@ class DataStore:
                     "Didn't get the expected generation after batch update: "
                     f"Expected: {old_root.generation + 1}. Got: {new_root.generation}"
                 )
+
+            await self.clean_node_table(writer)
             return root.node_hash
 
     async def _get_one_ancestor(
@@ -1202,9 +1226,6 @@ class DataStore:
                 # Don't reinsert it so we can save DB space.
                 if node.hash not in known_hashes:
                     await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, root.generation)
-
-            # Clean up intermediary hashes that are no longer needed, since every hash we need should be in ancestors.
-            await writer.execute("DELETE FROM node WHERE hash NOT IN (SELECT hash FROM ancestors)")
 
     async def insert_root_with_ancestor_table(
         self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING
