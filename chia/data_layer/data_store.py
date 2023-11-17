@@ -1447,8 +1447,8 @@ class DataStore:
                 )
 
     async def delete_store_data(self, tree_id: bytes32) -> None:
-        async with self.db_wrapper.writer() as reader:
-            cursor = await reader.execute(
+        async with self.db_wrapper.writer() as writer:
+            cursor = await writer.execute(
                 """
                 WITH all_nodes AS (
                     SELECT a.hash, n.left, n.right
@@ -1480,7 +1480,6 @@ class DataStore:
                 if right is not None:
                     ref_counts[right] = ref_counts.get(right, 0) + 1
 
-        async with self.db_wrapper.writer() as writer:
             await writer.execute("DELETE FROM ancestors WHERE tree_id == ?", (tree_id,))
             await writer.execute("DELETE FROM root WHERE tree_id == ?", (tree_id,))
             queue = [hash for hash in to_delete if ref_counts.get(hash, 0) == 0]

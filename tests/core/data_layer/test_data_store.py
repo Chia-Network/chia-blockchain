@@ -1441,7 +1441,8 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
     tree_id_2 = bytes32(b"\0" * 31 + b"\1")
     await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
     await raw_data_store.create_tree(tree_id=tree_id_2, status=Status.COMMITTED)
-    keys = [key.to_bytes(4, byteorder="big") for key in range(4)]
+    total_keys = 4
+    keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
     batch1 = [
         {"action": "insert", "key": keys[0], "value": keys[0]},
         {"action": "insert", "key": keys[1], "value": keys[1]},
@@ -1460,7 +1461,7 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
         for node in nodes:
             if node["key"] is not None:
                 kv_nodes_before[node["key"]] = node["value"]
-    for i in range(4):
+    for i in range(total_keys):
         assert kv_nodes_before[keys[i]] == keys[i]
     await raw_data_store.delete_store_data(tree_id)
     # Deleting from `node` table doesn't alter other stores.
@@ -1473,7 +1474,7 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
         for node in nodes:
             if node["key"] is not None:
                 kv_nodes_after[node["key"]] = node["value"]
-    for i in range(4):
+    for i in range(total_keys):
         if i != 2:
             assert kv_nodes_after[keys[i]] == keys[i]
         else:
@@ -1493,29 +1494,34 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
 async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> None:
     # Make sure inserting and deleting the same data works
     for repetition in range(2):
-        tree_ids = [bytes32(bytes((0,) * 31 + (i,))) for i in range(50)]
+        num_stores = 50
+        total_keys = 150
+        keys_deleted_per_store = 3
+        tree_ids = [bytes32(bytes((0,) * 31 + (i,))) for i in range(num_stores)]
         for tree_id in tree_ids:
             await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
-        original_keys = [key.to_bytes(4, byteorder="big") for key in range(150)]
+        original_keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
         batches = []
-        for i in range(50):
-            batch = [{"action": "insert", "key": key, "value": key} for key in original_keys[i * 3 :]]
+        for i in range(num_stores):
+            batch = [
+                {"action": "insert", "key": key, "value": key} for key in original_keys[i * keys_deleted_per_store :]
+            ]
             batches.append(batch)
 
         for tree_id, batch in zip(tree_ids, batches):
             await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
 
-        for tree_index in range(50):
+        for tree_index in range(num_stores):
             async with raw_data_store.db_wrapper.reader() as reader:
                 result = await reader.execute("SELECT * FROM node")
                 nodes = await result.fetchall()
 
-            keys = [node["key"] for node in nodes if node["key"] is not None]
-            assert len(keys) == 150 - tree_index * 3
-            for key in original_keys[tree_index * 3 :]:
-                assert key in keys
-            for key in original_keys[: tree_index * 3]:
-                assert key not in keys
+            keys = set(node["key"] for node in nodes if node["key"] is not None)
+            assert len(keys) == total_keys - tree_index * keys_deleted_per_store
+            keys_after_index = set(original_keys[tree_index * keys_deleted_per_store :])
+            keys_before_index = set(original_keys[: tree_index * keys_deleted_per_store])
+            assert keys_after_index.issubset(keys)
+            assert keys.isdisjoint(keys_before_index)
             await raw_data_store.delete_store_data(tree_ids[tree_index])
 
         async with raw_data_store.db_wrapper.reader() as reader:
@@ -1535,13 +1541,18 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
     await raw_data_store.create_tree(tree_id=tree_id_2, status=Status.COMMITTED)
 
     key_offset = 1000
+    total_keys_per_store = 500
     assert common_keys_count < key_offset
-    common_keys = [key.to_bytes(4, byteorder="big") for key in range(common_keys_count)]
-    unique_keys_1 = [(key + key_offset).to_bytes(4, byteorder="big") for key in range(500 - common_keys_count)]
-    unique_keys_2 = [(key + (2 * key_offset)).to_bytes(4, byteorder="big") for key in range(500 - common_keys_count)]
+    common_keys = set(key.to_bytes(4, byteorder="big") for key in range(common_keys_count))
+    unique_keys_1 = set(
+        (key + key_offset).to_bytes(4, byteorder="big") for key in range(total_keys_per_store - common_keys_count)
+    )
+    unique_keys_2 = set(
+        (key + (2 * key_offset)).to_bytes(4, byteorder="big") for key in range(total_keys_per_store - common_keys_count)
+    )
 
-    batch1 = [{"action": "insert", "key": key, "value": key} for key in common_keys + unique_keys_1]
-    batch2 = [{"action": "insert", "key": key, "value": key} for key in common_keys + unique_keys_2]
+    batch1 = [{"action": "insert", "key": key, "value": key} for key in common_keys.union(unique_keys_1)]
+    batch2 = [{"action": "insert", "key": key, "value": key} for key in common_keys.union(unique_keys_2)]
 
     await raw_data_store.insert_batch(tree_id_1, batch1, status=Status.COMMITTED)
     await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
@@ -1551,9 +1562,8 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
         result = await reader.execute("SELECT * FROM node")
         nodes = await result.fetchall()
 
-    keys = [node["key"] for node in nodes if node["key"] is not None]
-    assert len(keys) == 500
-    for key in unique_keys_1:
-        assert key not in keys
-    for key in common_keys + unique_keys_2:
-        assert key in keys
+    keys = set(node["key"] for node in nodes if node["key"] is not None)
+    # Since one store got all its keys deleted, we're left only with the keys of the other store.
+    assert len(keys) == total_keys_per_store
+    assert keys.intersection(unique_keys_1) == set()
+    assert keys.symmetric_difference(common_keys.union(unique_keys_2)) == set()
