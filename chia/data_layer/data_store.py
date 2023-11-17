@@ -1101,7 +1101,7 @@ class DataStore:
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
     ) -> Optional[bytes32]:
-        async with self.db_wrapper.writer():
+        async with self.db_wrapper.writer() as writer:
             old_root = await self.get_tree_root(tree_id)
             root_hash = old_root.node_hash
             if old_root.node_hash is None:
