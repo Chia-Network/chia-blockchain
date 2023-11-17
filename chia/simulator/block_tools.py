@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import copy
 import dataclasses
-import json
 import logging
 import os
 import random
@@ -59,6 +58,7 @@ from chia.plotting.util import (
     parse_plot_info,
 )
 from chia.server.server import ssl_context_for_client
+from chia.simulator.derivation_cache import load_derivation_cache
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.ssl_certs import (
     SSLTestCACertAndPrivateKey,
@@ -199,7 +199,7 @@ class BlockTools:
         log: logging.Logger = logging.getLogger(__name__),
     ) -> None:
         self.derivation_cache: DerivationCache = {}
-        self.load_derivation_cache(Path("tests/derivation_cache.json"))
+        self._load_derivation_cache(Path("tests/derivation_cache.json"))
         self._block_cache_header = bytes32([0] * 32)
 
         self._tempdir = None
@@ -296,15 +296,8 @@ class BlockTools:
             match_str=str(self.plot_dir.relative_to(DEFAULT_ROOT_PATH.parent)) if not automated_testing else None,
         )
 
-    def load_derivation_cache(self, path: Path) -> None:
-        try:
-            with path.open(encoding="UTF-8") as cache_file:
-                objects = json.load(cache_file)
-                for ob in objects:
-                    a, b, c, d = ob
-                    self.derivation_cache[(bytes.fromhex(a), b, c)] = bytes.fromhex(d)
-        except Exception as e:
-            print(f"Unable to load derivation cache used for test speedup: {e}")
+    def _load_derivation_cache(self, path: Path) -> None:
+        self.derivation_cache = load_derivation_cache(path)
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None) -> None:
         keychain_proxy: Optional[KeychainProxy]
