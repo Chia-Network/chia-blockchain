@@ -9,6 +9,7 @@ import random
 import sqlite3
 import time
 import traceback
+from functools import partial
 from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import (
@@ -28,6 +29,8 @@ from typing import (
     final,
 )
 
+import anyio
+import anyio.abc
 from chia_rs import AugSchemeMPL
 
 from chia.consensus.block_body_validation import ForkInfo
@@ -138,7 +141,6 @@ class FullNode:
     state_changed_callback: Optional[StateChangedProtocol] = None
     full_node_peers: Optional[FullNodePeers] = None
     sync_store: SyncStore = dataclasses.field(default_factory=SyncStore)
-    uncompact_task: Optional[asyncio.Task[None]] = None
     compact_vdf_requests: Set[bytes32] = dataclasses.field(default_factory=set)
     # TODO: Logging isn't setup yet so the log entries related to parsing the
     #       config would end up on stdout if handled here.
@@ -147,7 +149,6 @@ class FullNode:
     subscriptions: PeerSubscriptions = dataclasses.field(default_factory=PeerSubscriptions)
     _transaction_queue_task: Optional[asyncio.Task[None]] = None
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
-    _sync_task: Optional[asyncio.Task[None]] = None
     _transaction_queue: Optional[TransactionQueue] = None
     _compact_vdf_sem: Optional[LimitedSemaphore] = None
     _new_peak_sem: Optional[LimitedSemaphore] = None
@@ -167,6 +168,7 @@ class FullNode:
     # hashes of peaks that failed long sync on chip13 Validation
     bad_peak_cache: Dict[bytes32, uint32] = dataclasses.field(default_factory=dict)
     wallet_sync_task: Optional[asyncio.Task[None]] = None
+    _task_group: Optional[anyio.abc.TaskGroup] = None
 
     @property
     def server(self) -> ChiaServer:
@@ -319,55 +321,61 @@ class FullNode:
                 full_peak, state_change_summary, None
             )
             await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
-        if self.config["send_uncompact_interval"] != 0:
-            sanitize_weight_proof_only = False
-            if "sanitize_weight_proof_only" in self.config:
-                sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
-            assert self.config["target_uncompact_proofs"] != 0
-            self.uncompact_task = asyncio.create_task(
-                self.broadcast_uncompact_blocks(
-                    self.config["send_uncompact_interval"],
-                    self.config["target_uncompact_proofs"],
-                    sanitize_weight_proof_only,
+
+        async with anyio.create_task_group() as self._task_group:
+            if self.config["send_uncompact_interval"] != 0:
+                sanitize_weight_proof_only = False
+                if "sanitize_weight_proof_only" in self.config:
+                    sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
+                assert self.config["target_uncompact_proofs"] != 0
+                self.task_group.start_soon(
+                    name="broadcast uncompact blocks",
+                    func=partial(
+                        self.broadcast_uncompact_blocks,
+                        uncompact_interval_scan=self.config["send_uncompact_interval"],
+                        target_uncompact_proofs=self.config["target_uncompact_proofs"],
+                        sanitize_weight_proof_only=sanitize_weight_proof_only,
+                    ),
                 )
-            )
-        if self.wallet_sync_task is None or self.wallet_sync_task.done():
-            self.wallet_sync_task = asyncio.create_task(self._wallets_sync_task_handler())
+            if self.wallet_sync_task is None or self.wallet_sync_task.done():
+                self.wallet_sync_task = asyncio.create_task(self._wallets_sync_task_handler())
 
-        self.initialized = True
-        if self.full_node_peers is not None:
-            asyncio.create_task(self.full_node_peers.start())
-        try:
-            yield
-        finally:
-            self._shut_down = True
-            if self._init_weight_proof is not None:
-                self._init_weight_proof.cancel()
-
-            # blockchain is created in _start and in certain cases it may not exist here during _close
-            if self._blockchain is not None:
-                self.blockchain.shut_down()
-            # same for mempool_manager
-            if self._mempool_manager is not None:
-                self.mempool_manager.shut_down()
-
+            self.initialized = True
             if self.full_node_peers is not None:
-                asyncio.create_task(self.full_node_peers.close())
-            if self.uncompact_task is not None:
-                self.uncompact_task.cancel()
-            if self._transaction_queue_task is not None:
-                self._transaction_queue_task.cancel()
-            cancel_task_safe(task=self.wallet_sync_task, log=self.log)
-            cancel_task_safe(task=self._sync_task, log=self.log)
+                asyncio.create_task(self.full_node_peers.start())
+            try:
+                yield
+            finally:
+                self._shut_down = True
+                if self._init_weight_proof is not None:
+                    self._init_weight_proof.cancel()
 
-            for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
-                cancel_task_safe(task, self.log)
-            await self.db_wrapper.close()
-            if self._init_weight_proof is not None:
-                await asyncio.wait([self._init_weight_proof])
-            if self._sync_task is not None:
-                with contextlib.suppress(asyncio.CancelledError):
-                    await self._sync_task
+                # blockchain is created in _start and in certain cases it may not exist here during _close
+                if self._blockchain is not None:
+                    self.blockchain.shut_down()
+                # same for mempool_manager
+                if self._mempool_manager is not None:
+                    self.mempool_manager.shut_down()
+
+                if self.full_node_peers is not None:
+                    asyncio.create_task(self.full_node_peers.close())
+
+                self.task_group.cancel_scope.cancel()
+
+                if self._transaction_queue_task is not None:
+                    self._transaction_queue_task.cancel()
+                cancel_task_safe(task=self.wallet_sync_task, log=self.log)
+
+                for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
+                    cancel_task_safe(task, self.log)
+                await self.db_wrapper.close()
+                if self._init_weight_proof is not None:
+                    await asyncio.wait([self._init_weight_proof])
+
+    @property
+    def task_group(self) -> anyio.abc.TaskGroup:
+        assert self._task_group is not None
+        return self._task_group
 
     @property
     def block_store(self) -> BlockStore:
@@ -763,7 +771,10 @@ class FullNode:
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
-            self._sync_task = asyncio.create_task(self._sync())
+            self.task_group.start_soon(
+                name="full node sync task",
+                func=self._sync,
+            )
 
     async def send_peak_to_timelords(
         self, peak_block: Optional[FullBlock] = None, peer: Optional[WSChiaConnection] = None
