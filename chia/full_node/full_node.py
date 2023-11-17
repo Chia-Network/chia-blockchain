@@ -203,14 +203,6 @@ class FullNode:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        await self._start()
-        try:
-            yield
-        finally:
-            self._close()
-            await self._await_closed()
-
-    async def _start(self) -> None:
         self._timelord_lock = asyncio.Lock()
         self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 
@@ -345,37 +337,37 @@ class FullNode:
         self.initialized = True
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.start())
+        try:
+            yield
+        finally:
+            self._shut_down = True
+            if self._init_weight_proof is not None:
+                self._init_weight_proof.cancel()
 
-    def _close(self) -> None:
-        self._shut_down = True
-        if self._init_weight_proof is not None:
-            self._init_weight_proof.cancel()
+            # blockchain is created in _start and in certain cases it may not exist here during _close
+            if self._blockchain is not None:
+                self.blockchain.shut_down()
+            # same for mempool_manager
+            if self._mempool_manager is not None:
+                self.mempool_manager.shut_down()
 
-        # blockchain is created in _start and in certain cases it may not exist here during _close
-        if self._blockchain is not None:
-            self.blockchain.shut_down()
-        # same for mempool_manager
-        if self._mempool_manager is not None:
-            self.mempool_manager.shut_down()
+            if self.full_node_peers is not None:
+                asyncio.create_task(self.full_node_peers.close())
+            if self.uncompact_task is not None:
+                self.uncompact_task.cancel()
+            if self._transaction_queue_task is not None:
+                self._transaction_queue_task.cancel()
+            cancel_task_safe(task=self.wallet_sync_task, log=self.log)
+            cancel_task_safe(task=self._sync_task, log=self.log)
 
-        if self.full_node_peers is not None:
-            asyncio.create_task(self.full_node_peers.close())
-        if self.uncompact_task is not None:
-            self.uncompact_task.cancel()
-        if self._transaction_queue_task is not None:
-            self._transaction_queue_task.cancel()
-        cancel_task_safe(task=self.wallet_sync_task, log=self.log)
-        cancel_task_safe(task=self._sync_task, log=self.log)
-
-    async def _await_closed(self) -> None:
-        for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
-            cancel_task_safe(task, self.log)
-        await self.db_wrapper.close()
-        if self._init_weight_proof is not None:
-            await asyncio.wait([self._init_weight_proof])
-        if self._sync_task is not None:
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._sync_task
+            for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
+                cancel_task_safe(task, self.log)
+            await self.db_wrapper.close()
+            if self._init_weight_proof is not None:
+                await asyncio.wait([self._init_weight_proof])
+            if self._sync_task is not None:
+                with contextlib.suppress(asyncio.CancelledError):
+                    await self._sync_task
 
     @property
     def block_store(self) -> BlockStore:
