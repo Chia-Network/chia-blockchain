@@ -1092,7 +1092,7 @@ class DataStore:
             WHERE hash NOT IN (SELECT hash FROM ancestors)
             AND hash NOT IN (SELECT hash FROM pending_nodes)
             """,
-            (Status.PENDING.value,)
+            (Status.PENDING.value,),
         )
 
     async def insert_batch(
@@ -1469,6 +1469,7 @@ class DataStore:
 
     async def delete_store_data(self, tree_id: bytes32) -> None:
         async with self.db_wrapper.writer() as writer:
+            await self.clean_node_table(writer)
             cursor = await writer.execute(
                 """
                 WITH all_nodes AS (
@@ -1476,13 +1477,26 @@ class DataStore:
                     FROM ancestors AS a
                     JOIN node AS n ON a.hash = n.hash
                     WHERE a.tree_id = :tree_id
+                ),
+                WITH RECURSIVE pending_nodes AS (
+                    SELECT node_hash AS hash FROM root
+                    WHERE status = :status
+                    UNION ALL
+                    SELECT n.left FROM node n
+                    INNER JOIN pending_nodes pn ON n.hash = pn.hash
+                    WHERE n.left IS NOT NULL
+                    UNION ALL
+                    SELECT n.right FROM node n
+                    INNER JOIN pending_nodes pn ON n.hash = pn.hash
+                    WHERE n.right IS NOT NULL
                 )
 
                 SELECT hash, left, right
                 FROM all_nodes
                 WHERE hash NOT IN (SELECT hash FROM ancestors WHERE tree_id != :tree_id)
+                AND hash NOT IN (SELECT hash from pending_nodes)
                 """,
-                {"tree_id": tree_id},
+                {"tree_id": tree_id, "status": Status.PENDING.value},
             )
             to_delete: Dict[bytes, Tuple[bytes, bytes]] = {}
             ref_counts: Dict[bytes, int] = {}
