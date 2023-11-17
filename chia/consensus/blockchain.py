@@ -1100,11 +1100,8 @@ class Blockchain(BlockchainInterface):
             return BlockGenerator(block.transactions_generator, [], [])
 
         result: List[SerializedProgram] = []
-        previous_block_hash = block.prev_header_hash
-        if (
-            self.try_block_record(previous_block_hash)
-            and self.height_to_hash(self.block_record(previous_block_hash).height) == previous_block_hash
-        ):
+        previous_br = await self.get_block_record_from_db(block.prev_header_hash)
+        if previous_br is not None and self.height_to_hash(previous_br.height) == block.prev_header_hash:
             # We are not in a reorg, no need to look up alternate header hashes
             # (we can get them from height_to_hash)
             # in the v2 database, we can look up blocks by height directly
