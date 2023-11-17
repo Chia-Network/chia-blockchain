@@ -1896,7 +1896,7 @@ class TestCATTrades:
         xch_to_cat_amount = uint64(100)
 
         async with wallet_node_maker.wallet_state_manager.lock:
-            cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node_maker.wallet_state_manager,
                 wallet_maker,
                 {"identifier": "genesis_by_id"},
