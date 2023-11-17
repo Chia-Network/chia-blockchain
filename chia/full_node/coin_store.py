@@ -81,7 +81,7 @@ class CoinStore:
         self,
         height: uint32,
         timestamp: uint64,
-        included_reward_coins: Set[Coin],
+        included_reward_coins: List[Coin],
         tx_additions: List[Coin],
         tx_removals: List[bytes32],
     ) -> List[CoinRecord]:

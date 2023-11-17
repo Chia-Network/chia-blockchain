@@ -109,7 +109,7 @@ async def check_conditions(
     spend_reward_index: int = -2,
 ) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
     blocks = await initial_blocks(bt)
-    coin = list(blocks[spend_reward_index].get_included_reward_coins())[0]
+    coin = blocks[spend_reward_index].get_included_reward_coins()[0]
 
     coin_spend = CoinSpend(coin, EASY_PUZZLE, SerializedProgram.from_program(condition_solution))
     spend_bundle = SpendBundle([coin_spend], G2Element())
@@ -281,7 +281,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_invalid_my_id(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         wrong_name = bytearray(coin.name())
         wrong_name[-1] ^= 1
         conditions = Program.to(
@@ -294,7 +294,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_valid_my_id(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         conditions = Program.to(
             assemble(
                 f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{coin.name().hex()}))"
@@ -305,7 +305,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_invalid_coin_announcement(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         announce = Announcement(coin.name(), b"test_bad")
         conditions = Program.to(
             assemble(
@@ -318,7 +318,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_valid_coin_announcement(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         announce = Announcement(coin.name(), b"test")
         conditions = Program.to(
             assemble(
@@ -389,7 +389,7 @@ class TestConditions:
         """
 
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         coin_announcement = Announcement(coin.name(), b"test")
         puzzle_announcement = Announcement(EASY_PUZZLE_HASH, b"test")
 

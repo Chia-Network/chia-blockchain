@@ -16,7 +16,7 @@ from chia.util.ints import uint64
 def get_block_header(block: FullBlock, tx_addition_coins: List[Coin], removals_names: List[bytes32]) -> HeaderBlock:
     # Create filter
     byte_array_tx: List[bytearray] = []
-    addition_coins = tx_addition_coins + list(block.get_included_reward_coins())
+    addition_coins = tx_addition_coins + block.get_included_reward_coins()
     if block.is_transaction_block():
         for coin in addition_coins:
             byte_array_tx.append(bytearray(coin.puzzle_hash))
