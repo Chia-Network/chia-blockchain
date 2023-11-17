@@ -161,6 +161,39 @@ class WalletNode:
             self._close()
             await self._await_closed()
 
+    async def _start(self) -> None:
+        await self._start_with_fingerprint()
+
+    def _close(self) -> None:
+        self.log.info("self._close")
+        self.log_out()
+        self._shut_down = True
+        if self._weight_proof_handler is not None:
+            self._weight_proof_handler.cancel_weight_proof_tasks()
+        if self._process_new_subscriptions_task is not None:
+            self._process_new_subscriptions_task.cancel()
+        if self._retry_failed_states_task is not None:
+            self._retry_failed_states_task.cancel()
+        if self._secondary_peer_sync_task is not None:
+            self._secondary_peer_sync_task.cancel()
+
+    async def _await_closed(self, shutting_down: bool = True) -> None:
+        self.log.info("self._await_closed")
+        if self._server is not None:
+            await self.server.close_all_connections()
+        if self.wallet_peers is not None:
+            await self.wallet_peers.ensure_is_closed()
+        if self._wallet_state_manager is not None:
+            await self.wallet_state_manager._await_closed()
+            self._wallet_state_manager = None
+        if shutting_down and self._keychain_proxy is not None:
+            proxy = self._keychain_proxy
+            self._keychain_proxy = None
+            await proxy.close()
+            await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
+        self.wallet_peers = None
+        self._balance_cache = {}
+
     @property
     def keychain_proxy(self) -> KeychainProxy:
         # This is a stop gap until the class usage is refactored such the values of
@@ -362,9 +395,6 @@ class WalletNode:
                 self.set_resync_on_startup(fingerprint, False)
             return commit
 
-    async def _start(self) -> None:
-        await self._start_with_fingerprint()
-
     async def _start_with_fingerprint(
         self,
         fingerprint: Optional[int] = None,
@@ -438,36 +468,6 @@ class WalletNode:
             self.initialize_wallet_peers()
 
         return True
-
-    def _close(self) -> None:
-        self.log.info("self._close")
-        self.log_out()
-        self._shut_down = True
-        if self._weight_proof_handler is not None:
-            self._weight_proof_handler.cancel_weight_proof_tasks()
-        if self._process_new_subscriptions_task is not None:
-            self._process_new_subscriptions_task.cancel()
-        if self._retry_failed_states_task is not None:
-            self._retry_failed_states_task.cancel()
-        if self._secondary_peer_sync_task is not None:
-            self._secondary_peer_sync_task.cancel()
-
-    async def _await_closed(self, shutting_down: bool = True) -> None:
-        self.log.info("self._await_closed")
-        if self._server is not None:
-            await self.server.close_all_connections()
-        if self.wallet_peers is not None:
-            await self.wallet_peers.ensure_is_closed()
-        if self._wallet_state_manager is not None:
-            await self.wallet_state_manager._await_closed()
-            self._wallet_state_manager = None
-        if shutting_down and self._keychain_proxy is not None:
-            proxy = self._keychain_proxy
-            self._keychain_proxy = None
-            await proxy.close()
-            await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
-        self.wallet_peers = None
-        self._balance_cache = {}
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
