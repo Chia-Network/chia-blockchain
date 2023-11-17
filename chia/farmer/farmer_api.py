@@ -114,6 +114,9 @@ class FarmerAPI:
             # If the iters are good enough to make a block, proceed with the block making flow
             if required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters):
 
+                if new_proof_of_space.farmer_reward_address_override:
+                    self.farmer.notify_farmer_reward_taken_by_harvester_as_fee(sp, new_proof_of_space)
+
                 sp_src_data: Optional[List[SignatureRequestSourceData]] = None
                 if new_proof_of_space.include_source_signature_data or new_proof_of_space.farmer_reward_address_override:
                     cc_data: SignatureRequestSourceData

@@ -50,6 +50,11 @@ class NewSignagePointHarvester(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class ProofOfSpaceFeeInfo(Streamable):
+    applied_fee_threshold: uint32
+
+@streamable
+@dataclass(frozen=True)
 class NewProofOfSpace(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
@@ -58,6 +63,7 @@ class NewProofOfSpace(Streamable):
     signage_point_index: uint8
     include_source_signature_data: bool = None
     farmer_reward_address_override: Optional[bytes32] = None
+    fee_info: Optional[ProofOfSpaceFeeInfo] = None
 
 
 # NOTE: Only 1 of the fields in this type will not be None
