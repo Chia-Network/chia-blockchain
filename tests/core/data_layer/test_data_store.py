@@ -1450,9 +1450,9 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
     batch2 = batch1.copy()
     batch1.append({"action": "insert", "key": keys[2], "value": keys[2]})
     batch2.append({"action": "insert", "key": keys[3], "value": keys[3]})
+    assert batch1 != batch2
     await raw_data_store.insert_batch(tree_id, batch1, status=Status.COMMITTED)
     await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
-    assert batch1 != batch2
     keys_values_before = await raw_data_store.get_keys_values(tree_id_2)
     async with raw_data_store.db_wrapper.reader() as reader:
         result = await reader.execute("SELECT * FROM node")
@@ -1461,8 +1461,7 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
         for node in nodes:
             if node["key"] is not None:
                 kv_nodes_before[node["key"]] = node["value"]
-    for i in range(total_keys):
-        assert kv_nodes_before[keys[i]] == keys[i]
+    assert [kv_nodes_before[key] for key in keys] == keys
     await raw_data_store.delete_store_data(tree_id)
     # Deleting from `node` table doesn't alter other stores.
     keys_values_after = await raw_data_store.get_keys_values(tree_id_2)
@@ -1497,7 +1496,7 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
         num_stores = 50
         total_keys = 150
         keys_deleted_per_store = 3
-        tree_ids = [bytes32(bytes((0,) * 31 + (i,))) for i in range(num_stores)]
+        tree_ids = [bytes32(i.to_bytes(32, byteorder="big") for i in range(num_stores)]
         for tree_id in tree_ids:
             await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
         original_keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
