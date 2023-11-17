@@ -2,16 +2,54 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, Type, TypeVar, get_type_hints
 
 import aiohttp
+from typing_extensions import TypedDict, dataclass_transform
 
 from chia.types.blockchain_format.coin import Coin
 from chia.util.json_util import obj_to_response
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_from_json_dicts, parse_timelock_info
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
 log = logging.getLogger(__name__)
+
+RpcEndpoint = Callable[..., Coroutine[Any, Any, Dict[str, Any]]]
+MarshallableRpcEndpoint = Callable[..., Coroutine[Any, Any, Streamable]]
+
+
+class RequestType(TypedDict):
+    pass
+
+
+_T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
+
+
+@dataclass_transform()
+def get_streamable_from_request_type(cls: Type[RequestType]) -> Type[_T_Streamable]:
+    return streamable(
+        dataclass(frozen=True)(type("_" + cls.__name__, (Streamable,), {"__annotations__": cls.__annotations__}))
+    )
+
+
+def marshall(func: MarshallableRpcEndpoint) -> RpcEndpoint:
+    hints = get_type_hints(func)
+    request_class: Type[RequestType] = hints["request"]
+
+    async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
+        response_obj: Streamable = await func(
+            self,
+            request_class(
+                get_streamable_from_request_type(request_class).from_json_dict(request).__dict__  # type: ignore
+            ),
+            *args,
+            **kwargs,
+        )
+        return response_obj.to_json_dict()
+
+    return rpc_endpoint
 
 
 def wrap_http_handler(f) -> Callable:
@@ -36,9 +74,7 @@ def wrap_http_handler(f) -> Callable:
     return inner
 
 
-def tx_endpoint(
-    func: Callable[..., Coroutine[Any, Any, Dict[str, Any]]]
-) -> Callable[..., Coroutine[Any, Any, Dict[str, Any]]]:
+def tx_endpoint(func: RpcEndpoint) -> RpcEndpoint:
     async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
         assert self.service.logged_in_fingerprint is not None
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
