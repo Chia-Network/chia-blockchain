@@ -75,7 +75,7 @@ class TestCATWallet:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         async with wallet_node.wallet_state_manager.lock:
-            cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 {"identifier": "genesis_by_id"},
@@ -145,14 +145,14 @@ class TestCATWallet:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         async with wallet_node.wallet_state_manager.lock:
-            cat_wallet_1: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet_1, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 {"identifier": "genesis_by_id"},
                 uint64(100),
                 DEFAULT_TX_CONFIG,
             )
-            cat_wallet_2: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet_2, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 {"identifier": "genesis_by_id"},
@@ -206,7 +206,7 @@ class TestCATWallet:
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
         async with wallet_node.wallet_state_manager.lock:
-            cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 {"identifier": "genesis_by_id"},
@@ -318,7 +318,7 @@ class TestCATWallet:
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
         async with wallet_node.wallet_state_manager.lock:
-            cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 {"identifier": "genesis_by_id"},
@@ -420,7 +420,7 @@ class TestCATWallet:
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
         async with wallet_node.wallet_state_manager.lock:
-            cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 {"identifier": "genesis_by_id"},
@@ -482,7 +482,7 @@ class TestCATWallet:
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
         async with wallet_node.wallet_state_manager.lock:
-            cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 {"identifier": "genesis_by_id"},
@@ -579,7 +579,7 @@ class TestCATWallet:
         await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
 
         async with wallet_node_0.wallet_state_manager.lock:
-            cat_wallet_0: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet_0, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node_0.wallet_state_manager,
                 wallet_0,
                 {"identifier": "genesis_by_id"},
@@ -700,7 +700,7 @@ class TestCATWallet:
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
         async with wallet_node.wallet_state_manager.lock:
-            cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 {"identifier": "genesis_by_id"},
@@ -815,7 +815,7 @@ class TestCATWallet:
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
         async with wallet_node.wallet_state_manager.lock:
-            cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 {"identifier": "genesis_by_id"},
