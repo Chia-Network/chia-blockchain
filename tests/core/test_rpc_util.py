@@ -17,8 +17,8 @@ class SubObject(Streamable):
 
 
 class TestRequestType(RequestType):
-    foo: str
-    bar: uint32
+    foofoo: str
+    barbar: uint32
     bat: bytes
     bam: SubObject
 
@@ -33,16 +33,16 @@ class TestResponseObject(Streamable):
 async def test_rpc_marshalling() -> None:
     @marshall
     async def test_rpc_endpoint(self: None, request: TestRequestType) -> TestResponseObject:
-        return TestResponseObject([request["foo"], str(request["bar"]), request["bat"].hex(), request["bam"].qux])
+        return TestResponseObject([request["foofoo"], str(request["barbar"]), request["bat"].hex(), request["bam"].qux])
 
     assert await test_rpc_endpoint(
         None,
         {
-            "foo": "foo",
-            "bar": 1,
+            "foofoo": "foofoo",
+            "barbar": 1,
             "bat": b"\xff",
             "bam": {
                 "qux": "qux",
             },
         },
-    ) == {"qat": ["foo", "1", "ff", "qux"]}
+    ) == {"qat": ["foofoo", "1", "ff", "qux"]}
