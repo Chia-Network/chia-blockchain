@@ -18,6 +18,9 @@ updates:
       # Separate sections of the branch name with a hyphen
       # for example, `dependabot-npm_and_yarn-next_js-acorn-6.4.1`
       separator: "-"
+    reviewers:
+      - "emlowe"
+      - "altendky"
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
@@ -33,3 +36,6 @@ updates:
       # Separate sections of the branch name with a hyphen
       # for example, `dependabot-npm_and_yarn-next_js-acorn-6.4.1`
       separator: "-"
+    reviewers:
+      - "cmmarslender"
+      - "altendky"

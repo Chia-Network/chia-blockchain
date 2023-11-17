@@ -13,7 +13,7 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
@@ -25,7 +25,6 @@ from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
 from chia.simulator.simulator_protocol import ReorgProtocol
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
@@ -38,6 +37,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from tests.util.time_out_assert import time_out_assert
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 

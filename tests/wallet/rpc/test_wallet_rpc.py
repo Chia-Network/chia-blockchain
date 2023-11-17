@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiosqlite
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_puzzlehash_for_pk
@@ -22,7 +22,6 @@ from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -61,6 +60,7 @@ from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
 from tests.conftest import ConsensusMode
+from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.wallet.test_wallet_coin_store import (
     get_coin_records_amount_filter_tests,
     get_coin_records_amount_range_tests,

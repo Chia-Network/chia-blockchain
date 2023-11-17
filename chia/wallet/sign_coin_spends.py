@@ -3,8 +3,7 @@ from __future__ import annotations
 import inspect
 from typing import Any, Callable, List
 
-import blspy
-from blspy import AugSchemeMPL
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
@@ -18,7 +17,7 @@ async def sign_coin_spends(
     secret_key_for_puzzle_hash: Any,  # Potentially awaitable function from bytes32 => Optional[PrivateKey]
     additional_data: bytes,
     max_cost: int,
-    potential_derivation_functions: List[Callable[[blspy.G1Element], bytes32]],
+    potential_derivation_functions: List[Callable[[G1Element], bytes32]],
 ) -> SpendBundle:
     """
     Sign_coin_spends runs the puzzle code with the given argument and searches the
@@ -37,15 +36,15 @@ async def sign_coin_spends(
     derived keys (those returned by master_sk_to_wallet_sk from the ['sk'] member of
     wallet rpc's get_private_key method).
     """
-    signatures: List[blspy.G2Element] = []
-    pk_list: List[blspy.G1Element] = []
+    signatures: List[G2Element] = []
+    pk_list: List[G1Element] = []
     msg_list: List[bytes] = []
     for coin_spend in coin_spends:
         # Get AGG_SIG conditions
         conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, max_cost)
         # Create signature
         for pk_bytes, msg in pkm_pairs_for_conditions_dict(conditions_dict, coin_spend.coin, additional_data):
-            pk = blspy.G1Element.from_bytes(pk_bytes)
+            pk = G1Element.from_bytes(pk_bytes)
             pk_list.append(pk)
             msg_list.append(msg)
             if inspect.iscoroutinefunction(secret_key_for_public_key_f):

@@ -14,7 +14,6 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -37,6 +36,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from tests.conftest import ConsensusMode
+from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
 class TestCATWallet:

@@ -26,7 +26,6 @@ from chia.plotters.plotters import call_plotters
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_full_node
-from chia.simulator.time_out_assert import time_out_assert_not_none
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, supports_os_passphrase_storage
@@ -34,6 +33,7 @@ from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload, create_payload_dict
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 from tests.util.misc import Marks, datacases
+from tests.util.time_out_assert import time_out_assert_not_none
 
 chiapos_version = pkg_resources.get_distribution("chiapos").version
 

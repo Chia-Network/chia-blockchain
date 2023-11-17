@@ -18,7 +18,7 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
 
-from blspy import G1Element
+from chia_rs import G1Element
 from typing_extensions import Protocol
 
 from chia import __version__

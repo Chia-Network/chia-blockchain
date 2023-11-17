@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pkg_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
-from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from typing_extensions import final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -525,14 +525,14 @@ class Keychain:
         """
         Returns whether a user-supplied passphrase is optional, as specified by the passphrase requirements.
         """
-        return passphrase_requirements().get("is_optional", False)
+        return passphrase_requirements().get("is_optional", False)  # type: ignore[no-any-return]
 
     @staticmethod
     def minimum_passphrase_length() -> int:
         """
         Returns the minimum passphrase length, as specified by the passphrase requirements.
         """
-        return passphrase_requirements().get("min_length", 0)
+        return passphrase_requirements().get("min_length", 0)  # type: ignore[no-any-return]
 
     @staticmethod
     def passphrase_meets_requirements(passphrase: Optional[str]) -> bool:

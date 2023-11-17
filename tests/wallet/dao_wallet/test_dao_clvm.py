@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, List, Optional, Tuple
 
 import pytest
-from blspy import AugSchemeMPL
+from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
 from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client

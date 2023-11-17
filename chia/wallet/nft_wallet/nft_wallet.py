@@ -7,7 +7,7 @@ import math
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, Type, TypeVar, cast
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
 from typing_extensions import Unpack
 

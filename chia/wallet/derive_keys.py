@@ -3,7 +3,7 @@ from __future__ import annotations
 # import json
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.types.blockchain_format.sized_bytes import bytes32

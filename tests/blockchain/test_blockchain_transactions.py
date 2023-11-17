@@ -15,7 +15,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint32, uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
@@ -1025,7 +1025,7 @@ class TestBlockchainTransactions:
             uint64(1000), receiver_puzzlehash, spend_coin_block_1, block1_dic_good, fee=10
         )
         log.warning(block1_spend_bundle_good.additions())
-        log.warning(f"Spend bundle fees: {block1_spend_bundle_good.fees()}")
+        log.warning(f"Spend bundle fees: {estimate_fees(block1_spend_bundle_good)}")
         invalid_new_blocks = bt.get_consecutive_blocks(
             1,
             blocks,
