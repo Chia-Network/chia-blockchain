@@ -1,38 +1,38 @@
 from __future__ import annotations
 
-import json
+import pickle
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict
+
+from chia_rs import PrivateKey
 
 
-def validate_derivation_cache_entry(ob: List[Union[str, int, bool]]) -> Tuple[bytes, int, bool, bytes]:
-    assert isinstance(ob, list), f"{ob} is not a list"
-    assert len(ob) == 4, f"{ob} should have 4 entries"
-    parent_key: str
+@dataclass(frozen=True)
+class DerivationCacheKey:
+    private_key: PrivateKey
     index: int
     hardened: bool
-    child_key: str
-    parent_key, index, hardened, child_key = ob
-    assert isinstance(index, int), f"Index ({index}) should be an integer"
-    assert index >= 0, f"Index ({index}) should be >= 0"
-    assert isinstance(hardened, bool), f"Third entry ({hardened}) should be bool"
-    assert len(parent_key) == 64, f"{parent_key} should be 64 characters long"
-    assert len(child_key) == 64, f"{child_key} should be 64 characters long"
-    # Invalid hex values will be caught here
-    return bytes.fromhex(parent_key), index, hardened, bytes.fromhex(child_key)
 
 
-def load_derivation_cache(path: Path) -> Dict[Tuple[bytes, int, bool], bytes]:
-    derivation_cache: Dict[Tuple[bytes, int, bool], bytes] = {}
+"""
+Cache derivations during testing. This reduces the time spent in bls, and saves us about 12% of our time in pytest.
+Do not use this cache in production. BlockTools should only be used for testing.
+"""
+DerivationCache = Dict[DerivationCacheKey, PrivateKey]
+
+
+def load_derivation_cache(path: Path) -> DerivationCache:
     try:
-        with path.open(encoding="UTF-8") as cache_file:
-            objects = json.load(cache_file)
-            for ob in objects:
-                parent_key, index, hardened, child_key = validate_derivation_cache_entry(ob)
-                k = (parent_key, index, hardened)
-                if k in derivation_cache and derivation_cache[k] != child_key:
-                    raise RuntimeError(f"Conflicting entries found for {(parent_key.hex(), index, hardened)}")
-                derivation_cache[k] = child_key
+        with path.open("wb") as f:
+            return DerivationCache(pickle.load(f))
     except Exception as e:
+        # Eat the exception so that tests can continue even on a failed cache load
         print(f"Unable to load derivation cache '{path}' used for test speedup: {e}")
-    return derivation_cache
+        empty: DerivationCache = {}
+        return empty
+
+
+def save_derivation_cache(cache: DerivationCache, path: Path) -> None:
+    with path.open("wb") as f:
+        pickle.dump(cache, f)

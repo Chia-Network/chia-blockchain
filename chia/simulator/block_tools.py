@@ -68,7 +68,7 @@ from chia.plotting.util import (
     parse_plot_info,
 )
 from chia.server.server import ssl_context_for_client
-from chia.simulator.derivation_cache import load_derivation_cache
+from chia.simulator.derivation_cache import DerivationCache, load_derivation_cache
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.ssl_certs import (
     SSLTestCACertAndPrivateKey,
@@ -129,7 +129,6 @@ from chia.util.ssl_check import fix_ssl
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.derive_keys import (
-    DerivationCache,
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
     master_sk_to_pool_sk,
@@ -233,7 +232,7 @@ class BlockTools:
         log: logging.Logger = logging.getLogger(__name__),
     ) -> None:
         self.derivation_cache: DerivationCache = {}
-        self._load_derivation_cache(Path("tests/derivation_cache.json"))
+        self._load_derivation_cache(Path("tests/derivation_cache.pickle"))
         self._block_cache_header = bytes32([0] * 32)
 
         self._tempdir = None

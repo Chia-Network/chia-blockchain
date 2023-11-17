@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-# import json
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, List, Optional, Set, Tuple
 
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.simulator.derivation_cache import DerivationCache, DerivationCacheKey
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
 
@@ -19,13 +19,6 @@ from chia.util.ints import uint32
 MAX_POOL_WALLETS = 100
 
 
-"""
-Cache derivations during testing. This reduces the times spent in bls, and saves us about 12% of our time in pytest.
-Do not use this cache in production. BlockTools should only be used for testing.
-"""
-DerivationCache = Dict[Tuple[bytes, int, bool], bytes]
-
-
 def _derive_path_maybe_cached(
     sk: PrivateKey,
     path: List[int],
@@ -35,14 +28,13 @@ def _derive_path_maybe_cached(
 ) -> PrivateKey:
     for index in path:
         parent_sk = sk
-        if cache and (bytes(parent_sk), index, hardened) in cache:
-            sk = PrivateKey.from_bytes(cache[(bytes(parent_sk), index, True)])
+        dc_key = DerivationCacheKey(parent_sk, index, hardened)
+        if cache and dc_key in cache:
+            sk = cache[dc_key]
         else:
             sk = derivation_function(sk, index)
-            # To create more DerivationCache entries for new tests, append entries to 'tests/derivation_cache.json'
-            # print(f"DerivationCache miss: {json.dumps((bytes(parent_sk).hex(), index, True, bytes(sk).hex()))},")
             if cache:
-                cache[(bytes(parent_sk), index, hardened)] = bytes(sk)
+                cache[dc_key] = sk
     return sk
 
 

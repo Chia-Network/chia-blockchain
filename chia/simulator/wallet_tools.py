@@ -6,6 +6,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.consensus.constants import ConsensusConstants
+from chia.simulator.derivation_cache import DerivationCache
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -18,7 +19,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import agg_sig_additional_data, conditions_dict_for_solution, make_aggsig_final_message
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
-from chia.wallet.derive_keys import DerivationCache, master_sk_to_wallet_sk
+from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
