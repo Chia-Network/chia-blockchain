@@ -1472,13 +1472,13 @@ class DataStore:
             await self.clean_node_table(writer)
             cursor = await writer.execute(
                 """
-                WITH all_nodes AS (
+                WITH RECURSIVE all_nodes AS (
                     SELECT a.hash, n.left, n.right
                     FROM ancestors AS a
                     JOIN node AS n ON a.hash = n.hash
                     WHERE a.tree_id = :tree_id
                 ),
-                WITH RECURSIVE pending_nodes AS (
+                pending_nodes AS (
                     SELECT node_hash AS hash FROM root
                     WHERE status = :status
                     UNION ALL
