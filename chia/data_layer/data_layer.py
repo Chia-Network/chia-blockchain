@@ -190,18 +190,6 @@ class DataLayer:
             self._close()
             await self._await_closed()
 
-    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
-        self.state_changed_callback = callback
-
-    async def on_connect(self, connection: WSChiaConnection) -> None:
-        pass
-
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
-        return default_get_connections(server=self.server, request_node_type=request_node_type)
-
-    def set_server(self, server: ChiaServer) -> None:
-        self._server = server
-
     async def _start(self) -> None:
         sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
@@ -229,6 +217,18 @@ class DataLayer:
             await self.data_store.close()
         if self._wallet_rpc is not None:
             await self.wallet_rpc.await_closed()
+
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
+        self.state_changed_callback = callback
+
+    async def on_connect(self, connection: WSChiaConnection) -> None:
+        pass
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
+
+    def set_server(self, server: ChiaServer) -> None:
+        self._server = server
 
     async def wallet_log_in(self, fingerprint: int) -> int:
         result = await self.wallet_rpc.log_in(fingerprint)
