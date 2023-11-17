@@ -8,7 +8,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import StatisticsError, mean, stdev
-from typing import Any, Dict, List, TextIO, Tuple, Type, final
+from typing import Any, Dict, List, Optional, TextIO, Tuple, Type, final
 
 import click
 import lxml.etree
@@ -127,6 +127,12 @@ class EventId:
     required=True,
     show_default=True,
 )
+@click.option(
+    "--limit",
+    "result_count_limit",
+    type=int,
+    help="Limit the number of results to output.",
+)
 def main(
     xml_file: TextIO,
     link_prefix: str,
@@ -136,6 +142,7 @@ def main(
     percent_margin: int,
     randomoji: bool,
     tag: str,
+    result_count_limit: Optional[int],
 ) -> None:
     data_type = supported_data_types_by_tag[tag]
 
@@ -178,12 +185,24 @@ def main(
             )
         )
 
+    if result_count_limit is not None:
+        results = sorted(results, key=lambda result: max(result.durations) / result.limit, reverse=True)
+        results = results[:result_count_limit]
+
     handlers = {
         BenchmarkData.tag: output_benchmark,
         TimeOutAssertData.tag: output_time_out_assert,
     }
     handler = handlers[data_type.tag]
-    handler(link_line_separator, link_prefix, markdown, output, percent_margin, randomoji, results)
+    handler(
+        link_line_separator=link_line_separator,
+        link_prefix=link_prefix,
+        markdown=markdown,
+        output=output,
+        percent_margin=percent_margin,
+        randomoji=randomoji,
+        results=results,
+    )
 
 
 def output_benchmark(
