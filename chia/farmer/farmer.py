@@ -257,12 +257,12 @@ class Farmer:
     def _close(self) -> None:
         self._shut_down = True
 
-    async def _await_closed(self, shutting_down: bool = True) -> None:
+    async def _await_closed(self) -> None:
         if self.cache_clear_task is not None:
             await self.cache_clear_task
         if self.update_pool_state_task is not None:
             await self.update_pool_state_task
-        if shutting_down and self.keychain_proxy is not None:
+        if self.keychain_proxy is not None:
             proxy = self.keychain_proxy
             self.keychain_proxy = None
             await proxy.close()
