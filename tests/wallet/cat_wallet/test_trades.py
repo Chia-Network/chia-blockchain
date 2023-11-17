@@ -1931,12 +1931,16 @@ class TestCATTrades:
                 return TradeStatus(trade_rec.status)
             raise ValueError("Couldn't find the trade record")  # pragma: no cover
 
-        success, trade_make_1, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
+        success, trade_make_1, _, error = await trade_manager_maker.create_offer_for_ids(
+            chia_for_cat, DEFAULT_TX_CONFIG
+        )
         await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make_1)
         assert error is None
         assert success is True
         assert trade_make_1 is not None
-        success, trade_make_2, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, DEFAULT_TX_CONFIG)
+        success, trade_make_2, _, error = await trade_manager_maker.create_offer_for_ids(
+            cat_for_chia, DEFAULT_TX_CONFIG
+        )
         await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make_2)
         assert error is None
         assert success is True
