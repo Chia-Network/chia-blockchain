@@ -835,3 +835,26 @@ class Farmer:
                 log.error(f"_periodically_clear_cache_and_refresh_task failed: {traceback.format_exc()}")
 
             await asyncio.sleep(1)
+
+    def notify_farmer_reward_taken_by_harvester_as_fee(self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace) -> None:
+        challenge_str=str(sp.challenge_hash)
+        #TODO: Show as xch address, not as hex blob
+        self.log.info(
+            f"Farmer reward for challenge '{challenge_str}' taken by harvester to address '{str(proof_of_space.farmer_reward_address_override)}'."
+        )
+
+        fee_quality = calculate_harvester_fee_quality(proof_of_space.proof.proof, sp.challenge_hash)
+
+        if proof_of_space.fee_info:
+            fee_threshold = proof_of_space.fee_info.applied_fee_threshold
+
+            if fee_quality <= fee_threshold:
+                self.log.info(f"Fee threshold for challenge '{challenge_str}' passed: {fee_quality}/{fee_threshold}")
+            else:
+                self.log.warn(f"Fee threshold for challenge '{challenge_str}' failed: {fee_quality}/{fee_threshold}")
+        else:
+            self.log.warn(f"No fee information given by harvester for challenge '{challenge_str}'. Fee quality was {fee_quality} (0x{fee_quality:08x})")
+
+
+def calculate_harvester_fee_quality(proof: bytes, challenge: bytes32) -> uint32:
+    return uint32(int.from_bytes(std_hash(proof + challenge)[32-4:], byteorder='big', signed=False))
