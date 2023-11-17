@@ -1496,7 +1496,7 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
         num_stores = 50
         total_keys = 150
         keys_deleted_per_store = 3
-        tree_ids = [bytes32(i.to_bytes(32, byteorder="big") for i in range(num_stores)]
+        tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
         for tree_id in tree_ids:
             await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
         original_keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
