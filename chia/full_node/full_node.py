@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
+    AsyncIterator,
     Awaitable,
     Callable,
     ClassVar,
@@ -199,6 +200,15 @@ class FullNode:
             db_path=db_path,
             wallet_sync_queue=asyncio.Queue(),
         )
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        await self._start()
+        try:
+            yield
+        finally:
+            self._close()
+            await self._await_closed()
 
     @property
     def block_store(self) -> BlockStore:

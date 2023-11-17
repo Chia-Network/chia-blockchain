@@ -13,7 +13,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -647,7 +647,8 @@ class TradeManager:
                 for condition in spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_iter()
             )
         )
-        all_fees = uint64(final_spend_bundle.fees())
+        # this executes the puzzles again
+        all_fees = uint64(estimate_fees(final_spend_bundle))
 
         txs = []
 
