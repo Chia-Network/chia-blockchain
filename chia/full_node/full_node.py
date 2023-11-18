@@ -97,7 +97,6 @@ from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
-from chia.util.safe_cancel_task import cancel_task_safe
 
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
@@ -145,9 +144,8 @@ class FullNode:
     # TODO: Logging isn't setup yet so the log entries related to parsing the
     #       config would end up on stdout if handled here.
     multiprocessing_context: Optional[BaseContext] = None
-    _ui_tasks: Set[asyncio.Task[None]] = dataclasses.field(default_factory=set)
+    _ui_tasks_semaphore: anyio.Semaphore = dataclasses.field(default_factory=lambda: anyio.Semaphore(3))
     subscriptions: PeerSubscriptions = dataclasses.field(default_factory=PeerSubscriptions)
-    _transaction_queue_task: Optional[asyncio.Task[None]] = None
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
     _transaction_queue: Optional[TransactionQueue] = None
     _compact_vdf_sem: Optional[LimitedSemaphore] = None
@@ -161,13 +159,11 @@ class FullNode:
     _block_store: Optional[BlockStore] = None
     _coin_store: Optional[CoinStore] = None
     _mempool_manager: Optional[MempoolManager] = None
-    _init_weight_proof: Optional[asyncio.Task[None]] = None
     _blockchain: Optional[Blockchain] = None
     _timelord_lock: Optional[asyncio.Lock] = None
     weight_proof_handler: Optional[WeightProofHandler] = None
     # hashes of peaks that failed long sync on chip13 Validation
     bad_peak_cache: Dict[bytes32, uint32] = dataclasses.field(default_factory=dict)
-    wallet_sync_task: Optional[asyncio.Task[None]] = None
     _task_group: Optional[anyio.abc.TaskGroup] = None
 
     @property
@@ -280,49 +276,71 @@ class FullNode:
             single_threaded=single_threaded,
         )
 
-        # Transactions go into this queue from the server, and get sent to respond_transaction
-        self._transaction_queue = TransactionQueue(1000, self.log)
-        self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
-        self.transaction_responses = []
-
-        self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
-
-        if self.config.get("enable_profiler", False):
-            asyncio.create_task(profile_task(self.root_path, "node", self.log))
-
-        if self.config.get("enable_memory_profiler", False):
-            asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
-
-        time_taken = time.time() - start_time
-        peak: Optional[BlockRecord] = self.blockchain.get_peak()
-        if peak is None:
-            self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
-            num_unspent = await self.coin_store.num_unspent()
-            if num_unspent > 0:
-                self.log.error(
-                    f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
-                    "This is a fatal error. The blockchain database may be corrupt"
-                )
-                raise RuntimeError("corrupt blockchain DB")
-        else:
-            self.log.info(
-                f"Blockchain initialized to peak {peak.header_hash} height"
-                f" {peak.height}, "
-                f"time taken: {int(time_taken)}s"
-            )
-            async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                pending_tx = await self.mempool_manager.new_peak(peak, None)
-            assert len(pending_tx) == 0  # no pending transactions when starting up
-
-            full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
-            assert full_peak is not None
-            state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
-            ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
-                full_peak, state_change_summary, None
-            )
-            await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
-
         async with anyio.create_task_group() as self._task_group:
+            # Transactions go into this queue from the server, and get sent to respond_transaction
+            self._transaction_queue = TransactionQueue(1000, self.log)
+            self._task_group.start_soon(
+                name="full node transaction queue",
+                func=self._handle_transactions,
+            )
+            self.transaction_responses = []
+
+            self._task_group.start_soon(
+                name="full node initialize weight proof",
+                func=self.initialize_weight_proof,
+            )
+
+            if self.config.get("enable_profiler", False):
+                self._task_group.start_soon(
+                    name="full node cpu profiling",
+                    func=partial(
+                        profile_task,
+                        root_path=self.root_path,
+                        service="node",
+                        log=self.log,
+                    ),
+                )
+
+            if self.config.get("enable_memory_profiler", False):
+                self._task_group.start_soon(
+                    name="full node memory profiling",
+                    func=partial(
+                        mem_profile_task,
+                        root_path=self.root_path,
+                        service="node",
+                        log=self.log,
+                    ),
+                )
+
+            time_taken = time.time() - start_time
+            peak: Optional[BlockRecord] = self.blockchain.get_peak()
+            if peak is None:
+                self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
+                num_unspent = await self.coin_store.num_unspent()
+                if num_unspent > 0:
+                    self.log.error(
+                        f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
+                        "This is a fatal error. The blockchain database may be corrupt"
+                    )
+                    raise RuntimeError("corrupt blockchain DB")
+            else:
+                self.log.info(
+                    f"Blockchain initialized to peak {peak.header_hash} height"
+                    f" {peak.height}, "
+                    f"time taken: {int(time_taken)}s"
+                )
+                async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                    pending_tx = await self.mempool_manager.new_peak(peak, None)
+                assert len(pending_tx) == 0  # no pending transactions when starting up
+
+                full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
+                assert full_peak is not None
+                state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
+                ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
+                    full_peak, state_change_summary, None
+                )
+                await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
+
             if self.config["send_uncompact_interval"] != 0:
                 sanitize_weight_proof_only = False
                 if "sanitize_weight_proof_only" in self.config:
@@ -337,18 +355,24 @@ class FullNode:
                         sanitize_weight_proof_only=sanitize_weight_proof_only,
                     ),
                 )
-            if self.wallet_sync_task is None or self.wallet_sync_task.done():
-                self.wallet_sync_task = asyncio.create_task(self._wallets_sync_task_handler())
+
+            # TODO: it is ok to just drop the conditional, yeah?
+            self.task_group.start_soon(
+                name="full node wallets sync task",
+                func=self._wallets_sync_task_handler,
+            )
 
             self.initialized = True
             if self.full_node_peers is not None:
-                asyncio.create_task(self.full_node_peers.start())
+                self._task_group.start_soon(
+                    name="full node peers start",
+                    func=self.full_node_peers.start,
+                )
+
             try:
                 yield
             finally:
                 self._shut_down = True
-                if self._init_weight_proof is not None:
-                    self._init_weight_proof.cancel()
 
                 # blockchain is created in _start and in certain cases it may not exist here during _close
                 if self._blockchain is not None:
@@ -358,19 +382,14 @@ class FullNode:
                     self.mempool_manager.shut_down()
 
                 if self.full_node_peers is not None:
-                    asyncio.create_task(self.full_node_peers.close())
+                    self._task_group.start_soon(
+                        name="full node peers close",
+                        func=self.full_node_peers.close,
+                    )
 
                 self.task_group.cancel_scope.cancel()
 
-                if self._transaction_queue_task is not None:
-                    self._transaction_queue_task.cancel()
-                cancel_task_safe(task=self.wallet_sync_task, log=self.log)
-
-                for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
-                    cancel_task_safe(task, self.log)
                 await self.db_wrapper.close()
-                if self._init_weight_proof is not None:
-                    await asyncio.wait([self._init_weight_proof])
 
     @property
     def task_group(self) -> anyio.abc.TaskGroup:
@@ -495,7 +514,13 @@ class FullNode:
             # However, doing them one at a time would be slow, because they get sent to other processes.
             await self.add_transaction_semaphore.acquire()
             item: TransactionQueueEntry = await self.transaction_queue.pop()
-            asyncio.create_task(self._handle_one_transaction(item))
+            self.task_group.start_soon(
+                name="full node handle one transaction",
+                func=partial(
+                    self._handle_one_transaction,
+                    entry=item,
+                ),
+            )
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
@@ -686,9 +711,18 @@ class FullNode:
         return found_fork_point
 
     async def _refresh_ui_connections(self, sleep_before: float = 0) -> None:
-        if sleep_before > 0:
-            await asyncio.sleep(sleep_before)
-        self._state_changed("peer_changed_peak")
+        try:
+            # TODO: let's think about this again.  maybe worker tasks and a queue?
+            self._ui_tasks_semaphore.acquire_nowait()
+        except anyio.WouldBlock:
+            return
+
+        try:
+            if sleep_before > 0:
+                await asyncio.sleep(sleep_before)
+            self._state_changed("peer_changed_peak")
+        finally:
+            self._ui_tasks_semaphore.release()
 
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: WSChiaConnection) -> None:
         """
@@ -705,10 +739,14 @@ class FullNode:
             seen_header_hash = self.sync_store.seen_header_hash(request.header_hash)
             # Updates heights in the UI. Sleeps 1.5s before, so other peers have time to update their peaks as well.
             # Limit to 3 refreshes.
-            if not seen_header_hash and len(self._ui_tasks) < 3:
-                self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(1.5)))
-            # Prune completed connect tasks
-            self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
+            if not seen_header_hash:
+                self.task_group.start_soon(
+                    name="refresh ui connections",
+                    func=partial(
+                        self._refresh_ui_connections,
+                        sleep_before=1.5,
+                    ),
+                )
         except Exception as e:
             self.log.warning(f"Exception UI refresh task: {e}")
 
@@ -861,7 +899,14 @@ class FullNode:
         self._state_changed("add_connection")
         self._state_changed("sync_mode")
         if self.full_node_peers is not None:
-            asyncio.create_task(self.full_node_peers.on_connect(connection))
+            # TODO: should this be in a task group for full node peers?
+            self.task_group.start_soon(
+                name=f"full node peers on connect {connection.get_peer_logging()}",
+                func=partial(
+                    self.full_node_peers.on_connect,
+                    peer=connection,
+                ),
+            )
 
         if self.initialized is False:
             return None
@@ -1857,6 +1902,7 @@ class FullNode:
 
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
+            # TODO: how to handle, need to review this
             if self._segment_task is None or self._segment_task.done():
                 self._segment_task = asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
         return None

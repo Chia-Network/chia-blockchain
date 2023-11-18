@@ -8,6 +8,7 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from functools import partial
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -210,14 +211,18 @@ class FullNodeAPI:
                         full_node.full_node_store.peers_with_tx.pop(transaction_id)
                     if transaction_id in full_node.full_node_store.pending_tx_request:
                         full_node.full_node_store.pending_tx_request.pop(transaction_id)
-                    if task_id in full_node.full_node_store.tx_fetch_tasks:
-                        full_node.full_node_store.tx_fetch_tasks.pop(task_id)
 
             task_id: bytes32 = bytes32.secret()
-            fetch_task = asyncio.create_task(
-                tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
+            # TODO: this is awkward using someone else's task group...
+            self.full_node.task_group.start_soon(
+                name="full node api tx request",
+                func=partial(
+                    tx_request_and_timeout,
+                    full_node=self.full_node,
+                    transaction_id=transaction.transaction_id,
+                    task_id=task_id,
+                ),
             )
-            self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task
             return None
         return None
 
