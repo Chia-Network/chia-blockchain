@@ -371,26 +371,27 @@ class FullNode:
             try:
                 yield
             finally:
-                self._shut_down = True
+                with anyio.CancelScope(shield=True):
+                    self._shut_down = True
 
-                # blockchain is created in _start and in certain cases it may not exist here during _close
-                if self._blockchain is not None:
-                    self.blockchain.shut_down()
-                # same for mempool_manager
-                if self._mempool_manager is not None:
-                    self.mempool_manager.shut_down()
+                    # blockchain is created in _start and in certain cases it may not exist here during _close
+                    if self._blockchain is not None:
+                        self.blockchain.shut_down()
+                    # same for mempool_manager
+                    if self._mempool_manager is not None:
+                        self.mempool_manager.shut_down()
 
-                if self.full_node_peers is not None:
-                    # TODO: blah
-                    # self._task_group.start_soon(
-                    #     name="full node peers close",
-                    #     func=self.full_node_peers.close,
-                    # )
-                    await self.full_node_peers.close()
+                    if self.full_node_peers is not None:
+                        # TODO: blah
+                        # self._task_group.start_soon(
+                        #     name="full node peers close",
+                        #     func=self.full_node_peers.close,
+                        # )
+                        await self.full_node_peers.close()
 
-                await self.db_wrapper.close()
+                    await self.db_wrapper.close()
 
-                self.task_group.cancel_scope.cancel()
+                    self.task_group.cancel_scope.cancel()
 
     @property
     def task_group(self) -> anyio.abc.TaskGroup:
