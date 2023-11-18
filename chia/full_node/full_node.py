@@ -388,9 +388,9 @@ class FullNode:
                     # )
                     await self.full_node_peers.close()
 
-                self.task_group.cancel_scope.cancel()
-
                 await self.db_wrapper.close()
+
+                self.task_group.cancel_scope.cancel()
 
     @property
     def task_group(self) -> anyio.abc.TaskGroup:
