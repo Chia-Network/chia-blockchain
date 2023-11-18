@@ -340,7 +340,6 @@ class FullNode:
                     full_peak, state_change_summary, None
                 )
                 await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
-
             if self.config["send_uncompact_interval"] != 0:
                 sanitize_weight_proof_only = False
                 if "sanitize_weight_proof_only" in self.config:
