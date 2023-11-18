@@ -381,10 +381,12 @@ class FullNode:
                     self.mempool_manager.shut_down()
 
                 if self.full_node_peers is not None:
-                    self._task_group.start_soon(
-                        name="full node peers close",
-                        func=self.full_node_peers.close,
-                    )
+                    # TODO: blah
+                    # self._task_group.start_soon(
+                    #     name="full node peers close",
+                    #     func=self.full_node_peers.close,
+                    # )
+                    await self.full_node_peers.close()
 
                 self.task_group.cancel_scope.cancel()
 
