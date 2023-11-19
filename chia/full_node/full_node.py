@@ -451,9 +451,8 @@ class FullNode:
                 self.transaction_responses = self.transaction_responses[1:]
         except asyncio.CancelledError:
             # TODO: ack! consuming cancellation
-            with anyio.CancelScope(shield=True):
-                error_stack = traceback.format_exc()
-                self.log.debug(f"Cancelling _handle_one_transaction, closing: {error_stack}")
+            error_stack = traceback.format_exc()
+            self.log.debug(f"Cancelling _handle_one_transaction, closing: {error_stack}")
         except Exception:
             with anyio.CancelScope(shield=True):
                 error_stack = traceback.format_exc()

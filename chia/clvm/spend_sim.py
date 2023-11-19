@@ -324,8 +324,7 @@ class SimClient:
                 spend_bundle, None, spend_bundle_id
             )
         except ValidationError as e:
-            with anyio.CancelScope(shield=True):
-                return MempoolInclusionStatus.FAILED, e.code
+            return MempoolInclusionStatus.FAILED, e.code
         assert self.service.mempool_manager.peak
         cost, status, error = await self.service.mempool_manager.add_spend_bundle(
             spend_bundle, cost_result, spend_bundle_id, self.service.mempool_manager.peak.height

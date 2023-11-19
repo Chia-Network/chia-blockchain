@@ -226,7 +226,7 @@ class DataLayer:
             try:
                 self.periodically_manage_data_task.cancel()
             except asyncio.CancelledError:
-                # TODO: ack
+                # TODO: ack! consuming cancellation
                 pass
         if self._data_store is not None:
             await self.data_store.close()

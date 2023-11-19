@@ -68,7 +68,7 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
                 try:
                     await self.queue_task
                 except asyncio.CancelledError:  # we dont care
-                    # TODO: uhh...
+                    # TODO: ack! consuming cancellation
                     pass
             if self.transport is not None:
                 self.transport.close()

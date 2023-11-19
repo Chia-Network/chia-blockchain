@@ -1007,7 +1007,6 @@ class DIDWallet:
             message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
             return info_list, message_spend_bundle
         except Exception:
-            # TODO: uhm, why?
             raise
 
     async def recovery_spend(

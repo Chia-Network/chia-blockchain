@@ -38,7 +38,6 @@ if "CLVM_TOOLS" in os.environ:
 
         compile_clvm_py = compile_clvm_py_candidate
     finally:
-        # TODO: uhm, why?
         pass
 
 
