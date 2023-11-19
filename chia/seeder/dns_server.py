@@ -14,6 +14,7 @@ from types import FrameType
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 
 import aiosqlite
+import anyio
 from dnslib import AAAA, EDNS0, NS, QTYPE, RCODE, RD, RR, SOA, A, DNSError, DNSHeader, DNSQuestion, DNSRecord
 
 from chia.seeder.crawl_store import CrawlStore
@@ -61,14 +62,16 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
         self.queue_task = asyncio.create_task(self.respond())  # This starts the dns respond loop.
 
     async def stop(self) -> None:
-        if self.queue_task is not None:
-            self.queue_task.cancel()
-            try:
-                await self.queue_task
-            except asyncio.CancelledError:  # we dont care
-                pass
-        if self.transport is not None:
-            self.transport.close()
+        with anyio.CancelScope(shield=True):
+            if self.queue_task is not None:
+                self.queue_task.cancel()
+                try:
+                    await self.queue_task
+                except asyncio.CancelledError:  # we dont care
+                    # TODO: uhh...
+                    pass
+            if self.transport is not None:
+                self.transport.close()
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         # we use the #ignore because transport is a subclass of BaseTransport, but we need the real type.
@@ -356,8 +359,9 @@ class DNSServer:
         try:
             yield
         finally:  # catches any errors and properly shuts down the server
-            await self.stop()
-            log.warning("DNS server stopped.")
+            with anyio.CancelScope(shield=True):
+                await self.stop()
+                log.warning("DNS server stopped.")
 
     async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
         signal_handlers.setup_async_signal_handler(handler=self._accept_signal)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import enum
 import os
 import random
@@ -181,10 +182,8 @@ def rand_full_block() -> FullBlock:
 
 async def setup_db(name: Union[str, os.PathLike[str]], db_version: int) -> DBWrapper2:
     db_filename = Path(name)
-    try:
+    with contextlib.suppress(FileNotFoundError):
         os.unlink(db_filename)
-    except FileNotFoundError:
-        pass
     connection = await aiosqlite.connect(db_filename)
 
     def sql_trace_callback(req: str) -> None:

@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import anyio
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -46,7 +47,8 @@ async def test_notification_store_backwards_compat() -> None:
         await NotificationStore.create(db_wrapper)
         await NotificationStore.create(db_wrapper)
     finally:
-        await db_wrapper.close()
+        with anyio.CancelScope(shield=True):
+            await db_wrapper.close()
 
 
 @pytest.mark.parametrize(

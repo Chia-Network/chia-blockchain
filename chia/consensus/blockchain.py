@@ -14,6 +14,8 @@ from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
+import anyio
+
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -482,13 +484,14 @@ class Blockchain(BlockchainInterface):
                 self._peak_height = block_record.height
 
         except BaseException as e:
-            self.block_store.rollback_cache_block(header_hash)
-            self._peak_height = previous_peak_height
-            log.error(
-                f"Error while adding block {header_hash} height {block.height},"
-                f" rolling back: {traceback.format_exc()} {e}"
-            )
-            raise
+            with anyio.CancelScope(shield=True):
+                self.block_store.rollback_cache_block(header_hash)
+                self._peak_height = previous_peak_height
+                log.error(
+                    f"Error while adding block {header_hash} height {block.height},"
+                    f" rolling back: {traceback.format_exc()} {e}"
+                )
+                raise
 
         # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
         await self.__height_map.maybe_flush()

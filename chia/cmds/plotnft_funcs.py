@@ -10,6 +10,7 @@ from pprint import pprint
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 import aiohttp
+import anyio
 
 from chia.cmds.cmds_util import (
     get_any_service_client,
@@ -238,7 +239,8 @@ async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_pass
                         wallet_client, summaries_response, address_prefix, pool_state_dict
                     )
         except CliRpcConnectionError:  # we want to output this if we can't connect to the farmer
-            await pprint_all_pool_wallet_state(wallet_client, summaries_response, address_prefix, pool_state_dict)
+            with anyio.CancelScope(shield=True):
+                await pprint_all_pool_wallet_state(wallet_client, summaries_response, address_prefix, pool_state_dict)
 
 
 async def get_login_link(launcher_id_str: str) -> None:

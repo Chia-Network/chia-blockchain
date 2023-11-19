@@ -7,6 +7,8 @@ from pathlib import Path
 from sqlite3 import Row
 from typing import Any, Dict, Iterable, List, Optional, Set
 
+import anyio
+
 from chia.util.collection import find_duplicates
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
@@ -388,7 +390,8 @@ class WalletDBReader:
                 print(f"    ---- Errors Found for {db_path.name}----")
                 print("\n".join(errors))
         finally:
-            await self.db_wrapper.close()
+            with anyio.CancelScope(shield=True):
+                await self.db_wrapper.close()
         return len(errors)
 
 

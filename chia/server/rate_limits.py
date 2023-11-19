@@ -6,6 +6,8 @@ import time
 from collections import Counter
 from typing import List
 
+import anyio
+
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.outbound_message import Message
@@ -102,12 +104,13 @@ class RateLimiter:
             ret = True
             return True
         finally:
-            if self.incoming or ret:
-                # now that we determined that it's OK to send the message, commit the
-                # updates to the counters. Alternatively, if this was an
-                # incoming message, we already received it and it should
-                # increment the counters unconditionally
-                self.message_counts[message_type] = new_message_counts
-                self.message_cumulative_sizes[message_type] = new_cumulative_size
-                self.non_tx_message_counts = new_non_tx_count
-                self.non_tx_cumulative_size = new_non_tx_size
+            with anyio.CancelScope(shield=True):
+                if self.incoming or ret:
+                    # now that we determined that it's OK to send the message, commit the
+                    # updates to the counters. Alternatively, if this was an
+                    # incoming message, we already received it and it should
+                    # increment the counters unconditionally
+                    self.message_counts[message_type] = new_message_counts
+                    self.message_cumulative_sizes[message_type] = new_cumulative_size
+                    self.non_tx_message_counts = new_non_tx_count
+                    self.non_tx_cumulative_size = new_non_tx_size

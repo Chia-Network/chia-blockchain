@@ -298,6 +298,7 @@ class FullNodeDiscovery:
                     try:
                         await asyncio.sleep(introducer_backoff)
                     except asyncio.CancelledError:
+                        # TODO: ack! consuming cancellation
                         return None
                     # Alternate between DNS servers and introducers.
                     # First try all the DNS servers in the list once. Then try the introducers once.
@@ -316,6 +317,7 @@ class FullNodeDiscovery:
                         try:
                             await asyncio.sleep(5)
                         except asyncio.CancelledError:
+                            # TODO: ack! consuming cancellation
                             return None
 
                     retry_introducers = False
@@ -374,6 +376,7 @@ class FullNodeDiscovery:
                     try:
                         await asyncio.sleep(select_peer_interval)
                     except asyncio.CancelledError:
+                        # TODO: ack! consuming cancellation
                         return None
                     tries += 1
                     if tries > max_tries:
@@ -569,6 +572,7 @@ class FullNodePeers(FullNodeDiscovery):
                 try:
                     await asyncio.sleep(24 * 3600)
                 except asyncio.CancelledError:
+                    # TODO: ack! consuming cancellation
                     return None
                 # Clean up known nodes for neighbours every 24 hours.
                 async with self.lock:
@@ -654,6 +658,7 @@ class FullNodePeers(FullNodeDiscovery):
                     assert self.relay_queue is not None, "FullNodePeers.relay_queue should always exist"
                     relay_peer, num_peers = await self.relay_queue.get()
                 except asyncio.CancelledError:
+                    # TODO: ack! consuming canceallation
                     return None
                 try:
                     IPAddress.create(relay_peer.host)

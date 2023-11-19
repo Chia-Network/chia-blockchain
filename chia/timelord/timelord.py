@@ -14,6 +14,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
+import anyio
 from chiavdf import create_discriminant, prove
 
 from chia.consensus.constants import ConsensusConstants
@@ -151,8 +152,9 @@ class Timelord:
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
+            with anyio.CancelScope(shield=True):
+                self._close()
+                await self._await_closed()
 
     async def _start(self) -> None:
         self.lock: asyncio.Lock = asyncio.Lock()

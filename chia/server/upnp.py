@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from queue import Queue
 from typing import Iterator, List, Optional, Tuple, Union
 
+import anyio
 from typing_extensions import Literal
 
 log = logging.getLogger(__name__)
@@ -37,9 +38,10 @@ class UPnP:
                 self.remap(port)
             yield
         finally:
-            for port in ports:
-                self.release(port)
-            self.shutdown()
+            with anyio.CancelScope(shield=True):
+                for port in ports:
+                    self.release(port)
+                self.shutdown()
 
     def setup(self) -> None:
         if miniupnpc is None:

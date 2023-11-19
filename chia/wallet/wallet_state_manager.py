@@ -24,6 +24,7 @@ from typing import (
 )
 
 import aiosqlite
+import anyio
 from chia_rs import G1Element, G2Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -1996,14 +1997,15 @@ class WalletStateManager:
                     else:
                         raise RuntimeError("All cases already handled")  # Logic error, all cases handled
             except Exception as e:
-                self.log.exception(f"Failed to add coin_state: {coin_state}, error: {e}")
-                if rollback_wallets is not None:
-                    self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
-                if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
-                    await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
-                else:
-                    await self.retry_store.remove_state(coin_state)
-                continue
+                with anyio.CancelScope(shield=True):
+                    self.log.exception(f"Failed to add coin_state: {coin_state}, error: {e}")
+                    if rollback_wallets is not None:
+                        self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
+                    if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
+                        await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
+                    else:
+                        await self.retry_store.remove_state(coin_state)
+                    continue
 
     async def add_coin_states(
         self,

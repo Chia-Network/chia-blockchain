@@ -5,6 +5,7 @@ import json
 import sys
 from typing import Any, Dict, List, Optional, TextIO
 
+import anyio
 import click
 from aiohttp import ClientResponseError
 
@@ -50,8 +51,9 @@ async def call_rpc_service_endpoint(
     except Exception as e:
         raise Exception(f"Request failed: {e}")
     finally:
-        client.close()
-        await client.await_closed()
+        with anyio.CancelScope(shield=True):
+            client.close()
+            await client.await_closed()
     return result
 
 
@@ -73,7 +75,8 @@ async def call_daemon_command(
     except Exception as e:
         raise Exception(f"Request failed: {e}")
     finally:
-        await daemon.close()
+        with anyio.CancelScope(shield=True):
+            await daemon.close()
     return result
 
 

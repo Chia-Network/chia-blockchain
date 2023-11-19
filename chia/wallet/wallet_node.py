@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
 
 import aiosqlite
+import anyio
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from packaging.version import Version
 
@@ -158,8 +159,9 @@ class WalletNode:
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
+            with anyio.CancelScope(shield=True):
+                self._close()
+                await self._await_closed()
 
     @property
     def keychain_proxy(self) -> KeychainProxy:
@@ -1167,9 +1169,10 @@ class WalletNode:
         try:
             await self.long_sync_from_untrusted(syncing, new_peak_hb, peer)
         except Exception:
-            self.log.exception(f"Error syncing to {peer.get_peer_info()}")
-            await peer.close()
-            return False
+            with anyio.CancelScope(shield=True):
+                self.log.exception(f"Error syncing to {peer.get_peer_info()}")
+                await peer.close()
+                return False
         return True
 
     async def long_sync_from_untrusted(self, syncing: bool, new_peak_hb: HeaderBlock, peer: WSChiaConnection) -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+import anyio
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -217,8 +218,9 @@ class TestWalletRpc:
             await time_out_assert(15, client.dl_get_mirrors, [], launcher_id)
 
         finally:
-            # Checks that the RPC manages to stop the node
-            client.close()
-            client_2.close()
-            await client.await_closed()
-            await client_2.await_closed()
+            with anyio.CancelScope(shield=True):
+                # Checks that the RPC manages to stop the node
+                client.close()
+                client_2.close()
+                await client.await_closed()
+                await client_2.await_closed()

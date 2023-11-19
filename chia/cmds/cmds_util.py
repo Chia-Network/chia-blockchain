@@ -8,6 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
+import anyio
 import click
 from aiohttp import ClientConnectorCertificateError, ClientConnectorError
 
@@ -124,8 +125,9 @@ async def get_any_service_client(
         print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
 
     finally:
-        node_client.close()  # this can run even if already closed, will just do nothing.
-        await node_client.await_closed()
+        with anyio.CancelScope(shield=True):
+            node_client.close()  # this can run even if already closed, will just do nothing.
+            await node_client.await_closed()
 
 
 async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprint: Optional[int]) -> int:
@@ -213,9 +215,10 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
             if log_in_response["success"] is False:
                 raise CliRpcConnectionError(f"Login failed for fingerprint {selected_fingerprint}: {log_in_response}")
     finally:
-        # Closing the keychain proxy takes a moment, so we wait until after the login is complete
-        if keychain_proxy is not None:
-            await keychain_proxy.close()
+        with anyio.CancelScope(shield=True):
+            # Closing the keychain proxy takes a moment, so we wait until after the login is complete
+            if keychain_proxy is not None:
+                await keychain_proxy.close()
 
     return selected_fingerprint
 

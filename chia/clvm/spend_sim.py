@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
+import anyio
+
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
@@ -54,7 +56,8 @@ async def sim_and_client(
             await sim.farm_block()
         yield sim, client
     finally:
-        await sim.close()
+        with anyio.CancelScope(shield=True):
+            await sim.close()
 
 
 class CostLogger:
@@ -321,7 +324,8 @@ class SimClient:
                 spend_bundle, None, spend_bundle_id
             )
         except ValidationError as e:
-            return MempoolInclusionStatus.FAILED, e.code
+            with anyio.CancelScope(shield=True):
+                return MempoolInclusionStatus.FAILED, e.code
         assert self.service.mempool_manager.peak
         cost, status, error = await self.service.mempool_manager.add_spend_bundle(
             spend_bundle, cost_result, spend_bundle_id, self.service.mempool_manager.peak.height

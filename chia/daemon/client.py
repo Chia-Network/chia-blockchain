@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 import aiohttp
+import anyio
 
 from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
@@ -47,14 +48,16 @@ class DaemonProxy:
                 max_msg_size=self.max_message_size,
             )
         except Exception:
-            await self.close()
-            raise
+            with anyio.CancelScope(shield=True):
+                await self.close()
+                raise
 
         async def listener_task() -> None:
             try:
                 await self.listener()
             finally:
-                await self.close()
+                with anyio.CancelScope(shield=True):
+                    await self.close()
 
         asyncio.create_task(listener_task())
         await asyncio.sleep(1)
@@ -223,5 +226,6 @@ async def acquire_connection_to_daemon(
     except Exception as e:
         print(f"Exception occurred while communicating with the daemon: {e}")
     finally:
-        if daemon is not None:
-            await daemon.close()
+        with anyio.CancelScope(shield=True):
+            if daemon is not None:
+                await daemon.close()

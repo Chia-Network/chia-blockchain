@@ -6,6 +6,7 @@ import time
 import traceback
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
+import anyio
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 from typing_extensions import Unpack
 
@@ -144,8 +145,9 @@ class CATWallet:
             )
             assert self.cat_info.limitations_program_hash != empty_bytes
         except Exception:
-            await wallet_state_manager.user_store.delete_wallet(self.id())
-            raise
+            with anyio.CancelScope(shield=True):
+                await wallet_state_manager.user_store.delete_wallet(self.id())
+                raise
         if spend_bundle is None:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")

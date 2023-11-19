@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
+import anyio
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
 
@@ -205,13 +206,14 @@ class FullNodeAPI:
                 except asyncio.CancelledError:
                     pass
                 finally:
-                    # Always Cleanup
-                    if transaction_id in full_node.full_node_store.peers_with_tx:
-                        full_node.full_node_store.peers_with_tx.pop(transaction_id)
-                    if transaction_id in full_node.full_node_store.pending_tx_request:
-                        full_node.full_node_store.pending_tx_request.pop(transaction_id)
-                    if task_id in full_node.full_node_store.tx_fetch_tasks:
-                        full_node.full_node_store.tx_fetch_tasks.pop(task_id)
+                    with anyio.CancelScope(shield=True):
+                        # Always Cleanup
+                        if transaction_id in full_node.full_node_store.peers_with_tx:
+                            full_node.full_node_store.peers_with_tx.pop(transaction_id)
+                        if transaction_id in full_node.full_node_store.pending_tx_request:
+                            full_node.full_node_store.pending_tx_request.pop(transaction_id)
+                        if task_id in full_node.full_node_store.tx_fetch_tasks:
+                            full_node.full_node_store.tx_fetch_tasks.pop(task_id)
 
             task_id: bytes32 = bytes32.secret()
             fetch_task = asyncio.create_task(

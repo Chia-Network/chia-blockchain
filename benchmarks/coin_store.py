@@ -8,6 +8,8 @@ from pathlib import Path
 from time import monotonic
 from typing import List, Tuple
 
+import anyio
+
 from benchmarks.utils import rand_hash, rewards, setup_db
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
@@ -302,7 +304,8 @@ async def run_new_block_benchmark(version: int) -> None:
         print(f"all tests completed in {all_test_time:0.4f}s")
 
     finally:
-        await db_wrapper.close()
+        with anyio.CancelScope(shield=True):
+            await db_wrapper.close()
 
     db_size = os.path.getsize(Path("coin-store-benchmark.db"))
     print(f"database size: {db_size/1000000:.3f} MB")

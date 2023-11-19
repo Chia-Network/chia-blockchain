@@ -146,7 +146,8 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
             result, err, _ = await bc.add_block(block, results)
             assert err is None
     finally:
-        await db_wrapper.close()
+        with pytest.raises(Exception):
+            await db_wrapper.close()
 
 
 @pytest.mark.anyio

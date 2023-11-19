@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 import aiohttp.client_exceptions
+import anyio
 import pytest
 from typing_extensions import Protocol
 
@@ -70,7 +71,8 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
             process.send_signal(signal_number)
             process.communicate(timeout=adjusted_timeout(timeout=5))
         finally:
-            await client.close()
+            with anyio.CancelScope(shield=True):
+                await client.close()
 
 
 @pytest.mark.parametrize(argnames="signal_number", argvalues=sendable_termination_signals)
@@ -157,5 +159,6 @@ async def test_services_terminate(
                 process.send_signal(signal_number)
                 process.communicate(timeout=adjusted_timeout(timeout=30))
             finally:
-                client.close()
-                await client.await_closed()
+                with anyio.CancelScope(shield=True):
+                    client.close()
+                    await client.await_closed()

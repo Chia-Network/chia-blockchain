@@ -11,6 +11,8 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, AsyncGenerator, AsyncIterator, Dict, Iterator, List, Optional, Tuple, Union
 
+import anyio
+
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
@@ -306,27 +308,28 @@ async def setup_wallet_node(
             async with service.manage():
                 yield service
         finally:
-            if db_path.exists():
-                # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+            with anyio.CancelScope(shield=True):
+                if db_path.exists():
+                    # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
 
-                # 3.11 switched to using functools.lru_cache for the statement cache.
-                # See #87028. This introduces a reference cycle involving the connection
-                # object, so the connection object no longer gets immediately
-                # deallocated, not until, for example, gc.collect() is called to break
-                # the cycle.
-                gc.collect()
-                for _ in range(10):
-                    try:
-                        db_path.unlink()
-                        break
-                    except PermissionError as e:
-                        print(f"db_path.unlink(): {e}")
-                        time.sleep(0.1)
-                        # filesystem operations are async on windows
-                        # [WinError 32] The process cannot access the file because it is
-                        # being used by another process
-                        pass
-            keychain.delete_all_keys()
+                    # 3.11 switched to using functools.lru_cache for the statement cache.
+                    # See #87028. This introduces a reference cycle involving the connection
+                    # object, so the connection object no longer gets immediately
+                    # deallocated, not until, for example, gc.collect() is called to break
+                    # the cycle.
+                    gc.collect()
+                    for _ in range(10):
+                        try:
+                            db_path.unlink()
+                            break
+                        except PermissionError as e:
+                            print(f"db_path.unlink(): {e}")
+                            time.sleep(0.1)
+                            # filesystem operations are async on windows
+                            # [WinError 32] The process cannot access the file because it is
+                            # being used by another process
+                            pass
+                keychain.delete_all_keys()
 
 
 @asynccontextmanager
@@ -442,12 +445,14 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
         try:
             yield
         finally:
-            await process_mgr.kill_processes()
-            vdf_task_1.cancel()
-            try:
-                await vdf_task_1
-            except (Exception, asyncio.CancelledError):
-                pass
+            with anyio.CancelScope(shield=True):
+                await process_mgr.kill_processes()
+                vdf_task_1.cancel()
+                try:
+                    await vdf_task_1
+                except (Exception, asyncio.CancelledError):
+                    # TODO: ack! consuming cancellation
+                    pass
 
 
 @asynccontextmanager
@@ -480,13 +485,15 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
         try:
             yield
         finally:
-            await process_mgr.kill_processes()
-            for task in tasks:
-                task.cancel()
-                try:
-                    await task
-                except (Exception, asyncio.CancelledError):
-                    pass
+            with anyio.CancelScope(shield=True):
+                await process_mgr.kill_processes()
+                for task in tasks:
+                    task.cancel()
+                    try:
+                        await task
+                    except (Exception, asyncio.CancelledError):
+                        # TODO: ack! consuming cancellation
+                        pass
 
 
 @asynccontextmanager
