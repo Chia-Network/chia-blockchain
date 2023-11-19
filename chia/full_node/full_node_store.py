@@ -799,7 +799,7 @@ class FullNodeStore:
             self.finished_sub_slots.append((ip_sub_slot, ip_sub_slot_sps, ip_sub_slot_total_iters))
 
         new_eos: Optional[EndOfSubSlotBundle] = None
-        new_sps: List[Tuple[uint8, SignagePoint, int]] = []
+        new_sps: List[Tuple[uint8, SignagePoint]] = []
         new_ips: List[timelord_protocol.NewInfusionPointVDF] = []
 
         future_eos: List[EndOfSubSlotBundle] = self.future_eos_cache.get(peak.reward_infusion_new_challenge, []).copy()
