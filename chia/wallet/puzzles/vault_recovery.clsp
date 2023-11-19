@@ -6,8 +6,8 @@
 (mod
   (
     P2_1_OF_N_MOD_HASH
-    ESCAPE_RECOVERY_MOD_HASH
     FINISH_RECOVERY_MOD_HASH
+    P2_SECP_PUZZLEHASH
     BLS_PK
     TIMELOCK
     my_puzzlehash
@@ -25,12 +25,9 @@
   (defun create_recovery_puzzlehash
     (
       P2_1_OF_N_MOD_HASH
-      ESCAPE_RECOVERY_MOD_HASH
       FINISH_RECOVERY_MOD_HASH
-      BLS_PK
+      P2_SECP_PUZZLEHASH
       TIMELOCK
-      my_puzzlehash
-      my_amount
       recovery_conditions
     )
     (curry_hashes P2_1_OF_N_MOD_HASH
@@ -39,9 +36,7 @@
         (sha256
           TWO
           (sha256 ONE
-            (curry_hashes ESCAPE_RECOVERY_MOD_HASH
-              (sha256 ONE BLS_PK) (sha256 ONE my_puzzlehash) (sha256 ONE my_amount)
-            )
+            P2_SECP_PUZZLEHASH
           )
           (sha256 ONE
             (curry_hashes FINISH_RECOVERY_MOD_HASH
@@ -58,12 +53,9 @@
     (list CREATE_COIN
       (create_recovery_puzzlehash
         P2_1_OF_N_MOD_HASH
-        ESCAPE_RECOVERY_MOD_HASH
         FINISH_RECOVERY_MOD_HASH
-        BLS_PK
+        P2_SECP_PUZZLEHASH
         TIMELOCK
-        my_puzzlehash
-        my_amount
         recovery_conditions
       )
       my_amount

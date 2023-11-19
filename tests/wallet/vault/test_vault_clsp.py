@@ -20,8 +20,6 @@ P2_1_OF_N_MOD: Program = load_clvm("p2_1_of_n.clsp")
 P2_1_OF_N_MOD_HASH = P2_1_OF_N_MOD.get_tree_hash()
 RECOVERY_MOD: Program = load_clvm("vault_recovery.clsp")
 RECOVERY_MOD_HASH = RECOVERY_MOD.get_tree_hash()
-RECOVERY_ESCAPE_MOD: Program = load_clvm("vault_recovery_escape.clsp")
-RECOVERY_ESCAPE_MOD_HASH = RECOVERY_ESCAPE_MOD.get_tree_hash()
 RECOVERY_FINISH_MOD: Program = load_clvm("vault_recovery_finish.clsp")
 RECOVERY_FINISH_MOD_HASH = RECOVERY_FINISH_MOD.get_tree_hash()
 ACS = Program.to(1)
@@ -35,6 +33,8 @@ def run_with_secp(puzzle: Program, solution: Program) -> Tuple[int, Program]:
 def test_recovery_puzzles() -> None:
     bls_sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
     bls_pk = bls_sk.get_g1()
+    secp_sk = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
+    secp_pk = secp_sk.verifying_key.to_string("compressed")
 
     p2_puzzlehash = ACS_PH
     vault_puzzlehash = Program.to("vault_puzzlehash")
@@ -42,11 +42,13 @@ def test_recovery_puzzles() -> None:
     timelock = 5000
     recovery_conditions = Program.to([[51, p2_puzzlehash, amount]])
 
-    curried_escape_puzzle = RECOVERY_ESCAPE_MOD.curry(bls_pk, vault_puzzlehash, amount)
-    curried_finish_puzzle = RECOVERY_FINISH_MOD.curry(timelock, recovery_conditions)
+    escape_puzzle = P2_DELEGATED_SECP_MOD.curry(secp_pk)
+    escape_puzzlehash = escape_puzzle.get_tree_hash()
+    finish_puzzle = RECOVERY_FINISH_MOD.curry(timelock, recovery_conditions)
+    finish_puzzlehash = finish_puzzle.get_tree_hash()
 
     curried_recovery_puzzle = RECOVERY_MOD.curry(
-        P2_1_OF_N_MOD_HASH, RECOVERY_ESCAPE_MOD_HASH, RECOVERY_FINISH_MOD_HASH, bls_pk, timelock
+        P2_1_OF_N_MOD_HASH, RECOVERY_FINISH_MOD_HASH, escape_puzzlehash, bls_pk, timelock
     )
 
     recovery_solution = Program.to([vault_puzzlehash, amount, recovery_conditions])
@@ -54,7 +56,7 @@ def test_recovery_puzzles() -> None:
     conds = conditions_dict_for_solution(curried_recovery_puzzle, recovery_solution, INFINITE_COST)
 
     # Calculate the merkle root and expected recovery puzzle
-    merkle_tree = MerkleTree([curried_escape_puzzle.get_tree_hash(), curried_finish_puzzle.get_tree_hash()])
+    merkle_tree = MerkleTree([escape_puzzlehash, finish_puzzlehash])
     merkle_root = merkle_tree.calculate_root()
     recovery_puzzle = P2_1_OF_N_MOD.curry(merkle_root)
     recovery_puzzlehash = recovery_puzzle.get_tree_hash()
@@ -64,20 +66,23 @@ def test_recovery_puzzles() -> None:
 
     # Spend the recovery puzzle
     # 1. Finish Recovery (after timelock)
-    proof = merkle_tree.generate_proof(curried_finish_puzzle.get_tree_hash())
+    proof = merkle_tree.generate_proof(finish_puzzlehash)
     finish_proof = Program.to((proof[0], proof[1][0]))
     inner_solution = Program.to([])
-    finish_solution = Program.to([finish_proof, curried_finish_puzzle, inner_solution])
+    finish_solution = Program.to([finish_proof, finish_puzzle, inner_solution])
     finish_conds = conditions_dict_for_solution(recovery_puzzle, finish_solution, INFINITE_COST)
     assert finish_conds[ConditionOpcode.CREATE_COIN][0].vars[0] == p2_puzzlehash
 
     # 2. Escape Recovery
-    proof = merkle_tree.generate_proof(curried_escape_puzzle.get_tree_hash())
+    proof = merkle_tree.generate_proof(escape_puzzlehash)
     escape_proof = Program.to((proof[0], proof[1][0]))
-    inner_solution = Program.to([])
-    escape_solution = Program.to([escape_proof, curried_escape_puzzle, inner_solution])
+    delegated_puzzle = ACS
+    delegated_solution = Program.to([[51, ACS_PH, amount]])
+    signed_delegated_puzzle = secp_sk.sign_deterministic(delegated_puzzle.get_tree_hash())
+    secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle])
+    escape_solution = Program.to([escape_proof, escape_puzzle, secp_solution])
     escape_conds = conditions_dict_for_solution(recovery_puzzle, escape_solution, INFINITE_COST)
-    assert escape_conds[ConditionOpcode.CREATE_COIN][0].vars[0] == vault_puzzlehash
+    assert escape_conds[ConditionOpcode.CREATE_COIN][0].vars[0] == ACS_PH
 
 
 def test_p2_delegated_secp() -> None:
@@ -112,14 +117,15 @@ def test_vault_root_puzzle() -> None:
     secp_puzzle = P2_DELEGATED_SECP_MOD.curry(secp_pk)
     secp_puzzlehash = secp_puzzle.get_tree_hash()
 
-    # recovery puzzle
+    # recovery keys
     bls_sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
     bls_pk = bls_sk.get_g1()
+
     timelock = 5000
     amount = 10000
 
     recovery_puzzle = RECOVERY_MOD.curry(
-        P2_1_OF_N_MOD_HASH, RECOVERY_ESCAPE_MOD_HASH, RECOVERY_FINISH_MOD_HASH, bls_pk, timelock
+        P2_1_OF_N_MOD_HASH, RECOVERY_FINISH_MOD_HASH, secp_puzzlehash, bls_pk, timelock
     )
     recovery_puzzlehash = recovery_puzzle.get_tree_hash()
 
@@ -142,7 +148,7 @@ def test_vault_root_puzzle() -> None:
 
     # recovery spend path
     recovery_conditions = Program.to([[51, ACS_PH, amount]])
-    curried_escape_puzzle = RECOVERY_ESCAPE_MOD.curry(bls_pk, vault_puzzlehash, amount)
+    curried_escape_puzzle = P2_DELEGATED_SECP_MOD.curry(secp_pk)
     curried_finish_puzzle = RECOVERY_FINISH_MOD.curry(timelock, recovery_conditions)
     recovery_merkle_tree = MerkleTree([curried_escape_puzzle.get_tree_hash(), curried_finish_puzzle.get_tree_hash()])
     recovery_merkle_root = recovery_merkle_tree.calculate_root()
