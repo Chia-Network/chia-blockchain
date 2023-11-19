@@ -64,7 +64,7 @@ class FullNodeStore:
     future_eos_cache: Dict[bytes32, List[EndOfSubSlotBundle]]
 
     # Signage points which depend on infusions that we don't have
-    future_sp_cache: Dict[bytes32, List[Tuple[uint8, SignagePoint]]]
+    future_sp_cache: Dict[bytes32, List[Tuple[uint8, SignagePoint, int]]]
 
     # Infusion point VDFs which depend on infusions that we don't have
     future_ip_cache: Dict[bytes32, List[timelord_protocol.NewInfusionPointVDF]]
@@ -198,7 +198,7 @@ class FullNodeStore:
 
         if signage_point.rc_vdf.challenge not in self.future_sp_cache:
             return False
-        for cache_index, cache_sp in self.future_sp_cache[signage_point.rc_vdf.challenge]:
+        for cache_index, cache_sp, _ in self.future_sp_cache[signage_point.rc_vdf.challenge]:
             if cache_index == index and cache_sp.rc_vdf == signage_point.rc_vdf:
                 return True
         return False
@@ -218,7 +218,7 @@ class FullNodeStore:
             return None
 
         self.future_cache_key_times[signage_point.rc_vdf.challenge] = int(time.time())
-        self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
+        self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point, int(time.time())))
         log.info(f"Don't have rc hash {signage_point.rc_vdf.challenge}. caching signage point {index}.")
 
     def get_future_ip(self, rc_challenge_hash: bytes32) -> List[timelord_protocol.NewInfusionPointVDF]:
@@ -799,7 +799,7 @@ class FullNodeStore:
             self.finished_sub_slots.append((ip_sub_slot, ip_sub_slot_sps, ip_sub_slot_total_iters))
 
         new_eos: Optional[EndOfSubSlotBundle] = None
-        new_sps: List[Tuple[uint8, SignagePoint]] = []
+        new_sps: List[Tuple[uint8, SignagePoint, int]] = []
         new_ips: List[timelord_protocol.NewInfusionPointVDF] = []
 
         future_eos: List[EndOfSubSlotBundle] = self.future_eos_cache.get(peak.reward_infusion_new_challenge, []).copy()
@@ -811,11 +811,15 @@ class FullNodeStore:
                 new_eos = eos
                 break
 
-        future_sps: List[Tuple[uint8, SignagePoint]] = self.future_sp_cache.get(
+        future_sps: List[Tuple[uint8, SignagePoint, int]] = self.future_sp_cache.get(
             peak.reward_infusion_new_challenge, []
         ).copy()
-        for index, sp in future_sps:
+        for index, sp, received_time in future_sps:
             assert sp.cc_vdf is not None
+            # Ignore broadcasting signage points that have aged more than 40 seconds on our node
+            if int(time.time()) - received_time > 40:
+                log.info(f"SP {int(time.time()) - received_time} s old. Not relaying index {index} sp {sp}")
+                continue
             if self.new_signage_point(index, blocks, peak, peak.sub_slot_iters, sp):
                 new_sps.append((index, sp))
 
