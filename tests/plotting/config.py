@@ -1,3 +1,3 @@
-parallel = True
-install_timelord = False
+from __future__ import annotations
+
 checkout_blocks_and_plots = True

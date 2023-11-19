@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, List, Optional, cast
 from unittest.mock import MagicMock
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from benchmarks.utils import rand_g1, rand_hash
 from chia.pools.pool_wallet import PoolWallet
@@ -15,7 +17,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 class MockStandardWallet:
     canned_puzzlehash: bytes32
 
-    async def get_new_puzzlehash(self, in_transaction: bool = False) -> bytes32:
+    async def get_new_puzzlehash(self) -> bytes32:
         return self.canned_puzzlehash
 
 
@@ -48,7 +50,7 @@ class MockPoolWalletInfo:
     current: MockPoolState
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
     """
     Test that PoolWallet can create a new pool config
@@ -94,13 +96,13 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
     monkeypatch.setattr(PoolWallet, "get_current_state", mock_get_current_state)
 
     # Create an empty PoolWallet and populate only the required fields
-    wallet = PoolWallet()
-    # We need a standard wallet to provide a puzzlehash
-    wallet.standard_wallet = cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph))
-    # We need a wallet state manager to hold a root_path member
-    wallet.wallet_state_manager = MockWalletStateManager()
-    # We need a log object, but we don't care about how it's used
-    wallet.log = MagicMock()
+    wallet = PoolWallet(
+        wallet_state_manager=MockWalletStateManager(),  # type: ignore[arg-type]
+        standard_wallet=cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph)),
+        log=MagicMock(),
+        wallet_info=MagicMock(),
+        wallet_id=MagicMock(),
+    )
 
     await wallet.update_pool_config()
 
@@ -113,7 +115,7 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
     assert updated_configs[0].owner_public_key == owner_pubkey
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any) -> None:
     """
     Test that PoolWallet will retain existing payout_instructions when updating the pool config.
@@ -177,13 +179,13 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
     monkeypatch.setattr(PoolWallet, "get_current_state", mock_get_current_state)
 
     # Create an empty PoolWallet and populate only the required fields
-    wallet = PoolWallet()
-    # We need a standard wallet to provide a puzzlehash
-    wallet.standard_wallet = cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph))
-    # We need a wallet state manager to hold a root_path member
-    wallet.wallet_state_manager = MockWalletStateManager()
-    # We need a log object, but we don't care about how it's used
-    wallet.log = MagicMock()
+    wallet = PoolWallet(
+        wallet_state_manager=MockWalletStateManager(),  # type: ignore[arg-type]
+        standard_wallet=cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph)),
+        log=MagicMock(),
+        wallet_info=MagicMock(),
+        wallet_id=MagicMock(),
+    )
 
     await wallet.update_pool_config()
 

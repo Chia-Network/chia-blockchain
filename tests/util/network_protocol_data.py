@@ -1,31 +1,8 @@
 # flake8: noqa
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.coin_spend import CoinSpend
-from chia.types.blockchain_format.coin import Coin
-from chia.types.spend_bundle import SpendBundle
-from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.weight_proof import WeightProof, SubEpochData, SubEpochChallengeSegment, SubSlotData, RecentChainData
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from blspy import G1Element, G2Element
-from chia.types.header_block import HeaderBlock
-from chia.types.full_block import FullBlock
-from chia.types.unfinished_block import UnfinishedBlock
-from chia.types.blockchain_format.slots import (
-    ChallengeChainSubSlot,
-    InfusedChallengeChainSubSlot,
-    RewardChainSubSlot,
-    SubSlotProofs,
-)
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.peer_info import TimestampedPeerInfo
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
-from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, FoliageBlockData, TransactionsInfo
+from __future__ import annotations
+
+from chia_rs import G1Element, G2Element
 
 from chia.protocols import (
     farmer_protocol,
@@ -36,6 +13,39 @@ from chia.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
+from chia.protocols.shared_protocol import Error
+from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
+from chia.types.blockchain_format.pool_target import PoolTarget
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
+from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.slots import (
+    ChallengeChainSubSlot,
+    InfusedChallengeChainSubSlot,
+    RewardChainSubSlot,
+    SubSlotProofs,
+)
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chia.types.coin_spend import CoinSpend
+from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chia.types.full_block import FullBlock
+from chia.types.header_block import HeaderBlock
+from chia.types.peer_info import TimestampedPeerInfo
+from chia.types.spend_bundle import SpendBundle
+from chia.types.unfinished_block import UnfinishedBlock
+from chia.types.weight_proof import RecentChainData, SubEpochChallengeSegment, SubEpochData, SubSlotData, WeightProof
+from chia.util.errors import Err
+from chia.util.ints import int16, uint8, uint16, uint32, uint64, uint128
+
+# SHARED PROTOCOL
+error_without_data = Error(int16(Err.UNKNOWN.value), "Unknown", None)
+error_with_data = Error(int16(Err.UNKNOWN.value), "Unknown", b"extra data")
+
 
 ### FARMER PROTOCOL
 new_signage_point = farmer_protocol.NewSignagePoint(
@@ -45,17 +55,18 @@ new_signage_point = farmer_protocol.NewSignagePoint(
     uint64(2329045448547720842),
     uint64(8265724497259558930),
     uint8(194),
+    uint32(1),
 )
 
 proof_of_space = ProofOfSpace(
     bytes32(bytes.fromhex("1fb331df88bc142e70c110e21620374118fb220ccc3ef621378197e850882ec9")),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
     ),
     None,
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
         ),
@@ -70,7 +81,7 @@ pool_target = PoolTarget(
     bytes32.from_hexstr("d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"),
     uint32(421941852),
 )
-g2_element = G2Element(
+g2_element = G2Element.from_bytes(
     bytes.fromhex(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
     )
@@ -82,19 +93,19 @@ declare_proof_of_space = farmer_protocol.DeclareProofOfSpace(
     uint8(31),
     bytes32(bytes.fromhex("6c8dbcfae52c8df391231f3f7aae24c0b1e2be9638f6fc9e4c216b9ff43548d1")),
     proof_of_space,
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
     ),
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
     ),
     bytes32(bytes.fromhex("3843d1c2c574d376225733cf1a9c63da7051954b88b5adc1a4c198c1c7d5edfd")),
     pool_target,
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
@@ -114,16 +125,17 @@ farming_info = farmer_protocol.FarmingInfo(
     uint32(1390832181),
     uint32(908923578),
     uint32(2259819406),
+    uint64(3942498),
 )
 
 signed_values = farmer_protocol.SignedValues(
     bytes32(bytes.fromhex("915de5949724e1fc92d334e589c26ddbcd67415cbbdbbfc5e6de93b3b33bb267")),
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
     ),
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
@@ -177,7 +189,7 @@ coin_spends = [coin_spend]
 
 spend_bundle = SpendBundle(
     coin_spends,
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
@@ -527,8 +539,20 @@ request_block_header = wallet_protocol.RequestBlockHeader(
     uint32(3562957314),
 )
 
+request_block_headers = wallet_protocol.RequestBlockHeaders(
+    uint32(1234970524),
+    uint32(234653234),
+    False,
+)
+
 respond_header_block = wallet_protocol.RespondBlockHeader(
     header_block,
+)
+
+respond_block_headers = wallet_protocol.RespondBlockHeaders(
+    uint32(923662371),
+    uint32(992357623),
+    [header_block],
 )
 
 reject_header_request = wallet_protocol.RejectHeaderRequest(
@@ -585,6 +609,11 @@ request_header_blocks = wallet_protocol.RequestHeaderBlocks(
 reject_header_blocks = wallet_protocol.RejectHeaderBlocks(
     uint32(876520264),
     uint32(2908717391),
+)
+
+reject_block_headers = wallet_protocol.RejectBlockHeaders(
+    uint32(543373229),
+    uint32(2347869036),
 )
 
 respond_header_blocks = wallet_protocol.RespondHeaderBlocks(
@@ -656,14 +685,14 @@ pool_difficulty = harvester_protocol.PoolDifficulty(
 
 harvester_handhsake = harvester_protocol.HarvesterHandshake(
     [
-        G1Element(
+        G1Element.from_bytes(
             bytes.fromhex(
                 "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
             ),
         ),
     ],
     [
-        G1Element(
+        G1Element.from_bytes(
             bytes.fromhex(
                 "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
             ),
@@ -678,6 +707,7 @@ new_signage_point_harvester = harvester_protocol.NewSignagePointHarvester(
     uint8(148),
     bytes32(bytes.fromhex("b78c9fca155e9742df835cbe84bb7e518bee70d78b6be6e39996c0a02e0cfe4c")),
     [pool_difficulty],
+    uint8(9),
 )
 
 new_proof_of_space = harvester_protocol.NewProofOfSpace(
@@ -699,12 +729,12 @@ respond_signatures = harvester_protocol.RespondSignatures(
     "plot_1",
     bytes32(bytes.fromhex("59468dce63b5b08490ec4eec4c461fc84b69b6f80a64f4c76b0d55780f7e7e7a")),
     bytes32(bytes.fromhex("270b5fc00545db714077aba3b60245d769f492563f108a73b2b8502503d12b9e")),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
     ),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
@@ -716,19 +746,20 @@ plot = harvester_protocol.Plot(
     "plot_1",
     uint8(124),
     bytes32(bytes.fromhex("b2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98")),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
     ),
     bytes32(bytes.fromhex("1c96d26def7be696f12e7ebb91d50211e6217ce5d9087c9cd1b84782d5d4b237")),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
     ),
     uint64(3368414292564311420),
     uint64(2573238947935295522),
+    uint8(0),
 )
 
 request_plots = harvester_protocol.RequestPlots()
@@ -792,7 +823,7 @@ post_partial_response = pool_protocol.PostPartialResponse(
 )
 
 get_farmer_response = pool_protocol.GetFarmerResponse(
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
@@ -805,7 +836,7 @@ get_farmer_response = pool_protocol.GetFarmerResponse(
 post_farmer_payload = pool_protocol.PostFarmerPayload(
     bytes32(bytes.fromhex("d3785b251b4e066f87784d06afc8e6ac8dac5a4922d994902c1bad60b5fa7ad3")),
     uint64(5820795488800541986),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
@@ -826,7 +857,7 @@ post_farmer_response = pool_protocol.PostFarmerResponse(
 put_farmer_payload = pool_protocol.PutFarmerPayload(
     bytes32(bytes.fromhex("78aec4d523b0bea49829a1322d5de92a86a553ce8774690b8c8ad5fc1f7540a8")),
     uint64(15049374353843709257),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),

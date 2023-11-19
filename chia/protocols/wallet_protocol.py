@@ -1,18 +1,27 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
+import chia_rs
+
+from chia.full_node.fee_estimate import FeeEstimateGroup
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint128
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 
 """
 Protocol between wallet (SPV node) and full node.
 Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
+
+
+CoinState = chia_rs.CoinState
+RespondToPhUpdates = chia_rs.RespondToPhUpdates
 
 
 @streamable
@@ -27,8 +36,8 @@ class RequestPuzzleSolution(Streamable):
 class PuzzleSolutionResponse(Streamable):
     coin_name: bytes32
     height: uint32
-    puzzle: Program
-    solution: Program
+    puzzle: SerializedProgram
+    solution: SerializedProgram
 
 
 @streamable
@@ -135,6 +144,29 @@ class RejectAdditionsRequest(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class RespondBlockHeaders(Streamable):
+    start_height: uint32
+    end_height: uint32
+    header_blocks: List[HeaderBlock]
+
+
+@streamable
+@dataclass(frozen=True)
+class RejectBlockHeaders(Streamable):
+    start_height: uint32
+    end_height: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestBlockHeaders(Streamable):
+    start_height: uint32
+    end_height: uint32
+    return_filter: bool
+
+
+@streamable
+@dataclass(frozen=True)
 class RequestHeaderBlocks(Streamable):
     start_height: uint32
     end_height: uint32
@@ -155,12 +187,13 @@ class RespondHeaderBlocks(Streamable):
     header_blocks: List[HeaderBlock]
 
 
-@streamable
-@dataclass(frozen=True)
-class CoinState(Streamable):
-    coin: Coin
-    spent_height: Optional[uint32]
-    created_height: Optional[uint32]
+# This class is implemented in Rust
+# @streamable
+# @dataclass(frozen=True)
+# class CoinState(Streamable):
+#    coin: Coin
+#    spent_height: Optional[uint32]
+#    created_height: Optional[uint32]
 
 
 @streamable
@@ -170,12 +203,13 @@ class RegisterForPhUpdates(Streamable):
     min_height: uint32
 
 
-@streamable
-@dataclass(frozen=True)
-class RespondToPhUpdates(Streamable):
-    puzzle_hashes: List[bytes32]
-    min_height: uint32
-    coin_states: List[CoinState]
+# This class is implemented in Rust
+# @streamable
+# @dataclass(frozen=True)
+# class RespondToPhUpdates(Streamable):
+#    puzzle_hashes: List[bytes32]
+#    min_height: uint32
+#    coin_states: List[CoinState]
 
 
 @streamable
@@ -226,3 +260,19 @@ class RequestSESInfo(Streamable):
 class RespondSESInfo(Streamable):
     reward_chain_hash: List[bytes32]
     heights: List[List[uint32]]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestFeeEstimates(Streamable):
+    """
+    time_targets (List[uint64]): Epoch timestamps in seconds to estimate FeeRates for.
+    """
+
+    time_targets: List[uint64]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondFeeEstimates(Streamable):
+    estimates: FeeEstimateGroup

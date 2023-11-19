@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 import os
 import stat
 import sys
-from chia.util.config import load_config, traverse_dict
-from chia.util.permissions import octal_mode_string, verify_file_permissions
 from logging import Logger
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
+
+from chia.util.config import load_config, traverse_dict
+from chia.util.permissions import octal_mode_string, verify_file_permissions
 
 DEFAULT_PERMISSIONS_CERT_FILE: int = 0o644
 DEFAULT_PERMISSIONS_KEY_FILE: int = 0o600
@@ -23,6 +26,8 @@ CERT_CONFIG_KEY_PATHS = [
     "farmer:ssl:public_crt",
     "full_node:ssl:private_crt",
     "full_node:ssl:public_crt",
+    "data_layer:ssl:private_crt",
+    "data_layer:ssl:public_crt",
     "harvester:chia_ssl_ca:crt",
     "harvester:private_ssl_ca:crt",
     "harvester:ssl:private_crt",
@@ -66,7 +71,7 @@ def get_all_ssl_file_paths(root_path: Path) -> Tuple[List[Path], List[Path]]:
     all_keys: List[Path] = []
 
     try:
-        config: Dict = load_config(root_path, "config.yaml", exit_on_error=False)
+        config = load_config(root_path, "config.yaml", exit_on_error=False, fill_missing_services=True)
         for paths, parsed_list in [(CERT_CONFIG_KEY_PATHS, all_certs), (KEY_CONFIG_KEY_PATHS, all_keys)]:
             for path in paths:
                 try:
@@ -103,7 +108,7 @@ def verify_ssl_certs_and_keys(
 
     invalid_files_and_modes: List[Tuple[Path, int, int]] = []
 
-    def verify_paths(paths: List[Path], restrict_mask: int, expected_permissions: int):
+    def verify_paths(paths: List[Path], restrict_mask: int, expected_permissions: int) -> None:
         nonlocal invalid_files_and_modes
         for path in paths:
             try:
@@ -114,6 +119,9 @@ def verify_ssl_certs_and_keys(
                         log.error(get_ssl_perm_warning(path, actual_permissions, expected_permissions))
                     warned_ssl_files.add(path)
                     invalid_files_and_modes.append((path, actual_permissions, expected_permissions))
+            except FileNotFoundError:
+                # permissions can't be dangerously wrong on nonexistent files
+                pass
             except Exception as e:
                 print(f"Unable to check permissions for {path}: {e}")  # lgtm [py/clear-text-logging-sensitive-data]
 
@@ -135,15 +143,18 @@ def check_ssl(root_path: Path) -> None:
     certs_to_check, keys_to_check = get_all_ssl_file_paths(root_path)
     invalid_files = verify_ssl_certs_and_keys(certs_to_check, keys_to_check)
     if len(invalid_files):
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        print("@             WARNING: UNPROTECTED SSL FILE!              @")
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        for path, actual_permissions, expected_permissions in invalid_files:
-            print(
+        lines = [
+            "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+            "@             WARNING: UNPROTECTED SSL FILE!              @",
+            "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+            *(
                 get_ssl_perm_warning(path, actual_permissions, expected_permissions)
-            )  # lgtm [py/clear-text-logging-sensitive-data]
-        print("One or more SSL files were found with permission issues.")
-        print("Run `chia init --fix-ssl-permissions` to fix issues.")
+                for path, actual_permissions, expected_permissions in invalid_files
+            ),
+            "One or more SSL files were found with permission issues.",
+            "Run the following to fix issues: chia init --fix-ssl-permissions",
+        ]
+        print("\n".join(lines), file=sys.stderr)
 
 
 def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: int) -> Tuple[bool, bool]:
@@ -186,7 +197,7 @@ def fix_ssl(root_path: Path) -> None:
     certs_to_check, keys_to_check = get_all_ssl_file_paths(root_path)
     files_to_fix = verify_ssl_certs_and_keys(certs_to_check, keys_to_check)
 
-    for (file, mask, updated_mode) in files_to_fix:
+    for file, mask, updated_mode in files_to_fix:
         # Check that permissions are correct, and if not, attempt to fix
         (valid, fixed) = check_and_fix_permissions_for_ssl_file(file, mask, updated_mode)
         if fixed:

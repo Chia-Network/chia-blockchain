@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import ssl
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import aiohttp
 
-from chia.util.config import load_config
+from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
@@ -17,12 +19,14 @@ class DaemonProxy:
         self,
         uri: str,
         ssl_context: Optional[ssl.SSLContext],
-        max_message_size: Optional[int] = 50 * 1000 * 1000,
+        heartbeat: int,
+        max_message_size: int = 50 * 1000 * 1000,
     ):
         self._uri = uri
         self._request_dict: Dict[str, asyncio.Event] = {}
-        self.response_dict: Dict[str, Any] = {}
+        self.response_dict: Dict[str, WsRpcMessage] = {}
         self.ssl_context = ssl_context
+        self.heartbeat = heartbeat
         self.client_session: Optional[aiohttp.ClientSession] = None
         self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
         self.max_message_size = max_message_size
@@ -31,14 +35,14 @@ class DaemonProxy:
         request = create_payload_dict(command, data, "client", "daemon")
         return request
 
-    async def start(self):
+    async def start(self) -> None:
         try:
             self.client_session = aiohttp.ClientSession()
             self.websocket = await self.client_session.ws_connect(
                 self._uri,
                 autoclose=True,
                 autoping=True,
-                heartbeat=60,
+                heartbeat=self.heartbeat,
                 ssl_context=self.ssl_context,
                 max_msg_size=self.max_message_size,
             )
@@ -46,22 +50,29 @@ class DaemonProxy:
             await self.close()
             raise
 
-        async def listener():
-            while True:
-                message = await self.websocket.receive()
-                if message.type == aiohttp.WSMsgType.TEXT:
-                    decoded = json.loads(message.data)
-                    request_id = decoded["request_id"]
+        async def listener_task() -> None:
+            try:
+                await self.listener()
+            finally:
+                await self.close()
 
-                    if request_id in self._request_dict:
-                        self.response_dict[request_id] = decoded
-                        self._request_dict[request_id].set()
-                else:
-                    await self.close()
-                    return None
-
-        asyncio.create_task(listener())
+        asyncio.create_task(listener_task())
         await asyncio.sleep(1)
+
+    async def listener(self) -> None:
+        if self.websocket is None:
+            raise TypeError("Websocket is None in listener!")
+        while True:
+            message = await self.websocket.receive()
+            if message.type == aiohttp.WSMsgType.TEXT:
+                decoded: WsRpcMessage = json.loads(message.data)
+                request_id = decoded["request_id"]
+
+                if request_id in self._request_dict:
+                    self.response_dict[request_id] = decoded
+                    self._request_dict[request_id].set()
+            else:
+                return None
 
     async def _get(self, request: WsRpcMessage) -> WsRpcMessage:
         request_id = request["request_id"]
@@ -70,23 +81,15 @@ class DaemonProxy:
         if self.websocket is None or self.websocket.closed:
             raise Exception("Websocket is not connected")
         asyncio.create_task(self.websocket.send_str(string))
-
-        async def timeout():
-            await asyncio.sleep(30)
-            if request_id in self._request_dict:
-                print("Error, timeout.")
-                self._request_dict[request_id].set()
-
-        asyncio.create_task(timeout())
-        await self._request_dict[request_id].wait()
-        if request_id in self.response_dict:
-            response = self.response_dict[request_id]
+        try:
+            await asyncio.wait_for(self._request_dict[request_id].wait(), timeout=30)
+            self._request_dict.pop(request_id)
+            response: WsRpcMessage = self.response_dict[request_id]
             self.response_dict.pop(request_id)
-        else:
-            response = None
-        self._request_dict.pop(request_id)
-
-        return response
+            return response
+        except asyncio.TimeoutError:
+            self._request_dict.pop(request_id)
+            raise Exception(f"No response from daemon for request_id: {request_id}")
 
     async def get_version(self) -> WsRpcMessage:
         data: Dict[str, Any] = {}
@@ -128,12 +131,6 @@ class DaemonProxy:
         response = await self._get(request)
         return response
 
-    async def notify_keyring_migration_completed(self, passphrase: Optional[str]) -> WsRpcMessage:
-        data: Dict[str, Any] = {"key": passphrase}
-        request: WsRpcMessage = self.format_request("notify_keyring_migration_completed", data)
-        response: WsRpcMessage = await self._get(request)
-        return response
-
     async def ping(self) -> WsRpcMessage:
         request = self.format_request("ping", {})
         response = await self._get(request)
@@ -149,20 +146,33 @@ class DaemonProxy:
         request = self.format_request("exit", {})
         return await self._get(request)
 
+    async def get_keys_for_plotting(self, fingerprints: Optional[List[uint32]] = None) -> WsRpcMessage:
+        data = {"fingerprints": fingerprints} if fingerprints else {}
+        request = self.format_request("get_keys_for_plotting", data)
+        response = await self._get(request)
+        return response
+
 
 async def connect_to_daemon(
-    self_hostname: str, daemon_port: int, max_message_size: int, ssl_context: ssl.SSLContext
+    self_hostname: str, daemon_port: int, max_message_size: int, ssl_context: ssl.SSLContext, heartbeat: int
 ) -> DaemonProxy:
     """
     Connect to the local daemon.
     """
 
-    client = DaemonProxy(f"wss://{self_hostname}:{daemon_port}", ssl_context, max_message_size)
+    client = DaemonProxy(
+        f"wss://{self_hostname}:{daemon_port}",
+        ssl_context=ssl_context,
+        max_message_size=max_message_size,
+        heartbeat=heartbeat,
+    )
     await client.start()
     return client
 
 
-async def connect_to_daemon_and_validate(root_path: Path, quiet: bool = False) -> Optional[DaemonProxy]:
+async def connect_to_daemon_and_validate(
+    root_path: Path, config: Dict[str, Any], quiet: bool = False
+) -> Optional[DaemonProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really
     there and running.
@@ -170,15 +180,19 @@ async def connect_to_daemon_and_validate(root_path: Path, quiet: bool = False) -
     from chia.server.server import ssl_context_for_client
 
     try:
-        net_config = load_config(root_path, "config.yaml")
-        daemon_max_message_size = net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
-        crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
-        key_path = root_path / net_config["daemon_ssl"]["private_key"]
-        ca_crt_path = root_path / net_config["private_ssl_ca"]["crt"]
-        ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
+        daemon_max_message_size = config.get("daemon_max_message_size", 50 * 1000 * 1000)
+        daemon_heartbeat = config.get("daemon_heartbeat", 300)
+        crt_path = root_path / config["daemon_ssl"]["private_crt"]
+        key_path = root_path / config["daemon_ssl"]["private_key"]
+        ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
+        ca_key_path = root_path / config["private_ssl_ca"]["key"]
         ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
         connection = await connect_to_daemon(
-            net_config["self_hostname"], net_config["daemon_port"], daemon_max_message_size, ssl_context
+            config["self_hostname"],
+            config["daemon_port"],
+            max_message_size=daemon_max_message_size,
+            ssl_context=ssl_context,
+            heartbeat=daemon_heartbeat,
         )
         r = await connection.ping()
 
@@ -192,7 +206,9 @@ async def connect_to_daemon_and_validate(root_path: Path, quiet: bool = False) -
 
 
 @asynccontextmanager
-async def acquire_connection_to_daemon(root_path: Path, quiet: bool = False):
+async def acquire_connection_to_daemon(
+    root_path: Path, config: Dict[str, Any], quiet: bool = False
+) -> AsyncIterator[Optional[DaemonProxy]]:
     """
     Asynchronous context manager which attempts to create a connection to the daemon.
     The connection object (DaemonProxy) is yielded to the caller. After the caller's
@@ -202,10 +218,10 @@ async def acquire_connection_to_daemon(root_path: Path, quiet: bool = False):
 
     daemon: Optional[DaemonProxy] = None
     try:
-        daemon = await connect_to_daemon_and_validate(root_path, quiet=quiet)
+        daemon = await connect_to_daemon_and_validate(root_path, config, quiet=quiet)
         yield daemon  # <----
     except Exception as e:
         print(f"Exception occurred while communicating with the daemon: {e}")
-
-    if daemon is not None:
-        await daemon.close()
+    finally:
+        if daemon is not None:
+            await daemon.close()

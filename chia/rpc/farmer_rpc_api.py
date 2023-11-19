@@ -1,48 +1,62 @@
+from __future__ import annotations
+
 import dataclasses
 import operator
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, ClassVar, Dict, List, Optional, Tuple
 
 from typing_extensions import Protocol
 
 from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
 from chia.protocols.harvester_protocol import Plot
+from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint32
 from chia.util.paginator import Paginator
-from chia.util.streamable import dataclass_from_dict
+from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
+@dataclasses.dataclass(frozen=True)
 class PaginatedRequestData(Protocol):
     node_id: bytes32
-    page: int
-    page_size: int
+    page: uint32
+    page_size: uint32
+
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
 
 
-@dataclasses.dataclass
-class FilterItem:
+@streamable
+@dataclasses.dataclass(frozen=True)
+class FilterItem(Streamable):
     key: str
     value: Optional[str]
 
 
-@dataclasses.dataclass
-class PlotInfoRequestData:
+@streamable
+@dataclasses.dataclass(frozen=True)
+class PlotInfoRequestData(Streamable):
     node_id: bytes32
-    page: int
-    page_size: int
+    page: uint32
+    page_size: uint32
     filter: List[FilterItem] = dataclasses.field(default_factory=list)
     sort_key: str = "filename"
     reverse: bool = False
 
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
 
-@dataclasses.dataclass
-class PlotPathRequestData:
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class PlotPathRequestData(Streamable):
     node_id: bytes32
-    page: int
-    page_size: int
+    page: uint32
+    page_size: uint32
     filter: List[str] = dataclasses.field(default_factory=list)
     reverse: bool = False
+
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
 
 
 def paginated_plot_request(source: List[Any], request: PaginatedRequestData) -> Dict[str, object]:
@@ -69,7 +83,7 @@ class FarmerRpcApi:
         self.service = farmer
         self.service_name = "chia_farmer"
 
-    def get_routes(self) -> Dict[str, Callable]:
+    def get_routes(self) -> Dict[str, Endpoint]:
         return {
             "/get_signage_point": self.get_signage_point,
             "/get_signage_points": self.get_signage_points,
@@ -86,18 +100,31 @@ class FarmerRpcApi:
             "/get_pool_login_link": self.get_pool_login_link,
         }
 
-    async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
         payloads = []
 
-        if change == "new_signage_point":
+        if change_data is None:
+            # TODO: maybe something better?
+            pass
+        elif change == "new_signage_point":
             sp_hash = change_data["sp_hash"]
+            missing_signage_points = change_data["missing_signage_points"]
             data = await self.get_signage_point({"sp_hash": sp_hash.hex()})
+            data["missing_signage_points"] = missing_signage_points
             payloads.append(
                 create_payload_dict(
                     "new_signage_point",
                     data,
                     self.service_name,
                     "wallet_ui",
+                )
+            )
+            payloads.append(
+                create_payload_dict(
+                    "new_signage_point",
+                    data,
+                    self.service_name,
+                    "metrics",
                 )
             )
         elif change == "new_farming_info":
@@ -109,6 +136,14 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             )
+            payloads.append(
+                create_payload_dict(
+                    "new_farming_info",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
         elif change == "harvester_update":
             payloads.append(
                 create_payload_dict(
@@ -116,6 +151,14 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "wallet_ui",
+                )
+            )
+            payloads.append(
+                create_payload_dict(
+                    "harvester_update",
+                    change_data,
+                    self.service_name,
+                    "metrics",
                 )
             )
         elif change == "harvester_removed":
@@ -127,6 +170,14 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             )
+            payloads.append(
+                create_payload_dict(
+                    "harvester_removed",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
         elif change == "submitted_partial":
             payloads.append(
                 create_payload_dict(
@@ -134,6 +185,23 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "metrics",
+                )
+            )
+            payloads.append(
+                create_payload_dict(
+                    "submitted_partial",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
+                )
+            )
+        elif change == "failed_partial":
+            payloads.append(
+                create_payload_dict(
+                    "failed_partial",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
                 )
             )
         elif change == "proof":
@@ -145,29 +213,48 @@ class FarmerRpcApi:
                     "metrics",
                 )
             )
+        elif change == "add_connection":
+            payloads.append(
+                create_payload_dict(
+                    "add_connection",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
+        elif change == "close_connection":
+            payloads.append(
+                create_payload_dict(
+                    "close_connection",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
 
         return payloads
 
-    async def get_signage_point(self, request: Dict) -> Dict:
-        sp_hash = hexstr_to_bytes(request["sp_hash"])
-        for _, sps in self.service.sps.items():
-            for sp in sps:
-                if sp.challenge_chain_sp == sp_hash:
-                    pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
-                    return {
-                        "signage_point": {
-                            "challenge_hash": sp.challenge_hash,
-                            "challenge_chain_sp": sp.challenge_chain_sp,
-                            "reward_chain_sp": sp.reward_chain_sp,
-                            "difficulty": sp.difficulty,
-                            "sub_slot_iters": sp.sub_slot_iters,
-                            "signage_point_index": sp.signage_point_index,
-                        },
-                        "proofs": pospaces,
-                    }
-        raise ValueError(f"Signage point {sp_hash.hex()} not found")
+    async def get_signage_point(self, request: Dict[str, Any]) -> EndpointResult:
+        sp_hash = bytes32.from_hexstr(request["sp_hash"])
+        sps = self.service.sps.get(sp_hash)
+        if sps is None or len(sps) < 1:
+            raise ValueError(f"Signage point {sp_hash.hex()} not found")
+        sp = sps[0]
+        assert sp_hash == sp.challenge_chain_sp
+        pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
+        return {
+            "signage_point": {
+                "challenge_hash": sp.challenge_hash,
+                "challenge_chain_sp": sp.challenge_chain_sp,
+                "reward_chain_sp": sp.reward_chain_sp,
+                "difficulty": sp.difficulty,
+                "sub_slot_iters": sp.sub_slot_iters,
+                "signage_point_index": sp.signage_point_index,
+            },
+            "proofs": pospaces,
+        }
 
-    async def get_signage_points(self, _: Dict) -> Dict[str, Any]:
+    async def get_signage_points(self, _: Dict[str, Any]) -> EndpointResult:
         result: List[Dict[str, Any]] = []
         for sps in self.service.sps.values():
             for sp in sps:
@@ -187,12 +274,12 @@ class FarmerRpcApi:
                 )
         return {"signage_points": result}
 
-    async def get_reward_targets(self, request: Dict) -> Dict:
+    async def get_reward_targets(self, request: Dict[str, Any]) -> EndpointResult:
         search_for_private_key = request["search_for_private_key"]
         max_ph_to_search = request.get("max_ph_to_search", 500)
         return await self.service.get_reward_targets(search_for_private_key, max_ph_to_search)
 
-    async def set_reward_targets(self, request: Dict) -> Dict:
+    async def set_reward_targets(self, request: Dict[str, Any]) -> EndpointResult:
         farmer_target, pool_target = None, None
         if "farmer_target" in request:
             farmer_target = request["farmer_target"]
@@ -210,29 +297,28 @@ class FarmerRpcApi:
             )
         return plot_count
 
-    async def get_pool_state(self, _: Dict) -> Dict:
+    async def get_pool_state(self, request: Dict[str, Any]) -> EndpointResult:
         pools_list = []
         for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
             pool_state = pool_dict.copy()
-            pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
             pool_state["plot_count"] = self.get_pool_contract_puzzle_hash_plot_count(p2_singleton_puzzle_hash)
             pools_list.append(pool_state)
         return {"pool_state": pools_list}
 
-    async def set_payout_instructions(self, request: Dict) -> Dict:
+    async def set_payout_instructions(self, request: Dict[str, Any]) -> EndpointResult:
         launcher_id: bytes32 = bytes32.from_hexstr(request["launcher_id"])
         await self.service.set_payout_instructions(launcher_id, request["payout_instructions"])
         return {}
 
-    async def get_harvesters(self, _: Dict):
+    async def get_harvesters(self, request: Dict[str, Any]) -> EndpointResult:
         return await self.service.get_harvesters(False)
 
-    async def get_harvesters_summary(self, _: Dict[str, object]) -> Dict[str, object]:
+    async def get_harvesters_summary(self, _: Dict[str, object]) -> EndpointResult:
         return await self.service.get_harvesters(True)
 
-    async def get_harvester_plots_valid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+    async def get_harvester_plots_valid(self, request_dict: Dict[str, object]) -> EndpointResult:
         # TODO: Consider having a extra List[PlotInfo] in Receiver to avoid rebuilding the list for each call
-        request = dataclass_from_dict(PlotInfoRequestData, request_dict)
+        request = PlotInfoRequestData.from_json_dict(request_dict)
         plot_list = list(self.service.get_receiver(request.node_id).plots().values())
         # Apply filter
         plot_list = [
@@ -249,26 +335,25 @@ class FarmerRpcApi:
     def paginated_plot_path_request(
         self, source_func: Callable[[Receiver], List[str]], request_dict: Dict[str, object]
     ) -> Dict[str, object]:
-        request: PlotPathRequestData = dataclass_from_dict(PlotPathRequestData, request_dict)
+        request: PlotPathRequestData = PlotPathRequestData.from_json_dict(request_dict)
         receiver = self.service.get_receiver(request.node_id)
         source = source_func(receiver)
-        request = dataclass_from_dict(PlotPathRequestData, request_dict)
         # Apply filter
         source = [plot for plot in source if all(filter_item in plot for filter_item in request.filter)]
         # Apply reverse
         source = sorted(source, reverse=request.reverse)
         return paginated_plot_request(source, request)
 
-    async def get_harvester_plots_invalid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+    async def get_harvester_plots_invalid(self, request_dict: Dict[str, object]) -> EndpointResult:
         return self.paginated_plot_path_request(Receiver.invalid, request_dict)
 
-    async def get_harvester_plots_keys_missing(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+    async def get_harvester_plots_keys_missing(self, request_dict: Dict[str, object]) -> EndpointResult:
         return self.paginated_plot_path_request(Receiver.keys_missing, request_dict)
 
-    async def get_harvester_plots_duplicates(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+    async def get_harvester_plots_duplicates(self, request_dict: Dict[str, object]) -> EndpointResult:
         return self.paginated_plot_path_request(Receiver.duplicates, request_dict)
 
-    async def get_pool_login_link(self, request: Dict) -> Dict:
+    async def get_pool_login_link(self, request: Dict[str, Any]) -> EndpointResult:
         launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
         login_link: Optional[str] = await self.service.generate_login_link(launcher_id)
         if login_link is None:

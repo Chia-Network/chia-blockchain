@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import cProfile
 import random
 import sqlite3
@@ -10,13 +12,12 @@ from typing import Iterator, List, Optional
 import click
 import zstd
 
+from chia.simulator.block_tools import create_block_tools
+from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.coin import Coin
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chia_logging import initialize_logging
 from chia.util.ints import uint32, uint64
-from chia.util.path import mkdir
-from tests.block_tools import create_block_tools
-from tests.util.keyring import TempKeyring
 from tools.test_constants import test_constants
 
 
@@ -54,7 +55,6 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
     "--output", type=str, required=False, default=None, help="the filename to write the resulting sqlite database to"
 )
 def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: Optional[str]) -> None:
-
     if fill_rate < 0 or fill_rate > 100:
         print("fill-rate must be within [0, 100]")
         sys.exit(1)
@@ -76,9 +76,8 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
         output = f"stress-test-blockchain-{length}-{fill_rate}{'-refs' if block_refs else ''}.sqlite"
 
     root_path = Path("./test-chain").resolve()
-    mkdir(root_path)
+    root_path.mkdir(parents=True, exist_ok=True)
     with TempKeyring() as keychain:
-
         bt = create_block_tools(constants=test_constants, root_path=root_path, keychain=keychain)
         initialize_logging(
             "generate_chain", {"log_level": "DEBUG", "log_stdout": False, "log_syslog": False}, root_path=root_path
@@ -86,7 +85,6 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
 
         print(f"writing blockchain to {output}")
         with closing(sqlite3.connect(output)) as db:
-
             db.execute(
                 "CREATE TABLE full_blocks("
                 "header_hash blob PRIMARY KEY,"
@@ -107,7 +105,6 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                 pool_reward_puzzle_hash=pool_puzzlehash,
                 keep_going_until_tx_block=True,
                 genesis_timestamp=uint64(1234567890),
-                use_timestamp_residual=True,
             )
 
             unspent_coins: List[Coin] = []
@@ -166,7 +163,6 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                         keep_going_until_tx_block=True,
                         transaction_data=SpendBundle.aggregate(spend_bundles),
                         previous_generator=block_references,
-                        use_timestamp_residual=True,
                     )
                     prev_tx_block = b
                     prev_block = blocks[-2]

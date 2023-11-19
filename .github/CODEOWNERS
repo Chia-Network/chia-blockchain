@@ -1,0 +1,4 @@
+*	@Chia-Network/required-reviewers
+/.github/* @Chia-Network/actions-reviewers
+/PRETTY_GOOD_PRACTICES.md	@altendky @Chia-Network/required-reviewers
+/pylintrc	@altendky @Chia-Network/required-reviewers

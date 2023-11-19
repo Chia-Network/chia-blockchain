@@ -1,70 +1,84 @@
 repos:
 -   repo: local
     hooks:
-    -   id: build-workflows
-        name: Validate github action workflows
-        entry: ./tests/build-workflows.py --fail-on-update
-        language: python
-        pass_filenames: false
     -   id: check-sql
         name: Validate SQL statements
-        entry: ./tests/check_sql_statements.py
-        language: python
+        entry: ./activated.py python -m tests.check_sql_statements
+        language: system
         pass_filenames: false
 -   repo: local
     hooks:
     -   id: init_py_files
         name: __init__.py files
-        entry: python3 tests/build-init-files.py -v --root .
-        language: python
+        entry: ./activated.py python tests/build-init-files.py -v --root .
+        language: system
         pass_filenames: false
-        additional_dependencies: [click~=7.1]
-# The following, commented hook is the usual way to add isort. However, it doesn't work in some environments.
-# See https://github.com/PyCQA/isort/issues/1874#issuecomment-1002212936
-# -----------------------------------------------------
-# - repo: https://github.com/pycqa/isort
-#   rev: 5.9.3
-#   hooks:
-#   - id: isort
-# -----------------------------------------------------
-#  The hook below is the workaround for the issue above.
 -   repo: local
     hooks:
-    -   id: isort
-        name: isort
-        entry: isort
+    -   id: pyupgrade
+        name: pyupgrade
+        entry: ./activated.py pyupgrade --py38-plus --keep-runtime-typing
+        language: system
+        types: [python]
+-   repo: local
+    hooks:
+    -   id: black
+        name: black
+        entry: ./activated.py black
+        language: system
         require_serial: true
-        language: python
-        language_version: python3
-        types_or: [cython, pyi, python]
-        args: ['--filter-files']
-        minimum_pre_commit_version: '2.9.2'
-        additional_dependencies: [isort==5.10.1]
+        types_or: [python, pyi]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.3.0
     hooks:
     -   id: check-yaml
+    -   id: mixed-line-ending
+        args: ["--fix=lf"]
     -   id: end-of-file-fixer
-        exclude: ".*?(.hex|.clvm|.clib)"
+        exclude: ".*?(.hex|.clsp|.clvm|.clib)"
     -   id: trailing-whitespace
     -   id: check-merge-conflict
     -   id: check-ast
     -   id: debug-statements
--   repo: https://github.com/psf/black
-    rev: 21.12b0
+-   repo: local
     hooks:
-    -   id: black
-        additional_dependencies: ['click<8.1']
--   repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.2
+    -   id: clvm_hex
+        name: .clsp.hex files
+        entry: ./activated.py python tools/manage_clvm.py check
+        language: system
+        pass_filenames: false
+-   repo: local
     hooks:
-    - id: flake8
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.950
+    -   id: chialispp
+        name: Pretty print chialisp files
+        entry: ./activated.py python tools/chialispp.py .
+        language: system
+        pass_filenames: false
+-   repo: local
     hooks:
-    - id: mypy
-      additional_dependencies: [filelock, pytest, pytest-asyncio, types-aiofiles, types-click, types-setuptools, types-PyYAML]
-      # This intentionally counters the settings in mypy.ini to allow a loose local
-      # check and a strict CI check. This difference may or may not be retained long
-      # term.
-      args: [--no-warn-unused-ignores]
+    -   id: build mypy.ini
+        name: build mypy.ini
+        entry: ./activated.py python manage-mypy.py build-mypy-ini
+        language: system
+        pass_filenames: false
+-   repo: local
+    hooks:
+    -   id: mypy
+        name: mypy
+        entry: ./activated.py mypy
+        language: system
+        pass_filenames: false
+-   repo: local
+    hooks:
+    -   id: isort
+        name: isort
+        entry: ./activated.py isort
+        language: system
+        types: [python]
+-   repo: local
+    hooks:
+    -   id: flake8
+        name: Flake8
+        entry: ./activated.py flake8
+        language: system
+        types: [python]

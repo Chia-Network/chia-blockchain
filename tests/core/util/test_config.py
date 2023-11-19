@@ -1,11 +1,18 @@
+from __future__ import annotations
+
 import asyncio
 import copy
+import random
 import shutil
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool, Queue, TimeoutError
+from pathlib import Path
+from threading import Thread
+from time import sleep
+from typing import Any, Dict, Optional
 
 import pytest
-import random
 import yaml
 
 from chia.util.config import (
@@ -16,14 +23,9 @@ from chia.util.config import (
     lock_and_load_config,
     lock_config,
     save_config,
+    selected_network_address_prefix,
 )
-from chia.util.path import mkdir
-from multiprocessing import Pool, Queue, TimeoutError
-from pathlib import Path
-from threading import Thread
-from time import sleep
-from typing import Dict, Optional
-
+from chia.util.timing import adjusted_timeout
 
 # Commented-out lines are preserved to aid in debugging the multiprocessing tests
 # import logging
@@ -142,17 +144,6 @@ def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
 
 
 @pytest.fixture(scope="function")
-def root_path_populated_with_config(tmpdir) -> Path:
-    """
-    Create a temp directory and populate it with a default config.yaml.
-    Returns the root path containing the config.
-    """
-    root_path: Path = Path(tmpdir)
-    create_default_chia_config(root_path)
-    return Path(root_path)
-
-
-@pytest.fixture(scope="function")
 def default_config_dict() -> Dict:
     """
     Returns a dictionary containing the default config.yaml contents
@@ -180,7 +171,7 @@ class TestConfig:
         expected_content: str = initial_config_file("config.yaml")
         assert len(expected_content) > 0
 
-        with open(config_file_path, "r") as f:
+        with open(config_file_path) as f:
             actual_content: str = f.read()
             # Expect: config.yaml contents are seeded with initial contents
             assert actual_content == expected_content
@@ -192,7 +183,7 @@ class TestConfig:
         # When: using a clean directory
         root_path: Path = Path(tmpdir)
         config_file_path: Path = root_path / "config" / "config.yaml"
-        mkdir(config_file_path.parent)
+        config_file_path.parent.mkdir(parents=True, exist_ok=True)
         # When: config.yaml already exists with content
         with open(config_file_path, "w") as f:
             f.write("Some config content")
@@ -206,7 +197,7 @@ class TestConfig:
         expected_content: str = initial_config_file("config.yaml")
         assert len(expected_content) > 0
 
-        with open(config_file_path, "r") as f:
+        with open(config_file_path) as f:
             actual_content: str = f.read()
             # Expect: config.yaml contents are overwritten with initial contents
             assert actual_content == expected_content
@@ -228,14 +219,14 @@ class TestConfig:
             == "ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb"
         )
 
-    def test_load_config_exit_on_error(self, tmpdir):
+    def test_load_config_exit_on_error(self, tmp_path: Path):
         """
         Call load_config() with an invalid path. Behavior should be dependent on the exit_on_error flag.
         """
-        root_path: Path = tmpdir
+        root_path = tmp_path
         config_file_path: Path = root_path / "config" / "config.yaml"
         # When: config file path points to a directory
-        mkdir(config_file_path)
+        config_file_path.mkdir(parents=True, exist_ok=True)
         # When: exit_on_error is True
         # Expect: load_config will exit
         with pytest.raises(SystemExit):
@@ -253,16 +244,19 @@ class TestConfig:
         root_path: Path = root_path_populated_with_config
         config: Dict = copy.deepcopy(default_config_dict)
         # When: modifying the config
-        config["harvester"]["farmer_peer"]["host"] = "oldmacdonald.eie.io"
+        config["harvester"]["farmer_peers"][0]["host"] = "oldmacdonald.eie.io"
         # Sanity check that we didn't modify the default config
-        assert config["harvester"]["farmer_peer"]["host"] != default_config_dict["harvester"]["farmer_peer"]["host"]
+        assert (
+            config["harvester"]["farmer_peers"][0]["host"]
+            != default_config_dict["harvester"]["farmer_peers"][0]["host"]
+        )
         # When: saving the modified config
         with lock_config(root_path, "config.yaml"):
             save_config(root_path=root_path, filename="config.yaml", config_data=config)
 
         # Expect: modifications should be preserved in the config read from disk
         loaded: Dict = load_config(root_path=root_path, filename="config.yaml")
-        assert loaded["harvester"]["farmer_peer"]["host"] == "oldmacdonald.eie.io"
+        assert loaded["harvester"]["farmer_peers"][0]["host"] == "oldmacdonald.eie.io"
 
     def test_multiple_writers(self, root_path_populated_with_config, default_config_dict):
         """
@@ -283,11 +277,11 @@ class TestConfig:
         with Pool(processes=num_workers) as pool:
             res = pool.starmap_async(run_reader_and_writer_tasks, args)
             try:
-                res.get(timeout=60)
+                res.get(timeout=adjusted_timeout(timeout=60))
             except TimeoutError:
                 pytest.skip("Timed out waiting for reader/writer processes to complete")
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_non_atomic_writes(self, root_path_populated_with_config, default_config_dict):
         """
         Test whether one continuous writer (writing constantly, but not atomically) will interfere with many
@@ -314,3 +308,30 @@ class TestConfig:
                         )
                     )
             await asyncio.gather(*all_tasks)
+
+    @pytest.mark.parametrize("prefix", [None])
+    def test_selected_network_address_prefix_default_config(self, config_with_address_prefix: Dict[str, Any]) -> None:
+        """
+        Temp config.yaml created using a default config. address_prefix is defaulted to "xch"
+        """
+        config = config_with_address_prefix
+        prefix = selected_network_address_prefix(config)
+        assert prefix == "xch"
+
+    @pytest.mark.parametrize("prefix", ["txch"])
+    def test_selected_network_address_prefix_testnet_config(self, config_with_address_prefix: Dict[str, Any]) -> None:
+        """
+        Temp config.yaml created using a modified config. address_prefix is set to "txch"
+        """
+        config = config_with_address_prefix
+        prefix = selected_network_address_prefix(config)
+        assert prefix == "txch"
+
+    def test_selected_network_address_prefix_config_dict(self, default_config_dict: Dict[str, Any]) -> None:
+        """
+        Modified config dictionary has address_prefix set to "customxch"
+        """
+        config = default_config_dict
+        config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = "customxch"
+        prefix = selected_network_address_prefix(config)
+        assert prefix == "customxch"

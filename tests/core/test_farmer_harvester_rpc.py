@@ -1,5 +1,9 @@
+from __future__ import annotations
+
+import dataclasses
 import logging
 import operator
+import sys
 import time
 from math import ceil
 from os import mkdir
@@ -8,15 +12,14 @@ from shutil import copy
 from typing import Any, Awaitable, Callable, Dict, List, Union, cast
 
 import pytest
-import pytest_asyncio
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
 from chia.plotting.util import add_plot_directory
 from chia.protocols import farmer_protocol
 from chia.protocols.harvester_protocol import Plot
 from chia.rpc.farmer_rpc_api import (
-    FarmerRpcApi,
     FilterItem,
     PaginatedRequestData,
     PlotInfoRequestData,
@@ -24,123 +27,55 @@ from chia.rpc.farmer_rpc_api import (
     plot_matches_filter,
 )
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.harvester_rpc_api import HarvesterRpcApi
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.rpc.rpc_server import start_rpc_server
+from chia.simulator.block_tools import get_plot_dir
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.misc import get_list_or_len
-from chia.util.streamable import dataclass_from_dict
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
-from tests.block_tools import get_plot_dir
+from tests.conftest import HarvesterFarmerEnvironment
 from tests.plot_sync.test_delta import dummy_plot
-from tests.setup_nodes import setup_harvester_farmer, test_constants
-from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from tests.util.misc import assert_rpc_error
 from tests.util.rpc import validate_get_routes
-from tests.util.socket import find_available_listen_port
+from tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 log = logging.getLogger(__name__)
 
 
 async def wait_for_plot_sync(receiver: Receiver, previous_last_sync_id: uint64) -> None:
-    def wait():
+    def wait() -> bool:
         current_last_sync_id = receiver.last_sync().sync_id
         return current_last_sync_id != 0 and current_last_sync_id != previous_last_sync_id
 
     await time_out_assert(30, wait)
 
 
-@pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_simulation(bt, tmp_path):
-    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=True):
-        yield _
+async def wait_for_synced_receiver(farmer: Farmer, harvester_id: bytes32) -> None:
+    def wait() -> bool:
+        return (
+            harvester_id in farmer.plot_sync_receivers and not farmer.plot_sync_receivers[harvester_id].initial_sync()
+        )
+
+    await time_out_assert(30, wait)
 
 
-@pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_environment(bt, harvester_farmer_simulation, self_hostname):
-    harvester_service, farmer_service = harvester_farmer_simulation
-
-    def stop_node_cb():
-        pass
-
-    config = bt.config
-    hostname = config["self_hostname"]
-    daemon_port = config["daemon_port"]
-
-    farmer_rpc_api = FarmerRpcApi(farmer_service._api.farmer)
-    harvester_rpc_api = HarvesterRpcApi(harvester_service._node)
-
-    rpc_port_farmer = uint16(find_available_listen_port("farmer rpc"))
-    rpc_port_harvester = uint16(find_available_listen_port("harvester rpc"))
-
-    rpc_cleanup = await start_rpc_server(
-        farmer_rpc_api,
-        hostname,
-        daemon_port,
-        rpc_port_farmer,
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
-    )
-    rpc_cleanup_2 = await start_rpc_server(
-        harvester_rpc_api,
-        hostname,
-        daemon_port,
-        rpc_port_harvester,
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
-    )
-
-    farmer_rpc_client = await FarmerRpcClient.create(self_hostname, rpc_port_farmer, bt.root_path, config)
-    harvester_rpc_client = await HarvesterRpcClient.create(self_hostname, rpc_port_harvester, bt.root_path, config)
-
-    async def have_connections():
-        return len(await farmer_rpc_client.get_connections()) > 0
-
-    await time_out_assert(15, have_connections, True)
-
-    yield farmer_service, farmer_rpc_api, farmer_rpc_client, harvester_service, harvester_rpc_api, harvester_rpc_client
-
-    farmer_rpc_client.close()
-    harvester_rpc_client.close()
-    await farmer_rpc_client.await_closed()
-    await harvester_rpc_client.await_closed()
-    await rpc_cleanup()
-    await rpc_cleanup_2()
-
-
-@pytest.mark.asyncio
-async def test_get_routes(harvester_farmer_environment):
-    (
-        farmer_service,
-        farmer_rpc_api,
-        farmer_rpc_client,
-        harvester_service,
-        harvester_rpc_api,
-        harvester_rpc_client,
-    ) = harvester_farmer_environment
-    await validate_get_routes(farmer_rpc_client, farmer_rpc_api)
-    await validate_get_routes(harvester_rpc_client, harvester_rpc_api)
+@pytest.mark.anyio
+async def test_get_routes(harvester_farmer_environment: HarvesterFarmerEnvironment) -> None:
+    farmer_service, farmer_rpc_client, harvester_service, harvester_rpc_client, _ = harvester_farmer_environment
+    assert farmer_service.rpc_server is not None
+    assert harvester_service.rpc_server is not None
+    await validate_get_routes(farmer_rpc_client, farmer_service.rpc_server.rpc_api)
+    await validate_get_routes(harvester_rpc_client, harvester_service.rpc_server.rpc_api)
 
 
 @pytest.mark.parametrize("endpoint", ["get_harvesters", "get_harvesters_summary"])
-@pytest.mark.asyncio
-async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, endpoint: str):
-    (
-        farmer_service,
-        farmer_rpc_api,
-        farmer_rpc_client,
-        harvester_service,
-        harvester_rpc_api,
-        harvester_rpc_client,
-    ) = harvester_farmer_environment
+@pytest.mark.anyio
+async def test_farmer_get_harvesters_and_summary(
+    harvester_farmer_environment: HarvesterFarmerEnvironment, endpoint: str
+) -> None:
+    _, farmer_rpc_client, harvester_service, harvester_rpc_client, _ = harvester_farmer_environment
     harvester = harvester_service._node
 
     harvester_plots = []
@@ -153,7 +88,7 @@ async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, e
 
     await time_out_assert(10, non_zero_plots)
 
-    async def test_get_harvesters():
+    async def test_get_harvesters() -> bool:
         nonlocal harvester_plots
         harvester.plot_manager.trigger_refresh()
         await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
@@ -184,26 +119,19 @@ async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, e
     await time_out_assert_custom_interval(30, 1, test_get_harvesters)
 
 
-@pytest.mark.asyncio
-async def test_farmer_signage_point_endpoints(harvester_farmer_environment):
-    (
-        farmer_service,
-        farmer_rpc_api,
-        farmer_rpc_client,
-        harvester_service,
-        harvester_rpc_api,
-        harvester_rpc_client,
-    ) = harvester_farmer_environment
+@pytest.mark.anyio
+async def test_farmer_signage_point_endpoints(harvester_farmer_environment: HarvesterFarmerEnvironment) -> None:
+    farmer_service, farmer_rpc_client, _, _, _ = harvester_farmer_environment
     farmer_api = farmer_service._api
 
     assert (await farmer_rpc_client.get_signage_point(std_hash(b"2"))) is None
     assert len(await farmer_rpc_client.get_signage_points()) == 0
 
-    async def have_signage_points():
+    async def have_signage_points() -> bool:
         return len(await farmer_rpc_client.get_signage_points()) > 0
 
     sp = farmer_protocol.NewSignagePoint(
-        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2)
+        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
     )
     await farmer_api.new_signage_point(sp)
 
@@ -211,16 +139,9 @@ async def test_farmer_signage_point_endpoints(harvester_farmer_environment):
     assert (await farmer_rpc_client.get_signage_point(std_hash(b"2"))) is not None
 
 
-@pytest.mark.asyncio
-async def test_farmer_reward_target_endpoints(bt, harvester_farmer_environment):
-    (
-        farmer_service,
-        farmer_rpc_api,
-        farmer_rpc_client,
-        harvester_service,
-        harvester_rpc_api,
-        harvester_rpc_client,
-    ) = harvester_farmer_environment
+@pytest.mark.anyio
+async def test_farmer_reward_target_endpoints(harvester_farmer_environment: HarvesterFarmerEnvironment) -> None:
+    farmer_service, farmer_rpc_client, _, _, bt = harvester_farmer_environment
     farmer_api = farmer_service._api
 
     targets_1 = await farmer_rpc_client.get_reward_targets(False)
@@ -272,16 +193,11 @@ async def test_farmer_reward_target_endpoints(bt, harvester_farmer_environment):
         await farmer_rpc_client.set_reward_targets(None, replaced_char)
 
 
-@pytest.mark.asyncio
-async def test_farmer_get_pool_state(harvester_farmer_environment, self_hostname):
-    (
-        farmer_service,
-        farmer_rpc_api,
-        farmer_rpc_client,
-        harvester_service,
-        harvester_rpc_api,
-        harvester_rpc_client,
-    ) = harvester_farmer_environment
+@pytest.mark.anyio
+async def test_farmer_get_pool_state(
+    harvester_farmer_environment: HarvesterFarmerEnvironment, self_hostname: str
+) -> None:
+    farmer_service, farmer_rpc_client, _, _, _ = harvester_farmer_environment
     farmer_api = farmer_service._api
 
     assert len((await farmer_rpc_client.get_pool_state())["pool_state"]) == 0
@@ -309,7 +225,7 @@ async def test_farmer_get_pool_state(harvester_farmer_environment, self_hostname
         == "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8"
     )
     await farmer_rpc_client.set_payout_instructions(
-        hexstr_to_bytes(pool_state[0]["pool_config"]["launcher_id"]), "1234vy"
+        bytes32.from_hexstr(pool_state[0]["pool_config"]["launcher_id"]), "1234vy"
     )
     await farmer_api.farmer.update_pool_state()
     pool_state = (await farmer_rpc_client.get_pool_state())["pool_state"]
@@ -325,7 +241,7 @@ async def test_farmer_get_pool_state(harvester_farmer_environment, self_hostname
             pool_dict[key].insert(0, before_24h)
 
     sp = farmer_protocol.NewSignagePoint(
-        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2)
+        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
     )
     await farmer_api.new_signage_point(sp)
     client_pool_state = await farmer_rpc_client.get_pool_state()
@@ -334,21 +250,18 @@ async def test_farmer_get_pool_state(harvester_farmer_environment, self_hostname
             assert pool_dict[key][0] == list(since_24h)
 
 
-@pytest.mark.asyncio
-async def test_farmer_get_pool_state_plot_count(harvester_farmer_environment, self_hostname: str) -> None:
-    (
-        farmer_service,
-        farmer_rpc_api,
-        farmer_rpc_client,
-        harvester_service,
-        harvester_rpc_api,
-        harvester_rpc_client,
-    ) = harvester_farmer_environment
+@pytest.mark.anyio
+async def test_farmer_get_pool_state_plot_count(
+    harvester_farmer_environment: HarvesterFarmerEnvironment, self_hostname: str
+) -> None:
+    farmer_service, farmer_rpc_client, harvester_service, _, _ = harvester_farmer_environment
     farmer_api = farmer_service._api
 
     async def wait_for_plot_sync() -> bool:
         try:
-            return (await farmer_rpc_client.get_harvesters_summary())["harvesters"][0]["plots"] > 0
+            farmer_res = await farmer_rpc_client.get_harvesters_summary()
+            plots: int = farmer_res["harvesters"][0]["plots"]
+            return plots > 0
         except Exception:
             return False
 
@@ -376,7 +289,7 @@ async def test_farmer_get_pool_state_plot_count(harvester_farmer_environment, se
         save_config(root_path, "config.yaml", config)
     await farmer_api.farmer.update_pool_state()
 
-    pool_plot_count = (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"]
+    pool_plot_count: int = (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"]
     assert pool_plot_count == 5
 
     # TODO: Maybe improve this to not remove from Receiver directly but instead from the harvester and then wait for
@@ -388,9 +301,9 @@ async def test_farmer_get_pool_state_plot_count(harvester_farmer_environment, se
             if plot.pool_contract_puzzle_hash == pool_contract_puzzle_hash:
                 del receiver.plots()[path]
                 pool_plot_count -= 1
-        plot_count = (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"]
+        plot_count: int = (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"]
         assert plot_count == pool_plot_count
-        return plot_count
+        return plot_count > 0
 
     await time_out_assert(15, remove_all_and_validate, False)
     assert (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"] == 0
@@ -410,7 +323,7 @@ async def test_farmer_get_pool_state_plot_count(harvester_farmer_environment, se
         (FilterItem("pool_contract_puzzle_hash", "1"), False),
     ],
 )
-def test_plot_matches_filter(filter_item: FilterItem, match: bool):
+def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
     assert plot_matches_filter(dummy_plot("123"), filter_item) == match
 
 
@@ -435,31 +348,24 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool):
         ),
         (FarmerRpcClient.get_harvester_plots_invalid, [], None, True, 13),
         (FarmerRpcClient.get_harvester_plots_invalid, ["invalid_0"], None, False, 6),
-        (FarmerRpcClient.get_harvester_plots_invalid, ["inval", "lid_1/"], None, False, 2),
+        (FarmerRpcClient.get_harvester_plots_invalid, ["inval", "lid_1"], None, False, 2),
         (FarmerRpcClient.get_harvester_plots_keys_missing, [], None, True, 3),
         (FarmerRpcClient.get_harvester_plots_keys_missing, ["keys_missing_1"], None, False, 2),
         (FarmerRpcClient.get_harvester_plots_duplicates, [], None, True, 7),
         (FarmerRpcClient.get_harvester_plots_duplicates, ["duplicates_0"], None, False, 3),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
+@pytest.mark.skipif(sys.platform == "win32", reason="avoiding crashes on windows until we fix this (crashing workers)")
 async def test_farmer_get_harvester_plots_endpoints(
-    harvester_farmer_environment: Any,
+    harvester_farmer_environment: HarvesterFarmerEnvironment,
     endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[Dict[str, Any]]],
     filtering: Union[List[FilterItem], List[str]],
     sort_key: str,
     reverse: bool,
     expected_plot_count: int,
 ) -> None:
-    (
-        farmer_service,
-        farmer_rpc_api,
-        farmer_rpc_client,
-        harvester_service,
-        harvester_rpc_api,
-        harvester_rpc_client,
-    ) = harvester_farmer_environment
-
+    farmer_service, farmer_rpc_client, harvester_service, harvester_rpc_client, _ = harvester_farmer_environment
     harvester = harvester_service._node
     harvester_id = harvester_service._server.node_id
     receiver = farmer_service._api.farmer.plot_sync_receivers[harvester_id]
@@ -472,9 +378,11 @@ async def test_farmer_get_harvester_plots_endpoints(
 
     request: PaginatedRequestData
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
-        request = PlotInfoRequestData(harvester_id, 0, -1, cast(List[FilterItem], filtering), sort_key, reverse)
+        request = PlotInfoRequestData(
+            harvester_id, uint32(0), uint32(0), cast(List[FilterItem], filtering), sort_key, reverse
+        )
     else:
-        request = PlotPathRequestData(harvester_id, 0, -1, cast(List[str], filtering), reverse)
+        request = PlotPathRequestData(harvester_id, uint32(0), uint32(0), cast(List[str], filtering), reverse)
 
     def add_plot_directories(prefix: str, count: int) -> List[Path]:
         new_paths = []
@@ -514,7 +422,7 @@ async def test_farmer_get_harvester_plots_endpoints(
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
         for filter_item in filtering:
             assert isinstance(filter_item, FilterItem)
-            plots = [plot for plot in plots if plot_matches_filter(dataclass_from_dict(Plot, plot), filter_item)]
+            plots = [plot for plot in plots if plot_matches_filter(Plot.from_json_dict(plot), filter_item)]
         plots.sort(key=operator.itemgetter(sort_key, "plot_id"), reverse=reverse)
     else:
         for filter_item in filtering:
@@ -532,10 +440,11 @@ async def test_farmer_get_harvester_plots_endpoints(
     await wait_for_plot_sync(receiver, last_sync_id)
 
     for page_size in [1, int(total_count / 2), total_count - 1, total_count, total_count + 1, 100]:
-        request.page_size = page_size
+        request = dataclasses.replace(request, page_size=uint32(page_size))
         expected_page_count = ceil(total_count / page_size)
         for page in range(expected_page_count):
-            request.page = page
+            request = dataclasses.replace(request, page=uint32(page))
+            await wait_for_synced_receiver(farmer_service._api.farmer, harvester_id)
             page_result = await endpoint(farmer_rpc_client, request)
             offset = page * page_size
             expected_plots = plots[offset : offset + page_size]
@@ -547,3 +456,50 @@ async def test_farmer_get_harvester_plots_endpoints(
                 "total_count": total_count,
                 "plots": expected_plots,
             }
+
+
+@pytest.mark.anyio
+@pytest.mark.skip("This test causes hangs occasionally. TODO: fix this.")
+async def test_harvester_add_plot_directory(harvester_farmer_environment: HarvesterFarmerEnvironment) -> None:
+    _, _, harvester_service, harvester_rpc_client, _ = harvester_farmer_environment
+
+    async def assert_added(path: Path) -> None:
+        assert await harvester_rpc_client.add_plot_directory(str(path))
+        with lock_and_load_config(root_path, "config.yaml") as config:
+            assert str(path) in config["harvester"]["plot_directories"]
+
+    # Test without the required parameter: dirname
+    with pytest.raises(ValueError, match="dirname"):
+        await harvester_rpc_client.fetch("add_plot_directory", {})
+
+    root_path = harvester_service._node.root_path
+    test_path = Path(root_path / "test_path").resolve()
+
+    # The test_path doesn't exist at this point
+    with assert_rpc_error(f"Path doesn't exist: {test_path}"):
+        await harvester_rpc_client.add_plot_directory(str(test_path))
+
+    # Create a file at the test_path and make sure it detects this
+    with open(test_path, "w"):
+        pass
+
+    with assert_rpc_error(f"Path is not a directory: {test_path}"):
+        await harvester_rpc_client.add_plot_directory(str(test_path))
+
+    # Drop the file, make it a directory and make sure it gets added properly.
+    test_path.unlink()
+    mkdir(test_path)
+
+    await assert_added(test_path)
+
+    with assert_rpc_error(f"Path already added: {test_path}"):
+        await harvester_rpc_client.add_plot_directory(str(test_path))
+
+    # Add another one and make sure they are still both there.
+    test_path_other = test_path / "other"
+    mkdir(test_path_other)
+    await assert_added(test_path_other)
+
+    added_directories = await harvester_rpc_client.get_plot_directories()
+    assert str(test_path) in added_directories
+    assert str(test_path_other) in added_directories

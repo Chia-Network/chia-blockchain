@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import sys
@@ -7,11 +9,10 @@ import click
 
 from chia.plotting.util import add_plot_directory, validate_plot_size
 
-DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)
 
 
-def show_plots(root_path: Path):
+def show_plots(root_path: Path) -> None:
     from chia.plotting.util import get_plot_directories
 
     print("Directories where plots are being searched for:")
@@ -26,19 +27,19 @@ def show_plots(root_path: Path):
         print(f"{str_path}")
 
 
-@click.group("plots", short_help="Manage your plots")
+@click.group("plots", help="Manage your plots")
 @click.pass_context
-def plots_cmd(ctx: click.Context):
+def plots_cmd(ctx: click.Context) -> None:
     """Create, add, remove and check your plots"""
     from chia.util.chia_logging import initialize_logging
 
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with 'chia init'")
-    initialize_logging("", {"log_stdout": True}, root_path)
+    initialize_logging("", {"log_level": "INFO", "log_stdout": True}, root_path)
 
 
-@plots_cmd.command("create", short_help="Create plots")
+@plots_cmd.command("create", help="Create plots")
 @click.option("-k", "--size", help="Plot size", type=int, default=32, show_default=True)
 @click.option("--override-k", help="Force size smaller than 32", default=False, show_default=True, is_flag=True)
 @click.option("-n", "--num", help="Number of plots or challenges", type=int, default=1, show_default=True)
@@ -113,23 +114,23 @@ def create_cmd(
     nobitfield: bool,
     exclude_final_dir: bool,
     connect_to_daemon: bool,
-):
+) -> None:
     from chia.plotting.create_plots import create_plots, resolve_plot_keys
+    from chia.plotting.util import Params
 
-    class Params(object):
-        def __init__(self):
-            self.size = size
-            self.num = num
-            self.buffer = buffer
-            self.num_threads = num_threads
-            self.buckets = buckets
-            self.stripe_size = DEFAULT_STRIPE_SIZE
-            self.tmp_dir = Path(tmp_dir)
-            self.tmp2_dir = Path(tmp2_dir) if tmp2_dir else None
-            self.final_dir = Path(final_dir)
-            self.plotid = plotid
-            self.memo = memo
-            self.nobitfield = nobitfield
+    params = Params(
+        size=size,
+        num=num,
+        buffer=buffer,
+        num_threads=num_threads,
+        buckets=buckets,
+        tmp_dir=Path(tmp_dir),
+        tmp2_dir=Path(tmp2_dir) if tmp2_dir else None,
+        final_dir=Path(final_dir),
+        plotid=plotid,
+        memo=memo,
+        nobitfield=nobitfield,
+    )
 
     root_path: Path = ctx.obj["root_path"]
     try:
@@ -150,12 +151,15 @@ def create_cmd(
         )
     )
 
-    asyncio.run(create_plots(Params(), plot_keys))
+    asyncio.run(create_plots(params, plot_keys))
     if not exclude_final_dir:
-        add_plot_directory(root_path, final_dir)
+        try:
+            add_plot_directory(root_path, final_dir)
+        except ValueError as e:
+            print(e)
 
 
-@plots_cmd.command("check", short_help="Checks plots")
+@plots_cmd.command("check", help="Checks plots")
 @click.option("-n", "--num", help="Number of plots or challenges", type=int, default=None)
 @click.option(
     "-g",
@@ -170,13 +174,13 @@ def create_cmd(
 @click.pass_context
 def check_cmd(
     ctx: click.Context, num: int, grep_string: str, list_duplicates: bool, debug_show_memo: bool, challenge_start: int
-):
+) -> None:
     from chia.plotting.check_plots import check_plots
 
     check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo)
 
 
-@plots_cmd.command("add", short_help="Adds a directory of plots")
+@plots_cmd.command("add", help="Adds a directory of plots")
 @click.option(
     "-d",
     "--final_dir",
@@ -186,13 +190,17 @@ def check_cmd(
     show_default=True,
 )
 @click.pass_context
-def add_cmd(ctx: click.Context, final_dir: str):
+def add_cmd(ctx: click.Context, final_dir: str) -> None:
     from chia.plotting.util import add_plot_directory
 
-    add_plot_directory(ctx.obj["root_path"], final_dir)
+    try:
+        add_plot_directory(ctx.obj["root_path"], final_dir)
+        print(f"Successfully added: {final_dir}")
+    except ValueError as e:
+        print(e)
 
 
-@plots_cmd.command("remove", short_help="Removes a directory of plots from config.yaml")
+@plots_cmd.command("remove", help="Removes a directory of plots from config.yaml")
 @click.option(
     "-d",
     "--final_dir",
@@ -202,13 +210,13 @@ def add_cmd(ctx: click.Context, final_dir: str):
     show_default=True,
 )
 @click.pass_context
-def remove_cmd(ctx: click.Context, final_dir: str):
+def remove_cmd(ctx: click.Context, final_dir: str) -> None:
     from chia.plotting.util import remove_plot_directory
 
     remove_plot_directory(ctx.obj["root_path"], final_dir)
 
 
-@plots_cmd.command("show", short_help="Shows the directory of current plots")
+@plots_cmd.command("show", help="Shows the directory of current plots")
 @click.pass_context
-def show_cmd(ctx: click.Context):
+def show_cmd(ctx: click.Context) -> None:
     show_plots(ctx.obj["root_path"])

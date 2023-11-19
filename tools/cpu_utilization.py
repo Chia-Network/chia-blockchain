@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from dataclasses import dataclass
 from subprocess import check_call
@@ -36,7 +38,6 @@ def main(pid: int, output: str, threads: bool) -> None:
     try:
         step = 0
         while process.is_running():
-
             timestamps.append(time.perf_counter())
             ps = process.cpu_times()
             stats[pid][step] = Counters(ps.user, ps.system)

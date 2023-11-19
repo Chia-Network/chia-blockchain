@@ -1,0 +1,69 @@
+name: "Install chia-blockchain"
+
+description: "Run the platform appropriate installer script."
+
+inputs:
+  python-version:
+    description: "Value to be set for INSTALL_PYTHON_VERSION."
+    required: false
+    default: ""
+  development:
+    description: "Install development dependencies."
+    required: false
+    default: ""
+  editable:
+    description: "Install as editable source."
+    required: false
+    default: "true"
+  legacy_keyring:
+    description: "Install legacy keyring dependencies."
+    required: false
+    default: ""
+  automated:
+    description: "Automated install, no questions."
+    required: false
+    default: "true"
+  command-prefix:
+    description: "Text to place before the command such as `arch -arm64` for non-native macOS runners."
+    required: false
+    default: ""
+  do-system-installs:
+    description: "Skip python package installation and just do pip install."
+    required: false
+    default: "false"
+  constraints-file-artifact-name:
+    description: "Name of the artifact to upload the constraints file to."
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run install script (macOS, Ubuntu)
+      if: runner.os == 'macos' || runner.os == 'linux'
+      shell: bash
+      env:
+        INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
+      run: |
+        ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }} ${{ (fromJSON(inputs.do-system-installs) != true) && '-s' || '' }}
+
+    - name: Run install script (Windows)
+      if: runner.os == 'windows'
+      shell: pwsh
+      env:
+        INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
+      run: |
+        ${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }}
+
+    - name: Create constraints file
+      if: inputs.constraints-file-artifact-name != ''
+      shell: bash
+      run: |
+        ${{ runner.os == 'windows' && 'venv/scripts/pip' || 'venv/bin/pip' }} freeze --exclude-editable > venv/constraints.txt
+
+    - name: Upload constraints file
+      if: inputs.constraints-file-artifact-name != ''
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.constraints-file-artifact-name }}
+        path: venv/constraints.txt

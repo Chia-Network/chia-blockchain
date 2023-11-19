@@ -1,10 +1,17 @@
-import logging
+from __future__ import annotations
 
-from blspy import PrivateKey
-from chia.cmds.init_funcs import check_keys
-from chia.util.keychain import Keychain
+import logging
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional, Type
+
+from chia_rs import PrivateKey
+
+from chia.cmds.init_funcs import check_keys
+from chia.util.errors import KeychainException, KeychainFingerprintNotFound
+from chia.util.ints import uint32
+from chia.util.keychain import Keychain, KeyData
+from chia.util.streamable import Streamable, streamable
 
 # Commands that are handled by the KeychainServer
 keychain_commands = [
@@ -15,6 +22,12 @@ keychain_commands = [
     "get_all_private_keys",
     "get_first_private_key",
     "get_key_for_fingerprint",
+    "get_key",
+    "get_keys",
+    "get_public_key",
+    "get_public_keys",
+    "set_label",
+    "delete_label",
 ]
 
 log = logging.getLogger(__name__)
@@ -22,26 +35,128 @@ log = logging.getLogger(__name__)
 KEYCHAIN_ERR_KEYERROR = "key error"
 KEYCHAIN_ERR_LOCKED = "keyring is locked"
 KEYCHAIN_ERR_NO_KEYS = "no keys present"
+KEYCHAIN_ERR_KEY_NOT_FOUND = "key not found"
 KEYCHAIN_ERR_MALFORMED_REQUEST = "malformed request"
 
 
+@streamable
+@dataclass(frozen=True)
+class EmptyResponse(Streamable):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
+class GetKeyResponse(Streamable):
+    key: KeyData
+
+
+@streamable
+@dataclass(frozen=True)
+class GetKeyRequest(Streamable):
+    fingerprint: uint32
+    include_secrets: bool = False
+
+    def run(self, keychain: Keychain) -> GetKeyResponse:
+        return GetKeyResponse(key=keychain.get_key(self.fingerprint, self.include_secrets))
+
+
+@streamable
+@dataclass(frozen=True)
+class GetKeysResponse(Streamable):
+    keys: List[KeyData]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetKeysRequest(Streamable):
+    include_secrets: bool = False
+
+    def run(self, keychain: Keychain) -> GetKeysResponse:
+        return GetKeysResponse(keys=keychain.get_keys(self.include_secrets))
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeyRequest(Streamable):
+    fingerprint: uint32
+
+    def run(self, keychain: Keychain) -> GetPublicKeyResponse:
+        return GetPublicKeyResponse(key=keychain.get_key(self.fingerprint, include_secrets=False))
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeyResponse(Streamable):
+    key: KeyData
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        # Ensure that only approved keys are returned
+        approved_keys = ["fingerprint", "public_key", "label"]
+        key_dict = self.key.to_json_dict()
+        return {"key": {key: key_dict[key] for key in approved_keys if key in key_dict}}
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeysRequest(Streamable):
+    def run(self, keychain: Keychain) -> GetPublicKeysResponse:
+        return GetPublicKeysResponse(keys=keychain.get_keys(include_secrets=False))
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeysResponse(Streamable):
+    keys: List[KeyData]
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        # Ensure that only approved keys are returned
+        approved_keys = ["fingerprint", "public_key", "label"]
+        return {
+            "keys": [
+                {key: key_data_dict[key] for key in approved_keys if key in key_data_dict}
+                for key_data_dict in (key_data.to_json_dict() for key_data in self.keys)
+            ]
+        }
+
+
+@streamable
+@dataclass(frozen=True)
+class SetLabelRequest(Streamable):
+    fingerprint: uint32
+    label: str
+
+    def run(self, keychain: Keychain) -> EmptyResponse:
+        keychain.set_label(int(self.fingerprint), self.label)
+        return EmptyResponse()
+
+
+@streamable
+@dataclass(frozen=True)
+class DeleteLabelRequest(Streamable):
+    fingerprint: uint32
+
+    def run(self, keychain: Keychain) -> EmptyResponse:
+        keychain.delete_label(self.fingerprint)
+        return EmptyResponse()
+
+
+@dataclass
 class KeychainServer:
     """
     Implements a remote keychain service for clients to perform key operations on
     """
 
-    def __init__(self):
-        self._default_keychain = Keychain()
-        self._alt_keychains = {}
+    _default_keychain: Keychain = field(default_factory=Keychain)
+    _alt_keychains: Dict[str, Keychain] = field(default_factory=dict)
 
-    def get_keychain_for_request(self, request: Dict[str, Any]):
+    def get_keychain_for_request(self, request: Dict[str, Any]) -> Keychain:
         """
         Keychain instances can have user and service strings associated with them.
         The keychain backends ultimately point to the same data stores, but the user
         and service strings are used to partition those data stores. We attempt to
         maintain a mapping of user/service pairs to their corresponding Keychain.
         """
-        keychain = None
         user = request.get("kc_user", self._default_keychain.user)
         service = request.get("kc_service", self._default_keychain.service)
         if user == self._default_keychain.user and service == self._default_keychain.service:
@@ -55,22 +170,34 @@ class KeychainServer:
                 self._alt_keychains[key] = keychain
         return keychain
 
-    async def handle_command(self, command, data) -> Dict[str, Any]:
+    async def handle_command(self, command: str, data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             if command == "add_private_key":
-                return await self.add_private_key(cast(Dict[str, Any], data))
+                return await self.add_private_key(data)
             elif command == "check_keys":
-                return await self.check_keys(cast(Dict[str, Any], data))
+                return await self.check_keys(data)
             elif command == "delete_all_keys":
-                return await self.delete_all_keys(cast(Dict[str, Any], data))
+                return await self.delete_all_keys(data)
             elif command == "delete_key_by_fingerprint":
-                return await self.delete_key_by_fingerprint(cast(Dict[str, Any], data))
+                return await self.delete_key_by_fingerprint(data)
             elif command == "get_all_private_keys":
-                return await self.get_all_private_keys(cast(Dict[str, Any], data))
+                return await self.get_all_private_keys(data)
             elif command == "get_first_private_key":
-                return await self.get_first_private_key(cast(Dict[str, Any], data))
+                return await self.get_first_private_key(data)
             elif command == "get_key_for_fingerprint":
-                return await self.get_key_for_fingerprint(cast(Dict[str, Any], data))
+                return await self.get_key_for_fingerprint(data)
+            elif command == "get_key":
+                return await self.run_request(data, GetKeyRequest)
+            elif command == "get_keys":
+                return await self.run_request(data, GetKeysRequest)
+            elif command == "get_public_key":
+                return await self.run_request(data, GetPublicKeyRequest)
+            elif command == "get_public_keys":
+                return await self.run_request(data, GetPublicKeysRequest)
+            elif command == "set_label":
+                return await self.run_request(data, SetLabelRequest)
+            elif command == "delete_label":
+                return await self.run_request(data, DeleteLabelRequest)
             return {}
         except Exception as e:
             log.exception(e)
@@ -81,16 +208,17 @@ class KeychainServer:
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
         mnemonic = request.get("mnemonic", None)
-        passphrase = request.get("passphrase", None)
-        if mnemonic is None or passphrase is None:
+        label = request.get("label", None)
+
+        if mnemonic is None:
             return {
                 "success": False,
                 "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
-                "error_details": {"message": "missing mnemonic and/or passphrase"},
+                "error_details": {"message": "missing mnemonic"},
             }
 
         try:
-            self.get_keychain_for_request(request).add_private_key(mnemonic, passphrase)
+            sk = self.get_keychain_for_request(request).add_private_key(mnemonic, label)
         except KeyError as e:
             return {
                 "success": False,
@@ -104,7 +232,7 @@ class KeychainServer:
                 "error": str(e),
             }
 
-        return {"success": True}
+        return {"success": True, "fingerprint": sk.get_g1().get_fingerprint()}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
@@ -145,6 +273,35 @@ class KeychainServer:
         self.get_keychain_for_request(request).delete_key_by_fingerprint(fingerprint)
 
         return {"success": True}
+
+    async def run_request(self, request_dict: Dict[str, Any], request_type: Type[Any]) -> Dict[str, Any]:
+        keychain = self.get_keychain_for_request(request_dict)
+        if keychain.is_keyring_locked():
+            return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
+
+        try:
+            request = request_type.from_json_dict(request_dict)
+        except Exception as e:
+            return {
+                "success": False,
+                "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
+                "error_details": {"message": str(e)},
+            }
+
+        try:
+            return {"success": True, **request.run(keychain).to_json_dict()}
+        except KeychainFingerprintNotFound as e:
+            return {
+                "success": False,
+                "error": KEYCHAIN_ERR_KEY_NOT_FOUND,
+                "error_details": {"fingerprint": e.fingerprint},
+            }
+        except KeychainException as e:
+            return {
+                "success": False,
+                "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
+                "error_details": {"message": str(e)},
+            }
 
     async def get_all_private_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         all_keys: List[Dict[str, Any]] = []
@@ -191,7 +348,7 @@ class KeychainServer:
         else:
             private_key, entropy = private_keys[0]
 
-        if not private_key or not entropy:
-            return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
-        else:
+        if private_key is not None and entropy is not None:
             return {"success": True, "pk": bytes(private_key.get_g1()).hex(), "entropy": entropy.hex()}
+        else:
+            return {"success": False, "error": KEYCHAIN_ERR_KEY_NOT_FOUND}

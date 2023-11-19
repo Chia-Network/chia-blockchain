@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import logging
 import random
 from dataclasses import replace
 from typing import Callable, Dict, List, Optional, Tuple
 
-import blspy
-from blspy import G1Element, G2Element
+import chia_rs
+from chia_rs import G1Element, G2Element, compute_merkle_set_root
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -28,7 +30,6 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.merkle_set import MerkleSet
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.recursive_replace import recursive_replace
 
@@ -61,7 +62,7 @@ def create_foliage(
         constants: consensus constants being used for this chain
         reward_block_unfinished: the reward block to look at, potentially at the signage point
         block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transctions (or infinity element)
+        aggregate_sig: aggregate of all transactions (or infinity element)
         prev_block: the previous block at the signage point
         blocks: dict from header hash to blocks, of all ancestor blocks
         total_iters_sp: total iters at the signage point
@@ -128,10 +129,7 @@ def create_foliage(
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list
             result: NPCResult = get_name_puzzle_conditions(
-                block_generator,
-                constants.MAX_BLOCK_COST_CLVM,
-                cost_per_byte=constants.COST_PER_BYTE,
-                mempool_mode=True,
+                block_generator, constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=height, constants=constants
             )
             cost = result.cost
 
@@ -199,12 +197,7 @@ def create_foliage(
         bip158: PyBIP158 = PyBIP158(tx_for_bip158)
         encoded = bytes(bip158.GetEncoded())
 
-        removal_merkle_set = MerkleSet()
-        addition_merkle_set = MerkleSet()
-
-        # Create removal Merkle set
-        for coin_name in tx_removals:
-            removal_merkle_set.add_already_hashed(coin_name)
+        additions_merkle_items: List[bytes32] = []
 
         # Create addition Merkle set
         puzzlehash_coin_map: Dict[bytes32, List[bytes32]] = {}
@@ -217,11 +210,11 @@ def create_foliage(
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
         for puzzle, coin_ids in puzzlehash_coin_map.items():
-            addition_merkle_set.add_already_hashed(puzzle)
-            addition_merkle_set.add_already_hashed(hash_coin_ids(coin_ids))
+            additions_merkle_items.append(puzzle)
+            additions_merkle_items.append(hash_coin_ids(coin_ids))
 
-        additions_root = addition_merkle_set.get_root()
-        removals_root = removal_merkle_set.get_root()
+        additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
+        removals_root = bytes32(compute_merkle_set_root(tx_removals))
 
         generator_hash = bytes32([0] * 32)
         if block_generator is not None:
@@ -304,7 +297,7 @@ def create_unfinished_block(
     additions: Optional[List[Coin]] = None,
     removals: Optional[List[Coin]] = None,
     prev_block: Optional[BlockRecord] = None,
-    finished_sub_slots_input: List[EndOfSubSlotBundle] = None,
+    finished_sub_slots_input: Optional[List[EndOfSubSlotBundle]] = None,
 ) -> UnfinishedBlock:
     """
     Creates a new unfinished block using all the information available at the signage point. This will have to be
@@ -327,7 +320,7 @@ def create_unfinished_block(
         timestamp: timestamp to add to the foliage block, if created
         seed: seed to randomize chain
         block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transctions (or infinity element)
+        aggregate_sig: aggregate of all transactions (or infinity element)
         additions: Coins added in spend_bundle
         removals: Coins removed in spend_bundle
         prev_block: previous block (already in chain) from the signage point
@@ -374,7 +367,7 @@ def create_unfinished_block(
     rc_sp_signature: Optional[G2Element] = get_plot_signature(rc_sp_hash, proof_of_space.plot_public_key)
     assert cc_sp_signature is not None
     assert rc_sp_signature is not None
-    assert blspy.AugSchemeMPL.verify(proof_of_space.plot_public_key, cc_sp_hash, cc_sp_signature)
+    assert chia_rs.AugSchemeMPL.verify(proof_of_space.plot_public_key, cc_sp_hash, cc_sp_signature)
 
     total_iters = uint128(sub_slot_start_total_iters + ip_iters + (sub_slot_iters if overflow else 0))
 
@@ -392,7 +385,7 @@ def create_unfinished_block(
         additions = []
     if removals is None:
         removals = []
-    (foliage, foliage_transaction_block, transactions_info,) = create_foliage(
+    (foliage, foliage_transaction_block, transactions_info) = create_foliage(
         constants,
         rc_block,
         block_generator,
@@ -519,8 +512,9 @@ def unfinished_block_to_full_block(
         new_generator,
         new_generator_ref_list,
     )
-    return recursive_replace(
+    ret = recursive_replace(
         ret,
         "foliage.reward_block_hash",
         ret.reward_chain_block.get_hash(),
     )
+    return ret

@@ -18,13 +18,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# Based on this specification from Pieter Wuille:
-# https://github.com/sipa/bips/blob/bip-bech32m/bip-bech32m.mediawiki
+from __future__ import annotations
 
-"""Reference implementation for Bech32m and segwit addresses."""
-from typing import List, Iterable, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+
+# Based on this specification from Pieter Wuille:
+# https://github.com/sipa/bips/blob/bip-bech32m/bip-bech32m.mediawiki
+"""Reference implementation for Bech32m and segwit addresses."""
+
 
 CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 
@@ -67,6 +70,7 @@ def bech32_encode(hrp: str, data: List[int]) -> str:
 
 def bech32_decode(bech: str, max_length: int = 90) -> Tuple[Optional[str], Optional[List[int]]]:
     """Validate a Bech32 string, and determine HRP and data."""
+    bech = bech.strip()
     if (any(ord(x) < 33 or ord(x) > 126 for x in bech)) or (bech.lower() != bech and bech.upper() != bech):
         return (None, None)
     bech = bech.lower()

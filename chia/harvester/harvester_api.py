@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import asyncio
+import logging
 import time
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.harvester.harvester import Harvester
@@ -12,26 +15,35 @@ from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
 from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
+from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.proof_of_space import (
+    ProofOfSpace,
+    calculate_pos_challenge,
+    generate_plot_public_key,
+    passes_plot_filter,
+)
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.api_decorators import api_request, peer_required
+from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
 class HarvesterAPI:
+    log: logging.Logger
     harvester: Harvester
 
     def __init__(self, harvester: Harvester):
+        self.log = logging.getLogger(__name__)
         self.harvester = harvester
 
-    @peer_required
-    @api_request
+    def ready(self) -> bool:
+        return True
+
+    @api_request(peer_required=True)
     async def harvester_handshake(
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
-    ):
+    ) -> None:
         """
         Handshake between the harvester and farmer. The harvester receives the pool public keys,
         as well as the farmer pks, which must be put into the plots, before the plotting process begins.
@@ -44,11 +56,10 @@ class HarvesterAPI:
         await self.harvester.plot_sync_sender.start()
         self.harvester.plot_manager.start_refreshing()
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def new_signage_point_harvester(
         self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
-    ):
+    ) -> None:
         """
         The harvester receives a new signage point from the farmer, this happens at the start of each slot.
         The harvester does a few things:
@@ -63,7 +74,13 @@ class HarvesterAPI:
         """
         if not self.harvester.plot_manager.public_keys_available():
             # This means that we have not received the handshake yet
+            self.harvester.log.debug("new_signage_point_harvester received with no keys available")
             return None
+
+        self.harvester.log.debug(
+            f"new_signage_point_harvester lookup: challenge_hash: {new_challenge.challenge_hash}, "
+            f"sp_hash: {new_challenge.sp_hash}, signage_point_index: {new_challenge.signage_point_index}"
+        )
 
         start = time.time()
         assert len(new_challenge.challenge_hash) == 32
@@ -75,13 +92,29 @@ class HarvesterAPI:
             # so it should be run in a thread pool.
             try:
                 plot_id = plot_info.prover.get_id()
-                sp_challenge_hash = ProofOfSpace.calculate_pos_challenge(
+                sp_challenge_hash = calculate_pos_challenge(
                     plot_id,
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                 )
                 try:
                     quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
+                except RuntimeError as e:
+                    if str(e) == "Timeout waiting for context queue.":
+                        self.harvester.log.warning(
+                            f"No decompressor available. Cancelling qualities retrieving for {filename}"
+                        )
+                        self.harvester.log.warning(
+                            f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                            f"plot_info: {plot_info}"
+                        )
+                    else:
+                        self.harvester.log.error(f"Exception fetching qualities for {filename}. {e}")
+                        self.harvester.log.error(
+                            f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                            f"plot_info: {plot_info}"
+                        )
+                    return []
                 except Exception as e:
                     self.harvester.log.error(f"Error using prover object {e}")
                     self.harvester.log.error(
@@ -120,6 +153,30 @@ class HarvesterAPI:
                                 proof_xs = plot_info.prover.get_full_proof(
                                     sp_challenge_hash, index, self.harvester.parallel_read
                                 )
+                            except RuntimeError as e:
+                                if str(e) == "GRResult_NoProof received":
+                                    self.harvester.log.info(
+                                        f"Proof dropped due to line point compression for {filename}"
+                                    )
+                                    self.harvester.log.info(
+                                        f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                                        f"plot_info: {plot_info}"
+                                    )
+                                elif str(e) == "Timeout waiting for context queue.":
+                                    self.harvester.log.warning(
+                                        f"No decompressor available. Cancelling full proof retrieving for {filename}"
+                                    )
+                                    self.harvester.log.warning(
+                                        f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                                        f"plot_info: {plot_info}"
+                                    )
+                                else:
+                                    self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
+                                    self.harvester.log.error(
+                                        f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                                        f"plot_info: {plot_info}"
+                                    )
+                                continue
                             except Exception as e:
                                 self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
                                 self.harvester.log.error(
@@ -151,7 +208,7 @@ class HarvesterAPI:
         ) -> Tuple[Path, List[harvester_protocol.NewProofOfSpace]]:
             # Executes a DiskProverLookup in a thread pool, and returns responses
             all_responses: List[harvester_protocol.NewProofOfSpace] = []
-            if self.harvester._is_shutdown:
+            if self.harvester._shut_down:
                 return filename, []
             proofs_of_space_and_q: List[Tuple[bytes32, ProofOfSpace]] = await loop.run_in_executor(
                 self.harvester.executor, blocking_lookup, filename, plot_info
@@ -172,39 +229,42 @@ class HarvesterAPI:
         passed = 0
         total = 0
         with self.harvester.plot_manager:
+            self.harvester.log.debug("new_signage_point_harvester lock acquired")
             for try_plot_filename, try_plot_info in self.harvester.plot_manager.plots.items():
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
                 total += 1
-                if ProofOfSpace.passes_plot_filter(
-                    self.harvester.constants,
+                if passes_plot_filter(
+                    new_challenge.filter_prefix_bits,
                     try_plot_info.prover.get_id(),
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                 ):
                     passed += 1
                     awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
+            self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
+        time_taken = time.time() - start
         total_proofs_found = 0
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
             filename, sublist = await filename_sublist_awaitable
             time_taken = time.time() - start
-            if time_taken > 5:
+            if time_taken > 8:
                 self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds "
-                    f"to minimize risk of losing rewards."
+                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
+                    f" to minimize risk of losing rewards."
                 )
             else:
                 pass
-                # If you want additional logs, uncomment the following line
-                # self.harvester.log.debug(f"Looking up qualities on {filename} took: {time_taken}")
+                # self.harvester.log.info(f"Looking up qualities on {filename} took: {time_taken}")
             for response in sublist:
                 total_proofs_found += 1
                 msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
                 await peer.send_message(msg)
 
         now = uint64(int(time.time()))
+
         farming_info = FarmingInfo(
             new_challenge.challenge_hash,
             new_challenge.sp_hash,
@@ -212,13 +272,14 @@ class HarvesterAPI:
             uint32(passed),
             uint32(total_proofs_found),
             uint32(total),
+            uint64(time_taken * 1_000_000),  # microseconds
         )
         pass_msg = make_msg(ProtocolMessageTypes.farming_info, farming_info)
         await peer.send_message(pass_msg)
-        found_time = time.time() - start
+
         self.harvester.log.info(
             f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
-            f" Found {total_proofs_found} proofs. Time: {found_time:.5f} s. "
+            f" Found {total_proofs_found} proofs. Time: {time_taken:.5f} s. "
             f"Total {self.harvester.plot_manager.plot_count()} plots"
         )
         self.harvester.state_changed(
@@ -228,12 +289,12 @@ class HarvesterAPI:
                 "total_plots": self.harvester.plot_manager.plot_count(),
                 "found_proofs": total_proofs_found,
                 "eligible_plots": len(awaitables),
-                "time": found_time,
+                "time": time_taken,
             },
         )
 
-    @api_request
-    async def request_signatures(self, request: harvester_protocol.RequestSignatures):
+    @api_request(reply_types=[ProtocolMessageTypes.respond_signatures])
+    async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
         A signature is created on the header hash using the harvester private key. This can also
@@ -261,7 +322,7 @@ class HarvesterAPI:
             assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
             include_taproot = True
 
-        agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
+        agg_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
@@ -281,8 +342,8 @@ class HarvesterAPI:
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
-    @api_request
-    async def request_plots(self, _: harvester_protocol.RequestPlots):
+    @api_request()
+    async def request_plots(self, _: harvester_protocol.RequestPlots) -> Message:
         plots_response = []
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
         for plot in plots:
@@ -296,12 +357,13 @@ class HarvesterAPI:
                     plot["plot_public_key"],
                     plot["file_size"],
                     plot["time_modified"],
+                    plot["compression_level"],
                 )
             )
 
         response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)
         return make_msg(ProtocolMessageTypes.respond_plots, response)
 
-    @api_request
-    async def plot_sync_response(self, response: PlotSyncResponse):
+    @api_request()
+    async def plot_sync_response(self, response: PlotSyncResponse) -> None:
         self.harvester.plot_sync_sender.set_response(response)

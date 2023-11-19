@@ -1,29 +1,33 @@
-from pathlib import Path
-from secrets import token_bytes
-from typing import Optional
+from __future__ import annotations
 
-import aiosqlite
+import random
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
 import pytest
 from clvm_tools import binutils
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint64
-
+from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.util.ints import uint32, uint64
 from chia.wallet.wallet_pool_store import WalletPoolStore
+from tests.util.db_connection import DBConnection
 
 
-def make_child_solution(coin_spend: CoinSpend, new_coin: Optional[Coin] = None) -> CoinSpend:
-    new_puzzle_hash: bytes32 = bytes32(token_bytes(32))
+def make_child_solution(
+    coin_spend: Optional[CoinSpend], new_coin: Optional[Coin], seeded_random: random.Random
+) -> CoinSpend:
+    new_puzzle_hash: bytes32 = bytes32.random(seeded_random)
     solution = "()"
     puzzle = f"(q . ((51 0x{new_puzzle_hash.hex()} 1)))"
     puzzle_prog = Program.to(binutils.assemble(puzzle))
     solution_prog = Program.to(binutils.assemble(solution))
     if new_coin is None:
-        new_coin = coin_spend.additions()[0]
+        assert coin_spend is not None
+        new_coin = compute_additions(coin_spend)[0]
     sol: CoinSpend = CoinSpend(
         new_coin,
         SerializedProgram.from_program(puzzle_prog),
@@ -32,79 +36,97 @@ def make_child_solution(coin_spend: CoinSpend, new_coin: Optional[Coin] = None) 
     return sol
 
 
+async def assert_db_spends(store: WalletPoolStore, wallet_id: int, spends: List[CoinSpend]) -> None:
+    db_spends = await store.get_spends_for_wallet(wallet_id)
+    assert len(db_spends) == len(spends)
+    for spend, (_, db_spend) in zip(spends, db_spends):
+        assert spend == db_spend
+
+
+@dataclass
+class DummySpends:
+    seeded_random: random.Random
+    spends_per_wallet: Dict[int, List[CoinSpend]] = field(default_factory=dict)
+
+    def generate(self, wallet_id: int, count: int) -> None:
+        current = self.spends_per_wallet.setdefault(wallet_id, [])
+        for _ in range(count):
+            coin = None
+            last_spend = None if len(current) == 0 else current[-1]
+            if last_spend is None:
+                coin = Coin(bytes32.random(self.seeded_random), bytes32.random(self.seeded_random), uint64(12312))
+            current.append(make_child_solution(coin_spend=last_spend, new_coin=coin, seeded_random=self.seeded_random))
+
+
 class TestWalletPoolStore:
-    @pytest.mark.asyncio
-    async def test_store(self):
-        db_filename = Path("wallet_pool_store_test.db")
+    @pytest.mark.anyio
+    async def test_store(self, seeded_random: random.Random):
+        async with DBConnection(1) as db_wrapper:
+            store = await WalletPoolStore.create(db_wrapper)
 
-        if db_filename.exists():
-            db_filename.unlink()
+            try:
+                async with db_wrapper.writer():
+                    coin_0 = Coin(bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(12312))
+                    coin_0_alt = Coin(bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(12312))
+                    solution_0: CoinSpend = make_child_solution(
+                        coin_spend=None, new_coin=coin_0, seeded_random=seeded_random
+                    )
+                    solution_0_alt: CoinSpend = make_child_solution(
+                        coin_spend=None, new_coin=coin_0_alt, seeded_random=seeded_random
+                    )
+                    solution_1: CoinSpend = make_child_solution(
+                        coin_spend=solution_0, new_coin=None, seeded_random=seeded_random
+                    )
 
-        db_connection = await aiosqlite.connect(db_filename)
-        db_wrapper = DBWrapper(db_connection)
-        store = await WalletPoolStore.create(db_wrapper)
-        try:
-            await db_wrapper.begin_transaction()
-            coin_0 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
-            coin_0_alt = Coin(token_bytes(32), token_bytes(32), uint64(12312))
-            solution_0: CoinSpend = make_child_solution(None, coin_0)
-            solution_0_alt: CoinSpend = make_child_solution(None, coin_0_alt)
-            solution_1: CoinSpend = make_child_solution(solution_0)
+                    assert await store.get_spends_for_wallet(0) == []
+                    assert await store.get_spends_for_wallet(1) == []
 
-            assert store.get_spends_for_wallet(0) == []
-            assert store.get_spends_for_wallet(1) == []
+                    await store.add_spend(1, solution_1, 100)
+                    assert await store.get_spends_for_wallet(1) == [(100, solution_1)]
 
-            await store.add_spend(1, solution_1, 100, True)
-            assert store.get_spends_for_wallet(1) == [(100, solution_1)]
+                    # Idempotent
+                    await store.add_spend(1, solution_1, 100)
+                    assert await store.get_spends_for_wallet(1) == [(100, solution_1)]
 
-            # Idempotent
-            await store.add_spend(1, solution_1, 100, True)
-            assert store.get_spends_for_wallet(1) == [(100, solution_1)]
+                    with pytest.raises(ValueError):
+                        await store.add_spend(1, solution_1, 101)
+
+                    # Rebuild cache, no longer present
+                    raise RuntimeError("abandon transaction")
+            except Exception:
+                pass
+
+            assert await store.get_spends_for_wallet(1) == []
+
+            await store.add_spend(1, solution_1, 100)
+            assert await store.get_spends_for_wallet(1) == [(100, solution_1)]
+
+            solution_1_alt: CoinSpend = make_child_solution(solution_0_alt, new_coin=None, seeded_random=seeded_random)
 
             with pytest.raises(ValueError):
-                await store.add_spend(1, solution_1, 101, True)
+                await store.add_spend(1, solution_1_alt, 100)
 
-            # Rebuild cache, no longer present
-            await db_wrapper.rollback_transaction()
-            await store.rebuild_cache()
-            assert store.get_spends_for_wallet(1) == []
+            assert await store.get_spends_for_wallet(1) == [(100, solution_1)]
 
-            await store.rebuild_cache()
-            await store.add_spend(1, solution_1, 100, False)
-            assert store.get_spends_for_wallet(1) == [(100, solution_1)]
-
-            solution_1_alt: CoinSpend = make_child_solution(solution_0_alt)
-
-            with pytest.raises(ValueError):
-                await store.add_spend(1, solution_1_alt, 100, False)
-
-            assert store.get_spends_for_wallet(1) == [(100, solution_1)]
-
-            solution_2: CoinSpend = make_child_solution(solution_1)
-            await store.add_spend(1, solution_2, 100, False)
-            await store.rebuild_cache()
-            solution_3: CoinSpend = make_child_solution(solution_2)
+            solution_2: CoinSpend = make_child_solution(solution_1, new_coin=None, seeded_random=seeded_random)
+            await store.add_spend(1, solution_2, 100)
+            solution_3: CoinSpend = make_child_solution(solution_2, new_coin=None, seeded_random=seeded_random)
             await store.add_spend(1, solution_3, 100)
-            solution_4: CoinSpend = make_child_solution(solution_3)
+            solution_4: CoinSpend = make_child_solution(solution_3, new_coin=None, seeded_random=seeded_random)
 
             with pytest.raises(ValueError):
                 await store.add_spend(1, solution_4, 99)
 
-            await store.rebuild_cache()
             await store.add_spend(1, solution_4, 101)
-            await store.rebuild_cache()
-            await store.rollback(101, 1, False)
-            await store.rebuild_cache()
-            assert store.get_spends_for_wallet(1) == [
+            await store.rollback(101, 1)
+            assert await store.get_spends_for_wallet(1) == [
                 (100, solution_1),
                 (100, solution_2),
                 (100, solution_3),
                 (101, solution_4),
             ]
-            await store.rebuild_cache()
-            await store.rollback(100, 1, False)
-            await store.rebuild_cache()
-            assert store.get_spends_for_wallet(1) == [
+            await store.rollback(100, 1)
+            assert await store.get_spends_for_wallet(1) == [
                 (100, solution_1),
                 (100, solution_2),
                 (100, solution_3),
@@ -113,11 +135,27 @@ class TestWalletPoolStore:
                 await store.add_spend(1, solution_1, 105)
 
             await store.add_spend(1, solution_4, 105)
-            solution_5: CoinSpend = make_child_solution(solution_4)
+            solution_5: CoinSpend = make_child_solution(solution_4, new_coin=None, seeded_random=seeded_random)
             await store.add_spend(1, solution_5, 105)
-            await store.rollback(99, 1, False)
-            assert store.get_spends_for_wallet(1) == []
+            await store.rollback(99, 1)
+            assert await store.get_spends_for_wallet(1) == []
 
-        finally:
-            await db_connection.close()
-            db_filename.unlink()
+
+@pytest.mark.anyio
+async def test_delete_wallet(seeded_random: random.Random) -> None:
+    dummy_spends = DummySpends(seeded_random=seeded_random)
+    for i in range(5):
+        dummy_spends.generate(i, i * 5)
+    async with DBConnection(1) as db_wrapper:
+        store = await WalletPoolStore.create(db_wrapper)
+        # Add the spends per wallet and verify them
+        for wallet_id, spends in dummy_spends.spends_per_wallet.items():
+            for i, spend in enumerate(spends):
+                await store.add_spend(wallet_id, spend, uint32(i + wallet_id))
+            await assert_db_spends(store, wallet_id, spends)
+        # Remove one wallet after the other and verify before and after each
+        for wallet_id, spends in dummy_spends.spends_per_wallet.items():
+            # Assert the existence again here to make sure the previous removals did not affect other wallet_ids
+            await assert_db_spends(store, wallet_id, spends)
+            await store.delete_wallet(wallet_id)
+            await assert_db_spends(store, wallet_id, [])

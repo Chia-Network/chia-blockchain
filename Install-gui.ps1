@@ -1,4 +1,5 @@
 $ErrorActionPreference = "Stop"
+$SUBMODULE_BRANCH = $args[0]
 
 if ($null -eq (Get-ChildItem env:VIRTUAL_ENV -ErrorAction SilentlyContinue))
 {
@@ -16,6 +17,14 @@ if ($null -eq (Get-Command node -ErrorAction SilentlyContinue))
 Write-Output "Running 'git submodule update --init --recursive'."
 Write-Output ""
 git submodule update --init --recursive
+if ( $SUBMODULE_BRANCH ) {
+  git fetch --all
+  git reset --hard $SUBMODULE_BRANCH
+  Write-Output ""
+  Write-Output "Building the GUI with branch $SUBMODULE_BRANCH"
+  Write-Output ""
+}
+
 
 Push-Location
 try {

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import Enum
 
 
@@ -8,3 +10,4 @@ class TradeStatus(Enum):
     CANCELLED = 3
     CONFIRMED = 4
     FAILED = 5
+    EXPIRED = 6

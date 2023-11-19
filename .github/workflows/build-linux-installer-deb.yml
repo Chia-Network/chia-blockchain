@@ -1,37 +1,72 @@
-name: Build Installer - Linux DEB AMD64
+name: 📦🚀 Build Installer - Linux DEB
 
 on:
   workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Tagged release testing scenario'
+        required: false
+        type: choice
+        default: ''
+        options:
+        - ''
+        - 9.9.9-b1
+        - 9.9.9-rc1
+        - 9.9.9
   push:
+    paths-ignore:
+    - '**.md'
     branches:
+      - 'long_lived/**'
       - main
       - 'release/**'
-    tags:
-        - '**'
+  release:
+    types: [published]
   pull_request:
+    paths-ignore:
+    - '**.md'
     branches:
       - '**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: write
 
 jobs:
   build:
-    name: Linux amd64 DEB Installer
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    name: Build ${{ matrix.os.arch }}
+    runs-on: ${{ matrix.os.runs-on }}
+    container: chianetwork/ubuntu-20.04-builder:latest
+    timeout-minutes: 120
+    outputs:
+      chia-installer-version: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
     strategy:
       fail-fast: false
-      max-parallel: 4
       matrix:
-        python-version: [3.8]
-        os: [ubuntu-18.04]
+        python-version: ["3.10"]
+        os:
+          - runs-on: ubuntu-latest
+            arch: amd64
+            madmax-suffix: "x86-64"
+            bladebit-suffix: "ubuntu-x86-64.tar.gz"
+          - runs-on: [Linux, ARM64]
+            arch: arm64
+            madmax-suffix: "arm64"
+            bladebit-suffix: "ubuntu-arm64.tar.gz"
 
     steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - name: Add safe git directory
+      uses: Chia-Network/actions/git-mark-workspace-safe@main
+
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         submodules: recursive
@@ -41,40 +76,23 @@ jobs:
     - name: Cleanup any leftovers that exist from previous runs
       run: bash build_scripts/clean-runner.sh || true
 
-    - uses: Chia-Network/actions/enforce-semver@main
-      if: startsWith(github.ref, 'refs/tags/')
-
-    - name: Setup Python environment
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Cache npm
-      uses: actions/cache@v3
+    - name: Set Env
+      uses: Chia-Network/actions/setjobenv@main
       env:
-        cache-name: cache-node-modules
-      with:
-        # npm cache files are stored in `~/.npm` on Linux/macOS
-        path: ~/.npm
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-build-${{ env.cache-name }}-
-          ${{ runner.os }}-build-
-          ${{ runner.os }}-
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Get pip cache dir
-      id: pip-cache
+    - name: Check tag type
+      shell: bash
       run: |
-        echo "::set-output name=dir::$(pip cache dir)"
-
-    - name: Cache pip
-      uses: actions/cache@v3
-      with:
-        # Note that new runners may break this https://github.com/actions/cache/issues/292
-        path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+        REG_B="^[0-9]+\.[0-9]+\.[0-9]+-b[0-9]+$"
+        REG_RC="^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"
+        if [[ "${{ github.event.release.tag_name }}" =~ $REG_B ]] || [[ "${{ inputs.release_type }}" =~ $REG_B ]]; then
+          echo "TAG_TYPE=beta"
+          echo "TAG_TYPE=beta" >> "$GITHUB_ENV"
+        elif [[ "${{ github.event.release.tag_name }}" =~ $REG_RC ]] || [[ "${{ inputs.release_type }}" =~ $REG_RC ]]; then
+          echo "TAG_TYPE=rc"
+          echo "TAG_TYPE=rc" >> "$GITHUB_ENV"
+        fi
 
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
@@ -83,165 +101,313 @@ jobs:
         python3 -m venv ../venv
         . ../venv/bin/activate
         pip3 install setuptools_scm
-        echo "::set-output name=CHIA_INSTALLER_VERSION::$(python3 ./build_scripts/installer-version.py)"
+        echo "CHIA_INSTALLER_VERSION=$(python3 ./build_scripts/installer-version.py)" >> "$GITHUB_OUTPUT"
         deactivate
 
-    - name: Test for secrets access
-      id: check_secrets
-      shell: bash
-      run: |
-        unset HAS_SECRET
-        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo ::set-output name=HAS_SECRET::${HAS_SECRET}
-      env:
-        SECRET: "${{ secrets.INSTALLER_UPLOAD_SECRET }}"
-
-      # Get the most recent release from chia-plotter-madmax
-    - uses: actions/github-script@v6
-      id: 'latest-madmax'
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        result-encoding: string
-        script: |
-          const release = await github.rest.repos.getLatestRelease({
-            owner: 'Chia-Network',
-            repo: 'chia-plotter-madmax',
-          });
-          return release.data.tag_name;
-
     - name: Get latest madmax plotter
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        mkdir "$GITHUB_WORKSPACE/madmax"
-        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot-${{ steps.latest-madmax.outputs.result }}-x86-64
-        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot_k34" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}-x86-64
-        chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
-        chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
+        LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
+        mkdir "$GITHUB_WORKSPACE"/madmax
+        gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot-*-${{ matrix.os.madmax-suffix }}' -O "$GITHUB_WORKSPACE"/madmax/chia_plot
+        gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot_k34-*-${{ matrix.os.madmax-suffix }}' -O "$GITHUB_WORKSPACE"/madmax/chia_plot_k34
+        chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot
+        chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot_k34
 
-      # Get the most recent release from bladebit
-    - uses: actions/github-script@v6
-      id: 'latest-bladebit'
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        result-encoding: string
-        script: |
-          const release = await github.rest.repos.getLatestRelease({
-            owner: 'Chia-Network',
-            repo: 'bladebit',
-          });
-          return release.data.tag_name;
+    - name: Fetch bladebit versions
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Fetch the latest version of each type
+        LATEST_RELEASE=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
+        LATEST_BETA=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-beta[0-9]+$"))) | first | .tag_name')
+        LATEST_RC=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-rc[0-9]+$"))) | first | .tag_name')
+
+        # Compare the versions and choose the newest that matches the requirements
+        if [[ "$TAG_TYPE" == "beta" || -z "$TAG_TYPE" ]]; then
+          # For beta or dev builds (indicated by the absence of a tag), use the latest version available
+          LATEST_VERSION=$(printf "%s\n%s\n%s\n" "$LATEST_RELEASE" "$LATEST_BETA" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
+        elif [[ "$TAG_TYPE" == "rc" ]]; then
+          # For RC builds, use the latest RC or full release if it's newer
+          LATEST_VERSION=$(printf "%s\n%s\n" "$LATEST_RELEASE" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
+        else
+          # For full releases, use the latest full release
+          LATEST_VERSION="$LATEST_RELEASE"
+        fi
+        echo "LATEST_VERSION=$LATEST_VERSION" >> "$GITHUB_ENV"
 
     - name: Get latest bladebit plotter
-      run: |
-        mkdir "$GITHUB_WORKSPACE/bladebit"
-        wget -O /tmp/bladebit.tar.gz https://github.com/Chia-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-ubuntu-x86-64.tar.gz
-        tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
-        chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
-
-    - name: Run install script
+      shell: bash
       env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        sh install.sh -d
+        # Download and extract the chosen version
+        mkdir "$GITHUB_WORKSPACE"/bladebit
+        cd "$GITHUB_WORKSPACE"/bladebit
+        gh release download -R Chia-Network/bladebit "$LATEST_VERSION" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
+        ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
+        ls bladebit* | xargs -I{} chmod +x {}
+        cd "$OLDPWD"
 
-    - name: Setup Node 16.x
-      uses: actions/setup-node@v3
+    - uses: ./.github/actions/install
       with:
-        node-version: '16.x'
+        python-version: ${{ matrix.python-version }}
+        development: true
+        constraints-file-artifact-name: constraints-file-${{ matrix.os.arch }}
 
-    - name: Add jq
+    - uses: chia-network/actions/activate-venv@main
+
+    - name: Prepare GUI cache
+      id: gui-ref
       run: |
-        sudo apt-get install -y jq
+        gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
+        echo "${gui_ref}"
+        echo "GUI_REF=${gui_ref}" >> "$GITHUB_OUTPUT"
+        echo "rm -rf ./chia-blockchain-gui"
+        rm -rf ./chia-blockchain-gui
+
+    - name: Cache GUI
+      uses: actions/cache@v3
+      id: cache-gui
+      with:
+        path: ./chia-blockchain-gui
+        key: ${{ runner.os }}-${{ matrix.os.arch }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+
+    - if: steps.cache-gui.outputs.cache-hit != 'true'
+      name: Build GUI
+      continue-on-error: false
+      run: |
+        cd ./build_scripts
+        bash build_linux_deb-1-gui.sh
 
     - name: Build .deb package
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         ldd --version
-        git -C ./chia-blockchain-gui status
-        . ./activate
         cd ./build_scripts
-        sh build_linux_deb.sh amd64
+        sh build_linux_deb-2-installer.sh ${{ matrix.os.arch }}
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: chia-installers-linux-deb-intel
+        name: chia-installers-linux-deb-${{ matrix.os.arch }}
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
-    - name: Configure AWS Credentials
-      if: steps.check_secrets.outputs.HAS_SECRET
-      uses: aws-actions/configure-aws-credentials@v1
+    - name: Remove working files to exclude from cache
+      run: |
+        rm -rf ./chia-blockchain-gui/packages/gui/daemon
+
+  publish:
+    name: Publish ${{ matrix.os.arch }}
+    runs-on: ${{ matrix.os.runs-on }}
+    needs:
+    - build
+    container: chianetwork/ubuntu-20.04-builder:latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10"]
+        os:
+          - runs-on: ubuntu-latest
+            arch: amd64
+            glue-name: "build-amd64-deb"
+          - runs-on: [Linux, ARM64]
+            arch: arm64
+            glue-name: "build-arm64-deb"
+
+    env:
+      CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}
+
+    steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - uses: chia-network/actions/create-venv@main
+      id: create-venv
+
+    - uses: chia-network/actions/activate-venv@main
       with:
-        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
-        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
+
+    - name: Download constraints file
+      uses: actions/download-artifact@v3
+      with:
+        name: constraints-file-${{ matrix.os.arch }}
+        path: venv
+
+    - name: Install utilities
+      run: |
+        pip install --constraint venv/constraints.txt py3createtorrent
+
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      with:
+        name: chia-installers-linux-deb-${{ matrix.os.arch }}
+        path: build_scripts/final_installer/
+
+    - name: Set Env
+      uses: Chia-Network/actions/setjobenv@main
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Test for secrets access
+      id: check_secrets
+      shell: bash
+      run: |
+        unset HAS_AWS_SECRET
+        unset HAS_GLUE_SECRET
+
+        if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
+        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> "$GITHUB_OUTPUT"
+
+        if [ -n "$GLUE_API_URL" ]; then HAS_GLUE_SECRET='true' ; fi
+        echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
+      env:
+        AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
+        GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
+
+    - name: Configure AWS credentials
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
         aws-region: us-west-2
 
     - name: Upload to s3
-      if: steps.check_secrets.outputs.HAS_SECRET
-      env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
       run: |
         GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
         CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
-        echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >>$GITHUB_ENV
-        ls ${{ github.workspace }}/build_scripts/final_installer/
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb s3://download.chia.net/dev/chia-blockchain_${CHIA_DEV_BUILD}_amd64.deb
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb s3://download.chia.net/dev/chia-blockchain-cli_${CHIA_DEV_BUILD}-1_amd64.deb
+        echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >> "$GITHUB_ENV"
+        aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb" "s3://download.chia.net/dev/chia-blockchain_${CHIA_DEV_BUILD}_${{ matrix.os.arch }}.deb"
+        aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb" "s3://download.chia.net/dev/chia-blockchain-cli_${CHIA_DEV_BUILD}-1_${{ matrix.os.arch }}.deb"
 
     - name: Create Checksums
-      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
-      env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      if: env.FULL_RELEASE == 'true' || github.ref == 'refs/heads/main'
       run: |
-        ls ${{ github.workspace }}/build_scripts/final_installer/
-        sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb > ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.sha256
-        sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb > ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb.sha256
-        ls ${{ github.workspace }}/build_scripts/final_installer/
-
-    - name: Install py3createtorrent
-      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
-      run: |
-        pip3 install py3createtorrent
+        ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
+        sha256sum "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb > "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.sha256
+        sha256sum "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb > "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb.sha256
+        ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
 
     - name: Create .deb torrent
+      if: env.FULL_RELEASE == 'true'
       env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
-      if: startsWith(github.ref, 'refs/tags/')
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb -o ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.torrent --webseed https://download.chia.net/install/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb
-        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb -o ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb.torrent --webseed https://download.chia.net/install/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb
-        ls
+        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb -o "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.torrent --webseed https://download.chia.net/install/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb
+        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb -o "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb.torrent --webseed https://download.chia.net/install/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb
+        gh release upload $RELEASE_TAG "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.torrent
 
-    - name: Upload Beta Installer
-      if: steps.check_secrets.outputs.HAS_SECRET && github.ref == 'refs/heads/main'
-      env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+    - name: Upload Dev Installer
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
       run: |
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb s3://download.chia.net/beta/chia-blockchain_amd64_latest_beta.deb
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.sha256 s3://download.chia.net/beta/chia-blockchain_amd64_latest_beta.deb.sha256
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb s3://download.chia.net/beta/chia-blockchain-cli_amd64_latest_beta.deb
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb.sha256 s3://download.chia.net/beta/chia-blockchain-cli_amd64_latest_beta.deb.sha256
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb s3://download.chia.net/latest-dev/chia-blockchain_${{ matrix.os.arch }}_latest_dev.deb
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.sha256 s3://download.chia.net/latest-dev/chia-blockchain_${{ matrix.os.arch }}_latest_dev.deb.sha256
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb s3://download.chia.net/latest-dev/chia-blockchain-cli_${{ matrix.os.arch }}_latest_dev.deb
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb.sha256 s3://download.chia.net/latest-dev/chia-blockchain-cli_${{ matrix.os.arch }}_latest_dev.deb.sha256
 
     - name: Upload Release Files
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
+      run: |
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb s3://download.chia.net/install/
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.sha256 s3://download.chia.net/install/
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.torrent s3://download.chia.net/torrents/
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb s3://download.chia.net/install/
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb.sha256 s3://download.chia.net/install/
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb.torrent s3://download.chia.net/torrents/
+
+    - name: Upload release artifacts
+      if: env.RELEASE == 'true'
       env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
-      if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags/')
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb s3://download.chia.net/install/
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.sha256 s3://download.chia.net/install/
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.torrent s3://download.chia.net/torrents/
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb s3://download.chia.net/install/
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb.sha256 s3://download.chia.net/install/
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb.torrent s3://download.chia.net/torrents/
+        gh release upload \
+          $RELEASE_TAG \
+          build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb \
+          build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb
 
-    - name: Get tag name
-      if: startsWith(github.ref, 'refs/tags/')
-      id: tag-name
-      run: |
-        echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
-        echo "::set-output name=REPO_NAME::$(echo ${{ github.repository }} | cut -d'/' -f 2)"
+    - uses: Chia-Network/actions/github/jwt@main
+      if: steps.check_secrets.outputs.HAS_GLUE_SECRET
 
-    - name: Mark installer complete
-      if: startsWith(github.ref, 'refs/tags/')
+    - name: Mark pre-release installer complete
+      if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
       run: |
-        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-linux-deb
+        curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
+
+    - name: Mark release installer complete
+      if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
+      run: |
+        curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
+
+  test:
+    name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    needs:
+    - build
+    container: ${{ matrix.distribution.url }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+        - runs-on:
+            arm: [linux, arm64]
+            intel: [ubuntu-latest]
+        distribution:
+        - name: debian:bullseye
+          type: debian
+          # https://packages.debian.org/bullseye/python/python3 (3.9)
+          url: "docker://debian:bullseye"
+        - name: debian:bookworm
+          type: debian
+          # https://packages.debian.org/bookworm/python/python3 (3.11)
+          url: "docker://debian:bookworm"
+        - name: ubuntu:focal (20.04)
+          type: ubuntu
+          # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
+          url: "docker://ubuntu:focal"
+        - name: ubuntu:jammy (22.04)
+          type: ubuntu
+          # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
+          url: "docker://ubuntu:jammy"
+        mode:
+        - name: GUI
+          file: chia-blockchain_*.deb
+        - name: CLI
+          file: chia-blockchain-cli_*.deb
+        arch:
+        - name: ARM64
+          matrix: arm
+          artifact-name: arm64
+        - name: Intel
+          matrix: intel
+          artifact-name: amd64
+
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      id: download
+      with:
+        name: chia-installers-linux-deb-${{ matrix.arch.artifact-name }}
+        path: packages
+
+    - name: Update apt repos
+      run: |
+        apt-get update --yes
+
+    - name: Install package
+      run: |
+        ls -l "${{ steps.download.outputs.download-path }}"
+        apt-get install --yes "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
+
+    - name: Run chia version
+      run: |
+        chia version

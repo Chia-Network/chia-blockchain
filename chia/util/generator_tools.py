@@ -1,12 +1,15 @@
-from typing import Any, Iterator, List, Tuple, Optional
+from __future__ import annotations
+
+from typing import List, Optional, Tuple
+
 from chiabip158 import PyBIP158
 
+from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.consensus.cost_calculator import NPCResult
 from chia.util.ints import uint64
 
 
@@ -47,7 +50,7 @@ def additions_for_npc(npc_result: NPCResult) -> List[Coin]:
         return []
     for spend in npc_result.conds.spends:
         for puzzle_hash, amount, _ in spend.create_coin:
-            coin = Coin(spend.coin_id, puzzle_hash, uint64(amount))
+            coin = Coin(spend.coin_id, puzzle_hash, amount)
             additions.append(coin)
 
     return additions
@@ -65,19 +68,8 @@ def tx_removals_and_additions(results: Optional[SpendBundleConditions]) -> Tuple
     if results is None:
         return [], []
     for spend in results.spends:
-        removals.append(spend.coin_id)
+        removals.append(bytes32(spend.coin_id))
         for puzzle_hash, amount, _ in spend.create_coin:
-            additions.append(Coin(spend.coin_id, puzzle_hash, uint64(amount)))
+            additions.append(Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount)))
 
     return removals, additions
-
-
-def list_to_batches(list_to_split: List[Any], batch_size: int) -> Iterator[Tuple[int, List[Any]]]:
-    if batch_size <= 0:
-        raise ValueError("list_to_batches: batch_size must be greater than 0.")
-    total_size = len(list_to_split)
-    if total_size == 0:
-        return iter(())
-    for batch_start in range(0, total_size, batch_size):
-        batch_end = min(batch_start + batch_size, total_size)
-        yield total_size - batch_end, list_to_split[batch_start:batch_end]

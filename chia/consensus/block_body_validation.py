@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import collections
 import logging
+from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from chiabip158 import PyBIP158
@@ -11,10 +14,9 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
+from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
@@ -25,11 +27,58 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util import cached_bls
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
-from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
+
+#  peak->  o
+#  main    |
+#  chain   o  o <- peak_height  \ additions and removals
+#          |  |    peak_hash    | from these blocks are
+#          o  o                 / recorded
+#          \ /
+#           o <- fork_height
+#           |    this block is shared by the main chain
+#           o    and the fork
+#           :
+
+
+@dataclass
+class ForkInfo:
+    # defines the last block shared by the fork and the main chain. additions
+    # and removals are from the block following this height up to and including
+    # the peak_height
+    fork_height: int
+    # the ForkInfo object contain all additions and removals made by blocks
+    # starting at fork_height+1 up to and including peak_height.
+    # When validating the block at height 0, the peak_height is -1, that's why
+    # it needs to be signed
+    peak_height: int
+    # the header hash of the peak block of this fork
+    peak_hash: bytes32
+    # The additions include coinbase additions
+    # coin, creation-height, timestamp
+    additions_since_fork: Dict[bytes32, Tuple[Coin, uint32, uint64]] = field(default_factory=dict)
+    # coin-id
+    removals_since_fork: Set[bytes32] = field(default_factory=set)
+
+    def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock) -> None:
+        height = block.height
+        if npc_result is not None:
+            assert npc_result.conds is not None
+            assert block.foliage_transaction_block is not None
+            timestamp = block.foliage_transaction_block.timestamp
+            for spend in npc_result.conds.spends:
+                self.removals_since_fork.add(bytes32(spend.coin_id))
+                for puzzle_hash, amount, _ in spend.create_coin:
+                    coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
+                    self.additions_since_fork[coin.name()] = (coin, height, timestamp)
+        for coin in block.get_included_reward_coins():
+            assert block.foliage_transaction_block is not None
+            timestamp = block.foliage_transaction_block.timestamp
+            assert coin.name() not in self.additions_since_fork
+            self.additions_since_fork[coin.name()] = (coin, block.height, timestamp)
 
 
 async def validate_block_body(
@@ -41,10 +90,10 @@ async def validate_block_body(
     block: Union[FullBlock, UnfinishedBlock],
     height: uint32,
     npc_result: Optional[NPCResult],
-    fork_point_with_peak: Optional[uint32],
+    fork_info: ForkInfo,
     get_block_generator: Callable[[BlockInfo], Awaitable[Optional[BlockGenerator]]],
     *,
-    validate_signature=True,
+    validate_signature: bool = True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
     """
     This assumes the header block has been completely validated.
@@ -53,10 +102,14 @@ async def validate_block_body(
     only if validation succeeded, and there are transactions. In other cases it returns None. The NPC result is
     the result of running the generator with the previous generators refs. It is only present for transaction
     blocks which have spent coins.
+    fork_info specifies the fork context of this block. In case the block
+        extends the main chain, it can be empty, but if the block extends a fork
+        of the main chain, the fork info is mandatory in order to validate the block.
     """
     if isinstance(block, FullBlock):
         assert height == block.height
     prev_transaction_block_height: uint32 = uint32(0)
+    prev_transaction_block_timestamp: uint64 = uint64(0)
 
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must
     # be empty. If it is a block but not a transaction block, there is no body to validate. Check that all fields are
@@ -69,12 +122,16 @@ async def validate_block_body(
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA, None
 
-        prev_tb: BlockRecord = blocks.block_record(block.prev_header_hash)
+        prev_tb: Optional[BlockRecord] = await blocks.get_block_record_from_db(block.prev_header_hash)
+        assert prev_tb is not None
         while not prev_tb.is_transaction_block:
-            prev_tb = blocks.block_record(prev_tb.prev_hash)
+            prev_tb = await blocks.get_block_record_from_db(prev_tb.prev_hash)
+            assert prev_tb is not None
         assert prev_tb.timestamp is not None
         if len(block.transactions_generator_ref_list) > 0:
             return Err.NOT_BLOCK_BUT_HAS_DATA, None
+
+        assert fork_info.peak_height == height - 1
 
         return None, None  # This means the block is valid
 
@@ -99,8 +156,13 @@ async def validate_block_body(
     # If height == 0, expected_reward_coins will be left empty
     if height > 0:
         # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
-        prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
+        prev_transaction_block = await blocks.get_block_record_from_db(
+            block.foliage_transaction_block.prev_transaction_block_hash
+        )
+        assert prev_transaction_block is not None
         prev_transaction_block_height = prev_transaction_block.height
+        assert prev_transaction_block.timestamp
+        prev_transaction_block_timestamp = prev_transaction_block.timestamp
         assert prev_transaction_block.fees is not None
         pool_coin = create_pool_coin(
             prev_transaction_block_height,
@@ -120,7 +182,8 @@ async def validate_block_body(
 
         # For the second block in the chain, don't go back further
         if prev_transaction_block.height > 0:
-            curr_b = blocks.block_record(prev_transaction_block.prev_hash)
+            curr_b = await blocks.get_block_record_from_db(prev_transaction_block.prev_hash)
+            assert curr_b is not None
             while not curr_b.is_transaction_block:
                 expected_reward_coins.add(
                     create_pool_coin(
@@ -138,7 +201,8 @@ async def validate_block_body(
                         constants.GENESIS_CHALLENGE,
                     )
                 )
-                curr_b = blocks.block_record(curr_b.prev_hash)
+                curr_b = await blocks.get_block_record_from_db(curr_b.prev_hash)
+                assert curr_b is not None
 
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS, None
@@ -147,12 +211,16 @@ async def validate_block_body(
         return Err.INVALID_REWARD_COINS, None
 
     removals: List[bytes32] = []
-    coinbase_additions: List[Coin] = list(expected_reward_coins)
-    additions: List[Coin] = []
+
+    # we store coins paired with their names in order to avoid computing the
+    # coin name multiple times, we store it next to the coin while validating
+    # the block
+    coinbase_additions: List[Tuple[Coin, bytes32]] = [(c, c.name()) for c in expected_reward_coins]
+    additions: List[Tuple[Coin, bytes32]] = []
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
 
-    # In header validation we check that timestamp is not more that 5 minutes into the future
+    # In header validation we check that timestamp is not more than 5 minutes into the future
     # 6. No transactions before INITIAL_TRANSACTION_FREEZE timestamp
     # (this test has been removed)
 
@@ -178,7 +246,7 @@ async def validate_block_body(
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
 
         # The generator_refs_root must be the hash of the concatenation of the List[uint32]
-        generator_refs_hash = std_hash(b"".join([bytes(i) for i in block.transactions_generator_ref_list]))
+        generator_refs_hash = std_hash(b"".join([i.stream_to_bytes() for i in block.transactions_generator_ref_list]))
         if block.transactions_info.generator_refs_root != generator_refs_hash:
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
         if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
@@ -207,10 +275,11 @@ async def validate_block_body(
         assert npc_result.conds is not None
 
         for spend in npc_result.conds.spends:
-            removals.append(spend.coin_id)
-            removals_puzzle_dic[spend.coin_id] = spend.puzzle_hash
+            removals.append(bytes32(spend.coin_id))
+            removals_puzzle_dic[bytes32(spend.coin_id)] = bytes32(spend.puzzle_hash)
             for puzzle_hash, amount, _ in spend.create_coin:
-                additions.append(Coin(spend.coin_id, puzzle_hash, uint64(amount)))
+                c = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
+                additions.append((c, c.name()))
     else:
         assert npc_result is None
 
@@ -222,8 +291,8 @@ async def validate_block_body(
     # 10. Check additions for max coin amount
     # Be careful to check for 64 bit overflows in other languages. This is the max 64 bit unsigned integer
     # We will not even reach here because Coins do type checking (uint64)
-    for coin in additions + coinbase_additions:
-        additions_dic[coin.name()] = coin
+    for coin, coin_name in additions + coinbase_additions:
+        additions_dic[coin_name] = coin
         if coin.amount < 0:
             return Err.COIN_AMOUNT_NEGATIVE, None
 
@@ -242,8 +311,8 @@ async def validate_block_body(
 
     # 12. The additions and removals must result in the correct filter
     tx_for_bip158: List[bytes32] = [
-        *(coin.puzzle_hash for coin in additions),
-        *(coin.puzzle_hash for coin in coinbase_additions),
+        *(coin.puzzle_hash for coin, _ in additions),
+        *(coin.puzzle_hash for coin, _ in coinbase_additions),
         *(removal for removal in removals),
     ]
 
@@ -255,7 +324,7 @@ async def validate_block_body(
         return Err.INVALID_TRANSACTIONS_FILTER_HASH, None
 
     # 13. Check for duplicate outputs in additions
-    addition_counter = collections.Counter(_.name() for _ in additions + coinbase_additions)
+    addition_counter = collections.Counter(coin_name for _, coin_name in additions + coinbase_additions)
     for k, v in addition_counter.items():
         if v > 1:
             return Err.DUPLICATE_OUTPUT, None
@@ -268,75 +337,9 @@ async def validate_block_body(
 
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
     # The fork point is the last block in common between the peak chain and the chain of `block`
-    if peak is None or height == 0:
-        fork_h: int = -1
-    elif fork_point_with_peak is not None:
-        fork_h = fork_point_with_peak
-    else:
-        fork_h = find_fork_point_in_chain(blocks, peak, blocks.block_record(block.prev_header_hash))
 
-    # Get additions and removals since (after) fork_h but not including this block
-    # The values include: the coin that was added, the height of the block in which it was confirmed, and the
-    # timestamp of the block in which it was confirmed
-    additions_since_fork: Dict[bytes32, Tuple[Coin, uint32, uint64]] = {}  # This includes coinbase additions
-    removals_since_fork: Set[bytes32] = set()
-
-    # For height 0, there are no additions and removals before this block, so we can skip
-    if height > 0:
-        # First, get all the blocks in the fork > fork_h, < block.height
-        prev_block: Optional[FullBlock] = await block_store.get_full_block(block.prev_header_hash)
-        reorg_blocks: Dict[uint32, FullBlock] = {}
-        curr: Optional[FullBlock] = prev_block
-        assert curr is not None
-        while curr.height > fork_h:
-            if curr.height == 0:
-                break
-            curr = await block_store.get_full_block(curr.prev_header_hash)
-            assert curr is not None
-            reorg_blocks[curr.height] = curr
-        if fork_h != -1:
-            assert len(reorg_blocks) == height - fork_h - 1
-
-        curr = prev_block
-        assert curr is not None
-        while curr.height > fork_h:
-            # Coin store doesn't contain coins from fork, we have to run generator for each block in fork
-            if curr.transactions_generator is not None:
-                # These blocks are in the past and therefore assumed to be valid, so get_block_generator won't raise
-                curr_block_generator: Optional[BlockGenerator] = await get_block_generator(curr)
-                assert curr_block_generator is not None and curr.transactions_info is not None
-                curr_npc_result = get_name_puzzle_conditions(
-                    curr_block_generator,
-                    min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost),
-                    cost_per_byte=constants.COST_PER_BYTE,
-                    mempool_mode=False,
-                    height=curr.height,
-                )
-                removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.conds)
-            else:
-                removals_in_curr = []
-                additions_in_curr = []
-
-            for c_name in removals_in_curr:
-                assert c_name not in removals_since_fork
-                removals_since_fork.add(c_name)
-            for c in additions_in_curr:
-                assert c.name() not in additions_since_fork
-                assert curr.foliage_transaction_block is not None
-                additions_since_fork[c.name()] = (c, curr.height, curr.foliage_transaction_block.timestamp)
-
-            for coinbase_coin in curr.get_included_reward_coins():
-                assert coinbase_coin.name() not in additions_since_fork
-                assert curr.foliage_transaction_block is not None
-                additions_since_fork[coinbase_coin.name()] = (
-                    coinbase_coin,
-                    curr.height,
-                    curr.foliage_transaction_block.timestamp,
-                )
-            if curr.height == 0:
-                break
-            curr = reorg_blocks[uint32(curr.height - 1)]
-            assert curr is not None
+    assert fork_info.fork_height < height
+    assert fork_info.peak_height == height - 1
 
     removal_coin_records: Dict[bytes32, CoinRecord] = {}
     # the removed coins we need to look up from the DB
@@ -357,7 +360,7 @@ async def validate_block_body(
         else:
             # This check applies to both coins created before fork (pulled from coin_store),
             # and coins created after fork (additions_since_fork)
-            if rem in removals_since_fork:
+            if rem in fork_info.removals_since_fork:
                 # This coin was spent in the fork
                 return Err.DOUBLE_SPEND_IN_FORK, None
             removals_from_db.append(rem)
@@ -368,10 +371,10 @@ async def validate_block_body(
     # can't find in the DB, but also coins that were spent after the fork point
     look_in_fork: List[bytes32] = []
     for unspent in unspent_records:
-        if unspent.confirmed_block_index <= fork_h:
+        if unspent.confirmed_block_index <= fork_info.fork_height:
             # Spending something in the current chain, confirmed before fork
             # (We ignore all coins confirmed after fork)
-            if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
+            if unspent.spent == 1 and unspent.spent_block_index <= fork_info.fork_height:
                 # Check for coins spent in an ancestor block
                 return Err.DOUBLE_SPEND, None
             removal_coin_records[unspent.name] = unspent
@@ -381,7 +384,7 @@ async def validate_block_body(
     if len(unspent_records) != len(removals_from_db):
         # some coins could not be found in the DB. We need to find out which
         # ones and look for them in additions_since_fork
-        found: Set[bytes32] = set([u.name for u in unspent_records])
+        found: Set[bytes32] = {u.name for u in unspent_records}
         for rem in removals_from_db:
             if rem in found:
                 continue
@@ -389,11 +392,11 @@ async def validate_block_body(
 
     for rem in look_in_fork:
         # This coin is not in the current heaviest chain, so it must be in the fork
-        if rem not in additions_since_fork:
+        if rem not in fork_info.additions_since_fork:
             # Check for spending a coin that does not exist in this fork
             log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
             return Err.UNKNOWN_UNSPENT, None
-        new_coin, confirmed_height, confirmed_timestamp = additions_since_fork[rem]
+        new_coin, confirmed_height, confirmed_timestamp = fork_info.additions_since_fork[rem]
         new_coin_record: CoinRecord = CoinRecord(
             new_coin,
             confirmed_height,
@@ -408,7 +411,7 @@ async def validate_block_body(
         removed += unspent.coin.amount
 
     added = 0
-    for coin in additions:
+    for coin, _ in additions:
         added += coin.amount
 
     # 16. Check that the total coin amount for added is <= removed
@@ -423,7 +426,7 @@ async def validate_block_body(
     assert_fee_sum: uint64 = uint64(0)
     if npc_result:
         assert npc_result.conds is not None
-        assert_fee_sum = npc_result.conds.reserve_fee
+        assert_fee_sum = uint64(npc_result.conds.reserve_fee)
 
     # 17. Check that the assert fee sum <= fees, and that each reserved fee is non-negative
     if fees < assert_fee_sum:
@@ -446,11 +449,19 @@ async def validate_block_body(
     # verify absolute/relative height/time conditions
     if npc_result is not None:
         assert npc_result.conds is not None
+
+        block_timestamp: uint64
+        if height < constants.SOFT_FORK2_HEIGHT:
+            # this does not happen on mainnet. testnet10 only
+            block_timestamp = block.foliage_transaction_block.timestamp  # pragma: no cover
+        else:
+            block_timestamp = prev_transaction_block_timestamp
+
         error = mempool_check_time_locks(
             removal_coin_records,
             npc_result.conds,
             prev_transaction_block_height,
-            block.foliage_transaction_block.timestamp,
+            block_timestamp,
         )
         if error:
             return error, None

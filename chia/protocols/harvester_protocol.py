@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -38,6 +40,7 @@ class NewSignagePointHarvester(Streamable):
     signage_point_index: uint8
     sp_hash: bytes32
     pool_difficulties: List[PoolDifficulty]
+    filter_prefix_bits: uint8
 
 
 @streamable
@@ -81,6 +84,7 @@ class Plot(Streamable):
     plot_public_key: G1Element
     file_size: uint64
     time_modified: uint64
+    compression_level: Optional[uint8]
 
 
 @streamable
@@ -112,11 +116,13 @@ class PlotSyncStart(Streamable):
     initial: bool
     last_sync_id: uint64
     plot_file_count: uint32
+    harvesting_mode: uint8
 
     def __str__(self) -> str:
         return (
             f"PlotSyncStart: identifier {self.identifier}, initial {self.initial}, "
-            f"last_sync_id {self.last_sync_id}, plot_file_count {self.plot_file_count}"
+            f"last_sync_id {self.last_sync_id}, plot_file_count {self.plot_file_count}, "
+            f"harvesting_mode {self.harvesting_mode}"
         )
 
 

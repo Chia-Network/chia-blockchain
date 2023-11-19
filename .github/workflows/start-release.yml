@@ -2,22 +2,31 @@
 name: Start Release
 on:
   workflow_dispatch:
-  push:
-    tags:
-        - '**'
+  release:
+    types: [published]
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   start_release:
     name: Starts release process in Glue API
     runs-on: [glue-notify]
     steps:
-      - name: Get tag name
-        if: startsWith(github.ref, 'refs/tags/')
-        id: tag-name
+      - name: Set Env
+        uses: Chia-Network/actions/setjobenv@main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: Chia-Network/actions/github/jwt@main
+
+      - name: Start pre-release
+        if: "github.event.release.prerelease"
         run: |
-          echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
-          echo "::set-output name=REPO_NAME::$(echo ${{ github.repository }} | cut -d'/' -f 2)"
+          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/start
+
       - name: Start release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: "!github.event.release.prerelease"
         run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/start
+          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/start
