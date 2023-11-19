@@ -24,8 +24,8 @@
 (only check the boxes if you are filling the required reviewer role, initial reviews should consider these points but leave them to the required reviewers to confirm)
 - [ ] Cleanup/teardown code is shielded
 - [ ] Tests generally
-  - [ ] Avoid time out asserts in favor the helpers that process transactions, wait for wallets to be synced, etc
-  - [ ] Avoid farming blocks either for rewards or to process transactions
+  - [ ] Avoid time out asserts in favor of the helpers that process transactions, wait for wallets to be synced, etc
+  - [ ] Avoid directly farming blocks either for rewards or to process transactions
   - [ ] Avoid sleeps
 
 <!-- Attach any visual examples, or supporting evidence (attach any .gif/video/console output below) -->
