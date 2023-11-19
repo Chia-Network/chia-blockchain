@@ -831,7 +831,7 @@ class FullNodeStore:
                 self.recent_eos.put(eos_op.challenge_chain.get_hash(), (eos_op, time.time()))
 
         # Only forward the last 4 SPs that we have cached, as others will be too old
-        return FullNodeStorePeakResult(new_eos, new_sps.sort()[-4:], new_ips)
+        return FullNodeStorePeakResult(new_eos, sorted(new_sps)[-4:], new_ips)
 
     def get_finished_sub_slots(
         self,
