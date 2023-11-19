@@ -71,11 +71,8 @@ async def make_empty_blockchain(constants: ConsensusConstants):
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
 
-    bc, db_wrapper = await create_blockchain(constants, 2)
-    yield bc
-
-    await db_wrapper.close()
-    bc.shut_down()
+    async with create_blockchain(constants, 2) as (bc, db_wrapper):
+        yield bc
 
 
 class TestGenesisBlock:
@@ -567,80 +564,80 @@ class TestBlockHeaderValidation:
             ),
             keychain=keychain,
         )
-        bc1, db_wrapper = await create_blockchain(bt_high_iters.constants, db_version)
-        blocks = bt_high_iters.get_consecutive_blocks(10)
-        for block in blocks:
-            if len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is not None:
-                # Bad iters
-                new_finished_ss = recursive_replace(
-                    block.finished_sub_slots[-1],
-                    "infused_challenge_chain",
-                    InfusedChallengeChainSubSlot(
-                        replace(
-                            block.finished_sub_slots[
-                                -1
-                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            number_of_iterations=uint64(10000000),
-                        )
-                    ),
-                )
-                block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
-                )
-                await _validate_and_add_block(bc1, block_bad, expected_error=Err.INVALID_ICC_EOS_VDF)
+        async with create_blockchain(bt_high_iters.constants, db_version) as (bc1, db_wrapper):
+            blocks = bt_high_iters.get_consecutive_blocks(10)
+            for block in blocks:
+                if (
+                    len(block.finished_sub_slots) > 0
+                    and block.finished_sub_slots[-1].infused_challenge_chain is not None
+                ):
+                    # Bad iters
+                    new_finished_ss = recursive_replace(
+                        block.finished_sub_slots[-1],
+                        "infused_challenge_chain",
+                        InfusedChallengeChainSubSlot(
+                            replace(
+                                block.finished_sub_slots[
+                                    -1
+                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                                number_of_iterations=uint64(10000000),
+                            )
+                        ),
+                    )
+                    block_bad = recursive_replace(
+                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    )
+                    await _validate_and_add_block(bc1, block_bad, expected_error=Err.INVALID_ICC_EOS_VDF)
 
-                # Bad output
-                new_finished_ss_2 = recursive_replace(
-                    block.finished_sub_slots[-1],
-                    "infused_challenge_chain",
-                    InfusedChallengeChainSubSlot(
-                        replace(
-                            block.finished_sub_slots[
-                                -1
-                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            output=ClassgroupElement.get_default_element(),
-                        )
-                    ),
-                )
-                log.warning(f"Proof: {block.finished_sub_slots[-1].proofs}")
-                block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
-                )
-                await _validate_and_add_block(bc1, block_bad_2, expected_error=Err.INVALID_ICC_EOS_VDF)
+                    # Bad output
+                    new_finished_ss_2 = recursive_replace(
+                        block.finished_sub_slots[-1],
+                        "infused_challenge_chain",
+                        InfusedChallengeChainSubSlot(
+                            replace(
+                                block.finished_sub_slots[
+                                    -1
+                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                                output=ClassgroupElement.get_default_element(),
+                            )
+                        ),
+                    )
+                    log.warning(f"Proof: {block.finished_sub_slots[-1].proofs}")
+                    block_bad_2 = recursive_replace(
+                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
+                    )
+                    await _validate_and_add_block(bc1, block_bad_2, expected_error=Err.INVALID_ICC_EOS_VDF)
 
-                # Bad challenge hash
-                new_finished_ss_3 = recursive_replace(
-                    block.finished_sub_slots[-1],
-                    "infused_challenge_chain",
-                    InfusedChallengeChainSubSlot(
-                        replace(
-                            block.finished_sub_slots[
-                                -1
-                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            challenge=bytes32([0] * 32),
-                        )
-                    ),
-                )
-                block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
-                )
-                await _validate_and_add_block(bc1, block_bad_3, expected_error=Err.INVALID_ICC_EOS_VDF)
+                    # Bad challenge hash
+                    new_finished_ss_3 = recursive_replace(
+                        block.finished_sub_slots[-1],
+                        "infused_challenge_chain",
+                        InfusedChallengeChainSubSlot(
+                            replace(
+                                block.finished_sub_slots[
+                                    -1
+                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                                challenge=bytes32([0] * 32),
+                            )
+                        ),
+                    )
+                    block_bad_3 = recursive_replace(
+                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
+                    )
+                    await _validate_and_add_block(bc1, block_bad_3, expected_error=Err.INVALID_ICC_EOS_VDF)
 
-                # Bad proof
-                new_finished_ss_5 = recursive_replace(
-                    block.finished_sub_slots[-1],
-                    "proofs.infused_challenge_chain_slot_proof",
-                    VDFProof(uint8(0), b"1239819023890", False),
-                )
-                block_bad_5 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
-                )
-                await _validate_and_add_block(bc1, block_bad_5, expected_error=Err.INVALID_ICC_EOS_VDF)
+                    # Bad proof
+                    new_finished_ss_5 = recursive_replace(
+                        block.finished_sub_slots[-1],
+                        "proofs.infused_challenge_chain_slot_proof",
+                        VDFProof(uint8(0), b"1239819023890", False),
+                    )
+                    block_bad_5 = recursive_replace(
+                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
+                    )
+                    await _validate_and_add_block(bc1, block_bad_5, expected_error=Err.INVALID_ICC_EOS_VDF)
 
-            await _validate_and_add_block(bc1, block)
-
-        await db_wrapper.close()
-        bc1.shut_down()
+                await _validate_and_add_block(bc1, block)
 
     @pytest.mark.anyio
     async def test_invalid_icc_sub_slot_vdf(self, db_version, blockchain_constants):
