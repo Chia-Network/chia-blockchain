@@ -131,9 +131,9 @@ class TestNewPeak:
         timelord_unf_block = timelord_protocol.NewUnfinishedBlockTimelord(
             block_1.reward_chain_block.get_unfinished(), difficulty, sub_slot_iters, block_1.foliage, ses, rc_prev
         )
+        await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
-        timelord_api.new_unfinished_block_timelord(timelord_unf_block)
-
+        assert timelord_api.timelord.unfinished_blocks[-1].get_hash() == timelord_unf_block.get_hash()
         await timelord_api.new_peak_timelord(timelord_peak_from_block(block_2, b2, bt.constants))
         assert timelord_api.timelord.last_state.get_height() == peak.reward_chain_block.height
 
