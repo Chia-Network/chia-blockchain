@@ -38,7 +38,10 @@ def test_coins_get_info(capsys: object, get_test_cli_clients: Tuple[TestRpcClien
             (
                 1,
                 CoinSelectionConfig(
-                    min_coin_amount=uint64(0), max_coin_amount=uint64(0), excluded_coin_amounts=[], excluded_coin_ids=[]
+                    min_coin_amount=uint64(0),
+                    max_coin_amount=uint64(18446744073709551615),
+                    excluded_coin_amounts=[],
+                    excluded_coin_ids=[],
                 ),
             )
         ],
