@@ -10,6 +10,7 @@ from random import Random
 from secrets import randbits
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+import anyio
 import dns.asyncresolver
 
 from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
@@ -562,9 +563,10 @@ class FullNodePeers(FullNodeDiscovery):
         await self.start_tasks()
 
     async def close(self) -> None:
-        await self._close_common()
-        self.cancel_task_safe(self.self_advertise_task)
-        self.cancel_task_safe(self.address_relay_task)
+        with anyio.CancelScope(shield=True):
+            await self._close_common()
+            self.cancel_task_safe(self.self_advertise_task)
+            self.cancel_task_safe(self.address_relay_task)
 
     async def _periodically_self_advertise_and_clean_data(self) -> None:
         while not self.is_closed:

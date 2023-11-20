@@ -182,15 +182,16 @@ class SpendSim:
             return self
 
     async def close(self) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            c = await conn.execute("DELETE FROM block_data")
-            await c.close()
-            c = await conn.execute(
-                "INSERT INTO block_data VALUES(?)",
-                (bytes(SimStore(self.timestamp, self.block_height, self.block_records, self.blocks)),),
-            )
-            await c.close()
-        await self.db_wrapper.close()
+        with anyio.CancelScope(shield=True):
+            async with self.db_wrapper.writer_maybe_transaction() as conn:
+                c = await conn.execute("DELETE FROM block_data")
+                await c.close()
+                c = await conn.execute(
+                    "INSERT INTO block_data VALUES(?)",
+                    (bytes(SimStore(self.timestamp, self.block_height, self.block_records, self.blocks)),),
+                )
+                await c.close()
+            await self.db_wrapper.close()
 
     async def new_peak(self) -> None:
         await self.mempool_manager.new_peak(self.block_records[-1], None)

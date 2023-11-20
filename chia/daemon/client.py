@@ -140,10 +140,11 @@ class DaemonProxy:
         return response
 
     async def close(self) -> None:
-        if self.websocket is not None:
-            await self.websocket.close()
-        if self.client_session is not None:
-            await self.client_session.close()
+        with anyio.CancelScope(shield=True):
+            if self.websocket is not None:
+                await self.websocket.close()
+            if self.client_session is not None:
+                await self.client_session.close()
 
     async def exit(self) -> WsRpcMessage:
         request = self.format_request("exit", {})

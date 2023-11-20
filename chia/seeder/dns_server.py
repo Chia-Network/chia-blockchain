@@ -376,22 +376,24 @@ class DNSServer:
         await self.stop()
 
     async def stop(self) -> None:
-        log.warning("Stopping DNS server...")
-        if self.shutting_down:
-            return
-        self.shutting_down = True
-        if self.reliable_task is not None:
-            self.reliable_task.cancel()  # cancel the peer update task
-        if self.crawl_store is not None:
-            await self.crawl_store.crawl_db.close()
-        if self.udp_protocol_ipv6 is not None:
-            await self.udp_protocol_ipv6.stop()  # stop responding to and accepting udp requests (ipv6) & ipv4 if linux.
-        if self.udp_protocol_ipv4 is not None:
-            await self.udp_protocol_ipv4.stop()  # stop responding to and accepting udp requests (ipv4) if windows.
-        if self.tcp_server is not None:
-            self.tcp_server.close()  # stop accepting new tcp requests (ipv4 and ipv6)
-            await self.tcp_server.wait_closed()  # wait for existing TCP requests to finish (ipv4 and ipv6)
-        self.shutdown_event.set()
+        with anyio.CancelScope(shield=True):
+            log.warning("Stopping DNS server...")
+            if self.shutting_down:
+                return
+            self.shutting_down = True
+            if self.reliable_task is not None:
+                self.reliable_task.cancel()  # cancel the peer update task
+            if self.crawl_store is not None:
+                await self.crawl_store.crawl_db.close()
+            if self.udp_protocol_ipv6 is not None:
+                # stop responding to and accepting udp requests (ipv6) & ipv4 if linux.
+                await self.udp_protocol_ipv6.stop()
+            if self.udp_protocol_ipv4 is not None:
+                await self.udp_protocol_ipv4.stop()  # stop responding to and accepting udp requests (ipv4) if windows.
+            if self.tcp_server is not None:
+                self.tcp_server.close()  # stop accepting new tcp requests (ipv4 and ipv6)
+                await self.tcp_server.wait_closed()  # wait for existing TCP requests to finish (ipv4 and ipv6)
+            self.shutdown_event.set()
 
     async def periodically_get_reliable_peers(self) -> None:
         sleep_interval = 0

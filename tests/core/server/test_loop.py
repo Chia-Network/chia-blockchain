@@ -83,9 +83,10 @@ class Client:
         return received == to_send
 
     async def close(self) -> None:
-        if self.writer is not None:
-            self.writer.close()
-            await self.writer.wait_closed()
+        with anyio.CancelScope(shield=True):
+            if self.writer is not None:
+                self.writer.close()
+                await self.writer.wait_closed()
 
 
 @dataclass()
