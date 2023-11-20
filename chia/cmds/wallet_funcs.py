@@ -269,7 +269,7 @@ async def send(
     override: bool,
     min_coin_amount: CliAmount,
     max_coin_amount: CliAmount,
-    excluded_coin_ids: Sequence[str],
+    excluded_coin_ids: Sequence[bytes32],
     reuse_puzhash: Optional[bool],
     clawback_time_lock: int,
 ) -> None:
@@ -1596,7 +1596,7 @@ async def approve_r_cats(
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
                 reuse_puzhash=reuse,
-            ).to_tx_config(units["chia"], config, fingerprint),
+            ).to_tx_config(units["cat"], config, fingerprint),
         )
 
         print("VC successfully approved R-CATs!")

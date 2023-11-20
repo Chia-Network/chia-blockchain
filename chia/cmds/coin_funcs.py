@@ -24,7 +24,7 @@ async def async_list(
     max_coin_amount: CliAmount,
     min_coin_amount: CliAmount,
     excluded_amounts: Sequence[CliAmount],
-    excluded_coin_ids: Sequence[str],
+    excluded_coin_ids: Sequence[bytes32],
     show_unconfirmed: bool,
     paginate: Optional[bool],
 ) -> None:
@@ -120,11 +120,10 @@ async def async_combine(
     excluded_amounts: Sequence[CliAmount],
     number_of_coins: int,
     target_coin_amount: CliAmount,
-    target_coin_ids_str: Sequence[str],
+    target_coin_ids: Sequence[bytes32],
     largest_first: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
-        target_coin_ids: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in target_coin_ids_str]
         if number_of_coins > 500:
             raise ValueError(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
         try:
@@ -140,7 +139,7 @@ async def async_combine(
         tx_config = CMDTXConfigLoader(
             max_coin_amount=max_coin_amount,
             min_coin_amount=min_coin_amount,
-            excluded_coin_amounts=[*excluded_amounts, str(target_coin_amount)],  # dont reuse coins of same amount.
+            excluded_coin_amounts=[*excluded_amounts, target_coin_amount],  # dont reuse coins of same amount.
             # TODO: [add TXConfig args] add excluded_coin_ids
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 

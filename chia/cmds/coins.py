@@ -6,7 +6,8 @@ from typing import Optional, Sequence
 import click
 
 from chia.cmds import options
-from chia.cmds.param_types import AMOUNT_TYPE, TRANSACTION_FEE, CliAmount
+from chia.cmds.param_types import AMOUNT_TYPE, BYTES32_TYPE, CliAmount, cli_amount_none
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 
 
@@ -31,19 +32,20 @@ def coins_cmd(ctx: click.Context) -> None:
     "--min-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=AMOUNT_TYPE,
-    default=uint64(0),
+    default=cli_amount_none,
 )
 @click.option(
     "--max-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
     type=AMOUNT_TYPE,
-    default=uint64(0),
+    default=cli_amount_none,
 )
 @click.option(
     "--exclude-coin",
     "coins_to_exclude",
     multiple=True,
     help="prevent this coin from being included.",
+    type=BYTES32_TYPE,
 )
 @click.option(
     "--exclude-amount",
@@ -66,7 +68,7 @@ def list_cmd(
     show_unconfirmed: bool,
     min_amount: CliAmount,
     max_amount: CliAmount,
-    coins_to_exclude: Sequence[str],
+    coins_to_exclude: Sequence[bytes32],
     amounts_to_exclude: Sequence[CliAmount],
     paginate: Optional[bool],
 ) -> None:
@@ -109,7 +111,7 @@ def list_cmd(
     "--min-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=AMOUNT_TYPE,
-    default=uint64(0),
+    default=cli_amount_none,
 )
 @click.option(
     "--exclude-amount",
@@ -130,22 +132,15 @@ def list_cmd(
     "--max-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
     type=AMOUNT_TYPE,
-    default=uint64(0),  # 0 means no limit
+    default=cli_amount_none,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees for the transaction, in XCH",
-    type=TRANSACTION_FEE,
-    default=uint64(0),
-    show_default=True,
-    required=True,
-)
+@options.create_fee()
 @click.option(
     "--input-coin",
     "input_coins",
     multiple=True,
     help="Only combine coins with these ids.",
+    type=BYTES32_TYPE,
 )
 @click.option(
     "--largest-first/--smallest-first",
@@ -163,7 +158,7 @@ def combine_cmd(
     number_of_coins: int,
     max_amount: CliAmount,
     fee: uint64,
-    input_coins: Sequence[str],
+    input_coins: Sequence[bytes32],
     largest_first: bool,
 ) -> None:
     from .coin_funcs import async_combine
@@ -179,7 +174,7 @@ def combine_cmd(
             excluded_amounts=amounts_to_exclude,
             number_of_coins=number_of_coins,
             target_coin_amount=target_amount,
-            target_coin_ids_str=input_coins,
+            target_coin_ids=input_coins,
             largest_first=largest_first,
         )
     )
@@ -202,15 +197,7 @@ def combine_cmd(
     help="The number of coins we are creating.",
     required=True,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees for the transaction, in XCH",
-    type=TRANSACTION_FEE,
-    default=uint64(0),
-    show_default=True,
-    required=True,
-)
+@options.create_fee()
 @click.option(
     "-a",
     "--amount-per-coin",

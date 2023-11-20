@@ -4,13 +4,13 @@ import dataclasses
 import logging
 import traceback
 from contextlib import asynccontextmanager
-from decimal import Decimal
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
 import click
 from aiohttp import ClientConnectorCertificateError, ClientConnectorError
 
+from chia.cmds.param_types import AMOUNT_TYPE, BYTES32_TYPE, CliAmount, cli_amount_none
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
@@ -25,9 +25,8 @@ from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint16
 from chia.util.keychain import KeyData
-from chia.util.streamable import Streamable, streamable
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig, TXConfigLoader
 
@@ -251,29 +250,31 @@ def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:
         "--min-coin-amount",
         "--min-amount",
         help="Ignore coins worth less then this much XCH or CAT units",
-        type=str,
+        type=AMOUNT_TYPE,
         required=False,
-        default=None,
+        default=cli_amount_none,
     )(
         click.option(
             "-l",
             "--max-coin-amount",
             "--max-amount",
             help="Ignore coins worth more then this much XCH or CAT units",
-            type=str,
+            type=AMOUNT_TYPE,
             required=False,
-            default=None,
+            default=cli_amount_none,
         )(
             click.option(
                 "--exclude-coin",
                 "coins_to_exclude",
                 multiple=True,
+                type=BYTES32_TYPE,
                 help="Exclude this coin from being spent.",
             )(
                 click.option(
                     "--exclude-amount",
                     "amounts_to_exclude",
                     multiple=True,
+                    type=AMOUNT_TYPE,
                     help="Exclude any coins with this XCH or CAT amount from being included.",
                 )(func)
             )
@@ -309,26 +310,24 @@ def timelock_args(func: Callable[..., None]) -> Callable[..., None]:
     )
 
 
-@streamable
 @dataclasses.dataclass(frozen=True)
-class CMDCoinSelectionConfigLoader(Streamable):
-    min_coin_amount: Optional[str] = None
-    max_coin_amount: Optional[str] = None
-    excluded_coin_amounts: Optional[List[str]] = None
-    excluded_coin_ids: Optional[List[str]] = None
+class CMDCoinSelectionConfigLoader:
+    min_coin_amount: CliAmount = cli_amount_none
+    max_coin_amount: CliAmount = cli_amount_none
+    excluded_coin_amounts: Optional[List[CliAmount]] = None
+    excluded_coin_ids: Optional[List[bytes32]] = None
 
     def to_coin_selection_config(self, mojo_per_unit: int) -> CoinSelectionConfig:
         return CoinSelectionConfigLoader(
-            uint64(int(Decimal(self.min_coin_amount) * mojo_per_unit)) if self.min_coin_amount is not None else None,
-            uint64(int(Decimal(self.max_coin_amount) * mojo_per_unit)) if self.max_coin_amount is not None else None,
-            [uint64(int(Decimal(a) * mojo_per_unit)) for a in self.excluded_coin_amounts]
+            self.min_coin_amount.convert_amount_with_default(mojo_per_unit, None),
+            self.max_coin_amount.convert_amount_with_default(mojo_per_unit, None),
+            [cli_amount.convert_amount(mojo_per_unit) for cli_amount in self.excluded_coin_amounts]
             if self.excluded_coin_amounts is not None
             else None,
-            [bytes32.from_hexstr(id) for id in self.excluded_coin_ids] if self.excluded_coin_ids is not None else None,
+            self.excluded_coin_ids,
         ).autofill(constants=DEFAULT_CONSTANTS)
 
 
-@streamable
 @dataclasses.dataclass(frozen=True)
 class CMDTXConfigLoader(CMDCoinSelectionConfigLoader):
     reuse_puzhash: Optional[bool] = None

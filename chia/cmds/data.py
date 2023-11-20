@@ -8,7 +8,7 @@ from typing import Any, Callable, Coroutine, Dict, List, Optional, TypeVar, Unio
 import click
 
 from chia.cmds import options
-from chia.cmds.param_types import BYTES32_TYPE, TRANSACTION_FEE
+from chia.cmds.param_types import BYTES32_TYPE
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 
@@ -95,18 +95,6 @@ def create_rpc_port_option() -> Callable[[FC], FC]:
     )
 
 
-def create_fee_option() -> Callable[[FC], FC]:
-    return click.option(
-        "-m",
-        "--fee",
-        help="Set the fees for the transaction, in XCH",
-        type=TRANSACTION_FEE,
-        default=None,
-        show_default=True,
-        required=False,
-    )
-
-
 def create_root_hash_option() -> Callable[[FC], FC]:
     return click.option(
         "-r",
@@ -119,7 +107,7 @@ def create_root_hash_option() -> Callable[[FC], FC]:
 
 @data_cmd.command("create_data_store", help="Create a new data store")
 @create_rpc_port_option()
-@create_fee_option()
+@options.create_fee()
 @click.option("--verbose", is_flag=True, help="Enable verbose output.")
 @options.create_fingerprint()
 def create_data_store(
@@ -155,7 +143,7 @@ def get_value(
 @create_data_store_id_option()
 @create_changelist_option()
 @create_rpc_port_option()
-@create_fee_option()
+@options.create_fee()
 @options.create_fingerprint()
 def update_data_store(
     id: bytes32,
@@ -363,7 +351,7 @@ def add_missing_files(
     type=str,
     multiple=True,
 )
-@create_fee_option()
+@options.create_fee()
 @create_rpc_port_option()
 @options.create_fingerprint()
 def add_mirror(
@@ -390,7 +378,7 @@ def add_mirror(
 
 @data_cmd.command("delete_mirror", help="Delete an owned mirror by its coin id")
 @click.option("-c", "--coin_id", help="Coin id", type=BYTES32_TYPE, required=True)
-@create_fee_option()
+@options.create_fee()
 @create_rpc_port_option()
 @options.create_fingerprint()
 def delete_mirror(

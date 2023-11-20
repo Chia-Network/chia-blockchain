@@ -49,7 +49,14 @@ class CliAmount:
     """
 
     mojos: bool
-    amount: Union[uint64, Decimal]  # uint64 if mojos, Decimal if not
+    amount: Union[uint64, Decimal, None]  # uint64 if mojos, Decimal if not, None if default value is none
+
+    def convert_amount_with_default(
+        self, mojo_per_unit: int, default_value: Optional[uint64] = uint64(0)
+    ) -> Optional[uint64]:
+        if self.amount is None:  # if the value is set to none, return the default value
+            return default_value
+        return self.convert_amount(mojo_per_unit)
 
     def convert_amount(self, mojo_per_unit: int) -> uint64:
         if self.mojos:
@@ -80,8 +87,8 @@ class AmountParamType(click.ParamType):
             except ValueError:
                 self.fail("Amount must be positive integer value in mojos", param, ctx)
         try:
-            if Decimal(value) <= 0:
-                self.fail("Amount must be greater than 0", param, ctx)
+            if Decimal(value) < 0:
+                self.fail("Amount must be greater than or equal to 0", param, ctx)
             return CliAmount(mojos=False, amount=Decimal(value))
         except InvalidOperation:
             self.fail("Amount must be a decimal dotted value in XCH / CAT (e.g. 0.00005)", param, ctx)
@@ -164,3 +171,5 @@ TRANSACTION_FEE = TransactionFeeParamType()
 AMOUNT_TYPE = AmountParamType()
 ADDRESS_TYPE = AddressParamType()
 BYTES32_TYPE = Bytes32ParamType()
+
+cli_amount_none = CliAmount(mojos=False, amount=None)
