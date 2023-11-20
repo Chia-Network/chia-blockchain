@@ -766,7 +766,8 @@ async def take_offer(
 async def cancel_offer(
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
-    fee: uint64, offer_id: bytes32,
+    fee: uint64,
+    offer_id: bytes32,
     secure: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):

@@ -5,7 +5,6 @@ from typing import Optional
 import click
 
 from chia.cmds import options
-
 from chia.cmds.param_types import ADDRESS_TYPE, TRANSACTION_FEE, CliAddress
 from chia.util.ints import uint64
 

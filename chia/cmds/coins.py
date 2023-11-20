@@ -5,10 +5,9 @@ from typing import Optional, Sequence
 
 import click
 
+from chia.cmds import options
 from chia.cmds.param_types import AMOUNT_TYPE, TRANSACTION_FEE, CliAmount
 from chia.util.ints import uint64
-
-from chia.cmds import options
 
 
 @click.group("coins", help="Manage your wallets coins")

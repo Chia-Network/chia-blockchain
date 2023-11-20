@@ -45,6 +45,7 @@ async def create_data_store_cmd(
         res = await client.create_data_store(fee=fee, verbose=verbose)
         print(json.dumps(res, indent=4, sort_keys=True))
 
+
 async def get_value_cmd(
     rpc_port: Optional[int],
     store_id: bytes32,

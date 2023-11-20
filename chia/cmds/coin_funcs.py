@@ -180,7 +180,9 @@ async def async_combine(
             return
         target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, False))
         additions = [{"amount": (total_amount - fee) if is_xch else total_amount, "puzzle_hash": target_ph}]
-        transaction: TransactionRecord = await wallet_client.send_transaction_multi(wallet_id, additions, tx_config, removals, fee)
+        transaction: TransactionRecord = await wallet_client.send_transaction_multi(
+            wallet_id, additions, tx_config, removals, fee
+        )
         tx_id = transaction.name.hex()
         print(f"Transaction sent: {tx_id}")
         print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
