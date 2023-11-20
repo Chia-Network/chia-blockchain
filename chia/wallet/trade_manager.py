@@ -174,7 +174,7 @@ class TradeManager:
         # If any of our settlement_payments were spent, this offer was a success!
         if set(our_addition_ids) == set(coin_state_names):
             height = coin_states[0].created_height
-            await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, height)
+            await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, index=height)
             tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(offer, False)
             for tx in tx_records:
                 if TradeStatus(trade.status) == TradeStatus.PENDING_ACCEPT:
