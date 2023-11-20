@@ -639,7 +639,7 @@ async def wallet_two_node_simulator(blockchain_constants: ConsensusConstants):
 @pytest.fixture(scope="function")
 async def wallet_nodes_mempool_perf(bt):
     key_seed = bt.farmer_master_sk_entropy
-    async with setup_simulators_and_wallets(2, 1, bt.constants, key_seed=key_seed) as _:
+    async with setup_simulators_and_wallets(1, 1, bt.constants, key_seed=key_seed) as _:
         yield _
 
 
