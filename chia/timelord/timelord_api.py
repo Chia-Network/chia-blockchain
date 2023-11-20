@@ -38,20 +38,19 @@ class TimelordAPI:
                 return None
             self.timelord.max_allowed_inactivity_time = 60
 
-            # if there is a heavier unfinished block from a diff chain, skip
-            for unf_block in self.timelord.unfinished_blocks:
-                if unf_block.reward_chain_block.total_iters > new_peak.reward_chain_block.total_iters:
-                    found = False
-                    for rc, total_iters in new_peak.previous_reward_challenges:
-                        if rc == unf_block.rc_prev:
-                            found = True
-                            break
+            if self.timelord.last_state.peak is None:
+                # no known peak
+                log.info("no last known peak, switching to new peak")
+                self.timelord.new_peak = new_peak
+                self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
+                return
 
-                    if not found:
-                        log.info("there is a heavier unfinished block that does not belong to this chain- skip peak")
-                        return None
+            if self.timelord.last_state.get_weight() < new_peak.reward_chain_block.weight:
+                # if there is a heavier unfinished block from a diff chain, skip
+                if self.check_heavier_unfinished_block(new_peak) is True:
+                    log.info("there is a heavier unfinished block that does not belong to this chain - " "skip peak")
+                    self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
 
-            if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():
                 log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
                 log.info(
                     f"New peak: height: {new_peak.reward_chain_block.height} weight: "
@@ -59,16 +58,32 @@ class TimelordAPI:
                 )
                 self.timelord.new_peak = new_peak
                 self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
-            elif (
-                self.timelord.last_state.peak is not None
-                and self.timelord.last_state.peak.reward_chain_block == new_peak.reward_chain_block
-            ):
+                return
+
+            if self.timelord.last_state.peak.reward_chain_block.get_hash() == new_peak.reward_chain_block.get_hash():
                 log.info("Skipping peak, already have.")
-                self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
             else:
-                log.warning("block that we don't have, changing to it.")
-                self.timelord.new_peak = new_peak
-                self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
+                log.info("Skipping peak, block has equal or lower weight then our peak.")
+                log.debug(
+                    f"new peak height {new_peak.reward_chain_block.height} "
+                    f"weight {new_peak.reward_chain_block.weight}"
+                )
+
+            self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
+
+    def check_heavier_unfinished_block(self, new_peak):
+        for unf_block in self.timelord.unfinished_blocks:
+            if unf_block.reward_chain_block.total_iters > new_peak.reward_chain_block.total_iters:
+                found = False
+                for rc, total_iters in new_peak.previous_reward_challenges:
+                    if rc == unf_block.rc_prev:
+                        found = True
+                        break
+
+                if not found:
+                    # there is a heavier unfinished block that does not belong to the new peak chain
+                    return True
+        return False
 
     @api_request()
     async def new_unfinished_block_timelord(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord):

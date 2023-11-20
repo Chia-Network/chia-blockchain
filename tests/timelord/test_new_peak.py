@@ -54,11 +54,11 @@ class TestNewPeak:
         await timelord_api.new_peak_timelord(timelord_peak_from_block(blocks_1[-1], b1, bt.constants))
         assert timelord_api.timelord.new_peak.reward_chain_block.height == blocks_1[-1].height
 
-        # # new unknown peak, weight less then curr peak
-        # blocks_2 = bt.get_consecutive_blocks(1, blocks)
-        # await _validate_and_add_block(b2, blocks_2[-1])
-        # await timelord_api.new_peak_timelord(timelord_peak_from_block(blocks_2[-1], b2, bt.constants))
-        # assert timelord_api.timelord.new_peak.reward_chain_block.height == blocks_1[-1].height
+        # new unknown peak, weight less then curr peak
+        blocks_2 = bt.get_consecutive_blocks(1, blocks)
+        await _validate_and_add_block(b2, blocks_2[-1])
+        await timelord_api.new_peak_timelord(timelord_peak_from_block(blocks_2[-1], b2, bt.constants))
+        assert timelord_api.timelord.last_state.last_height == blocks_1[-1].height
 
         await db_wrapper1.close()
         await db_wrapper2.close()
@@ -93,17 +93,20 @@ class TestNewPeak:
         blocks_2 = bt.get_consecutive_blocks(1, default_1000_blocks)
         await _validate_and_add_block(b2, blocks_2[-1])
         block_record = b1.block_record(blocks_1[-1].header_hash)
-        block = blocks_1[-1]
+        block_1 = blocks_1[-1]
+        block_2 = blocks_2[-1]
+
+        assert block_1.weight > block_2.weight
 
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
-            bt.constants, b1, block_record.required_iters, block, True
+            bt.constants, b1, block_record.required_iters, block_1, True
         )
 
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-            bt.constants, len(block.finished_sub_slots) > 0, b1.block_record(blocks_1[-1].prev_header_hash), b1
+            bt.constants, len(block_1.finished_sub_slots) > 0, b1.block_record(blocks_1[-1].prev_header_hash), b1
         )
 
-        if block.reward_chain_block.signage_point_index == 0:
+        if block_1.reward_chain_block.signage_point_index == 0:
             # find first in slot and find slot challenge
             blk = b1.block_record(blocks_1[-1].header_hash)
             while blk.first_in_sub_slot is False:
@@ -111,24 +114,27 @@ class TestNewPeak:
             full_blk = await b1.get_full_block(blk.header_hash)
             sub_slot = None
             for s in full_blk.finished_sub_slots:
-                if s is not None and s.challenge_chain.get_hash() == block.reward_chain_block.pos_ss_cc_challenge_hash:
+                if (
+                    s is not None
+                    and s.challenge_chain.get_hash() == block_1.reward_chain_block.pos_ss_cc_challenge_hash
+                ):
                     sub_slot = s
             if sub_slot is None:
-                assert block.reward_chain_block.pos_ss_cc_challenge_hash == bt.constants.GENESIS_CHALLENGE
+                assert block_1.reward_chain_block.pos_ss_cc_challenge_hash == bt.constants.GENESIS_CHALLENGE
                 rc_prev = bt.constants.GENESIS_CHALLENGE
             else:
                 rc_prev = sub_slot.reward_chain.get_hash()
         else:
-            assert block.reward_chain_block.reward_chain_sp_vdf is not None
-            rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
+            assert block_1.reward_chain_block.reward_chain_sp_vdf is not None
+            rc_prev = block_1.reward_chain_block.reward_chain_sp_vdf.challenge
 
         timelord_unf_block = timelord_protocol.NewUnfinishedBlockTimelord(
-            block.reward_chain_block.get_unfinished(), difficulty, sub_slot_iters, block.foliage, ses, rc_prev
+            block_1.reward_chain_block.get_unfinished(), difficulty, sub_slot_iters, block_1.foliage, ses, rc_prev
         )
 
         timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
-        await timelord_api.new_peak_timelord(timelord_peak_from_block(blocks_2[-1], b2, bt.constants))
+        await timelord_api.new_peak_timelord(timelord_peak_from_block(block_2, b2, bt.constants))
         assert timelord_api.timelord.last_state.get_height() == peak.reward_chain_block.height
 
         await db_wrapper1.close()
