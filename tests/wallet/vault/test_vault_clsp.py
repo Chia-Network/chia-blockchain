@@ -18,8 +18,8 @@ from tests.clvm.test_puzzles import secret_exponent_for_index
 P2_DELEGATED_SECP_MOD: Program = load_clvm("p2_delegated_secp.clsp")
 P2_1_OF_N_MOD: Program = load_clvm("p2_1_of_n.clsp")
 P2_1_OF_N_MOD_HASH = P2_1_OF_N_MOD.get_tree_hash()
-RECOVERY_MOD: Program = load_clvm("vault_recovery.clsp")
-RECOVERY_MOD_HASH = RECOVERY_MOD.get_tree_hash()
+P2_RECOVERY_MOD: Program = load_clvm("vault_p2_recovery.clsp")
+P2_RECOVERY_MOD_HASH = P2_RECOVERY_MOD.get_tree_hash()
 RECOVERY_FINISH_MOD: Program = load_clvm("vault_recovery_finish.clsp")
 RECOVERY_FINISH_MOD_HASH = RECOVERY_FINISH_MOD.get_tree_hash()
 ACS = Program.to(1)
@@ -47,7 +47,7 @@ def test_recovery_puzzles() -> None:
     finish_puzzle = RECOVERY_FINISH_MOD.curry(timelock, recovery_conditions)
     finish_puzzlehash = finish_puzzle.get_tree_hash()
 
-    curried_recovery_puzzle = RECOVERY_MOD.curry(
+    curried_recovery_puzzle = P2_RECOVERY_MOD.curry(
         P2_1_OF_N_MOD_HASH, RECOVERY_FINISH_MOD_HASH, escape_puzzlehash, bls_pk, timelock
     )
 
@@ -124,7 +124,7 @@ def test_vault_root_puzzle() -> None:
     timelock = 5000
     amount = 10000
 
-    recovery_puzzle = RECOVERY_MOD.curry(
+    recovery_puzzle = P2_RECOVERY_MOD.curry(
         P2_1_OF_N_MOD_HASH, RECOVERY_FINISH_MOD_HASH, secp_puzzlehash, bls_pk, timelock
     )
     recovery_puzzlehash = recovery_puzzle.get_tree_hash()
