@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 from typing import Any, AsyncIterator, Generic, Optional, Tuple, Type, TypeVar, Union
 
-import aiosqlite
 import click
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
@@ -197,10 +196,10 @@ async def setup_db(name: Union[str, os.PathLike[str]], db_version: int) -> Async
         database=db_filename,
         log_path=log_path,
         db_version=db_version,
+        reader_count=1,
         journal_mode="wal",
         synchronous="full",
     ) as db_wrapper:
-        await db_wrapper.add_connection(await aiosqlite.connect(db_filename))
         yield db_wrapper
 
 
