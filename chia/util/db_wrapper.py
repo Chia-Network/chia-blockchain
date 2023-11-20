@@ -194,7 +194,7 @@ class DBWrapper2:
         foreign_keys: bool = False,
         row_factory: Optional[Type[aiosqlite.Row]] = None,
     ) -> DBWrapper2:
-        # TODO: please use .managed() instead
+        # WARNING: please use .managed() instead
         if log_path is None:
             log_file = None
         else:
@@ -224,7 +224,7 @@ class DBWrapper2:
         return self
 
     async def close(self) -> None:
-        # TODO: please use .managed() instead
+        # WARNING: please use .managed() instead
         try:
             while self._num_read_connections > 0:
                 await (await self._read_connections.get()).close()
