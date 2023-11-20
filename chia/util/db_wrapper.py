@@ -177,13 +177,9 @@ class DBWrapper2:
                 yield self
             finally:
                 with anyio.CancelScope(shield=True):
-                    try:
-                        while self._num_read_connections > 0:
-                            await self._read_connections.get()
-                            self._num_read_connections -= 1
-                    finally:
-                        if self._log_file is not None:
-                            self._log_file.close()
+                    while self._num_read_connections > 0:
+                        await self._read_connections.get()
+                        self._num_read_connections -= 1
 
     @classmethod
     async def create(
