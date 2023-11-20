@@ -84,7 +84,9 @@ class CoinSelectionConfigLoader(Streamable):
         constants: ConsensusConstants = kwargs["constants"]
         return CoinSelectionConfig(
             min_coin_amount=uint64(0) if self.min_coin_amount is None else self.min_coin_amount,
-            max_coin_amount=uint64(constants.MAX_COIN_AMOUNT) if self.max_coin_amount is None else self.max_coin_amount,
+            max_coin_amount=uint64(constants.MAX_COIN_AMOUNT)
+            if (self.max_coin_amount is None or self.max_coin_amount == 0)
+            else self.max_coin_amount,
             excluded_coin_amounts=[] if self.excluded_coin_amounts is None else self.excluded_coin_amounts,
             excluded_coin_ids=[] if self.excluded_coin_ids is None else self.excluded_coin_ids,
         )

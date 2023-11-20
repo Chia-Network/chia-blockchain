@@ -48,8 +48,8 @@ def test_coin_selection_args() -> None:
     )
 
     assert (
-        r"{'min_coin_amount': 0, 'max_coin_amount': 0, 'excluded_coin_amounts': [0], 'excluded_coin_ids': "
-        r"['0x0000000000000000000000000000000000000000000000000000000000000000']}" in result.output
+        r"{'min_coin_amount': 0, 'max_coin_amount': 18446744073709551615, 'excluded_coin_amounts': [0], "
+        r"'excluded_coin_ids': ['0x0000000000000000000000000000000000000000000000000000000000000000']}" in result.output
     )
 
     result = runner.invoke(
