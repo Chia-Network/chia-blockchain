@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+import random
 import sqlite3
 import sys
 from datetime import datetime
@@ -21,8 +22,13 @@ else:
 SQLITE_INT_MAX = 2**63 - 1
 
 
+def generate_in_memory_db_uri() -> str:
+    # We need to use shared cache as our DB wrapper uses different types of connections
+    return f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+
+
 async def execute_fetchone(
-    c: aiosqlite.Connection, sql: str, parameters: Iterable[Any] = None
+    c: aiosqlite.Connection, sql: str, parameters: Optional[Iterable[Any]] = None
 ) -> Optional[sqlite3.Row]:
     rows = await c.execute_fetchall(sql, parameters)
     for row in rows:
@@ -103,8 +109,8 @@ class DBWrapper2:
     _read_connections: asyncio.Queue[aiosqlite.Connection]
     _write_connection: aiosqlite.Connection
     _num_read_connections: int
-    _in_use: Dict[asyncio.Task, aiosqlite.Connection]
-    _current_writer: Optional[asyncio.Task]
+    _in_use: Dict[asyncio.Task[object], aiosqlite.Connection]
+    _current_writer: Optional[asyncio.Task[object]]
     _savepoint_name: int
     _log_file: Optional[TextIO]
 

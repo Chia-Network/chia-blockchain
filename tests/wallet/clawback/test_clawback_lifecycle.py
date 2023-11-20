@@ -3,11 +3,10 @@ from __future__ import annotations
 from typing import Dict, Optional, Tuple
 
 import pytest
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
@@ -39,6 +38,7 @@ from chia.wallet.util.wallet_types import RemarkDataType
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 from tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from tests.util.key_tool import KeyTool
+from tests.util.time_out_assert import time_out_assert
 
 ACS = Program.to(1)
 ACS_PH = ACS.get_tree_hash()
@@ -84,16 +84,16 @@ class TestClawbackLifecycle:
             signatures.append(signature)
         return AugSchemeMPL.aggregate(signatures)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.anyio
     async def test_clawback_spends(self, cost_logger: CostLogger) -> None:
         async with sim_and_client() as (sim, sim_client):
-            key_lookup = KeyTool()  # type: ignore[no-untyped-call]
+            key_lookup = KeyTool()
             sender_index = 1
-            sender_pk = G1Element(public_key_for_index(sender_index, key_lookup))
+            sender_pk = G1Element.from_bytes(public_key_for_index(sender_index, key_lookup))
             sender_puz = puzzle_for_pk(sender_pk)
             sender_ph = sender_puz.get_tree_hash()
             recipient_index = 2
-            recipient_pk = G1Element(public_key_for_index(recipient_index, key_lookup))
+            recipient_pk = G1Element.from_bytes(public_key_for_index(recipient_index, key_lookup))
             recipient_puz = puzzle_for_pk(recipient_pk)
             recipient_ph = recipient_puz.get_tree_hash()
 

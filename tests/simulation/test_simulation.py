@@ -1,42 +1,50 @@
 from __future__ import annotations
 
-from typing import List, Tuple
+import dataclasses
+import json
+from typing import AsyncIterator, List, Tuple
 
+import aiohttp
+import pkg_resources
 import pytest
-import pytest_asyncio
 
 from chia.cmds.units import units
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.daemon.server import WebSocketServer
 from chia.full_node.full_node import FullNode
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
-from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
-from chia.simulator.setup_nodes import SimulatorsAndWallets
+from chia.simulator.setup_nodes import FullSystem, SimulatorsAndWallets
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.ws_message import create_payload
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
+from tests.core.node_height import node_height_at_least
+from tests.util.time_out_assert import time_out_assert
 
-test_constants_modified = test_constants.replace(
-    **{
-        "DIFFICULTY_STARTING": 2**8,
-        "DISCRIMINANT_SIZE_BITS": 1024,
-        "SUB_EPOCH_BLOCKS": 140,
-        "WEIGHT_PROOF_THRESHOLD": 2,
-        "WEIGHT_PROOF_RECENT_BLOCKS": 350,
-        "MAX_SUB_SLOT_BLOCKS": 50,
-        "NUM_SPS_SUB_SLOT": 32,  # Must be a power of 2
-        "EPOCH_BLOCKS": 280,
-        "SUB_SLOT_ITERS_STARTING": 2**20,
-        "NUMBER_ZERO_BITS_PLOT_FILTER": 5,
-    }
+chiapos_version = pkg_resources.get_distribution("chiapos").version
+
+test_constants_modified = dataclasses.replace(
+    test_constants,
+    DIFFICULTY_STARTING=uint64(2**8),
+    DISCRIMINANT_SIZE_BITS=1024,
+    SUB_EPOCH_BLOCKS=uint32(140),
+    WEIGHT_PROOF_THRESHOLD=uint8(2),
+    WEIGHT_PROOF_RECENT_BLOCKS=uint32(350),
+    MAX_SUB_SLOT_BLOCKS=uint32(50),
+    NUM_SPS_SUB_SLOT=uint32(32),  # Must be a power of 2
+    EPOCH_BLOCKS=uint32(280),
+    SUB_SLOT_ITERS_STARTING=uint64(2**20),
+    NUMBER_ZERO_BITS_PLOT_FILTER=5,
 )
 
 
@@ -44,28 +52,31 @@ test_constants_modified = test_constants.replace(
 # fixture, to test all versions of the database schema. This doesn't work
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
-@pytest_asyncio.fixture(scope="function")
-async def extra_node(self_hostname):
+@pytest.fixture(scope="function")
+async def extra_node(self_hostname) -> AsyncIterator[FullNodeAPI | FullNodeSimulator]:
     with TempKeyring() as keychain:
         b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
-        async for service in setup_full_node(
+        async with setup_full_node(
             test_constants_modified,
             "blockchain_test_3.db",
             self_hostname,
             b_tools,
-            db_version=1,
-        ):
+            db_version=2,
+        ) as service:
             yield service._api
 
 
 class TestSimulation:
-    @pytest.mark.asyncio
-    async def test_simulation_1(self, simulation, extra_node, self_hostname):
-        node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation
-        server1: ChiaServer = node1.full_node.server
-
+    @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
+    @pytest.mark.anyio
+    async def test_full_system(self, simulation, extra_node, self_hostname):
+        full_system: FullSystem
+        bt: BlockTools
+        full_system, bt = simulation
+        server1: ChiaServer = full_system.node_1._server
+        blocks_to_farm = 3  # farming 3 blocks is sufficient to test the system
         node1_port: uint16 = server1.get_port()
-        node2_port: uint16 = node2.full_node.server.get_port()
+        node2_port: uint16 = full_system.node_2._server.get_port()
 
         # Connect node 1 to node 2
         connected: bool = await server1.start_client(PeerInfo(self_hostname, node2_port))
@@ -73,7 +84,7 @@ class TestSimulation:
         assert len(server1.get_connections(NodeType.FULL_NODE, outbound=True)) >= 1
 
         # Connect node3 to node1 and node2 - checks come later
-        node3: Service[FullNode] = extra_node
+        node3: FullNodeAPI = extra_node
         server3: ChiaServer = node3.full_node.server
         connected = await server3.start_client(PeerInfo(self_hostname, node1_port))
         assert connected, f"server3 was unable to connect to node1 on port {node1_port}"
@@ -81,17 +92,18 @@ class TestSimulation:
         assert connected, f"server3 was unable to connect to node2 on port {node2_port}"
         assert len(server3.get_connections(NodeType.FULL_NODE, outbound=True)) >= 2
 
-        # wait up to 10 mins for node2 to sync the chain to height 7
-        await time_out_assert(600, node2.full_node.blockchain.get_peak_height, 7)
+        # wait up to 25 mins for node2 to sync the chain to blocks_to_farm height
+        await time_out_assert(1500, node_height_at_least, True, full_system.node_2._api, blocks_to_farm)
 
-        connected = await sanitizer_server.start_client(PeerInfo(self_hostname, node2_port))
-        assert connected, f"sanitizer_server was unable to connect to node2 on port {node2_port}"
-
-        async def has_compact(node1, node2):
-            peak_height_1 = node1.full_node.blockchain.get_peak_height()
-            headers_1 = await node1.full_node.blockchain.get_header_blocks_in_range(0, peak_height_1 - 6)
-            peak_height_2 = node2.full_node.blockchain.get_peak_height()
-            headers_2 = await node2.full_node.blockchain.get_header_blocks_in_range(0, peak_height_2 - 6)
+        async def has_compact(node1: FullNode, node2: FullNode) -> bool:
+            peak_height_1 = node1.blockchain.get_peak_height()
+            if peak_height_1 is None:
+                return False
+            headers_1 = await node1.blockchain.get_header_blocks_in_range(0, peak_height_1 - blocks_to_farm - 1)
+            peak_height_2 = node2.blockchain.get_peak_height()
+            if peak_height_2 is None:
+                return False
+            headers_2 = await node2.blockchain.get_header_blocks_in_range(0, peak_height_2 - blocks_to_farm - 1)
             # Commented to speed up.
             # cc_eos = [False, False]
             # icc_eos = [False, False]
@@ -125,16 +137,55 @@ class TestSimulation:
             # )
             return has_compact == [True, True]
 
-        await time_out_assert(600, has_compact, True, node1, node2)
+        await time_out_assert(600, has_compact, True, full_system.node_1._node, full_system.node_2._node)
 
         # check node3 has synced to the proper height
         peak_height: uint32 = max(
-            node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height()
+            full_system.node_1._node.blockchain.get_peak_height(),
+            full_system.node_2._node.blockchain.get_peak_height(),
         )
         # wait up to 10 mins for node3 to sync
-        await time_out_assert(600, node3.full_node.blockchain.get_peak_height, peak_height)
+        await time_out_assert(600, node_height_at_least, True, node3, peak_height)
 
-    @pytest.mark.asyncio
+        # Connect node_1 up to the daemon
+        full_system.node_1.rpc_server.connect_to_daemon(
+            self_hostname=self_hostname, daemon_port=full_system.daemon.daemon_port
+        )
+
+        async def verify_daemon_connection(daemon: WebSocketServer, service: str) -> bool:
+            return len(daemon.connections.get(service, set())) >= 1
+
+        await time_out_assert(60, verify_daemon_connection, True, full_system.daemon, "chia_full_node")
+
+        async with aiohttp.ClientSession() as session:
+            ws = await session.ws_connect(
+                f"wss://127.0.0.1:{full_system.daemon.daemon_port}",
+                autoclose=True,
+                autoping=True,
+                ssl_context=bt.get_daemon_ssl_context(),
+                max_msg_size=100 * 1024 * 1024,
+            )
+            service_name = "test_service_name"
+            payload = create_payload("register_service", {"service": service_name}, service_name, "daemon")
+            await ws.send_str(payload)
+            await ws.receive()
+            await time_out_assert(10, verify_daemon_connection, True, full_system.daemon, service_name)
+
+            blockchain_state_found = False
+            payload = create_payload("get_blockchain_state", {}, service_name, "chia_full_node")
+            await ws.send_str(payload)
+            msg = await ws.receive()
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                message = msg.data.strip()
+                message = json.loads(message)
+                if message["command"] == "get_blockchain_state":
+                    blockchain_state_found = True
+
+            await ws.close()
+
+        assert blockchain_state_found, "Could not get blockchain state from daemon and node"
+
+    @pytest.mark.anyio
     async def test_simulator_auto_farm_and_get_coins(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -154,7 +205,7 @@ class TestSimulation:
         # enable auto_farming
         await full_node_api.update_autofarm_config(True)
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -163,9 +214,10 @@ class TestSimulation:
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(10),
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            DEFAULT_TX_CONFIG,
             uint64(0),
         )
         await wallet.push_transaction(tx)
@@ -197,7 +249,7 @@ class TestSimulation:
         assert len(reorg_non_spent_coins) == 12 and len(reorg_spent_and_non_spent_coins) == 12
         assert tx.additions not in spent_and_non_spent_coins  # just double check that those got reverted.
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
     async def test_simulation_farm_blocks_to_puzzlehash(
         self,
@@ -215,7 +267,7 @@ class TestSimulation:
         expected_height = None if count == 0 else count
         assert full_node_api.full_node.blockchain.get_peak_height() == expected_height
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
     async def test_simulation_farm_blocks(
         self,
@@ -225,7 +277,7 @@ class TestSimulation:
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
         # Avoiding an attribute error below.
         assert wallet_node.wallet_state_manager is not None
@@ -269,7 +321,7 @@ class TestSimulation:
             assert isinstance(end_time, uint64)
             assert end_time - start_time >= new_time_per_block
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         argnames=["amount", "coin_count"],
         argvalues=[
@@ -291,7 +343,7 @@ class TestSimulation:
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
         # Avoiding an attribute error below.
         assert wallet_node.wallet_state_manager is not None
@@ -312,7 +364,7 @@ class TestSimulation:
         spendable_coins = await wallet.wallet_state_manager.get_spendable_coins_for_wallet(wallet.id())
         assert len(spendable_coins) == coin_count
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wait_transaction_records_entered_mempool(
         self,
         self_hostname: str,
@@ -322,7 +374,7 @@ class TestSimulation:
         tx_amount = uint64(1)
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
@@ -336,9 +388,10 @@ class TestSimulation:
 
         # repeating just to try to expose any flakiness
         for coin in coins:
-            tx = await wallet.generate_signed_transaction(
+            [tx] = await wallet.generate_signed_transaction(
                 amount=uint64(tx_amount),
                 puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                tx_config=DEFAULT_TX_CONFIG,
                 coins={coin},
             )
             await wallet.push_transaction(tx)
@@ -350,7 +403,7 @@ class TestSimulation:
             # assert tx.is_in_mempool()
 
     @pytest.mark.parametrize(argnames="records_or_bundles_or_coins", argvalues=["records", "bundles", "coins"])
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_process_transactions(
         self,
         self_hostname: str,
@@ -362,7 +415,7 @@ class TestSimulation:
         tx_per_repeat = 2
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
@@ -381,11 +434,14 @@ class TestSimulation:
         for repeat in range(repeats):
             coins = [next(coins_iter) for _ in range(tx_per_repeat)]
             transactions = [
-                await wallet.generate_signed_transaction(
-                    amount=uint64(tx_amount),
-                    puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                    coins={coin},
-                )
+                (
+                    await wallet.generate_signed_transaction(
+                        amount=uint64(tx_amount),
+                        puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                        tx_config=DEFAULT_TX_CONFIG,
+                        coins={coin},
+                    )
+                )[0]
                 for coin in coins
             ]
             for tx in transactions:
@@ -413,7 +469,7 @@ class TestSimulation:
                 coin_record = await full_node_api.full_node.coin_store.get_coin_record(coin.name())
                 assert coin_record is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     @pytest.mark.parametrize(
         argnames="amounts",
         argvalues=[
@@ -432,7 +488,7 @@ class TestSimulation:
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None

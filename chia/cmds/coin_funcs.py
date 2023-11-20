@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
-from chia.cmds.cmds_util import cli_confirm, get_wallet_client
+from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm, get_wallet_client
 from chia.cmds.param_types import CliAmount
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.types.blockchain_format.coin import Coin
@@ -41,17 +41,14 @@ async def async_list(
         if not await wallet_client.get_synced():
             print("Wallet not synced. Please wait.")
             return
-        final_min_coin_amount: uint64 = min_coin_amount.convert_amount(mojo_per_unit)
-        final_max_coin_amount: uint64 = max_coin_amount.convert_amount(mojo_per_unit)
-        final_excluded_amounts: List[uint64] = [
-            cli_amount.convert_amount(mojo_per_unit) for cli_amount in excluded_amounts
-        ]
         conf_coins, unconfirmed_removals, unconfirmed_additions = await wallet_client.get_spendable_coins(
             wallet_id=wallet_id,
-            max_coin_amount=final_max_coin_amount,
-            min_coin_amount=final_min_coin_amount,
-            excluded_amounts=final_excluded_amounts,
-            excluded_coin_ids=excluded_coin_ids,
+            coin_selection_config=CMDCoinSelectionConfigLoader(
+                max_coin_amount=max_coin_amount,
+                min_coin_amount=min_coin_amount,
+                excluded_coin_amounts=list(excluded_amounts),
+                excluded_coin_ids=list(excluded_coin_ids),
+            ).to_coin_selection_config(mojo_per_unit),
         )
         print(f"There are a total of {len(conf_coins) + len(unconfirmed_additions)} coins in wallet {wallet_id}.")
         print(f"{len(conf_coins)} confirmed coins.")
@@ -140,27 +137,25 @@ async def async_combine(
             print("Wallet not synced. Please wait.")
             return
         is_xch: bool = wallet_type == WalletType.STANDARD_WALLET  # this lets us know if we are directly combining Chia
-        final_max_amount = max_coin_amount.convert_amount(mojo_per_unit) if not target_coin_ids else uint64(0)
-        final_min_coin_amount: uint64 = min_coin_amount.convert_amount(mojo_per_unit)
-        final_excluded_amounts: List[uint64] = [
-            cli_amount.convert_amount(mojo_per_unit) for cli_amount in excluded_amounts
-        ]
+        tx_config = CMDTXConfigLoader(
+            max_coin_amount=max_coin_amount,
+            min_coin_amount=min_coin_amount,
+            excluded_coin_amounts=[*excluded_amounts, str(target_coin_amount)],  # dont reuse coins of same amount.
+            # TODO: [add TXConfig args] add excluded_coin_ids
+        ).to_tx_config(mojo_per_unit, config, fingerprint)
+
         final_target_coin_amount = target_coin_amount.convert_amount(mojo_per_unit)
+
         if final_target_coin_amount != 0:  # if we have a set target, just use standard coin selection.
             removals: List[Coin] = await wallet_client.select_coins(
                 amount=(final_target_coin_amount + fee) if is_xch else final_target_coin_amount,
                 wallet_id=wallet_id,
-                max_coin_amount=final_max_amount,
-                min_coin_amount=final_min_coin_amount,
-                excluded_amounts=final_excluded_amounts
-                + [final_target_coin_amount],  # dont reuse coins of same amount.
+                coin_selection_config=tx_config.coin_selection_config,
             )
         else:
             conf_coins, _, _ = await wallet_client.get_spendable_coins(
                 wallet_id=wallet_id,
-                max_coin_amount=final_max_amount,
-                min_coin_amount=final_min_coin_amount,
-                excluded_amounts=final_excluded_amounts,
+                coin_selection_config=tx_config.coin_selection_config,
             )
             if len(target_coin_ids) > 0:
                 conf_coins = [cr for cr in conf_coins if cr.name in target_coin_ids]
@@ -185,7 +180,7 @@ async def async_combine(
             return
         target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, False))
         additions = [{"amount": (total_amount - fee) if is_xch else total_amount, "puzzle_hash": target_ph}]
-        transaction: TransactionRecord = await wallet_client.send_transaction_multi(wallet_id, additions, removals, fee)
+        transaction: TransactionRecord = await wallet_client.send_transaction_multi(wallet_id, additions, tx_config, removals, fee)
         tx_id = transaction.name.hex()
         print(f"Transaction sent: {tx_id}")
         print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
@@ -200,6 +195,7 @@ async def async_split(
     number_of_coins: int,
     amount_per_coin: CliAmount,
     target_coin_id_str: str,
+    # TODO: [add TXConfig args]
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         target_coin_id: bytes32 = bytes32.from_hexstr(target_coin_id_str)
@@ -234,8 +230,13 @@ async def async_split(
             # we always use new addresses
             target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, new_address=True))
             additions.append({"amount": final_amount_per_coin, "puzzle_hash": target_ph})
+
+        tx_config = CMDTXConfigLoader(
+            # TODO: [add TXConfig args]
+        ).to_tx_config(mojo_per_unit, config, fingerprint)
+
         transaction: TransactionRecord = await wallet_client.send_transaction_multi(
-            wallet_id, additions, [removal_coin_record.coin], fee
+            wallet_id, additions, tx_config, [removal_coin_record.coin], fee
         )
         tx_id = transaction.name.hex()
         print(f"Transaction sent: {tx_id}")

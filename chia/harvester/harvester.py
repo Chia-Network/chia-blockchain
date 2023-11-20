@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import concurrent
+import contextlib
 import dataclasses
 import logging
 import multiprocessing
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Tuple, cast
 
 from typing_extensions import Literal
 
@@ -16,6 +17,7 @@ from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
     DEFAULT_DECOMPRESSOR_THREAD_COUNT,
+    DEFAULT_DECOMPRESSOR_TIMEOUT,
     DEFAULT_DISABLE_CPU_AFFINITY,
     DEFAULT_ENFORCE_GPU_INDEX,
     DEFAULT_GPU_INDEX,
@@ -43,6 +45,11 @@ log = logging.getLogger(__name__)
 
 
 class Harvester:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Harvester", None)
+
     plot_manager: PlotManager
     plot_sync_sender: Sender
     root_path: Path
@@ -103,6 +110,7 @@ class Harvester:
         use_gpu_harvesting = config.get("use_gpu_harvesting", DEFAULT_USE_GPU_HARVESTING)
         gpu_index = config.get("gpu_index", DEFAULT_GPU_INDEX)
         enforce_gpu_index = config.get("enforce_gpu_index", DEFAULT_ENFORCE_GPU_INDEX)
+        decompressor_timeout = config.get("decompressor_timeout", DEFAULT_DECOMPRESSOR_TIMEOUT)
 
         try:
             self._mode = self.plot_manager.configure_decompressor(
@@ -113,12 +121,22 @@ class Harvester:
                 use_gpu_harvesting,
                 gpu_index,
                 enforce_gpu_index,
+                decompressor_timeout,
             )
         except Exception as e:
             self.log.error(f"{type(e)} {e} while configuring decompressor.")
             raise
 
         self.plot_sync_sender = Sender(self.plot_manager, self._mode)
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        await self._start()
+        try:
+            yield
+        finally:
+            self._close()
+            await self._await_closed()
 
     async def _start(self) -> None:
         self._refresh_lock = asyncio.Lock()

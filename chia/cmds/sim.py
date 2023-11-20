@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 import click
 
+from chia.cmds import options
 from chia.cmds.sim_funcs import async_config_wizard, farm_blocks, print_status, revert_block_height, set_auto_farm
 from chia.util.default_root import SIMULATOR_ROOT_PATH
 
@@ -40,7 +41,7 @@ def sim_cmd(ctx: click.Context, rpc_port: Optional[int], root_path: str, simulat
 
 
 @sim_cmd.command("create", help="Guides you through the process of setting up a Chia Simulator")
-@click.option("-f", "--fingerprint", type=int, required=False, help="Use your fingerprint to skip the key prompt")
+@options.create_fingerprint()
 @click.option(
     "-r",
     "--reward-address",
@@ -117,7 +118,7 @@ def sim_stop_cmd(ctx: click.Context, daemon: bool, wallet: bool) -> None:
 
 
 @sim_cmd.command("status", help="Get information about the state of the simulator.")
-@click.option("-f", "--fingerprint", type=int, help="Get detailed information on this fingerprint.")
+@options.create_fingerprint()
 @click.option("--show-key/--no-show-key", help="Show detailed key information.")
 @click.option("-c", "--show-coins", is_flag=True, help="Show all unspent coins.")
 @click.option("-i", "--include-rewards", is_flag=True, help="Include reward coins when showing coins.")

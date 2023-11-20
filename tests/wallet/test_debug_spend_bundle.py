@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from io import StringIO
 
-from blspy import AugSchemeMPL, PrivateKey
+from chia_rs import AugSchemeMPL, PrivateKey
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

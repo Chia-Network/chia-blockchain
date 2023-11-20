@@ -21,6 +21,10 @@ concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   mypy:
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
@@ -81,7 +85,7 @@ jobs:
     - name: Add safe git directory
       uses: chia-network/actions/git-mark-workspace-safe@main
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
         submodules: recursive
@@ -119,7 +123,7 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: '3.8'
+          - major_dot_minor: '3.10'
         check:
           - name: black
             command: black --check --diff .
@@ -138,7 +142,7 @@ jobs:
     - name: Add safe git directory
       uses: chia-network/actions/git-mark-workspace-safe@main
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
         submodules: recursive
@@ -170,7 +174,7 @@ jobs:
       uses: chia-network/actions/git-mark-workspace-safe@main
 
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         submodules: recursive
@@ -178,17 +182,7 @@ jobs:
     - uses: Chia-Network/actions/setup-python@main
       name: Install Python
       with:
-        python-version: '3.8'
-
-    - name: Test for secrets access
-      id: check_secrets
-      shell: bash
-      run: |
-        unset HAS_SECRET
-        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo HAS_SECRET=${HAS_SECRET} >> "$GITHUB_OUTPUT"
-      env:
-        SECRET: "${{ secrets.test_pypi_password }}"
+        python-version: '3.10'
 
     - uses: ./.github/actions/install
       with:
@@ -208,9 +202,8 @@ jobs:
         path: ./dist
 
     - name: Publish distribution to PyPI
-      if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags')
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_NON_INTERACTIVE: 1
-        TWINE_PASSWORD: ${{ secrets.pypi_password }}
-      run: twine upload --non-interactive --skip-existing --verbose 'dist/*'
+      if: startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: dist/
+        skip-existing: true

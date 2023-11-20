@@ -10,13 +10,14 @@ from chia.full_node.mempool import MempoolRemoveReason
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint64
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
+from tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 
 async def farm_blocks(full_node_api: FullNodeSimulator, ph: bytes32, num_blocks: int) -> int:
@@ -42,7 +43,7 @@ def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
     node.full_node.mempool_manager.remove_seen(sb.name())
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wallet_tx_retry(
     setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]], BlockTools],
     self_hostname: str,
@@ -57,12 +58,12 @@ async def test_wallet_tx_retry(
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     reward_ph = await wallet_1.get_new_puzzlehash()
 
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+    await wallet_server_1.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
     await farm_blocks(full_node_1, reward_ph, 2)
     await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)
 
-    transaction: TransactionRecord = await wallet_1.generate_signed_transaction(uint64(100), reward_ph)
+    [transaction] = await wallet_1.generate_signed_transaction(uint64(100), reward_ph, DEFAULT_TX_CONFIG)
     sb1: Optional[SpendBundle] = transaction.spend_bundle
     assert sb1 is not None
     await wallet_1.push_transaction(transaction)

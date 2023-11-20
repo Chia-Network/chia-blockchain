@@ -15,12 +15,13 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.ws_connection import WSChiaConnection
-from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
 from chia.util.ints import uint16
+from chia.util.timing import adjusted_timeout
+from tests.util.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ async def disconnect_all(server: ChiaServer) -> None:
 
 async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer, self_hostname: str) -> bool:
     await disconnect_all(server)
-    return await server.start_client(PeerInfo(self_hostname, uint16(reconnect_to._port)), None)
+    return await server.start_client(PeerInfo(self_hostname, uint16(reconnect_to.get_port())), None)
 
 
 async def add_dummy_connection(
@@ -77,7 +78,7 @@ async def add_dummy_connection_wsc(
         type,
         ws,
         server.api,
-        server._port,
+        dummy_port,
         log,
         True,
         server.received_message_callback,
@@ -97,7 +98,7 @@ async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer, self_
     """
     Connect server_2 to server_1, and get return the connection in server_1.
     """
-    await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()))
 
     async def connected():
         for node_id_c, _ in server_1.all_connections.items():

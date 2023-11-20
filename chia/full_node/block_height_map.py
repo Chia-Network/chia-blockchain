@@ -42,7 +42,12 @@ class BlockHeightMap:
 
     # count how many blocks have been added since the cache was last written to
     # disk
-    __dirty: int
+    __counter: int
+
+    # this is the lowest height whose hash has been updated since the last flush
+    # to disk. When it's time to write to disk, we can start flushing from this
+    # offset
+    __first_dirty: int
 
     # the file we're saving the height-to-hash cache to
     __height_to_hash_filename: Path
@@ -51,13 +56,14 @@ class BlockHeightMap:
     __ses_filename: Path
 
     @classmethod
-    async def create(cls, blockchain_dir: Path, db: DBWrapper2) -> "BlockHeightMap":
+    async def create(cls, blockchain_dir: Path, db: DBWrapper2) -> BlockHeightMap:
         if db.db_version != 2:
             raise RuntimeError(f"BlockHeightMap does not support database schema v{db.db_version}")
         self = BlockHeightMap()
         self.db = db
 
-        self.__dirty = 0
+        self.__counter = 0
+        self.__first_dirty = 0
         self.__height_to_hash = bytearray()
         self.__sub_epoch_summaries = {}
         self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
@@ -104,18 +110,20 @@ class BlockHeightMap:
         else:
             self.__height_to_hash += bytearray([0] * (new_size - size))
 
-        # if the peak hash is already in the height-to-hash map, we don't need
-        # to load anything more from the DB
+        self.__first_dirty = height + 1
+
         if self.get_hash(height) != peak:
             self.__set_hash(height, peak)
 
-            if row[3] is not None:
-                self.__sub_epoch_summaries[height] = row[3]
+        if row[3] is not None:
+            self.__sub_epoch_summaries[height] = row[3]
 
-            # prepopulate the height -> hash mapping
-            await self._load_blocks_from(height, prev_hash)
+        # prepopulate the height -> hash mapping
+        # run this unconditionally in to ensure both the height-to-hash and sub
+        # epoch summaries caches are in sync with the DB
+        await self._load_blocks_from(height, prev_hash)
 
-            await self.maybe_flush()
+        await self.maybe_flush()
 
         return self
 
@@ -128,30 +136,49 @@ class BlockHeightMap:
             self.__sub_epoch_summaries[height] = bytes(ses)
 
     async def maybe_flush(self) -> None:
-        if self.__dirty < 1000:
+        if self.__counter < 1000:
             return
 
         assert (len(self.__height_to_hash) % 32) == 0
-        map_buf = self.__height_to_hash.copy()
+        offset = self.__first_dirty * 32
 
         ses_buf = bytes(SesCache([(k, v) for (k, v) in self.__sub_epoch_summaries.items()]))
 
-        self.__dirty = 0
+        self.__counter = 0
 
-        await write_file_async(self.__height_to_hash_filename, map_buf)
+        try:
+            async with aiofiles.open(self.__height_to_hash_filename, "r+b") as f:
+                map_buf = self.__height_to_hash[offset:].copy()
+                await f.seek(offset)
+                await f.write(map_buf)
+        except Exception:
+            # if the file doesn't exist, write the whole buffer
+            async with aiofiles.open(self.__height_to_hash_filename, "wb") as f:
+                map_buf = self.__height_to_hash.copy()
+                await f.write(map_buf)
+
+        self.__first_dirty = len(self.__height_to_hash) // 32
         await write_file_async(self.__ses_filename, ses_buf)
 
     # load height-to-hash map entries from the DB starting at height back in
     # time until we hit a match in the existing map, at which point we can
     # assume all previous blocks have already been populated
+    # the first iteration is mandatory on each startup, so we make it load fewer
+    # blocks to be fast. The common case is that the files are in sync with the
+    # DB so iteration can stop early.
     async def _load_blocks_from(self, height: uint32, prev_hash: bytes32) -> None:
+        # on mainnet, every 384th block has a sub-epoch summary. This should
+        # guarantee that we find at least one in the first iteration. If it
+        # matches, we're done reconciliating the cache with the DB.
+        window_size = 400
         while height > 0:
             # load 5000 blocks at a time
-            window_end = max(0, height - 5000)
+            window_end = max(0, height - window_size)
+            window_size = 5000
 
             query = (
                 "SELECT header_hash,prev_hash,height,sub_epoch_summary from full_blocks "
-                "INDEXED BY height WHERE height>=? AND height <?"
+                "INDEXED BY height WHERE in_main_chain=1 AND height>=? AND height <?"
             )
 
             async with self.db.reader_no_transaction() as conn:
@@ -176,6 +203,9 @@ class BlockHeightMap:
                         and height in self.__sub_epoch_summaries
                         and self.__sub_epoch_summaries[height] == entry[2]
                     ):
+                        # we only terminate the loop if we encounter a block
+                        # that has a sub epoch summary matching the cache and
+                        # the block hash matches the cache
                         return
                     self.__sub_epoch_summaries[height] = entry[2]
                 elif height in self.__sub_epoch_summaries:
@@ -189,7 +219,8 @@ class BlockHeightMap:
     def __set_hash(self, height: int, block_hash: bytes32) -> None:
         idx = height * 32
         self.__height_to_hash[idx : idx + 32] = block_hash
-        self.__dirty += 1
+        self.__counter += 1
+        self.__first_dirty = min(self.__first_dirty, height)
 
     def get_hash(self, height: uint32) -> bytes32:
         idx = height * 32
@@ -209,6 +240,7 @@ class BlockHeightMap:
         for height in heights_to_delete:
             del self.__sub_epoch_summaries[height]
         del self.__height_to_hash[(fork_height + 1) * 32 :]
+        self.__first_dirty = min(self.__first_dirty, fork_height + 1)
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])

@@ -100,7 +100,7 @@ def no_sub(c: bytes32) -> bool:
     return False
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_hints_to_add(bt: BlockTools, empty_blockchain: Blockchain) -> None:
     blocks = bt.get_consecutive_blocks(2)
     await _validate_and_add_block(empty_blockchain, blocks[0])
@@ -122,7 +122,7 @@ async def test_hints_to_add(bt: BlockTools, empty_blockchain: Blockchain) -> Non
     assert set(hints_to_add) == {(first_coin_id, b"1" * 32), (second_coin_id, b"1" * 3), (third_coin_id, b"1" * 32)}
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> None:
     blocks = bt.get_consecutive_blocks(2)
     await _validate_and_add_block(empty_blockchain, blocks[0])

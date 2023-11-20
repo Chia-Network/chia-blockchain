@@ -4,10 +4,9 @@ import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union, cast
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
 
-from blspy import G2Element
-from chia_rs import Coin
+from chia_rs import Coin, G2Element
 
 import chia.cmds.wallet_funcs
 from chia.cmds.chia import cli as chia_cli
@@ -27,10 +26,12 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from tests.cmds.testing_classes import create_test_block_record
 
@@ -125,6 +126,7 @@ class TestWalletRpcClient(TestRpcClient):
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32([2] * 32),
             memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+            valid_times=ConditionValidTimes(),
         )
 
     async def get_cat_name(self, wallet_id: int) -> str:
@@ -198,18 +200,14 @@ class TestWalletRpcClient(TestRpcClient):
     async def get_spendable_coins(
         self,
         wallet_id: int,
-        excluded_coins: Optional[List[Coin]] = None,
-        min_coin_amount: uint64 = uint64(0),
-        max_coin_amount: uint64 = uint64(0),
-        excluded_amounts: Optional[List[uint64]] = None,
-        excluded_coin_ids: Optional[Sequence[str]] = None,
+        coin_selection_config: CoinSelectionConfig,
     ) -> Tuple[List[CoinRecord], List[CoinRecord], List[Coin]]:
         """
         We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
         """
         self.add_to_log(
             "get_spendable_coins",
-            (wallet_id, excluded_coins, min_coin_amount, max_coin_amount, excluded_amounts, excluded_coin_ids),
+            (wallet_id, coin_selection_config),
         )
         confirmed_records = [
             CoinRecord(
@@ -251,10 +249,11 @@ class TestWalletRpcClient(TestRpcClient):
         self,
         wallet_id: int,
         additions: List[Dict[str, object]],
+        tx_config: TXConfig,
         coins: Optional[List[Coin]] = None,
         fee: uint64 = uint64(0),
     ) -> TransactionRecord:
-        self.add_to_log("send_transaction_multi", (wallet_id, additions, coins, fee))
+        self.add_to_log("send_transaction_multi", (wallet_id, additions, tx_config, coins, fee))
         return TransactionRecord(
             confirmed_at_height=uint32(1),
             created_at_time=uint64(1234),
@@ -272,12 +271,20 @@ class TestWalletRpcClient(TestRpcClient):
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32([2] * 32),
             memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+            valid_times=ConditionValidTimes(),
         )
 
 
 @dataclass
 class TestFullNodeRpcClient(TestRpcClient):
     client_type: Type[FullNodeRpcClient] = field(init=False, default=FullNodeRpcClient)
+
+    async def get_fee_estimate(
+        self,
+        target_times: Optional[List[int]],
+        cost: Optional[int],
+    ) -> Dict[str, Any]:
+        return {}
 
     async def get_blockchain_state(self) -> Dict[str, Any]:
         response: Dict[str, Any] = {
@@ -368,9 +375,12 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     async def test_get_any_service_client(
         client_type: Type[_T_RpcClient],
         rpc_port: Optional[int] = None,
-        root_path: Path = default_root,
+        root_path: Optional[Path] = None,
         consume_errors: bool = True,
     ) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
+        if root_path is None:
+            root_path = default_root
+
         node_type = node_config_section_names.get(client_type)
         if node_type is None:
             # Click already checks this, so this should never happen
@@ -407,7 +417,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     # For more information, read the docstring of this function.
     chia.cmds.cmds_util.get_any_service_client = test_get_any_service_client
     chia.cmds.cmds_util.get_wallet_client = test_get_wallet_client  # type: ignore[assignment]
-    chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[attr-defined]
+    chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[assignment,attr-defined]
     # Monkey patches the confirm function to not ask for confirmation
     chia.cmds.cmds_util.cli_confirm = cli_confirm
     chia.cmds.wallet_funcs.cli_confirm = cli_confirm  # type: ignore[attr-defined]

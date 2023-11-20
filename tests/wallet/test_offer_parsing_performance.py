@@ -4,10 +4,8 @@ import cProfile
 from contextlib import contextmanager
 from typing import Iterator
 
-import pytest
-
 from chia.wallet.trading.offer import Offer
-from tests.util.misc import assert_runtime
+from tests.util.misc import BenchmarkRunner
 
 with_profile = False
 
@@ -28,21 +26,19 @@ def enable_profiler(name: str) -> Iterator[None]:
     pr.dump_stats(f"{name}.profile")
 
 
-@pytest.mark.benchmark
-def test_offer_parsing_performance() -> None:
+def test_offer_parsing_performance(benchmark_runner: BenchmarkRunner) -> None:
     offer_bytes = bytes.fromhex(test_offer)
-    with assert_runtime(seconds=2, label="Offer.from_bytes()"):
+    with benchmark_runner.assert_runtime(seconds=2.15):
         with enable_profiler("offer-parsing"):
             for _ in range(100):
                 o = Offer.from_bytes(offer_bytes)
                 assert o is not None
 
 
-@pytest.mark.benchmark
-def test_offered_coins_performance() -> None:
+def test_offered_coins_performance(benchmark_runner: BenchmarkRunner) -> None:
     offer_bytes = bytes.fromhex(test_offer)
     o = Offer.from_bytes(offer_bytes)
-    with assert_runtime(seconds=2.5, label="Offer.from_bytes()"):
+    with benchmark_runner.assert_runtime(seconds=2.5):
         with enable_profiler("offered-coins"):
             for _ in range(100):
                 c = o.get_offered_coins()

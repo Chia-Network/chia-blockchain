@@ -42,7 +42,7 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: '3.9'
+          - major_dot_minor: '3.10'
         exclude:
           - os:
               matrix: windows
@@ -59,7 +59,7 @@ jobs:
       run: |
         git config --global core.autocrlf false
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - uses: Chia-Network/actions/setup-python@main
       with:

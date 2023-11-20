@@ -3,23 +3,31 @@ repos:
     hooks:
     -   id: check-sql
         name: Validate SQL statements
-        entry: ./activated.py python3 -m tests.check_sql_statements
+        entry: ./activated.py python -m tests.check_sql_statements
         language: system
         pass_filenames: false
 -   repo: local
     hooks:
     -   id: init_py_files
         name: __init__.py files
-        entry: ./activated.py python3 tests/build-init-files.py -v --root .
+        entry: ./activated.py python tests/build-init-files.py -v --root .
         language: system
         pass_filenames: false
+-   repo: local
+    hooks:
+    -   id: pyupgrade
+        name: pyupgrade
+        entry: ./activated.py pyupgrade --py38-plus --keep-runtime-typing
+        language: system
+        types: [python]
 -   repo: local
     hooks:
     -   id: black
         name: black
         entry: ./activated.py black
         language: system
-        types: [python]
+        require_serial: true
+        types_or: [python, pyi]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.3.0
     hooks:

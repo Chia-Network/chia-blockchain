@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 import json
 import logging
 import os
@@ -16,9 +15,10 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
+from types import FrameType
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
 
-from blspy import G1Element
+from chia_rs import G1Element
 from typing_extensions import Protocol
 
 from chia import __version__
@@ -39,6 +39,8 @@ from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.log_exceptions import log_exceptions
+from chia.util.misc import SignalHandlers
 from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
@@ -172,12 +174,12 @@ class WebSocketServer:
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
-        self.log.info("Starting Daemon Server")
+        self.log.info(f"Starting Daemon Server ({self.self_hostname}:{self.daemon_port})")
 
         # Note: the minimum_version has been already set to TLSv1_2
         # in ssl_context_for_server()
-        # Daemon is internal connections, so override to TLSv1_3 only
-        if ssl.HAS_TLSv1_3:
+        # Daemon is internal connections, so override to TLSv1_3 only unless specified in the config
+        if ssl.HAS_TLSv1_3 and not self.net_config.get("daemon_allow_tls_1_2", False):
             try:
                 self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
             except ValueError:
@@ -209,21 +211,17 @@ class WebSocketServer:
                 await self.stop()
             await self.exit()
 
-    async def setup_process_global_state(self) -> None:
-        try:
-            asyncio.get_running_loop().add_signal_handler(
-                signal.SIGINT,
-                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
-            )
-            asyncio.get_running_loop().add_signal_handler(
-                signal.SIGTERM,
-                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
-            )
-        except NotImplementedError:
-            self.log.info("Not implemented")
+    async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
+        signal_handlers.setup_async_signal_handler(handler=self._accept_signal)
 
-    def _accept_signal(self, signal_number: int, stack_frame=None):
-        asyncio.create_task(self.stop())
+    async def _accept_signal(
+        self,
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        self.log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
+        await self.stop()
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
@@ -291,12 +289,23 @@ class WebSocketServer:
                 if len(service_names) == 0:
                     service_names = ["Unknown"]
 
-                if msg.type == WSMsgType.CLOSE:
-                    self.log.info(f"ConnectionClosed. Closing websocket with {service_names}")
+                closing_message = f"Closing websocket with {service_names}."
+
+                level = logging.INFO
+                if msg.type == WSMsgType.CLOSED:
+                    message = f"Connection closed. {closing_message}"
+                elif msg.type == WSMsgType.CLOSING:
+                    message = f"Connection closing. {closing_message}"
+                elif msg.type == WSMsgType.CLOSE:
+                    message = f"Connection close requested. {closing_message}"
                 elif msg.type == WSMsgType.ERROR:
-                    self.log.info(f"Websocket exception. Closing websocket with {service_names}. {ws.exception()}")
+                    level = logging.ERROR
+                    message = f"Websocket exception. {closing_message} {ws.exception()}"
                 else:
-                    self.log.info(f"Unexpected message type. Closing websocket with {service_names}. {msg.type}")
+                    level = logging.ERROR
+                    message = f"Unexpected message type. {closing_message} {msg.type}"
+
+                self.log.log(level=level, msg=message)
 
                 await ws.close()
                 break
@@ -333,26 +342,39 @@ class WebSocketServer:
         return service_names
 
     async def ping_task(self) -> None:
-        restart = True
-        await asyncio.sleep(30)
-        for service_name, connections in self.connections.items():
-            if service_name == service_plotter:
-                continue
-            for connection in connections.copy():
-                try:
-                    self.log.debug(f"About to ping: {service_name}")
-                    await connection.ping()
-                except asyncio.CancelledError:
-                    self.log.warning("Ping task received Cancel")
-                    restart = False
-                    break
-                except Exception:
-                    self.log.exception(f"Ping error to {service_name}")
-                    self.log.error(f"Ping failed, connection closed to {service_name}.")
-                    self.remove_connection(connection)
-                    await connection.close()
-        if restart is True:
-            self.ping_job = asyncio.create_task(self.ping_task())
+        with log_exceptions(
+            log=self.log,
+            consume=True,
+            message="Ping task received Cancel",
+            level=logging.DEBUG,
+            show_traceback=False,
+            exceptions_to_process=asyncio.CancelledError,
+        ):
+            while True:
+                with log_exceptions(
+                    log=self.log,
+                    consume=True,
+                    message="Unexpected exception, continuing:",
+                ):
+                    await asyncio.sleep(30)
+
+                    for service_name, connections in self.connections.items():
+                        if service_name == service_plotter:
+                            continue
+
+                        for connection in connections.copy():
+                            self.log.debug(f"About to ping: {service_name}")
+                            try:
+                                with log_exceptions(
+                                    log=self.log,
+                                    message=f"Ping error to {service_name}, closing connection.",
+                                    level=logging.WARNING,
+                                    show_traceback=False,
+                                ):
+                                    await connection.ping()
+                            except:  # noqa E722
+                                self.remove_connection(connection)
+                                await connection.close()
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
@@ -748,7 +770,10 @@ class WebSocketServer:
         if plotter == "chiapos":
             final_words = ["Renamed final file"]
         elif plotter == "bladebit":
-            final_words = ["Finished plotting in"]
+            if "cudaplot" in config["command_args"]:
+                final_words = ["Completed writing plot"]
+            else:
+                final_words = ["Finished plotting in"]
         elif plotter == "madmax":
             temp_dir = config["temp_dir"]
             final_dir = config["final_dir"]
@@ -779,7 +804,7 @@ class WebSocketServer:
 
     async def _track_plotting_progress(self, config, loop: asyncio.AbstractEventLoop):
         file_path = config["out_file"]
-        with open(file_path, "r") as fp:
+        with open(file_path) as fp:
             await self._watch_file_changes(config, fp, loop)
 
     def _common_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
@@ -807,7 +832,7 @@ class WebSocketServer:
     def _chiapos_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         k = request["k"]  # Plot size
         t = request["t"]  # Temp directory
-        t2 = request["t2"]  # Temp2 directory
+        t2 = request.get("t2")  # Temp2 directory
         b = request["b"]  # Buffer size
         u = request["u"]  # Buckets
         a = request.get("a")  # Fingerprint
@@ -815,8 +840,11 @@ class WebSocketServer:
         x = request["x"]  # Exclude final directory
         override_k = request["overrideK"]  # Force plot sizes < k32
 
-        command_args: List[str] = ["-k", str(k), "-t", t, "-2", t2, "-b", str(b), "-u", str(u)]
+        command_args: List[str] = ["-k", str(k), "-t", t, "-b", str(b), "-u", str(u)]
 
+        if t2 is not None:
+            command_args.append("-2")
+            command_args.append(str(t2))
         if a is not None:
             command_args.append("-a")
             command_args.append(str(a))
@@ -859,21 +887,24 @@ class WebSocketServer:
         # Options only applicable for cudaplot
         if plot_type == "cudaplot":
             device_index = request.get("device", None)
-            no_direct_downloads = request.get("no_direct_downloads", False)
             t1 = request.get("t", None)  # Temp directory
             t2 = request.get("t2", None)  # Temp2 directory
+            disk_128 = request.get("disk_128", False)
+            disk_16 = request.get("disk_16", False)
 
             if device_index is not None and str(device_index).isdigit():
                 command_args.append("--device")
                 command_args.append(str(device_index))
-            if no_direct_downloads:
-                command_args.append("--no-direct-downloads")
             if t1 is not None:
                 command_args.append("-t")
                 command_args.append(t1)
             if t2 is not None:
                 command_args.append("-2")
                 command_args.append(t2)
+            if disk_128:
+                command_args.append("--disk-128")
+            if disk_16:
+                command_args.append("--disk-16")
             return command_args
 
         # if plot_type == "diskplot"
@@ -1062,7 +1093,7 @@ class WebSocketServer:
 
             self._post_process_plotting_job(config)
 
-        except (subprocess.SubprocessError, IOError):
+        except (subprocess.SubprocessError, OSError):
             log.exception(f"problem starting {service_name}")  # lgtm [py/clear-text-logging-sensitive-data]
             error = Exception("Start plotting failed")
             config["state"] = PlotState.FINISHED
@@ -1223,7 +1254,7 @@ class WebSocketServer:
                 process, pid_path = launch_service(self.root_path, exe_command)
                 self.services[service_command] = [process]
                 success = True
-            except (subprocess.SubprocessError, IOError):
+            except (subprocess.SubprocessError, OSError):
                 log.exception(f"problem starting {service_command}")
                 error = "start failed"
 
@@ -1516,9 +1547,10 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
                 key_path,
                 run_check_keys_on_unlock=wait_for_unlock,
             )
-            await ws_server.setup_process_global_state()
-            async with ws_server.run():
-                await ws_server.shutdown_event.wait()
+            async with SignalHandlers.manage() as signal_handlers:
+                await ws_server.setup_process_global_state(signal_handlers=signal_handlers)
+                async with ws_server.run():
+                    await ws_server.shutdown_event.wait()
 
             if beta_metrics is not None:
                 await beta_metrics.stop_logging()

@@ -1,52 +1,21 @@
 from __future__ import annotations
 
-from typing import Iterator, List, Tuple
+from typing import List, Tuple
 
 import pytest
 
 from chia.cmds.units import units
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
-from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint64
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
 
-def test_backoff_yields_initial_first() -> None:
-    backoff = backoff_times(initial=3, final=10)
-    assert next(backoff) == 3
-
-
-def test_backoff_yields_final_at_end() -> None:
-    def clock(times: Iterator[int] = iter([0, 1])) -> float:
-        return next(times)
-
-    backoff = backoff_times(initial=2, final=7, time_to_final=1, clock=clock)
-    next(backoff)
-    assert next(backoff) == 7
-
-
-def test_backoff_yields_half_at_halfway() -> None:
-    def clock(times: Iterator[int] = iter([0, 1])) -> float:
-        return next(times)
-
-    backoff = backoff_times(initial=4, final=6, time_to_final=2, clock=clock)
-    next(backoff)
-    assert next(backoff) == 5
-
-
-def test_backoff_saturates_at_final() -> None:
-    def clock(times: Iterator[int] = iter([0, 2])) -> float:
-        return next(times)
-
-    backoff = backoff_times(initial=1, final=3, time_to_final=1, clock=clock)
-    next(backoff)
-    assert next(backoff) == 3
-
-
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
 @pytest.mark.parametrize(argnames="guarantee_transaction_blocks", argvalues=[False, True])
 async def test_simulation_farm_blocks_to_puzzlehash(
@@ -68,7 +37,7 @@ async def test_simulation_farm_blocks_to_puzzlehash(
     assert full_node_api.full_node.blockchain.get_peak_height() == expected_height
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
 async def test_simulation_farm_blocks_to_wallet(
     count: int,
@@ -76,7 +45,7 @@ async def test_simulation_farm_blocks_to_wallet(
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-    await wallet_server.start_client(PeerInfo("127.0.0.1", uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo("127.0.0.1", full_node_api.server.get_port()), None)
 
     # Avoiding an attribute error below.
     assert wallet_node.wallet_state_manager is not None
@@ -94,7 +63,7 @@ async def test_simulation_farm_blocks_to_wallet(
     assert [unconfirmed_balance, confirmed_balance] == [rewards, rewards]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     argnames=["amount", "coin_count"],
     argvalues=[
@@ -114,7 +83,7 @@ async def test_simulation_farm_rewards_to_wallet(
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-    await wallet_server.start_client(PeerInfo("127.0.0.1", uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo("127.0.0.1", full_node_api.server.get_port()), None)
 
     # Avoiding an attribute error below.
     assert wallet_node.wallet_state_manager is not None
@@ -136,7 +105,7 @@ async def test_simulation_farm_rewards_to_wallet(
     assert len(all_coin_records) == coin_count
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wait_transaction_records_entered_mempool(
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
@@ -144,7 +113,7 @@ async def test_wait_transaction_records_entered_mempool(
     tx_amount = 1
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-    await wallet_server.start_client(PeerInfo("127.0.0.1", uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo("127.0.0.1", full_node_api.server.get_port()), None)
 
     # Avoiding an attribute hint issue below.
     assert wallet_node.wallet_state_manager is not None
@@ -158,9 +127,10 @@ async def test_wait_transaction_records_entered_mempool(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             amount=uint64(tx_amount),
             puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            tx_config=DEFAULT_TX_CONFIG,
             coins={coin},
         )
         await wallet.push_transaction(tx)
@@ -170,7 +140,7 @@ async def test_wait_transaction_records_entered_mempool(
         assert full_node_api.full_node.mempool_manager.get_spendbundle(tx.spend_bundle.name()) is not None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_process_transaction_records(
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
@@ -178,7 +148,7 @@ async def test_process_transaction_records(
     tx_amount = 1
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-    await wallet_server.start_client(PeerInfo("127.0.0.1", uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo("127.0.0.1", full_node_api.server.get_port()), None)
 
     # Avoiding an attribute hint issue below.
     assert wallet_node.wallet_state_manager is not None
@@ -192,9 +162,10 @@ async def test_process_transaction_records(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             amount=uint64(tx_amount),
             puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            tx_config=DEFAULT_TX_CONFIG,
             coins={coin},
         )
         await wallet.push_transaction(tx)
@@ -203,7 +174,7 @@ async def test_process_transaction_records(
         assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     argnames="amounts",
     argvalues=[
@@ -218,7 +189,7 @@ async def test_create_coins_with_amounts(
     self_hostname: str, amounts: List[uint64], simulator_and_wallet: SimulatorsAndWallets
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
-    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
     # Avoiding an attribute hint issue below.
     assert wallet_node.wallet_state_manager is not None
     wallet = wallet_node.wallet_state_manager.main_wallet
@@ -230,7 +201,7 @@ async def test_create_coins_with_amounts(
     assert sorted(coin.amount for coin in coins) == sorted(amounts)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     argnames="amounts",
     argvalues=[
@@ -246,7 +217,7 @@ async def test_create_coins_with_invalid_amounts_raises(
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-    await wallet_server.start_client(PeerInfo("127.0.0.1", uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo("127.0.0.1", full_node_api.server.get_port()), None)
 
     # Avoiding an attribute hint issue below.backoff_times
     assert wallet_node.wallet_state_manager is not None

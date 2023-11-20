@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import random
+
 import pytest
 
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
@@ -10,6 +12,7 @@ from chia.protocols.harvester_protocol import PlotSyncIdentifier, PlotSyncRespon
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import int16, uint64
 from tests.plot_sync.util import get_dummy_connection, plot_sync_identifier
 
@@ -28,8 +31,8 @@ def test_default_values(bt: BlockTools) -> None:
     assert sender._harvesting_mode == HarvestingMode.CPU
 
 
-def test_set_connection_values(bt: BlockTools) -> None:
-    farmer_connection = get_dummy_connection(NodeType.FARMER)
+def test_set_connection_values(bt: BlockTools, seeded_random: random.Random) -> None:
+    farmer_connection = get_dummy_connection(NodeType.FARMER, bytes32.random(seeded_random))
     sender = Sender(bt.plot_manager, HarvestingMode.CPU)
     # Test invalid NodeType values
     for connection_type in NodeType:
@@ -45,7 +48,7 @@ def test_set_connection_values(bt: BlockTools) -> None:
     assert sender._connection == farmer_connection  # type: ignore[comparison-overlap]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_start_stop_send_task(bt: BlockTools) -> None:
     sender = Sender(bt.plot_manager, HarvestingMode.CPU)
     # Make sure starting/restarting works

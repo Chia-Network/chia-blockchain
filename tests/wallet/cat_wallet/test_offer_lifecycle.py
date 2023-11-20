@@ -4,7 +4,7 @@ from dataclasses import replace
 from typing import Any, Dict, List, Optional
 
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 
 from chia.clvm.spend_sim import sim_and_client
 from chia.types.announcement import Announcement
@@ -21,6 +21,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -166,7 +167,7 @@ def generate_secure_bundle(
 
 
 class TestOfferLifecycle:
-    @pytest.mark.asyncio()
+    @pytest.mark.anyio()
     async def test_complex_offer(self, cost_logger):
         async with sim_and_client() as (sim, sim_client):
             coins_needed: Dict[Optional[str], List[int]] = {
@@ -288,6 +289,7 @@ class TestOfferLifecycle:
                 },
                 {"xch": 900, str_to_tail_hash("red").hex(): 350},
                 driver_dict_as_infos,
+                ConditionValidTimes(),
             )
             assert new_offer.get_pending_amounts() == {
                 "xch": 1200,

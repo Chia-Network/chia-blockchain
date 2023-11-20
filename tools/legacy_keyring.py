@@ -9,9 +9,11 @@ import sys
 from typing import Callable, List, Union, cast
 
 import click
-from blspy import G1Element
+from chia_rs import G1Element
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
+
+from chia.util.ints import uint32
 
 try:
     from keyrings.cryptfile.cryptfile import CryptFileKeyring
@@ -77,7 +79,7 @@ def get_key_data(keyring: LegacyKeyring, index: int) -> KeyData:
     entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
 
     return KeyData(
-        fingerprint=fingerprint,
+        fingerprint=uint32(fingerprint),
         public_key=public_key,
         label=None,
         secrets=KeyDataSecrets.from_entropy(entropy),

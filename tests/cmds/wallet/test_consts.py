@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from blspy import G2Element
-from chia_rs import Coin
+from chia_rs import Coin, G2Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 
@@ -39,4 +39,5 @@ STD_TX = TransactionRecord(
     type=uint32(TransactionType.OUTGOING_TX.value),
     name=get_bytes32(2),
     memos=[(get_bytes32(3), [bytes([4] * 32)])],
+    valid_times=ConditionValidTimes(),
 )

@@ -43,7 +43,9 @@ def test_cat_outer_puzzle() -> None:
 
     # Set up for solve
     coin: Coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
-    coin_as_hex: str = "0x" + coin.parent_coin_info.hex() + coin.puzzle_hash.hex() + bytes(uint64(coin.amount)).hex()
+    coin_as_hex: str = (
+        "0x" + coin.parent_coin_info.hex() + coin.puzzle_hash.hex() + uint64(coin.amount).stream_to_bytes().hex()
+    )
     inner_solution = Program.to([[51, ACS.get_tree_hash(), 100]])
     solution: Program = solve_puzzle(
         cr_driver,

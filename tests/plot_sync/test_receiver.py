@@ -4,11 +4,10 @@ import dataclasses
 import logging
 import random
 import time
-from secrets import token_bytes
 from typing import Any, Callable, List, Tuple, Type, Union
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plot_sync.delta import Delta
@@ -129,7 +128,7 @@ def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]
             assert path in receiver._current_sync.delta.duplicates.additions
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
     assert receiver.current_sync().state == sync_step.state
     last_sync_time_before = receiver._last_sync.time_done
@@ -163,8 +162,8 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
         assert receiver._last_sync.time_done == last_sync_time_before
 
 
-def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
-    harvester_connection = get_dummy_connection(NodeType.HARVESTER)
+def plot_sync_setup(seeded_random: random.Random) -> Tuple[Receiver, List[SyncStepData]]:
+    harvester_connection = get_dummy_connection(NodeType.HARVESTER, bytes32.random(seeded_random))
     receiver = Receiver(harvester_connection, dummy_callback)  # type:ignore[arg-type]
 
     # Create example plot data
@@ -173,7 +172,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
         Plot(
             filename=str(x),
             size=uint8(0),
-            plot_id=bytes32(token_bytes(32)),
+            plot_id=bytes32.random(seeded_random),
             pool_contract_puzzle_hash=None,
             pool_public_key=None,
             plot_public_key=G1Element(),
@@ -211,13 +210,21 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
     return receiver, sync_steps
 
 
-def test_default_values() -> None:
-    assert_default_values(Receiver(get_dummy_connection(NodeType.HARVESTER), dummy_callback))  # type:ignore[arg-type]
+def test_default_values(seeded_random: random.Random) -> None:
+    assert_default_values(
+        Receiver(
+            get_dummy_connection(
+                NodeType.HARVESTER,
+                bytes32.random(seeded_random),
+            ),  # type:ignore[arg-type]
+            dummy_callback,  # type:ignore[arg-type]
+        )
+    )
 
 
-@pytest.mark.asyncio
-async def test_reset() -> None:
-    receiver, sync_steps = plot_sync_setup()
+@pytest.mark.anyio
+async def test_reset(seeded_random: random.Random) -> None:
+    receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
     connection_before = receiver.connection()
     # Assign some dummy values
     receiver._current_sync.state = State.done
@@ -249,9 +256,9 @@ async def test_reset() -> None:
 
 
 @pytest.mark.parametrize("counts_only", [True, False])
-@pytest.mark.asyncio
-async def test_to_dict(counts_only: bool) -> None:
-    receiver, sync_steps = plot_sync_setup()
+@pytest.mark.anyio
+async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
+    receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
     plot_sync_dict_1 = receiver.to_dict(counts_only)
 
     assert get_list_or_len(plot_sync_dict_1["plots"], not counts_only) == 10
@@ -330,9 +337,9 @@ async def test_to_dict(counts_only: bool) -> None:
     }
 
 
-@pytest.mark.asyncio
-async def test_sync_flow() -> None:
-    receiver, sync_steps = plot_sync_setup()
+@pytest.mark.anyio
+async def test_sync_flow(seeded_random: random.Random) -> None:
+    receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
 
     for plot_info in sync_steps[State.loaded].args[0]:
         assert plot_info.filename not in receiver.plots()
@@ -372,9 +379,9 @@ async def test_sync_flow() -> None:
     assert receiver.current_sync().state == State.idle
 
 
-@pytest.mark.asyncio
-async def test_invalid_ids() -> None:
-    receiver, sync_steps = plot_sync_setup()
+@pytest.mark.anyio
+async def test_invalid_ids(seeded_random: random.Random) -> None:
+    receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
     for state in State:
         assert receiver.current_sync().state == state
         current_step = sync_steps[state]
@@ -423,9 +430,9 @@ async def test_invalid_ids() -> None:
         pytest.param(State.removed, ErrorCodes.plot_not_available, id="not available"),
     ],
 )
-@pytest.mark.asyncio
-async def test_plot_errors(state_to_fail: State, expected_error_code: ErrorCodes) -> None:
-    receiver, sync_steps = plot_sync_setup()
+@pytest.mark.anyio
+async def test_plot_errors(state_to_fail: State, expected_error_code: ErrorCodes, seeded_random: random.Random) -> None:
+    receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
     for state in State:
         assert receiver.current_sync().state == state
         current_step = sync_steps[state]

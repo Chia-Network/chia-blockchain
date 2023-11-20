@@ -4,7 +4,7 @@ import random
 from typing import Generator, Iterator, List, Optional
 
 import pytest
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 
 from benchmarks.utils import rand_bytes, rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -23,12 +23,7 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
-from chia.util.full_block_utils import (
-    block_info_from_block,
-    generator_from_block,
-    header_block_from_block,
-    plot_filter_info_from_block,
-)
+from chia.util.full_block_utils import block_info_from_block, generator_from_block, header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint8, uint32, uint64, uint128
 
@@ -248,8 +243,8 @@ def get_full_blocks() -> Iterator[FullBlock]:
                                         )
 
 
-@pytest.mark.asyncio
-# @pytest.mark.skip("This test is expensive and has already convinced us the parser works")
+@pytest.mark.anyio
+@pytest.mark.skip("This test is expensive and has already convinced us the parser works")
 async def test_parser():
     # loop over every combination of Optionals being set and not set
     # along with random values for the FullBlock fields. Ensure
@@ -263,18 +258,11 @@ async def test_parser():
         assert block.transactions_generator == bi.transactions_generator
         assert block.prev_header_hash == bi.prev_header_hash
         assert block.transactions_generator_ref_list == bi.transactions_generator_ref_list
-        pfi = plot_filter_info_from_block(block_bytes)
-        assert pfi.pos_ss_cc_challenge_hash == block.reward_chain_block.pos_ss_cc_challenge_hash
-        if block.reward_chain_block.challenge_chain_sp_vdf is None:
-            expected_cc_sp_hash: bytes32 = block.reward_chain_block.pos_ss_cc_challenge_hash
-        else:
-            expected_cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-        assert pfi.cc_sp_hash == expected_cc_sp_hash
         # this doubles the run-time of this test, with questionable utility
         # assert gen == FullBlock.from_bytes(block_bytes).transactions_generator
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.skip("This test is expensive and has already convinced us the parser works")
 async def test_header_block():
     for block in get_full_blocks():
