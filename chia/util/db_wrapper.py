@@ -56,6 +56,8 @@ async def _create_connection(
 async def manage_connection(
     database: Union[str, Path],
     uri: bool = False,
+    # TODO: switch to log_file
+    # log_file: Optional[TextIO] = None,
     log_path: Optional[Path] = None,
     name: Optional[str] = None,
 ) -> AsyncIterator[aiosqlite.Connection]:
@@ -139,46 +141,49 @@ class DBWrapper2:
         foreign_keys: bool = False,
         row_factory: Optional[Type[aiosqlite.Row]] = None,
     ) -> AsyncIterator[DBWrapper2]:
-        if log_path is None:
-            log_file = None
-        else:
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-            log_file = log_path.open("a", encoding="utf-8")
+        async with contextlib.AsyncExitStack() as async_exit_stack:
+            if log_path is None:
+                log_file = None
+            else:
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_file = async_exit_stack.enter_context(log_path.open("a", encoding="utf-8"))
 
-        # TODO: better handle shutting down all these other things
-        write_connection = await _create_connection(database=database, uri=uri, log_file=log_file, name="writer")
-        await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
-        if synchronous is not None:
-            await (await write_connection.execute(f"pragma synchronous={synchronous}")).close()
-
-        await (await write_connection.execute(f"pragma foreign_keys={'ON' if foreign_keys else 'OFF'}")).close()
-
-        write_connection.row_factory = row_factory
-
-        self = cls(_write_connection=write_connection, db_version=db_version, _log_file=log_file)
-
-        for index in range(reader_count):
-            read_connection = await _create_connection(
-                database=database,
-                uri=uri,
-                log_file=log_file,
-                name=f"reader-{index}",
+            write_connection = await async_exit_stack.enter_async_context(
+                manage_connection(database=database, uri=uri, log_path=log_path, name="writer"),
             )
-            read_connection.row_factory = row_factory
-            await self.add_connection(c=read_connection)
+            await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
+            if synchronous is not None:
+                await (await write_connection.execute(f"pragma synchronous={synchronous}")).close()
 
-        try:
-            yield self
-        finally:
-            with anyio.CancelScope(shield=True):
-                try:
-                    while self._num_read_connections > 0:
-                        await (await self._read_connections.get()).close()
-                        self._num_read_connections -= 1
-                    await self._write_connection.close()
-                finally:
-                    if self._log_file is not None:
-                        self._log_file.close()
+            await (await write_connection.execute(f"pragma foreign_keys={'ON' if foreign_keys else 'OFF'}")).close()
+
+            write_connection.row_factory = row_factory
+
+            self = cls(_write_connection=write_connection, db_version=db_version, _log_file=log_file)
+
+            for index in range(reader_count):
+                read_connection = await async_exit_stack.enter_async_context(
+                    manage_connection(
+                        database=database,
+                        uri=uri,
+                        log_path=log_path,
+                        name=f"reader-{index}",
+                    ),
+                )
+                read_connection.row_factory = row_factory
+                await self.add_connection(c=read_connection)
+
+            try:
+                yield self
+            finally:
+                with anyio.CancelScope(shield=True):
+                    try:
+                        while self._num_read_connections > 0:
+                            await self._read_connections.get()
+                            self._num_read_connections -= 1
+                    finally:
+                        if self._log_file is not None:
+                            self._log_file.close()
 
     @classmethod
     async def create(
