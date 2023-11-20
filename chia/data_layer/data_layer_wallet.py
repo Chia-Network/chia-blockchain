@@ -610,7 +610,7 @@ class DataLayerWallet:
             )
             assert chia_tx.spend_bundle is not None
             aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
-            dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
+            dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle, name=aggregate_bundle.name())
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
             txs: List[TransactionRecord] = [dl_tx, chia_tx]
         else:
