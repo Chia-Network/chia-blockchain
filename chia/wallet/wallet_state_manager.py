@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import multiprocessing.context
 import time
@@ -199,7 +200,8 @@ class WalletStateManager:
     decorator_manager: PuzzleDecoratorManager
 
     @staticmethod
-    async def create(
+    @contextlib.asynccontextmanager
+    async def managed(
         private_key: PrivateKey,
         config: Dict[str, Any],
         db_path: Path,
@@ -207,7 +209,7 @@ class WalletStateManager:
         server: ChiaServer,
         root_path: Path,
         wallet_node: WalletNode,
-    ) -> WalletStateManager:
+    ) -> AsyncIterator[WalletStateManager]:
         self = WalletStateManager()
 
         self.config = config
@@ -223,119 +225,118 @@ class WalletStateManager:
             sql_log_path = path_from_root(self.root_path, "log/wallet_sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
 
-        self.db_wrapper = await DBWrapper2.create(
+        async with DBWrapper2.managed(
             database=db_path,
             reader_count=self.config.get("db_readers", 4),
             log_path=sql_log_path,
             synchronous=db_synchronous_on(self.config.get("db_sync", "auto")),
-        )
+        ) as self.db_wrapper:
+            self.initial_num_public_keys = config["initial_num_public_keys"]
+            min_num_public_keys = 425
+            if not config.get("testing", False) and self.initial_num_public_keys < min_num_public_keys:
+                self.initial_num_public_keys = min_num_public_keys
 
-        self.initial_num_public_keys = config["initial_num_public_keys"]
-        min_num_public_keys = 425
-        if not config.get("testing", False) and self.initial_num_public_keys < min_num_public_keys:
-            self.initial_num_public_keys = min_num_public_keys
+            self.coin_store = await WalletCoinStore.create(self.db_wrapper)
+            self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
+            self.puzzle_store = await WalletPuzzleStore.create(self.db_wrapper)
+            self.user_store = await WalletUserStore.create(self.db_wrapper)
+            self.nft_store = await WalletNftStore.create(self.db_wrapper)
+            self.vc_store = await VCStore.create(self.db_wrapper)
+            self.basic_store = await KeyValStore.create(self.db_wrapper)
+            self.trade_manager = await TradeManager.create(self, self.db_wrapper)
+            self.notification_manager = await NotificationManager.create(self, self.db_wrapper)
+            self.pool_store = await WalletPoolStore.create(self.db_wrapper)
+            self.dl_store = await DataLayerStore.create(self.db_wrapper)
+            self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
+            self.retry_store = await WalletRetryStore.create(self.db_wrapper)
+            self.singleton_store = await WalletSingletonStore.create(self.db_wrapper)
+            self.default_cats = DEFAULT_CATS
 
-        self.coin_store = await WalletCoinStore.create(self.db_wrapper)
-        self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
-        self.puzzle_store = await WalletPuzzleStore.create(self.db_wrapper)
-        self.user_store = await WalletUserStore.create(self.db_wrapper)
-        self.nft_store = await WalletNftStore.create(self.db_wrapper)
-        self.vc_store = await VCStore.create(self.db_wrapper)
-        self.basic_store = await KeyValStore.create(self.db_wrapper)
-        self.trade_manager = await TradeManager.create(self, self.db_wrapper)
-        self.notification_manager = await NotificationManager.create(self, self.db_wrapper)
-        self.pool_store = await WalletPoolStore.create(self.db_wrapper)
-        self.dl_store = await DataLayerStore.create(self.db_wrapper)
-        self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
-        self.retry_store = await WalletRetryStore.create(self.db_wrapper)
-        self.singleton_store = await WalletSingletonStore.create(self.db_wrapper)
-        self.default_cats = DEFAULT_CATS
+            self.wallet_node = wallet_node
+            self._sync_target = None
+            self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants)
+            self.state_changed_callback = None
+            self.pending_tx_callback = None
+            self.db_path = db_path
+            puzzle_decorators = self.config.get("puzzle_decorators", {}).get(fingerprint, [])
+            self.decorator_manager = PuzzleDecoratorManager.create(puzzle_decorators)
 
-        self.wallet_node = wallet_node
-        self._sync_target = None
-        self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants)
-        self.state_changed_callback = None
-        self.pending_tx_callback = None
-        self.db_path = db_path
-        puzzle_decorators = self.config.get("puzzle_decorators", {}).get(fingerprint, [])
-        self.decorator_manager = PuzzleDecoratorManager.create(puzzle_decorators)
+            main_wallet_info = await self.user_store.get_wallet_by_id(1)
+            assert main_wallet_info is not None
 
-        main_wallet_info = await self.user_store.get_wallet_by_id(1)
-        assert main_wallet_info is not None
+            self.private_key = private_key
+            self.main_wallet = await Wallet.create(self, main_wallet_info)
 
-        self.private_key = private_key
-        self.main_wallet = await Wallet.create(self, main_wallet_info)
+            self.wallets = {main_wallet_info.id: self.main_wallet}
 
-        self.wallets = {main_wallet_info.id: self.main_wallet}
+            self.asset_to_wallet_map = {
+                AssetType.CAT: CATWallet,
+            }
 
-        self.asset_to_wallet_map = {
-            AssetType.CAT: CATWallet,
-        }
+            wallet: Optional[WalletProtocol[Any]] = None
+            for wallet_info in await self.get_all_wallet_info_entries():
+                wallet_type = WalletType(wallet_info.type)
+                if wallet_type == WalletType.STANDARD_WALLET:
+                    if wallet_info.id == 1:
+                        continue
+                    wallet = await Wallet.create(self, wallet_info)
+                elif wallet_type == WalletType.CAT:
+                    wallet = await CATWallet.create(
+                        self,
+                        self.main_wallet,
+                        wallet_info,
+                    )
+                elif wallet_type == WalletType.DECENTRALIZED_ID:
+                    wallet = await DIDWallet.create(
+                        self,
+                        self.main_wallet,
+                        wallet_info,
+                    )
+                elif wallet_type == WalletType.NFT:
+                    wallet = await NFTWallet.create(
+                        self,
+                        self.main_wallet,
+                        wallet_info,
+                    )
+                elif wallet_type == WalletType.POOLING_WALLET:
+                    wallet = await PoolWallet.create_from_db(
+                        self,
+                        self.main_wallet,
+                        wallet_info,
+                    )
+                elif wallet_type == WalletType.DATA_LAYER:  # pragma: no cover
+                    wallet = await DataLayerWallet.create(
+                        self,
+                        wallet_info,
+                    )
+                elif wallet_type == WalletType.DAO:  # pragma: no cover
+                    wallet = await DAOWallet.create(
+                        self,
+                        self.main_wallet,
+                        wallet_info,
+                    )
+                elif wallet_type == WalletType.DAO_CAT:  # pragma: no cover
+                    wallet = await DAOCATWallet.create(
+                        self,
+                        self.main_wallet,
+                        wallet_info,
+                    )
+                elif wallet_type == WalletType.VC:  # pragma: no cover
+                    wallet = await VCWallet.create(
+                        self,
+                        self.main_wallet,
+                        wallet_info,
+                    )
+                elif wallet_type == WalletType.CRCAT:  # pragma: no cover
+                    wallet = await CRCATWallet.create(
+                        self,
+                        self.main_wallet,
+                        wallet_info,
+                    )
+                if wallet is not None:
+                    self.wallets[wallet_info.id] = wallet
 
-        wallet: Optional[WalletProtocol[Any]] = None
-        for wallet_info in await self.get_all_wallet_info_entries():
-            wallet_type = WalletType(wallet_info.type)
-            if wallet_type == WalletType.STANDARD_WALLET:
-                if wallet_info.id == 1:
-                    continue
-                wallet = await Wallet.create(self, wallet_info)
-            elif wallet_type == WalletType.CAT:
-                wallet = await CATWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-            elif wallet_type == WalletType.DECENTRALIZED_ID:
-                wallet = await DIDWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-            elif wallet_type == WalletType.NFT:
-                wallet = await NFTWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-            elif wallet_type == WalletType.POOLING_WALLET:
-                wallet = await PoolWallet.create_from_db(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-            elif wallet_type == WalletType.DATA_LAYER:  # pragma: no cover
-                wallet = await DataLayerWallet.create(
-                    self,
-                    wallet_info,
-                )
-            elif wallet_type == WalletType.DAO:  # pragma: no cover
-                wallet = await DAOWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-            elif wallet_type == WalletType.DAO_CAT:  # pragma: no cover
-                wallet = await DAOCATWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-            elif wallet_type == WalletType.VC:  # pragma: no cover
-                wallet = await VCWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-            elif wallet_type == WalletType.CRCAT:  # pragma: no cover
-                wallet = await CRCATWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-            if wallet is not None:
-                self.wallets[wallet_info.id] = wallet
-
-        return self
+            yield self
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk_unhardened(self.private_key, index).get_g1()
@@ -2322,9 +2323,6 @@ class WalletStateManager:
             self.state_changed("wallet_removed", wallet_id)
 
         return remove_ids
-
-    async def _await_closed(self) -> None:
-        await self.db_wrapper.close()
 
     def unlink_db(self) -> None:
         Path(self.db_path).unlink()
