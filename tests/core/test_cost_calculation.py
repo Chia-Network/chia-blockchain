@@ -211,7 +211,7 @@ async def test_tx_generator_speed(softfork_height: int, benchmark_runner: Benchm
     generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
     program = SerializedProgram.from_bytes(generator_bytes)
 
-    with benchmark_runner.assert_runtime(seconds=1.25):
+    with benchmark_runner.assert_runtime(seconds=1):
         generator = BlockGenerator(program, [], [])
         npc_result = get_name_puzzle_conditions(
             generator,
@@ -309,7 +309,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     # benchmark the function to pick out the puzzle and solution for a specific
     # coin
     generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [], [])
-    with benchmark_runner.assert_runtime(seconds=8.5):
+    with benchmark_runner.assert_runtime(seconds=6):
         for i in range(3):
             for c in spends:
                 spend_info = get_puzzle_and_solution_for_coin(generator, c, 0, test_constants)

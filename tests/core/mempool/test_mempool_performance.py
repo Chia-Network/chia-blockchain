@@ -72,6 +72,7 @@ async def test_mempool_update_performance(
 
     blocks = bt.get_consecutive_blocks(3, blocks)
 
-    with benchmark_runner.assert_runtime(seconds=0.45):
+    # TODO: make this benchmark take longer so it can actually be measured sensibly
+    with benchmark_runner.assert_runtime(seconds=1):
         for block in blocks[-3:]:
             await full_node_api_1.full_node.add_block(block)

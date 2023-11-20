@@ -24,7 +24,7 @@ class TestNodeLoad:
 
         await time_out_assert(10, num_connections, 1)
 
-        with benchmark_runner.assert_runtime(seconds=100) as runtime_results_future:
+        with benchmark_runner.assert_runtime(seconds=3) as runtime_results_future:
             for i in range(1, num_blocks):
                 await full_node_1.full_node.add_block(blocks[i])
                 await full_node_2.full_node.add_block(blocks[i])
