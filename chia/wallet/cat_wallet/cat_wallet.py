@@ -95,7 +95,7 @@ class CATWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> CATWallet:
+    ) -> Tuple[CATWallet, List[TransactionRecord]]:
         self = CATWallet()
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
@@ -180,7 +180,7 @@ class CATWallet:
         )
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle, name=spend_bundle.name())
         await self.wallet_state_manager.add_pending_transactions([chia_tx, cat_record])
-        return self
+        return self, [chia_tx, cat_record]
 
     @staticmethod
     async def get_or_create_wallet_for_cat(
