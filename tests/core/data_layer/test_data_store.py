@@ -89,14 +89,11 @@ async def test_create_creates_tables_and_columns(
             columns = await cursor.fetchall()
             assert columns == []
 
-        store = await DataStore.create(database=database_uri, uri=True)
-        try:
+        async with DataStore.managed(database=database_uri, uri=True):
             async with db_wrapper.reader() as reader:
                 cursor = await reader.execute(query)
                 columns = await cursor.fetchall()
                 assert [column[1] for column in columns] == expected_columns
-        finally:
-            await store.close()
     finally:
         await db_wrapper.close()
 
@@ -382,8 +379,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
     saved_batches: List[List[Dict[str, Any]]] = []
 
     db_uri = generate_in_memory_db_uri()
-    single_op_data_store = await DataStore.create(database=db_uri, uri=True)
-    try:
+    async with DataStore.managed(database=db_uri, uri=True) as single_op_data_store:
         await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
@@ -426,8 +422,6 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 batch = []
                 root = await single_op_data_store.get_tree_root(tree_id=tree_id)
                 saved_roots.append(root)
-    finally:
-        await single_op_data_store.close()
 
     for batch_number, batch in enumerate(saved_batches):
         assert len(batch) == num_ops_per_batch
@@ -1268,8 +1262,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
     num_ops_per_batch = 100
 
     db_uri = generate_in_memory_db_uri()
-    data_store_server = await DataStore.create(database=db_uri, uri=True)
-    try:
+    async with DataStore.managed(database=db_uri, uri=True) as data_store_server:
         await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
@@ -1294,8 +1287,6 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
             root = await data_store_server.get_tree_root(tree_id)
             await write_files_for_root(data_store_server, tree_id, root, tmp_path, 0)
             roots.append(root)
-    finally:
-        await data_store_server.close()
 
     generation = 1
     assert len(roots) == num_batches

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -48,10 +49,11 @@ class DataStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(
+    @contextlib.asynccontextmanager
+    async def managed(
         cls, database: Union[str, Path], uri: bool = False, sql_log_path: Optional[Path] = None
-    ) -> DataStore:
-        db_wrapper = await DBWrapper2.create(
+    ) -> AsyncIterator[DataStore]:
+        async with DBWrapper2.managed(
             database=database,
             uri=uri,
             journal_mode="WAL",
@@ -63,100 +65,97 @@ class DataStore:
             foreign_keys=True,
             row_factory=aiosqlite.Row,
             log_path=sql_log_path,
-        )
-        self = cls(db_wrapper=db_wrapper)
+        ) as db_wrapper:
+            self = cls(db_wrapper=db_wrapper)
 
-        async with db_wrapper.writer() as writer:
-            await writer.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS node(
-                    hash BLOB PRIMARY KEY NOT NULL CHECK(length(hash) == 32),
-                    node_type INTEGER NOT NULL CHECK(
-                        (
-                            node_type == {int(NodeType.INTERNAL)}
-                            AND left IS NOT NULL
-                            AND right IS NOT NULL
-                            AND key IS NULL
-                            AND value IS NULL
-                        )
-                        OR
-                        (
-                            node_type == {int(NodeType.TERMINAL)}
-                            AND left IS NULL
-                            AND right IS NULL
-                            AND key IS NOT NULL
-                            AND value IS NOT NULL
-                        )
-                    ),
-                    left BLOB REFERENCES node,
-                    right BLOB REFERENCES node,
-                    key BLOB,
-                    value BLOB
+            async with db_wrapper.writer() as writer:
+                await writer.execute(
+                    f"""
+                    CREATE TABLE IF NOT EXISTS node(
+                        hash BLOB PRIMARY KEY NOT NULL CHECK(length(hash) == 32),
+                        node_type INTEGER NOT NULL CHECK(
+                            (
+                                node_type == {int(NodeType.INTERNAL)}
+                                AND left IS NOT NULL
+                                AND right IS NOT NULL
+                                AND key IS NULL
+                                AND value IS NULL
+                            )
+                            OR
+                            (
+                                node_type == {int(NodeType.TERMINAL)}
+                                AND left IS NULL
+                                AND right IS NULL
+                                AND key IS NOT NULL
+                                AND value IS NOT NULL
+                            )
+                        ),
+                        left BLOB REFERENCES node,
+                        right BLOB REFERENCES node,
+                        key BLOB,
+                        value BLOB
+                    )
+                    """
                 )
-                """
-            )
-            await writer.execute(
-                """
-                CREATE TRIGGER IF NOT EXISTS no_node_updates
-                BEFORE UPDATE ON node
-                BEGIN
-                    SELECT RAISE(FAIL, 'updates not allowed to the node table');
-                END
-                """
-            )
-            await writer.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS root(
-                    tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
-                    generation INTEGER NOT NULL CHECK(generation >= 0),
-                    node_hash BLOB,
-                    status INTEGER NOT NULL CHECK(
-                        {" OR ".join(f"status == {status}" for status in Status)}
-                    ),
-                    PRIMARY KEY(tree_id, generation),
-                    FOREIGN KEY(node_hash) REFERENCES node(hash)
+                await writer.execute(
+                    """
+                    CREATE TRIGGER IF NOT EXISTS no_node_updates
+                    BEFORE UPDATE ON node
+                    BEGIN
+                        SELECT RAISE(FAIL, 'updates not allowed to the node table');
+                    END
+                    """
                 )
-                """
-            )
-            # TODO: Add ancestor -> hash relationship, this might involve temporarily
-            # deferring the foreign key enforcement due to the insertion order
-            # and the node table also enforcing a similar relationship in the
-            # other direction.
-            # FOREIGN KEY(ancestor) REFERENCES ancestors(ancestor)
-            await writer.execute(
-                """
-                CREATE TABLE IF NOT EXISTS ancestors(
-                    hash BLOB NOT NULL REFERENCES node,
-                    ancestor BLOB CHECK(length(ancestor) == 32),
-                    tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
-                    generation INTEGER NOT NULL,
-                    PRIMARY KEY(hash, tree_id, generation),
-                    FOREIGN KEY(ancestor) REFERENCES node(hash)
+                await writer.execute(
+                    f"""
+                    CREATE TABLE IF NOT EXISTS root(
+                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                        generation INTEGER NOT NULL CHECK(generation >= 0),
+                        node_hash BLOB,
+                        status INTEGER NOT NULL CHECK(
+                            {" OR ".join(f"status == {status}" for status in Status)}
+                        ),
+                        PRIMARY KEY(tree_id, generation),
+                        FOREIGN KEY(node_hash) REFERENCES node(hash)
+                    )
+                    """
                 )
-                """
-            )
-            await writer.execute(
-                """
-                CREATE TABLE IF NOT EXISTS subscriptions(
-                    tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
-                    url TEXT,
-                    ignore_till INTEGER,
-                    num_consecutive_failures INTEGER,
-                    from_wallet tinyint CHECK(from_wallet == 0 OR from_wallet == 1),
-                    PRIMARY KEY(tree_id, url)
+                # TODO: Add ancestor -> hash relationship, this might involve temporarily
+                # deferring the foreign key enforcement due to the insertion order
+                # and the node table also enforcing a similar relationship in the
+                # other direction.
+                # FOREIGN KEY(ancestor) REFERENCES ancestors(ancestor)
+                await writer.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS ancestors(
+                        hash BLOB NOT NULL REFERENCES node,
+                        ancestor BLOB CHECK(length(ancestor) == 32),
+                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                        generation INTEGER NOT NULL,
+                        PRIMARY KEY(hash, tree_id, generation),
+                        FOREIGN KEY(ancestor) REFERENCES node(hash)
+                    )
+                    """
                 )
-                """
-            )
-            await writer.execute(
-                """
-                CREATE INDEX IF NOT EXISTS node_hash ON root(node_hash)
-                """
-            )
+                await writer.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS subscriptions(
+                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                        url TEXT,
+                        ignore_till INTEGER,
+                        num_consecutive_failures INTEGER,
+                        from_wallet tinyint CHECK(from_wallet == 0 OR from_wallet == 1),
+                        PRIMARY KEY(tree_id, url)
+                    )
+                    """
+                )
+                await writer.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS node_hash ON root(node_hash)
+                    """
+                )
 
-        return self
-
-    async def close(self) -> None:
-        await self.db_wrapper.close()
+            yield self
 
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator[None]:
