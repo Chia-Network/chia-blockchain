@@ -12,7 +12,6 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -21,6 +20,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
+from chia.util.timing import adjusted_timeout
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.address_type import AddressType
@@ -30,6 +30,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.conftest import ConsensusMode
+from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
@@ -248,8 +249,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await time_out_assert(10, wallet_0.get_confirmed_balance, 4000000000000 - 1)
     # Test Reorg mint
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
-        assert False
+    assert height is not None
     await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 1), ph1, None))
     await time_out_assert(30, get_nft_count, 0, nft_wallet_0)
     await time_out_assert(30, get_wallet_number, 2, wallet_node_0.wallet_state_manager)
@@ -327,8 +327,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
 
     # Test Reorg
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
-        assert False
+    assert height is not None
     await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 2), ph1, None))
     await time_out_assert(30, get_nft_count, 1, nft_wallet_0)
     await time_out_assert(30, get_nft_count, 1, nft_wallet_1)

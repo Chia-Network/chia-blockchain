@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
 import traceback
 from math import floor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
 
 import aiohttp
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -168,6 +169,15 @@ class Farmer:
 
         # Use to find missing signage points. (new_signage_point, time)
         self.prev_signage_point: Optional[Tuple[uint64, farmer_protocol.NewSignagePoint]] = None
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        await self._start()
+        try:
+            yield
+        finally:
+            self._close()
+            await self._await_closed()
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)

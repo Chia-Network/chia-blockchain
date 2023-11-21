@@ -25,7 +25,6 @@ from chia.server.outbound_message import Message
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -41,7 +40,7 @@ from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.api_decorators import api_request
 from chia.util.errors import Err
@@ -60,6 +59,7 @@ from tests.core.mempool.test_mempool_manager import (
 )
 from tests.core.node_height import node_height_at_least
 from tests.util.misc import BenchmarkRunner
+from tests.util.time_out_assert import time_out_assert
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
@@ -1620,7 +1620,7 @@ class TestMempoolManager:
 
         combined = SpendBundle.aggregate([spend_bundle1, steal_fee_spendbundle])
 
-        assert combined.fees() == 4
+        assert estimate_fees(combined) == 4
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
 
