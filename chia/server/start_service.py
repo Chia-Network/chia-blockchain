@@ -270,6 +270,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                     self.rpc_server.close()
 
                 self._log.info("Waiting for socket to be closed (if opened)")
+
                 self._log.info("Waiting for ChiaServer to be closed")
                 await self._server.await_closed()
 
