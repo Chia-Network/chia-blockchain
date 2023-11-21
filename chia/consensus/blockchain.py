@@ -316,6 +316,14 @@ class Blockchain(BlockchainInterface):
                 if prev_block.height + 1 != block.height:
                     return AddBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
 
+                prev_prev_block = await self.get_block_record_from_db(prev_block.prev_hash)
+                if prev_prev_block is None:
+                    log.warning(f"wjb disconnected prev_block {prev_block}")
+                else:
+                    prev_prev_prev_block = await self.get_block_record_from_db(prev_prev_block.prev_hash)
+                    if prev_prev_prev_block is None:
+                        log.warning(f"wjb disconnected prev_prev_block {prev_prev_block}")
+
         npc_result: Optional[NPCResult] = pre_validation_result.npc_result
         required_iters = pre_validation_result.required_iters
         if pre_validation_result.error is not None:

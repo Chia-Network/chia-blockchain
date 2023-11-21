@@ -1332,7 +1332,7 @@ class FullNode:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
                 return False, agg_state_change_summary, error
-            block_record = await self.blockchain.get_block_record_from_db(block.header_hash)
+            block_record = await self.blockchain.block_store.get_block_record(block.header_hash)
             assert block_record is not None
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
