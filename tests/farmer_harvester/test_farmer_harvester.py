@@ -18,7 +18,7 @@ from chia_rs import G1Element, G2Element, AugSchemeMPL
 from chia.cmds.cmds_util import get_any_service_client
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.farmer.farmer import Farmer
+from chia.farmer.farmer import Farmer, calculate_harvester_fee_quality
 from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node import FullNode
 from chia.harvester.harvester import Harvester
@@ -42,7 +42,7 @@ from chia.types.blockchain_format.proof_of_space import generate_plot_public_key
     get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
-from chia.util.bech32m import decode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -462,6 +462,7 @@ async def test_harvester_receive_source_signing_data(
 @pytest.mark.asyncio
 async def test_harvester_fee_convention(
     farmer_harvester_full_node_timelord_zero_bits_plot_filter,
+    caplog: pytest.LogCaptureFixture,
     mocker: MockerFixture
 ) -> None:
 
@@ -475,32 +476,85 @@ async def test_harvester_fee_convention(
     farmer_service.add_peer(UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port()))
     harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
 
-    finished_validating_data = False
+    fee_threshold = 0.5
+    max_fee_proofs = 5
+    fee_count = 0
+    proof_count = 0
+
+    farmer_reward_puzzle_hash = bytes32.random()
 
     async def intercept_farmer_new_proof_of_space(*args) -> None:
         nonlocal farmer
+        nonlocal fee_threshold
+        nonlocal max_fee_proofs
+        nonlocal proof_count
+        nonlocal fee_count
+        nonlocal farmer_reward_puzzle_hash
 
-        # TODO: Complete writing test
-        fee_threshold = 0
-        fee_info = ProofOfSpaceFeeInfo(applied_fee_threshold=fee_threshold)
+        request: harvester_protocol.NewProofOfSpace = harvester_protocol.NewProofOfSpace.from_bytes(args[0])
 
-        request: harvester_protocol.NewProofOfSpace = dataclasses.replace(
-            harvester_protocol.NewProofOfSpace.from_bytes(args[0]),
-            fee_info=fee_info
-        )
+        fee_threshold_int = uint32(int(0xFFFFFFFF * fee_threshold))
+
+        fee_quality = calculate_harvester_fee_quality(request.proof.proof, request.challenge_hash)
+        if fee_quality <= fee_threshold_int and fee_count < max_fee_proofs:
+            fee_count += 1
+            request = dataclasses.replace(
+                request,
+                farmer_reward_address_override=farmer_reward_puzzle_hash,
+                fee_info=ProofOfSpaceFeeInfo(applied_fee_threshold=fee_threshold_int),
+            )
+
+        if proof_count <= max_fee_proofs:
+            proof_count += 1
+
         peer: WSChiaConnection = args[1]
-
         await FarmerAPI.new_proof_of_space(farmer.server.api, request, peer)
+
 
     mocker.patch.object(farmer.server.api, 'new_proof_of_space', side_effect=intercept_farmer_new_proof_of_space)
 
     await wait_until_node_type_connected(farmer.server, NodeType.FULL_NODE)
     await wait_until_node_type_connected(farmer.server, NodeType.HARVESTER)
 
-    # wait until test finishes
-    def did_finished_validating_data():
-        return finished_validating_data
-    await time_out_assert(60, did_finished_validating_data, True)
+    log_text_len = 0
+    def log_has_new_text() -> bool:
+        nonlocal log_text_len
+
+        text_len = len(caplog.text)
+        if text_len > log_text_len:
+            log_text_len = text_len
+            return True
+
+        return False
+
+    # wait until we've received all the proofs
+    def received_all_proofs():
+        nonlocal max_fee_proofs
+        nonlocal fee_count
+
+        return fee_count >= max_fee_proofs
+
+    await time_out_assert(120, received_all_proofs, True)
+
+    # Wait for the farmer to pick up the last proofs
+    await asyncio.sleep(2)
+
+    assert fee_count > 0
+    await time_out_assert(10, log_has_new_text, True)
+
+    find_message = "Fee threshold passed for challenge"
+    find_index = 0
+    log_text = caplog.text
+    fail_count = 0
+
+    for _ in range(fee_count):
+        index = log_text.find(find_message, find_index) + len(find_message)
+        if index < 0:
+            fail_count += 1
+            assert fail_count < 10
+            await time_out_assert(10, log_has_new_text, True)
+        else:
+            find_index = index
 
 
 async def wait_until_node_type_connected(server: ChiaServer, node_type: NodeType) -> WSChiaConnection:
