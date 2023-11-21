@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import math
@@ -9,7 +10,9 @@ import random
 import tempfile
 from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
-from typing import IO, Dict, List, Optional, Tuple
+from typing import IO, Callable, Dict, List, Optional, Tuple
+
+import anyio
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -224,20 +227,27 @@ class WeightProofHandler:
         )
         return recent_chain
 
-    async def create_prev_sub_epoch_segments(self) -> None:
-        log.debug("create prev sub_epoch_segments")
-        heights = self.blockchain.get_ses_heights()
-        if len(heights) < 3:
-            return None
-        count = len(heights) - 2
-        ses_sub_block = self.blockchain.height_to_block_record(heights[-2])
-        prev_ses_sub_block = self.blockchain.height_to_block_record(heights[-3])
-        assert prev_ses_sub_block.sub_epoch_summary_included is not None
-        segments = await self.__create_sub_epoch_segments(ses_sub_block, prev_ses_sub_block, uint32(count))
-        assert segments is not None
-        await self.blockchain.persist_sub_epoch_challenge_segments(ses_sub_block.header_hash, segments)
-        log.debug("sub_epoch_segments done")
-        return None
+    async def create_prev_sub_epoch_segments(
+        self, f: Callable[[], None], s: contextlib.AbstractContextManager[object]
+    ) -> None:
+        try:
+            with s:
+                log.debug("create prev sub_epoch_segments")
+                heights = self.blockchain.get_ses_heights()
+                if len(heights) < 3:
+                    return None
+                count = len(heights) - 2
+                ses_sub_block = self.blockchain.height_to_block_record(heights[-2])
+                prev_ses_sub_block = self.blockchain.height_to_block_record(heights[-3])
+                assert prev_ses_sub_block.sub_epoch_summary_included is not None
+                segments = await self.__create_sub_epoch_segments(ses_sub_block, prev_ses_sub_block, uint32(count))
+                assert segments is not None
+                await self.blockchain.persist_sub_epoch_challenge_segments(ses_sub_block.header_hash, segments)
+                log.debug("sub_epoch_segments done")
+                return None
+        finally:
+            with anyio.CancelScope(shield=True):
+                f()
 
     async def create_sub_epoch_segments(self) -> None:
         log.debug("check segments in db")
