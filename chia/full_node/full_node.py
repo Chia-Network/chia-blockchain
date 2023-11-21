@@ -132,7 +132,8 @@ class FullNode:
     log: logging.Logger
     db_path: Path
     wallet_sync_queue: asyncio.Queue[WalletUpdate]
-    _segment_task: Optional[asyncio.Task[None]] = None
+    _segment_task_active: bool = False
+    _segment_task_cancel_scope: Optional[anyio.abc.CancelScope] = None
     initialized: bool = False
     _server: Optional[ChiaServer] = None
     _shut_down: bool = False
@@ -616,12 +617,9 @@ class FullNode:
                 return False
 
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
-        if self._segment_task is not None and (not self._segment_task.done()):
-            try:
-                self._segment_task.cancel()
-            except Exception as e:
-                self.log.warning(f"failed to cancel segment task {e}")
-            self._segment_task = None
+        if self._segment_task_active:
+            assert self._segment_task_cancel_scope is not None
+            self._segment_task_cancel_scope.cancel()
 
         try:
             peer_info = peer.get_peer_logging()
@@ -1393,7 +1391,14 @@ class FullNode:
             assert block_record is not None
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
-                    await self.weight_proof_handler.create_prev_sub_epoch_segments()
+
+                    def f() -> None:
+                        return None
+
+                    await self.weight_proof_handler.create_prev_sub_epoch_segments(
+                        f=f,
+                        s=contextlib.nullcontext(),
+                    )
         if agg_state_change_summary is not None:
             self._state_changed("new_peak")
             self.log.debug(
@@ -1907,8 +1912,23 @@ class FullNode:
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
             # TODO: how to handle, need to review this
-            if self._segment_task is None or self._segment_task.done():
-                self._segment_task = asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
+            if not self._segment_task_active:
+                self._segment_task_active = True
+
+                def f() -> None:
+                    # TODO: wow this is bad
+                    self._segment_task_active = False
+
+                # TODO: and this too probably (is bad)
+                self._segment_task_cancel_scope = anyio.CancelScope()
+
+                self.task_group.start_soon(
+                    partial(
+                        self.weight_proof_handler.create_prev_sub_epoch_segments,
+                        f=f,
+                        s=self._segment_task_cancel_scope,
+                    ),
+                )
         return None
 
     async def add_unfinished_block(
