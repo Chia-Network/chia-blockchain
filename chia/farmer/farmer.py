@@ -38,7 +38,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import decode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.errors import KeychainProxyConnectionFailure
@@ -838,9 +838,12 @@ class Farmer:
 
     def notify_farmer_reward_taken_by_harvester_as_fee(self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace) -> None:
         challenge_str=str(sp.challenge_hash)
-        #TODO: Show as xch address, not as hex blob
+
+        ph_prefix = self.config["network_overrides"]["config"][self.config["selected_network"]]["address_prefix"]
+        farmer_reward_puzzle_hash = encode_puzzle_hash(proof_of_space.farmer_reward_address_override, ph_prefix)
+
         self.log.info(
-            f"Farmer reward for challenge '{challenge_str}' taken by harvester to address '{str(proof_of_space.farmer_reward_address_override)}'."
+            f"Farmer reward for challenge '{challenge_str}' taken by harvester to address '{farmer_reward_puzzle_hash}'."
         )
 
         fee_quality = calculate_harvester_fee_quality(proof_of_space.proof.proof, sp.challenge_hash)
@@ -849,11 +852,11 @@ class Farmer:
             fee_threshold = proof_of_space.fee_info.applied_fee_threshold
 
             if fee_quality <= fee_threshold:
-                self.log.info(f"Fee threshold for challenge '{challenge_str}' passed: {fee_quality}/{fee_threshold}")
+                self.log.info(f"Fee threshold passed for challenge '{challenge_str}': {fee_quality}/{fee_threshold}")
             else:
-                self.log.warn(f"Fee threshold for challenge '{challenge_str}' failed: {fee_quality}/{fee_threshold}")
+                self.log.warning(f"Fee threshold failed for challenge '{challenge_str}': {fee_quality}/{fee_threshold}")
         else:
-            self.log.warn(f"No fee information given by harvester for challenge '{challenge_str}'. Fee quality was {fee_quality} (0x{fee_quality:08x})")
+            self.log.warning(f"No fee information given by harvester for challenge '{challenge_str}'. Fee quality was {fee_quality} (0x{fee_quality:08x})")
 
 
 def calculate_harvester_fee_quality(proof: bytes, challenge: bytes32) -> uint32:
