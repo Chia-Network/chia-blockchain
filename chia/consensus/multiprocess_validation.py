@@ -197,9 +197,9 @@ async def pre_validate_blocks_multiprocessing(
     num_sub_slots_found = 0
     num_blocks_seen = 0
     if blocks[0].height > 0:
-        if not block_records.contains_block(blocks[0].prev_header_hash):
+        curr = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
+        if curr is None:
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)]
-        curr = block_records.block_record(blocks[0].prev_header_hash)
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
         header_hash = curr.header_hash
         while (
@@ -214,7 +214,8 @@ async def pre_validate_blocks_multiprocessing(
             if curr.is_transaction_block:
                 num_blocks_seen += 1
             header_hash = curr.prev_hash
-            curr = block_records.block_record(header_hash)
+            curr = await block_records.get_block_record_from_db(curr.prev_hash)
+            assert curr is not None
         recent_blocks[header_hash] = curr
     block_record_was_present = []
 
@@ -227,9 +228,30 @@ async def pre_validate_blocks_multiprocessing(
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
         if block.height != 0:
-            assert block_records.contains_block(block.prev_header_hash)
             if prev_b is None:
-                prev_b = block_records.block_record(block.prev_header_hash)
+                prev_b = await block_records.get_block_record_from_db(block.prev_header_hash)
+            assert prev_b is not None
+
+            # the call to block_to_block_record() requires the previous
+            # block is in the cache
+            # and make_sub_epoch_summary() requires all blocks until we find one
+            # that includes a sub_epoch_summary
+            curr = prev_b
+            block_records.add_block_record(curr)
+            counter = 0
+            # TODO: It would probably be better to make
+            # get_next_sub_slot_iters_and_difficulty() async and able to pull
+            # from the database rather than trying to predict which blocks it
+            # may need in the cache
+            while (
+                curr.sub_epoch_summary_included is None
+                or counter < 3 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
+            ):
+                curr = await block_records.get_block_record_from_db(curr.prev_hash)
+                if curr is None:
+                    break
+                block_records.add_block_record(curr)
+                counter += 1
 
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             constants, len(block.finished_sub_slots) > 0, prev_b, block_records

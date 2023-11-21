@@ -42,7 +42,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes, parse_timelock_info
 from chia.wallet.derive_keys import find_owner_sk
@@ -892,7 +892,7 @@ class PoolWallet:
             full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
             fee_tx = dataclasses.replace(fee_tx, spend_bundle=None)
 
-        assert full_spend.fees() == fee
+        assert estimate_fees(full_spend) == fee
         current_time = uint64(int(time.time()))
         # The claim spend, minus the fee amount from the main wallet
         absorb_transaction: TransactionRecord = TransactionRecord(

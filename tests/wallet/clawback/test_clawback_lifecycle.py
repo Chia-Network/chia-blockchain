@@ -7,7 +7,6 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
@@ -39,6 +38,7 @@ from chia.wallet.util.wallet_types import RemarkDataType
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 from tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from tests.util.key_tool import KeyTool
+from tests.util.time_out_assert import time_out_assert
 
 ACS = Program.to(1)
 ACS_PH = ACS.get_tree_hash()

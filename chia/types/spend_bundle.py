@@ -29,10 +29,6 @@ class SpendBundle(Streamable):
     coin_spends: List[CoinSpend]
     aggregated_signature: G2Element
 
-    @property
-    def coin_solutions(self) -> List[CoinSpend]:
-        return self.coin_spends
-
     @classmethod
     def aggregate(cls, spend_bundles: List[SpendBundle]) -> SpendBundle:
         coin_spends: List[CoinSpend] = []
@@ -57,34 +53,14 @@ class SpendBundle(Streamable):
     def removals(self) -> List[Coin]:
         return [_.coin for _ in self.coin_spends]
 
-    # TODO: this should be removed
-    def fees(self) -> int:
-        """Unsafe to use for fees validation!!!"""
-        amount_in = sum(coin.amount for coin in self.removals())
-        amount_out = sum(coin.amount for coin in self.additions())
-
-        return amount_in - amount_out
-
     def name(self) -> bytes32:
         return self.get_hash()
 
     def debug(self, agg_sig_additional_data: bytes = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
         debug_spend_bundle(self, agg_sig_additional_data)
 
-    # TODO: this should be removed
-    def not_ephemeral_additions(self) -> List[Coin]:
-        all_removals = self.removals()
-        all_additions = self.additions()
-        result: List[Coin] = []
-
-        for add in all_additions:
-            if add in all_removals:
-                continue
-            result.append(add)
-
-        return result
-
-    # Note that `coin_spends` used to have the bad name `coin_solutions`.
+    # Note that `coin_spends` used to have the bad name `coin_solutions`, prior
+    # to Jul 12, 2021
     # Some API still expects this name. For now, we accept both names.
     #
     # TODO: continue this deprecation. Eventually, all code below here should be removed.
@@ -114,3 +90,21 @@ class SpendBundle(Streamable):
         if exclude_modern_keys:
             del d["coin_spends"]
         return cast(Dict[str, Any], recurse_jsonify(d))
+
+
+# This function executes all the puzzles to compute the difference between
+# additions and removals
+def estimate_fees(spend_bundle: SpendBundle) -> int:
+    """Unsafe to use for fees validation!!!"""
+    removed_amount = 0
+    added_amount = 0
+    max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+    for cs in spend_bundle.coin_spends:
+        removed_amount += cs.coin.amount
+        coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
+        max_cost -= cost
+        if max_cost < 0:
+            raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "estimate_fees() for SpendBundle")
+        for c in coins:
+            added_amount += c.amount
+    return removed_amount - added_amount
