@@ -416,7 +416,7 @@ class FullNode:
 
             full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
             assert full_peak is not None
-            state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [])
+            state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
             ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
                 full_peak, state_change_summary, None
             )
@@ -1325,7 +1325,8 @@ class FullNode:
                         state_change_summary.peak,
                         agg_state_change_summary.fork_height,
                         agg_state_change_summary.rolled_back_records + state_change_summary.rolled_back_records,
-                        agg_state_change_summary.new_npc_results + state_change_summary.new_npc_results,
+                        agg_state_change_summary.removals + state_change_summary.removals,
+                        agg_state_change_summary.additions + state_change_summary.additions,
                         agg_state_change_summary.new_rewards + state_change_summary.new_rewards,
                     )
             elif result == AddBlockResult.INVALID_BLOCK or result == AddBlockResult.DISCONNECTED_BLOCK:
@@ -1362,7 +1363,7 @@ class FullNode:
             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
             if peak_fb is not None:
                 assert peak is not None
-                state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [])
+                state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
                 ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
                     peak_fb, state_change_summary, None
                 )
@@ -1545,10 +1546,7 @@ class FullNode:
         )
 
         # Update the mempool (returns successful pending transactions added to the mempool)
-        spent_coins: Optional[List[bytes32]] = None
-        new_npc_results: List[NPCResult] = state_change_summary.new_npc_results
-        if len(new_npc_results) > 0 and new_npc_results[-1].conds is not None:
-            spent_coins = [bytes32(s.coin_id) for s in new_npc_results[-1].conds.spends]
+        spent_coins: List[bytes32] = [coin_id for coin_id, _ in state_change_summary.removals]
         mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
             self.blockchain.get_peak(), spent_coins
         )
