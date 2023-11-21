@@ -203,108 +203,6 @@ class FullNode:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        await self._start()
-        try:
-            yield
-        finally:
-            self._close()
-            await self._await_closed()
-
-    @property
-    def block_store(self) -> BlockStore:
-        assert self._block_store is not None
-        return self._block_store
-
-    @property
-    def timelord_lock(self) -> asyncio.Lock:
-        assert self._timelord_lock is not None
-        return self._timelord_lock
-
-    @property
-    def mempool_manager(self) -> MempoolManager:
-        assert self._mempool_manager is not None
-        return self._mempool_manager
-
-    @property
-    def blockchain(self) -> Blockchain:
-        assert self._blockchain is not None
-        return self._blockchain
-
-    @property
-    def coin_store(self) -> CoinStore:
-        assert self._coin_store is not None
-        return self._coin_store
-
-    @property
-    def add_transaction_semaphore(self) -> asyncio.Semaphore:
-        assert self._add_transaction_semaphore is not None
-        return self._add_transaction_semaphore
-
-    @property
-    def transaction_queue(self) -> TransactionQueue:
-        assert self._transaction_queue is not None
-        return self._transaction_queue
-
-    @property
-    def db_wrapper(self) -> DBWrapper2:
-        assert self._db_wrapper is not None
-        return self._db_wrapper
-
-    @property
-    def hint_store(self) -> HintStore:
-        assert self._hint_store is not None
-        return self._hint_store
-
-    @property
-    def new_peak_sem(self) -> LimitedSemaphore:
-        assert self._new_peak_sem is not None
-        return self._new_peak_sem
-
-    @property
-    def compact_vdf_sem(self) -> LimitedSemaphore:
-        assert self._compact_vdf_sem is not None
-        return self._compact_vdf_sem
-
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
-        connections = self.server.get_connections(request_node_type)
-        con_info: List[Dict[str, Any]] = []
-        if self.sync_store is not None:
-            peak_store = self.sync_store.peer_to_peak
-        else:
-            peak_store = None
-        for con in connections:
-            if peak_store is not None and con.peer_node_id in peak_store:
-                peak = peak_store[con.peer_node_id]
-                peak_height = peak.height
-                peak_hash = peak.header_hash
-                peak_weight = peak.weight
-            else:
-                peak_height = None
-                peak_hash = None
-                peak_weight = None
-            con_dict: Dict[str, Any] = {
-                "type": con.connection_type,
-                "local_port": con.local_port,
-                "peer_host": con.peer_info.host,
-                "peer_port": con.peer_info.port,
-                "peer_server_port": con.peer_server_port,
-                "node_id": con.peer_node_id,
-                "creation_time": con.creation_time,
-                "bytes_read": con.bytes_read,
-                "bytes_written": con.bytes_written,
-                "last_message_time": con.last_message_time,
-                "peak_height": peak_height,
-                "peak_weight": peak_weight,
-                "peak_hash": peak_hash,
-            }
-            con_info.append(con_dict)
-
-        return con_info
-
-    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
-        self.state_changed_callback = callback
-
-    async def _start(self) -> None:
         self._timelord_lock = asyncio.Lock()
         self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 
@@ -439,6 +337,131 @@ class FullNode:
         self.initialized = True
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.start())
+        try:
+            yield
+        finally:
+            self._shut_down = True
+            if self._init_weight_proof is not None:
+                self._init_weight_proof.cancel()
+
+            # blockchain is created in _start and in certain cases it may not exist here during _close
+            if self._blockchain is not None:
+                self.blockchain.shut_down()
+            # same for mempool_manager
+            if self._mempool_manager is not None:
+                self.mempool_manager.shut_down()
+
+            if self.full_node_peers is not None:
+                asyncio.create_task(self.full_node_peers.close())
+            if self.uncompact_task is not None:
+                self.uncompact_task.cancel()
+            if self._transaction_queue_task is not None:
+                self._transaction_queue_task.cancel()
+            cancel_task_safe(task=self.wallet_sync_task, log=self.log)
+            cancel_task_safe(task=self._sync_task, log=self.log)
+
+            for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
+                cancel_task_safe(task, self.log)
+            await self.db_wrapper.close()
+            if self._init_weight_proof is not None:
+                await asyncio.wait([self._init_weight_proof])
+            if self._sync_task is not None:
+                with contextlib.suppress(asyncio.CancelledError):
+                    await self._sync_task
+
+    @property
+    def block_store(self) -> BlockStore:
+        assert self._block_store is not None
+        return self._block_store
+
+    @property
+    def timelord_lock(self) -> asyncio.Lock:
+        assert self._timelord_lock is not None
+        return self._timelord_lock
+
+    @property
+    def mempool_manager(self) -> MempoolManager:
+        assert self._mempool_manager is not None
+        return self._mempool_manager
+
+    @property
+    def blockchain(self) -> Blockchain:
+        assert self._blockchain is not None
+        return self._blockchain
+
+    @property
+    def coin_store(self) -> CoinStore:
+        assert self._coin_store is not None
+        return self._coin_store
+
+    @property
+    def add_transaction_semaphore(self) -> asyncio.Semaphore:
+        assert self._add_transaction_semaphore is not None
+        return self._add_transaction_semaphore
+
+    @property
+    def transaction_queue(self) -> TransactionQueue:
+        assert self._transaction_queue is not None
+        return self._transaction_queue
+
+    @property
+    def db_wrapper(self) -> DBWrapper2:
+        assert self._db_wrapper is not None
+        return self._db_wrapper
+
+    @property
+    def hint_store(self) -> HintStore:
+        assert self._hint_store is not None
+        return self._hint_store
+
+    @property
+    def new_peak_sem(self) -> LimitedSemaphore:
+        assert self._new_peak_sem is not None
+        return self._new_peak_sem
+
+    @property
+    def compact_vdf_sem(self) -> LimitedSemaphore:
+        assert self._compact_vdf_sem is not None
+        return self._compact_vdf_sem
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        connections = self.server.get_connections(request_node_type)
+        con_info: List[Dict[str, Any]] = []
+        if self.sync_store is not None:
+            peak_store = self.sync_store.peer_to_peak
+        else:
+            peak_store = None
+        for con in connections:
+            if peak_store is not None and con.peer_node_id in peak_store:
+                peak = peak_store[con.peer_node_id]
+                peak_height = peak.height
+                peak_hash = peak.header_hash
+                peak_weight = peak.weight
+            else:
+                peak_height = None
+                peak_hash = None
+                peak_weight = None
+            con_dict: Dict[str, Any] = {
+                "type": con.connection_type,
+                "local_port": con.local_port,
+                "peer_host": con.peer_info.host,
+                "peer_port": con.peer_info.port,
+                "peer_server_port": con.peer_server_port,
+                "node_id": con.peer_node_id,
+                "creation_time": con.creation_time,
+                "bytes_read": con.bytes_read,
+                "bytes_written": con.bytes_written,
+                "last_message_time": con.last_message_time,
+                "peak_height": peak_height,
+                "peak_weight": peak_weight,
+                "peak_hash": peak_hash,
+            }
+            con_info.append(con_dict)
+
+        return con_info
+
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
+        self.state_changed_callback = callback
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry) -> None:
         peer = entry.peer
@@ -877,37 +900,6 @@ class FullNode:
             self.sync_store.peer_disconnected(connection.peer_node_id)
         # Remove all ph | coin id subscription for this peer
         self.subscriptions.remove_peer(connection.peer_node_id)
-
-    def _close(self) -> None:
-        self._shut_down = True
-        if self._init_weight_proof is not None:
-            self._init_weight_proof.cancel()
-
-        # blockchain is created in _start and in certain cases it may not exist here during _close
-        if self._blockchain is not None:
-            self.blockchain.shut_down()
-        # same for mempool_manager
-        if self._mempool_manager is not None:
-            self.mempool_manager.shut_down()
-
-        if self.full_node_peers is not None:
-            asyncio.create_task(self.full_node_peers.close())
-        if self.uncompact_task is not None:
-            self.uncompact_task.cancel()
-        if self._transaction_queue_task is not None:
-            self._transaction_queue_task.cancel()
-        cancel_task_safe(task=self.wallet_sync_task, log=self.log)
-        cancel_task_safe(task=self._sync_task, log=self.log)
-
-    async def _await_closed(self) -> None:
-        for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
-            cancel_task_safe(task, self.log)
-        await self.db_wrapper.close()
-        if self._init_weight_proof is not None:
-            await asyncio.wait([self._init_weight_proof])
-        if self._sync_task is not None:
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._sync_task
 
     async def _sync(self) -> None:
         """
