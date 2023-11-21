@@ -57,22 +57,16 @@ async def manage_connection(
     database: Union[str, Path],
     uri: bool = False,
     # TODO: switch to log_file
-    # log_file: Optional[TextIO] = None,
-    log_path: Optional[Path] = None,
+    log_file: Optional[TextIO] = None,
     name: Optional[str] = None,
 ) -> AsyncIterator[aiosqlite.Connection]:
-    async with contextlib.AsyncExitStack() as exit_stack:
-        connection: aiosqlite.Connection
-        if log_path is not None:
-            file = exit_stack.enter_context(log_path.open("a", encoding="utf-8"))
-            connection = await _create_connection(database=database, uri=uri, log_file=file, name=name)
-        else:
-            connection = await _create_connection(database=database, uri=uri, name=name)
+    connection: aiosqlite.Connection
+    connection = await _create_connection(database=database, uri=uri, log_file=log_file, name=name)
 
-        try:
-            yield connection
-        finally:
-            await connection.close()
+    try:
+        yield connection
+    finally:
+        await connection.close()
 
 
 def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> None:
@@ -149,7 +143,7 @@ class DBWrapper2:
                 log_file = async_exit_stack.enter_context(log_path.open("a", encoding="utf-8"))
 
             write_connection = await async_exit_stack.enter_async_context(
-                manage_connection(database=database, uri=uri, log_path=log_path, name="writer"),
+                manage_connection(database=database, uri=uri, log_file=log_file, name="writer"),
             )
             await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
             if synchronous is not None:
@@ -166,7 +160,7 @@ class DBWrapper2:
                     manage_connection(
                         database=database,
                         uri=uri,
-                        log_path=log_path,
+                        log_file=log_file,
                         name=f"reader-{index}",
                     ),
                 )
