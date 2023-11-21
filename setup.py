@@ -12,7 +12,7 @@ dependencies = [
     "chiavdf==1.1.0",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
     "chiapos==2.0.3",  # proof of space
-    "clvm==0.9.8",
+    "clvm @ git+https://github.com/chia-network/clvm@mypie",
     "clvm_tools==0.4.7",  # Currying, Program.to, other conveniences
     "chia_rs==0.2.13",
     "clvm-tools-rs==0.1.38",  # Rust implementation of clvm_tools' compiler
