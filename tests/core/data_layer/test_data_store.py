@@ -1614,4 +1614,4 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
         kv = await raw_data_store.get_keys_values(tree_id=tree_id)
         start_index = index * keys_per_pending_root
         end_index = (index + 1) * keys_per_pending_root
-        assert set(pair.key for pair in kv) == set(original_keys[start_index:end_index])
+        assert {pair.key for pair in kv} == set(original_keys[start_index:end_index])
