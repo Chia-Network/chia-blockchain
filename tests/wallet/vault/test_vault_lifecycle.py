@@ -21,6 +21,7 @@ from chia.wallet.vault.vault_drivers import (
     construct_p2_delegated_secp,
     construct_p2_recovery_puzzle,
     construct_recovery_finish,
+    construct_secp_message,
     construct_vault_merkle_tree,
     construct_vault_puzzle,
     get_vault_proof,
@@ -63,9 +64,20 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         secp_conditions = Program.to([[51, ACS_PH, amount], [51, vault_puzzlehash, vault_coin.amount - amount]])
         secp_delegated_puzzle = puzzle_for_conditions(secp_conditions)
         secp_delegated_solution = solution_for_conditions(secp_delegated_puzzle)
-        secp_signature = SECP_SK.sign_deterministic(secp_delegated_puzzle.get_tree_hash())
+        secp_signature = SECP_SK.sign_deterministic(
+            construct_secp_message(secp_delegated_puzzle.get_tree_hash(), vault_coin.name())
+        )
 
-        secp_solution = Program.to([secp_delegated_puzzle, secp_delegated_solution, secp_signature])
+        secp_solution = Program.to(
+            [
+                secp_delegated_puzzle,
+                secp_delegated_solution,
+                secp_signature,
+                vault_coin.name(),
+                DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+            ]
+        )
+
         proof = get_vault_proof(vault_merkle_tree, secp_puzzlehash)
         vault_solution_secp = Program.to([proof, secp_puzzle, secp_solution])
         vault_spendbundle = SpendBundle([CoinSpend(vault_coin, vault_puzzle, vault_solution_secp)], G2Element())
@@ -136,8 +148,18 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         secp_conditions = Program.to([[51, ACS_PH, recovery_coin.amount]])
         secp_delegated_puzzle = puzzle_for_conditions(secp_conditions)
         secp_delegated_solution = solution_for_conditions(secp_delegated_puzzle)
-        secp_signature = SECP_SK.sign_deterministic(secp_delegated_puzzle.get_tree_hash())
-        secp_solution = Program.to([secp_delegated_puzzle, secp_delegated_solution, secp_signature])
+        secp_signature = SECP_SK.sign_deterministic(
+            construct_secp_message(secp_delegated_puzzle.get_tree_hash(), recovery_coin.name())
+        )
+        secp_solution = Program.to(
+            [
+                secp_delegated_puzzle,
+                secp_delegated_solution,
+                secp_signature,
+                recovery_coin.name(),
+                DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+            ]
+        )
 
         recovery_solution = Program.to([proof, secp_puzzle, secp_solution])
         escape_spendbundle = SpendBundle([CoinSpend(recovery_coin, recovery_puzzle, recovery_solution)], G2Element())

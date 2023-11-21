@@ -8,6 +8,7 @@ from blspy import PrivateKey
 from chia_rs import ENABLE_SECP_OPS
 from ecdsa import NIST256p, SigningKey
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution
@@ -37,9 +38,10 @@ def test_recovery_puzzles() -> None:
     secp_pk = secp_sk.verifying_key.to_string("compressed")
 
     p2_puzzlehash = ACS_PH
-    vault_puzzlehash = Program.to("vault_puzzlehash")
+    vault_puzzlehash = Program.to("vault_puzzlehash").get_tree_hash()
     amount = 10000
     timelock = 5000
+    coin_id = Program.to("coin_id").get_tree_hash()
     recovery_conditions = Program.to([[51, p2_puzzlehash, amount]])
 
     escape_puzzle = P2_DELEGATED_SECP_MOD.curry(secp_pk)
@@ -78,8 +80,12 @@ def test_recovery_puzzles() -> None:
     escape_proof = Program.to((proof[0], proof[1][0]))
     delegated_puzzle = ACS
     delegated_solution = Program.to([[51, ACS_PH, amount]])
-    signed_delegated_puzzle = secp_sk.sign_deterministic(delegated_puzzle.get_tree_hash())
-    secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle])
+    signed_delegated_puzzle = secp_sk.sign_deterministic(
+        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+    )
+    secp_solution = Program.to(
+        [delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id, DEFAULT_CONSTANTS.GENESIS_CHALLENGE]
+    )
     escape_solution = Program.to([escape_proof, escape_puzzle, secp_solution])
     escape_conds = conditions_dict_for_solution(recovery_puzzle, escape_solution, INFINITE_COST)
     assert escape_conds[ConditionOpcode.CREATE_COIN][0].vars[0] == ACS_PH
@@ -90,11 +96,16 @@ def test_p2_delegated_secp() -> None:
     secp_pk = secp_sk.verifying_key.to_string("compressed")
     secp_puzzle = P2_DELEGATED_SECP_MOD.curry(secp_pk)
 
+    coin_id = Program.to("coin_id").get_tree_hash()
     delegated_puzzle = ACS
     delegated_solution = Program.to([[51, ACS_PH, 1000]])
-    signed_delegated_puzzle = secp_sk.sign_deterministic(delegated_puzzle.get_tree_hash())
+    signed_delegated_puzzle = secp_sk.sign_deterministic(
+        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+    )
 
-    secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle])
+    secp_solution = Program.to(
+        [delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id, DEFAULT_CONSTANTS.GENESIS_CHALLENGE]
+    )
     _, conds = run_with_secp(secp_puzzle, secp_solution)
 
     assert conds.at("frf").as_atom() == ACS_PH
@@ -104,7 +115,9 @@ def test_p2_delegated_secp() -> None:
     sig_bytes[0] ^= (sig_bytes[0] + 1) % 256
     bad_signature = bytes(sig_bytes)
 
-    bad_solution = Program.to([delegated_puzzle, delegated_solution, bad_signature])
+    bad_solution = Program.to(
+        [delegated_puzzle, delegated_solution, bad_signature, coin_id, DEFAULT_CONSTANTS.GENESIS_CHALLENGE]
+    )
     with pytest.raises(ValueError, match="secp256r1_verify failed"):
         run_with_secp(secp_puzzle, bad_solution)
 
@@ -123,6 +136,7 @@ def test_vault_root_puzzle() -> None:
 
     timelock = 5000
     amount = 10000
+    coin_id = Program.to("coin_id").get_tree_hash()
 
     recovery_puzzle = P2_RECOVERY_MOD.curry(
         P2_1_OF_N_MOD_HASH, RECOVERY_FINISH_MOD_HASH, secp_puzzlehash, bls_pk, timelock
@@ -138,8 +152,12 @@ def test_vault_root_puzzle() -> None:
     # secp spend path
     delegated_puzzle = ACS
     delegated_solution = Program.to([[51, ACS_PH, amount]])
-    signed_delegated_puzzle = secp_sk.sign_deterministic(delegated_puzzle.get_tree_hash())
-    secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle])
+    signed_delegated_puzzle = secp_sk.sign_deterministic(
+        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+    )
+    secp_solution = Program.to(
+        [delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id, DEFAULT_CONSTANTS.GENESIS_CHALLENGE]
+    )
     proof = vault_merkle_tree.generate_proof(secp_puzzlehash)
     secp_proof = Program.to((proof[0], proof[1][0]))
     vault_solution = Program.to([secp_proof, secp_puzzle, secp_solution])

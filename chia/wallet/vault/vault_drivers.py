@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from chia_rs import G1Element
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -45,3 +46,8 @@ def get_vault_proof(merkle_tree: MerkleTree, puzzlehash: bytes32) -> Program:
     proof = merkle_tree.generate_proof(puzzlehash)
     vault_proof: Program = Program.to((proof[0], proof[1][0]))
     return vault_proof
+
+
+# SECP SIGNATURE
+def construct_secp_message(delegated_puzzlehash: bytes32, coin_id: bytes32) -> bytes:
+    return delegated_puzzlehash + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE
