@@ -2709,13 +2709,10 @@ class TestBodyValidation:
         #         list(blocks[1].get_included_reward_coins()),
         #         condition_dic=condition_dict,
         #     )
-        #     try:
+        #     with pytest.raises(Exception):
         #         blocks = bt_2.get_consecutive_blocks(
         #             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         #         )
-        #         assert False
-        #     except Exception as e:
-        #         pass
         #     await db_wrapper.close()
         #     b.shut_down()
 

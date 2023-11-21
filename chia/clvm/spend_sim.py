@@ -68,7 +68,7 @@ class CostLogger:
             program,
             INFINITE_COST,
             mempool_mode=True,
-            height=DEFAULT_CONSTANTS.SOFT_FORK3_HEIGHT,
+            height=DEFAULT_CONSTANTS.HARD_FORK_HEIGHT,
             constants=DEFAULT_CONSTANTS,
         )
         self.cost_dict[descriptor] = npc_result.cost
@@ -109,14 +109,15 @@ class SimBlockRecord(Streamable):
 
     @classmethod
     def create(cls: Type[_T_SimBlockRecord], rci: List[Coin], height: uint32, timestamp: uint64) -> _T_SimBlockRecord:
+        prev_transaction_block_height = uint32(height - 1 if height > 0 else 0)
         return cls(
             rci,
             height,
-            uint32(height - 1 if height > 0 else 0),
+            prev_transaction_block_height,
             timestamp,
             True,
             std_hash(height.stream_to_bytes()),
-            std_hash(std_hash(height.stream_to_bytes())),
+            std_hash(prev_transaction_block_height.stream_to_bytes()),
         )
 
 

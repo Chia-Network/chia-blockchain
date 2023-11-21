@@ -380,11 +380,6 @@ class TestConditions:
         pre-v2-softfork, and rejects more than the announcement limit afterward.
         """
 
-        if consensus_mode.value < ConsensusMode.SOFT_FORK3.value:
-            # before softfork 3, there was no limit on the number of
-            # announcements
-            expect_err = None
-
         blocks = await initial_blocks(bt)
         coin = list(blocks[-2].get_included_reward_coins())[0]
         coin_announcement = Announcement(coin.name(), b"test")
