@@ -294,12 +294,13 @@ class WSChiaConnection:
                 self.incoming_message_task.cancel()
             if self.outbound_task is not None:
                 self.outbound_task.cancel()
+            self.cancel_pending_requests()
+            tasks = self.cancel_tasks(all=True)
+            await asyncio.gather(*(task for task_id, task in tasks.items()), return_exceptions=True)
             if self.ws is not None and self.ws.closed is False:
                 await self.ws.close(code=ws_close_code, message=message)
             if self.session is not None:
                 await self.session.close()
-            self.cancel_pending_requests()
-            self.cancel_tasks()
         except Exception:
             error_stack = traceback.format_exc()
             self.log.warning(f"Exception closing socket: {error_stack}")
@@ -326,11 +327,14 @@ class WSChiaConnection:
             except Exception as e:
                 self.log.error(f"Failed setting event for {message_id}: {e} {traceback.format_exc()}")
 
-    def cancel_tasks(self) -> None:
-        for task_id, task in self.api_tasks.copy().items():
-            if task_id in self.execute_tasks:
+    def cancel_tasks(self, all: bool = False) -> Dict[bytes32, asyncio.Task[None]]:
+        api_tasks = self.api_tasks.copy()
+        for task_id, task in api_tasks.items():
+            if not all and task_id in self.execute_tasks:
                 continue
             task.cancel()
+
+        return api_tasks
 
     async def outbound_handler(self) -> None:
         try:
