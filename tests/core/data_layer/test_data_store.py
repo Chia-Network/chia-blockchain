@@ -1566,3 +1566,52 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
     assert len(keys) == total_keys_per_store
     assert keys.intersection(unique_keys_1) == set()
     assert keys.symmetric_difference(common_keys.union(unique_keys_2)) == set()
+
+
+@pytest.mark.anyio
+async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStore) -> None:
+    num_stores = 5
+    total_keys = 15
+    tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
+    for tree_id in tree_ids:
+        await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+    original_keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
+    batches = []
+    keys_per_pending_root = 2
+
+    for i in range(num_stores - 1):
+        start_index = i * keys_per_pending_root
+        end_index = (i + 1) * keys_per_pending_root
+        batch = [{"action": "insert", "key": key, "value": key} for key in original_keys[start_index:end_index]]
+        batches.append(batch)
+    for tree_id, batch in zip(tree_ids, batches):
+        await raw_data_store.insert_batch(tree_id, batch, status=Status.PENDING)
+
+    tree_id = tree_ids[-1]
+    batch = [{"action": "insert", "key": key, "value": key} for key in original_keys]
+    await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
+
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+
+    keys = {node["key"] for node in nodes if node["key"] is not None}
+    assert keys == set(original_keys)
+
+    await raw_data_store.delete_store_data(tree_id)
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+
+    keys = {node["key"] for node in nodes if node["key"] is not None}
+    assert keys == set(original_keys[: (num_stores - 1) * keys_per_pending_root])
+
+    for index in range(num_stores - 1):
+        tree_id = tree_ids[index]
+        root = await raw_data_store.get_pending_root(tree_id)
+        assert root is not None
+        await raw_data_store.change_root_status(root, Status.COMMITTED)
+        kv = await raw_data_store.get_keys_values(tree_id=tree_id)
+        start_index = index * keys_per_pending_root
+        end_index = (index + 1) * keys_per_pending_root
+        assert set(pair.key for pair in kv) == set(original_keys[start_index:end_index])
