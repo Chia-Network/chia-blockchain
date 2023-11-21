@@ -54,7 +54,11 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     WEIGHT_PROOF_THRESHOLD=uint8(2),
     BLOCKS_CACHE_SIZE=uint32(4608 + (128 * 4)),
     WEIGHT_PROOF_RECENT_BLOCKS=uint32(1000),
-    MAX_BLOCK_COUNT_PER_REQUESTS=uint32(32),  # Allow up to 32 blocks per request
+    # Allow up to 33 blocks per request. This defines the max allowed difference
+    # between start and end in the block request message. But the range is
+    # inclusive, so the max allowed range of 32 is a request for 33 blocks
+    # (which is allowed)
+    MAX_BLOCK_COUNT_PER_REQUESTS=uint32(32),
     MAX_GENERATOR_SIZE=uint32(1000000),
     MAX_GENERATOR_REF_LIST_SIZE=uint32(512),  # Number of references allowed in the block generator ref list
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS

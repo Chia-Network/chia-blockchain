@@ -289,7 +289,7 @@ async def test_basic_store(
         assert peak_here is not None
         if peak_here.header_hash == block.header_hash:
             sb = blockchain.block_record(block.header_hash)
-            fork = find_fork_point_in_chain(blockchain, peak, blockchain.block_record(sb.header_hash))
+            fork = await find_fork_point_in_chain(blockchain, peak, blockchain.block_record(sb.header_hash))
             if fork > 0:
                 fork_block = blockchain.height_to_block_record(uint32(fork))
             else:
@@ -366,7 +366,7 @@ async def test_basic_store(
         assert peak_here is not None
         if peak_here.header_hash == blocks[-1].header_hash:
             sb = blockchain.block_record(blocks[-1].header_hash)
-            fork = find_fork_point_in_chain(blockchain, peak, blockchain.block_record(sb.header_hash))
+            fork = await find_fork_point_in_chain(blockchain, peak, blockchain.block_record(sb.header_hash))
             if fork > 0:
                 fork_block = blockchain.height_to_block_record(uint32(fork))
             else:

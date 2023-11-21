@@ -15,9 +15,9 @@ from chia.harvester.harvester_api import HarvesterAPI
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.time_out_assert import time_out_assert
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from tests.util.time_out_assert import time_out_assert
 
 
 @pytest.mark.anyio

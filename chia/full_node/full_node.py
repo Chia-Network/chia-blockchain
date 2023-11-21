@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
+    AsyncIterator,
     Awaitable,
     Callable,
     ClassVar,
@@ -29,6 +30,7 @@ from typing import (
 
 from chia_rs import AugSchemeMPL
 
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
@@ -198,6 +200,15 @@ class FullNode:
             db_path=db_path,
             wallet_sync_queue=asyncio.Queue(),
         )
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        await self._start()
+        try:
+            yield
+        finally:
+            self._close()
+            await self._await_closed()
 
     @property
     def block_store(self) -> BlockStore:
@@ -703,7 +714,10 @@ class FullNode:
                             False,
                         )
         else:
-            if request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
+            if (
+                curr_peak_height <= request.height
+                and request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]
+            ):
                 # This is the normal case of receiving the next block
                 if await self.short_sync_backtrack(
                     peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
@@ -716,11 +730,10 @@ class FullNode:
                 await self.short_sync_batch(peer, uint32(0), request.height)
                 return None
 
-            if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
-                # TODO: We get here if we encountered a heavier peak with a
-                # lower height than ours. We don't seem to handle this case
-                # right now. This ends up requesting the block at *our* peak
-                # height.
+            if (
+                curr_peak_height <= request.height
+                and request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]
+            ):
                 # This case of being behind but not by so much
                 if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return None
@@ -1049,14 +1062,21 @@ class FullNode:
         )
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
 
+        # normally "fork_point" or "fork_height" refers to the first common
+        # block between the main chain and the fork. Here "fork_point_height"
+        # seems to refer to the first diverging block
+
         async def fetch_block_batches(
             batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
         ) -> None:
             start_height, end_height = 0, 0
             new_peers_with_peak: List[WSChiaConnection] = peers_with_peak[:]
             try:
-                for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
-                    end_height = min(target_peak_sb_height, start_height + batch_size)
+                # block request ranges are *inclusive*, this requires some
+                # gymnastics of this range (+1 to make it exclusive, like normal
+                # ranges) and then -1 when forming the request message
+                for start_height in range(fork_point_height, target_peak_sb_height + 1, batch_size):
+                    end_height = min(target_peak_sb_height, start_height + batch_size - 1)
                     request = RequestBlocks(uint32(start_height), uint32(end_height), True)
                     fetched = False
                     for peer in random.sample(new_peers_with_peak, len(new_peers_with_peak)):
@@ -1084,7 +1104,8 @@ class FullNode:
         async def validate_block_batches(
             inner_batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
         ) -> None:
-            advanced_peak: bool = False
+            fork_info: Optional[ForkInfo] = None
+
             while True:
                 res: Optional[Tuple[WSChiaConnection, List[FullBlock]]] = await inner_batch_queue.get()
                 if res is None:
@@ -1093,8 +1114,34 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
+
+                # in case we're validating a reorg fork (i.e. not extending the
+                # main chain), we need to record the coin set from that fork in
+                # fork_info. Otherwise validation is very expensive, especially
+                # for deep reorgs
+                peak: Optional[BlockRecord]
+                if fork_info is None:
+                    peak = self.blockchain.get_peak()
+                    extending_main_chain: bool = peak is None or (
+                        peak.header_hash == blocks[0].prev_header_hash or peak.header_hash == blocks[0].header_hash
+                    )
+                    # if we're simply extending the main chain, it's important
+                    # *not* to pass in a ForkInfo object, as it can potentially
+                    # accrue a large state (with no value, since we can validate
+                    # against the CoinStore)
+                    if not extending_main_chain:
+                        if fork_point_height == 0:
+                            fork_info = ForkInfo(-1, -1, bytes32([0] * 32))
+                        else:
+                            fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
+                            assert fork_hash is not None
+                            fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
+
                 success, state_change_summary, err = await self.add_block_batch(
-                    blocks, peer.get_peer_logging(), None if advanced_peak else uint32(fork_point_height), summaries
+                    blocks,
+                    peer.get_peer_logging(),
+                    fork_info,
+                    summaries,
                 )
                 if success is False:
                     await peer.close(600)
@@ -1104,9 +1151,8 @@ class FullNode:
                         raise ValidationError(err, f"Failed to validate block batch {start_height} to {end_height}")
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
-                peak: Optional[BlockRecord] = self.blockchain.get_peak()
+                peak = self.blockchain.get_peak()
                 if state_change_summary is not None:
-                    advanced_peak = True
                     assert peak is not None
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
                     hints_to_add, _ = get_hints_and_subscription_coin_ids(
@@ -1192,17 +1238,50 @@ class FullNode:
         self,
         all_blocks: List[FullBlock],
         peer_info: PeerInfo,
-        fork_point: Optional[uint32],
+        fork_info: Optional[ForkInfo],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
+        block_dict: Dict[bytes32, FullBlock] = {}
+        for block in all_blocks:
+            block_dict[block.header_hash] = block
+
         blocks_to_validate: List[FullBlock] = []
         for i, block in enumerate(all_blocks):
-            if not self.blockchain.contains_block(block.header_hash):
+            header_hash = block.header_hash
+            if not await self.blockchain.contains_block_from_db(header_hash):
                 blocks_to_validate = all_blocks[i:]
                 break
+
+            if fork_info is None:
+                continue
+            # the below section updates the fork_info object, if
+            # there is one.
+
+            # TODO: it seems unnecessary to request overlapping block ranges
+            # when syncing
+            if block.height <= fork_info.peak_height:
+                continue
+
+            # we have already validated this block once, no need to do it again.
+            # however, if this block is not part of the main chain, we need to
+            # update the fork context with its additions and removals
+            if self.blockchain.height_to_hash(block.height) == header_hash:
+                # we're on the main chain, just fast-forward the fork height
+                fork_info.fork_height = block.height
+                fork_info.peak_height = block.height
+                fork_info.peak_hash = header_hash
+                fork_info.additions_since_fork == {}
+                fork_info.removals_since_fork == set()
+            else:
+                # We have already validated the block, but if it's not part of the
+                # main chain, we still need to re-run it to update the additions and
+                # removals in fork_info.
+                await self.blockchain.advance_fork_info(block, fork_info, block_dict)
+                await self.blockchain.run_single_block(block, fork_info, block_dict)
+
         if len(blocks_to_validate) == 0:
             return True, None, None
 
@@ -1230,9 +1309,8 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
             state_change_summary: Optional[StateChangeSummary]
-            advanced_peak = agg_state_change_summary is not None
             result, error, state_change_summary = await self.blockchain.add_block(
-                block, pre_validation_results[i], None if advanced_peak else fork_point
+                block, pre_validation_results[i], fork_info
             )
 
             if result == AddBlockResult.NEW_PEAK:
@@ -1254,7 +1332,8 @@ class FullNode:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
                 return False, agg_state_change_summary, error
-            block_record = self.blockchain.block_record(block.header_hash)
+            block_record = await self.blockchain.get_block_record_from_db(block.header_hash)
+            assert block_record is not None
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
                     await self.weight_proof_handler.create_prev_sub_epoch_segments()
@@ -1423,7 +1502,7 @@ class FullNode:
             # This is a reorg
             fork_hash: Optional[bytes32] = self.blockchain.height_to_hash(state_change_summary.fork_height)
             assert fork_hash is not None
-            fork_block = self.blockchain.block_record(fork_hash)
+            fork_block = await self.blockchain.get_block_record_from_db(fork_hash)
 
         fns_peak_result: FullNodeStorePeakResult = self.full_node_store.new_peak(
             record,
@@ -1574,6 +1653,7 @@ class FullNode:
         block: FullBlock,
         peer: Optional[WSChiaConnection] = None,
         raise_on_disconnected: bool = False,
+        fork_info: Optional[ForkInfo] = None,
     ) -> Optional[Message]:
         """
         Add a full block from a peer full node (or ourselves).
@@ -1676,7 +1756,7 @@ class FullNode:
                     )
                     assert result_to_validate.required_iters == pre_validation_results[0].required_iters
                     (added, error_code, state_change_summary) = await self.blockchain.add_block(
-                        block, result_to_validate, None
+                        block, result_to_validate, fork_info
                     )
                 if added == AddBlockResult.ALREADY_HAVE_BLOCK:
                     return None
