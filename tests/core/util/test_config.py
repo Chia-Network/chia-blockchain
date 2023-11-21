@@ -15,7 +15,6 @@ from typing import Any, Dict, Optional
 import pytest
 import yaml
 
-from chia.simulator.time_out_assert import adjusted_timeout
 from chia.util.config import (
     config_path_for_filename,
     create_default_chia_config,
@@ -26,6 +25,7 @@ from chia.util.config import (
     save_config,
     selected_network_address_prefix,
 )
+from chia.util.timing import adjusted_timeout
 
 # Commented-out lines are preserved to aid in debugging the multiprocessing tests
 # import logging

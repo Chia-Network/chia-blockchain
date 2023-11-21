@@ -19,7 +19,6 @@ from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import RequestAdditions, RespondAdditions, RespondBlockHeaders, SendTransaction
 from chia.server.outbound_message import Message, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -34,6 +33,7 @@ from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
+from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
 
 
