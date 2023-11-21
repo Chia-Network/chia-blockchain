@@ -294,12 +294,13 @@ class WSChiaConnection:
                 self.incoming_message_task.cancel()
             if self.outbound_task is not None:
                 self.outbound_task.cancel()
+            self.cancel_pending_requests()
+            self.cancel_tasks()
+            await asyncio.sleep(0)
             if self.ws is not None and self.ws.closed is False:
                 await self.ws.close(code=ws_close_code, message=message)
             if self.session is not None:
                 await self.session.close()
-            self.cancel_pending_requests()
-            self.cancel_tasks()
         except Exception:
             error_stack = traceback.format_exc()
             self.log.warning(f"Exception closing socket: {error_stack}")
