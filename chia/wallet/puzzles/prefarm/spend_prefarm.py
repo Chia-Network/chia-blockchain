@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
+import anyio
 from chia_rs import G2Element
 from clvm_tools import binutils
 
@@ -84,7 +85,9 @@ async def main() -> None:
         print(up)
         print(uf)
     finally:
-        client.close()
+        with anyio.CancelScope(shield=True):
+            client.close()
+            # TODO: and await closed?
 
 
 asyncio.run(main())

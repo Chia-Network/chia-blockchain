@@ -4,6 +4,7 @@ import random
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+import anyio
 import pytest
 
 from chia.cmds.db_upgrade_func import convert_v1_to_v2
@@ -80,7 +81,8 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                 result, err, _ = await bc.add_block(block, results)
                 assert err is None
         finally:
-            await db_wrapper1.close()
+            with anyio.CancelScope(shield=True):
+                await db_wrapper1.close()
 
         # now, convert v1 in_file to v2 out_file
         convert_v1_to_v2(in_file, out_file)
@@ -135,5 +137,6 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                     n = c.coin.name()
                     assert await coin_store1.get_coin_record(n) == await coin_store2.get_coin_record(n)
         finally:
-            await db_wrapper1.close()
-            await db_wrapper2.close()
+            with anyio.CancelScope(shield=True):
+                await db_wrapper1.close()
+                await db_wrapper2.close()

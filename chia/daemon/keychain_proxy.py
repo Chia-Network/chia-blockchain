@@ -7,6 +7,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import anyio
 from aiohttp import ClientConnectorError, ClientSession
 from chia_rs import AugSchemeMPL, PrivateKey
 
@@ -135,10 +136,11 @@ class KeychainProxy(DaemonProxy):
         self.log.info("Close signal received from keychain, we probably timed out.")
 
     async def close(self) -> None:
-        self.shut_down = True
-        await super().close()
-        if self.keychain_connection_task is not None:
-            await self.keychain_connection_task
+        with anyio.CancelScope(shield=True):
+            self.shut_down = True
+            await super().close()
+            if self.keychain_connection_task is not None:
+                await self.keychain_connection_task
 
     async def get_response_for_request(self, request_name: str, data: Dict[str, Any]) -> Tuple[WsRpcMessage, bool]:
         request = self.format_request(request_name, data)

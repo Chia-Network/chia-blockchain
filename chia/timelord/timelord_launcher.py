@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from types import FrameType
 from typing import Any, AsyncIterator, Dict, List, Optional
 
+import anyio
 import pkg_resources
 
 from chia.util.chia_logging import initialize_logging
@@ -62,7 +63,8 @@ class VDFClientProcessMgr:
         try:
             yield
         finally:
-            await self.remove_process(proc)
+            with anyio.CancelScope(shield=True):
+                await self.remove_process(proc)
 
 
 def find_vdf_client() -> pathlib.Path:
@@ -141,7 +143,8 @@ async def async_main(config: Dict[str, Any], net_config: Dict[str, Any]) -> None
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
-        await process_mgr.kill_processes()
+        with anyio.CancelScope(shield=True):
+            await process_mgr.kill_processes()
 
     async with SignalHandlers.manage() as signal_handlers:
         signal_handlers.setup_async_signal_handler(handler=stop)

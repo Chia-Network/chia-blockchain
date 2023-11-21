@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
+import anyio
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
@@ -156,7 +157,8 @@ class DataStore:
         return self
 
     async def close(self) -> None:
-        await self.db_wrapper.close()
+        with anyio.CancelScope(shield=True):
+            await self.db_wrapper.close()
 
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator[None]:

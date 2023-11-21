@@ -8,6 +8,8 @@ import time
 from pathlib import Path
 from typing import Dict, Optional
 
+import anyio
+
 from chia.data_layer.data_layer_util import Side, TerminalNode, leaf_hash
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -108,7 +110,8 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
             root = await data_store.get_tree_root(tree_id=tree_id)
             print(f"Root hash: {root.node_hash}")
         finally:
-            await data_store.close()
+            with anyio.CancelScope(shield=True):
+                await data_store.close()
 
 
 if __name__ == "__main__":

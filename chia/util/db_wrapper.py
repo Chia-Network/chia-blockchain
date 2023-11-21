@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterable, Optional, TextIO, Type, Union
 
 import aiosqlite
+import anyio
 from typing_extensions import final
 
 if aiosqlite.sqlite_version_info < (3, 32, 0):
@@ -68,7 +69,8 @@ async def manage_connection(
         try:
             yield connection
         finally:
-            await connection.close()
+            with anyio.CancelScope(shield=True):
+                await connection.close()
 
 
 def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> None:
@@ -181,14 +183,15 @@ class DBWrapper2:
         return self
 
     async def close(self) -> None:
-        try:
-            while self._num_read_connections > 0:
-                await (await self._read_connections.get()).close()
-                self._num_read_connections -= 1
-            await self._write_connection.close()
-        finally:
-            if self._log_file is not None:
-                self._log_file.close()
+        with anyio.CancelScope(shield=True):
+            try:
+                while self._num_read_connections > 0:
+                    await (await self._read_connections.get()).close()
+                    self._num_read_connections -= 1
+                await self._write_connection.close()
+            finally:
+                if self._log_file is not None:
+                    self._log_file.close()
 
     def _next_savepoint(self) -> str:
         name = f"s{self._savepoint_name}"
@@ -202,12 +205,14 @@ class DBWrapper2:
         try:
             yield
         except:  # noqa E722
-            await self._write_connection.execute(f"ROLLBACK TO {name}")
-            raise
+            with anyio.CancelScope(shield=True):
+                await self._write_connection.execute(f"ROLLBACK TO {name}")
+                raise
         finally:
             # rollback to a savepoint doesn't cancel the transaction, it
             # just rolls back the state. We need to cancel it regardless
-            await self._write_connection.execute(f"RELEASE {name}")
+            with anyio.CancelScope(shield=True):
+                await self._write_connection.execute(f"RELEASE {name}")
 
     @contextlib.asynccontextmanager
     async def writer(self) -> AsyncIterator[aiosqlite.Connection]:
@@ -271,9 +276,10 @@ class DBWrapper2:
                 try:
                     yield connection
                 finally:
-                    # close the transaction with a rollback instead of commit just in
-                    # case any modifications were submitted through this reader
-                    await connection.rollback()
+                    with anyio.CancelScope(shield=True):
+                        # close the transaction with a rollback instead of commit just in
+                        # case any modifications were submitted through this reader
+                        await connection.rollback()
 
     @contextlib.asynccontextmanager
     async def reader_no_transaction(self) -> AsyncIterator[aiosqlite.Connection]:

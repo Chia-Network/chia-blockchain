@@ -13,6 +13,7 @@ if sys.platform == "win32":
 
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Optional, Tuple, Union
 
+import anyio
 from typing_extensions import Protocol, TypeAlias
 
 # https://github.com/python/asyncio/pull/448
@@ -296,8 +297,10 @@ if sys.platform == "win32":
                 try:
                     await future
                 except asyncio.CancelledError:
-                    conn.close()
-                    raise
+                    # TODO: ack! consuming cancellation...
+                    with anyio.CancelScope(shield=True):
+                        conn.close()
+                        raise
                 except OSError as exc:
                     # https://github.com/python/cpython/issues/93821#issuecomment-1157945855
                     if exc.winerror not in (  # pylint: disable=E1101

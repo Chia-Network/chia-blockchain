@@ -6,6 +6,7 @@ import time
 from typing import Any, Dict, List, Optional, Union
 
 import aiohttp
+import anyio
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 
 from chia import __version__
@@ -487,10 +488,11 @@ class FarmerAPI:
             msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
             await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
         except Exception as exception:
-            # Remove here, as we want to reprocess the SP should it be sent again
-            self.farmer.sps[new_signage_point.challenge_chain_sp].remove(new_signage_point)
+            with anyio.CancelScope(shield=True):
+                # Remove here, as we want to reprocess the SP should it be sent again
+                self.farmer.sps[new_signage_point.challenge_chain_sp].remove(new_signage_point)
 
-            raise exception
+                raise exception
         finally:
             # Age out old 24h information for every signage point regardless
             # of any failures.  Note that this still lets old data remain if

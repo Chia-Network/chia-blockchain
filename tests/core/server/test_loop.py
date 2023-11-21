@@ -62,7 +62,8 @@ class Client:
         try:
             yield [*clients]
         finally:
-            await asyncio.gather(*(client.close() for client in clients))
+            with anyio.CancelScope(shield=True):
+                await asyncio.gather(*(client.close() for client in clients))
 
     async def is_alive(self) -> bool:
         if self.reader is None or self.writer is None:
@@ -82,9 +83,10 @@ class Client:
         return received == to_send
 
     async def close(self) -> None:
-        if self.writer is not None:
-            self.writer.close()
-            await self.writer.wait_closed()
+        with anyio.CancelScope(shield=True):
+            if self.writer is not None:
+                self.writer.close()
+                await self.writer.wait_closed()
 
 
 @dataclass()
@@ -134,6 +136,7 @@ class ServeInThread:
         try:
             await self.server_task
         except asyncio.CancelledError:
+            # TODO: ack! consuming cancellation
             pass
 
     def stop(self) -> None:
@@ -197,9 +200,10 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
             post_connection_succeeded = False
             post_connection_error = f"{type(e).__name__}: {e}"
         finally:
-            if writer is not None:
-                writer.close()
-                await writer.wait_closed()
+            with anyio.CancelScope(shield=True):
+                if writer is not None:
+                    writer.close()
+                    await writer.wait_closed()
 
         logger.info(" ====   killing serve.py")
 

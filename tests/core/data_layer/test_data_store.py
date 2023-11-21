@@ -11,6 +11,7 @@ from random import Random
 from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
 
 import aiosqlite
+import anyio
 import pytest
 
 from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
@@ -96,9 +97,11 @@ async def test_create_creates_tables_and_columns(
                 columns = await cursor.fetchall()
                 assert [column[1] for column in columns] == expected_columns
         finally:
-            await store.close()
+            with anyio.CancelScope(shield=True):
+                await store.close()
     finally:
-        await db_wrapper.close()
+        with anyio.CancelScope(shield=True):
+            await db_wrapper.close()
 
 
 @pytest.mark.anyio
@@ -427,7 +430,8 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 root = await single_op_data_store.get_tree_root(tree_id=tree_id)
                 saved_roots.append(root)
     finally:
-        await single_op_data_store.close()
+        with anyio.CancelScope(shield=True):
+            await single_op_data_store.close()
 
     for batch_number, batch in enumerate(saved_batches):
         assert len(batch) == num_ops_per_batch
@@ -1295,7 +1299,8 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
             await write_files_for_root(data_store_server, tree_id, root, tmp_path, 0)
             roots.append(root)
     finally:
-        await data_store_server.close()
+        with anyio.CancelScope(shield=True):
+            await data_store_server.close()
 
     generation = 1
     assert len(roots) == num_batches

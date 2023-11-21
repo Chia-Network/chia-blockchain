@@ -5,6 +5,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
 
+import anyio
+
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 
 
@@ -15,7 +17,8 @@ async def DBConnection(db_version: int) -> AsyncIterator[DBWrapper2]:
     try:
         yield _db_wrapper
     finally:
-        await _db_wrapper.close()
+        with anyio.CancelScope(shield=True):
+            await _db_wrapper.close()
 
 
 @asynccontextmanager
@@ -26,4 +29,5 @@ async def PathDBConnection(db_version: int) -> AsyncIterator[DBWrapper2]:
         try:
             yield _db_wrapper
         finally:
-            await _db_wrapper.close()
+            with anyio.CancelScope(shield=True):
+                await _db_wrapper.close()

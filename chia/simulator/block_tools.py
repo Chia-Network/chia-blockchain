@@ -381,8 +381,9 @@ class BlockTools:
 
             self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
         finally:
-            if keychain_proxy is not None:
-                await keychain_proxy.close()  # close the keychain proxy
+            with anyio.CancelScope(shield=True):
+                if keychain_proxy is not None:
+                    await keychain_proxy.close()  # close the keychain proxy
 
     def change_config(self, new_config: Dict[str, Any]) -> None:
         self._config = new_config

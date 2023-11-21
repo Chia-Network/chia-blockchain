@@ -27,6 +27,7 @@ from typing import (
 )
 
 import aiohttp
+import anyio
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError
 from chia.data_layer.data_layer_util import (
@@ -187,8 +188,9 @@ class DataLayer:
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
+            with anyio.CancelScope(shield=True):
+                self._close()
+                await self._await_closed()
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
@@ -224,6 +226,7 @@ class DataLayer:
             try:
                 self.periodically_manage_data_task.cancel()
             except asyncio.CancelledError:
+                # TODO: ack! consuming cancellation
                 pass
         if self._data_store is not None:
             await self.data_store.close()
@@ -590,11 +593,12 @@ class DataLayer:
                     full_tree_first_publish_generation,
                 )
             except Exception as e:
-                self.log.error(f"Exception uploading files, will retry later: tree id {tree_id}")
-                self.log.debug(f"Failed to upload files, cleaning local files: {type(e).__name__}: {e}")
-                if write_file_result.full_tree is not None:
-                    os.remove(write_file_result.full_tree)
-                os.remove(write_file_result.diff_tree)
+                with anyio.CancelScope(shield=True):
+                    self.log.error(f"Exception uploading files, will retry later: tree id {tree_id}")
+                    self.log.debug(f"Failed to upload files, cleaning local files: {type(e).__name__}: {e}")
+                    if write_file_result.full_tree is not None:
+                        os.remove(write_file_result.full_tree)
+                    os.remove(write_file_result.diff_tree)
             publish_generation -= 1
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
 
@@ -671,10 +675,8 @@ class DataLayer:
         self.log.info(f"Unsubscribed to {tree_id}")
         for filename in filenames:
             file_path = self.server_files_location.joinpath(filename)
-            try:
+            with contextlib.suppress(FileNotFoundError):
                 file_path.unlink()
-            except FileNotFoundError:
-                pass
 
     async def get_subscriptions(self) -> List[Subscription]:
         async with self.subscription_lock:

@@ -10,6 +10,7 @@ from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union, cast
 
+import anyio
 from aiohttp import (
     ClientResponseError,
     ClientSession,
@@ -517,8 +518,9 @@ class ChiaServer:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception {e}, exception Stack: {error_stack}")
         finally:
-            if session is not None:
-                await session.close()
+            with anyio.CancelScope(shield=True):
+                if session is not None:
+                    await session.close()
 
         return False
 

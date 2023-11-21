@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
+import anyio
+
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
@@ -54,7 +56,8 @@ async def sim_and_client(
             await sim.farm_block()
         yield sim, client
     finally:
-        await sim.close()
+        with anyio.CancelScope(shield=True):
+            await sim.close()
 
 
 class CostLogger:
@@ -179,15 +182,16 @@ class SpendSim:
             return self
 
     async def close(self) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            c = await conn.execute("DELETE FROM block_data")
-            await c.close()
-            c = await conn.execute(
-                "INSERT INTO block_data VALUES(?)",
-                (bytes(SimStore(self.timestamp, self.block_height, self.block_records, self.blocks)),),
-            )
-            await c.close()
-        await self.db_wrapper.close()
+        with anyio.CancelScope(shield=True):
+            async with self.db_wrapper.writer_maybe_transaction() as conn:
+                c = await conn.execute("DELETE FROM block_data")
+                await c.close()
+                c = await conn.execute(
+                    "INSERT INTO block_data VALUES(?)",
+                    (bytes(SimStore(self.timestamp, self.block_height, self.block_records, self.blocks)),),
+                )
+                await c.close()
+            await self.db_wrapper.close()
 
     async def new_peak(self) -> None:
         await self.mempool_manager.new_peak(self.block_records[-1], None)

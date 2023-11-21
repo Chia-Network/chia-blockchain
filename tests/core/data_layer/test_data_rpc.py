@@ -2022,8 +2022,9 @@ async def test_clear_pending_roots(
             try:
                 cleared_root = await client.clear_pending_roots(store_id=tree_id)
             finally:
-                client.close()
-                await client.await_closed()
+                with anyio.CancelScope(shield=True):
+                    client.close()
+                    await client.await_closed()
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
 
@@ -2231,8 +2232,9 @@ async def test_wallet_log_in_changes_active_fingerprint(
             try:
                 await client.wallet_log_in(fingerprint=secondary_fingerprint)
             finally:
-                client.close()
-                await client.await_closed()
+                with anyio.CancelScope(shield=True):
+                    client.close()
+                    await client.await_closed()
         elif layer == InterfaceLayer.funcs:
             await wallet_log_in_cmd(rpc_port=rpc_port, fingerprint=secondary_fingerprint, root_path=bt.root_path)
         elif layer == InterfaceLayer.cli:

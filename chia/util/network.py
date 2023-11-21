@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union
 
+import anyio
 from aiohttp import web
 from aiohttp.log import web_logger
 from typing_extensions import final
@@ -123,8 +124,9 @@ class WebServer:
         return f"{self.scheme}://{self.hostname}:{self.listen_port}/{path}"
 
     async def _close(self) -> None:
-        await self.runner.shutdown()
-        await self.runner.cleanup()
+        with anyio.CancelScope(shield=True):
+            await self.runner.shutdown()
+            await self.runner.cleanup()
 
     def close(self) -> None:
         self._close_task = asyncio.create_task(self._close())

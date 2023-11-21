@@ -14,6 +14,7 @@ from types import FrameType
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 
 import aiosqlite
+import anyio
 from dnslib import AAAA, EDNS0, NS, QTYPE, RCODE, RD, RR, SOA, A, DNSError, DNSHeader, DNSQuestion, DNSRecord
 
 from chia.seeder.crawl_store import CrawlStore
@@ -61,14 +62,16 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
         self.queue_task = asyncio.create_task(self.respond())  # This starts the dns respond loop.
 
     async def stop(self) -> None:
-        if self.queue_task is not None:
-            self.queue_task.cancel()
-            try:
-                await self.queue_task
-            except asyncio.CancelledError:  # we dont care
-                pass
-        if self.transport is not None:
-            self.transport.close()
+        with anyio.CancelScope(shield=True):
+            if self.queue_task is not None:
+                self.queue_task.cancel()
+                try:
+                    await self.queue_task
+                except asyncio.CancelledError:  # we dont care
+                    # TODO: ack! consuming cancellation
+                    pass
+            if self.transport is not None:
+                self.transport.close()
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         # we use the #ignore because transport is a subclass of BaseTransport, but we need the real type.
@@ -356,8 +359,9 @@ class DNSServer:
         try:
             yield
         finally:  # catches any errors and properly shuts down the server
-            await self.stop()
-            log.warning("DNS server stopped.")
+            with anyio.CancelScope(shield=True):
+                await self.stop()
+                log.warning("DNS server stopped.")
 
     async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
         signal_handlers.setup_async_signal_handler(handler=self._accept_signal)
@@ -372,22 +376,24 @@ class DNSServer:
         await self.stop()
 
     async def stop(self) -> None:
-        log.warning("Stopping DNS server...")
-        if self.shutting_down:
-            return
-        self.shutting_down = True
-        if self.reliable_task is not None:
-            self.reliable_task.cancel()  # cancel the peer update task
-        if self.crawl_store is not None:
-            await self.crawl_store.crawl_db.close()
-        if self.udp_protocol_ipv6 is not None:
-            await self.udp_protocol_ipv6.stop()  # stop responding to and accepting udp requests (ipv6) & ipv4 if linux.
-        if self.udp_protocol_ipv4 is not None:
-            await self.udp_protocol_ipv4.stop()  # stop responding to and accepting udp requests (ipv4) if windows.
-        if self.tcp_server is not None:
-            self.tcp_server.close()  # stop accepting new tcp requests (ipv4 and ipv6)
-            await self.tcp_server.wait_closed()  # wait for existing TCP requests to finish (ipv4 and ipv6)
-        self.shutdown_event.set()
+        with anyio.CancelScope(shield=True):
+            log.warning("Stopping DNS server...")
+            if self.shutting_down:
+                return
+            self.shutting_down = True
+            if self.reliable_task is not None:
+                self.reliable_task.cancel()  # cancel the peer update task
+            if self.crawl_store is not None:
+                await self.crawl_store.crawl_db.close()
+            if self.udp_protocol_ipv6 is not None:
+                # stop responding to and accepting udp requests (ipv6) & ipv4 if linux.
+                await self.udp_protocol_ipv6.stop()
+            if self.udp_protocol_ipv4 is not None:
+                await self.udp_protocol_ipv4.stop()  # stop responding to and accepting udp requests (ipv4) if windows.
+            if self.tcp_server is not None:
+                self.tcp_server.close()  # stop accepting new tcp requests (ipv4 and ipv6)
+                await self.tcp_server.wait_closed()  # wait for existing TCP requests to finish (ipv4 and ipv6)
+            self.shutdown_event.set()
 
     async def periodically_get_reliable_peers(self) -> None:
         sleep_interval = 0

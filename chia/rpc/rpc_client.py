@@ -8,6 +8,7 @@ from ssl import SSLContext
 from typing import Any, AsyncIterator, Dict, List, Optional, Type, TypeVar
 
 import aiohttp
+import anyio
 
 from chia.server.outbound_message import NodeType
 from chia.server.server import ssl_context_for_client
@@ -76,8 +77,9 @@ class RpcClient:
         try:
             yield self
         finally:
-            self.close()
-            await self.await_closed()
+            with anyio.CancelScope(shield=True):
+                self.close()
+                await self.await_closed()
 
     async def fetch(self, path, request_json) -> Dict[str, Any]:
         async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context) as response:

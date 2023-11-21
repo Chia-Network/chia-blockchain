@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, cast, final
 
 import aiohttp
+import anyio
 import pytest
 from aiohttp import web
 
@@ -104,7 +105,8 @@ async def recording_web_server_fixture(self_hostname: str) -> AsyncIterator[Reco
     try:
         yield server
     finally:
-        await server.await_closed()
+        with anyio.CancelScope(shield=True):
+            await server.await_closed()
 
 
 @pytest.mark.anyio

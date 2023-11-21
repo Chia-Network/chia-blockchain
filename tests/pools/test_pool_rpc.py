@@ -9,6 +9,7 @@ from pathlib import Path
 from shutil import rmtree
 from typing import Any, AsyncIterator, Dict, List, Tuple
 
+import anyio
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
@@ -73,7 +74,8 @@ async def manage_temporary_pool_plot(
 
             yield plot
         finally:
-            await bt.delete_plot(bt_plot.plot_id)
+            with anyio.CancelScope(shield=True):
+                await bt.delete_plot(bt_plot.plot_id)
 
 
 PREFARMED_BLOCKS = 4

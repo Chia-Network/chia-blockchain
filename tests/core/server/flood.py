@@ -73,6 +73,7 @@ async def main() -> None:
         try:
             await task
         except asyncio.CancelledError:
+            # TODO: ack! consuming cancellation
             pass
         finally:
             logger.info("leaving flood")

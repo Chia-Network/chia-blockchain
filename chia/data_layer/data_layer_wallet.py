@@ -6,6 +6,7 @@ import time
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
+import anyio
 from chia_rs import G1Element, G2Element
 from clvm.EvalError import EvalError
 from typing_extensions import Unpack, final
@@ -1033,10 +1034,11 @@ class DataLayerWallet:
                 for tx in all_txs:
                     await self.wallet_state_manager.add_pending_transaction(tx)
             except Exception as e:
-                self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
-                # Something went wrong so let's delete anything pending that was created
-                for singleton in unconfirmed_singletons:
-                    await self.wallet_state_manager.dl_store.delete_singleton_record(singleton.coin_id)
+                with anyio.CancelScope(shield=True):
+                    self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
+                    # Something went wrong so let's delete anything pending that was created
+                    for singleton in unconfirmed_singletons:
+                        await self.wallet_state_manager.dl_store.delete_singleton_record(singleton.coin_id)
 
     async def stop_tracking_singleton(self, launcher_id: bytes32) -> None:
         await self.wallet_state_manager.dl_store.delete_singleton_records_by_launcher_id(launcher_id)

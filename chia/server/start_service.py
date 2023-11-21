@@ -24,6 +24,8 @@ from typing import (
     TypeVar,
 )
 
+import anyio
+
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
@@ -246,34 +248,35 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                         )
                 yield
             finally:
-                self._log.info(f"Stopping service {self._service_name} at port {self._advertised_port} ...")
+                with anyio.CancelScope(shield=True):
+                    self._log.info(f"Stopping service {self._service_name} at port {self._advertised_port} ...")
 
-                # start with UPnP, since this can take a while, we want it to happen
-                # in the background while shutting down everything else
-                for port in self._upnp_ports:
-                    self.upnp.release(port)
+                    # start with UPnP, since this can take a while, we want it to happen
+                    # in the background while shutting down everything else
+                    for port in self._upnp_ports:
+                        self.upnp.release(port)
 
-                self._log.info("Cancelling reconnect task")
-                if self._connect_peers_task is not None:
-                    self._connect_peers_task.cancel()
-                self._log.info("Closing connections")
-                self._server.close_all()
+                    self._log.info("Cancelling reconnect task")
+                    if self._connect_peers_task is not None:
+                        self._connect_peers_task.cancel()
+                    self._log.info("Closing connections")
+                    self._server.close_all()
 
-                if self.rpc_server is not None:
-                    self._log.info("Closing RPC server")
-                    self.rpc_server.close()
+                    if self.rpc_server is not None:
+                        self._log.info("Closing RPC server")
+                        self.rpc_server.close()
 
-                self._log.info("Waiting for socket to be closed (if opened)")
+                    self._log.info("Waiting for socket to be closed (if opened)")
 
-                self._log.info("Waiting for ChiaServer to be closed")
-                await self._server.await_closed()
+                    self._log.info("Waiting for ChiaServer to be closed")
+                    await self._server.await_closed()
 
-                if self.rpc_server:
-                    self._log.info("Waiting for RPC server")
-                    await self.rpc_server.await_closed()
-                    self._log.info("Closed RPC server")
+                    if self.rpc_server:
+                        self._log.info("Waiting for RPC server")
+                        await self.rpc_server.await_closed()
+                        self._log.info("Closed RPC server")
 
-                self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully stopped")
+                    self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully stopped")
 
     def add_peer(self, peer: UnresolvedPeerInfo) -> None:
         self._connect_peers.add(peer)

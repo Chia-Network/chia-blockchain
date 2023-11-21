@@ -10,6 +10,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Tuple, cast
 
+import anyio
 from typing_extensions import Literal
 
 from chia.consensus.constants import ConsensusConstants
@@ -135,8 +136,9 @@ class Harvester:
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
+            with anyio.CancelScope(shield=True):
+                self._close()
+                await self._await_closed()
 
     async def _start(self) -> None:
         self._refresh_lock = asyncio.Lock()

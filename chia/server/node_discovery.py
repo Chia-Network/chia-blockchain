@@ -10,6 +10,7 @@ from random import Random
 from secrets import randbits
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+import anyio
 import dns.asyncresolver
 
 from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
@@ -298,6 +299,7 @@ class FullNodeDiscovery:
                     try:
                         await asyncio.sleep(introducer_backoff)
                     except asyncio.CancelledError:
+                        # TODO: ack! consuming cancellation
                         return None
                     # Alternate between DNS servers and introducers.
                     # First try all the DNS servers in the list once. Then try the introducers once.
@@ -316,6 +318,7 @@ class FullNodeDiscovery:
                         try:
                             await asyncio.sleep(5)
                         except asyncio.CancelledError:
+                            # TODO: ack! consuming cancellation
                             return None
 
                     retry_introducers = False
@@ -374,6 +377,7 @@ class FullNodeDiscovery:
                     try:
                         await asyncio.sleep(select_peer_interval)
                     except asyncio.CancelledError:
+                        # TODO: ack! consuming cancellation
                         return None
                     tries += 1
                     if tries > max_tries:
@@ -559,9 +563,10 @@ class FullNodePeers(FullNodeDiscovery):
         await self.start_tasks()
 
     async def close(self) -> None:
-        await self._close_common()
-        self.cancel_task_safe(self.self_advertise_task)
-        self.cancel_task_safe(self.address_relay_task)
+        with anyio.CancelScope(shield=True):
+            await self._close_common()
+            self.cancel_task_safe(self.self_advertise_task)
+            self.cancel_task_safe(self.address_relay_task)
 
     async def _periodically_self_advertise_and_clean_data(self) -> None:
         while not self.is_closed:
@@ -569,6 +574,7 @@ class FullNodePeers(FullNodeDiscovery):
                 try:
                     await asyncio.sleep(24 * 3600)
                 except asyncio.CancelledError:
+                    # TODO: ack! consuming cancellation
                     return None
                 # Clean up known nodes for neighbours every 24 hours.
                 async with self.lock:
@@ -654,6 +660,7 @@ class FullNodePeers(FullNodeDiscovery):
                     assert self.relay_queue is not None, "FullNodePeers.relay_queue should always exist"
                     relay_peer, num_peers = await self.relay_queue.get()
                 except asyncio.CancelledError:
+                    # TODO: ack! consuming canceallation
                     return None
                 try:
                     IPAddress.create(relay_peer.host)

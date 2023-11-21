@@ -18,6 +18,7 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
 
+import anyio
 from chia_rs import G1Element
 from typing_extensions import Protocol
 
@@ -207,9 +208,10 @@ class WebSocketServer:
         try:
             yield
         finally:
-            if not self.shutdown_event.is_set():
-                await self.stop()
-            await self.exit()
+            with anyio.CancelScope(shield=True):
+                if not self.shutdown_event.is_set():
+                    await self.stop()
+                await self.exit()
 
     async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
         signal_handlers.setup_async_signal_handler(handler=self._accept_signal)
@@ -317,18 +319,19 @@ class WebSocketServer:
             try:
                 await connection.send_str(response)
             except Exception as e:
-                service_names = self.remove_connection(connection)
-                if len(service_names) == 0:
-                    service_names = ["Unknown"]
+                with anyio.CancelScope(shield=True):
+                    service_names = self.remove_connection(connection)
+                    if len(service_names) == 0:
+                        service_names = ["Unknown"]
 
-                if isinstance(e, ConnectionResetError):
-                    self.log.info(f"Peer disconnected. Closing websocket with {service_names}")
-                else:
-                    tb = traceback.format_exc()
-                    self.log.error(f"Unexpected exception trying to send to {service_names} (websocket: {e} {tb})")
-                    self.log.info(f"Closing websocket with {service_names}")
+                    if isinstance(e, ConnectionResetError):
+                        self.log.info(f"Peer disconnected. Closing websocket with {service_names}")
+                    else:
+                        tb = traceback.format_exc()
+                        self.log.error(f"Unexpected exception trying to send to {service_names} (websocket: {e} {tb})")
+                        self.log.info(f"Closing websocket with {service_names}")
 
-                await connection.close()
+                    await connection.close()
 
     def remove_connection(self, websocket: WebSocketResponse) -> List[str]:
         """Returns a list of service names from which the connection was removed"""
@@ -373,8 +376,10 @@ class WebSocketServer:
                                 ):
                                     await connection.ping()
                             except:  # noqa E722
-                                self.remove_connection(connection)
-                                await connection.close()
+                                # TODO: ack! consuming all exceptions including cancellation
+                                with anyio.CancelScope(shield=True):
+                                    self.remove_connection(connection)
+                                    await connection.close()
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
@@ -695,10 +700,11 @@ class WebSocketServer:
             try:
                 await websocket.send_str(response)
             except Exception as e:
-                tb = traceback.format_exc()
-                self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
-                websockets.remove(websocket)
-                await websocket.close()
+                with anyio.CancelScope(shield=True):
+                    tb = traceback.format_exc()
+                    self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
+                    websockets.remove(websocket)
+                    await websocket.close()
 
     def keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
         asyncio.create_task(self._keyring_status_changed(keyring_status, destination))
@@ -754,10 +760,11 @@ class WebSocketServer:
             try:
                 await websocket.send_str(response)
             except Exception as e:
-                tb = traceback.format_exc()
-                self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
-                websockets.remove(websocket)
-                await websocket.close()
+                with anyio.CancelScope(shield=True):
+                    tb = traceback.format_exc()
+                    self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
+                    websockets.remove(websocket)
+                    await websocket.close()
 
     def state_changed(self, service: str, message: Dict[str, Any]):
         asyncio.create_task(self._state_changed(service, message))
@@ -1102,10 +1109,11 @@ class WebSocketServer:
             raise error
 
         finally:
-            if current_process is not None:
-                self.services[service_name].remove(current_process)
-                current_process.wait()  # prevent zombies
-            self._run_next_serial_plotting(loop, queue)
+            with anyio.CancelScope(shield=True):
+                if current_process is not None:
+                    self.services[service_name].remove(current_process)
+                    current_process.wait()  # prevent zombies
+                self._run_next_serial_plotting(loop, queue)
 
     async def start_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         service_name = request["service"]

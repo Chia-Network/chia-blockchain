@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 from typing import List
 
+import anyio
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -1104,4 +1105,5 @@ async def test_unacknowledged_cat_table() -> None:
         await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(0))
         assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == []
     finally:
-        await db_wrapper.close()
+        with anyio.CancelScope(shield=True):
+            await db_wrapper.close()

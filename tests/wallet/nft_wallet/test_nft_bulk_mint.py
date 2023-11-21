@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 from typing import Any, Dict
 
+import anyio
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -334,10 +335,11 @@ async def test_nft_mint_from_did_rpc(
             assert meta_dict["edition_total"] == nft.edition_total
             assert nft.launcher_id in nft_ids
     finally:
-        client.close()
-        client_node.close()
-        await client.await_closed()
-        await client_node.await_closed()
+        with anyio.CancelScope(shield=True):
+            client.close()
+            client_node.close()
+            await client.await_closed()
+            await client_node.await_closed()
 
 
 @pytest.mark.parametrize(
@@ -508,10 +510,11 @@ async def test_nft_mint_from_did_rpc_no_royalties(
         await time_out_assert(60, get_taker_nfts, n)
 
     finally:
-        client.close()
-        client_node.close()
-        await client.await_closed()
-        await client_node.await_closed()
+        with anyio.CancelScope(shield=True):
+            client.close()
+            client_node.close()
+            await client.await_closed()
+            await client_node.await_closed()
 
 
 @pytest.mark.parametrize(
@@ -924,10 +927,11 @@ async def test_nft_mint_from_xch_rpc(
             assert meta_dict["edition_total"] == nft.edition_total
 
     finally:
-        client.close()
-        client_node.close()
-        await client.await_closed()
-        await client_node.await_closed()
+        with anyio.CancelScope(shield=True):
+            client.close()
+            client_node.close()
+            await client.await_closed()
+            await client_node.await_closed()
 
 
 @pytest.mark.parametrize(

@@ -8,6 +8,7 @@ import traceback
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
+import anyio
 from aiohttp import ClientSession, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
@@ -272,43 +273,44 @@ class WSChiaConnection:
         Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
         from the global list.
         """
-        if self.closed:
-            # always try to call the callback even for closed connections
-            with log_exceptions(self.log, consume=True):
-                self.log.debug(f"Closing already closed connection for {self.peer_info.host}")
-                if self.close_callback is not None:
-                    self.close_callback(self, ban_time, closed_connection=True)
-            self._close_event.set()
-            return None
-        self.closed = True
+        with anyio.CancelScope(shield=True):
+            if self.closed:
+                # always try to call the callback even for closed connections
+                with log_exceptions(self.log, consume=True):
+                    self.log.debug(f"Closing already closed connection for {self.peer_info.host}")
+                    if self.close_callback is not None:
+                        self.close_callback(self, ban_time, closed_connection=True)
+                self._close_event.set()
+                return None
+            self.closed = True
 
-        if error is None:
-            message = b""
-        else:
-            message = str(int(error.value)).encode("utf-8")
+            if error is None:
+                message = b""
+            else:
+                message = str(int(error.value)).encode("utf-8")
 
-        try:
-            if self.inbound_task is not None:
-                self.inbound_task.cancel()
-            if self.incoming_message_task is not None:
-                self.incoming_message_task.cancel()
-            if self.outbound_task is not None:
-                self.outbound_task.cancel()
-            if self.ws is not None and self.ws.closed is False:
-                await self.ws.close(code=ws_close_code, message=message)
-            if self.session is not None:
-                await self.session.close()
-            self.cancel_pending_requests()
-            self.cancel_tasks()
-        except Exception:
-            error_stack = traceback.format_exc()
-            self.log.warning(f"Exception closing socket: {error_stack}")
-            raise
-        finally:
-            with log_exceptions(self.log, consume=True):
-                if self.close_callback is not None:
-                    self.close_callback(self, ban_time, closed_connection=False)
-            self._close_event.set()
+            try:
+                if self.inbound_task is not None:
+                    self.inbound_task.cancel()
+                if self.incoming_message_task is not None:
+                    self.incoming_message_task.cancel()
+                if self.outbound_task is not None:
+                    self.outbound_task.cancel()
+                if self.ws is not None and self.ws.closed is False:
+                    await self.ws.close(code=ws_close_code, message=message)
+                if self.session is not None:
+                    await self.session.close()
+                self.cancel_pending_requests()
+                self.cancel_tasks()
+            except Exception:
+                error_stack = traceback.format_exc()
+                self.log.warning(f"Exception closing socket: {error_stack}")
+                raise
+            finally:
+                with log_exceptions(self.log, consume=True):
+                    if self.close_callback is not None:
+                        self.close_callback(self, ban_time, closed_connection=False)
+                self._close_event.set()
 
     async def wait_until_closed(self) -> None:
         await self._close_event.wait()
@@ -339,6 +341,7 @@ class WSChiaConnection:
                 if msg is not None:
                     await self._send_message(msg)
         except asyncio.CancelledError:
+            # TODO: ack! consuming cancellation
             pass
         except Exception as e:
             expected = False
@@ -404,6 +407,7 @@ class WSChiaConnection:
                     result: Message = await coroutine
                     return result
                 except asyncio.CancelledError:
+                    # TODO: ack! consuming cancellation
                     pass
                 except ApiError as api_error:
                     self.log.warning(f"ApiError: {api_error} from {self.peer_node_id}, {self.peer_info}")
@@ -456,10 +460,11 @@ class WSChiaConnection:
             # TODO: actually throw one of the errors from errors.py and pass this to close
             await self.close(ban_time, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
         finally:
-            if task_id in self.api_tasks:
-                self.api_tasks.pop(task_id)
-            if task_id in self.execute_tasks:
-                self.execute_tasks.remove(task_id)
+            with anyio.CancelScope(shield=True):
+                if task_id in self.api_tasks:
+                    self.api_tasks.pop(task_id)
+                if task_id in self.execute_tasks:
+                    self.execute_tasks.remove(task_id)
 
     async def incoming_message_handler(self) -> None:
         while True:
@@ -622,12 +627,13 @@ class WSChiaConnection:
         try:
             message: WSMessage = await self.ws.receive(30)
         except asyncio.TimeoutError:
-            # self.ws._closed if we didn't receive a ping / pong
-            if self.ws.closed:
-                asyncio.create_task(self.close())
-                await asyncio.sleep(3)
+            with anyio.CancelScope(shield=True):
+                # self.ws._closed if we didn't receive a ping / pong
+                if self.ws.closed:
+                    asyncio.create_task(self.close())
+                    await asyncio.sleep(3)
+                    return None
                 return None
-            return None
 
         if self.connection_type is not None:
             connection_type_str = NodeType(self.connection_type).name.lower()

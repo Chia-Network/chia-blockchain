@@ -25,6 +25,7 @@ from typing import (
 )
 
 import aiosqlite
+import anyio
 
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
@@ -87,8 +88,9 @@ class Crawler:
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
+            with anyio.CancelScope(shield=True):
+                self._close()
+                await self._await_closed()
 
     def __post_init__(self) -> None:
         # get db path
@@ -353,15 +355,16 @@ class Crawler:
         self._shut_down = True
 
     async def _await_closed(self) -> None:
-        if self.crawl_task is not None:
-            try:
-                await asyncio.wait_for(self.crawl_task, timeout=10)  # wait 10 seconds before giving up
-            except asyncio.TimeoutError:
-                self.log.error("Crawl task did not exit in time, killing task.")
-                self.crawl_task.cancel()
-        if self.crawl_store is not None:
-            self.log.info("Closing connection to DB.")
-            await self.crawl_store.crawl_db.close()
+        with anyio.CancelScope(shield=True):
+            if self.crawl_task is not None:
+                try:
+                    await asyncio.wait_for(self.crawl_task, timeout=10)  # wait 10 seconds before giving up
+                except asyncio.TimeoutError:
+                    self.log.error("Crawl task did not exit in time, killing task.")
+                    self.crawl_task.cancel()
+            if self.crawl_store is not None:
+                self.log.info("Closing connection to DB.")
+                await self.crawl_store.crawl_db.close()
 
     async def print_summary(self, t_start: float, total_nodes: int, tried_nodes: Set[str]) -> None:
         assert self.crawl_store is not None  # this is only ever called from the crawl task

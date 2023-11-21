@@ -6,6 +6,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import List
 
+import anyio
 import pytest
 
 from chia.cmds.db_validate_func import validate_v2
@@ -146,7 +147,8 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
             result, err, _ = await bc.add_block(block, results)
             assert err is None
     finally:
-        await db_wrapper.close()
+        with anyio.CancelScope(shield=True):
+            await db_wrapper.close()
 
 
 @pytest.mark.anyio

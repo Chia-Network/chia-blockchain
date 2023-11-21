@@ -8,6 +8,8 @@ from pathlib import Path
 from time import monotonic
 from typing import List
 
+import anyio
+
 from benchmarks.utils import (
     clvm_generator,
     rand_bytes,
@@ -496,7 +498,8 @@ async def run_add_block_benchmark(version: int) -> None:
         print(f"database size: {db_size/1000000:.3f} MB")
 
     finally:
-        await db_wrapper.close()
+        with anyio.CancelScope(shield=True):
+            await db_wrapper.close()
 
 
 if __name__ == "__main__":
