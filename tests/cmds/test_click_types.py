@@ -70,7 +70,7 @@ def test_click_amount_type() -> None:
     with pytest.raises(BadParameter):
         AMOUNT_TYPE.convert("test", None, None)
     with pytest.raises(BadParameter):
-        AMOUNT_TYPE.convert("0", None, None)
+        AMOUNT_TYPE.convert("-999999", None, None)
     with pytest.raises(BadParameter):
         AMOUNT_TYPE.convert("-0.6", None, None)
 
