@@ -110,12 +110,9 @@ async def start_simulator(chia_root: Path, automated_testing: bool = False) -> A
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
     started_simulator = await start_simulator_main(True, automated_testing, root_path=chia_root)
     service = started_simulator.service
-    await service.start()
 
-    yield service._api
-
-    service.stop()
-    await service.wait_closed()
+    async with service.manage():
+        yield service._api
 
 
 async def get_full_chia_simulator(

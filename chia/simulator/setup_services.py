@@ -175,13 +175,9 @@ async def setup_full_node(
             connect_to_daemon=connect_to_daemon,
             override_capabilities=override_capabilities,
         )
-    await service.start()
 
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -211,16 +207,11 @@ async def setup_crawler(
         updated_constants,
         connect_to_daemon=False,
     )
-    await service.start()
+    async with service.manage():
+        if not service_config["crawler"]["start_rpc_server"]:  # otherwise the loops don't work.
+            service._node.state_changed_callback = lambda x, y: None
 
-    if not service_config["crawler"]["start_rpc_server"]:  # otherwise the loops don't work.
-        service._node.state_changed_callback = lambda x, y: None
-
-    try:
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -311,13 +302,10 @@ async def setup_wallet_node(
             connect_to_daemon=False,
         )
 
-        await service.start()
-
         try:
-            yield service
+            async with service.manage():
+                yield service
         finally:
-            service.stop()
-            await service.wait_closed()
             if db_path.exists():
                 # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
 
@@ -367,14 +355,8 @@ async def setup_harvester(
         connect_to_daemon=False,
     )
 
-    if start_service:
-        await service.start()
-
-    try:
+    async with service.manage(start=start_service):
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -422,14 +404,8 @@ async def setup_farmer(
         connect_to_daemon=False,
     )
 
-    if start_service:
-        await service.start()
-
-    try:
+    async with service.manage(start=start_service):
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -441,13 +417,8 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[
         connect_to_daemon=False,
     )
 
-    await service.start()
-
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -542,10 +513,5 @@ async def setup_timelord(
         connect_to_daemon=False,
     )
 
-    await service.start()
-
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()

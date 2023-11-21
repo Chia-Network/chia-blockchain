@@ -20,13 +20,13 @@ from chia.server.start_wallet import create_wallet_service
 from chia.server.ws_connection import WSChiaConnection, error_response_version
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import api_request
 from chia.util.errors import ApiError, Err
 from chia.util.ints import int16, uint32
 from tests.connection_utils import connect_and_get_peer
+from tests.util.time_out_assert import time_out_assert
 
 
 @dataclass

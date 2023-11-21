@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import threading
 from dataclasses import dataclass, field
 from queue import Queue
-from typing import Optional, Tuple, Union
+from typing import Iterator, List, Optional, Tuple, Union
 
 from typing_extensions import Literal
 
@@ -27,6 +28,18 @@ class UPnP:
         default_factory=Queue,
     )
     _upnp: Optional[miniupnpc.UPnP] = None
+
+    @contextlib.contextmanager
+    def manage(self, ports: List[int]) -> Iterator[None]:
+        self.setup()
+        try:
+            for port in ports:
+                self.remap(port)
+            yield
+        finally:
+            for port in ports:
+                self.release(port)
+            self.shutdown()
 
     def setup(self) -> None:
         if miniupnpc is None:

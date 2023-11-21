@@ -16,7 +16,6 @@ from chia.protocols.wallet_protocol import CoinStateUpdate, RespondToCoinUpdates
 from chia.server.outbound_message import NodeType
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
@@ -24,11 +23,12 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
+from tests.util.time_out_assert import time_out_assert
 
 
 def wallet_height_at_least(wallet_node, h):
