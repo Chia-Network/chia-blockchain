@@ -214,6 +214,7 @@ class FullNode:
         # These many respond_transaction tasks can be active at any point in time
         self._add_transaction_semaphore = asyncio.Semaphore(200)
 
+        sql_log_path: Optional[Path] = None
         with contextlib.ExitStack() as exit_stack:
             sql_log_file: Optional[TextIO] = None
             if self.config.get("log_sqlite_cmds", False):
