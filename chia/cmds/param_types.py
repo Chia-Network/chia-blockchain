@@ -19,8 +19,8 @@ class TransactionFeeParamType(click.ParamType):
     A Click parameter type for transaction fees, which can be specified in XCH or mojos.
     """
 
-    name: str = "uint64"  # output type
-    value_limit: Decimal = Decimal(0.5)
+    name: str = uint64.__name__  # output type
+    value_limit: Decimal = Decimal("0.5")
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
         if isinstance(value, uint64):  # required by click
@@ -28,7 +28,7 @@ class TransactionFeeParamType(click.ParamType):
         mojos = False  # TODO: Add unit logic
         if mojos:
             try:
-                return uint64(int(value))
+                return uint64(value)
             except ValueError:
                 self.fail("Fee must be positive integer value in mojos", param, ctx)
         try:
@@ -65,7 +65,7 @@ class CliAmount:
             return self.amount
         if not isinstance(self.amount, Decimal):
             raise ValueError("Amount must be a Decimal if mojos flag is not set.")
-        return uint64(int(self.amount * mojo_per_unit))
+        return uint64(self.amount * mojo_per_unit)
 
 
 class AmountParamType(click.ParamType):
@@ -73,7 +73,7 @@ class AmountParamType(click.ParamType):
     A Click parameter type for TX / wallet amounts for both XCH and CAT, and of course mojos.
     """
 
-    name: str = "CliAmount"  # output type
+    name: str = CliAmount.__name__  # output type
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAmount:
         if isinstance(value, CliAmount):  # required by click
@@ -83,7 +83,7 @@ class AmountParamType(click.ParamType):
         mojos = False  # TODO: Add unit logic
         if mojos:
             try:
-                return CliAmount(mojos=True, amount=uint64(int(value)))
+                return CliAmount(mojos=True, amount=uint64(value))
             except ValueError:
                 self.fail("Amount must be positive integer value in mojos", param, ctx)
         try:
@@ -120,7 +120,7 @@ class AddressParamType(click.ParamType):
     A Click parameter type for bech32m encoded addresses, it gives a class with the address type and puzzle hash.
     """
 
-    name: str = "CliAddress"  # output type
+    name: str = CliAddress.__name__  # output type
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAddress:
         if isinstance(value, CliAddress):  # required by click
@@ -155,7 +155,7 @@ class Bytes32ParamType(click.ParamType):
     A Click parameter type for bytes32 hex strings, with or without the 0x prefix.
     """
 
-    name: str = "bytes32"  # output type
+    name: str = bytes32.__name__  # output type
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> bytes32:
         if isinstance(value, bytes32):  # required by click
@@ -171,7 +171,7 @@ class Uint64ParamType(click.ParamType):
     A Click parameter type for bytes32 hex strings, with or without the 0x prefix.
     """
 
-    name: str = "uint64"  # output type
+    name: str = uint64.__name__  # output type
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
         if isinstance(value, uint64):  # required by click
