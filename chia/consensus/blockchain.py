@@ -465,6 +465,12 @@ class Blockchain(BlockchainInterface):
                 self._peak_height = block_record.height
 
         except BaseException as e:
+            # depending on exactly when the failure of adding the block
+            # happened, we may not have added it to the block record cache
+            try:
+                self.remove_block_record(header_hash)
+            except KeyError:
+                pass
             self.block_store.rollback_cache_block(header_hash)
             self._peak_height = previous_peak_height
             log.error(
