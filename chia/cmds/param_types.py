@@ -166,10 +166,27 @@ class Bytes32ParamType(click.ParamType):
             self.fail("Value must be a valid bytes32 hex string like a coin id or puzzle hash", param, ctx)
 
 
+class Uint64ParamType(click.ParamType):
+    """
+    A Click parameter type for bytes32 hex strings, with or without the 0x prefix.
+    """
+
+    name: str = "uint64"  # output type
+
+    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
+        if isinstance(value, uint64):  # required by click
+            return value
+        try:
+            return uint64(value)
+        except ValueError:
+            self.fail("Value must be a valid uint64 number", param, ctx)
+
+
 # These are what we use in click decorators
 TRANSACTION_FEE = TransactionFeeParamType()
 AMOUNT_TYPE = AmountParamType()
 ADDRESS_TYPE = AddressParamType()
 BYTES32_TYPE = Bytes32ParamType()
+UINT64_TYPE = Uint64ParamType()
 
 cli_amount_none = CliAmount(mojos=False, amount=None)
