@@ -12,6 +12,7 @@ import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node import WalletUpdate
@@ -34,7 +35,6 @@ from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import Program
@@ -49,7 +49,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
@@ -66,6 +66,7 @@ from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.make_block_generator import make_spend_bundle
 from tests.core.mempool.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
+from tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
 
 async def new_transaction_not_requested(incoming, new_spend):
@@ -964,7 +965,7 @@ class TestFullNodeProtocol:
                 )
             ]
             spend_bundle = SpendBundle.aggregate(spend_bundles)
-            assert spend_bundle.fees() == fee
+            assert estimate_fees(spend_bundle) == fee
             respond_transaction = wallet_protocol.SendTransaction(spend_bundle)
 
             await full_node_1.send_transaction(respond_transaction)
@@ -2153,19 +2154,115 @@ async def test_wallet_sync_task_failure(
 
 
 @pytest.mark.anyio
-@pytest.mark.limit_consensus_modes(reason="this test is too slow (for now)")
+@pytest.mark.parametrize("light_blocks", [True, False])
+async def test_long_reorg(
+    light_blocks: bool,
+    one_node_one_block,
+    default_10000_blocks: List[FullBlock],
+    test_long_reorg_blocks: List[FullBlock],
+    test_long_reorg_blocks_light: List[FullBlock],
+    seeded_random: random.Random,
+):
+    node, server, bt = one_node_one_block
+
+    fork_point = 499
+    blocks = default_10000_blocks[:1600]
+
+    if light_blocks:
+        # if the blocks have lighter weight, we need more height to compensate,
+        # to force a reorg
+        reorg_blocks = test_long_reorg_blocks_light[:1650]
+    else:
+        reorg_blocks = test_long_reorg_blocks[:1200]
+
+    for block_batch in to_batches(blocks, 64):
+        b = block_batch.entries[0]
+        if (b.height % 128) == 0:
+            print(f"main chain: {b.height:4} weight: {b.weight}")
+        await node.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+
+    peak = node.full_node.blockchain.get_peak()
+    chain_1_height = peak.height
+    chain_1_weight = peak.weight
+    chain_1_peak = peak.header_hash
+
+    assert reorg_blocks[fork_point] == default_10000_blocks[fork_point]
+    assert reorg_blocks[fork_point + 1] != default_10000_blocks[fork_point + 1]
+
+    # one aspect of this test is to make sure we can reorg blocks that are
+    # not in the cache. We need to explicitly prune the cache to get that
+    # effect.
+    node.full_node.blockchain.clean_block_records()
+
+    fork_info: Optional[ForkInfo] = None
+    for b in reorg_blocks:
+        if (b.height % 128) == 0:
+            peak = node.full_node.blockchain.get_peak()
+            print(f"reorg chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
+        if b.height > fork_point and fork_info is None:
+            fork_info = ForkInfo(fork_point, fork_point, reorg_blocks[fork_point].header_hash)
+        await node.full_node.add_block(b, fork_info=fork_info)
+
+    # if these asserts fires, there was no reorg
+    peak = node.full_node.blockchain.get_peak()
+    assert peak.header_hash != chain_1_peak
+    assert peak.weight > chain_1_weight
+    chain_2_weight = peak.weight
+    chain_2_peak = peak.header_hash
+
+    # if the reorg chain has lighter blocks, once we've re-orged onto it, we
+    # have a greater block height. If the reorg chain has heavier blocks, we
+    # end up with a lower height than the original chain (but greater weight)
+    if light_blocks:
+        assert peak.height > chain_1_height
+    else:
+        assert peak.height < chain_1_height
+
+    # now reorg back to the original chain
+    # this exercises the case where we have some of the blocks in the DB already
+    node.full_node.blockchain.clean_block_records()
+
+    if light_blocks:
+        blocks = default_10000_blocks[fork_point - 100 : 1800]
+    else:
+        blocks = default_10000_blocks[fork_point - 100 : 2600]
+
+    fork_block = blocks[0]
+    fork_info = ForkInfo(fork_block.height - 1, fork_block.height - 1, fork_block.prev_header_hash)
+    for b in blocks:
+        if (b.height % 128) == 0:
+            peak = node.full_node.blockchain.get_peak()
+            print(f"original chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
+        await node.full_node.add_block(b, fork_info=fork_info)
+
+    # if these asserts fires, there was no reorg back to the original chain
+    peak = node.full_node.blockchain.get_peak()
+    assert peak.header_hash != chain_2_peak
+    assert peak.weight > chain_2_weight
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("light_blocks", [True, False])
+@pytest.mark.parametrize("chain_length", [0, 100])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
 async def test_long_reorg_nodes(
+    light_blocks: bool,
+    chain_length: int,
     three_nodes,
     default_10000_blocks: List[FullBlock],
     test_long_reorg_blocks: List[FullBlock],
+    test_long_reorg_blocks_light: List[FullBlock],
     self_hostname: str,
     seeded_random: random.Random,
 ):
     full_node_1, full_node_2, full_node_3 = three_nodes
 
-    blocks = default_10000_blocks[:1600]
+    blocks = default_10000_blocks[: 1600 - chain_length]
 
-    reorg_blocks = test_long_reorg_blocks[:1200]
+    if light_blocks:
+        reorg_blocks = test_long_reorg_blocks_light[: 1600 - chain_length]
+    else:
+        reorg_blocks = test_long_reorg_blocks[: 1200 - chain_length]
 
     # full node 1 has the original chain
     for block_batch in to_batches(blocks, 64):
@@ -2193,7 +2290,7 @@ async def test_long_reorg_nodes(
         p2 = full_node_1.full_node.blockchain.get_peak()
         return p1 == p2
 
-    await time_out_assert(120, check_nodes_in_sync)
+    await time_out_assert(100, check_nodes_in_sync)
     peak = full_node_2.full_node.blockchain.get_peak()
     print(f"peak: {str(peak.header_hash)[:6]}")
 
@@ -2214,20 +2311,20 @@ async def test_long_reorg_nodes(
 
     print("connecting node 3")
     await connect_and_get_peer(full_node_3.full_node.server, full_node_1.full_node.server, self_hostname)
-    # await connect_and_get_peer(full_node_3.full_node.server, full_node_2.full_node.server, self_hostname)
+    await connect_and_get_peer(full_node_3.full_node.server, full_node_2.full_node.server, self_hostname)
 
     def check_nodes_in_sync2():
         p1 = full_node_1.full_node.blockchain.get_peak()
-        # p2 = full_node_2.full_node.blockchain.get_peak()
+        p2 = full_node_2.full_node.blockchain.get_peak()
         p3 = full_node_3.full_node.blockchain.get_peak()
-        return p1 == p3
+        return p1 == p3 and p1 == p2
 
-    await time_out_assert(2000, check_nodes_in_sync2)
+    await time_out_assert(900, check_nodes_in_sync2)
 
     p1 = full_node_1.full_node.blockchain.get_peak()
-    # p2 = full_node_2.full_node.blockchain.get_peak()
+    p2 = full_node_2.full_node.blockchain.get_peak()
     p3 = full_node_3.full_node.blockchain.get_peak()
 
     assert p1.header_hash == blocks[-1].header_hash
-    # assert p2.header_hash == blocks[-1].header_hash
+    assert p2.header_hash == blocks[-1].header_hash
     assert p3.header_hash == blocks[-1].header_hash

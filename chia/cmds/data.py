@@ -53,7 +53,7 @@ def create_changelist_option() -> Callable[[FC], FC]:
 
 def create_key_option() -> Callable[[FC], FC]:
     return click.option(
-        "-h",
+        "-k",
         "--key",
         "key_string",
         help="str representing the key",

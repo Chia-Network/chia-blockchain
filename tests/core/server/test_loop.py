@@ -15,7 +15,7 @@ import anyio
 import pytest
 
 from chia.server import chia_policy
-from chia.simulator.time_out_assert import adjusted_timeout
+from chia.util.timing import adjusted_timeout
 from tests.core.server import serve
 from tests.util.misc import create_logger
 
