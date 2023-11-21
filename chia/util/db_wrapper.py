@@ -56,7 +56,6 @@ async def _create_connection(
 async def manage_connection(
     database: Union[str, Path],
     uri: bool = False,
-    # TODO: switch to log_file
     log_file: Optional[TextIO] = None,
     name: Optional[str] = None,
 ) -> AsyncIterator[aiosqlite.Connection]:
