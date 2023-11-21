@@ -65,7 +65,8 @@ async def manage_connection(
     try:
         yield connection
     finally:
-        await connection.close()
+        with anyio.CancelScope(shield=True):
+            await connection.close()
 
 
 def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> None:
