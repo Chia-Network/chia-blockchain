@@ -5,7 +5,6 @@ import tempfile
 from pathlib import Path
 from typing import List
 
-import anyio
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -1067,10 +1066,9 @@ class TestCATWallet:
 async def test_unacknowledged_cat_table() -> None:
     db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
     db_name.parent.mkdir(parents=True, exist_ok=True)
-    db_wrapper = await DBWrapper2.create(
+    async with DBWrapper2.managed(
         database=db_name,
-    )
-    try:
+    ) as db_wrapper:
         interested_store = await WalletInterestedStore.create(db_wrapper)
 
         def asset_id(i: int) -> bytes32:
@@ -1104,6 +1102,3 @@ async def test_unacknowledged_cat_table() -> None:
         assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
         await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(0))
         assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == []
-    finally:
-        with anyio.CancelScope(shield=True):
-            await db_wrapper.close()

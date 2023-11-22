@@ -7,8 +7,6 @@ from pathlib import Path
 from sqlite3 import Row
 from typing import Any, Dict, Iterable, List, Optional, Set
 
-import anyio
-
 from chia.util.collection import find_duplicates
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
@@ -360,18 +358,18 @@ class WalletDBReader:
 
     async def scan(self, db_path: Path) -> int:
         """Returns number of lines of error output (not warnings)"""
-        self.db_wrapper = await DBWrapper2.create(
+        async with DBWrapper2.managed(
             database=db_path,
             reader_count=self.config.get("db_readers", 4),
             log_path=self.sql_log_path,
             synchronous=db_synchronous_on("auto"),
-        )
-        # TODO: Pass down db_wrapper
-        wallets = await self.get_all_wallets()
-        derivation_paths = await self.get_derivation_paths()
-        errors = []
-        warnings = []
-        try:
+        ) as self.db_wrapper:
+            # TODO: Pass down db_wrapper
+            wallets = await self.get_all_wallets()
+            derivation_paths = await self.get_derivation_paths()
+            errors = []
+            warnings = []
+
             if self.verbose:
                 await self.show_tables()
                 print_min_max_derivation_for_wallets(derivation_paths)
@@ -389,9 +387,7 @@ class WalletDBReader:
             if len(errors) > 0:
                 print(f"    ---- Errors Found for {db_path.name}----")
                 print("\n".join(errors))
-        finally:
-            with anyio.CancelScope(shield=True):
-                await self.db_wrapper.close()
+
         return len(errors)
 
 

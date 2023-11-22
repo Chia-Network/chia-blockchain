@@ -8,7 +8,6 @@ from __future__ import annotations
 import logging
 from typing import List, Optional, Tuple
 
-import anyio
 import pytest
 from chia_rs import G2Element
 from clvm_tools.binutils import assemble
@@ -69,8 +68,7 @@ async def check_spend_bundle_validity(
     or fails with the correct error code.
     """
 
-    db_wrapper, blockchain = await create_ram_blockchain(bt.constants)
-    try:
+    async with create_ram_blockchain(bt.constants) as (db_wrapper, blockchain):
         for block in blocks:
             await _validate_and_add_block(blockchain, block)
 
@@ -94,14 +92,6 @@ async def check_spend_bundle_validity(
             coins_removed = []
 
         return coins_added, coins_removed, newest_block
-
-    finally:
-        with anyio.CancelScope(shield=True):
-            # if we don't close the db_wrapper, the test process doesn't exit cleanly
-            await db_wrapper.close()
-
-            # we must call `shut_down` or the executor in `Blockchain` doesn't stop
-            blockchain.shut_down()
 
 
 async def check_conditions(
