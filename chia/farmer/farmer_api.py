@@ -114,21 +114,31 @@ class FarmerAPI:
 
             # If the iters are good enough to make a block, proceed with the block making flow
             if required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters):
-
                 if new_proof_of_space.farmer_reward_address_override is not None:
                     self.farmer.notify_farmer_reward_taken_by_harvester_as_fee(sp, new_proof_of_space)
 
                 sp_src_data: Optional[List[SignatureRequestSourceData]] = None
-                if new_proof_of_space.include_source_signature_data or new_proof_of_space.farmer_reward_address_override is not None:
+                if (
+                    new_proof_of_space.include_source_signature_data
+                    or new_proof_of_space.farmer_reward_address_override is not None
+                ):
                     cc_data: SignatureRequestSourceData
                     rc_data: SignatureRequestSourceData
                     if sp.sp_source_data.vdf_data is not None:
-                        cc_data = SignatureRequestSourceData(SigningDataKind.CHALLENGE_CHAIN_VDF, sp.sp_source_data.vdf_data.cc_vdf)
-                        rc_data = SignatureRequestSourceData(SigningDataKind.REWARD_CHAIN_VDF, sp.sp_source_data.vdf_data.rc_vdf)
+                        cc_data = SignatureRequestSourceData(
+                            SigningDataKind.CHALLENGE_CHAIN_VDF, sp.sp_source_data.vdf_data.cc_vdf
+                        )
+                        rc_data = SignatureRequestSourceData(
+                            SigningDataKind.REWARD_CHAIN_VDF, sp.sp_source_data.vdf_data.rc_vdf
+                        )
                     else:
                         assert sp.sp_source_data.sub_slot_data is not None
-                        cc_data = SignatureRequestSourceData(SigningDataKind.CHALLENGE_CHAIN_SUB_SLOT, sp.sp_source_data.sub_slot_data.cc_sub_slot)
-                        rc_data = SignatureRequestSourceData(SigningDataKind.REWARD_CHAIN_SUB_SLOT, sp.sp_source_data.sub_slot_data.rc_sub_slot)
+                        cc_data = SignatureRequestSourceData(
+                            SigningDataKind.CHALLENGE_CHAIN_SUB_SLOT, sp.sp_source_data.sub_slot_data.cc_sub_slot
+                        )
+                        rc_data = SignatureRequestSourceData(
+                            SigningDataKind.REWARD_CHAIN_SUB_SLOT, sp.sp_source_data.sub_slot_data.rc_sub_slot
+                        )
 
                     sp_src_data = [cc_data, rc_data]
 
@@ -138,7 +148,7 @@ class FarmerAPI:
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     [sp.challenge_chain_sp, sp.reward_chain_sp],
-                    message_data=sp_src_data
+                    message_data=sp_src_data,
                 )
 
                 if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
@@ -258,7 +268,10 @@ class FarmerAPI:
                 m_to_sign = payload.get_hash()
                 m_src_data: Optional[List[SignatureRequestSourceData]] = None
 
-                if new_proof_of_space.include_source_signature_data or new_proof_of_space.farmer_reward_address_override is not None:
+                if (
+                    new_proof_of_space.include_source_signature_data
+                    or new_proof_of_space.farmer_reward_address_override is not None
+                ):
                     m_src_data = [SignatureRequestSourceData(SigningDataKind.PARTIAL, payload)]
 
                 request = harvester_protocol.RequestSignatures(
@@ -266,7 +279,7 @@ class FarmerAPI:
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     [m_to_sign],
-                    message_data=m_src_data
+                    message_data=m_src_data,
                 )
                 response: Any = await peer.call_api(HarvesterAPI.request_signatures, request)
                 if not isinstance(response, harvester_protocol.RespondSignatures):
@@ -555,16 +568,14 @@ class FarmerAPI:
         if full_node_request.foliage_block_data is not None:
             include_source_data = True
             foliage_block_data = SignatureRequestSourceData(
-                SigningDataKind.FOLIAGE_BLOCK_DATA,
-                full_node_request.foliage_block_data
+                SigningDataKind.FOLIAGE_BLOCK_DATA, full_node_request.foliage_block_data
             )
 
         if full_node_request.foliage_transaction_block_data is not None:
             assert foliage_block_data
             include_source_data = True
             foliage_transaction_block_data = SignatureRequestSourceData(
-                SigningDataKind.FOLIAGE_TRANSACTION_BLOCK,
-                full_node_request.foliage_transaction_block_data
+                SigningDataKind.FOLIAGE_TRANSACTION_BLOCK, full_node_request.foliage_transaction_block_data
             )
 
         request = harvester_protocol.RequestSignatures(
@@ -572,7 +583,7 @@ class FarmerAPI:
             challenge_hash,
             sp_hash,
             [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
-            message_data=[foliage_block_data, foliage_transaction_block_data] if include_source_data else None
+            message_data=[foliage_block_data, foliage_transaction_block_data] if include_source_data else None,
         )
 
         response = await self.farmer.server.call_api_of_specific(HarvesterAPI.request_signatures, request, node_id)
@@ -743,7 +754,7 @@ class FarmerAPI:
                         farmer_reward_address,
                         pool_target,
                         pool_target_signature,
-                        include_signature_source_data=include_source_signature_data
+                        include_signature_source_data=include_source_signature_data,
                     )
         else:
             # This is a response with block signatures

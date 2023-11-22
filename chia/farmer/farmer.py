@@ -837,7 +837,7 @@ class Farmer:
             await asyncio.sleep(1)
 
     def notify_farmer_reward_taken_by_harvester_as_fee(
-            self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace
+        self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace
     ) -> None:
         challenge_str = str(sp.challenge_hash)
 
@@ -858,9 +858,11 @@ class Farmer:
             else:
                 self.log.warning(f"Fee threshold failed for challenge '{challenge_str}': {fee_quality}/{fee_threshold}")
         else:
-            self.log.warning(f"No fee information given by harvester for challenge '{challenge_str}'. "
-                             f"Fee quality was {fee_quality} (0x{fee_quality:08x})")
+            self.log.warning(
+                f"No fee information given by harvester for challenge '{challenge_str}'. "
+                f"Fee quality was {fee_quality} (0x{fee_quality:08x})"
+            )
 
 
 def calculate_harvester_fee_quality(proof: bytes, challenge: bytes32) -> uint32:
-    return uint32(int.from_bytes(std_hash(proof + challenge)[32-4:], byteorder='big', signed=False))
+    return uint32(int.from_bytes(std_hash(proof + challenge)[32 - 4 :], byteorder="big", signed=False))

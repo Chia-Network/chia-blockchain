@@ -2033,9 +2033,9 @@ async def create_block_tools_async(
     bt = BlockTools(constants, root_path, keychain, config_overrides=config_overrides)
     await bt.setup_keys()
     await bt.setup_plots(
-        num_og_plots = num_og_plots,
-        num_pool_plots = num_pool_plots,
-        num_non_keychain_plots = num_non_keychain_plots,
+        num_og_plots=num_og_plots,
+        num_pool_plots=num_pool_plots,
+        num_non_keychain_plots=num_non_keychain_plots,
     )
 
     return bt
