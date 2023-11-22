@@ -336,8 +336,8 @@ async def test_harvester_receive_source_signing_data(
     farmer_service.add_peer(UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port()))
     harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
 
-    validated_folidage_data = False
-    validated_folidage_transaction = False
+    validated_foliage_data = False
+    validated_foliage_transaction = False
     validated_cc_vdf = False
     validated_rc_vdf = False
     validated_sub_slot_cc = False
@@ -366,8 +366,8 @@ async def test_harvester_receive_source_signing_data(
     def validate_harvester_request_signatures(request: harvester_protocol.RequestSignatures):
         nonlocal full_node
         nonlocal farmer_reward_address
-        nonlocal validated_folidage_data
-        nonlocal validated_folidage_transaction
+        nonlocal validated_foliage_data
+        nonlocal validated_foliage_transaction
         nonlocal validated_cc_vdf
         nonlocal validated_rc_vdf
         nonlocal validated_sub_slot_cc
@@ -386,10 +386,10 @@ async def test_harvester_receive_source_signing_data(
                 assert data.farmer_reward_puzzle_hash == farmer_reward_address or \
                     data.farmer_reward_puzzle_hash == bytes32(full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH)
                 if data.farmer_reward_puzzle_hash == farmer_reward_address:
-                    validated_folidage_data = True
+                    validated_foliage_data = True
             elif src.kind == SigningDataKind.FOLIAGE_TRANSACTION_BLOCK:
                 data = FoliageTransactionBlock.from_bytes(src.data)
-                validated_folidage_transaction = True
+                validated_foliage_transaction = True
             elif src.kind == SigningDataKind.CHALLENGE_CHAIN_VDF:
                 data = ClassgroupElement.from_bytes(src.data)
                 validated_cc_vdf = True
@@ -403,12 +403,14 @@ async def test_harvester_receive_source_signing_data(
                 data = RewardChainSubSlot.from_bytes(src.data)
                 validated_sub_slot_rc = True
             elif src.kind == SigningDataKind.PARTIAL:
+                # #NOTE: This data type is difficult to trigger, so it is
+                #        not tested for the time being.
                 # data = PostPartialPayload.from_bytes(src.data)
                 # validated_partial = True
                 pass
 
-            finished_validating_data = validated_folidage_data and \
-                validated_folidage_transaction and \
+            finished_validating_data = validated_foliage_data and \
+                validated_foliage_transaction and \
                 validated_cc_vdf and \
                 validated_rc_vdf and \
                 validated_sub_slot_cc and \
@@ -512,7 +514,6 @@ async def test_harvester_fee_convention(
         peer: WSChiaConnection = args[1]
         await FarmerAPI.new_proof_of_space(farmer.server.api, request, peer)
 
-
     mocker.patch.object(farmer.server.api, 'new_proof_of_space', side_effect=intercept_farmer_new_proof_of_space)
 
     await wait_until_node_type_connected(farmer.server, NodeType.FULL_NODE)
@@ -560,8 +561,8 @@ async def test_harvester_fee_convention(
 
 
 async def wait_until_node_type_connected(server: ChiaServer, node_type: NodeType) -> WSChiaConnection:
-        while True:
-            for peer in server.all_connections.values():
-                if peer.connection_type == node_type.value:
-                    return peer
-            await asyncio.sleep(1)
+    while True:
+        for peer in server.all_connections.values():
+            if peer.connection_type == node_type.value:
+                return peer
+        await asyncio.sleep(1)

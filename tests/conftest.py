@@ -16,7 +16,6 @@ from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Un
 
 import aiohttp
 import pytest
-from chia.simulator.socket import find_available_listen_port
 import pytest_asyncio
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
@@ -43,7 +42,7 @@ from chia.simulator.setup_nodes import (
     setup_simulators_and_wallets_service,
     setup_two_nodes,
 )
-from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord, setup_vdf_client, setup_vdf_clients
+from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord import Timelord
@@ -174,7 +173,7 @@ def get_keychain():
         yield keychain
         KeyringWrapper.cleanup_shared_instance()
 
-# TODO: Restore these modes
+
 class ConsensusMode(Enum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
@@ -1121,7 +1120,7 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester_zero_bits_plot_filter(
-    tmp_path: Path, get_b_tools: BlockTools, get_temp_keyring: Keychain
+    tmp_path: Path, get_temp_keyring: Keychain
 ) -> AsyncIterator[
     Tuple[
         Service[Harvester, HarvesterAPI],
@@ -1150,8 +1149,7 @@ async def farmer_one_harvester_zero_bits_plot_filter(
 @pytest_asyncio.fixture(scope="function")
 async def farmer_harvester_full_node_timelord_zero_bits_plot_filter(
         tmp_path: Path,
-        get_temp_keyring: Keychain,
-        self_hostname
+        get_temp_keyring: Keychain
 ) -> AsyncIterator[
     Tuple[
         Service[Harvester, HarvesterAPI],
