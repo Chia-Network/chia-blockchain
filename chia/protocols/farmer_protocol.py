@@ -20,6 +20,7 @@ Protocol between farmer and full node.
 Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
 
+
 @streamable
 @dataclass(frozen=True)
 class SPSubSlotSourceData(Streamable):
