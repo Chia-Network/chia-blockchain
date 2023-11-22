@@ -154,7 +154,7 @@ class SpendSim:
         else:
             uri = f"file:{db_path}"
 
-        async with DBWrapper2.create(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
+        async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
             self.coin_store = await CoinStore.create(self.db_wrapper)
             self.mempool_manager = MempoolManager(self.coin_store.get_coin_record, defaults)
             self.defaults = defaults
