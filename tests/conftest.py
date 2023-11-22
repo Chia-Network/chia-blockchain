@@ -1118,6 +1118,7 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
     with TempKeyring(populate=True) as keyring:
         yield keyring
 
+
 @pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester_zero_bits_plot_filter(
     tmp_path: Path, get_temp_keyring: Keychain
@@ -1129,27 +1130,22 @@ async def farmer_one_harvester_zero_bits_plot_filter(
         BlockTools,
     ]
 ]:
-    zero_bit_plot_filter_consts = dataclasses.replace(
-        test_constants_modified,
-        NUMBER_ZERO_BITS_PLOT_FILTER=0
-    )
+    zero_bit_plot_filter_consts = dataclasses.replace(test_constants_modified, NUMBER_ZERO_BITS_PLOT_FILTER=0)
 
     bt = await create_block_tools_async(zero_bit_plot_filter_consts, keychain=get_temp_keyring)
 
     async with setup_simulators_and_wallets_service(1, 0, bt.constants) as ([node], _, bt):
         async with setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as (
-                [harvester_service],
-                farmer_service,
-                _,
+            [harvester_service],
+            farmer_service,
+            _,
         ):
             yield harvester_service, farmer_service, node, bt
 
 
-
 @pytest_asyncio.fixture(scope="function")
 async def farmer_harvester_full_node_timelord_zero_bits_plot_filter(
-        tmp_path: Path,
-        get_temp_keyring: Keychain
+    tmp_path: Path, get_temp_keyring: Keychain
 ) -> AsyncIterator[
     Tuple[
         Service[Harvester, HarvesterAPI],
@@ -1175,8 +1171,8 @@ async def farmer_harvester_full_node_timelord_zero_bits_plot_filter(
 
     async with setup_full_system(bt.constants, bt, bt, bt) as full_system:
         async with setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as (
-                [harvester_service],
-                farmer_service,
-                _,
+            [harvester_service],
+            farmer_service,
+            _,
         ):
             yield harvester_service, farmer_service, full_system.node_1, full_system.timelord, bt

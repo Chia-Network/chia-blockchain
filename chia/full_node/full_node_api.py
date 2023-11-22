@@ -45,7 +45,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.foliage import FoliageTransactionBlock, FoliageBlockData
+from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -961,7 +961,7 @@ class FullNodeAPI:
                 foliage_sb_data_hash,
                 foliage_transaction_block_hash,
                 foliage_block_data,
-                foliage_transaction_block_data
+                foliage_transaction_block_data,
             )
             await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
 

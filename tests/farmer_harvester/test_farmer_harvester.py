@@ -2,18 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-
 from math import floor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
-
 from chia.timelord.timelord import Timelord
-from tests.util.network_protocol_data import *  # noqa: F403
+from chia_rs import G1Element
 from pytest_mock import MockerFixture
-
-from chia_rs import G1Element, G2Element, AugSchemeMPL
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.consensus.blockchain import AddBlockResult
@@ -31,7 +27,7 @@ from chia.protocols.full_node_protocol import NewSignagePointOrEndOfSubSlot
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.server.outbound_message import NodeType, make_msg, Message
+from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools, get_signage_point
@@ -51,8 +47,9 @@ from chia.util.misc import split_async_manager
 from chia.util.streamable import Streamable
 from chia.wallet.derive_keys import master_sk_to_local_sk
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_node_api import WalletNodeAPI
+from chia.wallet.wallet_node_api import WalletNodeAPIfrom chia.util.streamable import Streamable
 from tests.conftest import HarvesterFarmerEnvironment
+from tests.util.network_protocol_data import *  # noqa: F403
 from tests.util.time_out_assert import time_out_assert
 
 
@@ -320,20 +317,24 @@ async def test_harvester_has_no_server(
 
 @pytest.mark.asyncio
 async def test_harvester_receive_source_signing_data(
-    farmer_harvester_full_node_timelord_zero_bits_plot_filter,
-    mocker: MockerFixture
+    farmer_harvester_full_node_timelord_zero_bits_plot_filter, mocker: MockerFixture
 ) -> None:
-
-    harvester_service, farmer_service, full_node_service_1, _, bt = (
-        farmer_harvester_full_node_timelord_zero_bits_plot_filter
-    )
+    (
+        harvester_service,
+        farmer_service,
+        full_node_service_1,
+        _,
+        bt,
+    ) = farmer_harvester_full_node_timelord_zero_bits_plot_filter
 
     farmer: Farmer = farmer_service._node
     harvester: Harvester = harvester_service._node
     full_node: FullNode = full_node_service_1._node
 
     # Connect peers to each other
-    farmer_service.add_peer(UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port()))
+    farmer_service.add_peer(
+        UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port())
+    )
     harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
 
     validated_foliage_data = False
@@ -357,8 +358,7 @@ async def test_harvester_receive_source_signing_data(
 
         # Inject overridden farmer reward address
         response: RespondSignatures = dataclasses.replace(
-            RespondSignatures.from_bytes(result_msg.data),
-            farmer_reward_address_override=farmer_reward_address
+            RespondSignatures.from_bytes(result_msg.data), farmer_reward_address_override=farmer_reward_address
         )
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
@@ -383,8 +383,11 @@ async def test_harvester_receive_source_signing_data(
             data: Streamable = None
             if src.kind == SigningDataKind.FOLIAGE_BLOCK_DATA:
                 data = FoliageBlockData.from_bytes(src.data)
-                assert data.farmer_reward_puzzle_hash == farmer_reward_address or \
-                    data.farmer_reward_puzzle_hash == bytes32(full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH)
+                assert (
+                    data.farmer_reward_puzzle_hash == farmer_reward_address
+                    or data.farmer_reward_puzzle_hash
+                    == bytes32(full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH)
+                )
                 if data.farmer_reward_puzzle_hash == farmer_reward_address:
                     validated_foliage_data = True
             elif src.kind == SigningDataKind.FOLIAGE_TRANSACTION_BLOCK:
@@ -409,12 +412,14 @@ async def test_harvester_receive_source_signing_data(
                 # validated_partial = True
                 pass
 
-            finished_validating_data = validated_foliage_data and \
-                validated_foliage_transaction and \
-                validated_cc_vdf and \
-                validated_rc_vdf and \
-                validated_sub_slot_cc and \
-                validated_sub_slot_rc
+            finished_validating_data = (
+                validated_foliage_data
+                and validated_foliage_transaction
+                and validated_cc_vdf
+                and validated_rc_vdf
+                and validated_sub_slot_cc
+                and validated_sub_slot_rc
+            )
 
             assert data is not None
             data_hash = data.get_hash()
@@ -425,8 +430,7 @@ async def test_harvester_receive_source_signing_data(
         nonlocal farmer_reward_address
 
         request: harvester_protocol.NewProofOfSpace = dataclasses.replace(
-            harvester_protocol.NewProofOfSpace.from_bytes(args[0]),
-            farmer_reward_address_override=farmer_reward_address
+            harvester_protocol.NewProofOfSpace.from_bytes(args[0]), farmer_reward_address_override=farmer_reward_address
         )
         peer: WSChiaConnection = args[1]
 
@@ -445,14 +449,17 @@ async def test_harvester_receive_source_signing_data(
         assert request.foliage_transaction_block_data
         assert request.foliage_transaction_block_data.get_hash() == request.foliage_transaction_block_hash
 
-        assert request.foliage_block_data.farmer_reward_puzzle_hash == farmer_reward_address or \
-                request.foliage_block_data.farmer_reward_puzzle_hash == bytes32(full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH)
+        assert (
+            request.foliage_block_data.farmer_reward_puzzle_hash == farmer_reward_address
+            or request.foliage_block_data.farmer_reward_puzzle_hash
+            == bytes32(full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH)
+        )
 
         return await FarmerAPI.request_signed_values(farmer.server.api, request)
 
-    mocker.patch.object(farmer.server.api, 'request_signed_values', side_effect=intercept_farmer_request_signed_values)
-    mocker.patch.object(farmer.server.api, 'new_proof_of_space', side_effect=intercept_farmer_new_proof_of_space)
-    mocker.patch.object(harvester.server.api, 'request_signatures', side_effect=intercept_harvester_request_signatures)
+    mocker.patch.object(farmer.server.api, "request_signed_values", side_effect=intercept_farmer_request_signed_values)
+    mocker.patch.object(farmer.server.api, "new_proof_of_space", side_effect=intercept_farmer_new_proof_of_space)
+    mocker.patch.object(harvester.server.api, "request_signatures", side_effect=intercept_harvester_request_signatures)
 
     await wait_until_node_type_connected(farmer.server, NodeType.FULL_NODE)
     await wait_until_node_type_connected(farmer.server, NodeType.HARVESTER)
@@ -460,24 +467,28 @@ async def test_harvester_receive_source_signing_data(
     # wait until test finishes
     def did_finished_validating_data():
         return finished_validating_data
+
     await time_out_assert(90, did_finished_validating_data, True)
 
 
 @pytest.mark.asyncio
 async def test_harvester_fee_convention(
-    farmer_harvester_full_node_timelord_zero_bits_plot_filter,
-    caplog: pytest.LogCaptureFixture,
-    mocker: MockerFixture
+    farmer_harvester_full_node_timelord_zero_bits_plot_filter, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:
-
-    harvester_service, farmer_service, full_node_service_1, _, _ = (
-        farmer_harvester_full_node_timelord_zero_bits_plot_filter
-    )
+    (
+        harvester_service,
+        farmer_service,
+        full_node_service_1,
+        _,
+        _,
+    ) = farmer_harvester_full_node_timelord_zero_bits_plot_filter
 
     farmer: Farmer = farmer_service._node
 
     # Connect peers to each other
-    farmer_service.add_peer(UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port()))
+    farmer_service.add_peer(
+        UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port())
+    )
     harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
 
     fee_threshold = 0.5
@@ -514,12 +525,13 @@ async def test_harvester_fee_convention(
         peer: WSChiaConnection = args[1]
         await FarmerAPI.new_proof_of_space(farmer.server.api, request, peer)
 
-    mocker.patch.object(farmer.server.api, 'new_proof_of_space', side_effect=intercept_farmer_new_proof_of_space)
+    mocker.patch.object(farmer.server.api, "new_proof_of_space", side_effect=intercept_farmer_new_proof_of_space)
 
     await wait_until_node_type_connected(farmer.server, NodeType.FULL_NODE)
     await wait_until_node_type_connected(farmer.server, NodeType.HARVESTER)
 
     log_text_len = 0
+
     def log_has_new_text() -> bool:
         nonlocal log_text_len
 
