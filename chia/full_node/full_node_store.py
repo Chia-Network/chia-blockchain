@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import logging
 import time
@@ -82,7 +81,6 @@ class FullNodeStore:
     previous_generator: Optional[CompressorArg]
     pending_tx_request: Dict[bytes32, bytes32]  # tx_id: peer_id
     peers_with_tx: Dict[bytes32, Set[bytes32]]  # tx_id: Set[peer_ids}
-    tx_fetch_tasks: Dict[bytes32, asyncio.Task[None]]  # Task id: task
     serialized_wp_message: Optional[Message]
     serialized_wp_message_tip: Optional[bytes32]
 
@@ -105,7 +103,6 @@ class FullNodeStore:
         self.initialize_genesis_sub_slot()
         self.pending_tx_request = {}
         self.peers_with_tx = {}
-        self.tx_fetch_tasks = {}
         self.serialized_wp_message = None
         self.serialized_wp_message_tip = None
 
