@@ -368,7 +368,6 @@ class FullNode:
 
                     for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
                         cancel_task_safe(task, self.log)
-
                     if self._init_weight_proof is not None:
                         await asyncio.wait([self._init_weight_proof])
                     if self._sync_task is not None:
