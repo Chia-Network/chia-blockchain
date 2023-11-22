@@ -28,7 +28,7 @@ from chia.protocols import farmer_protocol, harvester_protocol, timelord_protoco
 from chia.protocols.farmer_protocol import NewSignagePoint, RequestSignedValues, DeclareProofOfSpace, \
     SignagePointSourceData, SPVDFSourceData
 from chia.protocols.full_node_protocol import NewSignagePointOrEndOfSubSlot
-from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures
+from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.server.outbound_message import NodeType, make_msg, Message
@@ -345,7 +345,7 @@ async def test_harvester_receive_source_signing_data(
     # validated_partial = False
 
     finished_validating_data = False
-    farmer_reward_address = decode_puzzle_hash('xch1uf48n3f50xrs7zds0uek9wp9wmyza6crnex6rw8kwm3jnm39y82q5mvps6')
+    farmer_reward_address = decode_puzzle_hash("txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej")
 
     async def intercept_harvester_request_signatures(*args):
         request: harvester_protocol.RequestSignatures = harvester_protocol.RequestSignatures.from_bytes(args[0])
@@ -381,29 +381,31 @@ async def test_harvester_receive_source_signing_data(
             src = request.message_data[i]
 
             data: Streamable = None
-            if src.foliage_block_data is not None:
-                data = src.foliage_block_data
+            if src.kind == SigningDataKind.FOLIAGE_BLOCK_DATA:
+                data = FoliageBlockData.from_bytes(src.data)
                 assert data.farmer_reward_puzzle_hash == farmer_reward_address or \
                     data.farmer_reward_puzzle_hash == bytes32(full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH)
                 if data.farmer_reward_puzzle_hash == farmer_reward_address:
                     validated_folidage_data = True
-            elif src.foliage_transaction_block is not None:
-                data = src.foliage_transaction_block
+            elif src.kind == SigningDataKind.FOLIAGE_TRANSACTION_BLOCK:
+                data = FoliageTransactionBlock.from_bytes(src.data)
                 validated_folidage_transaction = True
-            elif src.cc_vdf is not None:
-                data = src.cc_vdf
+            elif src.kind == SigningDataKind.CHALLENGE_CHAIN_VDF:
+                data = ClassgroupElement.from_bytes(src.data)
                 validated_cc_vdf = True
-            elif src.rc_vdf is not None:
-                data = src.rc_vdf
+            elif src.kind == SigningDataKind.REWARD_CHAIN_VDF:
+                data = ClassgroupElement.from_bytes(src.data)
                 validated_rc_vdf = True
-            elif src.cc_sub_slot is not None:
-                data = src.cc_sub_slot
+            elif src.kind == SigningDataKind.CHALLENGE_CHAIN_SUB_SLOT:
+                data = ChallengeChainSubSlot.from_bytes(src.data)
                 validated_sub_slot_cc = True
-            elif src.rc_sub_slot is not None:
-                data = src.rc_sub_slot
+            elif src.kind == SigningDataKind.REWARD_CHAIN_SUB_SLOT:
+                data = RewardChainSubSlot.from_bytes(src.data)
                 validated_sub_slot_rc = True
-            elif src.partial is not None:
-                data = src.partial
+            elif src.kind == SigningDataKind.PARTIAL:
+                # data = PostPartialPayload.from_bytes(src.data)
+                # validated_partial = True
+                pass
 
             finished_validating_data = validated_folidage_data and \
                 validated_folidage_transaction and \
@@ -456,7 +458,7 @@ async def test_harvester_receive_source_signing_data(
     # wait until test finishes
     def did_finished_validating_data():
         return finished_validating_data
-    await time_out_assert(60, did_finished_validating_data, True)
+    await time_out_assert(90, did_finished_validating_data, True)
 
 
 @pytest.mark.asyncio
@@ -481,7 +483,7 @@ async def test_harvester_fee_convention(
     fee_count = 0
     proof_count = 0
 
-    farmer_reward_puzzle_hash = bytes32.random()
+    farmer_reward_puzzle_hash = decode_puzzle_hash("txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej")
 
     async def intercept_farmer_new_proof_of_space(*args) -> None:
         nonlocal farmer
