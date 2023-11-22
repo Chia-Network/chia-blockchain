@@ -68,8 +68,7 @@ async def check_spend_bundle_validity(
     or fails with the correct error code.
     """
 
-    db_wrapper, blockchain = await create_ram_blockchain(bt.constants)
-    try:
+    async with create_ram_blockchain(bt.constants) as (db_wrapper, blockchain):
         for block in blocks:
             await _validate_and_add_block(blockchain, block)
 
@@ -93,13 +92,6 @@ async def check_spend_bundle_validity(
             coins_removed = []
 
         return coins_added, coins_removed, newest_block
-
-    finally:
-        # if we don't close the db_wrapper, the test process doesn't exit cleanly
-        await db_wrapper.close()
-
-        # we must call `shut_down` or the executor in `Blockchain` doesn't stop
-        blockchain.shut_down()
 
 
 async def check_conditions(
