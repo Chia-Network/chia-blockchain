@@ -53,6 +53,12 @@ class ForkAdd:
     is_coinbase: bool
 
 
+@dataclass(frozen=True)
+class ForkRem:
+    puzzle_hash: bytes32
+    height: uint32
+
+
 @dataclass
 class ForkInfo:
     # defines the last block shared by the fork and the main chain. additions
@@ -68,15 +74,15 @@ class ForkInfo:
     peak_hash: bytes32
     # The additions include coinbase additions
     additions_since_fork: Dict[bytes32, ForkAdd] = field(default_factory=dict)
-    # coin-id
-    removals_since_fork: Set[bytes32] = field(default_factory=set)
+    # coin-id, ForkRem
+    removals_since_fork: Dict[bytes32, ForkRem] = field(default_factory=dict)
 
     def reset(self, fork_height: int, header_hash: bytes32) -> None:
         self.fork_height = fork_height
         self.peak_height = fork_height
         self.peak_hash = header_hash
         self.additions_since_fork = {}
-        self.removals_since_fork = set()
+        self.removals_since_fork = {}
 
     def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock, header_hash: bytes32) -> None:
         height = block.height
@@ -90,7 +96,7 @@ class ForkInfo:
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
             for spend in npc_result.conds.spends:
-                self.removals_since_fork.add(bytes32(spend.coin_id))
+                self.removals_since_fork[bytes32(spend.coin_id)] = ForkRem(bytes32(spend.puzzle_hash), height)
                 for puzzle_hash, amount, hint in spend.create_coin:
                     coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
                     self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
