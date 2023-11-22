@@ -21,6 +21,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncStart,
     PoolDifficulty,
     SignatureRequestSourceData,
+    SigningDataKind,
 )
 from chia.protocols.pool_protocol import (
     PoolErrorCode,
@@ -122,12 +123,12 @@ class FarmerAPI:
                     cc_data: SignatureRequestSourceData
                     rc_data: SignatureRequestSourceData
                     if sp.sp_source_data.vdf_data:
-                        cc_data = SignatureRequestSourceData(cc_vdf=sp.sp_source_data.vdf_data.cc_vdf)
-                        rc_data = SignatureRequestSourceData(rc_vdf=sp.sp_source_data.vdf_data.rc_vdf)
+                        cc_data = SignatureRequestSourceData(SigningDataKind.CHALLENGE_CHAIN_VDF, sp.sp_source_data.vdf_data.cc_vdf)
+                        rc_data = SignatureRequestSourceData(SigningDataKind.REWARD_CHAIN_VDF, sp.sp_source_data.vdf_data.rc_vdf)
                     else:
                         assert sp.sp_source_data.sub_slot_data
-                        cc_data = SignatureRequestSourceData(cc_sub_slot=sp.sp_source_data.sub_slot_data.cc_sub_slot)
-                        rc_data = SignatureRequestSourceData(rc_sub_slot=sp.sp_source_data.sub_slot_data.rc_sub_slot)
+                        cc_data = SignatureRequestSourceData(SigningDataKind.CHALLENGE_CHAIN_SUB_SLOT, sp.sp_source_data.sub_slot_data.cc_sub_slot)
+                        rc_data = SignatureRequestSourceData(SigningDataKind.REWARD_CHAIN_SUB_SLOT, sp.sp_source_data.sub_slot_data.rc_sub_slot)
 
                     sp_src_data = [cc_data, rc_data]
 
@@ -258,7 +259,7 @@ class FarmerAPI:
                 m_src_data: Optional[List[SignatureRequestSourceData]] = None
 
                 if new_proof_of_space.include_source_signature_data or new_proof_of_space.farmer_reward_address_override:
-                    m_src_data = [SignatureRequestSourceData(partial=payload)]
+                    m_src_data = [SignatureRequestSourceData(SigningDataKind.PARTIAL, payload)]
 
                 request = harvester_protocol.RequestSignatures(
                     new_proof_of_space.plot_identifier,
@@ -554,14 +555,16 @@ class FarmerAPI:
         if full_node_request.foliage_block_data:
             include_source_data = True
             foliage_block_data = SignatureRequestSourceData(
-                foliage_block_data=full_node_request.foliage_block_data
+                SigningDataKind.FOLIAGE_BLOCK_DATA,
+                full_node_request.foliage_block_data
             )
 
         if full_node_request.foliage_transaction_block_data:
             assert foliage_block_data
             include_source_data = True
             foliage_transaction_block_data = SignatureRequestSourceData(
-                foliage_transaction_block=full_node_request.foliage_transaction_block_data
+                SigningDataKind.FOLIAGE_TRANSACTION_BLOCK,
+                full_node_request.foliage_transaction_block_data
             )
 
         request = harvester_protocol.RequestSignatures(
