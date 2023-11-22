@@ -486,7 +486,10 @@ class Blockchain(BlockchainInterface):
 
         except BaseException as e:
             # Find peak as reported by the on disk DB
-            rollback_peak_hash, rollback_peak_height = await self.block_store.get_peak()
+            peak_ret = await self.block_store.get_peak()
+
+            assert peak_ret is not None
+            rollback_peak_hash, rollback_peak_height = peak_ret
 
             # Now remove any blocks higher than that in the caches so they are synced after rollback
             height = rollback_peak_height + 1
