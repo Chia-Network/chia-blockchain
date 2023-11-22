@@ -836,19 +836,21 @@ class Farmer:
 
             await asyncio.sleep(1)
 
-    def notify_farmer_reward_taken_by_harvester_as_fee(self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace) -> None:
-        challenge_str=str(sp.challenge_hash)
+    def notify_farmer_reward_taken_by_harvester_as_fee(
+            self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace
+    ) -> None:
+        challenge_str = str(sp.challenge_hash)
 
         ph_prefix = self.config["network_overrides"]["config"][self.config["selected_network"]]["address_prefix"]
         farmer_reward_puzzle_hash = encode_puzzle_hash(proof_of_space.farmer_reward_address_override, ph_prefix)
 
         self.log.info(
-            f"Farmer reward for challenge '{challenge_str}' taken by harvester to address '{farmer_reward_puzzle_hash}'."
+            f"Farmer reward for challenge '{challenge_str}' taken by harvester to address '{farmer_reward_puzzle_hash}'"
         )
 
         fee_quality = calculate_harvester_fee_quality(proof_of_space.proof.proof, sp.challenge_hash)
 
-        if proof_of_space.fee_info:
+        if proof_of_space.fee_info is not None:
             fee_threshold = proof_of_space.fee_info.applied_fee_threshold
 
             if fee_quality <= fee_threshold:
@@ -856,7 +858,8 @@ class Farmer:
             else:
                 self.log.warning(f"Fee threshold failed for challenge '{challenge_str}': {fee_quality}/{fee_threshold}")
         else:
-            self.log.warning(f"No fee information given by harvester for challenge '{challenge_str}'. Fee quality was {fee_quality} (0x{fee_quality:08x})")
+            self.log.warning(f"No fee information given by harvester for challenge '{challenge_str}'. "
+                             f"Fee quality was {fee_quality} (0x{fee_quality:08x})")
 
 
 def calculate_harvester_fee_quality(proof: bytes, challenge: bytes32) -> uint32:

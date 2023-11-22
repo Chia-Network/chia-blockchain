@@ -63,7 +63,7 @@ class NewProofOfSpace(Streamable):
     plot_identifier: str
     proof: ProofOfSpace
     signage_point_index: uint8
-    include_source_signature_data: bool = None
+    include_source_signature_data: bool = False
     farmer_reward_address_override: Optional[bytes32] = None
     fee_info: Optional[ProofOfSpaceFeeInfo] = None
 
