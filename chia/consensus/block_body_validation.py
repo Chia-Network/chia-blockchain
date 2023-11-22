@@ -310,14 +310,13 @@ async def validate_block_body(
         return root_error, None
 
     # 12. The additions and removals must result in the correct filter
-    byte_array_tx: List[bytearray] = []
+    tx_for_bip158: List[bytes32] = [
+        *(coin.puzzle_hash for coin, _ in additions),
+        *(coin.puzzle_hash for coin, _ in coinbase_additions),
+        *(removal for removal in removals),
+    ]
 
-    for coin, _ in additions + coinbase_additions:
-        byte_array_tx.append(bytearray(coin.puzzle_hash))
-    for coin_name in removals:
-        byte_array_tx.append(bytearray(coin_name))
-
-    bip158: PyBIP158 = PyBIP158(byte_array_tx)
+    bip158: PyBIP158 = PyBIP158(tx_for_bip158)
     encoded_filter = bytes(bip158.GetEncoded())
     filter_hash = std_hash(encoded_filter)
 
