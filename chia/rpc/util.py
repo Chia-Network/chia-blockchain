@@ -30,7 +30,12 @@ def wrap_http_handler(f, use_traceback: bool = True) -> Callable:
                 if use_traceback:
                     res_object = {"success": False, "error": f"{e.args[0]}", "traceback": f"{tb}"}
                 else:
-                    res_object = {"success": False, "error": f"{e.args[0]}"}
+                    err_dict = e.args[0]
+                    if isinstance(err_dict, dict) and "error" in err_dict:
+                        error = err_dict["error"]
+                        res_object = {"success": False, "error": f"{error}"}
+                    else:
+                        res_object = {"success": False, "error": f"{e.args[0]}"}
             else:
                 res_object = {"success": False, "error": f"{e}"}
 
