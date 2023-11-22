@@ -1119,7 +1119,7 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
         yield keyring
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def farmer_one_harvester_zero_bits_plot_filter(
     tmp_path: Path, get_temp_keyring: Keychain
 ) -> AsyncIterator[
@@ -1143,7 +1143,7 @@ async def farmer_one_harvester_zero_bits_plot_filter(
             yield harvester_service, farmer_service, node, bt
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def farmer_harvester_full_node_timelord_zero_bits_plot_filter(
     tmp_path: Path, get_temp_keyring: Keychain
 ) -> AsyncIterator[

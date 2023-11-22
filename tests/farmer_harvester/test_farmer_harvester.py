@@ -315,7 +315,7 @@ async def test_harvester_has_no_server(
     assert harvester_server.webserver is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_harvester_receive_source_signing_data(
     farmer_harvester_full_node_timelord_zero_bits_plot_filter, mocker: MockerFixture
 ) -> None:
@@ -471,7 +471,7 @@ async def test_harvester_receive_source_signing_data(
     await time_out_assert(90, did_finished_validating_data, True)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_harvester_fee_convention(
     farmer_harvester_full_node_timelord_zero_bits_plot_filter, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:
