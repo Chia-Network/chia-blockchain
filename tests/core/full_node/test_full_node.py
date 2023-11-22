@@ -2285,6 +2285,8 @@ async def test_long_reorg_nodes(
     # heavier chain.
     await full_node_2.full_node.add_block(reorg_blocks[-1])
 
+    start = time.monotonic()
+
     def check_nodes_in_sync():
         p1 = full_node_2.full_node.blockchain.get_peak()
         p2 = full_node_1.full_node.blockchain.get_peak()
@@ -2293,6 +2295,8 @@ async def test_long_reorg_nodes(
     await time_out_assert(100, check_nodes_in_sync)
     peak = full_node_2.full_node.blockchain.get_peak()
     print(f"peak: {str(peak.header_hash)[:6]}")
+
+    reorg1_timing = time.monotonic() - start
 
     p1 = full_node_1.full_node.blockchain.get_peak()
     p2 = full_node_2.full_node.blockchain.get_peak()
@@ -2313,6 +2317,8 @@ async def test_long_reorg_nodes(
     await connect_and_get_peer(full_node_3.full_node.server, full_node_1.full_node.server, self_hostname)
     await connect_and_get_peer(full_node_3.full_node.server, full_node_2.full_node.server, self_hostname)
 
+    start = time.monotonic()
+
     def check_nodes_in_sync2():
         p1 = full_node_1.full_node.blockchain.get_peak()
         p2 = full_node_2.full_node.blockchain.get_peak()
@@ -2321,6 +2327,8 @@ async def test_long_reorg_nodes(
 
     await time_out_assert(900, check_nodes_in_sync2)
 
+    reorg2_timing = time.monotonic() - start
+
     p1 = full_node_1.full_node.blockchain.get_peak()
     p2 = full_node_2.full_node.blockchain.get_peak()
     p3 = full_node_3.full_node.blockchain.get_peak()
@@ -2328,3 +2336,6 @@ async def test_long_reorg_nodes(
     assert p1.header_hash == blocks[-1].header_hash
     assert p2.header_hash == blocks[-1].header_hash
     assert p3.header_hash == blocks[-1].header_hash
+
+    print(f"reorg1 timing: {reorg1_timing:0.2f}s")
+    print(f"reorg2 timing: {reorg2_timing:0.2f}s")
