@@ -328,11 +328,6 @@ class Blockchain(BlockchainInterface):
         # tests that make sure the Blockchain object can handle any blocks,
         # including orphaned ones, without any fork context
         if fork_info is None:
-            # remember that this fork_info object is temporary and won't be
-            # returned to the caller. It means we can save time by not updating
-            # it once the block validates
-            temporary_fork_info = True
-
             if await self.contains_block_from_db(header_hash):
                 # this means we have already seen and validated this block.
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
@@ -381,7 +376,6 @@ class Blockchain(BlockchainInterface):
                 )
 
         else:
-            temporary_fork_info = False
             if extending_main_chain:
                 fork_info.reset(block.height - 1, block.prev_header_hash)
 
@@ -422,10 +416,9 @@ class Blockchain(BlockchainInterface):
 
         # commit the additions and removals from this block into the ForkInfo, in
         # case we're validating blocks on a fork, the next block validation will
-        # need to know of these additions and removals
-        if not temporary_fork_info:
-            assert fork_info.peak_height == block.height - 1
-            fork_info.include_spends(npc_result, block, header_hash)
+        # need to know of these additions and removals. Also, _reconsider_peak()
+        # will need these results
+        fork_info.include_spends(npc_result, block, header_hash)
 
         # block_to_block_record() require the previous block in the cache
         if not genesis and prev_block is not None:
