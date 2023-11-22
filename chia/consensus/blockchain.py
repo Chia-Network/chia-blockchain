@@ -450,10 +450,6 @@ class Blockchain(BlockchainInterface):
             None,
         )
 
-        # in case we fail and need to restore the blockchain state, remember the
-        # peak height
-        previous_peak_height = self._peak_height
-
         try:
             # Always add the block to the database
             async with self.block_store.db_wrapper.writer():
