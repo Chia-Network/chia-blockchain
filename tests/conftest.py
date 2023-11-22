@@ -153,12 +153,11 @@ def get_keychain():
 class ConsensusMode(Enum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
-    SOFT_FORK3 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK3],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
 )
 def consensus_mode(request):
     return request.param
@@ -168,8 +167,6 @@ def consensus_mode(request):
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
-    if consensus_mode == ConsensusMode.SOFT_FORK3:
-        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=uint32(3))
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         return dataclasses.replace(
             test_constants,
@@ -212,11 +209,8 @@ async def empty_blockchain(latest_db_version, blockchain_constants):
     """
     from tests.util.blockchain import create_blockchain
 
-    bc1, db_wrapper = await create_blockchain(blockchain_constants, latest_db_version)
-    yield bc1
-
-    await db_wrapper.close()
-    bc1.shut_down()
+    async with create_blockchain(blockchain_constants, latest_db_version) as (bc1, db_wrapper):
+        yield bc1
 
 
 @pytest.fixture(scope="function")
@@ -229,7 +223,7 @@ def db_version(request) -> int:
     return request.param
 
 
-SOFTFORK_HEIGHTS = [1000000, 4510000, 5496000, 5496100]
+SOFTFORK_HEIGHTS = [1000000, 5496000, 5496100]
 
 
 @pytest.fixture(scope="function", params=SOFTFORK_HEIGHTS)
@@ -639,7 +633,7 @@ async def wallet_two_node_simulator(blockchain_constants: ConsensusConstants):
 @pytest.fixture(scope="function")
 async def wallet_nodes_mempool_perf(bt):
     key_seed = bt.farmer_master_sk_entropy
-    async with setup_simulators_and_wallets(2, 1, bt.constants, key_seed=key_seed) as _:
+    async with setup_simulators_and_wallets(1, 1, bt.constants, key_seed=key_seed) as _:
         yield _
 
 

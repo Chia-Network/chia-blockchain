@@ -459,15 +459,10 @@ class TestDIDWallet:
         coin = await did_wallet.get_coin()
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
-        try:
+        with pytest.raises(Exception):
             spend_bundle = await did_wallet.recovery_spend(
                 coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([]))
             )
-        except Exception:
-            # We expect a CLVM 80 error for this test
-            pass
-        else:
-            assert False
 
     @pytest.mark.parametrize(
         "trusted",
@@ -931,12 +926,8 @@ class TestDIDWallet:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=15)
 
         assert await wallet1.get_confirmed_balance() == odd_amount
-        try:
+        with pytest.raises(ValueError):
             await api_0.did_get_info({"coin_id": coin_1.name().hex()})
-            # We expect a ValueError here
-            assert False
-        except ValueError:
-            pass
 
     @pytest.mark.parametrize(
         "trusted",

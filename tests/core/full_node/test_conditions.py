@@ -68,8 +68,7 @@ async def check_spend_bundle_validity(
     or fails with the correct error code.
     """
 
-    db_wrapper, blockchain = await create_ram_blockchain(bt.constants)
-    try:
+    async with create_ram_blockchain(bt.constants) as (db_wrapper, blockchain):
         for block in blocks:
             await _validate_and_add_block(blockchain, block)
 
@@ -94,13 +93,6 @@ async def check_spend_bundle_validity(
 
         return coins_added, coins_removed, newest_block
 
-    finally:
-        # if we don't close the db_wrapper, the test process doesn't exit cleanly
-        await db_wrapper.close()
-
-        # we must call `shut_down` or the executor in `Blockchain` doesn't stop
-        blockchain.shut_down()
-
 
 async def check_conditions(
     bt: BlockTools,
@@ -109,7 +101,7 @@ async def check_conditions(
     spend_reward_index: int = -2,
 ) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
     blocks = await initial_blocks(bt)
-    coin = list(blocks[spend_reward_index].get_included_reward_coins())[0]
+    coin = blocks[spend_reward_index].get_included_reward_coins()[0]
 
     coin_spend = CoinSpend(coin, EASY_PUZZLE, SerializedProgram.from_program(condition_solution))
     spend_bundle = SpendBundle([coin_spend], G2Element())
@@ -281,7 +273,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_invalid_my_id(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         wrong_name = bytearray(coin.name())
         wrong_name[-1] ^= 1
         conditions = Program.to(
@@ -294,7 +286,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_valid_my_id(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         conditions = Program.to(
             assemble(
                 f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{coin.name().hex()}))"
@@ -305,7 +297,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_invalid_coin_announcement(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         announce = Announcement(coin.name(), b"test_bad")
         conditions = Program.to(
             assemble(
@@ -318,7 +310,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_valid_coin_announcement(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         announce = Announcement(coin.name(), b"test")
         conditions = Program.to(
             assemble(
@@ -388,13 +380,8 @@ class TestConditions:
         pre-v2-softfork, and rejects more than the announcement limit afterward.
         """
 
-        if consensus_mode.value < ConsensusMode.SOFT_FORK3.value:
-            # before softfork 3, there was no limit on the number of
-            # announcements
-            expect_err = None
-
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         coin_announcement = Announcement(coin.name(), b"test")
         puzzle_announcement = Announcement(EASY_PUZZLE_HASH, b"test")
 

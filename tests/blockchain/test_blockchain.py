@@ -71,11 +71,8 @@ async def make_empty_blockchain(constants: ConsensusConstants):
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
 
-    bc, db_wrapper = await create_blockchain(constants, 2)
-    yield bc
-
-    await db_wrapper.close()
-    bc.shut_down()
+    async with create_blockchain(constants, 2) as (bc, db_wrapper):
+        yield bc
 
 
 class TestGenesisBlock:
@@ -567,80 +564,80 @@ class TestBlockHeaderValidation:
             ),
             keychain=keychain,
         )
-        bc1, db_wrapper = await create_blockchain(bt_high_iters.constants, db_version)
-        blocks = bt_high_iters.get_consecutive_blocks(10)
-        for block in blocks:
-            if len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is not None:
-                # Bad iters
-                new_finished_ss = recursive_replace(
-                    block.finished_sub_slots[-1],
-                    "infused_challenge_chain",
-                    InfusedChallengeChainSubSlot(
-                        replace(
-                            block.finished_sub_slots[
-                                -1
-                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            number_of_iterations=uint64(10000000),
-                        )
-                    ),
-                )
-                block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
-                )
-                await _validate_and_add_block(bc1, block_bad, expected_error=Err.INVALID_ICC_EOS_VDF)
+        async with create_blockchain(bt_high_iters.constants, db_version) as (bc1, db_wrapper):
+            blocks = bt_high_iters.get_consecutive_blocks(10)
+            for block in blocks:
+                if (
+                    len(block.finished_sub_slots) > 0
+                    and block.finished_sub_slots[-1].infused_challenge_chain is not None
+                ):
+                    # Bad iters
+                    new_finished_ss = recursive_replace(
+                        block.finished_sub_slots[-1],
+                        "infused_challenge_chain",
+                        InfusedChallengeChainSubSlot(
+                            replace(
+                                block.finished_sub_slots[
+                                    -1
+                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                                number_of_iterations=uint64(10000000),
+                            )
+                        ),
+                    )
+                    block_bad = recursive_replace(
+                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    )
+                    await _validate_and_add_block(bc1, block_bad, expected_error=Err.INVALID_ICC_EOS_VDF)
 
-                # Bad output
-                new_finished_ss_2 = recursive_replace(
-                    block.finished_sub_slots[-1],
-                    "infused_challenge_chain",
-                    InfusedChallengeChainSubSlot(
-                        replace(
-                            block.finished_sub_slots[
-                                -1
-                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            output=ClassgroupElement.get_default_element(),
-                        )
-                    ),
-                )
-                log.warning(f"Proof: {block.finished_sub_slots[-1].proofs}")
-                block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
-                )
-                await _validate_and_add_block(bc1, block_bad_2, expected_error=Err.INVALID_ICC_EOS_VDF)
+                    # Bad output
+                    new_finished_ss_2 = recursive_replace(
+                        block.finished_sub_slots[-1],
+                        "infused_challenge_chain",
+                        InfusedChallengeChainSubSlot(
+                            replace(
+                                block.finished_sub_slots[
+                                    -1
+                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                                output=ClassgroupElement.get_default_element(),
+                            )
+                        ),
+                    )
+                    log.warning(f"Proof: {block.finished_sub_slots[-1].proofs}")
+                    block_bad_2 = recursive_replace(
+                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
+                    )
+                    await _validate_and_add_block(bc1, block_bad_2, expected_error=Err.INVALID_ICC_EOS_VDF)
 
-                # Bad challenge hash
-                new_finished_ss_3 = recursive_replace(
-                    block.finished_sub_slots[-1],
-                    "infused_challenge_chain",
-                    InfusedChallengeChainSubSlot(
-                        replace(
-                            block.finished_sub_slots[
-                                -1
-                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            challenge=bytes32([0] * 32),
-                        )
-                    ),
-                )
-                block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
-                )
-                await _validate_and_add_block(bc1, block_bad_3, expected_error=Err.INVALID_ICC_EOS_VDF)
+                    # Bad challenge hash
+                    new_finished_ss_3 = recursive_replace(
+                        block.finished_sub_slots[-1],
+                        "infused_challenge_chain",
+                        InfusedChallengeChainSubSlot(
+                            replace(
+                                block.finished_sub_slots[
+                                    -1
+                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                                challenge=bytes32([0] * 32),
+                            )
+                        ),
+                    )
+                    block_bad_3 = recursive_replace(
+                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
+                    )
+                    await _validate_and_add_block(bc1, block_bad_3, expected_error=Err.INVALID_ICC_EOS_VDF)
 
-                # Bad proof
-                new_finished_ss_5 = recursive_replace(
-                    block.finished_sub_slots[-1],
-                    "proofs.infused_challenge_chain_slot_proof",
-                    VDFProof(uint8(0), b"1239819023890", False),
-                )
-                block_bad_5 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
-                )
-                await _validate_and_add_block(bc1, block_bad_5, expected_error=Err.INVALID_ICC_EOS_VDF)
+                    # Bad proof
+                    new_finished_ss_5 = recursive_replace(
+                        block.finished_sub_slots[-1],
+                        "proofs.infused_challenge_chain_slot_proof",
+                        VDFProof(uint8(0), b"1239819023890", False),
+                    )
+                    block_bad_5 = recursive_replace(
+                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
+                    )
+                    await _validate_and_add_block(bc1, block_bad_5, expected_error=Err.INVALID_ICC_EOS_VDF)
 
-            await _validate_and_add_block(bc1, block)
-
-        await db_wrapper.close()
-        bc1.shut_down()
+                await _validate_and_add_block(bc1, block)
 
     @pytest.mark.anyio
     async def test_invalid_icc_sub_slot_vdf(self, db_version, blockchain_constants):
@@ -1816,7 +1813,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx1: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         coin1: Coin = tx1.additions()[0]
 
@@ -1951,7 +1948,7 @@ class TestBodyValidation:
 
             conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
 
-            coin = list(blocks[-1].get_included_reward_coins())[0]
+            coin = blocks[-1].get_included_reward_coins()[0]
             tx: SpendBundle = wt.generate_signed_transaction(
                 10, wt.get_new_puzzlehash(), coin, condition_dic=conditions
             )
@@ -2035,7 +2032,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx1: SpendBundle = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         coin1: Coin = tx1.additions()[0]
         secret_key = wt.get_private_key_for_puzzle_hash(coin1.puzzle_hash)
@@ -2156,7 +2153,7 @@ class TestBodyValidation:
             }
 
             tx1: SpendBundle = wt.generate_signed_transaction(
-                10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+                10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
             )
             coin1: Coin = tx1.additions()[0]
             tx2: SpendBundle = wt.generate_signed_transaction(
@@ -2382,7 +2379,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
@@ -2442,7 +2439,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1])
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=False)
         for block in blocks[-5:]:
@@ -2537,7 +2534,7 @@ class TestBodyValidation:
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0], condition_dic=condition_dict
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0], condition_dic=condition_dict
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2583,7 +2580,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2709,16 +2706,13 @@ class TestBodyValidation:
         #     tx: SpendBundle = wt.generate_signed_transaction_multiple_coins(
         #         10,
         #         wt.get_new_puzzlehash(),
-        #         list(blocks[1].get_included_reward_coins()),
+        #         blocks[1].get_included_reward_coins(),
         #         condition_dic=condition_dict,
         #     )
-        #     try:
+        #     with pytest.raises(Exception):
         #         blocks = bt_2.get_consecutive_blocks(
         #             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         #         )
-        #         assert False
-        #     except Exception as e:
-        #         pass
         #     await db_wrapper.close()
         #     b.shut_down()
 
@@ -2738,7 +2732,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2787,7 +2781,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2826,7 +2820,7 @@ class TestBodyValidation:
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0], condition_dic=condition_dict
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0], condition_dic=condition_dict
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2851,10 +2845,10 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         tx_2: SpendBundle = wt.generate_signed_transaction(
-            11, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            11, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         agg = SpendBundle.aggregate([tx, tx_2])
 
@@ -2880,7 +2874,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2889,7 +2883,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1])
 
         tx_2: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-2].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-2].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_2
@@ -2914,7 +2908,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
@@ -3005,7 +2999,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        spend = list(blocks[-1].get_included_reward_coins())[0]
+        spend = blocks[-1].get_included_reward_coins()[0]
         print("spend=", spend)
         # this create coin will spend all of the coin, so the 10 mojos below
         # will be "minted".
@@ -3044,7 +3038,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -3085,7 +3079,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
@@ -3329,7 +3323,7 @@ class TestReorgs:
 
         spend_block = blocks[10]
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
@@ -3373,7 +3367,7 @@ class TestReorgs:
         await _validate_and_add_block(b, blocks[2])
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[2].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[2].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
             1,
@@ -3423,7 +3417,7 @@ async def test_reorg_new_ref(empty_blockchain, bt):
 
     all_coins = []
     for spend_block in blocks[:5]:
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 all_coins.append(coin)
     spend_bundle_0 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
@@ -3503,7 +3497,7 @@ async def test_reorg_stale_fork_height(empty_blockchain, bt):
 
     all_coins = []
     for spend_block in blocks:
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 all_coins.append(coin)
 
@@ -3558,7 +3552,7 @@ async def test_chain_failed_rollback(empty_blockchain, bt):
 
     all_coins = []
     for spend_block in blocks[:10]:
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 all_coins.append(coin)
 
@@ -3607,7 +3601,7 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 
     all_coins = []
     for spend_block in chain_a:
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 all_coins.append(coin)
 

@@ -82,8 +82,7 @@ async def test_create_creates_tables_and_columns(
     # allow you to parametrize the query.
     query = f"pragma table_info({table_name});"
 
-    db_wrapper = await DBWrapper2.create(database=database_uri, uri=True, reader_count=1)
-    try:
+    async with DBWrapper2.managed(database=database_uri, uri=True, reader_count=1) as db_wrapper:
         async with db_wrapper.reader() as reader:
             cursor = await reader.execute(query)
             columns = await cursor.fetchall()
@@ -97,8 +96,6 @@ async def test_create_creates_tables_and_columns(
                 assert [column[1] for column in columns] == expected_columns
         finally:
             await store.close()
-    finally:
-        await db_wrapper.close()
 
 
 @pytest.mark.anyio

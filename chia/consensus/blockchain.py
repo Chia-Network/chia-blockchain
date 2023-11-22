@@ -76,7 +76,10 @@ class StateChangeSummary:
     peak: BlockRecord
     fork_height: uint32
     rolled_back_records: List[CoinRecord]
-    new_npc_results: List[NPCResult]
+    # list of coin-id, puzzle-hash pairs
+    removals: List[Tuple[bytes32, bytes32]]
+    # new coin and hint
+    additions: List[Tuple[Coin, Optional[bytes]]]
     new_rewards: List[Coin]
 
 
@@ -539,7 +542,7 @@ class Blockchain(BlockchainInterface):
                 await self.block_store.set_in_chain([(block_record.header_hash,)])
                 await self.block_store.set_peak(block_record.header_hash)
                 return [block_record], StateChangeSummary(
-                    block_record, uint32(0), [], [], list(block.get_included_reward_coins())
+                    block_record, uint32(0), [], [], [], block.get_included_reward_coins()
                 )
             return [], None
 
@@ -569,7 +572,9 @@ class Blockchain(BlockchainInterface):
             curr = fetched_block_record.prev_hash
 
         records_to_add: List[BlockRecord] = []
-        npc_results: List[NPCResult] = []
+        # coin-id, puzzle-hash
+        removals: List[Tuple[bytes32, bytes32]] = []
+        additions: List[Tuple[Coin, Optional[bytes]]] = []
         reward_coins: List[Coin] = []
         for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
             records_to_add.append(fetched_block_record)
@@ -586,8 +591,11 @@ class Blockchain(BlockchainInterface):
                 tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(fetched_full_block, None)
 
             # Collect the NPC results for later post-processing
-            if npc_res is not None:
-                npc_results.append(npc_res)
+            if npc_res is not None and npc_res.conds is not None:
+                for spend in npc_res.conds.spends:
+                    removals.append((bytes32(spend.coin_id), bytes32(spend.puzzle_hash)))
+                    for ph, amount, hint in spend.create_coin:
+                        additions.append((Coin(spend.coin_id, ph, amount), hint))
 
             # Apply the coin store changes for each block that is now in the blockchain
             assert fetched_full_block.foliage_transaction_block is not None
@@ -613,7 +621,8 @@ class Blockchain(BlockchainInterface):
             block_record,
             uint32(max(fork_info.fork_height, 0)),
             list(rolled_back_state.values()),
-            npc_results,
+            removals,
+            additions,
             reward_coins,
         )
 
@@ -1100,11 +1109,8 @@ class Blockchain(BlockchainInterface):
             return BlockGenerator(block.transactions_generator, [], [])
 
         result: List[SerializedProgram] = []
-        previous_block_hash = block.prev_header_hash
-        if (
-            self.try_block_record(previous_block_hash)
-            and self.height_to_hash(self.block_record(previous_block_hash).height) == previous_block_hash
-        ):
+        previous_br = await self.get_block_record_from_db(block.prev_header_hash)
+        if previous_br is not None and self.height_to_hash(previous_br.height) == block.prev_header_hash:
             # We are not in a reorg, no need to look up alternate header hashes
             # (we can get them from height_to_hash)
             # in the v2 database, we can look up blocks by height directly

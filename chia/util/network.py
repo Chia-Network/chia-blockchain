@@ -58,7 +58,6 @@ class WebServer:
     hostname: str
     listen_port: uint16
     scheme: Literal["http", "https"]
-    _shutdown_timeout: int
     _ssl_context: Optional[ssl.SSLContext] = None
     _close_task: Optional[asyncio.Task[None]] = None
     _prefer_ipv6: bool = False
@@ -72,20 +71,24 @@ class WebServer:
         max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
         ssl_context: Optional[ssl.SSLContext] = None,
         keepalive_timeout: int = 75,  # Default from aiohttp.web
-        shutdown_timeout: int = 60,  # Default `shutdown_timeout` from web.TCPSite
+        shutdown_timeout: int = 60,  # Default `shutdown_timeout` from aiohttp.web_runner.BaseRunner
         prefer_ipv6: bool = False,
         logger: logging.Logger = web_logger,
         start: bool = True,
     ) -> WebServer:
         app = web.Application(client_max_size=max_request_body_size, logger=logger)
-        runner = web.AppRunner(app, access_log=None, keepalive_timeout=keepalive_timeout)
+        runner = web.AppRunner(
+            app,
+            access_log=None,
+            keepalive_timeout=keepalive_timeout,
+            shutdown_timeout=shutdown_timeout,
+        )
 
         self = cls(
             runner=runner,
             hostname=hostname,
             listen_port=uint16(port),
             scheme="https" if ssl_context is not None else "http",
-            _shutdown_timeout=shutdown_timeout,
             _ssl_context=ssl_context,
             _prefer_ipv6=prefer_ipv6,
         )
@@ -104,7 +107,6 @@ class WebServer:
             self.hostname,
             int(self.listen_port),
             ssl_context=self._ssl_context,
-            shutdown_timeout=self._shutdown_timeout,
         )
         await site.start()
 
