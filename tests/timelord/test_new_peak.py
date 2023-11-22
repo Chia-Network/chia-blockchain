@@ -61,7 +61,6 @@ class TestNewPeak:
         assert timelord_api.timelord.last_state.last_weight == blocks_1[-1].weight
         assert timelord_api.timelord.last_state.total_iters == blocks_1[-1].reward_chain_block.total_iters
 
-
         await db_wrapper1.close()
         await db_wrapper2.close()
         b1.shut_down()
