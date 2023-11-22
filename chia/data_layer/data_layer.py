@@ -208,10 +208,10 @@ class DataLayer:
                     except asyncio.CancelledError:
                         # TODO: ack! consuming cancellation
                         pass
-        if self._data_store is not None:
-            await self.data_store.close()
-        if self._wallet_rpc is not None:
-            await self.wallet_rpc.await_closed()
+                if self._data_store is not None:
+                    await self.data_store.close()
+                if self._wallet_rpc is not None:
+                    await self.wallet_rpc.await_closed()
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
@@ -667,8 +667,10 @@ class DataLayer:
         self.log.info(f"Unsubscribed to {tree_id}")
         for filename in filenames:
             file_path = self.server_files_location.joinpath(filename)
-            with contextlib.suppress(FileNotFoundError):
+            try:
                 file_path.unlink()
+            except FileNotFoundError:
+                pass
 
     async def get_subscriptions(self) -> List[Subscription]:
         async with self.subscription_lock:

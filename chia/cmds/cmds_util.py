@@ -113,21 +113,16 @@ async def get_any_service_client(
     if rpc_port is None:
         rpc_port = config[node_type]["rpc_port"]
     # select node client type based on string
-    node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path, config)
-    try:
-        # check if we can connect to node
-        await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
-        yield node_client, config
-    except Exception as e:  # this is only here to make the errors more user-friendly.
-        if not consume_errors or isinstance(e, CliRpcConnectionError) or isinstance(e, click.Abort):
-            # CliRpcConnectionError will be handled by click.
-            raise
-        print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
-
-    finally:
-        with anyio.CancelScope(shield=True):
-            node_client.close()  # this can run even if already closed, will just do nothing.
-            await node_client.await_closed()
+    async with client_type.create_as_context(self_hostname, uint16(rpc_port), root_path, config) as node_client:
+        try:
+            # check if we can connect to node
+            await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
+            yield node_client, config
+        except Exception as e:  # this is only here to make the errors more user-friendly.
+            if not consume_errors or isinstance(e, CliRpcConnectionError) or isinstance(e, click.Abort):
+                # CliRpcConnectionError will be handled by click.
+                raise
+            print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
 
 
 async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprint: Optional[int]) -> int:
