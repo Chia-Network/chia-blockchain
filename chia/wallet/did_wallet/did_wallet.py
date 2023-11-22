@@ -976,36 +976,33 @@ class DIDWallet:
     async def load_attest_files_for_recovery_spend(self, attest_data: List[str]) -> Tuple[List, SpendBundle]:
         spend_bundle_list = []
         info_dict = {}
-        try:
-            for attest in attest_data:
-                info = attest.split(":")
-                info_dict[info[0]] = [
-                    bytes.fromhex(info[2]),
-                    bytes.fromhex(info[3]),
-                    uint64(info[4]),
-                ]
-                new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
-                spend_bundle_list.append(new_sb)
-            # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
-            my_recovery_list: List[bytes32] = self.did_info.backup_ids
+        for attest in attest_data:
+            info = attest.split(":")
+            info_dict[info[0]] = [
+                bytes.fromhex(info[2]),
+                bytes.fromhex(info[3]),
+                uint64(info[4]),
+            ]
+            new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
+            spend_bundle_list.append(new_sb)
+        # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
+        my_recovery_list: List[bytes32] = self.did_info.backup_ids
 
-            # convert info dict into recovery list - same order as wallet
-            info_list = []
-            for entry in my_recovery_list:
-                if entry.hex() in info_dict:
-                    info_list.append(
-                        [
-                            info_dict[entry.hex()][0],
-                            info_dict[entry.hex()][1],
-                            info_dict[entry.hex()][2],
-                        ]
-                    )
-                else:
-                    info_list.append([])
-            message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
-            return info_list, message_spend_bundle
-        except Exception:
-            raise
+        # convert info dict into recovery list - same order as wallet
+        info_list = []
+        for entry in my_recovery_list:
+            if entry.hex() in info_dict:
+                info_list.append(
+                    [
+                        info_dict[entry.hex()][0],
+                        info_dict[entry.hex()][1],
+                        info_dict[entry.hex()][2],
+                    ]
+                )
+            else:
+                info_list.append([])
+        message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
+        return info_list, message_spend_bundle
 
     async def recovery_spend(
         self,

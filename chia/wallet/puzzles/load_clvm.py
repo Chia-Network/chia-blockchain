@@ -33,12 +33,9 @@ def translate_path(p_):
 
 # Handle optional use of python clvm_tools if available and requested
 if "CLVM_TOOLS" in os.environ:
-    try:
-        from clvm_tools.clvmc import compile_clvm as compile_clvm_py_candidate
+    from clvm_tools.clvmc import compile_clvm as compile_clvm_py_candidate
 
-        compile_clvm_py = compile_clvm_py_candidate
-    finally:
-        pass
+    compile_clvm_py = compile_clvm_py_candidate
 
 
 def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_paths: List[pathlib.Path]):

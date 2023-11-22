@@ -22,6 +22,7 @@ from typing import (
     List,
     Optional,
     Set,
+    TextIO,
     Tuple,
     Union,
     cast,
@@ -203,12 +204,173 @@ class FullNode:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        await self._start()
-        try:
-            yield
-        finally:
-            self._close()
-            await self._await_closed()
+        self._timelord_lock = asyncio.Lock()
+        self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
+
+        # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
+        # multiple peers and re-validate.
+        self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20)
+
+        # These many respond_transaction tasks can be active at any point in time
+        self._add_transaction_semaphore = asyncio.Semaphore(200)
+
+        sql_log_path: Optional[Path] = None
+        with contextlib.ExitStack() as exit_stack:
+            sql_log_file: Optional[TextIO] = None
+            if self.config.get("log_sqlite_cmds", False):
+                sql_log_path = path_from_root(self.root_path, "log/sql.log")
+                self.log.info(f"logging SQL commands to {sql_log_path}")
+                sql_log_file = exit_stack.enter_context(sql_log_path.open("a", encoding="utf-8"))
+
+            # create the store (db) and full node instance
+            # TODO: is this standardized and thus able to be handled by DBWrapper2?
+            async with manage_connection(self.db_path, log_file=sql_log_file, name="version_check") as db_connection:
+                db_version = await lookup_db_version(db_connection)
+
+        self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
+
+        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
+        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
+
+        async with DBWrapper2.managed(
+            self.db_path,
+            db_version=db_version,
+            reader_count=4,
+            log_path=sql_log_path,
+            synchronous=db_sync,
+        ) as self._db_wrapper:
+            if self.db_wrapper.db_version != 2:
+                async with self.db_wrapper.reader_no_transaction() as conn:
+                    async with conn.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
+                    ) as cur:
+                        if len(list(await cur.fetchall())) == 0:
+                            try:
+                                # this is a new DB file. Make it v2
+                                async with self.db_wrapper.writer_maybe_transaction() as w_conn:
+                                    await set_db_version_async(w_conn, 2)
+                                    self.db_wrapper.db_version = 2
+                                    self.log.info("blockchain database is empty, configuring as v2")
+                            except sqlite3.OperationalError:
+                                # it could be a database created with "chia init", which is
+                                # empty except it has the database_version table
+                                pass
+
+            self._block_store = await BlockStore.create(self.db_wrapper)
+            self._hint_store = await HintStore.create(self.db_wrapper)
+            self._coin_store = await CoinStore.create(self.db_wrapper)
+            self.log.info("Initializing blockchain from disk")
+            start_time = time.time()
+            reserved_cores = self.config.get("reserved_cores", 0)
+            single_threaded = self.config.get("single_threaded", False)
+            multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
+            self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+            self._blockchain = await Blockchain.create(
+                coin_store=self.coin_store,
+                block_store=self.block_store,
+                consensus_constants=self.constants,
+                blockchain_dir=self.db_path.parent,
+                reserved_cores=reserved_cores,
+                multiprocessing_context=self.multiprocessing_context,
+                single_threaded=single_threaded,
+            )
+
+            self._mempool_manager = MempoolManager(
+                get_coin_record=self.coin_store.get_coin_record,
+                consensus_constants=self.constants,
+                multiprocessing_context=self.multiprocessing_context,
+                single_threaded=single_threaded,
+            )
+
+            # Transactions go into this queue from the server, and get sent to respond_transaction
+            self._transaction_queue = TransactionQueue(1000, self.log)
+            self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
+            self.transaction_responses = []
+
+            self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
+
+            if self.config.get("enable_profiler", False):
+                asyncio.create_task(profile_task(self.root_path, "node", self.log))
+
+            if self.config.get("enable_memory_profiler", False):
+                asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
+
+            time_taken = time.time() - start_time
+            peak: Optional[BlockRecord] = self.blockchain.get_peak()
+            if peak is None:
+                self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
+                num_unspent = await self.coin_store.num_unspent()
+                if num_unspent > 0:
+                    self.log.error(
+                        f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
+                        "This is a fatal error. The blockchain database may be corrupt"
+                    )
+                    raise RuntimeError("corrupt blockchain DB")
+            else:
+                self.log.info(
+                    f"Blockchain initialized to peak {peak.header_hash} height"
+                    f" {peak.height}, "
+                    f"time taken: {int(time_taken)}s"
+                )
+                async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                    pending_tx = await self.mempool_manager.new_peak(peak, None)
+                assert len(pending_tx) == 0  # no pending transactions when starting up
+
+                full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
+                assert full_peak is not None
+                state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
+                ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
+                    full_peak, state_change_summary, None
+                )
+                await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
+            if self.config["send_uncompact_interval"] != 0:
+                sanitize_weight_proof_only = False
+                if "sanitize_weight_proof_only" in self.config:
+                    sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
+                assert self.config["target_uncompact_proofs"] != 0
+                self.uncompact_task = asyncio.create_task(
+                    self.broadcast_uncompact_blocks(
+                        self.config["send_uncompact_interval"],
+                        self.config["target_uncompact_proofs"],
+                        sanitize_weight_proof_only,
+                    )
+                )
+            if self.wallet_sync_task is None or self.wallet_sync_task.done():
+                self.wallet_sync_task = asyncio.create_task(self._wallets_sync_task_handler())
+
+            self.initialized = True
+            if self.full_node_peers is not None:
+                asyncio.create_task(self.full_node_peers.start())
+            try:
+                yield
+            finally:
+                self._shut_down = True
+                if self._init_weight_proof is not None:
+                    self._init_weight_proof.cancel()
+
+                # blockchain is created in _start and in certain cases it may not exist here during _close
+                if self._blockchain is not None:
+                    self.blockchain.shut_down()
+                # same for mempool_manager
+                if self._mempool_manager is not None:
+                    self.mempool_manager.shut_down()
+
+                if self.full_node_peers is not None:
+                    asyncio.create_task(self.full_node_peers.close())
+                if self.uncompact_task is not None:
+                    self.uncompact_task.cancel()
+                if self._transaction_queue_task is not None:
+                    self._transaction_queue_task.cancel()
+                cancel_task_safe(task=self.wallet_sync_task, log=self.log)
+                cancel_task_safe(task=self._sync_task, log=self.log)
+
+                for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
+                    cancel_task_safe(task, self.log)
+                if self._init_weight_proof is not None:
+                    await asyncio.wait([self._init_weight_proof])
+                if self._sync_task is not None:
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await self._sync_task
 
     @property
     def block_store(self) -> BlockStore:
@@ -303,142 +465,6 @@ class FullNode:
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
-
-    async def _start(self) -> None:
-        self._timelord_lock = asyncio.Lock()
-        self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
-
-        # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
-        # multiple peers and re-validate.
-        self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20)
-
-        # These many respond_transaction tasks can be active at any point in time
-        self._add_transaction_semaphore = asyncio.Semaphore(200)
-
-        sql_log_path: Optional[Path] = None
-        if self.config.get("log_sqlite_cmds", False):
-            sql_log_path = path_from_root(self.root_path, "log/sql.log")
-            self.log.info(f"logging SQL commands to {sql_log_path}")
-
-        # create the store (db) and full node instance
-        # TODO: is this standardized and thus able to be handled by DBWrapper2?
-        async with manage_connection(self.db_path, log_path=sql_log_path, name="version_check") as db_connection:
-            db_version = await lookup_db_version(db_connection)
-        self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
-
-        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
-        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
-
-        self._db_wrapper = await DBWrapper2.create(
-            self.db_path,
-            db_version=db_version,
-            reader_count=4,
-            log_path=sql_log_path,
-            synchronous=db_sync,
-        )
-
-        if self.db_wrapper.db_version != 2:
-            async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
-                ) as cur:
-                    if len(list(await cur.fetchall())) == 0:
-                        try:
-                            # this is a new DB file. Make it v2
-                            async with self.db_wrapper.writer_maybe_transaction() as w_conn:
-                                await set_db_version_async(w_conn, 2)
-                                self.db_wrapper.db_version = 2
-                                self.log.info("blockchain database is empty, configuring as v2")
-                        except sqlite3.OperationalError:
-                            # it could be a database created with "chia init", which is
-                            # empty except it has the database_version table
-                            pass
-
-        self._block_store = await BlockStore.create(self.db_wrapper)
-        self._hint_store = await HintStore.create(self.db_wrapper)
-        self._coin_store = await CoinStore.create(self.db_wrapper)
-        self.log.info("Initializing blockchain from disk")
-        start_time = time.time()
-        reserved_cores = self.config.get("reserved_cores", 0)
-        single_threaded = self.config.get("single_threaded", False)
-        multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
-        self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
-        self._blockchain = await Blockchain.create(
-            coin_store=self.coin_store,
-            block_store=self.block_store,
-            consensus_constants=self.constants,
-            blockchain_dir=self.db_path.parent,
-            reserved_cores=reserved_cores,
-            multiprocessing_context=self.multiprocessing_context,
-            single_threaded=single_threaded,
-        )
-
-        self._mempool_manager = MempoolManager(
-            get_coin_record=self.coin_store.get_coin_record,
-            consensus_constants=self.constants,
-            multiprocessing_context=self.multiprocessing_context,
-            single_threaded=single_threaded,
-        )
-
-        # Transactions go into this queue from the server, and get sent to respond_transaction
-        self._transaction_queue = TransactionQueue(1000, self.log)
-        self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
-        self.transaction_responses = []
-
-        self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
-
-        if self.config.get("enable_profiler", False):
-            asyncio.create_task(profile_task(self.root_path, "node", self.log))
-
-        if self.config.get("enable_memory_profiler", False):
-            asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
-
-        time_taken = time.time() - start_time
-        peak: Optional[BlockRecord] = self.blockchain.get_peak()
-        if peak is None:
-            self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
-            num_unspent = await self.coin_store.num_unspent()
-            if num_unspent > 0:
-                self.log.error(
-                    f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
-                    "This is a fatal error. The blockchain database may be corrupt"
-                )
-                raise RuntimeError("corrupt blockchain DB")
-        else:
-            self.log.info(
-                f"Blockchain initialized to peak {peak.header_hash} height"
-                f" {peak.height}, "
-                f"time taken: {int(time_taken)}s"
-            )
-            async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                pending_tx = await self.mempool_manager.new_peak(peak, None)
-            assert len(pending_tx) == 0  # no pending transactions when starting up
-
-            full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
-            assert full_peak is not None
-            state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [])
-            ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
-                full_peak, state_change_summary, None
-            )
-            await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
-        if self.config["send_uncompact_interval"] != 0:
-            sanitize_weight_proof_only = False
-            if "sanitize_weight_proof_only" in self.config:
-                sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
-            assert self.config["target_uncompact_proofs"] != 0
-            self.uncompact_task = asyncio.create_task(
-                self.broadcast_uncompact_blocks(
-                    self.config["send_uncompact_interval"],
-                    self.config["target_uncompact_proofs"],
-                    sanitize_weight_proof_only,
-                )
-            )
-        if self.wallet_sync_task is None or self.wallet_sync_task.done():
-            self.wallet_sync_task = asyncio.create_task(self._wallets_sync_task_handler())
-
-        self.initialized = True
-        if self.full_node_peers is not None:
-            asyncio.create_task(self.full_node_peers.start())
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry) -> None:
         peer = entry.peer
@@ -878,37 +904,6 @@ class FullNode:
         # Remove all ph | coin id subscription for this peer
         self.subscriptions.remove_peer(connection.peer_node_id)
 
-    def _close(self) -> None:
-        self._shut_down = True
-        if self._init_weight_proof is not None:
-            self._init_weight_proof.cancel()
-
-        # blockchain is created in _start and in certain cases it may not exist here during _close
-        if self._blockchain is not None:
-            self.blockchain.shut_down()
-        # same for mempool_manager
-        if self._mempool_manager is not None:
-            self.mempool_manager.shut_down()
-
-        if self.full_node_peers is not None:
-            asyncio.create_task(self.full_node_peers.close())
-        if self.uncompact_task is not None:
-            self.uncompact_task.cancel()
-        if self._transaction_queue_task is not None:
-            self._transaction_queue_task.cancel()
-        cancel_task_safe(task=self.wallet_sync_task, log=self.log)
-        cancel_task_safe(task=self._sync_task, log=self.log)
-
-    async def _await_closed(self) -> None:
-        for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
-            cancel_task_safe(task, self.log)
-        await self.db_wrapper.close()
-        if self._init_weight_proof is not None:
-            await asyncio.wait([self._init_weight_proof])
-        if self._sync_task is not None:
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._sync_task
-
     async def _sync(self) -> None:
         """
         Performs a full sync of the blockchain up to the peak.
@@ -1325,7 +1320,8 @@ class FullNode:
                         state_change_summary.peak,
                         agg_state_change_summary.fork_height,
                         agg_state_change_summary.rolled_back_records + state_change_summary.rolled_back_records,
-                        agg_state_change_summary.new_npc_results + state_change_summary.new_npc_results,
+                        agg_state_change_summary.removals + state_change_summary.removals,
+                        agg_state_change_summary.additions + state_change_summary.additions,
                         agg_state_change_summary.new_rewards + state_change_summary.new_rewards,
                     )
             elif result == AddBlockResult.INVALID_BLOCK or result == AddBlockResult.DISCONNECTED_BLOCK:
@@ -1362,7 +1358,7 @@ class FullNode:
             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
             if peak_fb is not None:
                 assert peak is not None
-                state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [])
+                state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
                 ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
                     peak_fb, state_change_summary, None
                 )
@@ -1545,10 +1541,7 @@ class FullNode:
         )
 
         # Update the mempool (returns successful pending transactions added to the mempool)
-        spent_coins: Optional[List[bytes32]] = None
-        new_npc_results: List[NPCResult] = state_change_summary.new_npc_results
-        if len(new_npc_results) > 0 and new_npc_results[-1].conds is not None:
-            spent_coins = [bytes32(s.coin_id) for s in new_npc_results[-1].conds.spends]
+        spent_coins: List[bytes32] = [coin_id for coin_id, _ in state_change_summary.removals]
         mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
             self.blockchain.get_peak(), spent_coins
         )
