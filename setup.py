@@ -68,6 +68,13 @@ dev_dependencies = [
     "types-setuptools==68.2.0.1",
 ]
 
+prof_dependencies = [
+    *dev_dependencies,
+    "pytest-timeout==2.2.0",
+    "pytest-profiling==1.7.0",
+    "gprof2dot==2022.7.29",
+]
+
 legacy_keyring_dependencies = [
     "keyrings.cryptfile==1.3.9",
 ]
@@ -85,6 +92,7 @@ kwargs = dict(
     extras_require=dict(
         dev=dev_dependencies,
         upnp=upnp_dependencies,
+        prof=prof_dependencies,
         legacy_keyring=legacy_keyring_dependencies,
     ),
     packages=find_packages(include=["build_scripts", "chia", "chia.*", "mozilla-ca"]),
