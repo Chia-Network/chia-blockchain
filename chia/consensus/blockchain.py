@@ -386,11 +386,7 @@ class Blockchain(BlockchainInterface):
         else:
             temporary_fork_info = False
             if extending_main_chain:
-                fork_info.fork_height = block.height - 1
-                fork_info.peak_height = block.height - 1
-                fork_info.peak_hash = block.prev_header_hash
-                fork_info.additions_since_fork == {}
-                fork_info.removals_since_fork == set()
+                fork_info.reset(block.height - 1, block.prev_header_hash)
 
             if await self.contains_block_from_db(header_hash):
                 # We have already validated the block, but if it's not part of the

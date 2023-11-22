@@ -63,6 +63,13 @@ class ForkInfo:
     # coin-id
     removals_since_fork: Set[bytes32] = field(default_factory=set)
 
+    def reset(self, fork_height: int, header_hash: bytes32) -> None:
+        self.fork_height = fork_height
+        self.peak_height = fork_height
+        self.peak_hash = header_hash
+        self.additions_since_fork = {}
+        self.removals_since_fork = set()
+
     def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock) -> None:
         height = block.height
         if npc_result is not None:
