@@ -74,7 +74,7 @@ async def run_new_block_benchmark(version: int) -> None:
             await coin_store.new_block(
                 uint32(height),
                 uint64(timestamp),
-                {pool_coin, farmer_coin},
+                [pool_coin, farmer_coin],
                 additions,
                 removals,
             )
@@ -114,7 +114,7 @@ async def run_new_block_benchmark(version: int) -> None:
             await coin_store.new_block(
                 uint32(height),
                 uint64(timestamp),
-                {pool_coin, farmer_coin},
+                [pool_coin, farmer_coin],
                 additions,
                 removals,
             )
@@ -164,7 +164,7 @@ async def run_new_block_benchmark(version: int) -> None:
             await coin_store.new_block(
                 uint32(height),
                 uint64(timestamp),
-                {pool_coin, farmer_coin},
+                [pool_coin, farmer_coin],
                 additions,
                 removals,
             )
@@ -212,7 +212,7 @@ async def run_new_block_benchmark(version: int) -> None:
             await coin_store.new_block(
                 uint32(height),
                 uint64(timestamp),
-                {pool_coin, farmer_coin},
+                [pool_coin, farmer_coin],
                 additions,
                 removals,
             )

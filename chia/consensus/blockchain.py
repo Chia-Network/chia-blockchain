@@ -542,7 +542,7 @@ class Blockchain(BlockchainInterface):
                 await self.block_store.set_in_chain([(block_record.header_hash,)])
                 await self.block_store.set_peak(block_record.header_hash)
                 return [block_record], StateChangeSummary(
-                    block_record, uint32(0), [], [], [], list(block.get_included_reward_coins())
+                    block_record, uint32(0), [], [], [], block.get_included_reward_coins()
                 )
             return [], None
 
