@@ -485,11 +485,24 @@ class Blockchain(BlockchainInterface):
                 self._peak_height = block_record.height
 
         except BaseException as e:
-            self.block_store.rollback_cache_block(header_hash)
-            self._peak_height = previous_peak_height
+            # Find peak as reported by the on disk DB
+            rollback_peak_hash, rollback_peak_height = await self.block_store.get_peak()
+
+            # Now remove any blocks higher than that in the caches so they are synced after rollback
+            height = rollback_peak_height + 1
+            blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
+            while blocks_to_remove is not None:
+                for header_hash in blocks_to_remove:
+                    del self.__block_records[header_hash]  # remove from blocks
+                    self.block_store.rollback_cache_block(header_hash)
+                del self.__heights_in_cache[uint32(height)]  # remove height from heights in cache
+                height = height + 1
+                blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
+
+            self._peak_height = rollback_peak_height
             log.error(
                 f"Error while adding block {header_hash} height {block.height},"
-                f" rolling back: {traceback.format_exc()} {e}"
+                f" rollback to {rollback_peak_hash} height {rollback_peak_height}: {traceback.format_exc()} {e}"
             )
             raise
 
