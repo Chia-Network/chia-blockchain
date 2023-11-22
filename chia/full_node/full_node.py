@@ -1221,7 +1221,8 @@ class FullNode:
             maxsize=buffer_size
         )
 
-        with log_exceptions(log=self.log, message="sync from fork point failed"):
+        # TODO: just consuming for backwards compatibility expectations
+        with log_exceptions(log=self.log, consume=True, message="sync from fork point failed"):
             async with anyio.create_task_group() as task_group:
                 task_group.start_soon(
                     name="full node sync fetch block batches",
