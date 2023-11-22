@@ -771,7 +771,7 @@ class TestFullNodeProtocol:
         )
         await full_node_1.full_node.add_block(blocks[-2])
         await full_node_1.full_node.add_block(blocks[-1])
-        coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
+        coin_to_spend = blocks[-1].get_included_reward_coins()[0]
 
         spend_bundle = wallet_a.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
 
@@ -1085,7 +1085,7 @@ class TestFullNodeProtocol:
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            100, receiver_puzzlehash, list(blocks[-1].get_included_reward_coins())[0]
+            100, receiver_puzzlehash, blocks[-1].get_included_reward_coins()[0]
         )
         assert spend_bundle is not None
         respond_transaction = fnp.RespondTransaction(spend_bundle)
@@ -1136,7 +1136,7 @@ class TestFullNodeProtocol:
         spend_bundle = wallet_a.generate_signed_transaction(
             100000000000000,
             receiver_puzzlehash,
-            list(blocks_new[-1].get_included_reward_coins())[0],
+            blocks_new[-1].get_included_reward_coins()[0],
         )
 
         assert spend_bundle is not None
@@ -1162,7 +1162,7 @@ class TestFullNodeProtocol:
         spend_bundle = wallet_a.generate_signed_transaction(
             1123,
             wallet_receiver.get_new_puzzlehash(),
-            list(blocks[-1].get_included_reward_coins())[0],
+            blocks[-1].get_included_reward_coins()[0],
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
@@ -1206,7 +1206,7 @@ class TestFullNodeProtocol:
         spend_bundle = wallet_a.generate_signed_transaction(
             1123,
             wallet_receiver.get_new_puzzlehash(),
-            list(blocks[-1].get_included_reward_coins())[0],
+            blocks[-1].get_included_reward_coins()[0],
         )
         blocks_t = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
@@ -1447,7 +1447,7 @@ class TestFullNodeProtocol:
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
 
-        coin = list(blocks[-1].get_included_reward_coins())[0]
+        coin = blocks[-1].get_included_reward_coins()[0]
         tx: SpendBundle = wallet_a.generate_signed_transaction(10000, wallet_receiver.get_new_puzzlehash(), coin)
 
         blocks = bt.get_consecutive_blocks(
