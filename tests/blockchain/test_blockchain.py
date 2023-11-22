@@ -1816,7 +1816,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx1: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         coin1: Coin = tx1.additions()[0]
 
@@ -1951,7 +1951,7 @@ class TestBodyValidation:
 
             conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
 
-            coin = list(blocks[-1].get_included_reward_coins())[0]
+            coin = blocks[-1].get_included_reward_coins()[0]
             tx: SpendBundle = wt.generate_signed_transaction(
                 10, wt.get_new_puzzlehash(), coin, condition_dic=conditions
             )
@@ -2035,7 +2035,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx1: SpendBundle = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         coin1: Coin = tx1.additions()[0]
         secret_key = wt.get_private_key_for_puzzle_hash(coin1.puzzle_hash)
@@ -2156,7 +2156,7 @@ class TestBodyValidation:
             }
 
             tx1: SpendBundle = wt.generate_signed_transaction(
-                10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+                10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
             )
             coin1: Coin = tx1.additions()[0]
             tx2: SpendBundle = wt.generate_signed_transaction(
@@ -2382,7 +2382,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
@@ -2442,7 +2442,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1])
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=False)
         for block in blocks[-5:]:
@@ -2537,7 +2537,7 @@ class TestBodyValidation:
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0], condition_dic=condition_dict
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0], condition_dic=condition_dict
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2583,7 +2583,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2709,16 +2709,13 @@ class TestBodyValidation:
         #     tx: SpendBundle = wt.generate_signed_transaction_multiple_coins(
         #         10,
         #         wt.get_new_puzzlehash(),
-        #         list(blocks[1].get_included_reward_coins()),
+        #         blocks[1].get_included_reward_coins(),
         #         condition_dic=condition_dict,
         #     )
-        #     try:
+        #     with pytest.raises(Exception):
         #         blocks = bt_2.get_consecutive_blocks(
         #             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         #         )
-        #         assert False
-        #     except Exception as e:
-        #         pass
         #     await db_wrapper.close()
         #     b.shut_down()
 
@@ -2738,7 +2735,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2787,7 +2784,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2826,7 +2823,7 @@ class TestBodyValidation:
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0], condition_dic=condition_dict
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0], condition_dic=condition_dict
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2851,10 +2848,10 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         tx_2: SpendBundle = wt.generate_signed_transaction(
-            11, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            11, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         agg = SpendBundle.aggregate([tx, tx_2])
 
@@ -2880,7 +2877,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2889,7 +2886,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1])
 
         tx_2: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-2].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-2].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_2
@@ -2914,7 +2911,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
@@ -3005,7 +3002,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        spend = list(blocks[-1].get_included_reward_coins())[0]
+        spend = blocks[-1].get_included_reward_coins()[0]
         print("spend=", spend)
         # this create coin will spend all of the coin, so the 10 mojos below
         # will be "minted".
@@ -3044,7 +3041,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -3085,7 +3082,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
@@ -3329,7 +3326,7 @@ class TestReorgs:
 
         spend_block = blocks[10]
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
@@ -3373,7 +3370,7 @@ class TestReorgs:
         await _validate_and_add_block(b, blocks[2])
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[2].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), blocks[2].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
             1,
@@ -3423,7 +3420,7 @@ async def test_reorg_new_ref(empty_blockchain, bt):
 
     all_coins = []
     for spend_block in blocks[:5]:
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 all_coins.append(coin)
     spend_bundle_0 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
@@ -3503,7 +3500,7 @@ async def test_reorg_stale_fork_height(empty_blockchain, bt):
 
     all_coins = []
     for spend_block in blocks:
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 all_coins.append(coin)
 
@@ -3558,7 +3555,7 @@ async def test_chain_failed_rollback(empty_blockchain, bt):
 
     all_coins = []
     for spend_block in blocks[:10]:
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 all_coins.append(coin)
 
@@ -3607,7 +3604,7 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 
     all_coins = []
     for spend_block in chain_a:
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 all_coins.append(coin)
 

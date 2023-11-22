@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import sqlite3
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Collection, Dict, List, Optional, Set, Tuple
 
 import typing_extensions
 from aiosqlite import Cursor
@@ -81,8 +81,8 @@ class CoinStore:
         self,
         height: uint32,
         timestamp: uint64,
-        included_reward_coins: Set[Coin],
-        tx_additions: List[Coin],
+        included_reward_coins: Collection[Coin],
+        tx_additions: Collection[Coin],
         tx_removals: List[bytes32],
     ) -> List[CoinRecord]:
         """

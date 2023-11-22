@@ -3100,8 +3100,7 @@ async def test_dao_reorgs(
 
     # Test Reorg on creation
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:  # pragma: no cover
-        assert False
+    assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 2), uint32(height + 1), puzzle_hash_0, None)
     )
@@ -3145,8 +3144,7 @@ async def test_dao_reorgs(
 
     # Reorg funding spend
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:  # pragma: no cover
-        assert False
+    assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
     )
@@ -3211,8 +3209,7 @@ async def test_dao_reorgs(
 
     # Reorg proposal creation
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:  # pragma: no cover
-        assert False
+    assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
     )
@@ -3255,8 +3252,7 @@ async def test_dao_reorgs(
 
     # Reorg on vote spend
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:  # pragma: no cover
-        assert False
+    assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
     )
@@ -3283,8 +3279,7 @@ async def test_dao_reorgs(
 
     # Reorg closed proposal
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:  # pragma: no cover
-        assert False
+    assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
     )

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.puzzles.load_clvm import load_clvm
@@ -83,30 +85,17 @@ def test_deserialization_large_numbers():
 
 def test_overflow_atoms():
     b = hexstr_to_bytes(serialized_atom_overflow(0xFFFFFFFF))
-    try:
+    with pytest.raises(Exception):
         cost, output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
-    except Exception:
-        assert True
-    else:
-        assert False
+
     b = hexstr_to_bytes(serialized_atom_overflow(0x3FFFFFFFF))
-    try:
+    with pytest.raises(Exception):
         cost, output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
-    except Exception:
-        assert True
-    else:
-        assert False
+
     b = hexstr_to_bytes(serialized_atom_overflow(0xFFFFFFFFFF))
-    try:
+    with pytest.raises(Exception):
         cost, output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
-    except Exception:
-        assert True
-    else:
-        assert False
+
     b = hexstr_to_bytes(serialized_atom_overflow(0x1FFFFFFFFFF))
-    try:
+    with pytest.raises(Exception):
         cost, output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
-    except Exception:
-        assert True
-    else:
-        assert False

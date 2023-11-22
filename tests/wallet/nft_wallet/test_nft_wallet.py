@@ -249,8 +249,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await time_out_assert(10, wallet_0.get_confirmed_balance, 4000000000000 - 1)
     # Test Reorg mint
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
-        assert False
+    assert height is not None
     await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 1), ph1, None))
     await time_out_assert(30, get_nft_count, 0, nft_wallet_0)
     await time_out_assert(30, get_wallet_number, 2, wallet_node_0.wallet_state_manager)
@@ -328,8 +327,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
 
     # Test Reorg
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
-        assert False
+    assert height is not None
     await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 2), ph1, None))
     await time_out_assert(30, get_nft_count, 1, nft_wallet_0)
     await time_out_assert(30, get_nft_count, 1, nft_wallet_1)
