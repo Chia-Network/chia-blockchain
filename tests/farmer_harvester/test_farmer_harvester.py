@@ -7,8 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
-from chia.timelord.timelord import Timelord
-from chia_rs import G1Element
+from chia_rs import ClassgroupElement, G1Element
 from pytest_mock import MockerFixture
 
 from chia.cmds.cmds_util import get_any_service_client
@@ -30,13 +29,10 @@ from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.simulator.block_tools import BlockTools, get_signage_point
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.types.aliases import FarmerService, HarvesterService
-from chia.types.blockchain_format.foliage import FoliageBlockData
-from chia.types.blockchain_format.proof_of_space import generate_plot_public_key, ProofOfSpace, calculate_pos_challenge, \
-    get_quality_string
+from chia.simulator.block_tools import BlockTools
+from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config
@@ -49,7 +45,6 @@ from chia.wallet.derive_keys import master_sk_to_local_sk
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPIfrom chia.util.streamable import Streamable
 from tests.conftest import HarvesterFarmerEnvironment
-from tests.util.network_protocol_data import *  # noqa: F403
 from tests.util.time_out_assert import time_out_assert
 
 
