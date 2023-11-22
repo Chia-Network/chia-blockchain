@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import List, Optional, Tuple
 
 from chia_rs import G1Element, G2Element
@@ -53,6 +54,7 @@ class NewSignagePointHarvester(Streamable):
 class ProofOfSpaceFeeInfo(Streamable):
     applied_fee_threshold: uint32
 
+
 @streamable
 @dataclass(frozen=True)
 class NewProofOfSpace(Streamable):
@@ -66,17 +68,22 @@ class NewProofOfSpace(Streamable):
     fee_info: Optional[ProofOfSpaceFeeInfo] = None
 
 
-# NOTE: Only 1 of the fields in this type will not be None
+# Source data corresponding to the hash that is sent to the Harvester for signing
+class SigningDataKind(IntEnum):
+    FOLIAGE_BLOCK_DATA = 1
+    FOLIAGE_TRANSACTION_BLOCK = 2
+    CHALLENGE_CHAIN_VDF = 3
+    REWARD_CHAIN_VDF = 4
+    CHALLENGE_CHAIN_SUB_SLOT = 5
+    REWARD_CHAIN_SUB_SLOT = 6
+    PARTIAL = 7
+
+
 @streamable
 @dataclass(frozen=True)
 class SignatureRequestSourceData(Streamable):
-    foliage_block_data: Optional[FoliageBlockData] = None
-    foliage_transaction_block: Optional[FoliageTransactionBlock] = None
-    cc_vdf: Optional[ClassgroupElement] = None
-    rc_vdf: Optional[ClassgroupElement] = None
-    cc_sub_slot: Optional[ChallengeChainSubSlot] = None
-    rc_sub_slot: Optional[RewardChainSubSlot] = None
-    partial: Optional[PostPartialPayload] = None
+    kind: uint8
+    data: bytes
 
 
 @streamable
