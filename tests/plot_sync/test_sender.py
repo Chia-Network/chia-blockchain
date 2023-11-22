@@ -48,7 +48,7 @@ def test_set_connection_values(bt: BlockTools, seeded_random: random.Random) -> 
     assert sender._connection == farmer_connection  # type: ignore[comparison-overlap]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_start_stop_send_task(bt: BlockTools) -> None:
     sender = Sender(bt.plot_manager, HarvestingMode.CPU)
     # Make sure starting/restarting works

@@ -10,7 +10,21 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Dict, List, Optional, Set, Tuple, Union, cast, final
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Awaitable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+    final,
+)
 
 import aiohttp
 
@@ -78,6 +92,11 @@ async def get_plugin_info(plugin_remote: PluginRemote) -> Tuple[PluginRemote, Di
 @final
 @dataclasses.dataclass
 class DataLayer:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("DataLayer", None)
+
     db_path: Path
     config: Dict[str, Any]
     root_path: Path
@@ -164,11 +183,32 @@ class DataLayer:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
+        sql_log_path: Optional[Path] = None
+        if self.config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
+            self.log.info(f"logging SQL commands to {sql_log_path}")
+
+        self._data_store = await DataStore.create(database=self.db_path, sql_log_path=sql_log_path)
+        self._wallet_rpc = await self.wallet_rpc_init
+
+        self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
+            # TODO: review for anything else we need to do here
+            self._shut_down = True
+            if self._wallet_rpc is not None:
+                self.wallet_rpc.close()
+
+            if self.periodically_manage_data_task is not None:
+                try:
+                    self.periodically_manage_data_task.cancel()
+                except asyncio.CancelledError:
+                    pass
+            if self._data_store is not None:
+                await self.data_store.close()
+            if self._wallet_rpc is not None:
+                await self.wallet_rpc.await_closed()
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
@@ -181,34 +221,6 @@ class DataLayer:
 
     def set_server(self, server: ChiaServer) -> None:
         self._server = server
-
-    async def _start(self) -> None:
-        sql_log_path: Optional[Path] = None
-        if self.config.get("log_sqlite_cmds", False):
-            sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
-            self.log.info(f"logging SQL commands to {sql_log_path}")
-
-        self._data_store = await DataStore.create(database=self.db_path, sql_log_path=sql_log_path)
-        self._wallet_rpc = await self.wallet_rpc_init
-
-        self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
-
-    def _close(self) -> None:
-        # TODO: review for anything else we need to do here
-        self._shut_down = True
-        if self._wallet_rpc is not None:
-            self.wallet_rpc.close()
-
-    async def _await_closed(self) -> None:
-        if self.periodically_manage_data_task is not None:
-            try:
-                self.periodically_manage_data_task.cancel()
-            except asyncio.CancelledError:
-                pass
-        if self._data_store is not None:
-            await self.data_store.close()
-        if self._wallet_rpc is not None:
-            await self.wallet_rpc.await_closed()
 
     async def wallet_log_in(self, fingerprint: int) -> int:
         result = await self.wallet_rpc.log_in(fingerprint)
@@ -644,9 +656,10 @@ class DataLayer:
                 root_hash = root.node_hash if root.node_hash is not None else self.none_bytes
                 filenames.append(get_full_tree_filename(tree_id, root_hash, root.generation))
                 filenames.append(get_delta_filename(tree_id, root_hash, root.generation))
+        # stop tracking first, then unsubscribe from the data store
+        await self.wallet_rpc.dl_stop_tracking(tree_id)
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
-        await self.wallet_rpc.dl_stop_tracking(tree_id)
         self.log.info(f"Unsubscribed to {tree_id}")
         for filename in filenames:
             file_path = self.server_files_location.joinpath(filename)
@@ -711,7 +724,7 @@ class DataLayer:
 
             # Subscribe to all local tree_ids that we can find on chain.
             local_tree_ids = await self.data_store.get_tree_ids()
-            subscription_tree_ids = set(subscription.tree_id for subscription in subscriptions)
+            subscription_tree_ids = {subscription.tree_id for subscription in subscriptions}
             for local_id in local_tree_ids:
                 if local_id not in subscription_tree_ids:
                     try:
@@ -1016,7 +1029,13 @@ class DataLayer:
         coros = [get_plugin_info(plugin_remote=plugin) for plugin in {*self.uploaders, *self.downloaders}]
         results = dict(await asyncio.gather(*coros))
 
-        uploader_status = {uploader.url: results.get(uploader.url, "unknown") for uploader in self.uploaders}
-        downloader_status = {downloader.url: results.get(downloader.url, "unknown") for downloader in self.downloaders}
+        unknown = {
+            "name": "unknown",
+            "version": "unknown",
+            "instance": "unknown",
+        }
+
+        uploader_status = {uploader.url: results.get(uploader, unknown) for uploader in self.uploaders}
+        downloader_status = {downloader.url: results.get(downloader, unknown) for downloader in self.downloaders}
 
         return PluginStatus(uploaders=uploader_status, downloaders=downloader_status)

@@ -123,7 +123,7 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: '3.8'
+          - major_dot_minor: '3.10'
         check:
           - name: black
             command: black --check --diff .
@@ -182,7 +182,7 @@ jobs:
     - uses: Chia-Network/actions/setup-python@main
       name: Install Python
       with:
-        python-version: '3.8'
+        python-version: '3.10'
 
     - uses: ./.github/actions/install
       with:

@@ -3,11 +3,12 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -44,12 +45,12 @@ msg2: bytes = b"msg2"
 additional_data: bytes32 = bytes32(DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
 
 coin: Coin = Coin(bytes32([0] * 32), bytes32([0] * 32), 0)
-puzzle: Program = Program.to(1)
-solution_h: Program = Program.to(
-    [[ConditionOpcode.AGG_SIG_UNSAFE, pk1_h, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_h, msg2]]
+puzzle = SerializedProgram.from_bytes(b"\x01")
+solution_h = SerializedProgram.from_program(
+    Program.to([[ConditionOpcode.AGG_SIG_UNSAFE, pk1_h, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_h, msg2]])
 )
-solution_u: Program = Program.to(
-    [[ConditionOpcode.AGG_SIG_UNSAFE, pk1_u, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_u, msg2]]
+solution_u = SerializedProgram.from_program(
+    Program.to([[ConditionOpcode.AGG_SIG_UNSAFE, pk1_u, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_u, msg2]])
 )
 spend_h: CoinSpend = CoinSpend(
     coin,
@@ -63,7 +64,7 @@ spend_u: CoinSpend = CoinSpend(
 )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sign_coin_spends() -> None:
     def derive_ph(pk: G1Element) -> bytes32:
         return bytes32([0] * 32)
@@ -145,7 +146,7 @@ async def test_sign_coin_spends() -> None:
     assert signature2 == signature
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wsm_sign_transaction() -> None:
     async with manage_connection("file:temp.db?mode=memory&cache=shared", uri=True, name="writer") as writer_conn:
         async with manage_connection("file:temp.db?mode=memory&cache=shared", uri=True, name="reader") as reader_conn:

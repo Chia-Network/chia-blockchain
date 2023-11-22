@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import ipaddress
 import logging
 import time
@@ -8,7 +9,20 @@ import traceback
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    cast,
+)
 
 import aiosqlite
 
@@ -32,6 +46,11 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class Crawler:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Crawler", None)
+
     config: Dict[str, Any]
     root_path: Path
     constants: ConsensusConstants
@@ -48,7 +67,7 @@ class Crawler:
     minimum_version_count: int = 0
     peers_retrieved: List[RespondPeers] = field(default_factory=list)
     host_to_version: Dict[str, str] = field(default_factory=dict)
-    versions: Dict[str, int] = field(default_factory=lambda: defaultdict(lambda: 0))
+    versions: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
     version_cache: List[Tuple[str, str]] = field(default_factory=list)
     handshake_time: Dict[str, uint64] = field(default_factory=dict)
     best_timestamp_per_peer: Dict[str, uint64] = field(default_factory=dict)
@@ -61,6 +80,32 @@ class Crawler:
             raise RuntimeError("server not assigned")
 
         return self._server
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        # We override the default peer_connect_timeout when running from the crawler
+        crawler_peer_timeout = self.config.get("peer_connect_timeout", 2)
+        self.server.config["peer_connect_timeout"] = crawler_peer_timeout
+
+        # Connect to the DB
+        self.crawl_store: CrawlStore = await CrawlStore.create(await aiosqlite.connect(self.db_path))
+        # Bootstrap the initial peers
+        await self.load_bootstrap_peers()
+        self.crawl_task = asyncio.create_task(self.crawl())
+        try:
+            yield
+        finally:
+            self._shut_down = True
+
+            if self.crawl_task is not None:
+                try:
+                    await asyncio.wait_for(self.crawl_task, timeout=10)  # wait 10 seconds before giving up
+                except asyncio.TimeoutError:
+                    self.log.error("Crawl task did not exit in time, killing task.")
+                    self.crawl_task.cancel()
+            if self.crawl_store is not None:
+                self.log.info("Closing connection to DB.")
+                await self.crawl_store.crawl_db.close()
 
     def __post_init__(self) -> None:
         # get db path
@@ -128,17 +173,6 @@ class Crawler:
         except Exception as e:
             self.log.warning(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
             await self.crawl_store.peer_failed_to_connect(peer)
-
-    async def _start(self) -> None:
-        # We override the default peer_connect_timeout when running from the crawler
-        crawler_peer_timeout = self.config.get("peer_connect_timeout", 2)
-        self.server.config["peer_connect_timeout"] = crawler_peer_timeout
-
-        # Connect to the DB
-        self.crawl_store: CrawlStore = await CrawlStore.create(await aiosqlite.connect(self.db_path))
-        # Bootstrap the initial peers
-        await self.load_bootstrap_peers()
-        self.crawl_task = asyncio.create_task(self.crawl())
 
     async def load_bootstrap_peers(self) -> None:
         assert self.crawl_store is not None
@@ -256,7 +290,7 @@ class Crawler:
                     for host, timestamp in self.best_timestamp_per_peer.items()
                     if timestamp >= now - 5 * 24 * 3600
                 }
-                self.versions = defaultdict(lambda: 0)
+                self.versions = defaultdict(int)
                 for host, version in self.host_to_version.items():
                     self.versions[version] += 1
 
@@ -320,20 +354,6 @@ class Crawler:
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
         pass
-
-    def _close(self) -> None:
-        self._shut_down = True
-
-    async def _await_closed(self) -> None:
-        if self.crawl_task is not None:
-            try:
-                await asyncio.wait_for(self.crawl_task, timeout=10)  # wait 10 seconds before giving up
-            except asyncio.TimeoutError:
-                self.log.error("Crawl task did not exit in time, killing task.")
-                self.crawl_task.cancel()
-        if self.crawl_store is not None:
-            self.log.info("Closing connection to DB.")
-            await self.crawl_store.crawl_db.close()
 
     async def print_summary(self, t_start: float, total_nodes: int, tried_nodes: Set[str]) -> None:
         assert self.crawl_store is not None  # this is only ever called from the crawl task

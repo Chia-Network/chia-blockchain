@@ -5,16 +5,15 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, Tuple
 
 import pytest
-import pytest_asyncio
 
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.simulator.simulator_test_tools import get_full_chia_simulator, get_puzzle_hash_from_key
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint16
 from chia.util.keychain import Keychain
+from tests.util.time_out_assert import time_out_assert
 
 
 async def get_num_coins_for_ph(simulator_client: SimulatorFullNodeRpcClient, ph: bytes32) -> int:
@@ -26,14 +25,14 @@ class TestStartSimulator:
     These tests are designed to test the user facing functionality of the simulator.
     """
 
-    @pytest_asyncio.fixture(scope="function")
+    @pytest.fixture(scope="function")
     async def get_chia_simulator(
         self, tmp_path: Path, empty_keyring: Keychain
     ) -> AsyncGenerator[Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int, Keychain], None]:
         async for simulator_args in get_full_chia_simulator(chia_root=tmp_path, keychain=empty_keyring):
             yield simulator_args
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_start_simulator(
         self, get_chia_simulator: Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int, Keychain]
     ) -> None:

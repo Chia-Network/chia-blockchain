@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import List, Optional, Tuple
 
-from blspy import G1Element
+from chia_rs import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER

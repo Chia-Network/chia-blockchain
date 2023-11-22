@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from tests.connection_utils import connect_and_get_peer
 from tests.util.misc import BenchmarkRunner
+from tests.util.time_out_assert import time_out_assert
 
 
 class TestNodeLoad:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_blocks_load(self, two_nodes, self_hostname, benchmark_runner: BenchmarkRunner):
         num_blocks = 50
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes

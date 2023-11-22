@@ -33,12 +33,9 @@ def translate_path(p_):
 
 # Handle optional use of python clvm_tools if available and requested
 if "CLVM_TOOLS" in os.environ:
-    try:
-        from clvm_tools.clvmc import compile_clvm as compile_clvm_py_candidate
+    from clvm_tools.clvmc import compile_clvm as compile_clvm_py_candidate
 
-        compile_clvm_py = compile_clvm_py_candidate
-    finally:
-        pass
+    compile_clvm_py = compile_clvm_py_candidate
 
 
 def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_paths: List[pathlib.Path]):
@@ -66,11 +63,11 @@ def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_p
         rs256 = sha256file(output)
 
         if orig256 != rs256:
-            print("Compiled original %s: %s vs rust %s\n" % (full_path, orig256, rs256))
+            print(f"Compiled original {full_path}: {orig256} vs rust {rs256}\n")
             print("Aborting compilation due to mismatch with rust")
             assert orig256 == rs256
         else:
-            print("Compilation match %s: %s\n" % (full_path, orig256))
+            print(f"Compilation match {full_path}: {orig256}\n")
 
     return res
 

@@ -15,7 +15,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint32, uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 
 
 class TestBlockchainTransactions:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_basic_blockchain_tx(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -49,7 +49,7 @@ class TestBlockchainTransactions:
 
         spend_block = blocks[2]
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
@@ -94,7 +94,7 @@ class TestBlockchainTransactions:
             assert not unspent.spent
             assert not unspent.coinbase
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_with_double_spend(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -113,7 +113,7 @@ class TestBlockchainTransactions:
 
         spend_block = blocks[2]
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
@@ -134,7 +134,7 @@ class TestBlockchainTransactions:
         next_block = new_blocks[-1]
         await _validate_and_add_block(full_node_1.blockchain, next_block, expected_error=Err.DOUBLE_SPEND)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_duplicate_output(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -154,7 +154,7 @@ class TestBlockchainTransactions:
         spend_block = blocks[2]
 
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
@@ -174,7 +174,7 @@ class TestBlockchainTransactions:
         next_block = new_blocks[-1]
         await _validate_and_add_block(full_node_1.blockchain, next_block, expected_error=Err.DUPLICATE_OUTPUT)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_with_reorg_double_spend(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -193,7 +193,7 @@ class TestBlockchainTransactions:
         spend_block = blocks[2]
 
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
@@ -283,7 +283,7 @@ class TestBlockchainTransactions:
             for block in new_blocks_reorg:
                 await full_node_api_1.full_node.add_block(block)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_spend_reorg_coin(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], softfork_height: uint32
     ) -> None:
@@ -304,7 +304,7 @@ class TestBlockchainTransactions:
         spend_block = blocks[2]
 
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
@@ -371,7 +371,7 @@ class TestBlockchainTransactions:
 
         await full_node_api_1.full_node.add_block(new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_spend_reorg_cb_coin(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -399,7 +399,7 @@ class TestBlockchainTransactions:
 
         spend_block = new_blocks[-1]
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
@@ -416,7 +416,7 @@ class TestBlockchainTransactions:
 
         await full_node_api_1.full_node.add_block(new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_blockchain_spend_reorg_since_genesis(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -434,7 +434,7 @@ class TestBlockchainTransactions:
 
         spend_block = blocks[-1]
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
@@ -467,7 +467,7 @@ class TestBlockchainTransactions:
 
         await full_node_api_1.full_node.add_block(new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_my_coin_id(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -491,11 +491,11 @@ class TestBlockchainTransactions:
         bad_block = blocks[3]
         spend_coin = None
         bad_spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
-        for coin in list(bad_block.get_included_reward_coins()):
+        for coin in bad_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 bad_spend_coin = coin
         assert bad_spend_coin is not None
@@ -539,7 +539,7 @@ class TestBlockchainTransactions:
         )
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_coin_announcement_consumed(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -563,11 +563,11 @@ class TestBlockchainTransactions:
 
         spend_coin_block_1 = None
         spend_coin_block_2 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
-        for coin in list(block2.get_included_reward_coins()):
+        for coin in block2.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_2 = coin
         assert spend_coin_block_2 is not None
@@ -623,7 +623,7 @@ class TestBlockchainTransactions:
         # Try to validate newly created block
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_puzzle_announcement_consumed(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -647,11 +647,11 @@ class TestBlockchainTransactions:
 
         spend_coin_block_1 = None
         spend_coin_block_2 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
-        for coin in list(block2.get_included_reward_coins()):
+        for coin in block2.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_2 = coin
         assert spend_coin_block_2 is not None
@@ -707,7 +707,7 @@ class TestBlockchainTransactions:
         # Try to validate newly created block
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_height_absolute(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -728,7 +728,7 @@ class TestBlockchainTransactions:
         # Coinbase that gets spent
         block1 = blocks[2]
         spend_coin_block_1 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
@@ -773,7 +773,7 @@ class TestBlockchainTransactions:
         )
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_height_relative(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -794,7 +794,7 @@ class TestBlockchainTransactions:
         # Coinbase that gets spent
         block1 = blocks[2]
         spend_coin_block_1 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
@@ -841,7 +841,7 @@ class TestBlockchainTransactions:
         )
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_seconds_relative(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -862,7 +862,7 @@ class TestBlockchainTransactions:
         # Coinbase that gets spent
         block1 = blocks[2]
         spend_coin_block_1 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
@@ -913,7 +913,7 @@ class TestBlockchainTransactions:
         )
         await _validate_and_add_block(full_node_1.blockchain, valid_new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_seconds_absolute(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -934,7 +934,7 @@ class TestBlockchainTransactions:
         # Coinbase that gets spent
         block1 = blocks[2]
         spend_coin_block_1 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
@@ -987,7 +987,7 @@ class TestBlockchainTransactions:
         )
         await _validate_and_add_block(full_node_1.blockchain, valid_new_blocks[-1])
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_assert_fee_condition(
         self, two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -1008,7 +1008,7 @@ class TestBlockchainTransactions:
         # Coinbase that gets spent
         block1 = blocks[2]
         spend_coin_block_1 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
@@ -1025,7 +1025,7 @@ class TestBlockchainTransactions:
             uint64(1000), receiver_puzzlehash, spend_coin_block_1, block1_dic_good, fee=10
         )
         log.warning(block1_spend_bundle_good.additions())
-        log.warning(f"Spend bundle fees: {block1_spend_bundle_good.fees()}")
+        log.warning(f"Spend bundle fees: {estimate_fees(block1_spend_bundle_good)}")
         invalid_new_blocks = bt.get_consecutive_blocks(
             1,
             blocks,

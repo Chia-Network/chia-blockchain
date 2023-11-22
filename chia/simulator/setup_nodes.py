@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import AsyncIterator, Dict, List, Optional, Tuple, Union
+
+import anyio
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
@@ -33,7 +36,6 @@ from chia.simulator.setup_services import (
     setup_wallet_node,
 )
 from chia.simulator.socket import find_available_listen_port
-from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -41,6 +43,7 @@ from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
+from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
@@ -77,8 +80,11 @@ async def setup_two_nodes(
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
 
+    config_overrides = {"full_node.max_sync_wait": 0}
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        bt1 = await create_block_tools_async(constants=consensus_constants, keychain=keychain1)
+        bt1 = await create_block_tools_async(
+            constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
+        )
         async with setup_full_node(
             consensus_constants,
             "blockchain_test.db",
@@ -91,7 +97,9 @@ async def setup_two_nodes(
                 consensus_constants,
                 "blockchain_test_2.db",
                 self_hostname,
-                await create_block_tools_async(constants=consensus_constants, keychain=keychain2),
+                await create_block_tools_async(
+                    constants=consensus_constants, keychain=keychain2, config_overrides=config_overrides
+                ),
                 simulator=False,
                 db_version=db_version,
             ) as service2:
@@ -108,6 +116,7 @@ async def setup_n_nodes(
     """
     Setup and teardown of n full nodes, with blockchains and separate DBs.
     """
+    config_overrides = {"full_node.max_sync_wait": 0}
     with ExitStack() as stack:
         keychains = [stack.enter_context(TempKeyring(populate=True)) for _ in range(n)]
         async with AsyncExitStack() as async_exit_stack:
@@ -117,7 +126,9 @@ async def setup_n_nodes(
                         consensus_constants,
                         f"blockchain_test_{i}.db",
                         self_hostname,
-                        await create_block_tools_async(constants=consensus_constants, keychain=keychain),
+                        await create_block_tools_async(
+                            constants=consensus_constants, keychain=keychain, config_overrides=config_overrides
+                        ),
                         simulator=False,
                         db_version=db_version,
                     )
@@ -143,6 +154,8 @@ async def setup_simulators_and_wallets(
     disable_capabilities: Optional[List[Capability]] = None,
 ) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
+        if config_overrides is None:
+            config_overrides = {}
         async with setup_simulators_and_wallets_inner(
             db_version,
             consensus_constants,
@@ -219,6 +232,8 @@ async def setup_simulators_and_wallets_inner(
 ) -> AsyncIterator[
     Tuple[List[BlockTools], List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]]]
 ]:
+    if config_overrides is not None and "full_node.max_sync_wait" not in config_overrides:
+        config_overrides["full_node.max_sync_wait"] = 0
     async with AsyncExitStack() as async_exit_stack:
         bt_tools: List[BlockTools] = [
             await create_block_tools_async(consensus_constants, keychain=keychain1, config_overrides=config_overrides)
@@ -257,7 +272,7 @@ async def setup_simulators_and_wallets_inner(
                     spam_filter_after_n_txs,
                     xch_spam_amount,
                     None,
-                    key_seed=std_hash(uint32(index)) if key_seed is None else key_seed,
+                    key_seed=std_hash(uint32(index).stream_to_bytes()) if key_seed is None else key_seed,
                     initial_num_public_keys=initial_num_public_keys,
                 )
             )
@@ -333,10 +348,15 @@ async def setup_full_system_inner(
     keychain2: Keychain,
     shared_b_tools: BlockTools,
 ) -> AsyncIterator[FullSystem]:
+    config_overrides = {"full_node.max_sync_wait": 0}
     if b_tools is None:
-        b_tools = await create_block_tools_async(constants=consensus_constants, keychain=keychain1)
+        b_tools = await create_block_tools_async(
+            constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
+        )
     if b_tools_1 is None:
-        b_tools_1 = await create_block_tools_async(constants=consensus_constants, keychain=keychain2)
+        b_tools_1 = await create_block_tools_async(
+            constants=consensus_constants, keychain=keychain2, config_overrides=config_overrides
+        )
 
     self_hostname = shared_b_tools.config["self_hostname"]
 
@@ -428,11 +448,12 @@ async def setup_full_system_inner(
             )
         )
 
-        async def num_connections() -> int:
-            count = len(harvester.server.all_connections.items())
-            return count
+        with anyio.fail_after(delay=adjusted_timeout(10)):
+            for backoff in backoff_times():
+                if len(harvester.server.all_connections.items()) > 0:
+                    break
 
-        await time_out_assert_custom_interval(10, 3, num_connections, 1)
+                await asyncio.sleep(backoff)
 
         full_system = FullSystem(
             node_1=node_1,

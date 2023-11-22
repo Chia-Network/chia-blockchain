@@ -8,7 +8,7 @@ from multiprocessing import freeze_support
 from typing import Any, Dict, List, Optional, Tuple
 
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
@@ -66,27 +66,6 @@ async def create_full_node_service(
         connect_to_daemon=connect_to_daemon,
         override_capabilities=override_capabilities,
     )
-
-
-def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None:
-    if network_id != "testnet10":
-        return
-    # activate softforks immediately on testnet
-    # these numbers are supposed to match initial-config.yaml
-    if "SOFT_FORK2_HEIGHT" not in overrides:
-        overrides["SOFT_FORK2_HEIGHT"] = 3000000
-    if "SOFT_FORK3_HEIGHT" not in overrides:
-        overrides["SOFT_FORK3_HEIGHT"] = 2997292
-    if "HARD_FORK_HEIGHT" not in overrides:
-        overrides["HARD_FORK_HEIGHT"] = 2997292
-    if "HARD_FORK_FIX_HEIGHT" not in overrides:
-        overrides["HARD_FORK_FIX_HEIGHT"] = 3426000
-    if "PLOT_FILTER_128_HEIGHT" not in overrides:
-        overrides["PLOT_FILTER_128_HEIGHT"] = 3061804
-    if "PLOT_FILTER_64_HEIGHT" not in overrides:
-        overrides["PLOT_FILTER_64_HEIGHT"] = 8010796
-    if "PLOT_FILTER_32_HEIGHT" not in overrides:
-        overrides["PLOT_FILTER_32_HEIGHT"] = 13056556
 
 
 async def async_main(service_config: Dict[str, Any]) -> int:

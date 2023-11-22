@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Dict, List, Optional, Set, Tuple, Union
 
-from blspy import G2Element
+from chia_rs import G2Element
 from clvm_tools.binutils import disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -11,7 +11,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions_with_cost
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError
@@ -29,6 +29,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.puzzle_compression import (
     compress_object_with_puzzles,
     decompress_object_with_puzzles,
@@ -58,7 +59,7 @@ class NotarizedPayment(Payment):
     nonce: bytes32 = ZERO_32
 
     @classmethod
-    def from_condition_and_nonce(cls, condition: Program, nonce: bytes32) -> "NotarizedPayment":
+    def from_condition_and_nonce(cls, condition: Program, nonce: bytes32) -> NotarizedPayment:
         with_opcode: Program = Program.to((51, condition))  # Gotta do this because the super class is expecting it
         p = Payment.from_condition(with_opcode)
         puzzle_hash, amount, memos = tuple(p.as_condition_args())
@@ -76,6 +77,7 @@ class Offer:
     # this is a cache of the coin additions made by the SpendBundle (_bundle)
     # ordered by the coin being spent
     _additions: Dict[Coin, List[Coin]] = field(init=False)
+    _hints: Dict[bytes32, bytes32] = field(init=False)
     _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False)
     _final_spend_bundle: Optional[SpendBundle] = field(init=False)
     _conditions: Optional[Dict[Coin, List[Condition]]] = field(init=False)
@@ -137,19 +139,22 @@ class Offer:
 
         # populate the _additions cache
         adds: Dict[Coin, List[Coin]] = {}
+        hints: Dict[bytes32, bytes32] = {}
         max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
         for cs in self._bundle.coin_spends:
             # you can't spend the same coin twice in the same SpendBundle
             assert cs.coin not in adds
             try:
-                coins, cost = compute_additions_with_cost(cs)
+                hinted_coins, cost = compute_spend_hints_and_additions(cs)
                 max_cost -= cost
-                adds[cs.coin] = coins
+                adds[cs.coin] = [hc.coin for hc in hinted_coins.values()]
+                hints = {**hints, **{id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None}}
             except Exception:
                 continue
             if max_cost < 0:
                 raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend")
         object.__setattr__(self, "_additions", adds)
+        object.__setattr__(self, "_hints", hints)
         object.__setattr__(self, "_conditions", None)
 
     def conditions(self) -> Dict[Coin, List[Condition]]:
@@ -184,6 +189,9 @@ class Offer:
         ):
             raise ValueError("Offers with relative timelocks are not currently supported")
         return valid_times
+
+    def hints(self) -> Dict[bytes32, bytes32]:
+        return self._hints
 
     def additions(self) -> List[Coin]:
         return [c for additions in self._additions.values() for c in additions]
@@ -513,7 +521,7 @@ class Offer:
                                 "0x"
                                 + sibling_coin.parent_coin_info.hex()
                                 + sibling_coin.puzzle_hash.hex()
-                                + bytes(uint64(sibling_coin.amount)).hex()
+                                + uint64(sibling_coin.amount).stream_to_bytes().hex()
                                 + " "
                             )
                             sibling_spends += "0x" + bytes(coin_to_spend_dict[sibling_coin]).hex() + " "
@@ -531,7 +539,7 @@ class Offer:
                                 "coin": "0x"
                                 + coin.parent_coin_info.hex()
                                 + coin.puzzle_hash.hex()
-                                + bytes(uint64(coin.amount)).hex(),
+                                + uint64(coin.amount).stream_to_bytes().hex(),
                                 "parent_spend": "0x" + bytes(coin_to_spend_dict[coin]).hex(),
                                 "siblings": siblings,
                                 "sibling_spends": sibling_spends,

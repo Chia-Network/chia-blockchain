@@ -69,19 +69,17 @@ class WalletCoinStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS coin_record("
-                    "coin_name text PRIMARY KEY,"
-                    " confirmed_height bigint,"
-                    " spent_height bigint,"
-                    " spent int,"
-                    " coinbase int,"
-                    " puzzle_hash text,"
-                    " coin_parent text,"
-                    " amount blob,"
-                    " wallet_type int,"
-                    " wallet_id int)"
-                )
+                "CREATE TABLE IF NOT EXISTS coin_record("
+                "coin_name text PRIMARY KEY,"
+                " confirmed_height bigint,"
+                " spent_height bigint,"
+                " spent int,"
+                " coinbase int,"
+                " puzzle_hash text,"
+                " coin_parent text,"
+                " amount blob,"
+                " wallet_type int,"
+                " wallet_id int)"
             )
 
             # Useful for reorg lookups
@@ -106,7 +104,7 @@ class WalletCoinStore:
         return self
 
     async def count_small_unspent(self, cutoff: int, coin_type: CoinType = CoinType.NORMAL) -> int:
-        amount_bytes = bytes(uint64(cutoff))
+        amount_bytes = uint64(cutoff).stream_to_bytes()
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
                 conn,
@@ -133,7 +131,7 @@ class WalletCoinStore:
                     int(record.coinbase),
                     str(record.coin.puzzle_hash.hex()),
                     str(record.coin.parent_coin_info.hex()),
-                    bytes(uint64(record.coin.amount)),
+                    uint64(record.coin.amount).stream_to_bytes(),
                     record.wallet_type,
                     record.wallet_id,
                     record.coin_type,
@@ -226,13 +224,14 @@ class WalletCoinStore:
         if spent_range is not None and spent_range != UInt32Range():
             conditions.append(f"spent_height BETWEEN {spent_range.start} AND {spent_range.stop}")
         if amount_filter is not None:
-            entries = ",".join(f"X'{bytes(value).hex()}'" for value in amount_filter.values)
+            entries = ",".join(f"X'{value.stream_to_bytes().hex()}'" for value in amount_filter.values)
             conditions.append(
                 f"amount {'not' if FilterMode(amount_filter.mode) == FilterMode.exclude else ''} in ({entries})"
             )
         if amount_range is not None and amount_range != UInt64Range():
             conditions.append(
-                f"amount BETWEEN X'{bytes(amount_range.start).hex()}' AND X'{bytes(amount_range.stop).hex()}'"
+                f"amount BETWEEN X'{amount_range.start.stream_to_bytes().hex()}' "
+                f"AND X'{amount_range.stop.stream_to_bytes().hex()}'"
             )
 
         where_sql = "WHERE " + " AND ".join(conditions) if len(conditions) > 0 else ""
@@ -301,7 +300,7 @@ class WalletCoinStore:
                 "SELECT * FROM coin_record WHERE coin_type=? AND wallet_id=? AND spent_height=0",
                 (coin_type, wallet_id),
             )
-        return set(self.coin_record_from_row(row) for row in rows)
+        return {self.coin_record_from_row(row) for row in rows}
 
     async def get_all_unspent_coins(self, coin_type: CoinType = CoinType.NORMAL) -> Set[WalletCoinRecord]:
         """Returns set of CoinRecords that have not been spent yet for a wallet."""
@@ -309,7 +308,7 @@ class WalletCoinStore:
             rows = await conn.execute_fetchall(
                 "SELECT * FROM coin_record WHERE coin_type=? AND spent_height=0", (coin_type,)
             )
-        return set(self.coin_record_from_row(row) for row in rows)
+        return {self.coin_record_from_row(row) for row in rows}
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[WalletCoinRecord]:

@@ -13,7 +13,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -83,6 +83,7 @@ class TradeManager:
     wallet_state_manager: Any
     log: logging.Logger
     trade_store: TradeStore
+    most_recently_deserialized_trade: Optional[Tuple[bytes32, Offer]]
 
     @staticmethod
     async def create(
@@ -98,6 +99,7 @@ class TradeManager:
 
         self.wallet_state_manager = wallet_state_manager
         self.trade_store = await TradeStore.create(db_wrapper)
+        self.most_recently_deserialized_trade = None
         return self
 
     async def get_offers_with_status(self, status: TradeStatus) -> List[TradeRecord]:
@@ -142,7 +144,14 @@ class TradeManager:
         if coin_state.spent_height is None:
             self.log.error(f"Coin: {coin_state.coin}, has not been spent so trade can remain valid")
         # Then let's filter the offer into coins that WE offered
-        offer = Offer.from_bytes(trade.offer)
+        if (
+            self.most_recently_deserialized_trade is not None
+            and trade.trade_id == self.most_recently_deserialized_trade[0]
+        ):
+            offer = self.most_recently_deserialized_trade[1]
+        else:
+            offer = Offer.from_bytes(trade.offer)
+            self.most_recently_deserialized_trade = (trade.trade_id, offer)
         primary_coin_ids = [c.name() for c in offer.removals()]
         # TODO: Add `WalletCoinStore.get_coins`.
         result = await self.wallet_state_manager.coin_store.get_coin_records(
@@ -165,7 +174,7 @@ class TradeManager:
         # If any of our settlement_payments were spent, this offer was a success!
         if set(our_addition_ids) == set(coin_state_names):
             height = coin_states[0].created_height
-            await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, height)
+            await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, index=height)
             tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(offer, False)
             for tx in tx_records:
                 if TradeStatus(trade.status) == TradeStatus.PENDING_ACCEPT:
@@ -348,7 +357,7 @@ class TradeManager:
         await self.trade_store.add_trade_record(trade, offer_name)
 
         # We want to subscribe to the coin IDs of all coins that are not the ephemeral offer coins
-        offered_coins: Set[Coin] = set([value for values in offer.get_offered_coins().values() for value in values])
+        offered_coins: Set[Coin] = {value for values in offer.get_offered_coins().values() for value in values}
         non_offer_additions: Set[Coin] = set(offer.additions()) ^ offered_coins
         non_offer_removals: Set[Coin] = set(offer.removals()) ^ offered_coins
         await self.wallet_state_manager.add_interested_coin_ids(
@@ -613,18 +622,24 @@ class TradeManager:
     async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
         if validate:
             final_spend_bundle: SpendBundle = offer.to_valid_spend()
+            hint_dict: Dict[bytes32, bytes32] = {}
+            additions_dict: Dict[bytes32, Coin] = {}
+            for hinted_coins, _ in (
+                compute_spend_hints_and_additions(spend) for spend in final_spend_bundle.coin_spends
+            ):
+                hint_dict.update({id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None})
+                additions_dict.update({id: hc.coin for id, hc in hinted_coins.items()})
+            all_additions: List[Coin] = list(a for a in additions_dict.values())
         else:
             final_spend_bundle = offer._bundle
+            hint_dict = offer.hints()
+            all_additions = offer.additions()
 
         settlement_coins: List[Coin] = [c for coins in offer.get_offered_coins().values() for c in coins]
         settlement_coin_ids: List[bytes32] = [c.name() for c in settlement_coins]
-        hint_dict: Dict[bytes32, bytes32] = {}
-        additions_dict: Dict[bytes32, Coin] = {}
-        for hinted_coins in (compute_spend_hints_and_additions(spend) for spend in final_spend_bundle.coin_spends):
-            hint_dict.update({id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None})
-            additions_dict.update({id: hc.coin for id, hc in hinted_coins.items()})
+
         removals: List[Coin] = final_spend_bundle.removals()
-        additions: List[Coin] = list(a for a in additions_dict.values() if a not in removals)
+        additions: List[Coin] = list(a for a in all_additions if a not in removals)
         valid_times: ConditionValidTimes = parse_timelock_info(
             parse_conditions_non_consensus(
                 condition
@@ -632,7 +647,8 @@ class TradeManager:
                 for condition in spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_iter()
             )
         )
-        all_fees = uint64(final_spend_bundle.fees())
+        # this executes the puzzles again
+        all_fees = uint64(estimate_fees(final_spend_bundle))
 
         txs = []
 

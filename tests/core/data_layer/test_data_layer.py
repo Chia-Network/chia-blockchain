@@ -7,7 +7,6 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 
 import aiohttp
 import pytest
-import pytest_asyncio
 from aiohttp import web
 
 from chia.data_layer.data_layer import DataLayer
@@ -31,7 +30,7 @@ class SufficientWalletRpcClient:
 
 
 @pytest.mark.parametrize(argnames="enable", argvalues=[True, False], ids=["log", "do not log"])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sql_logs(enable: bool, config: Dict[str, Any], tmp_chia_root: Path) -> None:
     config["data_layer"]["log_sqlite_cmds"] = enable
 
@@ -44,12 +43,9 @@ async def test_sql_logs(enable: bool, config: Dict[str, Any], tmp_chia_root: Pat
         downloaders=[],
         uploaders=[],
     )
-    try:
-        assert not log_path.exists()
-        await data_layer._start()
-    finally:
-        data_layer._close()
-        await data_layer._await_closed()
+    assert not log_path.exists()
+    async with data_layer.manage():
+        pass
 
     if enable:
         assert log_path.is_file()
@@ -99,7 +95,7 @@ class RecordingWebServer:
         await self.web_server.await_closed()
 
 
-@pytest_asyncio.fixture(name="recording_web_server")
+@pytest.fixture(name="recording_web_server")
 async def recording_web_server_fixture(self_hostname: str) -> AsyncIterator[RecordingWebServer]:
     server = await RecordingWebServer.create(
         hostname=self_hostname,
@@ -111,7 +107,7 @@ async def recording_web_server_fixture(self_hostname: str) -> AsyncIterator[Reco
         await server.await_closed()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_plugin_requests_use_custom_headers(
     recording_web_server: RecordingWebServer,
     config: Dict[str, Any],
@@ -125,11 +121,14 @@ async def test_plugin_requests_use_custom_headers(
         headers={header_key: header_value},
     )
 
+    async def wallet_rpc_init() -> WalletRpcClient:
+        # this return is not presently used for this test
+        return None  # type: ignore[return-value]
+
     data_layer = DataLayer.create(
         config=config["data_layer"],
         root_path=tmp_chia_root,
-        # not presently used for this test
-        wallet_rpc_init=None,  # type: ignore[arg-type]
+        wallet_rpc_init=wallet_rpc_init(),
         downloaders=[plugin_remote],
         uploaders=[plugin_remote],
     )
@@ -139,5 +138,5 @@ async def test_plugin_requests_use_custom_headers(
         await data_layer.get_uploaders(tree_id=bytes32([0] * 32))
         await data_layer.check_plugins()
 
-    header_values = set(request.headers.get(header_key) for request in recording_web_server.requests)
+    header_values = {request.headers.get(header_key) for request in recording_web_server.requests}
     assert header_values == {header_value}

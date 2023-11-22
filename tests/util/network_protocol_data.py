@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 
 from chia.protocols import (
     farmer_protocol,
@@ -44,7 +44,7 @@ from chia.util.ints import int16, uint8, uint16, uint32, uint64, uint128
 
 # SHARED PROTOCOL
 error_without_data = Error(int16(Err.UNKNOWN.value), "Unknown", None)
-error_with_data = Error(int16(Err.UNKNOWN.value), "Unknown", bytes(b"extra data"))
+error_with_data = Error(int16(Err.UNKNOWN.value), "Unknown", b"extra data")
 
 
 ### FARMER PROTOCOL

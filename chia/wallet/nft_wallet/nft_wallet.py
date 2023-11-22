@@ -7,7 +7,7 @@ import math
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, Type, TypeVar, cast
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
 from typing_extensions import Unpack
 
@@ -768,7 +768,7 @@ class NFTWallet:
 
         innersol: Program = self.standard_wallet.make_solution(
             primaries=payments,
-            coin_announcements=None if announcement_to_make is None else set((announcement_to_make,)),
+            coin_announcements=None if announcement_to_make is None else {announcement_to_make},
             coin_announcements_to_assert=coin_announcements_bytes,
             puzzle_announcements_to_assert=puzzle_announcements_bytes,
             conditions=extra_conditions,
@@ -1073,7 +1073,7 @@ class NFTWallet:
                                 "0x"
                                 + royalty_coin.parent_coin_info.hex()
                                 + royalty_coin.puzzle_hash.hex()
-                                + bytes(uint64(royalty_coin.amount)).hex()
+                                + uint64(royalty_coin.amount).stream_to_bytes().hex()
                             )
                             parent_spend_hex: str = "0x" + bytes(parent_spend).hex()
                             solver = Solver(
@@ -1259,7 +1259,7 @@ class NFTWallet:
         did_lineage_parent: Optional[bytes32] = None,
         fee: Optional[uint64] = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> SpendBundle:
+    ) -> List[TransactionRecord]:
         """
         Minting NFTs from the DID linked wallet, also used for bulk minting NFTs.
         - The DID is spent along with an intermediate launcher puzzle which
@@ -1529,7 +1529,9 @@ class NFTWallet:
 
         # Aggregate everything into a single spend bundle
         total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends])
-        return total_spend
+
+        tx_record: TransactionRecord = dataclasses.replace(eve_txs[0], spend_bundle=total_spend)
+        return [tx_record]
 
     async def mint_from_xch(
         self,
@@ -1542,7 +1544,7 @@ class NFTWallet:
         xch_change_ph: Optional[bytes32] = None,
         fee: Optional[uint64] = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> SpendBundle:
+    ) -> List[TransactionRecord]:
         """
         Minting NFTs from a single XCH spend using intermediate launcher puzzle
         :param metadata_list: A list of dicts containing the metadata for each NFT to be minted
@@ -1731,7 +1733,8 @@ class NFTWallet:
 
         # Aggregate everything into a single spend bundle
         total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends])
-        return total_spend
+        tx_record: TransactionRecord = dataclasses.replace(eve_txs[0], spend_bundle=total_spend)
+        return [tx_record]
 
     async def select_coins(
         self,

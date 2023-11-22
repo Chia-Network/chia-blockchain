@@ -8,7 +8,7 @@ from math import ceil
 from pathlib import Path
 from typing import Dict, ItemsView, KeysView, List, Optional, Tuple, ValuesView
 
-from blspy import G1Element
+from chia_rs import G1Element
 from chiapos import DiskProver
 
 from chia.plotting.util import parse_plot_info
@@ -51,7 +51,7 @@ class CacheEntry:
     last_use: float
 
     @classmethod
-    def from_disk_prover(cls, prover: DiskProver) -> "CacheEntry":
+    def from_disk_prover(cls, prover: DiskProver) -> CacheEntry:
         (
             pool_public_key_or_puzzle_hash,
             farmer_public_key,

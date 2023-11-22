@@ -7,7 +7,7 @@ from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
 
-from blspy import AugSchemeMPL, G1Element
+from chia_rs import AugSchemeMPL, G1Element
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -197,10 +197,11 @@ async def pre_validate_blocks_multiprocessing(
     num_sub_slots_found = 0
     num_blocks_seen = 0
     if blocks[0].height > 0:
-        if not block_records.contains_block(blocks[0].prev_header_hash):
+        curr = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
+        if curr is None:
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)]
-        curr = block_records.block_record(blocks[0].prev_header_hash)
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
+        header_hash = curr.header_hash
         while (
             curr.sub_epoch_summary_included is None
             or num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
@@ -209,21 +210,48 @@ async def pre_validate_blocks_multiprocessing(
             if curr.first_in_sub_slot:
                 assert curr.finished_challenge_slot_hashes is not None
                 num_sub_slots_found += len(curr.finished_challenge_slot_hashes)
-            recent_blocks[curr.header_hash] = curr
+            recent_blocks[header_hash] = curr
             if curr.is_transaction_block:
                 num_blocks_seen += 1
-            curr = block_records.block_record(curr.prev_hash)
-        recent_blocks[curr.header_hash] = curr
+            header_hash = curr.prev_hash
+            curr = await block_records.get_block_record_from_db(curr.prev_hash)
+            assert curr is not None
+        recent_blocks[header_hash] = curr
     block_record_was_present = []
+
+    block_hashes: List[bytes32] = []
     for block in blocks:
-        block_record_was_present.append(block_records.contains_block(block.header_hash))
+        header_hash = block.header_hash
+        block_hashes.append(header_hash)
+        block_record_was_present.append(block_records.contains_block(header_hash))
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
         if block.height != 0:
-            assert block_records.contains_block(block.prev_header_hash)
             if prev_b is None:
-                prev_b = block_records.block_record(block.prev_header_hash)
+                prev_b = await block_records.get_block_record_from_db(block.prev_header_hash)
+            assert prev_b is not None
+
+            # the call to block_to_block_record() requires the previous
+            # block is in the cache
+            # and make_sub_epoch_summary() requires all blocks until we find one
+            # that includes a sub_epoch_summary
+            curr = prev_b
+            block_records.add_block_record(curr)
+            counter = 0
+            # TODO: It would probably be better to make
+            # get_next_sub_slot_iters_and_difficulty() async and able to pull
+            # from the database rather than trying to predict which blocks it
+            # may need in the cache
+            while (
+                curr.sub_epoch_summary_included is None
+                or counter < 3 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
+            ):
+                curr = await block_records.get_block_record_from_db(curr.prev_hash)
+                if curr is None:
+                    break
+                block_records.add_block_record(curr)
+                counter += 1
 
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             constants, len(block.finished_sub_slots) > 0, prev_b, block_records
@@ -240,8 +268,8 @@ async def pre_validate_blocks_multiprocessing(
         )
         if q_str is None:
             for i, block_i in enumerate(blocks):
-                if not block_record_was_present[i] and block_records.contains_block(block_i.header_hash):
-                    block_records.remove_block_record(block_i.header_hash)
+                if not block_record_was_present[i] and block_records.contains_block(block_hashes[i]):
+                    block_records.remove_block_record(block_hashes[i])
             return [PreValidationResult(uint16(Err.INVALID_POSPACE.value), None, None, False)]
 
         required_iters: uint64 = calculate_iterations_quality(
@@ -280,9 +308,9 @@ async def pre_validate_blocks_multiprocessing(
 
     block_dict: Dict[bytes32, FullBlock] = {}
     for i, block in enumerate(blocks):
-        block_dict[block.header_hash] = block
+        block_dict[block_hashes[i]] = block
         if not block_record_was_present[i]:
-            block_records.remove_block_record(block.header_hash)
+            block_records.remove_block_record(block_hashes[i])
 
     npc_results_pickled = {}
     for k, v in npc_results.items():
@@ -304,8 +332,9 @@ async def pre_validate_blocks_multiprocessing(
             curr_b: FullBlock = block
 
             while curr_b.prev_header_hash in block_dict:
+                header_hash = curr_b.prev_header_hash
                 curr_b = block_dict[curr_b.prev_header_hash]
-                prev_blocks_dict[curr_b.header_hash] = curr_b
+                prev_blocks_dict[header_hash] = curr_b
 
             if isinstance(block, FullBlock):
                 assert get_block_generator is not None

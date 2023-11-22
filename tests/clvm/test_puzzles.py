@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable, List, Tuple
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
@@ -233,7 +233,7 @@ def do_test_spend_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(hid
 
     assert synthetic_public_key == int_to_public_key(synthetic_offset) + hidden_pub_key_point
 
-    secret_exponent = key_lookup.get(hidden_public_key)
+    secret_exponent = key_lookup.dict.get(hidden_public_key)
     assert int_to_public_key(secret_exponent) == hidden_pub_key_point
 
     synthetic_secret_exponent = secret_exponent + synthetic_offset

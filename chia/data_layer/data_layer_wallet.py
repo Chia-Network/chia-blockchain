@@ -6,7 +6,7 @@ import time
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 from clvm.EvalError import EvalError
 from typing_extensions import Unpack, final
 
@@ -22,7 +22,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, UnknownCondition, parse_timelock_info
@@ -95,7 +95,7 @@ class Mirror:
         }
 
     @classmethod
-    def from_json_dict(cls, json_dict: Dict[str, Any]) -> "Mirror":
+    def from_json_dict(cls, json_dict: Dict[str, Any]) -> Mirror:
         return cls(
             bytes32.from_hexstr(json_dict["coin_id"]),
             bytes32.from_hexstr(json_dict["launcher_id"]),
@@ -505,7 +505,7 @@ class DataLayerWallet:
             )
             root_announce = Announcement(second_full_puz.get_tree_hash(), b"$")
             if puzzle_announcements_to_consume is None:
-                puzzle_announcements_to_consume = set((root_announce,))
+                puzzle_announcements_to_consume = {root_announce}
             else:
                 puzzle_announcements_to_consume.add(root_announce)
             second_singleton_record = SingletonRecord(
@@ -1009,7 +1009,8 @@ class DataLayerWallet:
                     for tx in relevant_dl_txs:
                         if any(c.name() == singleton.coin_id for c in tx.additions):
                             if tx.spend_bundle is not None:
-                                fee = uint64(tx.spend_bundle.fees())
+                                # This executes the puzzles
+                                fee = uint64(estimate_fees(tx.spend_bundle))
                             else:
                                 fee = uint64(0)
 
@@ -1160,7 +1161,7 @@ class DataLayerWallet:
         ).get_tree_hash_precalc(record.inner_puzzle_hash)
         assert record.lineage_proof.parent_name is not None
         assert record.lineage_proof.amount is not None
-        return set([Coin(record.lineage_proof.parent_name, puzhash, record.lineage_proof.amount)])
+        return {Coin(record.lineage_proof.parent_name, puzhash, record.lineage_proof.amount)}
 
     @staticmethod
     async def make_update_offer(

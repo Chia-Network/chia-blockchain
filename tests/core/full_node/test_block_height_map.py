@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import struct
 from pathlib import Path
 from typing import Optional
@@ -30,11 +31,12 @@ async def new_block(
 ) -> None:
     async with db.writer_maybe_transaction() as conn:
         cursor = await conn.execute(
-            "INSERT INTO full_blocks VALUES(?, ?, ?, ?)",
+            "INSERT INTO full_blocks VALUES(?, ?, ?, ?, ?)",
             (
                 block_hash,
                 parent,
                 height,
+                True,  # in_main_chain
                 # sub epoch summary
                 None if ses is None else bytes(ses),
             ),
@@ -52,6 +54,7 @@ async def setup_db(db: DBWrapper2) -> None:
             "header_hash blob PRIMARY KEY,"
             "prev_hash blob,"
             "height bigint,"
+            "in_main_chain tinyint,"
             "sub_epoch_summary blob)"
         )
         await conn.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
@@ -80,11 +83,13 @@ async def setup_chain(
         peak_hash = gen_block_hash(height + chain_id * 65536)
 
     # we only set is_peak=1 for chain_id 0
-    await new_block(db, peak_hash, parent_hash, height, chain_id == 0, None)
+    if ses_every is not None and height % ses_every == 0:
+        ses = gen_ses(height)
+    await new_block(db, peak_hash, parent_hash, height, chain_id == 0, ses)
 
 
 class TestBlockHeightMap:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_height_to_hash(self, tmp_dir: Path, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             await setup_db(db_wrapper)
@@ -99,7 +104,7 @@ class TestBlockHeightMap:
             for height in reversed(range(10)):
                 assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_height_to_hash_long_chain(self, tmp_dir: Path, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             await setup_db(db_wrapper)
@@ -113,18 +118,19 @@ class TestBlockHeightMap:
             for height in reversed(range(10000)):
                 assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
 
-    @pytest.mark.asyncio
-    async def test_save_restore(self, tmp_dir: Path, db_version: int) -> None:
+    @pytest.mark.parametrize("ses_every", [20, 1])
+    @pytest.mark.anyio
+    async def test_save_restore(self, ses_every: int, tmp_dir: Path, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             await setup_db(db_wrapper)
-            await setup_chain(db_wrapper, 10000, ses_every=20)
+            await setup_chain(db_wrapper, 10000, ses_every=ses_every)
 
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(10000)):
                 assert height_map.contains_height(uint32(height))
                 assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
-                if (height % 20) == 0:
+                if (height % ses_every) == 0:
                     assert height_map.get_ses(uint32(height)) == gen_ses(height)
                 else:
                     with pytest.raises(KeyError) as _:
@@ -142,19 +148,19 @@ class TestBlockHeightMap:
             async with db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute("DROP TABLE full_blocks")
             await setup_db(db_wrapper)
-            await setup_chain(db_wrapper, 10000, ses_every=20, start_height=9970)
+            await setup_chain(db_wrapper, 10000, ses_every=ses_every, start_height=9970)
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(10000)):
                 assert height_map.contains_height(uint32(height))
                 assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
-                if (height % 20) == 0:
+                if (height % ses_every) == 0:
                     assert height_map.get_ses(uint32(height)) == gen_ses(height)
                 else:
                     with pytest.raises(KeyError) as _:
                         height_map.get_ses(uint32(height))
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_restore_entire_chain(self, tmp_dir: Path, db_version: int) -> None:
         # this is a test where the height-to-hash and height-to-ses caches are
         # entirely unrelated to the database. Make sure they can both be fully
@@ -187,7 +193,39 @@ class TestBlockHeightMap:
                     with pytest.raises(KeyError) as _:
                         height_map.get_ses(uint32(height))
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
+    async def test_restore_ses_only(self, tmp_dir: Path, db_version: int) -> None:
+        # this is a test where the height-to-hash is complete and correct but
+        # sub epoch summaries are missing. We need to be able to restore them in
+        # this case.
+        async with DBConnection(db_version) as db_wrapper:
+            await setup_db(db_wrapper)
+            await setup_chain(db_wrapper, 2000, ses_every=20)
+
+            height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+            await height_map.maybe_flush()
+            del height_map
+
+            # corrupt the sub epoch cache
+            ses_cache = []
+            for i in range(0, 2000, 19):
+                ses_cache.append((uint32(i), bytes(gen_ses(i + 9999))))
+
+            await write_file_async(tmp_dir / "sub-epoch-summaries", bytes(SesCache(ses_cache)))
+
+            # the test starts here
+            height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+            for height in reversed(range(2000)):
+                assert height_map.contains_height(uint32(height))
+                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                if (height % 20) == 0:
+                    assert height_map.get_ses(uint32(height)) == gen_ses(height)
+                else:
+                    with pytest.raises(KeyError) as _:
+                        height_map.get_ses(uint32(height))
+
+    @pytest.mark.anyio
     async def test_restore_extend(self, tmp_dir: Path, db_version: int) -> None:
         # test the case where the cache has fewer blocks than the DB, and that
         # we correctly load all the missing blocks from the DB to update the
@@ -227,7 +265,7 @@ class TestBlockHeightMap:
                     with pytest.raises(KeyError) as _:
                         height_map.get_ses(uint32(height))
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_height_to_hash_with_orphans(self, tmp_dir: Path, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             await setup_db(db_wrapper)
@@ -242,7 +280,7 @@ class TestBlockHeightMap:
             for height in range(10):
                 assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_height_to_hash_update(self, tmp_dir: Path, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             await setup_db(db_wrapper)
@@ -263,7 +301,7 @@ class TestBlockHeightMap:
 
             assert height_map.get_hash(uint32(10)) == gen_block_hash(100)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_update_ses(self, tmp_dir: Path, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             await setup_db(db_wrapper)
@@ -282,7 +320,7 @@ class TestBlockHeightMap:
             assert height_map.get_ses(uint32(10)) == gen_ses(10)
             assert height_map.get_hash(uint32(10)) == gen_block_hash(10)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_height_to_ses(self, tmp_dir: Path, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             await setup_db(db_wrapper)
@@ -307,7 +345,7 @@ class TestBlockHeightMap:
             with pytest.raises(KeyError) as _:
                 height_map.get_ses(uint32(9))
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_rollback(self, tmp_dir: Path, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             await setup_db(db_wrapper)
@@ -343,7 +381,7 @@ class TestBlockHeightMap:
             with pytest.raises(KeyError) as _:
                 height_map.get_ses(uint32(8))
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_rollback2(self, tmp_dir: Path, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             await setup_db(db_wrapper)
@@ -374,7 +412,7 @@ class TestBlockHeightMap:
             with pytest.raises(KeyError) as _:
                 height_map.get_ses(uint32(8))
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cache_file_nothing_to_write(self, tmp_dir: Path, db_version: int) -> None:
         # This is a test where the height-to-hash data is entirely used from
         # the cache file and there is nothing to write in that file as a result.
@@ -401,7 +439,7 @@ class TestBlockHeightMap:
                 for idx in range(0, len(heights), 32):
                     assert new_heights[idx : idx + 32] == heights[idx : idx + 32]
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cache_file_replace_everything(self, tmp_dir: Path, db_version: int) -> None:
         # This is a test where the height-to-hash is entirely unrelated to the
         # database. Make sure it can be fully replaced
@@ -423,7 +461,7 @@ class TestBlockHeightMap:
                 for i in range(0, len(heights), 32):
                     assert new_heights[i : i + 32] != heights[i : i + 32]
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cache_file_extend(self, tmp_dir: Path, db_version: int) -> None:
         # Test the case where the cache has fewer blocks than the DB, and that
         # we correctly load all the missing blocks from the DB to update the
@@ -450,15 +488,41 @@ class TestBlockHeightMap:
                 for idx in range(0, len(heights), 32):
                     assert new_heights[idx : idx + 32] == heights[idx : idx + 32]
 
+    @pytest.mark.anyio
+    async def test_cache_file_truncate(self, tmp_dir: Path, db_version: int) -> None:
+        # Test the case where the cache has more blocks than the DB, the cache
+        # file will be truncated
+        async with DBConnection(db_version) as db_wrapper:
+            await setup_db(db_wrapper)
+            await setup_chain(db_wrapper, 2000, ses_every=20)
+            bh = await BlockHeightMap.create(tmp_dir, db_wrapper)
+            await bh.maybe_flush()
 
-@pytest.mark.asyncio
+            # extend the cache file
+            with open(tmp_dir / "height-to-hash", "r+b") as f:
+                f.truncate(32 * 4000)
+            assert os.path.getsize(tmp_dir / "height-to-hash") == 32 * 4000
+
+            bh = await BlockHeightMap.create(tmp_dir, db_wrapper)
+            await bh.maybe_flush()
+
+            with open(tmp_dir / "height-to-hash", "rb") as f:
+                new_heights = f.read()
+                assert len(new_heights) == 4000 * 32
+                # pytest doesn't behave very well comparing large buffers
+                # (when the test fails). Compare small portions at a time instead
+                for idx in range(0, 2000):
+                    assert new_heights[idx * 32 : idx * 32 + 32] == gen_block_hash(idx)
+
+
+@pytest.mark.anyio
 async def test_unsupported_version(tmp_dir: Path) -> None:
     with pytest.raises(RuntimeError, match="BlockHeightMap does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:
             await BlockHeightMap.create(tmp_dir, db_wrapper)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_empty_chain(tmp_dir: Path, db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         await setup_db(db_wrapper)
@@ -472,7 +536,7 @@ async def test_empty_chain(tmp_dir: Path, db_version: int) -> None:
             height_map.get_hash(uint32(0))
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_peak_only_chain(tmp_dir: Path, db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         await setup_db(db_wrapper)

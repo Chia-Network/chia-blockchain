@@ -7,7 +7,7 @@ import re
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -235,7 +235,7 @@ class DIDWallet:
             None,
             None,
             False,
-            json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
+            json.dumps(did_wallet_puzzles.did_program_to_metadata(metadata)),
         )
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
@@ -404,7 +404,7 @@ class DIDWallet:
             None,
             None,
             False,
-            json.dumps(did_wallet_puzzles.program_to_metadata(did_data.metadata)),
+            json.dumps(did_wallet_puzzles.did_program_to_metadata(did_data.metadata)),
         )
         await self.save_info(new_info)
 
@@ -730,7 +730,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32.secret(),
+            name=spend_bundle.name(),
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -976,36 +976,33 @@ class DIDWallet:
     async def load_attest_files_for_recovery_spend(self, attest_data: List[str]) -> Tuple[List, SpendBundle]:
         spend_bundle_list = []
         info_dict = {}
-        try:
-            for attest in attest_data:
-                info = attest.split(":")
-                info_dict[info[0]] = [
-                    bytes.fromhex(info[2]),
-                    bytes.fromhex(info[3]),
-                    uint64(info[4]),
-                ]
-                new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
-                spend_bundle_list.append(new_sb)
-            # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
-            my_recovery_list: List[bytes32] = self.did_info.backup_ids
+        for attest in attest_data:
+            info = attest.split(":")
+            info_dict[info[0]] = [
+                bytes.fromhex(info[2]),
+                bytes.fromhex(info[3]),
+                uint64(info[4]),
+            ]
+            new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
+            spend_bundle_list.append(new_sb)
+        # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
+        my_recovery_list: List[bytes32] = self.did_info.backup_ids
 
-            # convert info dict into recovery list - same order as wallet
-            info_list = []
-            for entry in my_recovery_list:
-                if entry.hex() in info_dict:
-                    info_list.append(
-                        [
-                            info_dict[entry.hex()][0],
-                            info_dict[entry.hex()][1],
-                            info_dict[entry.hex()][2],
-                        ]
-                    )
-                else:
-                    info_list.append([])
-            message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
-            return info_list, message_spend_bundle
-        except Exception:
-            raise
+        # convert info dict into recovery list - same order as wallet
+        info_list = []
+        for entry in my_recovery_list:
+            if entry.hex() in info_dict:
+                info_list.append(
+                    [
+                        info_dict[entry.hex()][0],
+                        info_dict[entry.hex()][1],
+                        info_dict[entry.hex()][2],
+                    ]
+                )
+            else:
+                info_list.append([])
+        message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
+        return info_list, message_spend_bundle
 
     async def recovery_spend(
         self,
@@ -1319,7 +1316,7 @@ class DIDWallet:
             to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
             fee_amount=fee,
             confirmed=False,
-            sent=uint32(10),
+            sent=uint32(0),
             spend_bundle=full_spend,
             additions=full_spend.additions(),
             removals=full_spend.removals(),
@@ -1327,7 +1324,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32.secret(),
+            name=full_spend.name(),
             memos=[],
             valid_times=ConditionValidTimes(),
         )

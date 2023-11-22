@@ -1,0 +1,47 @@
+;; This puzzle holds an amount which can be spent via two spend paths:
+;; 1. to a delegated puzzle provided our owner singleton creates a puzzle announcement of this coin's id and the delegated puzzle.
+;; 2. coins of this puzzle type can be merged together without the owner singleton's permission. This spend type is useful for DAOs which use this puzzle to custody funds and want to keep a reasonable limit on the number of coins tracked by DAO wallets.
+;; The AGGREGATOR_PUZZLE is curried in to preserve generality and so its logic can be updated without requiring any change to the spend to delegated path. Optionally the Aggregator puzzle can be `(x)` to close off this spend path
+
+(mod (
+    SINGLETON_STRUCT
+    AGGREGATOR_PUZZLE
+    aggregator_solution  ; (my_id my_puzhash list_of_parent_puzhash_amounts my_amount)
+    singleton_inner_puzhash
+    delegated_puzzle
+    delegated_solution
+    my_id
+  )
+
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT singleton_inner_puzhash)
+    (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+      singleton_inner_puzhash
+      (sha256tree SINGLETON_STRUCT)
+    )
+  )
+
+  (if aggregator_solution
+      ; we are merging coins to make a larger coin
+      (a AGGREGATOR_PUZZLE aggregator_solution)
+      ; we are being spent by our singleton
+      (c
+        (list
+          ASSERT_PUZZLE_ANNOUNCEMENT
+          (sha256
+            (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_inner_puzhash)
+            (sha256tree (list my_id (sha256tree delegated_puzzle)))
+          )
+        )
+        (c
+          (list CREATE_COIN_ANNOUNCEMENT '$')
+          (c
+            (list ASSERT_MY_COIN_ID my_id)
+            (a delegated_puzzle delegated_solution)
+          )
+        )
+      )
+  )
+)

@@ -15,7 +15,7 @@ import anyio
 import pytest
 
 from chia.server import chia_policy
-from chia.simulator.time_out_assert import adjusted_timeout
+from chia.util.timing import adjusted_timeout
 from tests.core.server import serve
 from tests.util.misc import create_logger
 
@@ -149,7 +149,7 @@ class ServeInThread:
             chia_policy.global_max_concurrent_connections = self.original_connection_limit
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_loop(tmp_path: pathlib.Path) -> None:
     logger = create_logger()
 
@@ -260,7 +260,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     argvalues=[1, 3],
     ids=lambda cycles: f"{cycles} cycle{'s' if cycles != 1 else ''}",
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_limits_connections(repetition: int, cycles: int, tmp_path: pathlib.Path) -> None:
     ip = "127.0.0.1"
     connection_limit = 10

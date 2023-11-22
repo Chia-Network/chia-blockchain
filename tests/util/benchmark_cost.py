@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import time
 
-from blspy import AugSchemeMPL, PrivateKey
+from chia_rs import AugSchemeMPL, PrivateKey
 from clvm_tools import binutils
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -26,9 +26,9 @@ def float_to_str(f):
         zero_padding = "0" * (abs(int(exp)) - 1)  # minus 1 for decimal point in the sci notation
         sign = "-" if f < 0 else ""
         if exp > 0:
-            float_string = "{}{}{}.0".format(sign, digits, zero_padding)
+            float_string = f"{sign}{digits}{zero_padding}.0"
         else:
-            float_string = "{}0.{}{}".format(sign, zero_padding, digits)
+            float_string = f"{sign}0.{zero_padding}{digits}"
     return float_string
 
 

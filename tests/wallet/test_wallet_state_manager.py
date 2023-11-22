@@ -36,7 +36,7 @@ async def assert_sync_mode(wallet_state_manager: WalletStateManager, target_heig
     assert wallet_state_manager.sync_target is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_set_sync_mode(simulator_and_wallet: SimulatorsAndWallets) -> None:
     _, [(wallet_node, _)], _ = simulator_and_wallet
     async with assert_sync_mode(wallet_node.wallet_state_manager, uint32(1)):
@@ -47,7 +47,7 @@ async def test_set_sync_mode(simulator_and_wallet: SimulatorsAndWallets) -> None
         pass
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_set_sync_mode_exception(simulator_and_wallet: SimulatorsAndWallets) -> None:
     _, [(wallet_node, _)], _ = simulator_and_wallet
     async with assert_sync_mode(wallet_node.wallet_state_manager, uint32(1)):
@@ -55,7 +55,7 @@ async def test_set_sync_mode_exception(simulator_and_wallet: SimulatorsAndWallet
 
 
 @pytest.mark.parametrize("hardened", [True, False])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_private_key(simulator_and_wallet: SimulatorsAndWallets, hardened: bool) -> None:
     _, [(wallet_node, _)], _ = simulator_and_wallet
     wallet_state_manager: WalletStateManager = wallet_node.wallet_state_manager
@@ -74,7 +74,7 @@ async def test_get_private_key(simulator_and_wallet: SimulatorsAndWallets, harde
     assert await wallet_state_manager.get_private_key(record.puzzle_hash) == expected_private_key
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_private_key_failure(simulator_and_wallet: SimulatorsAndWallets) -> None:
     _, [(wallet_node, _)], _ = simulator_and_wallet
     wallet_state_manager: WalletStateManager = wallet_node.wallet_state_manager
@@ -83,7 +83,7 @@ async def test_get_private_key_failure(simulator_and_wallet: SimulatorsAndWallet
         await wallet_state_manager.get_private_key(bytes32(b"1" * 32))
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_determine_coin_type(simulator_and_wallet: SimulatorsAndWallets, self_hostname: str) -> None:
     full_nodes, wallets, _ = simulator_and_wallet
     full_node_api = full_nodes[0]

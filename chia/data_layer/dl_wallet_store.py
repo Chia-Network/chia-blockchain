@@ -55,29 +55,25 @@ class DataLayerStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS singleton_records("
-                    "coin_id blob PRIMARY KEY,"
-                    " launcher_id blob,"
-                    " root blob,"
-                    " inner_puzzle_hash blob,"
-                    " confirmed tinyint,"
-                    " confirmed_at_height int,"
-                    " proof blob,"
-                    " generation int,"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
-                    " timestamp int)"
-                )
+                "CREATE TABLE IF NOT EXISTS singleton_records("
+                "coin_id blob PRIMARY KEY,"
+                " launcher_id blob,"
+                " root blob,"
+                " inner_puzzle_hash blob,"
+                " confirmed tinyint,"
+                " confirmed_at_height int,"
+                " proof blob,"
+                " generation int,"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
+                " timestamp int)"
             )
 
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS mirrors("
-                    "coin_id blob PRIMARY KEY,"
-                    "launcher_id blob,"
-                    "amount blob,"
-                    "urls blob,"
-                    "ours tinyint)"
-                )
+                "CREATE TABLE IF NOT EXISTS mirrors("
+                "coin_id blob PRIMARY KEY,"
+                "launcher_id blob,"
+                "amount blob,"
+                "urls blob,"
+                "ours tinyint)"
             )
 
             await conn.execute(
@@ -251,7 +247,9 @@ class DataLayerStore:
         """
         Add a new launcher coin's information to the DB
         """
-        launcher_bytes: bytes = launcher.parent_coin_info + launcher.puzzle_hash + bytes(uint64(launcher.amount))
+        launcher_bytes: bytes = (
+            launcher.parent_coin_info + launcher.puzzle_hash + uint64(launcher.amount).stream_to_bytes()
+        )
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO launchers VALUES (?, ?)",
@@ -309,8 +307,10 @@ class DataLayerStore:
                 (
                     mirror.coin_id,
                     mirror.launcher_id,
-                    bytes(mirror.amount),
-                    b"".join([bytes(uint16(len(url))) + url for url in mirror.urls]),  # prefix each item with a length
+                    mirror.amount.stream_to_bytes(),
+                    b"".join(
+                        [uint16(len(url)).stream_to_bytes() + url for url in mirror.urls]
+                    ),  # prefix each item with a length
                     1 if mirror.ours else 0,
                 ),
             )

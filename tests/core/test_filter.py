@@ -6,7 +6,7 @@ import pytest
 from chiabip158 import PyBIP158
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_basic_filter_test(simulator_and_wallet):
     full_nodes, wallets, bt = simulator_and_wallet
     wallet_node, server_2 = wallets[0]
@@ -23,7 +23,7 @@ async def test_basic_filter_test(simulator_and_wallet):
     for i in range(1, num_blocks):
         byte_array_tx: List[bytes] = []
         block = blocks[i]
-        coins = list(block.get_included_reward_coins())
+        coins = block.get_included_reward_coins()
         coin_0 = bytearray(coins[0].puzzle_hash)
         coin_1 = bytearray(coins[1].puzzle_hash)
         byte_array_tx.append(coin_0)

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from blspy import G2Element
+from chia_rs import G2Element
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 
 from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock

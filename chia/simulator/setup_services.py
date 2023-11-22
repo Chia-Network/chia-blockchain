@@ -27,6 +27,7 @@ from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
+from chia.server.outbound_message import NodeType
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
 from chia.server.start_harvester import create_harvester_service
@@ -46,7 +47,8 @@ from chia.timelord.timelord_launcher import VDFClientProcessMgr, find_vdf_client
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
+from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config, set_peer_info
+from chia.util.db_wrapper import generate_in_memory_db_uri
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
@@ -119,17 +121,18 @@ async def setup_full_node(
     *,
     reuse_db: bool = False,
 ) -> AsyncGenerator[Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]], None]:
-    db_path = local_bt.root_path / f"{db_name}"
-    if not reuse_db and db_path.exists():
-        # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
-        gc.collect()
-        db_path.unlink()
+    if reuse_db:
+        db_path: Union[str, Path] = local_bt.root_path / f"{db_name}"
+        uri = False
+    else:
+        db_path = generate_in_memory_db_uri()
+        uri = True
 
-        if db_version > 1:
-            with sqlite3.connect(db_path) as connection:
-                connection.execute("CREATE TABLE database_version(version int)")
-                connection.execute("INSERT INTO database_version VALUES (?)", (db_version,))
-                connection.commit()
+    if not reuse_db and db_version > 1:
+        with sqlite3.connect(db_path, uri=uri) as connection:
+            connection.execute("CREATE TABLE database_version(version int)")
+            connection.execute("INSERT INTO database_version VALUES (?)", (db_version,))
+            connection.commit()
 
     if connect_to_daemon:
         assert local_bt.config["daemon_port"] is not None
@@ -172,33 +175,9 @@ async def setup_full_node(
             connect_to_daemon=connect_to_daemon,
             override_capabilities=override_capabilities,
         )
-    await service.start()
 
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
-        if not reuse_db and db_path.exists():
-            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
-
-            # 3.11 switched to using functools.lru_cache for the statement cache.
-            # See #87028. This introduces a reference cycle involving the connection
-            # object, so the connection object no longer gets immediately
-            # deallocated, not until, for example, gc.collect() is called to break
-            # the cycle.
-            gc.collect()
-            for _ in range(10):
-                try:
-                    db_path.unlink()
-                    break
-                except PermissionError as e:
-                    print(f"db_path.unlink(): {e}")
-                    time.sleep(0.1)
-                    # filesystem operations are async on windows
-                    # [WinError 32] The process cannot access the file because it is
-                    # being used by another process
-                    pass
 
 
 @asynccontextmanager
@@ -228,16 +207,11 @@ async def setup_crawler(
         updated_constants,
         connect_to_daemon=False,
     )
-    await service.start()
+    async with service.manage():
+        if not service_config["crawler"]["start_rpc_server"]:  # otherwise the loops don't work.
+            service._node.state_changed_callback = lambda x, y: None
 
-    if not service_config["crawler"]["start_rpc_server"]:  # otherwise the loops don't work.
-        service._node.state_changed_callback = lambda x, y: None
-
-    try:
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -309,11 +283,16 @@ async def setup_wallet_node(
             service_config["introducer_peer"] = None
 
         if full_node_port is not None:
-            service_config["full_node_peer"] = {}
-            service_config["full_node_peer"]["host"] = self_hostname
-            service_config["full_node_peer"]["port"] = full_node_port
+            service_config.pop("full_node_peer", None)
+            service_config["full_node_peers"] = [
+                {
+                    "host": self_hostname,
+                    "port": full_node_port,
+                },
+            ]
         else:
-            del service_config["full_node_peer"]
+            service_config.pop("full_node_peer", None)
+            service_config.pop("full_node_peers", None)
 
         service = create_wallet_service(
             local_bt.root_path,
@@ -323,13 +302,10 @@ async def setup_wallet_node(
             connect_to_daemon=False,
         )
 
-        await service.start()
-
         try:
-            yield service
+            async with service.manage():
+                yield service
         finally:
-            service.stop()
-            await service.wait_closed()
             if db_path.exists():
                 # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
 
@@ -375,18 +351,12 @@ async def setup_harvester(
         root_path,
         config,
         consensus_constants,
-        farmer_peer=farmer_peer,
+        farmer_peers={farmer_peer} if farmer_peer is not None else set(),
         connect_to_daemon=False,
     )
 
-    if start_service:
-        await service.start()
-
-    try:
+    async with service.manage(start=start_service):
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -414,10 +384,16 @@ async def setup_farmer(
     config_pool["xch_target_address"] = encode_puzzle_hash(b_tools.pool_ph, "xch")
 
     if full_node_port:
-        service_config["full_node_peer"]["host"] = self_hostname
-        service_config["full_node_peer"]["port"] = full_node_port
+        service_config.pop("full_node_peer", None)
+        service_config["full_node_peers"] = [
+            {
+                "host": self_hostname,
+                "port": full_node_port,
+            },
+        ]
     else:
-        del service_config["full_node_peer"]
+        service_config.pop("full_node_peer", None)
+        service_config.pop("full_node_peers", None)
 
     service = create_farmer_service(
         root_path,
@@ -428,14 +404,8 @@ async def setup_farmer(
         connect_to_daemon=False,
     )
 
-    if start_service:
-        await service.start()
-
-    try:
+    async with service.manage(start=start_service):
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -447,13 +417,8 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[
         connect_to_daemon=False,
     )
 
-    await service.start()
-
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -534,7 +499,7 @@ async def setup_timelord(
     vdf_port: uint16 = uint16(0),
 ) -> AsyncGenerator[Service[Timelord, TimelordAPI], None]:
     service_config = config["timelord"]
-    service_config["full_node_peer"]["port"] = full_node_port
+    set_peer_info(service_config, peer_type=NodeType.FULL_NODE, peer_port=full_node_port)
     service_config["bluebox_mode"] = sanitizer
     service_config["fast_algorithm"] = False
     service_config["vdf_server"]["port"] = vdf_port
@@ -548,10 +513,5 @@ async def setup_timelord(
         connect_to_daemon=False,
     )
 
-    await service.start()
-
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
