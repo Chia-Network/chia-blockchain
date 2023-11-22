@@ -190,8 +190,8 @@ class SpendSim:
             await c.close()
         await self.db_wrapper.close()
 
-    async def new_peak(self) -> None:
-        await self.mempool_manager.new_peak(self.block_records[-1], None)
+    async def new_peak(self, spent_coins_ids: Optional[List[bytes32]]) -> None:
+        await self.mempool_manager.new_peak(self.block_records[-1], spent_coins_ids)
 
     def new_coin_record(self, coin: Coin, coinbase: bool = False) -> CoinRecord:
         return CoinRecord(
@@ -253,6 +253,7 @@ class SpendSim:
         generator_bundle: Optional[SpendBundle] = None
         return_additions: List[Coin] = []
         return_removals: List[Coin] = []
+        spent_coins_ids = None
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
             if peak is not None:
@@ -263,9 +264,10 @@ class SpendSim:
                     generator_bundle = bundle
                     return_additions = additions
                     return_removals = bundle.removals()
+                    spent_coins_ids = [r.name() for r in return_removals]
 
                     await self.coin_store._add_coin_records([self.new_coin_record(addition) for addition in additions])
-                    await self.coin_store._set_spent([r.name() for r in return_removals], uint32(self.block_height + 1))
+                    await self.coin_store._set_spent(spent_coins_ids, uint32(self.block_height + 1))
 
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
@@ -282,7 +284,7 @@ class SpendSim:
         self.block_height = next_block_height
 
         # mempool is reset
-        await self.new_peak()
+        await self.new_peak(spent_coins_ids)
 
         # return some debugging data
         return return_additions, return_removals
