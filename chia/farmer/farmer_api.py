@@ -117,27 +117,31 @@ class FarmerAPI:
                 if new_proof_of_space.farmer_reward_address_override is not None:
                     self.farmer.notify_farmer_reward_taken_by_harvester_as_fee(sp, new_proof_of_space)
 
-                sp_src_data: Optional[List[SignatureRequestSourceData]] = None
+                sp_src_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
                 if (
                     new_proof_of_space.include_source_signature_data
                     or new_proof_of_space.farmer_reward_address_override is not None
                 ):
+                    assert sp.sp_source_data
+
                     cc_data: SignatureRequestSourceData
                     rc_data: SignatureRequestSourceData
                     if sp.sp_source_data.vdf_data is not None:
                         cc_data = SignatureRequestSourceData(
-                            SigningDataKind.CHALLENGE_CHAIN_VDF, sp.sp_source_data.vdf_data.cc_vdf
+                            uint8(SigningDataKind.CHALLENGE_CHAIN_VDF), bytes(sp.sp_source_data.vdf_data.cc_vdf)
                         )
                         rc_data = SignatureRequestSourceData(
-                            SigningDataKind.REWARD_CHAIN_VDF, sp.sp_source_data.vdf_data.rc_vdf
+                            uint8(SigningDataKind.REWARD_CHAIN_VDF), bytes(sp.sp_source_data.vdf_data.rc_vdf)
                         )
                     else:
                         assert sp.sp_source_data.sub_slot_data is not None
                         cc_data = SignatureRequestSourceData(
-                            SigningDataKind.CHALLENGE_CHAIN_SUB_SLOT, sp.sp_source_data.sub_slot_data.cc_sub_slot
+                            uint8(SigningDataKind.CHALLENGE_CHAIN_SUB_SLOT),
+                            bytes(sp.sp_source_data.sub_slot_data.cc_sub_slot),
                         )
                         rc_data = SignatureRequestSourceData(
-                            SigningDataKind.REWARD_CHAIN_SUB_SLOT, sp.sp_source_data.sub_slot_data.rc_sub_slot
+                            uint8(SigningDataKind.REWARD_CHAIN_SUB_SLOT),
+                            bytes(sp.sp_source_data.sub_slot_data.rc_sub_slot),
                         )
 
                     sp_src_data = [cc_data, rc_data]
@@ -266,13 +270,13 @@ class FarmerAPI:
 
                 # The plot key is 2/2 so we need the harvester's half of the signature
                 m_to_sign = payload.get_hash()
-                m_src_data: Optional[List[SignatureRequestSourceData]] = None
+                m_src_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
 
                 if (
                     new_proof_of_space.include_source_signature_data
                     or new_proof_of_space.farmer_reward_address_override is not None
                 ):
-                    m_src_data = [SignatureRequestSourceData(SigningDataKind.PARTIAL, payload)]
+                    m_src_data = [SignatureRequestSourceData(uint8(SigningDataKind.PARTIAL), bytes(payload))]
 
                 request = harvester_protocol.RequestSignatures(
                     new_proof_of_space.plot_identifier,
@@ -568,14 +572,15 @@ class FarmerAPI:
         if full_node_request.foliage_block_data is not None:
             include_source_data = True
             foliage_block_data = SignatureRequestSourceData(
-                SigningDataKind.FOLIAGE_BLOCK_DATA, full_node_request.foliage_block_data
+                uint8(SigningDataKind.FOLIAGE_BLOCK_DATA), bytes(full_node_request.foliage_block_data)
             )
 
         if full_node_request.foliage_transaction_block_data is not None:
             assert foliage_block_data
             include_source_data = True
             foliage_transaction_block_data = SignatureRequestSourceData(
-                SigningDataKind.FOLIAGE_TRANSACTION_BLOCK, full_node_request.foliage_transaction_block_data
+                uint8(SigningDataKind.FOLIAGE_TRANSACTION_BLOCK),
+                bytes(full_node_request.foliage_transaction_block_data),
             )
 
         request = harvester_protocol.RequestSignatures(

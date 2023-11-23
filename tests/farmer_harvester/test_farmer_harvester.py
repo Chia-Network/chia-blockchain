@@ -4,10 +4,10 @@ import asyncio
 import dataclasses
 from math import floor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import pytest
-from chia_rs import ClassgroupElement, G1Element
+from chia_rs import G1Element
 from pytest_mock import MockerFixture
 
 from chia.cmds.cmds_util import get_any_service_client
@@ -16,6 +16,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.farmer.farmer import Farmer, calculate_harvester_fee_quality
 from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node import FullNode
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.plotting.util import PlotsRefreshParameter, PlotInfo, parse_plot_info
@@ -30,6 +31,10 @@ from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.timelord.timelord import Timelord
+from chia.timelord.timelord_api import TimelordAPI
+from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
@@ -312,14 +317,21 @@ async def test_harvester_has_no_server(
 
 @pytest.mark.anyio
 async def test_harvester_receive_source_signing_data(
-    farmer_harvester_full_node_timelord_zero_bits_plot_filter, mocker: MockerFixture
+    farmer_harvester_full_node_timelord_zero_bits_plot_filter: Tuple[
+        Service[Harvester, HarvesterAPI],
+        Service[Farmer, FarmerAPI],
+        Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]],
+        Service[Timelord, TimelordAPI],
+        BlockTools,
+    ],
+    mocker: MockerFixture,
 ) -> None:
     (
         harvester_service,
         farmer_service,
         full_node_service_1,
         _,
-        bt,
+        _,
     ) = farmer_harvester_full_node_timelord_zero_bits_plot_filter
 
     farmer: Farmer = farmer_service._node
@@ -343,13 +355,16 @@ async def test_harvester_receive_source_signing_data(
     finished_validating_data = False
     farmer_reward_address = decode_puzzle_hash("txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej")
 
-    async def intercept_harvester_request_signatures(*args):
+    async def intercept_harvester_request_signatures(*args: Any) -> Message:
         request: harvester_protocol.RequestSignatures = harvester_protocol.RequestSignatures.from_bytes(args[0])
         nonlocal harvester
         nonlocal farmer_reward_address
 
         validate_harvester_request_signatures(request)
-        result_msg: Message = await HarvesterAPI.request_signatures(harvester.server.api, request)
+        result_msg: Optional[Message] = await HarvesterAPI.request_signatures(
+            cast(HarvesterAPI, harvester.server.api), request
+        )
+        assert result_msg is not None
 
         # Inject overridden farmer reward address
         response: RespondSignatures = dataclasses.replace(
@@ -358,7 +373,7 @@ async def test_harvester_receive_source_signing_data(
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
-    def validate_harvester_request_signatures(request: harvester_protocol.RequestSignatures):
+    def validate_harvester_request_signatures(request: harvester_protocol.RequestSignatures) -> None:
         nonlocal full_node
         nonlocal farmer_reward_address
         nonlocal validated_foliage_data
@@ -369,14 +384,17 @@ async def test_harvester_receive_source_signing_data(
         nonlocal validated_sub_slot_rc
         nonlocal finished_validating_data
 
+        assert request.message_data is not None
         assert len(request.messages) > 0
         assert len(request.messages) == len(request.message_data)
+
         for i in range(len(request.messages)):
             hash = request.messages[i]
             src = request.message_data[i]
+            assert src
 
-            data: Streamable = None
-            if src.kind == SigningDataKind.FOLIAGE_BLOCK_DATA:
+            data: Optional[Streamable] = None
+            if src.kind == uint8(SigningDataKind.FOLIAGE_BLOCK_DATA):
                 data = FoliageBlockData.from_bytes(src.data)
                 assert (
                     data.farmer_reward_puzzle_hash == farmer_reward_address
@@ -385,22 +403,22 @@ async def test_harvester_receive_source_signing_data(
                 )
                 if data.farmer_reward_puzzle_hash == farmer_reward_address:
                     validated_foliage_data = True
-            elif src.kind == SigningDataKind.FOLIAGE_TRANSACTION_BLOCK:
+            elif src.kind == uint8(SigningDataKind.FOLIAGE_TRANSACTION_BLOCK):
                 data = FoliageTransactionBlock.from_bytes(src.data)
                 validated_foliage_transaction = True
-            elif src.kind == SigningDataKind.CHALLENGE_CHAIN_VDF:
+            elif src.kind == uint8(SigningDataKind.CHALLENGE_CHAIN_VDF):
                 data = ClassgroupElement.from_bytes(src.data)
                 validated_cc_vdf = True
-            elif src.kind == SigningDataKind.REWARD_CHAIN_VDF:
+            elif src.kind == uint8(SigningDataKind.REWARD_CHAIN_VDF):
                 data = ClassgroupElement.from_bytes(src.data)
                 validated_rc_vdf = True
-            elif src.kind == SigningDataKind.CHALLENGE_CHAIN_SUB_SLOT:
+            elif src.kind == uint8(SigningDataKind.CHALLENGE_CHAIN_SUB_SLOT):
                 data = ChallengeChainSubSlot.from_bytes(src.data)
                 validated_sub_slot_cc = True
-            elif src.kind == SigningDataKind.REWARD_CHAIN_SUB_SLOT:
+            elif src.kind == uint8(SigningDataKind.REWARD_CHAIN_SUB_SLOT):
                 data = RewardChainSubSlot.from_bytes(src.data)
                 validated_sub_slot_rc = True
-            elif src.kind == SigningDataKind.PARTIAL:
+            elif src.kind == uint8(SigningDataKind.PARTIAL):
                 # #NOTE: This data type is difficult to trigger, so it is
                 #        not tested for the time being.
                 # data = PostPartialPayload.from_bytes(src.data)
@@ -420,7 +438,7 @@ async def test_harvester_receive_source_signing_data(
             data_hash = data.get_hash()
             assert data_hash == hash
 
-    async def intercept_farmer_new_proof_of_space(*args) -> None:
+    async def intercept_farmer_new_proof_of_space(*args: Any) -> None:
         nonlocal farmer
         nonlocal farmer_reward_address
 
@@ -431,7 +449,7 @@ async def test_harvester_receive_source_signing_data(
 
         await FarmerAPI.new_proof_of_space(farmer.server.api, request, peer)
 
-    async def intercept_farmer_request_signed_values(*args) -> Optional[Message]:
+    async def intercept_farmer_request_signed_values(*args: Any) -> Optional[Message]:
         nonlocal farmer
         nonlocal farmer_reward_address
         nonlocal full_node
@@ -460,7 +478,7 @@ async def test_harvester_receive_source_signing_data(
     await wait_until_node_type_connected(farmer.server, NodeType.HARVESTER)
 
     # wait until test finishes
-    def did_finished_validating_data():
+    def did_finished_validating_data() -> bool:
         return finished_validating_data
 
     await time_out_assert(90, did_finished_validating_data, True)
@@ -468,7 +486,15 @@ async def test_harvester_receive_source_signing_data(
 
 @pytest.mark.anyio
 async def test_harvester_fee_convention(
-    farmer_harvester_full_node_timelord_zero_bits_plot_filter, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+    farmer_harvester_full_node_timelord_zero_bits_plot_filter: Tuple[
+        Service[Harvester, HarvesterAPI],
+        Service[Farmer, FarmerAPI],
+        Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]],
+        Service[Timelord, TimelordAPI],
+        BlockTools,
+    ],
+    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
 ) -> None:
     (
         harvester_service,
@@ -493,7 +519,7 @@ async def test_harvester_fee_convention(
 
     farmer_reward_puzzle_hash = decode_puzzle_hash("txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej")
 
-    async def intercept_farmer_new_proof_of_space(*args) -> None:
+    async def intercept_farmer_new_proof_of_space(*args: Any) -> None:
         nonlocal farmer
         nonlocal fee_threshold
         nonlocal max_fee_proofs
@@ -538,7 +564,7 @@ async def test_harvester_fee_convention(
         return False
 
     # wait until we've received all the proofs
-    def received_all_proofs():
+    def received_all_proofs() -> bool:
         nonlocal max_fee_proofs
         nonlocal fee_count
 

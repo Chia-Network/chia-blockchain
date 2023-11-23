@@ -88,7 +88,7 @@ class RequestSignatures(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     messages: List[bytes32]
-    message_data: Optional[List[SignatureRequestSourceData]] = None
+    message_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
 
 
 @streamable

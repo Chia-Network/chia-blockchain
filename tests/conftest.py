@@ -1150,7 +1150,7 @@ async def farmer_harvester_full_node_timelord_zero_bits_plot_filter(
     Tuple[
         Service[Harvester, HarvesterAPI],
         Service[Farmer, FarmerAPI],
-        Service[FullNode, FullNodeSimulator],
+        Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]],
         Service[Timelord, TimelordAPI],
         BlockTools,
     ]
@@ -1158,7 +1158,7 @@ async def farmer_harvester_full_node_timelord_zero_bits_plot_filter(
     zero_bit_plot_filter_consts = dataclasses.replace(
         test_constants_modified,
         NUMBER_ZERO_BITS_PLOT_FILTER=0,
-        NUM_SPS_SUB_SLOT=4,
+        NUM_SPS_SUB_SLOT=uint32(4),
     )
 
     bt = await create_block_tools_async(

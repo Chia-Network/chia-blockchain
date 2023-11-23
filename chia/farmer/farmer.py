@@ -839,6 +839,8 @@ class Farmer:
     def notify_farmer_reward_taken_by_harvester_as_fee(
         self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace
     ) -> None:
+        assert proof_of_space.farmer_reward_address_override is not None
+
         challenge_str = str(sp.challenge_hash)
 
         ph_prefix = self.config["network_overrides"]["config"][self.config["selected_network"]]["address_prefix"]
