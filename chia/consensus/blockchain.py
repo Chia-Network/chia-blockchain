@@ -252,7 +252,9 @@ class Blockchain(BlockchainInterface):
 
         npc: Optional[NPCResult] = None
         if block.transactions_generator is not None:
-            block_generator: Optional[BlockGenerator] = await self.get_block_generator(block, additional_blocks)
+            block_generator: Optional[BlockGenerator] = await self.get_block_generator(
+                block, fork_info.fork_height, additional_blocks
+            )
             assert block_generator is not None
             assert block.transactions_info is not None
             assert block.foliage_transaction_block is not None
@@ -415,14 +417,11 @@ class Blockchain(BlockchainInterface):
         error_code, _ = await validate_block_body(
             self.constants,
             self,
-            self.block_store,
             self.coin_store,
-            self.get_peak(),
             block,
             block.height,
             npc_result,
             fork_info,
-            self.get_block_generator,
             # If we did not already validate the signature, validate it now
             validate_signature=not pre_validation_result.validated_signature,
         )
@@ -576,6 +575,9 @@ class Blockchain(BlockchainInterface):
         removals: List[Tuple[bytes32, bytes32]] = []
         additions: List[Tuple[Coin, Optional[bytes]]] = []
         reward_coins: List[Coin] = []
+        fork_height = None
+        if fork_info is not None:
+            fork_height = fork_info.fork_height
         for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
             records_to_add.append(fetched_block_record)
             if not fetched_full_block.is_transaction_block():
@@ -585,10 +587,12 @@ class Blockchain(BlockchainInterface):
             # We need to recompute the additions and removals, since they are not stored on DB (only generator is).
             if fetched_block_record.header_hash == block_record.header_hash:
                 tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(
-                    fetched_full_block, npc_result
+                    fetched_full_block, npc_result, fork_height=fork_height
                 )
             else:
-                tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(fetched_full_block, None)
+                tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(
+                    fetched_full_block, None, fork_height=fork_height
+                )
 
             # Collect the NPC results for later post-processing
             if npc_res is not None and npc_res.conds is not None:
@@ -627,7 +631,7 @@ class Blockchain(BlockchainInterface):
         )
 
     async def get_tx_removals_and_additions(
-        self, block: FullBlock, npc_result: Optional[NPCResult] = None
+        self, block: FullBlock, npc_result: Optional[NPCResult] = None, fork_height: Optional[int] = None
     ) -> Tuple[List[bytes32], List[Coin], Optional[NPCResult]]:
         if not block.is_transaction_block():
             return [], [], None
@@ -636,7 +640,7 @@ class Blockchain(BlockchainInterface):
             return [], [], None
 
         if npc_result is None:
-            block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
+            block_generator: Optional[BlockGenerator] = await self.get_block_generator(block, fork=fork_height)
             assert block_generator is not None
             npc_result = get_name_puzzle_conditions(
                 block_generator,
@@ -814,14 +818,11 @@ class Blockchain(BlockchainInterface):
         error_code, cost_result = await validate_block_body(
             self.constants,
             self,
-            self.block_store,
             self.coin_store,
-            self.get_peak(),
             block,
             uint32(prev_height + 1),
             npc_result,
             fork_info,
-            self.get_block_generator,
             validate_signature=False,  # Signature was already validated before calling this method, no need to validate
         )
 
@@ -838,6 +839,7 @@ class Blockchain(BlockchainInterface):
         wp_summaries: Optional[List[SubEpochSummary]] = None,
         *,
         validate_signatures: bool,
+        fork_height: Optional[uint32] = None,
     ) -> List[PreValidationResult]:
         return await pre_validate_blocks_multiprocessing(
             self.constants,
@@ -848,6 +850,7 @@ class Blockchain(BlockchainInterface):
             npc_results,
             self.get_block_generator,
             batch_size,
+            fork_height,
             wp_summaries,
             validate_signatures=validate_signatures,
         )
@@ -1097,10 +1100,8 @@ class Blockchain(BlockchainInterface):
         return False
 
     async def get_block_generator(
-        self, block: BlockInfo, additional_blocks: Optional[Dict[bytes32, FullBlock]] = None
+        self, block: BlockInfo, fork: Optional[int] = None, additional_blocks: Optional[Dict[bytes32, FullBlock]] = None
     ) -> Optional[BlockGenerator]:
-        if additional_blocks is None:
-            additional_blocks = {}
         ref_list = block.transactions_generator_ref_list
         if block.transactions_generator is None:
             assert len(ref_list) == 0
@@ -1116,40 +1117,45 @@ class Blockchain(BlockchainInterface):
             # in the v2 database, we can look up blocks by height directly
             # (as long as we're in the main chain)
             result = await self.block_store.get_generators_at(block.transactions_generator_ref_list)
-        else:
-            # First tries to find the blocks in additional_blocks
-            curr = block
-            additional_height_dict = {}
-            while curr.prev_header_hash in additional_blocks:
-                prev: FullBlock = additional_blocks[curr.prev_header_hash]
-                additional_height_dict[prev.height] = prev
-                curr = prev
+            return BlockGenerator(block.transactions_generator, result, [])
 
-            peak: Optional[BlockRecord] = self.get_peak()
-            prev_block_record = await self.get_block_record_from_db(curr.prev_header_hash)
-            reorg_chain: Dict[uint32, bytes32] = {}
-            if prev_block_record is not None and peak is not None:
-                # Then we look up blocks up to fork point one at a time, backtracking
-                height_to_hash, _ = await lookup_fork_chain(
-                    self,
-                    (peak.height, peak.header_hash),
-                    (prev_block_record.height, prev_block_record.header_hash),
-                )
-                reorg_chain.update(height_to_hash)
+        assert fork is not None
+        curr = block
+        additional_height_dict = {}
+        while additional_blocks and curr.prev_header_hash in additional_blocks:
+            prev: FullBlock = additional_blocks[curr.prev_header_hash]
+            additional_height_dict[prev.height] = prev
+            curr = prev
 
-            for ref_height in block.transactions_generator_ref_list:
-                if ref_height in additional_height_dict:
-                    ref_block = additional_height_dict[ref_height]
-                    if ref_block.transactions_generator is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(ref_block.transactions_generator)
-                elif ref_height in reorg_chain:
-                    gen = await self.block_store.get_generator(reorg_chain[ref_height])
-                    if gen is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(gen)
-                else:
-                    [gen] = await self.block_store.get_generators_at([ref_height])
-                    result.append(gen)
+        prev_full_block = await self.block_store.get_full_block(block.prev_header_hash)
+
+        reorg_chain = {}
+        if prev_full_block is not None:
+            header_hash_info = await self.block_store.get_block_header_hashses_in_range(fork, prev_full_block.height)
+            curr_block_info = header_hash_info[prev_full_block.header_hash]
+            curr_height: uint32 = curr_block_info[0]
+            curr_header_hash: bytes32 = prev_full_block.header_hash
+            while curr_block_info[0] > fork and curr_block_info[0] > 0:
+                reorg_chain[curr_height] = curr_header_hash
+                curr_header_hash = curr_block_info[1]
+                curr_block_info = header_hash_info[curr_header_hash]
+                curr_height = curr_block_info[0]
+
+        for ref_height in block.transactions_generator_ref_list:
+            if ref_height in additional_height_dict:
+                ref_block = additional_height_dict[ref_height]
+                if ref_block.transactions_generator is None:
+                    raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                result.append(ref_block.transactions_generator)
+            elif ref_height in reorg_chain:
+                gen = await self.block_store.get_generator(reorg_chain[ref_height])
+                if gen is None:
+                    raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                result.append(gen)
+            else:
+                [gen] = await self.block_store.get_generators_at([ref_height])
+                if gen is None:
+                    raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                result.append(gen)
         assert len(result) == len(ref_list)
         return BlockGenerator(block.transactions_generator, result, [])

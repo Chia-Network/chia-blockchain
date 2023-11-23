@@ -170,8 +170,11 @@ async def pre_validate_blocks_multiprocessing(
     pool: Executor,
     check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
-    get_block_generator: Callable[[BlockInfo, Dict[bytes32, FullBlock]], Awaitable[Optional[BlockGenerator]]],
+    get_block_generator: Callable[
+        [BlockInfo, Optional[int], Dict[bytes32, FullBlock]], Awaitable[Optional[BlockGenerator]]
+    ],
     batch_size: int,
+    fork_height: Optional[uint32],
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
     validate_signatures: bool = True,
@@ -342,7 +345,9 @@ async def pre_validate_blocks_multiprocessing(
                     b_pickled = []
                 b_pickled.append(bytes(block))
                 try:
-                    block_generator: Optional[BlockGenerator] = await get_block_generator(block, prev_blocks_dict)
+                    block_generator: Optional[BlockGenerator] = await get_block_generator(
+                        block, fork_height, prev_blocks_dict
+                    )
                 except ValueError:
                     return [
                         PreValidationResult(

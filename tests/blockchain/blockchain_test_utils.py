@@ -58,9 +58,12 @@ async def _validate_and_add_block(
     if skip_prevalidation:
         results = PreValidationResult(None, uint64(1), None, False)
     else:
+        fork_height = None
+        if fork_info is not None:
+            fork_height = fork_info.fork_height
         # Do not change this, validate_signatures must be False
         pre_validation_results: List[PreValidationResult] = await blockchain.pre_validate_blocks_multiprocessing(
-            [block], {}, validate_signatures=False
+            [block], {}, fork_height=fork_height, validate_signatures=False
         )
         assert pre_validation_results is not None
         results = pre_validation_results[0]

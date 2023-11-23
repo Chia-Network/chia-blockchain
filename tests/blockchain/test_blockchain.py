@@ -3156,7 +3156,7 @@ class TestReorgs:
 
         print(f"pre-validating {len(blocks)} blocks")
         pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            blocks, {}, validate_signatures=False
+            blocks, {}, fork_height=uint32(0), validate_signatures=False
         )
 
         for i, block in enumerate(blocks):

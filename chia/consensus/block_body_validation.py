@@ -84,14 +84,11 @@ class ForkInfo:
 async def validate_block_body(
     constants: ConsensusConstants,
     blocks: BlockchainInterface,
-    block_store: BlockStore,
     coin_store: CoinStore,
-    peak: Optional[BlockRecord],
     block: Union[FullBlock, UnfinishedBlock],
     height: uint32,
     npc_result: Optional[NPCResult],
     fork_info: ForkInfo,
-    get_block_generator: Callable[[BlockInfo], Awaitable[Optional[BlockGenerator]]],
     *,
     validate_signature: bool = True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:

@@ -453,6 +453,27 @@ class BlockStore:
 
         return ret
 
+    async def get_block_header_hashses_in_range(
+        self,
+        start: int,
+        stop: int,
+    ) -> Dict[bytes32, Tuple[uint32, bytes32]]:
+        """
+        Returns a dictionary with all blocks in range between start and stop
+        if present.
+        """
+
+        ret: Dict[bytes32, Tuple[uint32, bytes32]] = {}
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT header_hash,prev_hash,height  " "FROM full_blocks " "WHERE height >= ? AND height <= ?",
+                (start, stop),
+            ) as cursor:
+                for row in await cursor.fetchall():
+                    header_hash = bytes32(row[0])
+                    ret[header_hash] = uint32(row[2]), bytes32(row[1])
+        return ret
+
     async def get_block_bytes_in_range(
         self,
         start: int,

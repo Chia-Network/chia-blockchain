@@ -542,7 +542,9 @@ class FullNode:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
-    async def short_sync_batch(self, peer: WSChiaConnection, start_height: uint32, target_height: uint32) -> bool:
+    async def short_sync_batch(
+        self, peer: WSChiaConnection, start_height: uint32, peak: full_node_protocol.NewPeak
+    ) -> bool:
         """
         Tries to sync to a chain which is not too far in the future, by downloading batches of blocks. If the first
         block that we download is not connected to our chain, we return False and do an expensive long sync instead.
@@ -565,7 +567,7 @@ class FullNode:
             return True  # Don't trigger a long sync
         self.sync_store.batch_syncing.add(peer.peer_node_id)
 
-        self.log.info(f"Starting batch short sync from {start_height} to height {target_height}")
+        self.log.info(f"Starting batch short sync from {start_height} to height {peak.height}")
         if start_height > 0:
             first = await peer.call_api(
                 FullNodeAPI.request_block, full_node_protocol.RequestBlock(uint32(start_height), False)
@@ -590,15 +592,19 @@ class FullNode:
 
         try:
             peer_info = peer.get_peer_logging()
-            for height in range(start_height, target_height, batch_size):
-                end_height = min(target_height, height + batch_size)
+            for height in range(start_height, peak.height, batch_size):
+                end_height = min(peak.height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
                 response = await peer.call_api(FullNodeAPI.request_blocks, request)
                 if not response:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: Optional[StateChangeSummary]
-                    success, state_change_summary, _ = await self.add_block_batch(response.blocks, peer_info, None)
+                    success, state_change_summary, _ = await self.add_block_batch(
+                        response.blocks,
+                        peer_info,
+                        ForkInfo(fork_height=start_height, peak_height=peak.height, peak_hash=peak.header_hash),
+                    )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -750,7 +756,7 @@ class FullNode:
             if request.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                 # This is the case of syncing up more than a few blocks, at the start of the chain
                 self.log.debug("Doing batch sync, no backup")
-                await self.short_sync_batch(peer, uint32(0), request.height)
+                await self.short_sync_batch(peer, uint32(0), request)
                 return None
 
             if (
@@ -758,7 +764,7 @@ class FullNode:
                 and request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]
             ):
                 # This case of being behind but not by so much
-                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
+                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request):
                     return None
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
@@ -1235,7 +1241,9 @@ class FullNode:
     ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
-
+        forkpoint: Optional[uint32] = None
+        if fork_info is not None:
+            forkpoint = uint32(fork_info.fork_height)
         block_dict: Dict[bytes32, FullBlock] = {}
         for block in all_blocks:
             block_dict[block.header_hash] = block
@@ -1281,7 +1289,7 @@ class FullNode:
         # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.monotonic()
         pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
-            blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
+            blocks_to_validate, {}, fork_height=forkpoint, wp_summaries=wp_summaries, validate_signatures=True
         )
         pre_validate_end = time.monotonic()
         pre_validate_time = pre_validate_end - pre_validate_start
