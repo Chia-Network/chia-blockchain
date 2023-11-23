@@ -839,6 +839,11 @@ class Farmer:
     def notify_farmer_reward_taken_by_harvester_as_fee(
         self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace
     ) -> None:
+        """
+        Apply a fee quality convention (see CHIP-22: https://github.com/Chia-Network/chips/pull/88)
+        given the proof and signage point. This will be tested against the fee threshold reported
+        by the harvester (if any), and logged.
+        """
         assert proof_of_space.farmer_reward_address_override is not None
 
         challenge_str = str(sp.challenge_hash)
@@ -867,4 +872,8 @@ class Farmer:
 
 
 def calculate_harvester_fee_quality(proof: bytes, challenge: bytes32) -> uint32:
+    """
+    This calculates the 'fee quality' given a convention between farmers and third party harvesters.
+    See CHIP-22: https://github.com/Chia-Network/chips/pull/88
+    """
     return uint32(int.from_bytes(std_hash(proof + challenge)[32 - 4 :], byteorder="big", signed=False))
