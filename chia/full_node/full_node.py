@@ -553,7 +553,7 @@ class FullNode:
         Args:
             peer: peer to sync from
             start_height: height that we should start downloading at. (Our peak is higher)
-            target_height: target to sync to
+            peak: target to sync to
 
         Returns:
             False if the fork point was not found, and we need to do a long sync. True otherwise.
@@ -600,11 +600,7 @@ class FullNode:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: Optional[StateChangeSummary]
-                    success, state_change_summary, _ = await self.add_block_batch(
-                        response.blocks,
-                        peer_info,
-                        ForkInfo(fork_height=start_height, peak_height=peak.height, peak_hash=peak.header_hash),
-                    )
+                    success, state_change_summary, _ = await self.add_block_batch(response.blocks, peer_info, None)
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
