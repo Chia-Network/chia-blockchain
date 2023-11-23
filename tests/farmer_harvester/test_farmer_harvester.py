@@ -326,6 +326,12 @@ async def test_harvester_receive_source_signing_data(
     ],
     mocker: MockerFixture,
 ) -> None:
+    """
+    Tests that the source data for the signatures requests sent to the
+    harvester are indeed available and also tests that overrides of
+    the farmer reward address, as specified by the harvester, are respected.
+    See: CHIP-22: https://github.com/Chia-Network/chips/pull/88
+    """
     (
         harvester_service,
         farmer_service,
@@ -496,6 +502,9 @@ async def test_harvester_fee_convention(
     caplog: pytest.LogCaptureFixture,
     mocker: MockerFixture,
 ) -> None:
+    """
+    Tests fee convention specified in CHIP-22: https://github.com/Chia-Network/chips/pull/88
+    """
     (
         harvester_service,
         farmer_service,
