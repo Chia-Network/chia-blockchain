@@ -1128,9 +1128,7 @@ class FullNode:
                     # accrue a large state (with no value, since we can validate
                     # against the CoinStore)
                     if not extending_main_chain:
-                        if fork_point_height == 0:
-                            fork_info = ForkInfo(-1, -1, bytes32([0] * 32))
-                        else:
+                        if fork_point_height != 0:
                             fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
                             assert fork_hash is not None
                             fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
