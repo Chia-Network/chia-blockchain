@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from typing import Any, List, Optional, Tuple, Union, cast
+from typing import Any, Optional, Tuple, Union, cast
 
 import pytest
 from pytest_mock import MockerFixture
