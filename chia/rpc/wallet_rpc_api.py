@@ -366,6 +366,8 @@ class WalletRpcApi:
         """
         Logs in the wallet with a specific key.
         """
+        if self._service_management_queue is None:
+            return {"success": False, "error": "service management queue not set, unable to request restart"}
 
         fingerprint = request["fingerprint"]
         if self.service.logged_in_fingerprint == fingerprint:
@@ -447,6 +449,10 @@ class WalletRpcApi:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+        # TODO: should this be at the start and block the key creation?
+        if self._service_management_queue is None:
+            return {"success": False, "error": "service management queue not set, unable to request restart"}
+
         fingerprint = sk.get_g1().get_fingerprint()
 
         self._service_management_queue.put_nowait(
@@ -512,6 +518,9 @@ class WalletRpcApi:
         max_ph_to_search = request.get("max_ph_to_search", 100)
         sk, _ = await self._get_private_key(fingerprint)
         if sk is not None:
+            if self._service_management_queue is None:
+                return {"success": False, "error": "service management queue not set, unable to request restart"}
+
             used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(
                 self.service.root_path, sk, max_ph_to_search
             )
