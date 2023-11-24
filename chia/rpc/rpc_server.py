@@ -44,9 +44,6 @@ class RestartChoice(enum.Enum):
     restart = enum.auto
 
 
-# T = TypeVar("T")
-
-
 @dataclass(frozen=True)
 class ServiceManagementMessage(Protocol):
     action: RestartChoice
@@ -101,16 +98,9 @@ class RpcServiceProtocol(Protocol):
     @contextlib.asynccontextmanager
     async def manage(
         self,
-        # TODO: maybe this could give back an event that will be set when the action is 'done'?
-        # submit_management_message: Callable[[ServiceManagementMessage], None],
         management_message: Optional[ServiceManagementMessage] = None,
-        # restart_cb: Callable[[RestartChoice], None],
-        # startup_parameters: Optional[object] = ...,
     ) -> AsyncIterator[None]:
         yield  # pragma: no cover
-
-    # async def run(self) -> AsyncIterator[None]:
-    #     ...
 
 
 class RpcApiProtocol(Protocol):
@@ -121,7 +111,9 @@ class RpcApiProtocol(Protocol):
     """
 
     def __init__(
-        self, node: RpcServiceProtocol, service_management_queue: asyncio.Queue[ServiceManagementMessage]
+        self,
+        node: RpcServiceProtocol,
+        service_management_queue: asyncio.Queue[ServiceManagementMessage],
     ) -> None:
         ...
 

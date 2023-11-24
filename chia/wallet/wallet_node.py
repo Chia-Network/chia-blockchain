@@ -165,44 +165,13 @@ class WalletNode:
     _secondary_peer_sync_task: Optional[asyncio.Task[None]] = None
     _tx_messages_in_progress: Dict[bytes32, List[bytes32]] = dataclasses.field(default_factory=dict)
 
-    # # _restart_queue: asyncio.Queue[RestartChoice] = dataclasses.field(default_factory=partial(asyncio.Queue, maxsize=1))
-    # # TODO: can we get this early enough to be non-optional?
-    # # TODO: or hint our type
-    # _submit_management_message: Optional[Callable[[ServiceManagementMessage], None]] = None
-    #
-    # # TODO: do these belong on the api?
-    # def stop(self) -> None:
-    #     # TODO: no assert
-    #     assert self._submit_management_message is not None
-    #     self._submit_management_message(
-    #         WalletServiceManagementMessage(
-    #             action=RestartChoice.stop,
-    #         ),
-    #     )
-    #
-    # # TODO: do these belong on the api?
-    # def restart(self, fingerprint: int) -> None:
-    #     # TODO: no assert
-    #     assert self._submit_management_message is not None
-    #     self._submit_management_message(
-    #         WalletServiceManagementMessage(
-    #             action=RestartChoice.restart,
-    #             data=fingerprint,
-    #         ),
-    #     )
-
     @contextlib.asynccontextmanager
     async def manage(
         self,
-        # submit_management_message: Callable[[ServiceManagementMessage], None],
         management_message: Optional[ServiceManagementMessage] = None,
-        # restart_cb: Callable[[RestartChoice], None],
-        # startup_parameters: Optional[object] = None,
     ) -> AsyncIterator[None]:
-        # self._restart_cb = restart_cb
-        # self._submit_management_message = submit_management_message
-
         # TODO: do away with this assert?  maybe generics can help for this type?
+        # TODO: also the stop from the service signal handler presently passes `EmptyServiceManagementMessage
         assert isinstance(management_message, WalletServiceManagementMessage)
 
         if management_message is not None:
@@ -243,12 +212,6 @@ class WalletNode:
             self.wallet_peers = None
             self._balance_cache = {}
 
-    # async def run(self) -> None:
-    #     while True:
-    #         async with self.manage():
-    #             choice = await self._restart_queue.get()
-    #             if choice == RestartChoice.stop:
-    #                 break
     @property
     def keychain_proxy(self) -> KeychainProxy:
         # This is a stop gap until the class usage is refactored such the values of

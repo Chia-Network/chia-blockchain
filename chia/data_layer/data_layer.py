@@ -184,7 +184,6 @@ class DataLayer:
     @contextlib.asynccontextmanager
     async def manage(
         self,
-        # submit_management_message: Callable[[ServiceManagementMessage], None],
         management_message: Optional[ServiceManagementMessage] = None,
     ) -> AsyncIterator[None]:
         sql_log_path: Optional[Path] = None

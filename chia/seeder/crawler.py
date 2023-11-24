@@ -84,7 +84,6 @@ class Crawler:
     @contextlib.asynccontextmanager
     async def manage(
         self,
-        # submit_management_message: Callable[[ServiceManagementMessage], None],
         management_message: Optional[ServiceManagementMessage] = None,
     ) -> AsyncIterator[None]:
         # We override the default peer_connect_timeout when running from the crawler

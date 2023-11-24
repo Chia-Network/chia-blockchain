@@ -39,7 +39,6 @@ class Introducer:
     @contextlib.asynccontextmanager
     async def manage(
         self,
-        # submit_management_message: Callable[[ServiceManagementMessage], None],
         management_message: Optional[ServiceManagementMessage] = None,
     ) -> AsyncIterator[None]:
         self._vetting_task = asyncio.create_task(self._vetting_loop())

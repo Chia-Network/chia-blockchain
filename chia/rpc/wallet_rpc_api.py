@@ -314,10 +314,7 @@ class WalletRpcApi:
         """
         # TODO: do we want a failure...?  or...
         if self._service_management_queue is not None:
-            # self.service.stop()
             self._service_management_queue.put_nowait(WalletServiceManagementMessage(RestartChoice.stop))
-            # self.service._close()
-            # await self.service._await_closed(shutting_down=False)
 
     async def _convert_tx_puzzle_hash(self, tx: TransactionRecord) -> TransactionRecord:
         return dataclasses.replace(
@@ -374,9 +371,6 @@ class WalletRpcApi:
         if self.service.logged_in_fingerprint == fingerprint:
             return {"fingerprint": fingerprint}
 
-        # TODO: need to indicate fingerprint, more generally parameters
-        # self.service.submit_management_message(RestartChoice.restart)
-        # self.service.restart(fingerprint=fingerprint)
         self._service_management_queue.put_nowait(
             WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint)
         )
@@ -455,12 +449,9 @@ class WalletRpcApi:
 
         fingerprint = sk.get_g1().get_fingerprint()
 
-        # TODO: need to indicate fingerprint, more generally parameters
         self._service_management_queue.put_nowait(
             WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint)
         )
-        # self.service.restart(fingerprint=fingerprint)
-        # self.service._restart_cb(RestartChoice.restart)
         # TODO: wait for restart to complete
 
         if self.service.logged_in:
@@ -526,12 +517,9 @@ class WalletRpcApi:
             )
 
             if self.service.logged_in_fingerprint != fingerprint:
-                # TODO: need to indicate fingerprint, more generally parameters
                 self._service_management_queue.put_nowait(
                     WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint)
                 )
-                # self.service.restart(fingerprint=fingerprint)
-                # self.service._restart_cb(RestartChoice.restart)
                 # TODO: wait for restart to complete
 
             wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()

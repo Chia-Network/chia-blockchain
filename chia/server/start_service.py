@@ -70,7 +70,6 @@ class ServiceException(Exception):
     pass
 
 
-# TODO: make this generic against the service management queue element type?
 class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
     def __init__(
         self,
@@ -83,7 +82,6 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         network_id: str,
         *,
         config: Dict[str, Any],
-        # service_management_queue: asyncio.Queue[ServiceManagementMessage],
         upnp_ports: Optional[List[int]] = None,
         connect_peers: Optional[Set[UnresolvedPeerInfo]] = None,
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
@@ -166,9 +164,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         self.upnp: UPnP = UPnP()
 
         # TODO: make sure in async
-        # self._restart_queue: asyncio.Queue[RestartChoice] = dataclasses.field(default_factory=partial(asyncio.Queue, maxsize=1))
         self._service_management_queue: asyncio.Queue[ServiceManagementMessage] = asyncio.Queue(maxsize=1)
-        # self._service_management_queue = service_management_queue
 
     async def _connect_peers_task_handler(self) -> None:
         resolved_peers: Dict[UnresolvedPeerInfo, PeerInfo] = {}
@@ -210,13 +206,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                 async with self.manage():
                     message: Optional[ServiceManagementMessage] = None
                     while True:
-                        # TODO: cb that will give a better error
-                        # TODO: maybe management queue instead of restart queue, or...
-                        # async with self._node.manage(restart_cb=self._restart_queue.put_nowait):
-                        async with self._node.manage(
-                            # submit_management_message=self._service_management_queue.put_nowait,
-                            management_message=message,
-                        ):
+                        async with self._node.manage(management_message=message):
                             message = await self._service_management_queue.get()
                             if message.action == RestartChoice.stop:
                                 break
@@ -340,7 +330,6 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         # TODO: should we cancel?
         # TODO: should we await a put?  or ...
         self._service_management_queue.put_nowait(EmptyServiceManagementMessage(action=RestartChoice.stop))
-        # self._restart_queue.put_nowait(RestartChoice.stop)
 
 
 def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:

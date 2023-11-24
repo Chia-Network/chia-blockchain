@@ -205,7 +205,6 @@ class FullNode:
     @contextlib.asynccontextmanager
     async def manage(
         self,
-        # # submit_management_message: Callable[[ServiceManagementMessage], None],
         management_message: Optional[ServiceManagementMessage] = None,
     ) -> AsyncIterator[None]:
         self._timelord_lock = asyncio.Lock()
