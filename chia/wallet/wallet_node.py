@@ -117,6 +117,7 @@ class WalletServiceManagementMessage:
         _protocol_check: ClassVar[ServiceManagementMessage] = cast("WalletServiceManagementMessage", None)
 
     action: RestartChoice
+    done_event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
     fingerprint: Optional[int] = None
 
     __match_args__: ClassVar[Tuple[str, ...]] = ()

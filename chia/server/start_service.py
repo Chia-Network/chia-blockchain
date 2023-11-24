@@ -166,6 +166,14 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         # TODO: make sure in async
         self._service_management_queue: asyncio.Queue[ServiceManagementMessage] = asyncio.Queue(maxsize=1)
 
+    async def request(self, message: ServiceManagementMessage) -> None:
+        self.request_sync(message=message)
+        await message.done_event.wait()
+
+    def request_sync(self, message: ServiceManagementMessage) -> None:
+        # TODO: do we want to block multiple requests?  in most cases?
+        self._service_management_queue.put_nowait(message)
+
     async def _connect_peers_task_handler(self) -> None:
         resolved_peers: Dict[UnresolvedPeerInfo, PeerInfo] = {}
         prefer_ipv6 = self.config.get("prefer_ipv6", False)
@@ -207,9 +215,16 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                     message: Optional[ServiceManagementMessage] = None
                     while True:
                         async with self._node.manage(management_message=message):
+                            if message is not None:
+                                message.done_event.set()
                             message = await self._service_management_queue.get()
                             if message.action == RestartChoice.stop:
                                 break
+                    # TODO: finally?
+                    # TODO: annoyingly duplicated
+                    if message is not None:
+                        message.done_event.set()
+
         except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
             raise ValueError(f"{self._service_name}: already running") from e
@@ -247,12 +262,12 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                     if self._rpc_info:
                         rpc_api, rpc_port = self._rpc_info
                         self.rpc_server = await start_rpc_server(
-                            rpc_api(self._node, service_management_queue=self._service_management_queue),
+                            rpc_api(self._node, management_request=self.request),
                             self.self_hostname,
                             self.daemon_port,
                             uint16(rpc_port),
                             partial(
-                                self._service_management_queue.put_nowait,
+                                self.request_sync,
                                 EmptyServiceManagementMessage(action=RestartChoice.stop),
                             ),
                             self.root_path,
@@ -329,7 +344,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
 
         # TODO: should we cancel?
         # TODO: should we await a put?  or ...
-        self._service_management_queue.put_nowait(EmptyServiceManagementMessage(action=RestartChoice.stop))
+        self.request_sync(EmptyServiceManagementMessage(action=RestartChoice.stop))
 
 
 def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:

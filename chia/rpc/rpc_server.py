@@ -6,7 +6,7 @@ import enum
 import json
 import logging
 import traceback
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from ssl import SSLContext
 from typing import Any, AsyncIterator, Awaitable, Callable, ClassVar, Dict, List, Optional, Tuple
@@ -47,6 +47,7 @@ class RestartChoice(enum.Enum):
 @dataclass(frozen=True)
 class ServiceManagementMessage(Protocol):
     action: RestartChoice
+    done_event: asyncio.Event = field(default_factory=asyncio.Event)
     # TODO: is this overly complicated passing this data out of the object to pass
     #       it back in?
     # TODO: does this need to be in the protocol?  might be how the callback and
@@ -60,6 +61,7 @@ class ServiceManagementMessage(Protocol):
 @dataclass(frozen=True)
 class EmptyServiceManagementMessage:
     action: RestartChoice
+    done_event: asyncio.Event = field(default_factory=asyncio.Event)
 
     __match_args__: ClassVar[Tuple[str, ...]] = ()
 
@@ -113,7 +115,7 @@ class RpcApiProtocol(Protocol):
     def __init__(
         self,
         node: RpcServiceProtocol,
-        service_management_queue: asyncio.Queue[ServiceManagementMessage],
+        management_request: Callable[[ServiceManagementMessage], Awaitable[None]],
     ) -> None:
         ...
 

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import json
 import logging
 import zlib
 from pathlib import Path
-from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Callable, ClassVar, Dict, List, Optional, Set, Tuple, Union
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
@@ -131,12 +130,12 @@ class WalletRpcApi:
     def __init__(
         self,
         wallet_node: WalletNode,
-        service_management_queue: Optional[asyncio.Queue[ServiceManagementMessage]] = None,
+        management_request: Optional[Callable[[ServiceManagementMessage], Awaitable[None]]] = None,
     ):
         assert wallet_node is not None
         self.service = wallet_node
         self.service_name = "chia_wallet"
-        self._service_management_queue = service_management_queue
+        self._management_request = management_request
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
@@ -313,8 +312,9 @@ class WalletRpcApi:
         Each key has it's own wallet database.
         """
         # TODO: do we want a failure...?  or...
-        if self._service_management_queue is not None:
-            self._service_management_queue.put_nowait(WalletServiceManagementMessage(RestartChoice.stop))
+        if self._management_request is not None:
+            # TODO: do we want to wait?
+            await self._management_request(WalletServiceManagementMessage(RestartChoice.stop))
 
     async def _convert_tx_puzzle_hash(self, tx: TransactionRecord) -> TransactionRecord:
         return dataclasses.replace(
@@ -366,17 +366,14 @@ class WalletRpcApi:
         """
         Logs in the wallet with a specific key.
         """
-        if self._service_management_queue is None:
+        if self._management_request is None:
             return {"success": False, "error": "service management queue not set, unable to request restart"}
 
         fingerprint = request["fingerprint"]
         if self.service.logged_in_fingerprint == fingerprint:
             return {"fingerprint": fingerprint}
 
-        self._service_management_queue.put_nowait(
-            WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint)
-        )
-        # TODO: wait for restart to complete
+        await self._management_request(WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint))
 
         if self.service.logged_in:
             # TODO: maybe check the fingerprint is as requested?
@@ -450,15 +447,12 @@ class WalletRpcApi:
             return {"success": False, "error": str(e)}
 
         # TODO: should this be at the start and block the key creation?
-        if self._service_management_queue is None:
+        if self._management_request is None:
             return {"success": False, "error": "service management queue not set, unable to request restart"}
 
         fingerprint = sk.get_g1().get_fingerprint()
 
-        self._service_management_queue.put_nowait(
-            WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint)
-        )
-        # TODO: wait for restart to complete
+        await self._management_request(WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint))
 
         if self.service.logged_in:
             # TODO: maybe check the fingerprint is as requested?
@@ -518,7 +512,7 @@ class WalletRpcApi:
         max_ph_to_search = request.get("max_ph_to_search", 100)
         sk, _ = await self._get_private_key(fingerprint)
         if sk is not None:
-            if self._service_management_queue is None:
+            if self._management_request is None:
                 return {"success": False, "error": "service management queue not set, unable to request restart"}
 
             used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(
@@ -526,10 +520,9 @@ class WalletRpcApi:
             )
 
             if self.service.logged_in_fingerprint != fingerprint:
-                self._service_management_queue.put_nowait(
+                await self._management_request(
                     WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint)
                 )
-                # TODO: wait for restart to complete
 
             wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
             for w in wallets:
