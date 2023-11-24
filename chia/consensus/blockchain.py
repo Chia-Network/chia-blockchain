@@ -265,10 +265,7 @@ class Blockchain(BlockchainInterface):
             )
             assert npc.error is None
 
-        fork_info.include_spends(npc, block)
-
-        fork_info.peak_height = block.height
-        fork_info.peak_hash = block.header_hash
+        fork_info.include_spends(npc, block, block.header_hash)
 
     async def add_block(
         self,
@@ -393,9 +390,7 @@ class Blockchain(BlockchainInterface):
                 # main chain, we still need to re-run it to update the additions and
                 # removals in fork_info.
                 await self.advance_fork_info(block, fork_info, {})
-                fork_info.include_spends(npc_result, block)
-                fork_info.peak_height = int(block.height)
-                fork_info.peak_hash = header_hash
+                fork_info.include_spends(npc_result, block, header_hash)
 
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
@@ -430,9 +425,7 @@ class Blockchain(BlockchainInterface):
         # need to know of these additions and removals
         if not temporary_fork_info:
             assert fork_info.peak_height == block.height - 1
-            fork_info.include_spends(npc_result, block)
-            fork_info.peak_height = int(block.height)
-            fork_info.peak_hash = header_hash
+            fork_info.include_spends(npc_result, block, header_hash)
 
         # block_to_block_record() require the previous block in the cache
         if not genesis and prev_block is not None:

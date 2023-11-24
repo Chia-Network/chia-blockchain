@@ -70,8 +70,13 @@ class ForkInfo:
         self.additions_since_fork = {}
         self.removals_since_fork = set()
 
-    def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock) -> None:
+    def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock, header_hash: bytes32) -> None:
         height = block.height
+        assert self.peak_height == height - 1
+
+        self.peak_height = int(block.height)
+        self.peak_hash = header_hash
+
         if npc_result is not None:
             assert npc_result.conds is not None
             assert block.foliage_transaction_block is not None
