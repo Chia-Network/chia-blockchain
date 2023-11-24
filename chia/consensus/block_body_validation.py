@@ -76,6 +76,10 @@ class ForkInfo:
     additions_since_fork: Dict[bytes32, ForkAdd] = field(default_factory=dict)
     # coin-id, ForkRem
     removals_since_fork: Dict[bytes32, ForkRem] = field(default_factory=dict)
+    # the header hashes of the blocks, starting with the one-past fork_height
+    # i.e. the header hash of fork_height + 1 is stored in block_hashes[0]
+    # followed by fork_height + 2, and so on.
+    block_hashes: List[bytes32] = field(default_factory=list)
 
     def reset(self, fork_height: int, header_hash: bytes32) -> None:
         self.fork_height = fork_height
@@ -83,10 +87,16 @@ class ForkInfo:
         self.peak_hash = header_hash
         self.additions_since_fork = {}
         self.removals_since_fork = {}
+        self.block_hashes = []
 
     def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock, header_hash: bytes32) -> None:
         height = block.height
+
         assert self.peak_height == height - 1
+
+        assert len(self.block_hashes) == self.peak_height - self.fork_height
+        assert block.height == self.fork_height + 1 + len(self.block_hashes)
+        self.block_hashes.append(header_hash)
 
         self.peak_height = int(block.height)
         self.peak_hash = header_hash
