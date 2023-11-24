@@ -31,7 +31,7 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
+from chia.rpc.rpc_server import ServiceManagementMessage, StateChangedProtocol, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer, ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
@@ -171,7 +171,11 @@ class Farmer:
         self.prev_signage_point: Optional[Tuple[uint64, farmer_protocol.NewSignagePoint]] = None
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(
+        self,
+        # submit_management_message: Callable[[ServiceManagementMessage], None],
+        management_message: Optional[ServiceManagementMessage] = None,
+    ) -> AsyncIterator[None]:
         async def start_task() -> None:
             # `Farmer.setup_keys` returns `False` if there are no keys setup yet. In this case we just try until it
             # succeeds or until we need to shut down.

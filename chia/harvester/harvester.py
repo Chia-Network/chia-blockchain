@@ -35,7 +35,7 @@ from chia.plotting.util import (
     remove_plot_directory,
     update_harvester_config,
 )
-from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
+from chia.rpc.rpc_server import ServiceManagementMessage, StateChangedProtocol, default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -130,7 +130,11 @@ class Harvester:
         self.plot_sync_sender = Sender(self.plot_manager, self._mode)
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(
+        self,
+        # submit_management_message: Callable[[ServiceManagementMessage], None],
+        management_message: Optional[ServiceManagementMessage] = None,
+    ) -> AsyncIterator[None]:
         self._refresh_lock = asyncio.Lock()
         self.event_loop = asyncio.get_running_loop()
         try:

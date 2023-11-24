@@ -6,6 +6,7 @@ import logging
 import logging.config
 import os
 import signal
+from functools import partial
 from pathlib import Path
 from types import FrameType
 from typing import (
@@ -26,7 +27,15 @@ from typing import (
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
-from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
+from chia.rpc.rpc_server import (
+    EmptyServiceManagementMessage,
+    RestartChoice,
+    RpcApiProtocol,
+    RpcServer,
+    RpcServiceProtocol,
+    ServiceManagementMessage,
+    start_rpc_server,
+)
 from chia.server.api_protocol import ApiProtocol
 from chia.server.chia_policy import set_chia_policy
 from chia.server.outbound_message import NodeType
@@ -61,6 +70,7 @@ class ServiceException(Exception):
     pass
 
 
+# TODO: make this generic against the service management queue element type?
 class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
     def __init__(
         self,
@@ -73,6 +83,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         network_id: str,
         *,
         config: Dict[str, Any],
+        # service_management_queue: asyncio.Queue[ServiceManagementMessage],
         upnp_ports: Optional[List[int]] = None,
         connect_peers: Optional[Set[UnresolvedPeerInfo]] = None,
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
@@ -153,7 +164,11 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         self._connect_peers = connect_peers
         self._connect_peers_task: Optional[asyncio.Task[None]] = None
         self.upnp: UPnP = UPnP()
-        self.stop_requested = asyncio.Event()
+
+        # TODO: make sure in async
+        # self._restart_queue: asyncio.Queue[RestartChoice] = dataclasses.field(default_factory=partial(asyncio.Queue, maxsize=1))
+        self._service_management_queue: asyncio.Queue[ServiceManagementMessage] = asyncio.Queue(maxsize=1)
+        # self._service_management_queue = service_management_queue
 
     async def _connect_peers_task_handler(self) -> None:
         resolved_peers: Dict[UnresolvedPeerInfo, PeerInfo] = {}
@@ -193,7 +208,18 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         try:
             with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
                 async with self.manage():
-                    await self.stop_requested.wait()
+                    message: Optional[ServiceManagementMessage] = None
+                    while True:
+                        # TODO: cb that will give a better error
+                        # TODO: maybe management queue instead of restart queue, or...
+                        # async with self._node.manage(restart_cb=self._restart_queue.put_nowait):
+                        async with self._node.manage(
+                            # submit_management_message=self._service_management_queue.put_nowait,
+                            management_message=message,
+                        ):
+                            message = await self._service_management_queue.get()
+                            if message.action == RestartChoice.stop:
+                                break
         except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
             raise ValueError(f"{self._service_name}: already running") from e
@@ -204,12 +230,9 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         async with contextlib.AsyncExitStack() as async_exit_stack:
             try:
                 if start:
-                    self.stop_requested = asyncio.Event()
-
                     assert self.self_hostname is not None
                     assert self.daemon_port is not None
 
-                    await async_exit_stack.enter_async_context(self._node.manage())
                     self._node._shut_down = False
 
                     if len(self._upnp_ports) > 0:
@@ -234,11 +257,14 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                     if self._rpc_info:
                         rpc_api, rpc_port = self._rpc_info
                         self.rpc_server = await start_rpc_server(
-                            rpc_api(self._node),
+                            rpc_api(self._node, service_management_queue=self._service_management_queue),
                             self.self_hostname,
                             self.daemon_port,
                             uint16(rpc_port),
-                            self.stop_requested.set,
+                            partial(
+                                self._service_management_queue.put_nowait,
+                                EmptyServiceManagementMessage(action=RestartChoice.stop),
+                            ),
                             self.root_path,
                             self.config,
                             self._connect_to_daemon,
@@ -311,7 +337,10 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         if ignore:
             return
 
-        self.stop_requested.set()
+        # TODO: should we cancel?
+        # TODO: should we await a put?  or ...
+        self._service_management_queue.put_nowait(EmptyServiceManagementMessage(action=RestartChoice.stop))
+        # self._restart_queue.put_nowait(RestartChoice.stop)
 
 
 def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:

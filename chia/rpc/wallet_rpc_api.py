@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import json
 import logging
@@ -17,7 +18,13 @@ from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
-from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
+from chia.rpc.rpc_server import (
+    Endpoint,
+    EndpointResult,
+    RestartChoice,
+    ServiceManagementMessage,
+    default_get_connections,
+)
 from chia.rpc.util import tx_endpoint
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
@@ -106,7 +113,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node import WalletNode, WalletServiceManagementMessage
 from chia.wallet.wallet_protocol import WalletProtocol
 
 # Timeout for response from wallet/full node for sending a transaction
@@ -121,10 +128,15 @@ class WalletRpcApi:
     max_get_coin_records_limit: ClassVar[uint32] = uint32(1000)
     max_get_coin_records_filter_items: ClassVar[uint32] = uint32(1000)
 
-    def __init__(self, wallet_node: WalletNode):
+    def __init__(
+        self,
+        wallet_node: WalletNode,
+        service_management_queue: Optional[asyncio.Queue[ServiceManagementMessage]] = None,
+    ):
         assert wallet_node is not None
         self.service = wallet_node
         self.service_name = "chia_wallet"
+        self._service_management_queue = service_management_queue
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
@@ -294,14 +306,18 @@ class WalletRpcApi:
 
         return payloads
 
+    # TODO: maybe drop this intermediary?
     async def _stop_wallet(self) -> None:
         """
         Stops a currently running wallet/key, which allows starting the wallet with a new key.
         Each key has it's own wallet database.
         """
-        if self.service is not None:
-            self.service._close()
-            await self.service._await_closed(shutting_down=False)
+        # TODO: do we want a failure...?  or...
+        if self._service_management_queue is not None:
+            # self.service.stop()
+            self._service_management_queue.put_nowait(WalletServiceManagementMessage(RestartChoice.stop))
+            # self.service._close()
+            # await self.service._await_closed(shutting_down=False)
 
     async def _convert_tx_puzzle_hash(self, tx: TransactionRecord) -> TransactionRecord:
         return dataclasses.replace(
@@ -358,10 +374,17 @@ class WalletRpcApi:
         if self.service.logged_in_fingerprint == fingerprint:
             return {"fingerprint": fingerprint}
 
-        await self._stop_wallet()
-        started = await self.service._start_with_fingerprint(fingerprint)
-        if started is True:
-            return {"fingerprint": fingerprint}
+        # TODO: need to indicate fingerprint, more generally parameters
+        # self.service.submit_management_message(RestartChoice.restart)
+        # self.service.restart(fingerprint=fingerprint)
+        self._service_management_queue.put_nowait(
+            WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint)
+        )
+        # TODO: wait for restart to complete
+
+        if self.service.logged_in:
+            # TODO: maybe check the fingerprint is as requested?
+            return {"fingerprint": self.service.logged_in_fingerprint}
 
         return {"success": False, "error": "Unknown Error"}
 
@@ -431,17 +454,18 @@ class WalletRpcApi:
             return {"success": False, "error": str(e)}
 
         fingerprint = sk.get_g1().get_fingerprint()
-        await self._stop_wallet()
 
-        # Makes sure the new key is added to config properly
-        started = False
-        try:
-            await self.service.keychain_proxy.check_keys(self.service.root_path)
-        except Exception as e:
-            log.error(f"Failed to check_keys after adding a new key: {e}")
-        started = await self.service._start_with_fingerprint(fingerprint=fingerprint)
-        if started is True:
-            return {"fingerprint": fingerprint}
+        # TODO: need to indicate fingerprint, more generally parameters
+        self._service_management_queue.put_nowait(
+            WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint)
+        )
+        # self.service.restart(fingerprint=fingerprint)
+        # self.service._restart_cb(RestartChoice.restart)
+        # TODO: wait for restart to complete
+
+        if self.service.logged_in:
+            # TODO: maybe check the fingerprint is as requested?
+            return {"fingerprint": self.service.logged_in_fingerprint}
         raise ValueError("Failed to start")
 
     async def delete_key(self, request: Dict[str, Any]) -> EndpointResult:
@@ -502,8 +526,13 @@ class WalletRpcApi:
             )
 
             if self.service.logged_in_fingerprint != fingerprint:
-                await self._stop_wallet()
-                await self.service._start_with_fingerprint(fingerprint=fingerprint)
+                # TODO: need to indicate fingerprint, more generally parameters
+                self._service_management_queue.put_nowait(
+                    WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint)
+                )
+                # self.service.restart(fingerprint=fingerprint)
+                # self.service._restart_cb(RestartChoice.restart)
+                # TODO: wait for restart to complete
 
             wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
             for w in wallets:

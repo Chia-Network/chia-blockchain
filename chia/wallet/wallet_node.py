@@ -34,7 +34,7 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     SendTransaction,
 )
-from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
+from chia.rpc.rpc_server import RestartChoice, ServiceManagementMessage, StateChangedProtocol, default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -109,6 +109,19 @@ class Balance(Streamable):
     pending_coin_removal_count: uint32 = uint32(0)
 
 
+@dataclasses.dataclass(frozen=True)
+class WalletServiceManagementMessage:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import ServiceManagementMessage
+
+        _protocol_check: ClassVar[ServiceManagementMessage] = cast("WalletServiceManagementMessage", None)
+
+    action: RestartChoice
+    fingerprint: Optional[int] = None
+
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
+
+
 @dataclasses.dataclass
 class WalletNode:
     if TYPE_CHECKING:
@@ -152,48 +165,90 @@ class WalletNode:
     _secondary_peer_sync_task: Optional[asyncio.Task[None]] = None
     _tx_messages_in_progress: Dict[bytes32, List[bytes32]] = dataclasses.field(default_factory=dict)
 
+    # # _restart_queue: asyncio.Queue[RestartChoice] = dataclasses.field(default_factory=partial(asyncio.Queue, maxsize=1))
+    # # TODO: can we get this early enough to be non-optional?
+    # # TODO: or hint our type
+    # _submit_management_message: Optional[Callable[[ServiceManagementMessage], None]] = None
+    #
+    # # TODO: do these belong on the api?
+    # def stop(self) -> None:
+    #     # TODO: no assert
+    #     assert self._submit_management_message is not None
+    #     self._submit_management_message(
+    #         WalletServiceManagementMessage(
+    #             action=RestartChoice.stop,
+    #         ),
+    #     )
+    #
+    # # TODO: do these belong on the api?
+    # def restart(self, fingerprint: int) -> None:
+    #     # TODO: no assert
+    #     assert self._submit_management_message is not None
+    #     self._submit_management_message(
+    #         WalletServiceManagementMessage(
+    #             action=RestartChoice.restart,
+    #             data=fingerprint,
+    #         ),
+    #     )
+
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
-        await self._start()
+    async def manage(
+        self,
+        # submit_management_message: Callable[[ServiceManagementMessage], None],
+        management_message: Optional[ServiceManagementMessage] = None,
+        # restart_cb: Callable[[RestartChoice], None],
+        # startup_parameters: Optional[object] = None,
+    ) -> AsyncIterator[None]:
+        # self._restart_cb = restart_cb
+        # self._submit_management_message = submit_management_message
+
+        # TODO: do away with this assert?  maybe generics can help for this type?
+        assert isinstance(management_message, WalletServiceManagementMessage)
+
+        if management_message is not None:
+            await self._start_with_fingerprint(fingerprint=management_message.fingerprint)
+        else:
+            await self._start_with_fingerprint()
+
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
+            self.log.info("self._close")
+            self.log_out()
+            self._shut_down = True
+            if self._weight_proof_handler is not None:
+                self._weight_proof_handler.cancel_weight_proof_tasks()
+            if self._process_new_subscriptions_task is not None:
+                self._process_new_subscriptions_task.cancel()
+            if self._retry_failed_states_task is not None:
+                self._retry_failed_states_task.cancel()
+            if self._secondary_peer_sync_task is not None:
+                self._secondary_peer_sync_task.cancel()
 
-    async def _start(self) -> None:
-        await self._start_with_fingerprint()
+            self.log.info("self._await_closed")
+            if self._server is not None:
+                await self.server.close_all_connections()
+            if self.wallet_peers is not None:
+                await self.wallet_peers.ensure_is_closed()
+            if self._wallet_state_manager is not None:
+                await self.wallet_state_manager._await_closed()
+                self._wallet_state_manager = None
+            # TODO: how big a deal is this optimization?
+            # if shutting_down and self._keychain_proxy is not None:
+            if self._keychain_proxy is not None:
+                proxy = self._keychain_proxy
+                self._keychain_proxy = None
+                await proxy.close()
+                await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
+            self.wallet_peers = None
+            self._balance_cache = {}
 
-    def _close(self) -> None:
-        self.log.info("self._close")
-        self.log_out()
-        self._shut_down = True
-        if self._weight_proof_handler is not None:
-            self._weight_proof_handler.cancel_weight_proof_tasks()
-        if self._process_new_subscriptions_task is not None:
-            self._process_new_subscriptions_task.cancel()
-        if self._retry_failed_states_task is not None:
-            self._retry_failed_states_task.cancel()
-        if self._secondary_peer_sync_task is not None:
-            self._secondary_peer_sync_task.cancel()
-
-    async def _await_closed(self, shutting_down: bool = True) -> None:
-        self.log.info("self._await_closed")
-        if self._server is not None:
-            await self.server.close_all_connections()
-        if self.wallet_peers is not None:
-            await self.wallet_peers.ensure_is_closed()
-        if self._wallet_state_manager is not None:
-            await self.wallet_state_manager._await_closed()
-            self._wallet_state_manager = None
-        if shutting_down and self._keychain_proxy is not None:
-            proxy = self._keychain_proxy
-            self._keychain_proxy = None
-            await proxy.close()
-            await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
-        self.wallet_peers = None
-        self._balance_cache = {}
-
+    # async def run(self) -> None:
+    #     while True:
+    #         async with self.manage():
+    #             choice = await self._restart_queue.get()
+    #             if choice == RestartChoice.stop:
+    #                 break
     @property
     def keychain_proxy(self) -> KeychainProxy:
         # This is a stop gap until the class usage is refactored such the values of
@@ -398,6 +453,12 @@ class WalletNode:
         self,
         fingerprint: Optional[int] = None,
     ) -> bool:
+        try:
+            await self.keychain_proxy.check_keys(self.root_path)
+        except Exception as e:
+            # TODO: error message not accurate after moving this here
+            self.log.error(f"Failed to check_keys after adding a new key: {e}")
+
         # Makes sure the coin_state_updates get higher priority than new_peak messages.
         # Delayed instantiation until here to avoid errors.
         #   got Future <Future pending> attached to a different loop

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import enum
 import json
 import logging
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
+from typing import Any, AsyncIterator, Awaitable, Callable, ClassVar, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final
@@ -36,6 +37,34 @@ Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
 class StateChangedProtocol(Protocol):
     def __call__(self, change: str, change_data: Optional[Dict[str, Any]]) -> None:
         ...
+
+
+class RestartChoice(enum.Enum):
+    stop = enum.auto
+    restart = enum.auto
+
+
+# T = TypeVar("T")
+
+
+@dataclass(frozen=True)
+class ServiceManagementMessage(Protocol):
+    action: RestartChoice
+    # TODO: is this overly complicated passing this data out of the object to pass
+    #       it back in?
+    # TODO: does this need to be in the protocol?  might be how the callback and
+    #       data back in are linked in terms of hinting
+    # data: T
+
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
+
+
+# TODO: bare not empty?
+@dataclass(frozen=True)
+class EmptyServiceManagementMessage:
+    action: RestartChoice
+
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
 
 
 class RpcServiceProtocol(Protocol):
@@ -70,8 +99,18 @@ class RpcServiceProtocol(Protocol):
         ...
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(
+        self,
+        # TODO: maybe this could give back an event that will be set when the action is 'done'?
+        # submit_management_message: Callable[[ServiceManagementMessage], None],
+        management_message: Optional[ServiceManagementMessage] = None,
+        # restart_cb: Callable[[RestartChoice], None],
+        # startup_parameters: Optional[object] = ...,
+    ) -> AsyncIterator[None]:
         yield  # pragma: no cover
+
+    # async def run(self) -> AsyncIterator[None]:
+    #     ...
 
 
 class RpcApiProtocol(Protocol):
@@ -81,7 +120,9 @@ class RpcApiProtocol(Protocol):
     All lower case with underscores as needed.
     """
 
-    def __init__(self, node: RpcServiceProtocol) -> None:
+    def __init__(
+        self, node: RpcServiceProtocol, service_management_queue: asyncio.Queue[ServiceManagementMessage]
+    ) -> None:
         ...
 
     @property
