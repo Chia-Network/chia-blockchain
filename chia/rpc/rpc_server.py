@@ -39,14 +39,14 @@ class StateChangedProtocol(Protocol):
         ...
 
 
-class RestartChoice(enum.Enum):
+class ServiceManagementAction(enum.Enum):
     stop = enum.auto
     restart = enum.auto
 
 
 @dataclass(frozen=True)
 class ServiceManagementMessage(Protocol):
-    action: RestartChoice
+    action: ServiceManagementAction
     done_event: asyncio.Event = field(default_factory=asyncio.Event)
     # TODO: is this overly complicated passing this data out of the object to pass
     #       it back in?
@@ -60,7 +60,7 @@ class ServiceManagementMessage(Protocol):
 # TODO: bare not empty?
 @dataclass(frozen=True)
 class EmptyServiceManagementMessage:
-    action: RestartChoice
+    action: ServiceManagementAction
     done_event: asyncio.Event = field(default_factory=asyncio.Event)
 
     __match_args__: ClassVar[Tuple[str, ...]] = ()
@@ -115,7 +115,7 @@ class RpcApiProtocol(Protocol):
     def __init__(
         self,
         node: RpcServiceProtocol,
-        management_request: Callable[[ServiceManagementMessage], Awaitable[None]],
+        management_request: Optional[Callable[[ServiceManagementMessage], Awaitable[None]]] = None,
     ) -> None:
         ...
 

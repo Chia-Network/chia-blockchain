@@ -14,6 +14,7 @@ from chia_rs import PrivateKey
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
+from chia.rpc.rpc_server import ServiceManagementAction
 from chia.server.outbound_message import Message, make_msg
 from chia.simulator.block_tools import test_constants
 from chia.simulator.setup_nodes import SimulatorsAndWallets
@@ -27,7 +28,7 @@ from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.wallet_node import Balance, WalletNode
+from chia.wallet.wallet_node import Balance, WalletNode, WalletServiceManagementMessage
 from tests.conftest import ConsensusMode
 from tests.util.misc import CoinGenerator
 from tests.util.time_out_assert import time_out_assert
@@ -403,9 +404,9 @@ async def test_get_balance(
         return full_node_server.node_id in wallet_node.synced_peers
 
     async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
-        wallet_node._close()
-        await wallet_node._await_closed(shutting_down=False)
-        await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
+        await wallet_server.api._management_request(
+            WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint)
+        )
 
     wallet_id = uint32(1)
     initial_fingerprint = wallet_node.logged_in_fingerprint
@@ -497,7 +498,7 @@ async def test_add_states_from_peer_untrusted_shutdown(
     wallet = wallet_node.wallet_state_manager.main_wallet
     await full_node_api.farm_rewards_to_wallet(1, wallet)
     # Close to trigger the shutdown
-    wallet_node._close()
+    wallet_node._shut_down = True
     coin_generator = CoinGenerator()
     # Generate enough coin states to fill up the max number validation/add tasks.
     coin_states = [CoinState(coin_generator.get().coin, i, i) for i in range(3000)]

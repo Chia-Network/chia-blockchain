@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from chia.harvester.harvester import Harvester
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, ServiceManagementMessage
 from chia.util.ints import uint32
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class HarvesterRpcApi:
-    def __init__(self, harvester: Harvester):
+    def __init__(
+        self,
+        harvester: Harvester,
+        management_request: Optional[Callable[[ServiceManagementMessage], Awaitable[None]]] = None,
+    ):
         self.service = harvester
         self.service_name = "chia_harvester"
 

@@ -152,6 +152,7 @@ async def setup_simulators_and_wallets(
     db_version: int = 2,
     config_overrides: Optional[Dict[str, int]] = None,
     disable_capabilities: Optional[List[Capability]] = None,
+    start_wallet_services: bool = True,
 ) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         if config_overrides is None:
@@ -169,6 +170,7 @@ async def setup_simulators_and_wallets(
             xch_spam_amount,
             config_overrides,
             disable_capabilities,
+            start_wallet_services=start_wallet_services,
         ) as (bt_tools, simulators, wallets_services):
             wallets = []
             for wallets_servic in wallets_services:
@@ -229,6 +231,7 @@ async def setup_simulators_and_wallets_inner(
     xch_spam_amount: int,
     config_overrides: Optional[Dict[str, int]],
     disable_capabilities: Optional[List[Capability]],
+    start_wallet_services: bool = True,
 ) -> AsyncIterator[
     Tuple[List[BlockTools], List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]]]
 ]:
@@ -274,6 +277,7 @@ async def setup_simulators_and_wallets_inner(
                     None,
                     key_seed=std_hash(uint32(index).stream_to_bytes()) if key_seed is None else key_seed,
                     initial_num_public_keys=initial_num_public_keys,
+                    start_service=start_wallet_services,
                 )
             )
             for index in range(0, wallet_count)

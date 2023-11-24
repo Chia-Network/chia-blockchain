@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import dataclasses
 import operator
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, ClassVar, Dict, List, Optional, Tuple
 
 from typing_extensions import Protocol
 
 from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
 from chia.protocols.harvester_protocol import Plot
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, ServiceManagementMessage
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
@@ -79,7 +79,11 @@ def plot_matches_filter(plot: Plot, filter_item: FilterItem) -> bool:
 
 
 class FarmerRpcApi:
-    def __init__(self, farmer: Farmer):
+    def __init__(
+        self,
+        farmer: Farmer,
+        management_request: Optional[Callable[[ServiceManagementMessage], Awaitable[None]]] = None,
+    ) -> None:
         self.service = farmer
         self.service_name = "chia_farmer"
 

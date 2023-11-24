@@ -29,10 +29,10 @@ from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import (
     EmptyServiceManagementMessage,
-    RestartChoice,
     RpcApiProtocol,
     RpcServer,
     RpcServiceProtocol,
+    ServiceManagementAction,
     ServiceManagementMessage,
     start_rpc_server,
 )
@@ -211,14 +211,14 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
     async def run(self) -> None:
         try:
             with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
-                async with self.manage():
+                async with self.manage(manage_node=False):
                     message: Optional[ServiceManagementMessage] = None
                     while True:
                         async with self._node.manage(management_message=message):
                             if message is not None:
                                 message.done_event.set()
                             message = await self._service_management_queue.get()
-                            if message.action == RestartChoice.stop:
+                            if message.action == ServiceManagementAction.stop:
                                 break
                     # TODO: finally?
                     # TODO: annoyingly duplicated
@@ -230,7 +230,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
             raise ValueError(f"{self._service_name}: already running") from e
 
     @contextlib.asynccontextmanager
-    async def manage(self, *, start: bool = True) -> AsyncIterator[None]:
+    async def manage(self, *, start: bool = True, manage_node: bool = True) -> AsyncIterator[None]:
         # NOTE: avoid start=False, this is presently used for corner case setup type tests
         async with contextlib.AsyncExitStack() as async_exit_stack:
             try:
@@ -238,6 +238,9 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                     assert self.self_hostname is not None
                     assert self.daemon_port is not None
 
+                    # TODO: need to think through how this changes order relative to .run()
+                    if manage_node:
+                        await async_exit_stack.enter_async_context(self._node.manage())
                     self._node._shut_down = False
 
                     if len(self._upnp_ports) > 0:
@@ -268,7 +271,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                             uint16(rpc_port),
                             partial(
                                 self.request_sync,
-                                EmptyServiceManagementMessage(action=RestartChoice.stop),
+                                EmptyServiceManagementMessage(action=ServiceManagementAction.stop),
                             ),
                             self.root_path,
                             self.config,
@@ -344,7 +347,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
 
         # TODO: should we cancel?
         # TODO: should we await a put?  or ...
-        self.request_sync(EmptyServiceManagementMessage(action=RestartChoice.stop))
+        self.request_sync(EmptyServiceManagementMessage(action=ServiceManagementAction.stop))
 
 
 def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:

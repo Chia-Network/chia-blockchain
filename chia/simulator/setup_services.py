@@ -246,6 +246,7 @@ async def setup_wallet_node(
     introducer_port: Optional[uint16] = None,
     key_seed: Optional[bytes] = None,
     initial_num_public_keys: int = 5,
+    start_service: bool = True,
 ) -> AsyncGenerator[Service[WalletNode, WalletNodeAPI], None]:
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config
@@ -303,7 +304,7 @@ async def setup_wallet_node(
         )
 
         try:
-            async with service.manage():
+            async with service.manage(start=start_service):
                 yield service
         finally:
             if db_path.exists():

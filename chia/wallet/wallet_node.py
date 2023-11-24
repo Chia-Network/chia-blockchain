@@ -34,7 +34,12 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     SendTransaction,
 )
-from chia.rpc.rpc_server import RestartChoice, ServiceManagementMessage, StateChangedProtocol, default_get_connections
+from chia.rpc.rpc_server import (
+    ServiceManagementAction,
+    ServiceManagementMessage,
+    StateChangedProtocol,
+    default_get_connections,
+)
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -116,7 +121,7 @@ class WalletServiceManagementMessage:
 
         _protocol_check: ClassVar[ServiceManagementMessage] = cast("WalletServiceManagementMessage", None)
 
-    action: RestartChoice
+    action: ServiceManagementAction
     done_event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
     fingerprint: Optional[int] = None
 
@@ -171,11 +176,7 @@ class WalletNode:
         self,
         management_message: Optional[ServiceManagementMessage] = None,
     ) -> AsyncIterator[None]:
-        # TODO: do away with this assert?  maybe generics can help for this type?
-        # TODO: also the stop from the service signal handler presently passes `EmptyServiceManagementMessage
-        assert isinstance(management_message, WalletServiceManagementMessage)
-
-        if management_message is not None:
+        if isinstance(management_message, WalletServiceManagementMessage):
             await self._start_with_fingerprint(fingerprint=management_message.fingerprint)
         else:
             await self._start_with_fingerprint()

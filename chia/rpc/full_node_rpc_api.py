@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
@@ -14,7 +14,7 @@ from chia.full_node.mempool_check_conditions import (
     get_spends_for_block,
     get_spends_for_block_with_conditions,
 )
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, ServiceManagementMessage
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -82,7 +82,11 @@ async def get_average_block_time(
 
 
 class FullNodeRpcApi:
-    def __init__(self, service: FullNode) -> None:
+    def __init__(
+        self,
+        service: FullNode,
+        management_request: Optional[Callable[[ServiceManagementMessage], Awaitable[None]]] = None,
+    ) -> None:
         self.service = service
         self.service_name = "chia_full_node"
         self.cached_blockchain_state: Optional[Dict[str, Any]] = None

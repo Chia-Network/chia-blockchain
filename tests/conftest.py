@@ -581,6 +581,15 @@ async def two_wallet_nodes(request, blockchain_constants: ConsensusConstants):
 
 
 @pytest.fixture(scope="function")
+async def two_not_started_wallet_nodes(request, blockchain_constants: ConsensusConstants):
+    params = {}
+    if request and request.param_index > 0:
+        params = request.param
+    async with setup_simulators_and_wallets(1, 2, blockchain_constants, start_wallet_services=False, **params) as _:
+        yield _
+
+
+@pytest.fixture(scope="function")
 async def two_wallet_nodes_services(
     blockchain_constants: ConsensusConstants,
 ) -> AsyncIterator[

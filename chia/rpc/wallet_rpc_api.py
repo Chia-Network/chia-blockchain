@@ -20,7 +20,7 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import (
     Endpoint,
     EndpointResult,
-    RestartChoice,
+    ServiceManagementAction,
     ServiceManagementMessage,
     default_get_connections,
 )
@@ -314,7 +314,7 @@ class WalletRpcApi:
         # TODO: do we want a failure...?  or...
         if self._management_request is not None:
             # TODO: do we want to wait?
-            await self._management_request(WalletServiceManagementMessage(RestartChoice.stop))
+            await self._management_request(WalletServiceManagementMessage(ServiceManagementAction.stop))
 
     async def _convert_tx_puzzle_hash(self, tx: TransactionRecord) -> TransactionRecord:
         return dataclasses.replace(
@@ -373,7 +373,9 @@ class WalletRpcApi:
         if self.service.logged_in_fingerprint == fingerprint:
             return {"fingerprint": fingerprint}
 
-        await self._management_request(WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint))
+        await self._management_request(
+            WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint)
+        )
 
         if self.service.logged_in:
             # TODO: maybe check the fingerprint is as requested?
@@ -452,7 +454,9 @@ class WalletRpcApi:
 
         fingerprint = sk.get_g1().get_fingerprint()
 
-        await self._management_request(WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint))
+        await self._management_request(
+            WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint)
+        )
 
         if self.service.logged_in:
             # TODO: maybe check the fingerprint is as requested?
@@ -521,7 +525,7 @@ class WalletRpcApi:
 
             if self.service.logged_in_fingerprint != fingerprint:
                 await self._management_request(
-                    WalletServiceManagementMessage(RestartChoice.restart, fingerprint=fingerprint)
+                    WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint)
                 )
 
             wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
