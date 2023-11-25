@@ -1,15 +1,18 @@
 ; p2_delegated with SECP256-R1 signature
 ; this is the "standard puzzle" for spending coins with SECP keys (ie secure enclave)
 
-(mod (SECP_PK delegated_puzzle delegated_solution signature coin_id genesis_challenge)
+(mod (GENESIS_CHALLENGE SECP_PK delegated_puzzle delegated_solution signature coin_id)
   (include *standard-cl-21*)
   (include condition_codes.clib)
   (include sha256tree.clib)
 
-  (if (secp256r1_verify SECP_PK (sha256 (sha256tree delegated_puzzle) coin_id genesis_challenge) signature)
+  (if (secp256r1_verify SECP_PK (sha256 (sha256tree delegated_puzzle) coin_id GENESIS_CHALLENGE) signature)
       ; secp256r1_verify returns 0 if successful.
       (x)  ; this doesn't actually run because secp256_verify will raise on failure
-      (a delegated_puzzle delegated_solution)
+      (c
+        (list ASSERT_MY_COIN_ID coin_id)
+        (a delegated_puzzle delegated_solution)
+      )
   )
 
 )

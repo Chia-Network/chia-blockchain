@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from chia_rs import G1Element
 
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -21,8 +20,8 @@ RECOVERY_FINISH_MOD_HASH = RECOVERY_FINISH_MOD.get_tree_hash()
 
 
 # PUZZLES
-def construct_p2_delegated_secp(secp_pk: bytes) -> Program:
-    return P2_DELEGATED_SECP_MOD.curry(secp_pk)
+def construct_p2_delegated_secp(secp_pk: bytes, genesis_challenge: bytes32) -> Program:
+    return P2_DELEGATED_SECP_MOD.curry(genesis_challenge, secp_pk)
 
 
 def construct_recovery_finish(timelock: uint64, recovery_conditions: Program) -> Program:
@@ -49,5 +48,5 @@ def get_vault_proof(merkle_tree: MerkleTree, puzzlehash: bytes32) -> Program:
 
 
 # SECP SIGNATURE
-def construct_secp_message(delegated_puzzlehash: bytes32, coin_id: bytes32) -> bytes:
-    return delegated_puzzlehash + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+def construct_secp_message(delegated_puzzlehash: bytes32, coin_id: bytes32, genesis_challenge: bytes32) -> bytes:
+    return delegated_puzzlehash + coin_id + genesis_challenge

@@ -44,7 +44,7 @@ def test_recovery_puzzles() -> None:
     coin_id = Program.to("coin_id").get_tree_hash()
     recovery_conditions = Program.to([[51, p2_puzzlehash, amount]])
 
-    escape_puzzle = P2_DELEGATED_SECP_MOD.curry(secp_pk)
+    escape_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk)
     escape_puzzlehash = escape_puzzle.get_tree_hash()
     finish_puzzle = RECOVERY_FINISH_MOD.curry(timelock, recovery_conditions)
     finish_puzzlehash = finish_puzzle.get_tree_hash()
@@ -94,7 +94,7 @@ def test_recovery_puzzles() -> None:
 def test_p2_delegated_secp() -> None:
     secp_sk = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
     secp_pk = secp_sk.verifying_key.to_string("compressed")
-    secp_puzzle = P2_DELEGATED_SECP_MOD.curry(secp_pk)
+    secp_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk)
 
     coin_id = Program.to("coin_id").get_tree_hash()
     delegated_puzzle = ACS
@@ -103,12 +103,10 @@ def test_p2_delegated_secp() -> None:
         delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE
     )
 
-    secp_solution = Program.to(
-        [delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id, DEFAULT_CONSTANTS.GENESIS_CHALLENGE]
-    )
+    secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id])
     _, conds = run_with_secp(secp_puzzle, secp_solution)
 
-    assert conds.at("frf").as_atom() == ACS_PH
+    assert conds.at("rfrf").as_atom() == ACS_PH
 
     # test that a bad secp sig fails
     sig_bytes = bytearray(signed_delegated_puzzle)
@@ -127,7 +125,7 @@ def test_vault_root_puzzle() -> None:
     # secp puzzle
     secp_sk = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
     secp_pk = secp_sk.verifying_key.to_string("compressed")
-    secp_puzzle = P2_DELEGATED_SECP_MOD.curry(secp_pk)
+    secp_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk)
     secp_puzzlehash = secp_puzzle.get_tree_hash()
 
     # recovery keys
@@ -155,9 +153,7 @@ def test_vault_root_puzzle() -> None:
     signed_delegated_puzzle = secp_sk.sign_deterministic(
         delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE
     )
-    secp_solution = Program.to(
-        [delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id, DEFAULT_CONSTANTS.GENESIS_CHALLENGE]
-    )
+    secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id])
     proof = vault_merkle_tree.generate_proof(secp_puzzlehash)
     secp_proof = Program.to((proof[0], proof[1][0]))
     vault_solution = Program.to([secp_proof, secp_puzzle, secp_solution])
@@ -166,7 +162,7 @@ def test_vault_root_puzzle() -> None:
 
     # recovery spend path
     recovery_conditions = Program.to([[51, ACS_PH, amount]])
-    curried_escape_puzzle = P2_DELEGATED_SECP_MOD.curry(secp_pk)
+    curried_escape_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk)
     curried_finish_puzzle = RECOVERY_FINISH_MOD.curry(timelock, recovery_conditions)
     recovery_merkle_tree = MerkleTree([curried_escape_puzzle.get_tree_hash(), curried_finish_puzzle.get_tree_hash()])
     recovery_merkle_root = recovery_merkle_tree.calculate_root()
