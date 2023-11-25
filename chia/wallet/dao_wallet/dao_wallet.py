@@ -6,7 +6,6 @@ import json
 import logging
 import re
 import time
-from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -792,7 +791,7 @@ class DAOWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=full_spend.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -956,7 +955,7 @@ class DAOWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=full_spend.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -1139,7 +1138,7 @@ class DAOWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=spend_bundle.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -1499,7 +1498,7 @@ class DAOWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=full_spend.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -1646,7 +1645,7 @@ class DAOWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=full_spend.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
