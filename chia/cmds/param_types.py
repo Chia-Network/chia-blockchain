@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Any, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import click
 
@@ -12,6 +12,48 @@ from chia.util.bech32m import bech32_decode, decode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint64
 from chia.wallet.util.address_type import AddressType
+
+
+def validate_uint64(
+    value: str,
+    fail_func: Callable[[str, Optional[click.Parameter], Optional[click.Context]], None],
+    param: Optional[click.Parameter],
+    ctx: Optional[click.Context],
+) -> uint64:
+    try:
+        d_value = Decimal(value)
+    except InvalidOperation:
+        fail_func("Value must be a valid uint64 number", param, ctx)
+    if d_value.is_signed():
+        fail_func("Value must be a positive integer", param, ctx)
+    if d_value != d_value.to_integral():
+        fail_func("Value must be an integer", param, ctx)
+    try:
+        u_value = uint64(value)
+    except ValueError:
+        fail_func("Value must be a valid uint64 number", param, ctx)
+    return u_value
+
+
+def validate_decimal_xch(
+    value: str,
+    fail_func: Callable[[str, Optional[click.Parameter], Optional[click.Context]], None],
+    param: Optional[click.Parameter],
+    ctx: Optional[click.Context],
+) -> Decimal:
+    try:
+        d_value = Decimal(value)
+    except InvalidOperation:  # won't ever be value error because of the fee limit check
+        fail_func("Value must be decimal dotted value in XCH (e.g. 0.00005)", param, ctx)
+    if d_value.is_signed():
+        fail_func("Value can not be negative", param, ctx)
+    if not d_value.is_zero() and d_value < Decimal("0.000000000001"):
+        fail_func(
+            "Invalid amount of mojos, too many zeros. Either give zero or at least 1 mojo (0.000000000001 xch).",
+            param,
+            ctx,
+        )
+    return d_value
 
 
 class TransactionFeeParamType(click.ParamType):
@@ -25,21 +67,18 @@ class TransactionFeeParamType(click.ParamType):
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
         if isinstance(value, uint64):  # required by click
             return value
+        if not isinstance(value, str):
+            self.fail("Invalid Type, fee must be string or uint64.", param, ctx)
         mojos = False  # TODO: Add unit logic
         if mojos:
-            try:
-                return uint64(value)
-            except ValueError:
-                self.fail("Fee must be positive integer value in mojos", param, ctx)
+            return validate_uint64(value, self.fail, param, ctx)
+        d_value = validate_decimal_xch(value, self.fail, param, ctx)
+        if not self.value_limit.is_zero() and d_value > self.value_limit:
+            self.fail(f"Fee must be in the range 0 to {self.value_limit}", param, ctx)
         try:
-            d_value = Decimal(value)
-            if 0 > d_value:
-                self.fail("Fee can not be negative", param, ctx)
-            if self.value_limit != Decimal(0) and d_value > self.value_limit:
-                self.fail(f"Fee must be in the range 0 to {self.value_limit}", param, ctx)
             return uint64(d_value * units["chia"])
-        except InvalidOperation:  # won't ever be value error because of the fee limit check
-            self.fail("Fee must be decimal dotted value in XCH (e.g. 0.00005)", param, ctx)
+        except ValueError:
+            self.fail("Fee must be a valid uint64 number", param, ctx)
 
 
 @dataclass(frozen=True)
@@ -80,18 +119,15 @@ class AmountParamType(click.ParamType):
             return value
         if isinstance(value, uint64):
             return CliAmount(mojos=True, amount=value)
+        if not isinstance(value, str):
+            self.fail("Invalid Type, amount must be string, uint64 or CliAmount.", param, ctx)
         mojos = False  # TODO: Add unit logic
         if mojos:
-            try:
-                return CliAmount(mojos=True, amount=uint64(value))
-            except ValueError:
-                self.fail("Amount must be positive integer value in mojos", param, ctx)
-        try:
-            if Decimal(value) < 0:
-                self.fail("Amount must be greater than or equal to 0", param, ctx)
-            return CliAmount(mojos=False, amount=Decimal(value))
-        except InvalidOperation:
-            self.fail("Amount must be a decimal dotted value in XCH / CAT (e.g. 0.00005)", param, ctx)
+            if mojos:
+                m_value = validate_uint64(value, self.fail, param, ctx)
+                return CliAmount(mojos=True, amount=m_value)
+        d_value = validate_decimal_xch(value, self.fail, param, ctx)
+        return CliAmount(mojos=False, amount=d_value)
 
 
 @dataclass(frozen=True)
@@ -125,6 +161,8 @@ class AddressParamType(click.ParamType):
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAddress:
         if isinstance(value, CliAddress):  # required by click
             return value
+        if not isinstance(value, str):
+            self.fail("Invalid Type, address must be string or CliAddress.", param, ctx)
         try:
             hrp, b32data = bech32_decode(value)
             if hrp in ["xch", "txch"]:  # I hate having to load the config here
@@ -160,6 +198,8 @@ class Bytes32ParamType(click.ParamType):
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> bytes32:
         if isinstance(value, bytes32):  # required by click
             return value
+        if not isinstance(value, str):
+            self.fail("Invalid Type, value must be string or bytes32.", param, ctx)
         try:
             return bytes32.from_hexstr(value)
         except ValueError:
@@ -176,10 +216,9 @@ class Uint64ParamType(click.ParamType):
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
         if isinstance(value, uint64):  # required by click
             return value
-        try:
-            return uint64(value)
-        except ValueError:
-            self.fail("Value must be a valid uint64 number", param, ctx)
+        if not isinstance(value, str):
+            self.fail("Invalid Type, value must be string or uint64.", param, ctx)
+        return validate_uint64(value, self.fail, param, ctx)
 
 
 # These are what we use in click decorators
