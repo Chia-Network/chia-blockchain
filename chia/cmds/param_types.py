@@ -123,9 +123,8 @@ class AmountParamType(click.ParamType):
             self.fail("Invalid Type, amount must be string, uint64 or CliAmount.", param, ctx)
         mojos = False  # TODO: Add unit logic
         if mojos:
-            if mojos:
-                m_value = validate_uint64(value, self.fail, param, ctx)
-                return CliAmount(mojos=True, amount=m_value)
+            m_value = validate_uint64(value, self.fail, param, ctx)
+            return CliAmount(mojos=True, amount=m_value)
         d_value = validate_decimal_xch(value, self.fail, param, ctx)
         return CliAmount(mojos=False, amount=d_value)
 

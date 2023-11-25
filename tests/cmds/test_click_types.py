@@ -32,6 +32,9 @@ burn_address = encode_puzzle_hash(burn_ph, "xch")
 burn_address_txch = encode_puzzle_hash(burn_ph, "txch")
 burn_nft_addr = encode_puzzle_hash(burn_ph, "did:chia:")
 burn_bad_prefix = encode_puzzle_hash(burn_ph, "badprefix")
+overflow_ammt = 18446744073709551616  # max coin + 1
+overflow_decimal_str = "18446744.073709551616"
+overflow_decimal = Decimal(overflow_decimal_str)
 
 
 class FakeContext:
@@ -60,6 +63,8 @@ def test_click_tx_fee_type() -> None:
         TRANSACTION_FEE.convert("0.0000000000001", None, None)  # 0.1 mojos
     with pytest.raises(BadParameter):
         TRANSACTION_FEE.convert("-0.6", None, None)
+    with pytest.raises(BadParameter):
+        TRANSACTION_FEE.convert(overflow_decimal_str, None, None)
     # Test Type Failures
     with pytest.raises(BadParameter):
         TRANSACTION_FEE.convert(float(0.01), None, None)
@@ -67,7 +72,7 @@ def test_click_tx_fee_type() -> None:
 
 def test_click_amount_type() -> None:
     decimal_cli_amount = CliAmount(mojos=False, amount=Decimal("5.25"))
-    large_decimal_amount = CliAmount(mojos=False, amount=Decimal(10000000000))
+    large_decimal_amount = CliAmount(mojos=False, amount=overflow_decimal)
     mojos_cli_amount = CliAmount(mojos=True, amount=uint64(100000))
     one_mojo_cli_amount = CliAmount(mojos=False, amount=Decimal("0.000000000001"))
     # Test CliAmount (Generally is not used)
@@ -80,7 +85,7 @@ def test_click_amount_type() -> None:
 
     # Test Decimal / XCH (we dont test overflow because we dont know the conversion ratio yet)
     assert AMOUNT_TYPE.convert("5.25", None, None) == decimal_cli_amount
-    assert AMOUNT_TYPE.convert("10000000000", None, None) == large_decimal_amount
+    assert AMOUNT_TYPE.convert(overflow_decimal_str, None, None) == large_decimal_amount
     assert AMOUNT_TYPE.convert("0.000000000001", None, None) == one_mojo_cli_amount
     # Test Decimal Failures
     with pytest.raises(BadParameter):
@@ -132,7 +137,7 @@ def test_click_address_type() -> None:
         ADDRESS_TYPE.convert(burn_bad_prefix, None, None)
     # Test Type Failures
     with pytest.raises(BadParameter):
-        AMOUNT_TYPE.convert(float(0.01), None, None)
+        ADDRESS_TYPE.convert(float(0.01), None, None)
 
     # check class error handling
     with pytest.raises(ValueError):
@@ -163,7 +168,7 @@ def test_click_bytes32_type() -> None:
         BYTES32_TYPE.convert("test", None, None)
     # Test Type Failures
     with pytest.raises(BadParameter):
-        AMOUNT_TYPE.convert(float(0.01), None, None)
+        BYTES32_TYPE.convert(float(0.01), None, None)
 
 
 def test_click_uint64_type() -> None:
@@ -181,6 +186,8 @@ def test_click_uint64_type() -> None:
         UINT64_TYPE.convert("0.1", None, None)
     with pytest.raises(BadParameter):
         UINT64_TYPE.convert("-1", None, None)
+    with pytest.raises(BadParameter):
+        UINT64_TYPE.convert(str(overflow_ammt), None, None)
     # Test Type Failures
     with pytest.raises(BadParameter):
         UINT64_TYPE.convert(float(0.01), None, None)
