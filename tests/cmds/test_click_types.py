@@ -52,7 +52,7 @@ def test_click_tx_fee_type() -> None:
 
 
 def test_click_amount_type() -> None:
-    decimal_cli_amount = CliAmount(mojos=False, amount=Decimal(5.25))
+    decimal_cli_amount = CliAmount(mojos=False, amount=Decimal("5.25"))
     large_decimal_amount = CliAmount(mojos=False, amount=Decimal(10000000000))
     mojos_cli_amount = CliAmount(mojos=True, amount=uint64(100000))
     # Test CliAmount (Generally is not used)
@@ -78,7 +78,7 @@ def test_click_amount_type() -> None:
     assert decimal_cli_amount.convert_amount(units["chia"]) == uint64(int(5.25 * units["chia"]))
     assert mojos_cli_amount.convert_amount(units["chia"]) == uint64(100000)
     with pytest.raises(ValueError):  # incorrect arg
-        CliAmount(mojos=True, amount=Decimal(5.25)).convert_amount(units["chia"])
+        CliAmount(mojos=True, amount=Decimal("5.25")).convert_amount(units["chia"])
     with pytest.raises(ValueError):  # incorrect arg
         CliAmount(mojos=False, amount=uint64(100000)).convert_amount(units["chia"])
     with pytest.raises(ValueError):  # overflow
