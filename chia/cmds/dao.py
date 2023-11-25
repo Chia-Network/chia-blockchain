@@ -98,21 +98,21 @@ def dao_add_cmd(
     "--pass-percentage",
     help="The percentage of 'yes' votes in basis points a proposal must receive to be accepted. 100% = 10000",
     type=UINT64_TYPE,
-    default=5000,
+    default=uint64(5000),
     show_default=True,
 )
 @click.option(
     "--self-destruct",
     help="The number of blocks required before a proposal can be automatically removed",
     type=UINT64_TYPE,
-    default=10000,
+    default=uint64(10000),
     show_default=True,
 )
 @click.option(
     "--oracle-delay",
     help="The number of blocks required between oracle spends of the treasury",
     type=UINT64_TYPE,
-    default=50,
+    default=uint64(50),
     show_default=True,
 )
 @click.option(
