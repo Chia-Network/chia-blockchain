@@ -304,8 +304,20 @@ async def setup_wallet_node(
         )
 
         try:
-            async with service.manage(start=start_service):
+            started = asyncio.Event()
+            task = asyncio.create_task(service.run(started_event=started))
+            try:
+                await started.wait()
                 yield service
+            finally:
+                from chia.rpc.rpc_server import EmptyServiceManagementMessage, ServiceManagementAction
+
+                await service.request(EmptyServiceManagementMessage(action=ServiceManagementAction.stop))
+                task.cancel()
+                import contextlib
+
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
         finally:
             if db_path.exists():
                 # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641

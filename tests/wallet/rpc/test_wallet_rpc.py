@@ -15,7 +15,7 @@ from chia_rs import G2Element
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_server import RpcServer
+from chia.rpc.rpc_server import RpcServer, ServiceManagementAction
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -2366,7 +2366,9 @@ async def test_set_wallet_resync_on_startup(wallet_not_started_rpc_environment: 
     wallet_node_2.local_keychain = wallet_node.local_keychain
     # use second node to start the same wallet, reusing config and db
     # TODO: this is kinda awkward
-    async with wallet_node_2.manage(WalletServiceManagementMessage(action=None, fingerprint=fingerprint)):
+    async with wallet_node_2.manage(
+        WalletServiceManagementMessage(action=ServiceManagementAction.stop, fingerprint=fingerprint)
+    ):
         assert wallet_node_2._wallet_state_manager
         after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_all_transactions()
         # transactions should be the same
@@ -2413,7 +2415,9 @@ async def test_set_wallet_resync_on_startup_disable(wallet_not_started_rpc_envir
     wallet_node_2.local_keychain = wallet_node.local_keychain
     # use second node to start the same wallet, reusing config and db
     # TODO: this is kinda awkward
-    async with wallet_node_2.manage(WalletServiceManagementMessage(action=None, fingerprint=fingerprint)):
+    async with wallet_node_2.manage(
+        WalletServiceManagementMessage(action=ServiceManagementAction.stop, fingerprint=fingerprint)
+    ):
         assert wallet_node_2._wallet_state_manager
         after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_all_transactions()
         # transactions should be the same

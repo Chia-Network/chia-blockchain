@@ -404,7 +404,8 @@ async def test_get_balance(
         return full_node_server.node_id in wallet_node.synced_peers
 
     async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
-        await wallet_server.api._management_request(
+        # TODO: private...  cut it out
+        await wallet_server.api._management_request(  # type: ignore[attr-defined]
             WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint)
         )
 

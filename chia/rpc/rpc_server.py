@@ -40,8 +40,8 @@ class StateChangedProtocol(Protocol):
 
 
 class ServiceManagementAction(enum.Enum):
-    stop = enum.auto
-    restart = enum.auto
+    stop = enum.auto()
+    restart = enum.auto()
 
 
 @dataclass(frozen=True)

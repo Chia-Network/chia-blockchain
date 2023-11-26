@@ -208,16 +208,21 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                         resolved_peers[unresolved] = resolved_new
             await asyncio.sleep(self.reconnect_retry_seconds)
 
-    async def run(self) -> None:
+    async def run(self, started_event: Optional[asyncio.Event] = None) -> None:
         try:
             with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
                 async with self.manage(manage_node=False):
                     message: Optional[ServiceManagementMessage] = None
                     while True:
                         async with self._node.manage(management_message=message):
+                            if started_event is not None:
+                                started_event.set()
+
                             if message is not None:
                                 message.done_event.set()
+
                             message = await self._service_management_queue.get()
+
                             if message.action == ServiceManagementAction.stop:
                                 break
                     # TODO: finally?
@@ -262,6 +267,11 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                         f"at port {self._advertised_port}"
                     )
 
+                    # if not self._rpc_info:
+                    #     # TODO: humm....
+                    #     self.rpc_server._management_request = self.request
+                    #     # TODO: maybe undo this after
+                    # else:
                     if self._rpc_info:
                         rpc_api, rpc_port = self._rpc_info
                         self.rpc_server = await start_rpc_server(

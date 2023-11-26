@@ -128,9 +128,15 @@ async def init_wallet_and_node(
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     balance = await wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance()
     assert balance == funds
-    wallet_rpc_api = WalletRpcApi(wallet_node)
     assert wallet_service.rpc_server is not None
-    return wallet_rpc_api, full_node_api, wallet_service.rpc_server.listen_port, ph, bt
+    # TODO: handle
+    return (
+        cast(WalletRpcApi, wallet_service.rpc_server.rpc_api),
+        full_node_api,
+        wallet_service.rpc_server.listen_port,
+        ph,
+        bt,
+    )
 
 
 async def farm_block_check_singleton(
