@@ -48,7 +48,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_node import WalletNode
 from tests.util.setup_nodes import SimulatorsAndWallets
 
-IDENTITY_PUZZLE = SerializedProgram.from_program(Program.to(1))
+IDENTITY_PUZZLE = SerializedProgram.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 TEST_TIMESTAMP = uint64(10040)
@@ -665,7 +665,7 @@ def mk_item(
 ) -> MempoolItem:
     # we don't actually care about the puzzle and solutions for the purpose of
     # can_replace()
-    spends = [CoinSpend(c, SerializedProgram(), SerializedProgram()) for c in coins]
+    spends = [CoinSpend(c, SerializedProgram.to(None), SerializedProgram.to(None)) for c in coins]
     spend_bundle = SpendBundle(spends, G2Element())
     npc_result = NPCResult(None, make_test_conds(cost=cost, spend_ids=[c.name() for c in coins]), uint64(cost))
     return MempoolItem(
@@ -1234,7 +1234,7 @@ def test_dedup_info_eligible_1st_time() -> None:
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
     eligible_coin_spends = EligibleCoinSpends()
-    solution = SerializedProgram.from_program(Program.to(conditions))
+    solution = SerializedProgram.to(conditions)
     unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
     )
@@ -1253,7 +1253,7 @@ def test_dedup_info_eligible_but_different_solution() -> None:
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
-    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    initial_solution = SerializedProgram.to(initial_conditions)
     eligible_coin_spends = EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
@@ -1270,11 +1270,11 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
-    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    initial_solution = SerializedProgram.to(initial_conditions)
     eligible_coin_spends = EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
     sb1 = spend_bundle_from_conditions(initial_conditions, TEST_COIN)
     second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
-    second_solution = SerializedProgram.from_program(Program.to(second_conditions))
+    second_solution = SerializedProgram.to(second_conditions)
     sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
     sb = SpendBundle.aggregate([sb1, sb2])
     mempool_item = mempool_item_from_spendbundle(sb)
@@ -1303,9 +1303,9 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
-    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    initial_solution = SerializedProgram.to(initial_conditions)
     second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
-    second_solution = SerializedProgram.from_program(Program.to(second_conditions))
+    second_solution = SerializedProgram.to(second_conditions)
     saved_cost = uint64(3600044)
     eligible_coin_spends = EligibleCoinSpends(
         {
