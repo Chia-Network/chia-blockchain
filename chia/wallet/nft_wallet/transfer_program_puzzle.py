@@ -39,7 +39,7 @@ def solution_for_transfer_program(
     new_did_inner_hash: bytes32,
     trade_prices_list: Program,
 ) -> Program:
-    return Program.to([conditions, current_owner, [new_did, trade_prices_list, new_did_inner_hash]])  # type: ignore
+    return Program.to([conditions, current_owner, [new_did, trade_prices_list, new_did_inner_hash]])
 
 
 @dataclass(frozen=True)
@@ -79,4 +79,4 @@ class TransferProgramPuzzle:
         return None
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
-        return Program.to(None)  # type: ignore
+        return Program.to(None)

@@ -29,7 +29,7 @@ def puzzle_for_ownership_layer(
 
 
 def solution_for_ownership_layer(inner_solution: Program) -> Program:
-    return Program.to([inner_solution])  # type: ignore
+    return Program.to([inner_solution])
 
 
 @dataclass(frozen=True)

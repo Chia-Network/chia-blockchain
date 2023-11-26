@@ -652,7 +652,7 @@ def match_treasury_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
         if mod == SINGLETON_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DAO_TREASURY_MOD:
-                return curried_args.first().as_iter()  # type: ignore[no-any-return]
+                return curried_args.first().as_iter()
     except ValueError:  # pragma: no cover
         # We just pass here to prevent spamming logs with error messages when WSM checks incoming coins
         pass
@@ -688,7 +688,7 @@ def match_finished_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
         if mod == SINGLETON_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DAO_FINISHED_STATE:
-                return curried_args.as_iter()  # type: ignore[no-any-return]
+                return curried_args.as_iter()
     except ValueError:  # pragma: no cover
         # We just pass here to prevent spamming logs with error messages when WSM checks incoming coins
         pass

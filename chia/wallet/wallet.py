@@ -230,7 +230,7 @@ class Wallet:
     def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:
         python_program = solution.as_python()
         python_program[1].append(condition)
-        return cast(Program, Program.to(python_program))
+        return Program.to(python_program)
 
     async def select_coins(
         self,
