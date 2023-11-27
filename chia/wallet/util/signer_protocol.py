@@ -52,11 +52,11 @@ _T_ClvmStreamable = TypeVar("_T_ClvmStreamable", bound="ClvmStreamable")
 
 class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
     def as_program(self) -> Program:
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @classmethod
     def from_program(cls: Type[_T_ClvmStreamable], prog: Program) -> _T_ClvmStreamable:
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     def stream(self, f: BinaryIO) -> None:
         global USE_CLVM_SERIALIZATION

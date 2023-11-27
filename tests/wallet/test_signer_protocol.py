@@ -12,7 +12,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import ConversionError, Streamable, streamable
 from chia.wallet.conditions import AggSigMe
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -45,6 +45,7 @@ def test_signing_serialization() -> None:
     solution: Program = Program.to([AggSigMe(pubkey, message).to_program()])
 
     coin_spend: CoinSpend = CoinSpend(coin, puzzle, solution)
+    assert Spend.from_coin_spend(coin_spend).as_coin_spend() == coin_spend
 
     tx: UnsignedTransaction = UnsignedTransaction(
         TransactionInfo([Spend.from_coin_spend(coin_spend)]),
@@ -128,6 +129,13 @@ def test_signing_serialization() -> None:
         == TempStreamable.from_bytes(inside_clvm_streamable_blob)
         == TempStreamable(tx.transaction_info.spends[0])
     )
+
+    # Test some json loading errors
+
+    with pytest.raises(ConversionError):
+        Spend.from_json_dict("blah")
+    with pytest.raises(ConversionError):
+        UnsignedTransaction.from_json_dict(streamable_blob.hex())
 
 
 @pytest.mark.parametrize(
