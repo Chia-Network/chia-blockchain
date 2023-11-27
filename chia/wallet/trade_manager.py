@@ -709,7 +709,9 @@ class TradeManager:
             potential_change_coins: List[Coin] = addition_dict[wid] if wid in addition_dict else []
             change_coins: List[Coin] = [c for c in potential_change_coins if c.parent_coin_info in all_removals]
             change_amount: int = sum(c.amount for c in change_coins)
-            sent_amount: int = removed - change_amount
+            sent_amount: int = (
+                removed - change_amount - (all_fees if wallet == self.wallet_state_manager.main_wallet else 0)
+            )
             txs.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
