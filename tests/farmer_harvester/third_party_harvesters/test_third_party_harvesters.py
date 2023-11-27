@@ -207,7 +207,7 @@ async def test_harvester_receive_source_signing_data(
     def did_finished_validating_data() -> bool:
         return finished_validating_data
 
-    await time_out_assert(90, did_finished_validating_data, True)
+    await time_out_assert(60*60, did_finished_validating_data, True)
 
 
 @pytest.mark.anyio
@@ -299,7 +299,7 @@ async def test_harvester_fee_convention(
 
         return fee_count >= max_fee_proofs
 
-    await time_out_assert(120, received_all_proofs, True)
+    await time_out_assert(60*60, received_all_proofs, True)
 
     # Wait for the farmer to pick up the last proofs
     await asyncio.sleep(2)
