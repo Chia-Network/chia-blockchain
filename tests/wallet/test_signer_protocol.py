@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
