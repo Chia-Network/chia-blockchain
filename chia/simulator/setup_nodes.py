@@ -5,7 +5,7 @@ import logging
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AsyncIterator, Dict, List, Optional, Protocol, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, AsyncIterator, ClassVar, Dict, List, Optional, Protocol, Tuple, TypeVar, Union, cast
 
 import anyio
 
@@ -180,6 +180,9 @@ class ServiceForTest(Protocol[T_Node, T_RpcApi, T_PeerApi]):
 # TODO: some common pattern across all the services?
 @dataclass
 class WalletForTest:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[ServiceForTest[WalletNode, WalletRpcApi, WalletNodeAPI]] = cast("WalletForTest", None)
+
     service: Service[WalletNode, WalletNodeAPI]
 
     @property
@@ -217,6 +220,11 @@ class WalletForTest:
 
 @dataclass
 class NodeForTest:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[ServiceForTest[FullNode, FullNodeRpcApi, FullNodeSimulator]] = cast(
+            "NodeForTest", None
+        )
+
     service: Service[FullNode, FullNodeSimulator]
 
     @property
