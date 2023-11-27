@@ -113,6 +113,9 @@ def test_missing_messages() -> None:
     farmer_msgs = {
         "DeclareProofOfSpace",
         "FarmingInfo",
+        "SPSubSlotSourceData",
+        "SPVDFSourceData",
+        "SignagePointSourceData",
         "NewSignagePoint",
         "RequestSignedValues",
         "SignedValues",
@@ -148,6 +151,7 @@ def test_missing_messages() -> None:
 
     harvester_msgs = {
         "HarvesterHandshake",
+        "ProofOfSpaceFeeInfo",
         "NewProofOfSpace",
         "NewSignagePointHarvester",
         "Plot",
@@ -160,6 +164,8 @@ def test_missing_messages() -> None:
         "PlotSyncStart",
         "PoolDifficulty",
         "RequestPlots",
+        "SigningDataKind",
+        "SignatureRequestSourceData",
         "RequestSignatures",
         "RespondPlots",
         "RespondSignatures",
