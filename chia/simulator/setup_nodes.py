@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import RpcServer, RpcServiceProtocol
+from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.api_protocol import ApiProtocol
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
@@ -266,11 +268,27 @@ async def setup_simulators_and_wallets(
             # TODO: https://github.com/Chia-Network/chia-blockchain/pull/16933
             from tests.wallet.conftest import WalletEnvironment
 
-            yield SimulatorsAndWallets(
-                simulators=[NodeForTest(service=service) for service in simulators],
-                wallets=[WalletEnvironment(service=service) for service in wallets_services],
-                bt=bt_tools[0],
-            )
+            # TODO: does this belong here?
+            async with contextlib.AsyncExitStack() as exit_stack:
+                wallets: List[WalletEnvironment] = []
+                for service in wallets_services:
+                    assert service.rpc_server is not None
+
+                    rpc_client = await exit_stack.enter_async_context(
+                        WalletRpcClient.create_as_context(
+                            self_hostname=service.self_hostname,
+                            port=service.rpc_server.listen_port,
+                            root_path=service.root_path,
+                            net_config=service.config,
+                        ),
+                    )
+                    wallets.append(WalletEnvironment(service=service, rpc_client=rpc_client))
+
+                yield SimulatorsAndWallets(
+                    simulators=[NodeForTest(service=service) for service in simulators],
+                    wallets=wallets,
+                    bt=bt_tools[0],
+                )
 
 
 @asynccontextmanager

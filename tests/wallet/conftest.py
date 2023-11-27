@@ -65,10 +65,10 @@ class WalletEnvironment:
     __match_args__: ClassVar[Tuple[str, ...]] = ()
 
     service: Service[WalletNode, WalletNodeAPI]
+    rpc_client: WalletRpcClient
     # TODO: added the default, but should think through implementing it etc.  `.create()`?
     wallet_states: Dict[uint32, WalletState] = field(default_factory=dict)
     # TODO: put this in the protocol?
-    maybe_rpc_client: Optional[WalletRpcClient] = None
     wallet_aliases: Dict[str, int] = field(default_factory=dict)
 
     @property
@@ -85,11 +85,6 @@ class WalletEnvironment:
     def rpc_server(self) -> RpcServer:
         assert self.service.rpc_server is not None
         return self.service.rpc_server
-
-    @property
-    def rpc_client(self) -> WalletRpcClient:
-        assert self.maybe_rpc_client is not None
-        return self.maybe_rpc_client
 
     @property
     def peer_api(self) -> WalletNodeAPI:
@@ -437,7 +432,7 @@ async def wallet_environments(
                 [
                     WalletEnvironment(
                         service=service,
-                        maybe_rpc_client=rpc_client,
+                        rpc_client=rpc_client,
                         wallet_states={uint32(1): wallet_state},
                     )
                     for service, rpc_client, wallet_state in zip(wallet_services, rpc_clients, wallet_states)
