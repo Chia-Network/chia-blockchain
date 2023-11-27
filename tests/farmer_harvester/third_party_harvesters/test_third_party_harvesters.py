@@ -115,9 +115,8 @@ async def test_harvester_receive_source_signing_data(
         assert len(request.messages) > 0
         assert len(request.messages) == len(request.message_data)
 
-        for i in range(len(request.messages)):
-            hash = request.messages[i]
-            src = request.message_data[i]
+        for hash, src in zip(request.messages, request.message_data):
+            assert hash
             assert src
 
             data: Optional[Streamable] = None

@@ -864,6 +864,9 @@ class Farmer:
                 self.log.info(f"Fee threshold passed for challenge '{challenge_str}': {fee_quality}/{fee_threshold}")
             else:
                 self.log.warning(f"Fee threshold failed for challenge '{challenge_str}': {fee_quality}/{fee_threshold}")
+                self.log.warning(
+                    "Harvester took a fee reward that did not belong to it or incorrectly applied fee convention."
+                )
         else:
             self.log.warning(
                 f"No fee information given by harvester for challenge '{challenge_str}'. "
