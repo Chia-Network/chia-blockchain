@@ -98,7 +98,6 @@ class WalletEnvironment:
     def wallet_state_manager(self) -> WalletStateManager:
         return self.service._node.wallet_state_manager
 
-    # TODO: probably call this .main
     @property
     def xch_wallet(self) -> Wallet:
         return self.service._node.wallet_state_manager.main_wallet
