@@ -151,7 +151,7 @@ def tx_endpoint(push: bool = False, merge_spends: bool = True) -> Callable[[RpcE
 
             new_txs: List[TransactionRecord] = []
             if request.get("sign", self.service.config.get("auto_sign_txs", True)):
-                new_txs = await self.service.wallet_state_manager.sign_transactions(
+                new_txs, _ = await self.service.wallet_state_manager.sign_transactions(
                     tx_records, response.get("signing_responses", []), "signing_responses" in response
                 )
                 response["transactions"] = [

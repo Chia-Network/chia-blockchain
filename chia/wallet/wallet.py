@@ -575,7 +575,7 @@ class Wallet:
                 sk_lookup[derive_child_pk_unhardened.get_fingerprint()] = derive_child_sk_unhardened
 
         for sum_hint in signing_instructions.key_hints.sum_hints:
-            final_sk: PrivateKey = PrivateKey.from_bytes(bytes(32))
+            final_sk_int: int = 0
             for fingerprint in sum_hint.fingerprints:
                 fingerprint_as_int = int.from_bytes(fingerprint, "big")
                 if fingerprint_as_int not in pk_lookup:
@@ -587,11 +587,10 @@ class Wallet:
                     else:
                         break
                 else:
-                    final_sk = PrivateKey.aggregate([final_sk, sk_lookup[fingerprint_as_int]])
+                    final_sk_int += int.from_bytes(bytes(sk_lookup[fingerprint_as_int]), "big")
             else:  # Only do this if we don't break
-                secret_exponent = int.from_bytes(bytes(final_sk), "big")
                 synthetic_secret_exponent = (
-                    secret_exponent + int.from_bytes(sum_hint.synthetic_offset, "big")
+                    final_sk_int + int.from_bytes(sum_hint.synthetic_offset, "big")
                 ) % GROUP_ORDER
                 blob = synthetic_secret_exponent.to_bytes(32, "big")
                 synthetic_sk = PrivateKey.from_bytes(blob)
