@@ -9,7 +9,7 @@ import pytest
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.simulator.setup_nodes import SimulatorsAndWallets, SimulatorsAndWalletsServices
+from chia.simulator.setup_nodes import OldSimulatorsAndWallets, SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -84,7 +84,7 @@ puzzle_hash_0 = bytes32(32 * b"0")
 )
 @pytest.mark.anyio
 async def test_dao_creation(
-    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+    self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
     num_blocks = 1
     full_nodes, wallets, _ = three_wallet_nodes
@@ -270,7 +270,7 @@ async def test_dao_creation(
 )
 @pytest.mark.anyio
 async def test_dao_funding(
-    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+    self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
     num_blocks = 1
     full_nodes, wallets, _ = three_wallet_nodes
@@ -444,7 +444,7 @@ async def test_dao_funding(
 )
 @pytest.mark.anyio
 async def test_dao_proposals(
-    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+    self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
     """
     Test a set of proposals covering:
@@ -976,7 +976,7 @@ async def test_dao_proposals(
 )
 @pytest.mark.anyio
 async def test_dao_proposal_partial_vote(
-    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+    self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
     num_blocks = 1
     full_nodes, wallets, _ = three_wallet_nodes
@@ -2580,7 +2580,7 @@ async def test_dao_complex_spends(
 )
 @pytest.mark.anyio
 async def test_dao_concurrency(
-    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+    self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
     num_blocks = 3
     full_nodes, wallets, _ = three_wallet_nodes
@@ -3026,7 +3026,7 @@ async def test_dao_cat_exits(
 )
 @pytest.mark.anyio
 async def test_dao_reorgs(
-    self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
     num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
@@ -3292,7 +3292,7 @@ async def test_dao_reorgs(
 )
 @pytest.mark.anyio
 async def test_dao_votes(
-    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+    self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
     num_blocks = 1
     full_nodes, wallets, _ = three_wallet_nodes

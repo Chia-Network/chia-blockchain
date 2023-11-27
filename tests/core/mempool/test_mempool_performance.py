@@ -4,7 +4,7 @@ from typing import List
 
 import pytest
 
-from chia.simulator.setup_nodes import SimulatorsAndWallets
+from chia.simulator.setup_nodes import OldSimulatorsAndWallets
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
@@ -28,7 +28,7 @@ async def wallet_balance_at_least(wallet_node: WalletNode, balance: uint128) -> 
 @pytest.mark.limit_consensus_modes(reason="benchmark")
 @pytest.mark.anyio
 async def test_mempool_update_performance(
-    wallet_nodes_mempool_perf: SimulatorsAndWallets,
+    wallet_nodes_mempool_perf: OldSimulatorsAndWallets,
     default_400_blocks: List[FullBlock],
     self_hostname: str,
     benchmark_runner: BenchmarkRunner,

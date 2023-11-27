@@ -8,7 +8,7 @@ import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.simulator.setup_nodes import SimulatorsAndWallets
+from chia.simulator.setup_nodes import OldSimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -42,7 +42,7 @@ class TestDIDWallet:
     )
     @pytest.mark.anyio
     async def test_creation_from_coin_spend(
-        self, self_hostname, two_nodes_two_wallets_with_same_keys: SimulatorsAndWallets, trusted
+        self, self_hostname, two_nodes_two_wallets_with_same_keys: OldSimulatorsAndWallets, trusted
     ):
         """
         Verify that DIDWallet.create_new_did_wallet_from_coin_spend() is called after Singleton creation on

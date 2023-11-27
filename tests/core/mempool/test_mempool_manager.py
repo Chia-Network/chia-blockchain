@@ -24,7 +24,7 @@ from chia.full_node.mempool_manager import (
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.setup_nodes import SimulatorsAndWallets
+from chia.simulator.setup_nodes import OldSimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -1401,7 +1401,9 @@ async def test_bundle_coin_spends() -> None:
 
 
 @pytest.mark.anyio
-async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsAndWallets, self_hostname: str) -> None:
+async def test_identical_spend_aggregation_e2e(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str
+) -> None:
     def get_sb_names_by_coin_id(
         full_node_api: FullNodeSimulator,
         spent_coin_id: bytes32,

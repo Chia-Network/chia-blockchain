@@ -14,7 +14,7 @@ from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinStateUpdate, RespondToCoinUpdates, RespondToPhUpdates
 from chia.server.outbound_message import NodeType
-from chia.simulator.setup_nodes import SimulatorsAndWallets
+from chia.simulator.setup_nodes import OldSimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
@@ -545,7 +545,7 @@ class TestSimpleSyncProtocol:
 
     @pytest.mark.anyio
     async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
-        self, simulator_and_wallet: SimulatorsAndWallets, self_hostname: str
+        self, simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str
     ) -> None:
         [full_node_api], [[_, wallet_server]], bt = simulator_and_wallet
         full_node_server = full_node_api.full_node.server

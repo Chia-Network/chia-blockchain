@@ -5,7 +5,7 @@ import logging
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AsyncIterator, Dict, List, Optional, Tuple, Union
+from typing import AsyncIterator, Dict, List, Optional, Protocol, Tuple, TypeVar, Union
 
 import anyio
 
@@ -19,6 +19,10 @@ from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
+from chia.rpc.full_node_rpc_api import FullNodeRpcApi
+from chia.rpc.rpc_server import RpcServer, RpcServiceProtocol
+from chia.rpc.wallet_rpc_api import WalletRpcApi
+from chia.server.api_protocol import ApiProtocol
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
@@ -44,10 +48,12 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from chia.wallet.wallet_state_manager import WalletStateManager
 
-SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
+OldSimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
 SimulatorsAndWalletsServices = Tuple[
     List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools
 ]
@@ -139,6 +145,119 @@ async def setup_n_nodes(
             yield [node._api for node in nodes]
 
 
+T_Node = TypeVar("T_Node", bound=RpcServiceProtocol)
+T_RpcApi = TypeVar("T_RpcApi", covariant=True)
+T_PeerApi = TypeVar("T_PeerApi", bound=ApiProtocol)
+
+
+@dataclass
+class ServiceForTest(Protocol[T_Node, T_RpcApi, T_PeerApi]):
+    service: Service[T_Node, T_PeerApi]
+
+    # TODO: node doesn't seem right...  but maybe?
+    @property
+    def node(self) -> T_Node:
+        ...
+
+    @property
+    def rpc_api(self) -> T_RpcApi:
+        ...
+
+    @property
+    def rpc_server(self) -> RpcServer:
+        ...
+
+    @property
+    def peer_api(self) -> T_PeerApi:
+        ...
+
+    @property
+    def peer_server(self) -> ChiaServer:
+        ...
+
+
+# TODO: gotta make a naming scheme, or module that we import and use classes from `themodule.Wallet` etc.
+# TODO: some common pattern across all the services?
+@dataclass
+class WalletForTest:
+    service: Service[WalletNode, WalletNodeAPI]
+
+    @property
+    def state(self) -> WalletStateManager:
+        return self.service._node.wallet_state_manager
+
+    # TODO: probably call this .main
+    @property
+    def wallet(self) -> Wallet:
+        return self.service._node.wallet_state_manager.main_wallet
+
+    @property
+    def node(self) -> WalletNode:
+        return self.service._node
+
+    @property
+    def rpc_api(self) -> WalletRpcApi:
+        assert self.service.rpc_server is not None
+        # TODO: hinting...?
+        return self.service.rpc_server.rpc_api  # type: ignore[return-value]
+
+    @property
+    def rpc_server(self) -> RpcServer:
+        assert self.service.rpc_server is not None
+        return self.service.rpc_server
+
+    @property
+    def peer_api(self) -> WalletNodeAPI:
+        return self.service._api
+
+    @property
+    def peer_server(self) -> ChiaServer:
+        return self.service._server
+
+
+@dataclass
+class NodeForTest:
+    service: Service[FullNode, FullNodeSimulator]
+
+    @property
+    def node(self) -> FullNode:
+        return self.service._node
+
+    @property
+    def rpc_api(self) -> FullNodeRpcApi:
+        assert self.service.rpc_server is not None
+        # TODO: hinting...?
+        return self.service.rpc_server.rpc_api  # type: ignore[return-value]
+
+    @property
+    def rpc_server(self) -> RpcServer:
+        assert self.service.rpc_server is not None
+        return self.service.rpc_server
+
+    @property
+    def peer_api(self) -> FullNodeSimulator:
+        return self.service._api
+
+    @property
+    def peer_server(self) -> ChiaServer:
+        return self.service._server
+
+
+@dataclass
+class SimulatorsAndWallets:
+    simulators: List[NodeForTest]
+    wallets: List[WalletForTest]
+    bt: BlockTools
+
+
+def make_old_setup_simulators_and_wallets(new: SimulatorsAndWallets) -> OldSimulatorsAndWallets:
+    return (
+        [simulator.peer_api for simulator in new.simulators],
+        [(wallet.node, wallet.peer_server) for wallet in new.wallets],
+        new.bt,
+    )
+
+
 @asynccontextmanager
 async def setup_simulators_and_wallets(
     simulator_count: int,
@@ -152,7 +271,7 @@ async def setup_simulators_and_wallets(
     db_version: int = 2,
     config_overrides: Optional[Dict[str, int]] = None,
     disable_capabilities: Optional[List[Capability]] = None,
-) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
+) -> AsyncIterator[SimulatorsAndWallets]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         if config_overrides is None:
             config_overrides = {}
@@ -170,15 +289,11 @@ async def setup_simulators_and_wallets(
             config_overrides,
             disable_capabilities,
         ) as (bt_tools, simulators, wallets_services):
-            wallets = []
-            for wallets_servic in wallets_services:
-                wallets.append((wallets_servic._node, wallets_servic._node.server))
-
-            nodes = []
-            for nodes_service in simulators:
-                nodes.append(nodes_service._api)
-
-            yield nodes, wallets, bt_tools[0]
+            yield SimulatorsAndWallets(
+                simulators=[NodeForTest(service=service) for service in simulators],
+                wallets=[WalletForTest(service=service) for service in wallets_services],
+                bt=bt_tools[0],
+            )
 
 
 @asynccontextmanager
