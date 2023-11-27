@@ -81,6 +81,8 @@ class SignatureRequestSourceData(Streamable):
     data: bytes
 
 
+# message_data elements are optional as FoliageTransactionBlock may not always be present in
+# the case of the UnfinishedBlock not being a transaction block.
 @streamable
 @dataclass(frozen=True)
 class RequestSignatures(Streamable):
