@@ -91,8 +91,8 @@ async def test_cat_trades(
     # Setup
     env_maker: WalletEnvironment = wallet_environments.environments[0]
     env_taker: WalletEnvironment = wallet_environments.environments[1]
-    wallet_node_maker = env_maker.wallet_node
-    wallet_node_taker = env_taker.wallet_node
+    wallet_node_maker = env_maker.node
+    wallet_node_taker = env_taker.node
     client_maker = env_maker.rpc_client
     client_taker = env_taker.rpc_client
     wallet_maker = env_maker.xch_wallet

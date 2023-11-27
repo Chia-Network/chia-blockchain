@@ -4,14 +4,18 @@ import json
 import operator
 from contextlib import AsyncExitStack
 from dataclasses import asdict, dataclass, field, replace
-from typing import Any, AsyncIterator, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Tuple, Union, cast
 
 import pytest
 
 from chia.consensus.constants import ConsensusConstants
+from chia.rpc.rpc_server import RpcServer
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.server.server import ChiaServer
+from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
+from chia.simulator.setup_nodes import ServiceForTest, setup_simulators_and_wallets_service
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
@@ -19,6 +23,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
@@ -52,12 +57,56 @@ class WalletStateTransition:
 
 @dataclass
 class WalletEnvironment:
-    wallet_node: WalletNode
-    wallet_state_manager: WalletStateManager
-    xch_wallet: Wallet
-    rpc_client: WalletRpcClient
-    wallet_states: Dict[uint32, WalletState]
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[ServiceForTest[WalletNode, WalletRpcApi, WalletNodeAPI]] = cast(
+            "WalletEnvironment", None
+        )
+
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
+
+    service: Service[WalletNode, WalletNodeAPI]
+    # TODO: added the default, but should think through implementing it etc.  `.create()`?
+    wallet_states: Dict[uint32, WalletState] = field(default_factory=dict)
+    # TODO: put this in the protocol?
+    maybe_rpc_client: Optional[WalletRpcClient] = None
     wallet_aliases: Dict[str, int] = field(default_factory=dict)
+
+    @property
+    def node(self) -> WalletNode:
+        return self.service._node
+
+    @property
+    def rpc_api(self) -> WalletRpcApi:
+        assert self.service.rpc_server is not None
+        # TODO: hinting...?
+        return self.service.rpc_server.rpc_api  # type: ignore[return-value]
+
+    @property
+    def rpc_server(self) -> RpcServer:
+        assert self.service.rpc_server is not None
+        return self.service.rpc_server
+
+    @property
+    def rpc_client(self) -> WalletRpcClient:
+        assert self.maybe_rpc_client is not None
+        return self.maybe_rpc_client
+
+    @property
+    def peer_api(self) -> WalletNodeAPI:
+        return self.service._api
+
+    @property
+    def peer_server(self) -> ChiaServer:
+        return self.service._server
+
+    @property
+    def wallet_state_manager(self) -> WalletStateManager:
+        return self.service._node.wallet_state_manager
+
+    # TODO: probably call this .main
+    @property
+    def xch_wallet(self) -> Wallet:
+        return self.service._node.wallet_state_manager.main_wallet
 
     def dealias_wallet_id(self, wallet_id_or_alias: Union[int, str]) -> uint32:
         """
@@ -96,12 +145,12 @@ class WalletEnvironment:
             wallet_state: WalletState = self.wallet_states[wallet_id]
             wallet_errors: List[str] = []
 
-            assert self.wallet_node.logged_in_fingerprint is not None
+            assert self.node.logged_in_fingerprint is not None
             expected_result: Dict[str, int] = {
                 **wallet_state.balance.to_json_dict(),
                 "wallet_id": wallet_id,
                 "wallet_type": self.wallet_state_manager.wallets[wallet_id].type().value,
-                "fingerprint": self.wallet_node.logged_in_fingerprint,
+                "fingerprint": self.node.logged_in_fingerprint,
                 **(
                     dealiased_additional_balance_info[wallet_id]
                     if wallet_id in dealiased_additional_balance_info
@@ -154,7 +203,7 @@ class WalletEnvironment:
             wallet_id: uint32 = self.dealias_wallet_id(wallet_id_or_alias)
 
             new_values: Dict[str, int] = {}
-            existing_values: Balance = await self.wallet_node.get_balance(wallet_id)
+            existing_values: Balance = await self.node.get_balance(wallet_id)
             if "init" in kwargs and kwargs["init"]:
                 new_values = {k: v for k, v in kwargs.items() if k not in ("set_remainder", "init")}
             elif wallet_id not in self.wallet_states:
@@ -243,7 +292,7 @@ class WalletTestFramework:
         for local_pending_txs, (i, env) in zip(pending_txs, enumerate(self.environments)):
             try:
                 await self.full_node.wait_transaction_records_marked_as_in_mempool(
-                    [tx.name for tx in local_pending_txs], env.wallet_node
+                    [tx.name for tx in local_pending_txs], env.node
                 )
             except TimeoutError:  # pragma: no cover
                 raise ValueError(f"All tx records from env index {i} were not marked correctly with `.is_in_mempool()`")
@@ -251,7 +300,7 @@ class WalletTestFramework:
         # Check balances prior to block
         try:
             for env in self.environments:
-                await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
+                await self.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20)
             for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
                 try:
                     async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
@@ -268,7 +317,7 @@ class WalletTestFramework:
         # Check balances after block
         try:
             for env in self.environments:
-                await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
+                await self.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20)
             for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
                 try:
                     async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
@@ -387,11 +436,9 @@ async def wallet_environments(
                 trusted_full_node,
                 [
                     WalletEnvironment(
-                        service._node,
-                        service._node.wallet_state_manager,
-                        service._node.wallet_state_manager.main_wallet,
-                        rpc_client,
-                        {uint32(1): wallet_state},
+                        service=service,
+                        maybe_rpc_client=rpc_client,
+                        wallet_states={uint32(1): wallet_state},
                     )
                     for service, rpc_client, wallet_state in zip(wallet_services, rpc_clients, wallet_states)
                 ],

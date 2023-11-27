@@ -21,7 +21,6 @@ from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import RpcServer, RpcServiceProtocol
-from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.api_protocol import ApiProtocol
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
@@ -48,10 +47,8 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
-from chia.wallet.wallet_state_manager import WalletStateManager
 
 OldSimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
 SimulatorsAndWalletsServices = Tuple[
@@ -154,6 +151,8 @@ T_PeerApi = TypeVar("T_PeerApi", bound=ApiProtocol)
 class ServiceForTest(Protocol[T_Node, T_RpcApi, T_PeerApi]):
     service: Service[T_Node, T_PeerApi]
 
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
+
     # TODO: node doesn't seem right...  but maybe?
     @property
     def node(self) -> T_Node:
@@ -179,51 +178,13 @@ class ServiceForTest(Protocol[T_Node, T_RpcApi, T_PeerApi]):
 # TODO: gotta make a naming scheme, or module that we import and use classes from `themodule.Wallet` etc.
 # TODO: some common pattern across all the services?
 @dataclass
-class WalletForTest:
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[ServiceForTest[WalletNode, WalletRpcApi, WalletNodeAPI]] = cast("WalletForTest", None)
-
-    service: Service[WalletNode, WalletNodeAPI]
-
-    @property
-    def state(self) -> WalletStateManager:
-        return self.service._node.wallet_state_manager
-
-    # TODO: probably call this .main
-    @property
-    def wallet(self) -> Wallet:
-        return self.service._node.wallet_state_manager.main_wallet
-
-    @property
-    def node(self) -> WalletNode:
-        return self.service._node
-
-    @property
-    def rpc_api(self) -> WalletRpcApi:
-        assert self.service.rpc_server is not None
-        # TODO: hinting...?
-        return self.service.rpc_server.rpc_api  # type: ignore[return-value]
-
-    @property
-    def rpc_server(self) -> RpcServer:
-        assert self.service.rpc_server is not None
-        return self.service.rpc_server
-
-    @property
-    def peer_api(self) -> WalletNodeAPI:
-        return self.service._api
-
-    @property
-    def peer_server(self) -> ChiaServer:
-        return self.service._server
-
-
-@dataclass
 class NodeForTest:
     if TYPE_CHECKING:
         _protocol_check: ClassVar[ServiceForTest[FullNode, FullNodeRpcApi, FullNodeSimulator]] = cast(
             "NodeForTest", None
         )
+
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
 
     service: Service[FullNode, FullNodeSimulator]
 
@@ -251,10 +212,15 @@ class NodeForTest:
         return self.service._server
 
 
+if TYPE_CHECKING:
+    # TODO: https://github.com/Chia-Network/chia-blockchain/pull/16933
+    from tests.wallet.conftest import WalletEnvironment
+
+
 @dataclass
 class SimulatorsAndWallets:
     simulators: List[NodeForTest]
-    wallets: List[WalletForTest]
+    wallets: List[WalletEnvironment]
     bt: BlockTools
 
 
@@ -297,9 +263,12 @@ async def setup_simulators_and_wallets(
             config_overrides,
             disable_capabilities,
         ) as (bt_tools, simulators, wallets_services):
+            # TODO: https://github.com/Chia-Network/chia-blockchain/pull/16933
+            from tests.wallet.conftest import WalletEnvironment
+
             yield SimulatorsAndWallets(
                 simulators=[NodeForTest(service=service) for service in simulators],
-                wallets=[WalletForTest(service=service) for service in wallets_services],
+                wallets=[WalletEnvironment(service=service) for service in wallets_services],
                 bt=bt_tools[0],
             )
 
