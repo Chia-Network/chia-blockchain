@@ -71,7 +71,7 @@ class TestSimulation:
     @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
     @pytest.mark.anyio
     async def test_full_system(self, simulation, extra_node, self_hostname):
-        print(f" ==-== {inspect.currentframe().f_code.co_qualname}() entering")
+        print(f" ==-== {type(self).__name__}{inspect.currentframe().f_code.co_name}() entering")
         try:
             full_system: FullSystem
             bt: BlockTools
@@ -189,10 +189,10 @@ class TestSimulation:
 
             assert blockchain_state_found, "Could not get blockchain state from daemon and node"
         except BaseException as e:
-            print(f" ==-== {inspect.currentframe().f_code.co_qualname}() leaving {e}")
+            print(f" ==-== {type(self).__name__}{inspect.currentframe().f_code.co_name}() leaving {e}")
             raise
         else:
-            print(f" ==-== {inspect.currentframe().f_code.co_qualname}() leaving without exception")
+            print(f" ==-== {type(self).__name__}{inspect.currentframe().f_code.co_name}() leaving without exception")
 
     @pytest.mark.anyio
     async def test_simulator_auto_farm_and_get_coins(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import os
 import pathlib
@@ -42,17 +43,23 @@ class VDFClientProcessMgr:
             self.active_processes.append(proc)
 
     async def kill_processes(self) -> None:
+        print(f" ==-== {type(self).__name__}{inspect.currentframe().f_code.co_name}() entering")
         async with self.lock:
+            print(f" ==-== {type(self).__name__}{inspect.currentframe().f_code.co_name}() inside lock")
             self.stopped = True
             for process in self.active_processes:
                 try:
+                    print(f" ==-== {type(self).__name__}{inspect.currentframe().f_code.co_name}() killing {process}")
                     process.kill()
+                    print(f" ==-== {type(self).__name__}{inspect.currentframe().f_code.co_name}() killing {process} after .kill()")
                     await process.wait()
+                    print(f" ==-== {type(self).__name__}{inspect.currentframe().f_code.co_name}() killing {process} after .wait()")
                     if sys.version_info < (3, 11, 1):
                         # hack to avoid `Event loop is closed` errors (fixed in python 3.11.1)
                         # https://github.com/python/cpython/issues/88050
                         process._transport.close()  # type: ignore [attr-defined]
-                except (ProcessLookupError, AttributeError):
+                except (ProcessLookupError, AttributeError) as e:
+                    print(f" ==-== {type(self).__name__}{inspect.currentframe().f_code.co_name}() killing {process} exception {e}")
                     pass
             self.active_processes.clear()
 
@@ -88,8 +95,11 @@ async def spawn_process(
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
             resolved = await resolve(host, prefer_ipv6=prefer_ipv6)
-            proc = await asyncio.create_subprocess_shell(
-                f"{basename} {resolved} {port} {counter}",
+            proc = await asyncio.create_subprocess_exec(
+                os.fspath(basename),
+                str(resolved),
+                str(port),
+                str(counter),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env={"PATH": os.fspath(dirname)},
