@@ -4,7 +4,7 @@ import contextlib
 import json
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.units import units
@@ -28,6 +28,21 @@ async def get_client(
         yield client, _
 
 
+def run_with_error_handling(client: DataLayerRpcClient, method_name: str) -> Callable:
+    async def wrapper(*args, **kwargs) -> Optional[Any]:
+        try:
+            command_func = getattr(client, method_name)
+            res = await command_func(*args, **kwargs)
+            print(json.dumps(res, indent=4, sort_keys=True))
+        except ValueError as e:
+            json_str = json.dumps(e.args[0], indent=4)
+            json_str = json_str.replace("\\n", "\n").replace("\\\\", "\\").replace("\\\n", "\n")
+            print(f"An error occurred: {json_str}")
+            return None
+
+    return wrapper
+
+
 async def wallet_log_in_cmd(
     rpc_port: Optional[int],
     fingerprint: int,
@@ -45,8 +60,8 @@ async def create_data_store_cmd(
 ) -> None:
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.create_data_store(fee=final_fee, verbose=verbose)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        create_data_store = run_with_error_handling(client, "create_data_store")
+        await create_data_store(fee=final_fee, verbose=verbose)
 
 
 async def get_value_cmd(
@@ -60,8 +75,8 @@ async def get_value_cmd(
     key_bytes = hexstr_to_bytes(key)
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_value(store_id=store_id_bytes, key=key_bytes, root_hash=root_hash_bytes)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        get_value = run_with_error_handling(client, "get_value")
+        await get_value(store_id=store_id_bytes, key=key_bytes, root_hash=root_hash_bytes)
 
 
 async def update_data_store_cmd(
@@ -74,8 +89,8 @@ async def update_data_store_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.update_data_store(store_id=store_id_bytes, changelist=changelist, fee=final_fee)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        update_data_store = run_with_error_handling(client, "update_data_store")
+        await update_data_store(store_id=store_id_bytes, changelist=changelist, fee=final_fee)
 
 
 async def get_keys_cmd(
@@ -87,8 +102,8 @@ async def get_keys_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_keys(store_id=store_id_bytes, root_hash=root_hash_bytes)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        get_keys = run_with_error_handling(client, "get_keys")
+        await get_keys(store_id=store_id_bytes, root_hash=root_hash_bytes)
 
 
 async def get_keys_values_cmd(
@@ -100,8 +115,8 @@ async def get_keys_values_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_keys_values(store_id=store_id_bytes, root_hash=root_hash_bytes)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        get_keys_values = run_with_error_handling(client, "get_keys_values")
+        await get_keys_values(store_id=store_id_bytes, root_hash=root_hash_bytes)
 
 
 async def get_root_cmd(
@@ -111,8 +126,8 @@ async def get_root_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_root(store_id=store_id_bytes)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        get_root = run_with_error_handling(client, "get_root")
+        await get_root(store_id=store_id_bytes)
 
 
 async def subscribe_cmd(
@@ -123,8 +138,8 @@ async def subscribe_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.subscribe(store_id=store_id_bytes, urls=urls)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        subscribe = run_with_error_handling(client, "subscribe")
+        await subscribe(store_id=store_id_bytes, urls=urls)
 
 
 async def unsubscribe_cmd(
@@ -135,8 +150,8 @@ async def unsubscribe_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.unsubscribe(store_id=store_id_bytes, retain=retain)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        unsubscribe = run_with_error_handling(client, "unsubscribe")
+        await unsubscribe(store_id=store_id_bytes, retain=retain)
 
 
 async def remove_subscriptions_cmd(
@@ -147,8 +162,8 @@ async def remove_subscriptions_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.remove_subscriptions(store_id=store_id_bytes, urls=urls)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        remove_subscriptions = run_with_error_handling(client, "remove_subscriptions")
+        await remove_subscriptions(store_id=store_id_bytes, urls=urls)
 
 
 async def get_kv_diff_cmd(
@@ -162,8 +177,8 @@ async def get_kv_diff_cmd(
     hash_1_bytes = bytes32.from_hexstr(hash_1)
     hash_2_bytes = bytes32.from_hexstr(hash_2)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_kv_diff(store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        get_kv_diff = run_with_error_handling(client, "get_kv_diff")
+        await get_kv_diff(store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes)
 
 
 async def get_root_history_cmd(
@@ -173,8 +188,8 @@ async def get_root_history_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_root_history(store_id=store_id_bytes)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        get_root_history = run_with_error_handling(client, "get_root_history")
+        await get_root_history(store_id=store_id_bytes)
 
 
 async def add_missing_files_cmd(
@@ -185,12 +200,12 @@ async def add_missing_files_cmd(
     fingerprint: Optional[int],
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.add_missing_files(
+        add_missing_files = run_with_error_handling(client, "add_missing_files")
+        await add_missing_files(
             store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]),
             overwrite=overwrite,
             foldername=foldername,
         )
-        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def add_mirror_cmd(
@@ -204,13 +219,13 @@ async def add_mirror_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.add_mirror(
+        add_mirror = run_with_error_handling(client, "add_mirror")
+        await add_mirror(
             store_id=store_id_bytes,
             urls=urls,
             amount=amount,
             fee=final_fee,
         )
-        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def delete_mirror_cmd(
@@ -222,11 +237,8 @@ async def delete_mirror_cmd(
     coin_id_bytes = bytes32.from_hexstr(coin_id)
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.delete_mirror(
-            coin_id=coin_id_bytes,
-            fee=final_fee,
-        )
-        print(json.dumps(res, indent=4, sort_keys=True))
+        delete_mirror = run_with_error_handling(client, "delete_mirror")
+        await delete_mirror(coin_id=coin_id_bytes, fee=final_fee)
 
 
 async def get_mirrors_cmd(
@@ -236,8 +248,8 @@ async def get_mirrors_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_mirrors(store_id=store_id_bytes)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        get_mirrors = run_with_error_handling(client, "get_mirrors")
+        await get_mirrors(store_id=store_id_bytes)
 
 
 async def get_subscriptions_cmd(
@@ -245,8 +257,8 @@ async def get_subscriptions_cmd(
     fingerprint: Optional[int],
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_subscriptions()
-        print(json.dumps(res, indent=4, sort_keys=True))
+        get_subscriptions = run_with_error_handling(client, "get_subscriptions")
+        await get_subscriptions()
 
 
 async def get_owned_stores_cmd(
@@ -254,8 +266,8 @@ async def get_owned_stores_cmd(
     fingerprint: Optional[int],
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_owned_stores()
-        print(json.dumps(res, indent=4, sort_keys=True))
+        get_owned_stores = run_with_error_handling(client, "get_owned_stores")
+        await get_owned_stores()
 
 
 async def get_sync_status_cmd(
@@ -265,14 +277,14 @@ async def get_sync_status_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_sync_status(store_id=store_id_bytes)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        get_sync_status = run_with_error_handling(client, "get_sync_status")
+        await get_sync_status(store_id=store_id_bytes)
 
 
 async def check_plugins_cmd(rpc_port: Optional[int]) -> None:
     async with get_client(rpc_port=rpc_port) as (client, _):
-        res = await client.check_plugins()
-        print(json.dumps(res, indent=4, sort_keys=True))
+        check_plugins = run_with_error_handling(client, "check_plugins")
+        await check_plugins()
 
 
 async def clear_pending_roots(
