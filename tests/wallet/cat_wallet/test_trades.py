@@ -1993,7 +1993,13 @@ class TestCATTrades:
         assert success is True
         assert trade_make_2 is not None
 
-        agg_offer = Offer.aggregate([Offer.from_bytes(trade_make_1.offer), Offer.from_bytes(trade_make_2.offer)])
+        [offer_1], signing_response_1 = await wallet_node_maker.wallet_state_manager.sign_offers(
+            [Offer.from_bytes(trade_make_1.offer)]
+        )
+        [offer_2], signing_response_2 = await wallet_node_maker.wallet_state_manager.sign_offers(
+            [Offer.from_bytes(trade_make_2.offer)]
+        )
+        agg_offer = Offer.aggregate([offer_1, offer_2])
 
         peer = wallet_node_taker.get_full_node_peer()
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
@@ -2004,7 +2010,10 @@ class TestCATTrades:
         assert trade_take is not None
         assert tx_records is not None
 
-        await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
+        tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+            tx_records,
+            additional_signing_responses=[*signing_response_1, *signing_response_2],
+        )
         await full_node.process_transaction_records(records=tx_records)
         await full_node.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=60)
 
