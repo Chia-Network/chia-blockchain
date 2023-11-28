@@ -11,6 +11,7 @@ from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.util.streamable import ConversionError, Streamable, streamable
 from chia.wallet.conditions import AggSigMe
@@ -22,6 +23,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 from chia.wallet.util.signer_protocol import (
     KeyHints,
     PathHint,
+    SignedTransaction,
     SigningInstructions,
     SigningResponse,
     SigningTarget,
@@ -31,9 +33,10 @@ from chia.wallet.util.signer_protocol import (
     UnsignedTransaction,
     clvm_serialization_mode,
 )
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.wallet.conftest import WalletTestFramework
+from tests.wallet.conftest import WalletStateTransition, WalletTestFramework
 
 
 def test_signing_serialization() -> None:
@@ -157,17 +160,12 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
 
     # Test first that we can properly examine and sign a regular transaction
-    puzzle: Program = await wallet.get_puzzle(new=False)
-    puzzle_hash: bytes32 = puzzle.get_tree_hash()
+    [coin] = await wallet.select_coins(uint64(0), DEFAULT_COIN_SELECTION_CONFIG)
+    puzzle: Program = await wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
     delegated_puzzle: Program = Program.to(None)
     delegated_puzzle_hash: bytes32 = delegated_puzzle.get_tree_hash()
     solution: Program = Program.to([None, None, None])
 
-    coin: ConsensusCoin = ConsensusCoin(
-        bytes32([0] * 32),
-        puzzle_hash,
-        uint64(0),
-    )
     coin_spend: CoinSpend = CoinSpend(
         coin,
         puzzle,
@@ -176,7 +174,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
 
     derivation_record: Optional[
         DerivationRecord
-    ] = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
+    ] = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
     assert derivation_record is not None
     pubkey: G1Element = derivation_record.pubkey
     synthetic_pubkey: G1Element = G1Element.from_bytes(puzzle.uncurry()[1].at("f").atom)
@@ -268,3 +266,36 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     )
     assert len(signing_responses_2) == 1
     assert signing_responses_2 == signing_responses
+
+    signed_txs: List[SignedTransaction] = (
+        await wallet_rpc.apply_signatures(
+            spends=[Spend.from_coin_spend(coin_spend)], signing_responses=signing_responses
+        )
+    ).signed_transactions
+    await wallet_rpc.submit_transactions(signed_transactions=signed_txs)
+    await wallet_environments.full_node.wait_bundle_ids_in_mempool(
+        [
+            SpendBundle(
+                [spend.as_coin_spend() for tx in signed_txs for spend in tx.transaction_info.spends],
+                G2Element.from_bytes(signing_responses[0].signature),
+            ).name()
+        ]
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                # We haven't submitted a TransactionRecord so the wallet won't know about this until confirmed
+                pre_block_balance_updates={},
+                post_block_balance_updates={
+                    1: {
+                        "confirmed_wallet_balance": -1 * coin.amount,
+                        "unconfirmed_wallet_balance": -1 * coin.amount,
+                        "spendable_balance": -1 * coin.amount,
+                        "max_send_amount": -1 * coin.amount,
+                        "unspent_coin_count": -1,
+                    },
+                },
+            ),
+        ]
+    )
