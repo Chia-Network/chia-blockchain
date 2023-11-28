@@ -16,7 +16,6 @@ from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import get_signage_point
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -33,6 +32,7 @@ from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.conftest import ConsensusMode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.rpc import validate_get_routes
+from tests.util.time_out_assert import time_out_assert
 
 
 @pytest.mark.anyio

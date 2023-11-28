@@ -1341,10 +1341,12 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
 @pytest.mark.anyio
 @pytest.mark.parametrize("new_height_step", [1, 2, -1])
 async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(new_height_step: int) -> None:
-    # This test makes sure all mempool items that spend a coin (in different ways)
-    # that shows up as spent in a block, get removed properly.
-    # NOTE: this test's parameter allows us to cover both the optimized and
-    # the reorg code paths
+    """
+    This test makes sure all mempool items that spend a coin (in different ways)
+    that shows up as spent in a block, get removed properly.
+    NOTE: `new_height_step` parameter allows us to cover both the optimized and
+    the reorg code paths
+    """
     new_height = uint32(TEST_HEIGHT + new_height_step)
     coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, 100)
     coin_id = coin.name()
@@ -1367,9 +1369,7 @@ async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(ne
     # Mark this coin as spent
     test_coin_records = {coin_id: CoinRecord(coin, uint32(0), TEST_HEIGHT, False, uint64(0))}
     block_record = create_test_block_record(height=new_height)
-    npc_result = NPCResult(None, make_test_conds(spend_ids=[coin_id]), uint64(0))
-    assert npc_result.conds is not None
-    await mempool_manager.new_peak(block_record, [bytes32(s.coin_id) for s in npc_result.conds.spends])
+    await mempool_manager.new_peak(block_record, [coin_id])
     # As the coin was a spend in all the mempool items we had, nothing should be left now
     assert len(mempool_manager.mempool.get_items_by_coin_id(coin_id)) == 0
     assert mempool_manager.mempool.size() == 0

@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import concurrent
+import contextlib
 import dataclasses
 import logging
 import multiprocessing
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Tuple, cast
 
 from typing_extensions import Literal
 
@@ -127,6 +128,15 @@ class Harvester:
             raise
 
         self.plot_sync_sender = Sender(self.plot_manager, self._mode)
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        await self._start()
+        try:
+            yield
+        finally:
+            self._close()
+            await self._await_closed()
 
     async def _start(self) -> None:
         self._refresh_lock = asyncio.Lock()
