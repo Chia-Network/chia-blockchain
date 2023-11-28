@@ -28,8 +28,8 @@ async def get_client(
         yield client, _
 
 
-def run_with_error_handling(client: DataLayerRpcClient, method_name: str) -> Callable:
-    async def wrapper(*args, **kwargs) -> Optional[Any]:
+def run_with_error_handling(client: DataLayerRpcClient, method_name: str) -> Callable[..., None]:
+    async def wrapper(*args: Any, **kwargs: Any) -> None:
         try:
             command_func = getattr(client, method_name)
             res = await command_func(*args, **kwargs)
@@ -38,7 +38,6 @@ def run_with_error_handling(client: DataLayerRpcClient, method_name: str) -> Cal
             json_str = json.dumps(e.args[0], indent=4)
             json_str = json_str.replace("\\n", "\n").replace("\\\\", "\\").replace("\\\n", "\n")
             print(f"An error occurred: {json_str}")
-            return None
 
     return wrapper
 
