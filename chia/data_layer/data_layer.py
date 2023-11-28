@@ -513,9 +513,17 @@ class DataLayer:
                     self.log.error(f"get_downloader could not get response: {type(e).__name__}: {e}")
         return None
 
-    async def clean_old_full_tree_files(
-        self, foldername: Path, tree_id: bytes32, full_tree_first_publish_generation: int
-    ) -> None:
+    async def clean_old_full_tree_files(self, tree_id: bytes32) -> None:
+        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
+        if singleton_record is None:
+            return
+        await self._update_confirmation_status(tree_id=tree_id)
+
+        root = await self.data_store.get_tree_root(tree_id=tree_id)
+        latest_generation = root.generation
+        full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
+        foldername = self.server_files_location
+
         for generation in range(full_tree_first_publish_generation - 1, 0, -1):
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=generation)
             file_exists = delete_full_file_if_exists(foldername, tree_id, root)
@@ -576,11 +584,6 @@ class DataLayer:
                                     self.log.error(
                                         f"Failed to upload files to, will retry later: {uploader} : {res_json}"
                                     )
-                await self.clean_old_full_tree_files(
-                    self.server_files_location,
-                    tree_id,
-                    full_tree_first_publish_generation,
-                )
             except Exception as e:
                 self.log.error(f"Exception uploading files, will retry later: tree id {tree_id}")
                 self.log.debug(f"Failed to upload files, cleaning local files: {type(e).__name__}: {e}")
@@ -740,6 +743,7 @@ class DataLayer:
                         await self.update_subscriptions_from_wallet(subscription.tree_id)
                         await self.fetch_and_validate(subscription.tree_id)
                         await self.upload_files(subscription.tree_id)
+                        await self.clean_old_full_tree_files(subscription.tree_id)
                     except Exception as e:
                         self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
 
