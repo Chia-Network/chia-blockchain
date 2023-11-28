@@ -5,12 +5,9 @@ import logging
 import os
 import pathlib
 import signal
-import sys
 import time
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
 from types import FrameType
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pkg_resources
 
@@ -21,69 +18,38 @@ from chia.util.misc import SignalHandlers
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
+active_processes: List = []
+stopped = False
+
 log = logging.getLogger(__name__)
 
 
-@dataclass
-class VDFClientProcessMgr:
-    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    stopped: bool = False
-    active_processes: List[asyncio.subprocess.Process] = field(default_factory=list)
-
-    async def remove_process(self, proc: asyncio.subprocess.Process) -> None:
-        async with self.lock:
+async def kill_processes(lock: asyncio.Lock):
+    global stopped
+    global active_processes
+    async with lock:
+        stopped = True
+        for process in active_processes:
             try:
-                self.active_processes.remove(proc)
-            except ValueError:
+                process.kill()
+            except ProcessLookupError:
                 pass
-
-    async def add_process(self, proc: asyncio.subprocess.Process) -> None:
-        async with self.lock:
-            self.active_processes.append(proc)
-
-    async def kill_processes(self) -> None:
-        async with self.lock:
-            self.stopped = True
-            for process in self.active_processes:
-                try:
-                    process.kill()
-                    await process.wait()
-                    if sys.version_info < (3, 11, 1):
-                        # hack to avoid `Event loop is closed` errors (fixed in python 3.11.1)
-                        # https://github.com/python/cpython/issues/88050
-                        process._transport.close()  # type: ignore [attr-defined]
-                except (ProcessLookupError, AttributeError):
-                    pass
-            self.active_processes.clear()
-
-    @asynccontextmanager
-    async def manage_proc(self, proc: asyncio.subprocess.Process) -> AsyncIterator[None]:
-        await self.add_process(proc)
-        try:
-            yield
-        finally:
-            await self.remove_process(proc)
 
 
 def find_vdf_client() -> pathlib.Path:
     p = pathlib.Path(pkg_resources.get_distribution("chiavdf").location) / "vdf_client"
     if p.is_file():
         return p
-    raise FileNotFoundError("Cannot find vdf_client binary. Is Timelord installed? See install-timelord.sh")
+    raise FileNotFoundError("can't find vdf_client binary")
 
 
-async def spawn_process(
-    host: str,
-    port: int,
-    counter: int,
-    process_mgr: VDFClientProcessMgr,
-    *,
-    prefer_ipv6: bool,
-) -> None:
+async def spawn_process(host: str, port: int, counter: int, lock: asyncio.Lock, *, prefer_ipv6: bool):
+    global stopped
+    global active_processes
     path_to_vdf_client = find_vdf_client()
     first_10_seconds = True
     start_time = time.time()
-    while not process_mgr.stopped:
+    while not stopped:
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
@@ -97,22 +63,25 @@ async def spawn_process(
         except Exception as e:
             log.warning(f"Exception while spawning process {counter}: {(e)}")
             continue
-
-        async with process_mgr.manage_proc(proc):
-            stdout, stderr = await proc.communicate()
-            if stdout:
-                log.info(f"VDF client {counter}: {stdout.decode().rstrip()}")
-            if stderr:
-                if first_10_seconds:
-                    if time.time() - start_time > 10:
-                        first_10_seconds = False
-                else:
-                    log.error(f"VDF client {counter}: {stderr.decode().rstrip()}")
-
+        async with lock:
+            active_processes.append(proc)
+        stdout, stderr = await proc.communicate()
+        if stdout:
+            log.info(f"VDF client {counter}: {stdout.decode().rstrip()}")
+        if stderr:
+            if first_10_seconds:
+                if time.time() - start_time > 10:
+                    first_10_seconds = False
+            else:
+                log.error(f"VDF client {counter}: {stderr.decode().rstrip()}")
+        log.info(f"Process number {counter} ended.")
+        async with lock:
+            if proc in active_processes:
+                active_processes.remove(proc)
         await asyncio.sleep(0.1)
 
 
-async def spawn_all_processes(config: Dict, net_config: Dict, process_mgr: VDFClientProcessMgr):
+async def spawn_all_processes(config: Dict, net_config: Dict, lock: asyncio.Lock):
     await asyncio.sleep(5)
     hostname = net_config["self_hostname"] if "host" not in config else config["host"]
     port = config["port"]
@@ -121,33 +90,27 @@ async def spawn_all_processes(config: Dict, net_config: Dict, process_mgr: VDFCl
         log.info("Process_count set to 0, stopping TLauncher.")
         return
     awaitables = [
-        spawn_process(
-            hostname,
-            port,
-            i,
-            process_mgr,
-            prefer_ipv6=net_config.get("prefer_ipv6", False),
-        )
+        spawn_process(hostname, port, i, lock, prefer_ipv6=net_config.get("prefer_ipv6", False))
         for i in range(process_count)
     ]
     await asyncio.gather(*awaitables)
 
 
 async def async_main(config: Dict[str, Any], net_config: Dict[str, Any]) -> None:
-    process_mgr = VDFClientProcessMgr()
+    lock = asyncio.Lock()
 
     async def stop(
         signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
-        await process_mgr.kill_processes()
+        await kill_processes(lock)
 
     async with SignalHandlers.manage() as signal_handlers:
         signal_handlers.setup_async_signal_handler(handler=stop)
 
         try:
-            await spawn_all_processes(config, net_config, process_mgr)
+            await spawn_all_processes(config, net_config, lock)
         finally:
             log.info("Launcher fully closed.")
 
