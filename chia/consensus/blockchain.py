@@ -471,6 +471,7 @@ class Blockchain(BlockchainInterface):
                 self.remove_block_record(header_hash)
             except KeyError:
                 pass
+            fork_info.rollback(header_hash, -1 if previous_peak_height is None else previous_peak_height)
             self.block_store.rollback_cache_block(header_hash)
             self._peak_height = previous_peak_height
             log.error(

@@ -118,6 +118,13 @@ class ForkInfo:
             assert coin.name() not in self.additions_since_fork
             self.additions_since_fork[coin.name()] = ForkAdd(coin, uint32(block.height), uint64(timestamp), None, True)
 
+    def rollback(self, header_hash: bytes32, height: int) -> None:
+        assert height <= self.peak_height
+        self.peak_height = height
+        self.peak_hash = header_hash
+        self.additions_since_fork = {k: v for k, v in self.additions_since_fork.items() if v.confirmed_height <= height}
+        self.removals_since_fork = {k: v for k, v in self.removals_since_fork.items() if v.height <= height}
+
 
 async def validate_block_body(
     constants: ConsensusConstants,
