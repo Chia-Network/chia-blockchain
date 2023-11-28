@@ -11,6 +11,7 @@ new_signage_point_json: Dict[str, Any] = {
     "sub_slot_iters": 8265724497259558930,
     "signage_point_index": 194,
     "peak_height": 1,
+    "sp_source_data": None,
 }
 
 declare_proof_of_space_json: Dict[str, Any] = {
@@ -41,6 +42,8 @@ request_signed_values_json: Dict[str, Any] = {
     "quality_string": "0x60649de258d2221ca6a178476861b13f8c394a992eaeae1f1159c32bbf703b45",
     "foliage_block_data_hash": "0x9da23e943246bb99ebeb5e773e35a445bbbfdbd45dd9b9df169eeca80880a53b",
     "foliage_transaction_block_hash": "0x5d76a4bcb3524d862e92317410583daf50828927885444c6d62ca8843635c46f",
+    "foliage_block_data": None,
+    "foliage_transaction_block_data": None,
 }
 
 farming_info_json: Dict[str, Any] = {
@@ -2042,6 +2045,9 @@ new_proof_of_space_json: Dict[str, Any] = {
         "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
     },
     "signage_point_index": 160,
+    "include_source_signature_data": False,
+    "farmer_reward_address_override": None,
+    "fee_info": None,
 }
 
 request_signatures_json: Dict[str, Any] = {
@@ -2049,6 +2055,7 @@ request_signatures_json: Dict[str, Any] = {
     "challenge_hash": "0xb5fa873020fa8b959d89bc2ffc5797501bf870ac8b30437cd6b4fcdea0812789",
     "sp_hash": "0xbccb7744192771f3a7abca2bce6ea03ed53f1f0d991c13bd2711ce32a2fb3777",
     "messages": ["0x3fc12545f50a9f0621371688f60b29eff05805dd51b42c90063f5e3c6698fc75"],
+    "message_data": None,
 }
 
 respond_signatures_json: Dict[str, Any] = {
@@ -2063,6 +2070,8 @@ respond_signatures_json: Dict[str, Any] = {
             "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         ]
     ],
+    "include_source_signature_data": False,
+    "farmer_reward_address_override": None,
 }
 
 plot_json: Dict[str, Any] = {
