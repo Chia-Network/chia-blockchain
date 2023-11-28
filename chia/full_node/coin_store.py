@@ -29,7 +29,6 @@ class CoinStore:
     """
 
     db_wrapper: DBWrapper2
-    coins_added_at_height_cache: LRUCache[uint32, List[CoinRecord]]
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
@@ -174,10 +173,6 @@ class CoinStore:
         return coins
 
     async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
-        coins_added: Optional[List[CoinRecord]] = self.coins_added_at_height_cache.get(height)
-        if coins_added is not None:
-            return coins_added
-
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -189,7 +184,6 @@ class CoinStore:
                 for row in rows:
                     coin = self.row_to_coin(row)
                     coins.append(CoinRecord(coin, row[0], row[1], row[2], row[6]))
-                self.coins_added_at_height_cache.put(height, coins)
                 return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
@@ -446,7 +440,6 @@ class CoinStore:
                         coin_changes[record.name] = record
 
             await conn.execute("UPDATE coin_record SET spent_index=0 WHERE spent_index>?", (block_index,))
-        self.coins_added_at_height_cache = LRUCache(self.coins_added_at_height_cache.capacity)
         return list(coin_changes.values())
 
     # Store CoinRecord in DB
