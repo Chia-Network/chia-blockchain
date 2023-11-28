@@ -1428,3 +1428,185 @@ async def test_benchmark_batch_insert_speed(
             tree_id=tree_id,
             changelist=batch,
         )
+
+
+@pytest.mark.anyio
+async def test_delete_store_data(raw_data_store: DataStore) -> None:
+    tree_id = bytes32(b"\0" * 32)
+    tree_id_2 = bytes32(b"\0" * 31 + b"\1")
+    await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+    await raw_data_store.create_tree(tree_id=tree_id_2, status=Status.COMMITTED)
+    total_keys = 4
+    keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
+    batch1 = [
+        {"action": "insert", "key": keys[0], "value": keys[0]},
+        {"action": "insert", "key": keys[1], "value": keys[1]},
+    ]
+    batch2 = batch1.copy()
+    batch1.append({"action": "insert", "key": keys[2], "value": keys[2]})
+    batch2.append({"action": "insert", "key": keys[3], "value": keys[3]})
+    assert batch1 != batch2
+    await raw_data_store.insert_batch(tree_id, batch1, status=Status.COMMITTED)
+    await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
+    keys_values_before = await raw_data_store.get_keys_values(tree_id_2)
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+        kv_nodes_before = {}
+        for node in nodes:
+            if node["key"] is not None:
+                kv_nodes_before[node["key"]] = node["value"]
+    assert [kv_nodes_before[key] for key in keys] == keys
+    await raw_data_store.delete_store_data(tree_id)
+    # Deleting from `node` table doesn't alter other stores.
+    keys_values_after = await raw_data_store.get_keys_values(tree_id_2)
+    assert keys_values_before == keys_values_after
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+        kv_nodes_after = {}
+        for node in nodes:
+            if node["key"] is not None:
+                kv_nodes_after[node["key"]] = node["value"]
+    for i in range(total_keys):
+        if i != 2:
+            assert kv_nodes_after[keys[i]] == keys[i]
+        else:
+            # `keys[2]` was only present in the first store.
+            assert keys[i] not in kv_nodes_after
+    assert not await raw_data_store.tree_id_exists(tree_id)
+    await raw_data_store.delete_store_data(tree_id_2)
+    async with raw_data_store.db_wrapper.reader() as reader:
+        async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
+            row_count = await cursor.fetchone()
+            assert row_count is not None
+            assert row_count[0] == 0
+    assert not await raw_data_store.tree_id_exists(tree_id_2)
+
+
+@pytest.mark.anyio
+async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> None:
+    # Make sure inserting and deleting the same data works
+    for repetition in range(2):
+        num_stores = 50
+        total_keys = 150
+        keys_deleted_per_store = 3
+        tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
+        for tree_id in tree_ids:
+            await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+        original_keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
+        batches = []
+        for i in range(num_stores):
+            batch = [
+                {"action": "insert", "key": key, "value": key} for key in original_keys[i * keys_deleted_per_store :]
+            ]
+            batches.append(batch)
+
+        for tree_id, batch in zip(tree_ids, batches):
+            await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
+
+        for tree_index in range(num_stores):
+            async with raw_data_store.db_wrapper.reader() as reader:
+                result = await reader.execute("SELECT * FROM node")
+                nodes = await result.fetchall()
+
+            keys = {node["key"] for node in nodes if node["key"] is not None}
+            assert len(keys) == total_keys - tree_index * keys_deleted_per_store
+            keys_after_index = set(original_keys[tree_index * keys_deleted_per_store :])
+            keys_before_index = set(original_keys[: tree_index * keys_deleted_per_store])
+            assert keys_after_index.issubset(keys)
+            assert keys.isdisjoint(keys_before_index)
+            await raw_data_store.delete_store_data(tree_ids[tree_index])
+
+        async with raw_data_store.db_wrapper.reader() as reader:
+            async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
+                row_count = await cursor.fetchone()
+                assert row_count is not None
+                assert row_count[0] == 0
+
+
+@pytest.mark.parametrize("common_keys_count", [1, 250, 499])
+@pytest.mark.anyio
+async def test_delete_store_data_with_common_values(raw_data_store: DataStore, common_keys_count: int) -> None:
+    tree_id_1 = bytes32(b"\x00" * 31 + b"\x01")
+    tree_id_2 = bytes32(b"\x00" * 31 + b"\x02")
+
+    await raw_data_store.create_tree(tree_id=tree_id_1, status=Status.COMMITTED)
+    await raw_data_store.create_tree(tree_id=tree_id_2, status=Status.COMMITTED)
+
+    key_offset = 1000
+    total_keys_per_store = 500
+    assert common_keys_count < key_offset
+    common_keys = {key.to_bytes(4, byteorder="big") for key in range(common_keys_count)}
+    unique_keys_1 = {
+        (key + key_offset).to_bytes(4, byteorder="big") for key in range(total_keys_per_store - common_keys_count)
+    }
+    unique_keys_2 = {
+        (key + (2 * key_offset)).to_bytes(4, byteorder="big") for key in range(total_keys_per_store - common_keys_count)
+    }
+
+    batch1 = [{"action": "insert", "key": key, "value": key} for key in common_keys.union(unique_keys_1)]
+    batch2 = [{"action": "insert", "key": key, "value": key} for key in common_keys.union(unique_keys_2)]
+
+    await raw_data_store.insert_batch(tree_id_1, batch1, status=Status.COMMITTED)
+    await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
+
+    await raw_data_store.delete_store_data(tree_id_1)
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+
+    keys = {node["key"] for node in nodes if node["key"] is not None}
+    # Since one store got all its keys deleted, we're left only with the keys of the other store.
+    assert len(keys) == total_keys_per_store
+    assert keys.intersection(unique_keys_1) == set()
+    assert keys.symmetric_difference(common_keys.union(unique_keys_2)) == set()
+
+
+@pytest.mark.anyio
+async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStore) -> None:
+    num_stores = 5
+    total_keys = 15
+    tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
+    for tree_id in tree_ids:
+        await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+    original_keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
+    batches = []
+    keys_per_pending_root = 2
+
+    for i in range(num_stores - 1):
+        start_index = i * keys_per_pending_root
+        end_index = (i + 1) * keys_per_pending_root
+        batch = [{"action": "insert", "key": key, "value": key} for key in original_keys[start_index:end_index]]
+        batches.append(batch)
+    for tree_id, batch in zip(tree_ids, batches):
+        await raw_data_store.insert_batch(tree_id, batch, status=Status.PENDING)
+
+    tree_id = tree_ids[-1]
+    batch = [{"action": "insert", "key": key, "value": key} for key in original_keys]
+    await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
+
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+
+    keys = {node["key"] for node in nodes if node["key"] is not None}
+    assert keys == set(original_keys)
+
+    await raw_data_store.delete_store_data(tree_id)
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+
+    keys = {node["key"] for node in nodes if node["key"] is not None}
+    assert keys == set(original_keys[: (num_stores - 1) * keys_per_pending_root])
+
+    for index in range(num_stores - 1):
+        tree_id = tree_ids[index]
+        root = await raw_data_store.get_pending_root(tree_id)
+        assert root is not None
+        await raw_data_store.change_root_status(root, Status.COMMITTED)
+        kv = await raw_data_store.get_keys_values(tree_id=tree_id)
+        start_index = index * keys_per_pending_root
+        end_index = (index + 1) * keys_per_pending_root
+        assert {pair.key for pair in kv} == set(original_keys[start_index:end_index])
