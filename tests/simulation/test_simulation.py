@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import inspect
 import json
 from typing import AsyncIterator, List, Tuple
 
@@ -70,120 +71,128 @@ class TestSimulation:
     @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
     @pytest.mark.anyio
     async def test_full_system(self, simulation, extra_node, self_hostname):
-        full_system: FullSystem
-        bt: BlockTools
-        full_system, bt = simulation
-        server1: ChiaServer = full_system.node_1._server
-        blocks_to_farm = 3  # farming 3 blocks is sufficient to test the system
-        node1_port: uint16 = server1.get_port()
-        node2_port: uint16 = full_system.node_2._server.get_port()
+        print(f" ==-== {inspect.currentframe().f_code.co_qualname}() entering")
+        try:
+            full_system: FullSystem
+            bt: BlockTools
+            full_system, bt = simulation
+            server1: ChiaServer = full_system.node_1._server
+            blocks_to_farm = 3  # farming 3 blocks is sufficient to test the system
+            node1_port: uint16 = server1.get_port()
+            node2_port: uint16 = full_system.node_2._server.get_port()
 
-        # Connect node 1 to node 2
-        connected: bool = await server1.start_client(PeerInfo(self_hostname, node2_port))
-        assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
-        assert len(server1.get_connections(NodeType.FULL_NODE, outbound=True)) >= 1
+            # Connect node 1 to node 2
+            connected: bool = await server1.start_client(PeerInfo(self_hostname, node2_port))
+            assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
+            assert len(server1.get_connections(NodeType.FULL_NODE, outbound=True)) >= 1
 
-        # Connect node3 to node1 and node2 - checks come later
-        node3: FullNodeAPI = extra_node
-        server3: ChiaServer = node3.full_node.server
-        connected = await server3.start_client(PeerInfo(self_hostname, node1_port))
-        assert connected, f"server3 was unable to connect to node1 on port {node1_port}"
-        connected = await server3.start_client(PeerInfo(self_hostname, node2_port))
-        assert connected, f"server3 was unable to connect to node2 on port {node2_port}"
-        assert len(server3.get_connections(NodeType.FULL_NODE, outbound=True)) >= 2
+            # Connect node3 to node1 and node2 - checks come later
+            node3: FullNodeAPI = extra_node
+            server3: ChiaServer = node3.full_node.server
+            connected = await server3.start_client(PeerInfo(self_hostname, node1_port))
+            assert connected, f"server3 was unable to connect to node1 on port {node1_port}"
+            connected = await server3.start_client(PeerInfo(self_hostname, node2_port))
+            assert connected, f"server3 was unable to connect to node2 on port {node2_port}"
+            assert len(server3.get_connections(NodeType.FULL_NODE, outbound=True)) >= 2
 
-        # wait up to 25 mins for node2 to sync the chain to blocks_to_farm height
-        await time_out_assert(1500, node_height_at_least, True, full_system.node_2._api, blocks_to_farm)
+            # wait up to 25 mins for node2 to sync the chain to blocks_to_farm height
+            await time_out_assert(1500, node_height_at_least, True, full_system.node_2._api, blocks_to_farm)
 
-        async def has_compact(node1: FullNode, node2: FullNode) -> bool:
-            peak_height_1 = node1.blockchain.get_peak_height()
-            if peak_height_1 is None:
-                return False
-            headers_1 = await node1.blockchain.get_header_blocks_in_range(0, peak_height_1 - blocks_to_farm - 1)
-            peak_height_2 = node2.blockchain.get_peak_height()
-            if peak_height_2 is None:
-                return False
-            headers_2 = await node2.blockchain.get_header_blocks_in_range(0, peak_height_2 - blocks_to_farm - 1)
-            # Commented to speed up.
-            # cc_eos = [False, False]
-            # icc_eos = [False, False]
-            # cc_sp = [False, False]
-            # cc_ip = [False, False]
-            has_compact = [False, False]
-            for index, headers in enumerate([headers_1, headers_2]):
-                for header in headers.values():
-                    for sub_slot in header.finished_sub_slots:
-                        if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
-                            # cc_eos[index] = True
-                            has_compact[index] = True
+            async def has_compact(node1: FullNode, node2: FullNode) -> bool:
+                peak_height_1 = node1.blockchain.get_peak_height()
+                if peak_height_1 is None:
+                    return False
+                headers_1 = await node1.blockchain.get_header_blocks_in_range(0, peak_height_1 - blocks_to_farm - 1)
+                peak_height_2 = node2.blockchain.get_peak_height()
+                if peak_height_2 is None:
+                    return False
+                headers_2 = await node2.blockchain.get_header_blocks_in_range(0, peak_height_2 - blocks_to_farm - 1)
+                # Commented to speed up.
+                # cc_eos = [False, False]
+                # icc_eos = [False, False]
+                # cc_sp = [False, False]
+                # cc_ip = [False, False]
+                has_compact = [False, False]
+                for index, headers in enumerate([headers_1, headers_2]):
+                    for header in headers.values():
+                        for sub_slot in header.finished_sub_slots:
+                            if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
+                                # cc_eos[index] = True
+                                has_compact[index] = True
+                            if (
+                                sub_slot.proofs.infused_challenge_chain_slot_proof is not None
+                                and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                            ):
+                                # icc_eos[index] = True
+                                has_compact[index] = True
                         if (
-                            sub_slot.proofs.infused_challenge_chain_slot_proof is not None
-                            and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                            header.challenge_chain_sp_proof is not None
+                            and header.challenge_chain_sp_proof.normalized_to_identity
                         ):
-                            # icc_eos[index] = True
+                            # cc_sp[index] = True
                             has_compact[index] = True
-                    if (
-                        header.challenge_chain_sp_proof is not None
-                        and header.challenge_chain_sp_proof.normalized_to_identity
-                    ):
-                        # cc_sp[index] = True
-                        has_compact[index] = True
-                    if header.challenge_chain_ip_proof.normalized_to_identity:
-                        # cc_ip[index] = True
-                        has_compact[index] = True
+                        if header.challenge_chain_ip_proof.normalized_to_identity:
+                            # cc_ip[index] = True
+                            has_compact[index] = True
 
-            # return (
-            #     cc_eos == [True, True] and icc_eos == [True, True] and cc_sp == [True, True] and cc_ip == [True, True]
-            # )
-            return has_compact == [True, True]
+                # return (
+                #     cc_eos == [True, True] and icc_eos == [True, True]
+                #     and cc_sp == [True, True] and cc_ip == [True, True]
+                # )
+                return has_compact == [True, True]
 
-        await time_out_assert(600, has_compact, True, full_system.node_1._node, full_system.node_2._node)
+            await time_out_assert(600, has_compact, True, full_system.node_1._node, full_system.node_2._node)
 
-        # check node3 has synced to the proper height
-        peak_height: uint32 = max(
-            full_system.node_1._node.blockchain.get_peak_height(),
-            full_system.node_2._node.blockchain.get_peak_height(),
-        )
-        # wait up to 10 mins for node3 to sync
-        await time_out_assert(600, node_height_at_least, True, node3, peak_height)
-
-        # Connect node_1 up to the daemon
-        full_system.node_1.rpc_server.connect_to_daemon(
-            self_hostname=self_hostname, daemon_port=full_system.daemon.daemon_port
-        )
-
-        async def verify_daemon_connection(daemon: WebSocketServer, service: str) -> bool:
-            return len(daemon.connections.get(service, set())) >= 1
-
-        await time_out_assert(60, verify_daemon_connection, True, full_system.daemon, "chia_full_node")
-
-        async with aiohttp.ClientSession() as session:
-            ws = await session.ws_connect(
-                f"wss://127.0.0.1:{full_system.daemon.daemon_port}",
-                autoclose=True,
-                autoping=True,
-                ssl_context=bt.get_daemon_ssl_context(),
-                max_msg_size=100 * 1024 * 1024,
+            # check node3 has synced to the proper height
+            peak_height: uint32 = max(
+                full_system.node_1._node.blockchain.get_peak_height(),
+                full_system.node_2._node.blockchain.get_peak_height(),
             )
-            service_name = "test_service_name"
-            payload = create_payload("register_service", {"service": service_name}, service_name, "daemon")
-            await ws.send_str(payload)
-            await ws.receive()
-            await time_out_assert(10, verify_daemon_connection, True, full_system.daemon, service_name)
+            # wait up to 10 mins for node3 to sync
+            await time_out_assert(600, node_height_at_least, True, node3, peak_height)
 
-            blockchain_state_found = False
-            payload = create_payload("get_blockchain_state", {}, service_name, "chia_full_node")
-            await ws.send_str(payload)
-            msg = await ws.receive()
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                message = msg.data.strip()
-                message = json.loads(message)
-                if message["command"] == "get_blockchain_state":
-                    blockchain_state_found = True
+            # Connect node_1 up to the daemon
+            full_system.node_1.rpc_server.connect_to_daemon(
+                self_hostname=self_hostname, daemon_port=full_system.daemon.daemon_port
+            )
 
-            await ws.close()
+            async def verify_daemon_connection(daemon: WebSocketServer, service: str) -> bool:
+                return len(daemon.connections.get(service, set())) >= 1
 
-        assert blockchain_state_found, "Could not get blockchain state from daemon and node"
+            await time_out_assert(60, verify_daemon_connection, True, full_system.daemon, "chia_full_node")
+
+            async with aiohttp.ClientSession() as session:
+                ws = await session.ws_connect(
+                    f"wss://127.0.0.1:{full_system.daemon.daemon_port}",
+                    autoclose=True,
+                    autoping=True,
+                    ssl_context=bt.get_daemon_ssl_context(),
+                    max_msg_size=100 * 1024 * 1024,
+                )
+                service_name = "test_service_name"
+                payload = create_payload("register_service", {"service": service_name}, service_name, "daemon")
+                await ws.send_str(payload)
+                await ws.receive()
+                await time_out_assert(10, verify_daemon_connection, True, full_system.daemon, service_name)
+
+                blockchain_state_found = False
+                payload = create_payload("get_blockchain_state", {}, service_name, "chia_full_node")
+                await ws.send_str(payload)
+                msg = await ws.receive()
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    message = msg.data.strip()
+                    message = json.loads(message)
+                    if message["command"] == "get_blockchain_state":
+                        blockchain_state_found = True
+
+                await ws.close()
+
+            assert blockchain_state_found, "Could not get blockchain state from daemon and node"
+        except BaseException as e:
+            print(f" ==-== {inspect.currentframe().f_code.co_qualname}() leaving {e}")
+            raise
+        else:
+            print(f" ==-== {inspect.currentframe().f_code.co_qualname}() leaving without exception")
 
     @pytest.mark.anyio
     async def test_simulator_auto_farm_and_get_coins(
