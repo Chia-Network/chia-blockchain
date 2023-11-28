@@ -4,7 +4,7 @@ import contextlib
 import json
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Awaitable, AsyncIterator, Callable, Dict, List, Optional, Tuple
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.units import units
