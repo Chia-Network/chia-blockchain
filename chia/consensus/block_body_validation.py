@@ -408,6 +408,7 @@ async def validate_block_body(
             # and coins created after fork (additions_since_fork)
             if rem in fork_info.removals_since_fork:
                 # This coin was spent in the fork
+                log.error(f"Err.DOUBLE_SPEND_IN_FORK {fork_info.removals_since_fork[rem]}")
                 return Err.DOUBLE_SPEND_IN_FORK, None
             removals_from_db.append(rem)
 
@@ -440,7 +441,7 @@ async def validate_block_body(
         # This coin is not in the current heaviest chain, so it must be in the fork
         if rem not in fork_info.additions_since_fork:
             # Check for spending a coin that does not exist in this fork
-            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
+            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} fork_info: {fork_info}")
             return Err.UNKNOWN_UNSPENT, None
         addition: ForkAdd = fork_info.additions_since_fork[rem]
         new_coin_record: CoinRecord = CoinRecord(
