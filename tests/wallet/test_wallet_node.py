@@ -541,7 +541,7 @@ async def test_transaction_send_cache(
 
     # Generate the transaction
     [tx] = await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), DEFAULT_TX_CONFIG)
-    await wallet.wallet_state_manager.add_pending_transactions([tx])
+    [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
     # Make sure it is sent to the peer
     await wallet_node._resend_queue()

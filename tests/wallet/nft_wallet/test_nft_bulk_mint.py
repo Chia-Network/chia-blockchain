@@ -118,7 +118,7 @@ async def test_nft_mint_from_did(
     sb = tx_records[0].spend_bundle
     assert sb is not None
 
-    bundle = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb.coin_spends)
+    bundle, _ = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb.coin_spends)
     await api_0.push_tx({"spend_bundle": bytes(bundle).hex()})
 
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, bundle.name())
@@ -618,7 +618,7 @@ async def test_nft_mint_from_did_multiple_xch(
     sb = tx_records[0].spend_bundle
     assert sb is not None
 
-    bundle = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb.coin_spends)
+    bundle, _ = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb.coin_spends)
     await api_0.push_tx({"spend_bundle": bytes(bundle).hex()})
 
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, bundle.name())
@@ -720,7 +720,7 @@ async def test_nft_mint_from_xch(
     sb = tx_records[0].spend_bundle
     assert sb is not None
 
-    bundle = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb.coin_spends)
+    bundle, _ = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb.coin_spends)
     await api_0.push_tx({"spend_bundle": bytes(bundle).hex()})
 
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, bundle.name())
@@ -1036,7 +1036,7 @@ async def test_nft_mint_from_xch_multiple_xch(
     sb = tx_records[0].spend_bundle
     assert sb is not None
 
-    bundle = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb)
+    bundle, _ = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb.coin_spends)
     await api_0.push_tx({"spend_bundle": bytes(bundle).hex()})
 
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, bundle.name())

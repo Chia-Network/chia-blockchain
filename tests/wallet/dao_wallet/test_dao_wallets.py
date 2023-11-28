@@ -2767,7 +2767,7 @@ async def test_dao_concurrency(
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=30)
 
     txs = await dao_cat_wallet_2.enter_dao_cat_voting_mode(dao_cat_1_bal, DEFAULT_TX_CONFIG)
-    await wallet_2.wallet_state_manager.add_pending_transactions(txs)
+    txs = await wallet_2.wallet_state_manager.add_pending_transactions(txs)
     await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_2, timeout=60)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
