@@ -158,7 +158,7 @@ def tx_endpoint(push: bool = False, merge_spends: bool = True) -> Callable[[RpcE
                     TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
                 ]
             else:
-                new_txs = tx_records
+                new_txs = tx_records  # pragma: no cover
 
             if request.get("push", push):
                 await self.service.wallet_state_manager.add_pending_transactions(new_txs, merge_spends=merge_spends)

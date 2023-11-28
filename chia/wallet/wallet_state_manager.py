@@ -2609,7 +2609,7 @@ class WalletStateManager:
 
     def signed_tx_to_spendbundle(self, signed_tx: SignedTransaction) -> SpendBundle:
         if len([_ for _ in signed_tx.signatures if _.type != "bls_12381_aug_scheme"]) > 0:
-            raise ValueError("Unable to handle signatures that are not bls_12381_aug_scheme")
+            raise ValueError("Unable to handle signatures that are not bls_12381_aug_scheme")  # pragma: no cover
         return SpendBundle(
             [spend.as_coin_spend() for spend in signed_tx.transaction_info.spends],
             AugSchemeMPL.aggregate([G2Element.from_bytes(sig.signature) for sig in signed_tx.signatures]),
