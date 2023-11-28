@@ -34,7 +34,7 @@ class CoinStore:
     async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
         if db_wrapper.db_version != 2:
             raise RuntimeError(f"CoinStore does not support database schema v{db_wrapper.db_version}")
-        self = CoinStore(db_wrapper, LRUCache(100))
+        self = CoinStore(db_wrapper)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating coin store tables and indexes.")
