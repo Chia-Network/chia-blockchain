@@ -9,7 +9,7 @@ dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.0.0",
     "boto3==1.29.4",  # AWS S3 for DL s3 plugin
-    "chiavdf==1.1.0",  # timelord and vdf verification
+    "chiavdf==1.1.1",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
     "chiapos==2.0.3",  # proof of space
     "clvm==0.9.8",
