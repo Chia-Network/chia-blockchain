@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import operator
 from contextlib import AsyncExitStack
 from dataclasses import replace
 from typing import Any, AsyncIterator, Dict, List
@@ -15,8 +14,6 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
 from tests.environments import WalletEnvironment, WalletState, WalletTestFramework
 from tests.util.setup_nodes import setup_simulators_and_wallets_service
-
-OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
 
 
 @pytest.fixture(scope="function", params=[True, False])

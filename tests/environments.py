@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import operator
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Protocol, Tuple, TypeVar, Union, cast
 
@@ -22,7 +23,8 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.wallet.conftest import OPP_DICT
+
+OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
 
 
 class BalanceCheckingError(Exception):
