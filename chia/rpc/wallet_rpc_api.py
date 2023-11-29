@@ -900,7 +900,7 @@ class WalletRpcApi:
                         raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
 
                     owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-                        self.service.wallet_state_manager.private_key, uint32(max_pwi + 1)
+                        self.service.wallet_state_manager.get_master_private_key(), uint32(max_pwi + 1)
                     )
                     owner_pk: G1Element = owner_sk.get_g1()
 

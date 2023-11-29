@@ -469,7 +469,8 @@ class PoolWallet:
     async def _get_owner_key_cache(self) -> Tuple[PrivateKey, uint32]:
         if self._owner_sk_and_index is None:
             self._owner_sk_and_index = find_owner_sk(
-                [self.wallet_state_manager.private_key], (await self.get_current_state()).current.owner_pubkey
+                [self.wallet_state_manager.get_master_private_key()],
+                (await self.get_current_state()).current.owner_pubkey,
             )
         assert self._owner_sk_and_index is not None
         return self._owner_sk_and_index

@@ -529,18 +529,19 @@ class Wallet:
             index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
                 puzzle_hash_for_synthetic_public_key(pk_parsed)
             )
-        root_pubkey: bytes = self.wallet_state_manager.private_key.get_g1().get_fingerprint().to_bytes(4, "big")
+        root_pubkey: bytes = self.wallet_state_manager.root_pubkey.get_fingerprint().to_bytes(4, "big")
         if index is None:
             # Pool wallet may have a secret key here
-            for pool_wallet_index in range(MAX_POOL_WALLETS):
-                try_owner_sk = master_sk_to_singleton_owner_sk(
-                    self.wallet_state_manager.private_key, uint32(pool_wallet_index)
-                )
-                if try_owner_sk.get_g1() == pk_parsed:
-                    return PathHint(
-                        root_pubkey,
-                        [uint64(12381), uint64(8444), uint64(5), uint64(pool_wallet_index)],
+            if self.wallet_state_manager.private_key is not None:
+                for pool_wallet_index in range(MAX_POOL_WALLETS):
+                    try_owner_sk = master_sk_to_singleton_owner_sk(
+                        self.wallet_state_manager.private_key, uint32(pool_wallet_index)
                     )
+                    if try_owner_sk.get_g1() == pk_parsed:
+                        return PathHint(
+                            root_pubkey,
+                            [uint64(12381), uint64(8444), uint64(5), uint64(pool_wallet_index)],
+                        )
             return None
         return PathHint(
             root_pubkey,
@@ -550,9 +551,11 @@ class Wallet:
     async def execute_signing_instructions(
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
     ) -> List[SigningResponse]:
-        root_pubkey: G1Element = self.wallet_state_manager.private_key.get_g1()
+        root_pubkey: G1Element = self.wallet_state_manager.root_pubkey
         pk_lookup: Dict[int, G1Element] = {root_pubkey.get_fingerprint(): root_pubkey}
-        sk_lookup: Dict[int, PrivateKey] = {root_pubkey.get_fingerprint(): self.wallet_state_manager.private_key}
+        sk_lookup: Dict[int, PrivateKey] = {
+            root_pubkey.get_fingerprint(): self.wallet_state_manager.get_master_private_key()
+        }
 
         for path_hint in signing_instructions.key_hints.path_hints:
             if int.from_bytes(path_hint.root_fingerprint, "big") != root_pubkey.get_fingerprint():
@@ -562,8 +565,10 @@ class Wallet:
                     continue
             else:
                 path = [int(step) for step in path_hint.path]
-                derive_child_sk = _derive_path(self.wallet_state_manager.private_key, path)
-                derive_child_sk_unhardened = _derive_path_unhardened(self.wallet_state_manager.private_key, path)
+                derive_child_sk = _derive_path(self.wallet_state_manager.get_master_private_key(), path)
+                derive_child_sk_unhardened = _derive_path_unhardened(
+                    self.wallet_state_manager.get_master_private_key(), path
+                )
                 derive_child_pk = derive_child_sk.get_g1()
                 derive_child_pk_unhardened = derive_child_sk_unhardened.get_g1()
                 pk_lookup[derive_child_pk.get_fingerprint()] = derive_child_pk

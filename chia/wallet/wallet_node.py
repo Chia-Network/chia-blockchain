@@ -220,11 +220,16 @@ class WalletNode:
         for cache in self.peer_caches.values():
             cache.clear_after_height(reorg_height)
 
-    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: bool = False
+    ) -> Optional[Union[PrivateKey, G1Element]]:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
-            # Returns first private key if fingerprint is None
-            key = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+            # Returns first key if fingerprint is None
+            if private:
+                key: Optional[Union[PrivateKey, G1Element]] = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+            else:
+                key = await keychain_proxy.get_public_key_for_fingerprint(fingerprint)
         except KeychainIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
             return None
@@ -241,18 +246,22 @@ class WalletNode:
 
         return key
 
-    async def get_private_key(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+    async def get_key(self, fingerprint: Optional[int], private: bool = True) -> Optional[Union[PrivateKey, G1Element]]:
         """
         Attempt to get the private key for the given fingerprint. If the fingerprint is None,
         get_key_for_fingerprint() will return the first private key. Similarly, if a key isn't
         returned for the provided fingerprint, the first key will be returned.
         """
-        key: Optional[PrivateKey] = await self.get_key_for_fingerprint(fingerprint)
+        key: Optional[Union[PrivateKey, G1Element]] = await self.get_key_for_fingerprint(fingerprint, private=private)
 
         if key is None and fingerprint is not None:
-            key = await self.get_key_for_fingerprint(None)
+            key = await self.get_key_for_fingerprint(None, private=private)
             if key is not None:
-                self.log.info(f"Using first key found (fingerprint: {key.get_g1().get_fingerprint()})")
+                if isinstance(key, PrivateKey):
+                    fp = key.get_g1().get_fingerprint()
+                else:
+                    fp = key.get_fingerprint()
+                self.log.info(f"Using first key found (fingerprint: {fp})")
 
         return key
 
@@ -378,13 +387,19 @@ class WalletNode:
         multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
         self.synced_peers = set()
-        private_key = await self.get_private_key(fingerprint)
+        private_key = await self.get_key(fingerprint, private=True)
         if private_key is None:
+            public_key = await self.get_key(fingerprint, private=False)
+        else:
+            assert isinstance(private_key, PrivateKey)
+            public_key = private_key.get_g1()
+        if public_key is None:
             self.log_out()
             return False
+        assert isinstance(public_key, G1Element)
         # override with private key fetched in case it's different from what was passed
         if fingerprint is None:
-            fingerprint = private_key.get_g1().get_fingerprint()
+            fingerprint = public_key.get_fingerprint()
         if self.config.get("enable_profiler", False):
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
@@ -399,6 +414,7 @@ class WalletNode:
         if self.config.get("reset_sync_for_fingerprint") == fingerprint:
             await self.reset_sync_db(path, fingerprint)
 
+        assert private_key is None or isinstance(private_key, PrivateKey)
         self._wallet_state_manager = await WalletStateManager.create(
             private_key,
             self.config,
@@ -407,6 +423,7 @@ class WalletNode:
             self.server,
             self.root_path,
             self,
+            public_key,
         )
 
         if self.state_changed_callback is not None:
@@ -420,7 +437,7 @@ class WalletNode:
         self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
 
         self.sync_event = asyncio.Event()
-        self.log_in(private_key)
+        self.log_in(fingerprint)
         self.wallet_state_manager.state_changed("sync_changed")
 
         # Populate the balance caches for all wallets
@@ -620,8 +637,8 @@ class WalletNode:
                 if peer is not None:
                     await peer.close(9999)
 
-    def log_in(self, sk: PrivateKey) -> None:
-        self.logged_in_fingerprint = sk.get_g1().get_fingerprint()
+    def log_in(self, fingerprint: int) -> None:
+        self.logged_in_fingerprint = fingerprint
         self.logged_in = True
         self.log.info(f"Wallet is logged in using key with fingerprint: {self.logged_in_fingerprint}")
         try:

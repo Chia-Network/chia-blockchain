@@ -20,6 +20,7 @@ from chia.util.ints import uint32
 from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.wallet.derive_keys import (
+    master_pk_to_wallet_pk_unhardened,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
@@ -155,27 +156,44 @@ def show_keys(
 
     def process_key_data(key_data: KeyData) -> Dict[str, Any]:
         key: Dict[str, Any] = {}
-        sk = key_data.private_key
+        sk = key_data.private_key if key_data.secrets is not None else None
         if key_data.label is not None:
             key["label"] = key_data.label
 
         key["fingerprint"] = key_data.fingerprint
         key["master_pk"] = bytes(key_data.public_key).hex()
-        key["farmer_pk"] = bytes(master_sk_to_farmer_sk(sk).get_g1()).hex()
-        key["pool_pk"] = bytes(master_sk_to_pool_sk(sk).get_g1()).hex()
-        first_wallet_sk: PrivateKey = (
-            master_sk_to_wallet_sk(sk, uint32(0))
-            if non_observer_derivation
-            else master_sk_to_wallet_sk_unhardened(sk, uint32(0))
-        )
-        wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_sk.get_g1()), prefix)
-        key["wallet_address"] = wallet_address
+        if sk is not None:
+            key["farmer_pk"] = bytes(master_sk_to_farmer_sk(sk).get_g1()).hex()
+            key["pool_pk"] = bytes(master_sk_to_pool_sk(sk).get_g1()).hex()
+        else:
+            key["farmer_pk"] = "N/A"
+            key["pool_pk"] = "N/A"
+
+        if non_observer_derivation:
+            if sk is None:
+                first_wallet_pk: Optional[G1Element] = None
+            else:
+                first_wallet_pk = master_sk_to_wallet_sk(sk, uint32(0)).get_g1()
+        else:
+            first_wallet_pk = master_pk_to_wallet_pk_unhardened(key_data.public_key, uint32(0))
+
+        if first_wallet_pk is not None:
+            wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_pk), prefix)
+            key["wallet_address"] = wallet_address
+        else:
+            key["wallet_address"] = "N/A"
+
         key["non_observer"] = non_observer_derivation
 
-        if show_mnemonic:
+        if show_mnemonic and sk is not None:
             key["master_sk"] = bytes(sk).hex()
             key["wallet_sk"] = bytes(master_sk_to_wallet_sk(sk, uint32(0))).hex()
             key["mnemonic"] = bytes_to_mnemonic(key_data.entropy)
+        else:
+            key["master_sk"] = "N/A"
+            key["wallet_sk"] = "N/A"
+            key["mnemonic"] = "N/A"
+
         return key
 
     keys = [process_key_data(key) for key in all_keys]

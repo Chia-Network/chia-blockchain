@@ -27,7 +27,7 @@ from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import _derive_path_unhardened, master_sk_to_wallet_sk_unhardened_intermediate
+from chia.wallet.derive_keys import master_pk_to_wallet_pk_unhardened
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.transaction_record import TransactionRecord
@@ -928,10 +928,9 @@ class TestCATWallet:
 
         # Mint CAT to ourselves, immediately spend it to an unhinted puzzle hash that we have manually added to the DB
         # We should pick up this coin as balance even though it is unhinted because it is "change"
-        intermediate_sk_un = master_sk_to_wallet_sk_unhardened_intermediate(
-            wallet_node_0.wallet_state_manager.private_key
+        pubkey_unhardened = master_pk_to_wallet_pk_unhardened(
+            wallet_node_0.wallet_state_manager.root_pubkey, uint32(100000000)
         )
-        pubkey_unhardened = _derive_path_unhardened(intermediate_sk_un, [100000000]).get_g1()
         inner_puzhash = puzzle_hash_for_pk(pubkey_unhardened)
         puzzlehash_unhardened = construct_cat_puzzle(
             CAT_MOD,
