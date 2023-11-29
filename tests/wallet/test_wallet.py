@@ -26,8 +26,6 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.payment import Payment
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
-from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import TransactionTypeFilter
@@ -1410,14 +1408,7 @@ class TestWalletSimulator:
             if compute_additions(cs) == []:
                 stolen_cs = cs
         # get a legit signature
-        stolen_sb = await sign_coin_spends(
-            [stolen_cs],
-            wallet_node.wallet_state_manager.get_private_key_for_pubkey,
-            wallet_node.wallet_state_manager.get_synthetic_private_key_for_puzzle_hash,
-            wallet_node.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-            wallet_node.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-            [puzzle_hash_for_synthetic_public_key],
-        )
+        stolen_sb, _ = await wallet_node.wallet_state_manager.sign_bundle([stolen_cs])
         now = uint64(int(time.time()))
         add_list = list(stolen_sb.additions())
         rem_list = list(stolen_sb.removals())

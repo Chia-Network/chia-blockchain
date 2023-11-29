@@ -29,11 +29,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import _derive_path_unhardened, master_sk_to_wallet_sk_unhardened_intermediate
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    puzzle_hash_for_pk,
-    puzzle_hash_for_synthetic_public_key,
-)
-from chia.wallet.sign_coin_spends import sign_coin_spends
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
@@ -981,7 +977,7 @@ class TestCATWallet:
             ).get_tree_hash(),
             cat_amount_0,
         )
-        eve_spend = await sign_coin_spends(
+        eve_spend, _ = await wallet_node_0.wallet_state_manager.sign_bundle(
             [
                 CoinSpend(
                     cat_coin,
@@ -1040,11 +1036,6 @@ class TestCATWallet:
                     ),
                 ),
             ],
-            wallet_node_0.wallet_state_manager.get_private_key_for_pubkey,
-            wallet_node_0.wallet_state_manager.get_synthetic_private_key_for_puzzle_hash,
-            wallet_node_0.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-            wallet_node_0.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-            [puzzle_hash_for_synthetic_public_key],
         )
         await client_0.push_tx(eve_spend)
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, eve_spend.name())
