@@ -1268,8 +1268,8 @@ class FullNode:
                 fork_info.fork_height = block.height
                 fork_info.peak_height = block.height
                 fork_info.peak_hash = header_hash
-                fork_info.additions_since_fork == {}
-                fork_info.removals_since_fork == set()
+                fork_info.additions_since_fork = {}
+                fork_info.removals_since_fork = set()
             else:
                 # We have already validated the block, but if it's not part of the
                 # main chain, we still need to re-run it to update the additions and
