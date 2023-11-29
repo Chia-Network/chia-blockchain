@@ -4,7 +4,7 @@ import json
 import pathlib
 import random
 from dataclasses import replace
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
@@ -32,6 +32,7 @@ from chia.util.keychain import (
     mnemonic_from_short_words,
     mnemonic_to_seed,
 )
+from chia.util.observation_root import ObservationRoot
 
 mnemonic = (
     "rapid this oven common drive ribbon bulb urban uncover napkin kitten usage enforce uncle unveil scene "
@@ -469,3 +470,16 @@ async def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool)
         for key_data in keys:
             keychain.delete_key_by_fingerprint(key_data.fingerprint)
             assert keychain.keyring_wrapper.get_label(key_data.fingerprint) is None
+
+
+@pytest.mark.parametrize("key_type", [e.value for e in KeyTypes])
+def test_key_type_support(key_type: str) -> None:
+    """
+    The purpose of this test is to make sure that whenever KeyTypes is updated, all relevant functionality is
+    also updated with it.
+    """
+    generate_test_key_for_key_type: Dict[str, Tuple[int, bytes, ObservationRoot]] = {
+        KeyTypes.G1_ELEMENT.value: (G1Element().get_fingerprint(), bytes(G1Element()), G1Element())
+    }
+    obr_fingerprint, obr_bytes, obr = generate_test_key_for_key_type[key_type]
+    assert KeyData(uint32(obr_fingerprint), obr_bytes, None, None, key_type).observation_root == obr
