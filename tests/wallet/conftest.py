@@ -15,7 +15,6 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.setup_nodes import ServiceForTest, setup_simulators_and_wallets_service
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
@@ -25,6 +24,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_state_manager import WalletStateManager
+from tests.util.setup_nodes import ServiceForTest, setup_simulators_and_wallets_service
 
 OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
 

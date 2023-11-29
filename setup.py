@@ -8,7 +8,7 @@ from setuptools import find_packages, setup
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.0.0",
-    "boto3==1.29.4",  # AWS S3 for DL s3 plugin
+    "boto3==1.33.2",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.1",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
     "chiapos==2.0.3",  # proof of space
@@ -18,11 +18,11 @@ dependencies = [
     "clvm-tools-rs==0.1.39",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.9.0",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
-    "bitstring==4.1.2",  # Binary data management library
+    "bitstring==4.1.3",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
-    "cryptography==41.0.5",  # Python cryptography library for TLS - keyring conflict
+    "cryptography==41.0.7",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.13.1",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==24.3.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0.1",  # Used for config file format
@@ -57,7 +57,7 @@ dev_dependencies = [
     "twine==4.0.2",
     "isort==5.12.0",
     "flake8==6.1.0",
-    "mypy==1.7.0",
+    "mypy==1.7.1",
     "black==23.11.0",
     "lxml==4.9.3",
     "aiohttp_cors==0.7.0",  # For blackd
@@ -65,7 +65,7 @@ dev_dependencies = [
     "types-aiofiles==23.2.0.0",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.12",
-    "types-setuptools==68.2.0.1",
+    "types-setuptools==68.2.0.2",
 ]
 
 legacy_keyring_dependencies = [
