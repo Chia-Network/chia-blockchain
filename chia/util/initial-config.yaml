@@ -85,6 +85,24 @@ network_overrides: &network_overrides
       PLOT_FILTER_64_HEIGHT: 8010796
       # 3 years later
       PLOT_FILTER_32_HEIGHT: 13056556
+    testnet11:
+      AGG_SIG_ME_ADDITIONAL_DATA: 37a90eb5185a9c4439a91ddc98bbadce7b4feba060d50116a067de66bf236615
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
+      DIFFICULTY_STARTING: 30
+      EPOCH_BLOCKS: 768
+      GENESIS_CHALLENGE: 37a90eb5185a9c4439a91ddc98bbadce7b4feba060d50116a067de66bf236615
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: 3ef7c233fc0785f3c0cae5992c1d35e7c955ca37a423571c1607ba392a9d12f7
+      MEMPOOL_BLOCK_BUFFER: 10
+      MIN_PLOT_SIZE: 18
+      NETWORK_TYPE: 1
+      SUB_SLOT_ITERS_STARTING: 67108864
+      # Forks activated from the beginning on this network
+      HARD_FORK_HEIGHT: 0
+      HARD_FORK_FIX_HEIGHT: 0
+      PLOT_FILTER_128_HEIGHT: 6029568
+      PLOT_FILTER_64_HEIGHT: 11075328
+      PLOT_FILTER_32_HEIGHT: 16121088
   config:
     mainnet:
       address_prefix: "xch"
@@ -104,6 +122,9 @@ network_overrides: &network_overrides
       address_prefix: "txch"
       default_full_node_port: 58444
     testnet10:
+      address_prefix: "txch"
+      default_full_node_port: 58444
+    testnet11:
       address_prefix: "txch"
       default_full_node_port: 58444
 
