@@ -300,7 +300,7 @@ jobs:
       run: |
         py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb -o "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.torrent --webseed https://download.chia.net/install/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb
         py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb -o "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb.torrent --webseed https://download.chia.net/install/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb
-        gh release upload $RELEASE_TAG "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.torrent
+        gh release upload --repo ${{ github.repository }} $RELEASE_TAG "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.torrent
 
     - name: Upload Dev Installer
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
@@ -326,6 +326,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         gh release upload \
+          --repo ${{ github.repository }} \
           $RELEASE_TAG \
           build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb \
           build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb
