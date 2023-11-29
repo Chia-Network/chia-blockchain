@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession
-from chia_rs import AugSchemeMPL, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
@@ -20,6 +20,7 @@ from chia.daemon.keychain_server import (
     KEYCHAIN_ERR_NO_KEYS,
 )
 from chia.server.server import ssl_context_for_client
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.errors import (
     KeychainIsEmpty,
@@ -194,6 +195,30 @@ class KeychainProxy(DaemonProxy):
 
         return key
 
+    async def add_public_key(self, pubkey: str, label: Optional[str] = None) -> G1Element:
+        """
+        Forwards to Keychain.add_public_key()
+        """
+        key: G1Element
+        if self.use_local_keychain():
+            key = self.keychain.add_public_key(pubkey, label)  # pragma: no cover
+        else:
+            response, success = await self.get_response_for_request(
+                "add_public_key", {"public_key": pubkey, "label": label}
+            )
+            if success:
+                key = G1Element.from_bytes(hexstr_to_bytes(pubkey))
+            else:
+                error = response["data"].get("error", None)
+                if error == KEYCHAIN_ERR_KEYERROR:  # pragma: no cover
+                    error_details = response["data"].get("error_details", {})
+                    word = error_details.get("word", "")
+                    raise KeyError(word)
+                else:
+                    self.handle_error(response)
+
+        return key
+
     async def check_keys(self, root_path: Path) -> None:
         """
         Forwards to init_funcs.check_keys()
@@ -343,6 +368,42 @@ class KeychainProxy(DaemonProxy):
                     else:
                         err = "G1Elements don't match"
                         self.log.error(f"{err}")
+            else:
+                self.handle_error(response)
+
+        return key
+
+    async def get_public_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[G1Element]:
+        """
+        Locates and returns a private key matching the provided fingerprint
+        """
+        key: Optional[G1Element] = None
+        if self.use_local_keychain():
+            public_keys = self.keychain.get_all_public_keys()
+            if len(public_keys) == 0:
+                raise KeychainIsEmpty()
+            else:
+                if fingerprint is not None:
+                    for pk in public_keys:
+                        if pk.get_fingerprint() == fingerprint:
+                            key = pk
+                            break
+                    if key is None:
+                        raise KeychainKeyNotFound(fingerprint)
+                else:
+                    key = public_keys[0]
+        else:
+            response, success = await self.get_response_for_request(
+                "get_public_key_for_fingerprint", {"fingerprint": fingerprint}
+            )
+            if success:
+                pk_str = response["data"].get("pk", None)
+                if pk_str is None:  # pragma: no cover
+                    err = f"Missing pk in {response.get('command')} response"
+                    self.log.error(f"{err}")
+                    raise KeychainMalformedResponse(f"{err}")
+                else:
+                    key = G1Element.from_bytes(bytes.fromhex(pk_str))
             else:
                 self.handle_error(response)
 

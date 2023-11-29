@@ -13,6 +13,7 @@ from chia_rs import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissin
 from typing_extensions import final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import (
     KeychainException,
     KeychainFingerprintExists,
@@ -307,13 +308,16 @@ class Keychain:
 
         public_key = G1Element.from_bytes(str_bytes[: G1Element.SIZE])
         fingerprint = public_key.get_fingerprint()
-        entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+        if len(str_bytes) == G1Element.SIZE + 32:
+            entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+        else:
+            entropy = None
 
         return KeyData(
             fingerprint=uint32(fingerprint),
             public_key=public_key,
             label=self.keyring_wrapper.get_label(fingerprint),
-            secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets else None,
+            secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
         )
 
     def _get_free_private_key_index(self) -> int:
@@ -356,6 +360,36 @@ class Keychain:
                 bytes(key.get_g1()).hex() + entropy.hex(),
             )
         except Exception:
+            if label is not None:
+                self.keyring_wrapper.delete_label(fingerprint)
+            raise
+
+        return key
+
+    def add_public_key(self, pubkey: str, label: Optional[str] = None) -> G1Element:
+        """
+        Adds a public key to the keychain.
+        """
+        key = G1Element.from_bytes(hexstr_to_bytes(pubkey))
+        index = self._get_free_private_key_index()
+        fingerprint = key.get_fingerprint()
+
+        if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
+            # Prevents duplicate add
+            raise KeychainFingerprintExists(fingerprint)
+
+        # Try to set the label first, it may fail if the label is invalid or already exists.
+        # This can probably just be moved into `FileKeyring.set_passphrase` after the legacy keyring stuff was dropped.
+        if label is not None:
+            self.keyring_wrapper.set_label(fingerprint, label)
+
+        try:
+            self.keyring_wrapper.set_passphrase(
+                self.service,
+                get_private_key_user(self.user, index),
+                bytes(key).hex(),
+            )
+        except Exception:  # pragma: no cover
             if label is not None:
                 self.keyring_wrapper.delete_label(fingerprint)
             raise
@@ -410,7 +444,7 @@ class Keychain:
             try:
                 key_data = self._get_key_data(index)
                 all_keys.append((key_data.private_key, key_data.entropy))
-            except KeychainUserNotFound:
+            except (KeychainUserNotFound, KeychainSecretsMissing):
                 pass
         return all_keys
 
@@ -444,7 +478,14 @@ class Keychain:
         """
         Returns all public keys.
         """
-        return [key_data[0].get_g1() for key_data in self.get_all_private_keys()]
+        all_keys: List[G1Element] = []
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index)
+                all_keys.append(key_data.public_key)
+            except KeychainUserNotFound:
+                pass
+        return all_keys
 
     def get_first_public_key(self) -> Optional[G1Element]:
         """
