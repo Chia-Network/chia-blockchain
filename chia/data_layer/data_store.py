@@ -1090,30 +1090,27 @@ class DataStore:
             intermediate_root: Optional[Root] = old_root
             for change in changelist:
                 if change["action"] == "insert":
-                    key = change["key"]
-                    value = change["value"]
                     reference_node_hash = change.get("reference_node_hash", None)
                     side = change.get("side", None)
+                    key = change["key"]
+                    value = change["value"]
                     if reference_node_hash is None and side is None:
-                        insert_result = await self.autoinsert(
-                            key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
-                        )
-                        intermediate_root = insert_result.root
-                    else:
-                        if reference_node_hash is None or side is None:
-                            raise Exception("Provide both reference_node_hash and side or neither.")
-                        insert_result = await self.insert(
-                            key,
-                            value,
-                            tree_id,
-                            reference_node_hash,
-                            side,
-                            hint_keys_values,
-                            True,
-                            Status.COMMITTED,
-                            root=intermediate_root,
-                        )
-                        intermediate_root = insert_result.root
+                        # We'll do all autoinserts later, as a batch for performance purposes.
+                        continue
+                    if reference_node_hash is None or side is None:
+                        raise Exception("Provide both reference_node_hash and side or neither.")
+                    insert_result = await self.insert(
+                        key,
+                        value,
+                        tree_id,
+                        reference_node_hash,
+                        side,
+                        hint_keys_values,
+                        True,
+                        Status.COMMITTED,
+                        root=intermediate_root,
+                    )
+                    intermediate_root = insert_result.root
                 elif change["action"] == "delete":
                     key = change["key"]
                     intermediate_root = await self.delete(
@@ -1121,6 +1118,92 @@ class DataStore:
                     )
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
+
+            # Group all autoinserts together in their own tree.
+            seen_keys_within_batch: Set[bytes] = set()
+            batch_hashes: List[bytes32] = []
+            for change in changelist:
+                if change["action"] == "insert":
+                    reference_node_hash = change.get("reference_node_hash", None)
+                    side = change.get("side", None)
+                    if reference_node_hash is None and side is None:
+                        key = change["key"]
+                        value = change["value"]
+                        if key in hint_keys_values or key in seen_keys_within_batch:
+                            raise Exception(f"Key already present: {key.hex()}")
+                        seen_keys_within_batch.add(key)
+                        terminal_node_hash = await self._insert_terminal_node(key, value)
+                        batch_hashes.append(terminal_node_hash)
+
+            while len(batch_hashes) > 1:
+                new_batch_hashes: List[bytes32] = []
+                for i in range(0, len(batch_hashes) - 1, 2):
+                    internal_node_hash = await self._insert_internal_node(batch_hashes[i], batch_hashes[i + 1])
+                    new_batch_hashes.append(internal_node_hash)
+                if len(batch_hashes) % 2 != 0:
+                    new_batch_hashes.append(batch_hashes[-1])
+
+                batch_hashes = new_batch_hashes
+
+            # At least one autoinsert.
+            if len(batch_hashes) > 0:
+                subtree_hash = batch_hashes[0]
+                if intermediate_root is None or intermediate_root.node_hash is None:
+                    # No leaf to merge with, just keep this subtree as the root.
+                    await self._insert_root(tree_id=tree_id, node_hash=subtree_hash, status=Status.COMMITTED)
+                else:
+                    # Find leftmost node, at minimum height. Use a breadth-first-search to avoid scanning
+                    # the whole tree.
+                    root_node = await self.get_node(intermediate_root.node_hash)
+                    queue: List[Node] = [root_node]
+                    while True:
+                        assert len(queue) > 0
+                        node = queue.pop(0)
+                        if isinstance(node, InternalNode):
+                            left_node = await self.get_node(node.left_hash)
+                            right_node = await self.get_node(node.right_hash)
+                            queue.append(left_node)
+                            queue.append(right_node)
+                        elif isinstance(node, TerminalNode):
+                            leftmost_node = node
+                            break
+
+                    # Use a similar logic to `insert` to attach the autoinsert subtree to `leftmost_node`.
+                    # TODO: maybe factor out this common code?
+                    ancestors: List[InternalNode] = await self.get_ancestors_optimized(
+                        node_hash=leftmost_node.hash,
+                        tree_id=tree_id,
+                        generation=intermediate_root.generation,
+                        root_hash=intermediate_root.node_hash,
+                    )
+                    if len(ancestors) >= 62:
+                        raise RuntimeError("Tree exceeds max height of 62.")
+
+                    left = subtree_hash
+                    right = leftmost_node.hash
+                    traversal_node_hash = leftmost_node.hash
+                    new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+
+                    for ancestor in ancestors:
+                        if not isinstance(ancestor, InternalNode):
+                            raise Exception(f"Expected an internal node but got: {type(ancestor).__name__}")
+
+                        if ancestor.left_hash == traversal_node_hash:
+                            left = new_hash
+                            right = ancestor.right_hash
+                        elif ancestor.right_hash == traversal_node_hash:
+                            left = ancestor.left_hash
+                            right = new_hash
+
+                        traversal_node_hash = ancestor.hash
+                        new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+
+                    await self._insert_root(
+                        tree_id=tree_id,
+                        node_hash=new_hash,
+                        status=Status.COMMITTED,
+                        generation=intermediate_root.generation + 1,
+                    )
 
             root = await self.get_tree_root(tree_id=tree_id)
             if root.node_hash == old_root.node_hash:
