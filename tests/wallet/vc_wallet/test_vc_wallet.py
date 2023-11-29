@@ -29,8 +29,8 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from tests.environments import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from tests.util.time_out_assert import time_out_assert_not_none
-from tests.wallet.conftest import WalletEnvironment, WalletStateTransition, WalletTestFramework
 
 
 async def mint_cr_cat(

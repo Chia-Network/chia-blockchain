@@ -6,7 +6,7 @@ import logging
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, AsyncIterator, ClassVar, Dict, List, Optional, Protocol, Tuple, TypeVar, Union, cast
+from typing import AsyncIterator, Dict, List, Optional, Tuple, Union
 
 import anyio
 
@@ -20,10 +20,7 @@ from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-from chia.rpc.rpc_server import RpcServer, RpcServiceProtocol
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.server.api_protocol import ApiProtocol
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
@@ -51,6 +48,7 @@ from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from tests.environments import NodeForTest, SimulatorsAndWallets, WalletEnvironment
 
 OldSimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
 SimulatorsAndWalletsServices = Tuple[
@@ -144,96 +142,6 @@ async def setup_n_nodes(
             yield [node._api for node in nodes]
 
 
-T_Node = TypeVar("T_Node", bound=RpcServiceProtocol)
-T_RpcApi = TypeVar("T_RpcApi", covariant=True)
-T_PeerApi = TypeVar("T_PeerApi", bound=ApiProtocol)
-
-
-@dataclass
-class ServiceForTest(Protocol[T_Node, T_RpcApi, T_PeerApi]):
-    service: Service[T_Node, T_PeerApi]
-
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
-
-    # TODO: node doesn't seem right...  but maybe?
-    @property
-    def node(self) -> T_Node:
-        ...
-
-    @property
-    def rpc_api(self) -> T_RpcApi:
-        ...
-
-    @property
-    def rpc_server(self) -> RpcServer:
-        ...
-
-    @property
-    def peer_api(self) -> T_PeerApi:
-        ...
-
-    @property
-    def peer_server(self) -> ChiaServer:
-        ...
-
-
-# TODO: gotta make a naming scheme, or module that we import and use classes from `themodule.Wallet` etc.
-# TODO: some common pattern across all the services?
-@dataclass
-class NodeForTest:
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[ServiceForTest[FullNode, FullNodeRpcApi, FullNodeSimulator]] = cast(
-            "NodeForTest", None
-        )
-
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
-
-    service: Service[FullNode, FullNodeSimulator]
-
-    @property
-    def node(self) -> FullNode:
-        return self.service._node
-
-    @property
-    def rpc_api(self) -> FullNodeRpcApi:
-        assert self.service.rpc_server is not None
-        # TODO: hinting...?
-        return self.service.rpc_server.rpc_api  # type: ignore[return-value]
-
-    @property
-    def rpc_server(self) -> RpcServer:
-        assert self.service.rpc_server is not None
-        return self.service.rpc_server
-
-    @property
-    def peer_api(self) -> FullNodeSimulator:
-        return self.service._api
-
-    @property
-    def peer_server(self) -> ChiaServer:
-        return self.service._server
-
-
-if TYPE_CHECKING:
-    # TODO: https://github.com/Chia-Network/chia-blockchain/pull/16933
-    from tests.wallet.conftest import WalletEnvironment
-
-
-@dataclass
-class SimulatorsAndWallets:
-    simulators: List[NodeForTest]
-    wallets: List[WalletEnvironment]
-    bt: BlockTools
-
-
-def make_old_setup_simulators_and_wallets(new: SimulatorsAndWallets) -> OldSimulatorsAndWallets:
-    return (
-        [simulator.peer_api for simulator in new.simulators],
-        [(wallet.node, wallet.peer_server) for wallet in new.wallets],
-        new.bt,
-    )
-
-
 @asynccontextmanager
 async def setup_simulators_and_wallets(
     simulator_count: int,
@@ -265,9 +173,6 @@ async def setup_simulators_and_wallets(
             config_overrides,
             disable_capabilities,
         ) as (bt_tools, simulators, wallets_services):
-            # TODO: https://github.com/Chia-Network/chia-blockchain/pull/16933
-            from tests.wallet.conftest import WalletEnvironment
-
             # TODO: does this belong here?
             async with contextlib.AsyncExitStack() as exit_stack:
                 wallets: List[WalletEnvironment] = []

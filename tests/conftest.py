@@ -54,11 +54,11 @@ from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
+from tests.environments import SimulatorsAndWallets
 from tests.simulation.test_simulation import test_constants_modified
 from tests.util.misc import BenchmarkRunner, GcMode, _AssertRuntime, measure_overhead
 from tests.util.setup_nodes import (
     OldSimulatorsAndWallets,
-    make_old_setup_simulators_and_wallets,
     setup_full_system,
     setup_n_nodes,
     setup_simulators_and_wallets,
@@ -1107,3 +1107,11 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
     """Populated with a payload containing 0 keys using the default passphrase."""
     with TempKeyring(populate=True) as keyring:
         yield keyring
+
+
+def make_old_setup_simulators_and_wallets(new: SimulatorsAndWallets) -> OldSimulatorsAndWallets:
+    return (
+        [simulator.peer_api for simulator in new.simulators],
+        [(wallet.node, wallet.peer_server) for wallet in new.wallets],
+        new.bt,
+    )
