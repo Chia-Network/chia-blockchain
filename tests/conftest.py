@@ -77,6 +77,14 @@ from chia.util.keyring_wrapper import KeyringWrapper
 from tests.util.setup_nodes import setup_farmer_multi_harvester
 
 
+def make_old_setup_simulators_and_wallets(new: SimulatorsAndWallets) -> OldSimulatorsAndWallets:
+    return (
+        [simulator.peer_api for simulator in new.simulators],
+        [(wallet.node, wallet.peer_server) for wallet in new.wallets],
+        new.bt,
+    )
+
+
 @pytest.fixture(scope="session")
 def anyio_backend():
     return "asyncio"
@@ -1107,11 +1115,3 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
     """Populated with a payload containing 0 keys using the default passphrase."""
     with TempKeyring(populate=True) as keyring:
         yield keyring
-
-
-def make_old_setup_simulators_and_wallets(new: SimulatorsAndWallets) -> OldSimulatorsAndWallets:
-    return (
-        [simulator.peer_api for simulator in new.simulators],
-        [(wallet.node, wallet.peer_server) for wallet in new.wallets],
-        new.bt,
-    )

@@ -63,10 +63,10 @@ class WalletEnvironment:
     __match_args__: ClassVar[Tuple[str, ...]] = ()
 
     service: Service[WalletNode, WalletNodeAPI]
+    # TODO: maybe put this in the protocol?
     rpc_client: WalletRpcClient
     # TODO: added the default, but should think through implementing it etc.  `.create()`?
     wallet_states: Dict[uint32, WalletState] = field(default_factory=dict)
-    # TODO: put this in the protocol?
     wallet_aliases: Dict[str, int] = field(default_factory=dict)
 
     @property
