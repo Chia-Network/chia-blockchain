@@ -1265,11 +1265,7 @@ class FullNode:
             # update the fork context with its additions and removals
             if self.blockchain.height_to_hash(block.height) == header_hash:
                 # we're on the main chain, just fast-forward the fork height
-                fork_info.fork_height = block.height
-                fork_info.peak_height = block.height
-                fork_info.peak_hash = header_hash
-                fork_info.additions_since_fork == {}
-                fork_info.removals_since_fork == set()
+                fork_info.reset(block.height, header_hash)
             else:
                 # We have already validated the block, but if it's not part of the
                 # main chain, we still need to re-run it to update the additions and
@@ -1309,6 +1305,10 @@ class FullNode:
             )
 
             if result == AddBlockResult.NEW_PEAK:
+                # since this block just added a new peak, we've don't need any
+                # fork history from fork_info anymore
+                if fork_info is not None:
+                    fork_info.reset(block.height, block.header_hash)
                 assert state_change_summary is not None
                 # Since all blocks are contiguous, we can simply append the rollback changes and npc results
                 if agg_state_change_summary is None:
