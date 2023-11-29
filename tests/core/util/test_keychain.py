@@ -25,6 +25,7 @@ from chia.util.keychain import (
     Keychain,
     KeyData,
     KeyDataSecrets,
+    KeyTypes,
     bytes_from_mnemonic,
     bytes_to_mnemonic,
     generate_mnemonic,
@@ -228,7 +229,7 @@ def test_key_data_generate(label: Optional[str]) -> None:
     key_data = KeyData.generate(label)
     assert key_data.private_key == AugSchemeMPL.key_gen(mnemonic_to_seed(key_data.mnemonic_str()))
     assert key_data.entropy == bytes_from_mnemonic(key_data.mnemonic_str())
-    assert key_data.public_key == key_data.private_key.get_g1()
+    assert key_data.observation_root == key_data.private_key.get_g1()
     assert key_data.fingerprint == key_data.private_key.get_g1().get_fingerprint()
     assert key_data.label == label
 
@@ -240,7 +241,7 @@ def test_key_data_generate(label: Optional[str]) -> None:
 def test_key_data_creation(input_data: object, from_method: Callable[..., KeyData], label: Optional[str]) -> None:
     key_data = from_method(input_data, label)
     assert key_data.fingerprint == fingerprint
-    assert key_data.public_key == public_key
+    assert key_data.observation_root == public_key
     assert key_data.mnemonic == mnemonic.split()
     assert key_data.mnemonic_str() == mnemonic
     assert key_data.entropy == entropy
@@ -249,7 +250,7 @@ def test_key_data_creation(input_data: object, from_method: Callable[..., KeyDat
 
 
 def test_key_data_without_secrets() -> None:
-    key_data = KeyData(fingerprint, public_key, None, None)
+    key_data = KeyData(fingerprint, bytes(public_key), None, None, KeyTypes.G1_ELEMENT.value)
     assert key_data.secrets is None
 
     with pytest.raises(KeychainSecretsMissing):
@@ -281,12 +282,21 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateK
 @pytest.mark.parametrize(
     "input_data, data_type",
     [
-        ((fingerprint, G1Element(), None, KeyDataSecrets(mnemonic.split(), entropy, private_key)), "public_key"),
-        ((fingerprint, G1Element(), None, None), "fingerprint"),
+        (
+            (
+                fingerprint,
+                bytes(G1Element()),
+                None,
+                KeyDataSecrets(mnemonic.split(), entropy, private_key),
+                KeyTypes.G1_ELEMENT.value,
+            ),
+            "public_key",
+        ),
+        ((fingerprint, bytes(G1Element()), None, None, KeyTypes.G1_ELEMENT.value), "fingerprint"),
     ],
 )
 def test_key_data_post_init(
-    input_data: Tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]], data_type: str
+    input_data: Tuple[uint32, bytes, Optional[str], Optional[KeyDataSecrets], str], data_type: str
 ) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyData(*input_data)

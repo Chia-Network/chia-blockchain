@@ -631,6 +631,8 @@ class WebSocketServer:
 
         wallet_addresses_by_fingerprint = {}
         for key in keys:
+            if not isinstance(key.observation_root, G1Element):
+                continue
             address_entries = []
 
             # we require access to the private key to generate wallet addresses for non observer
@@ -642,7 +644,7 @@ class WebSocketServer:
                     sk = master_sk_to_wallet_sk(key.private_key, uint32(i))
                     pk = sk.get_g1()
                 else:
-                    pk = master_pk_to_wallet_pk_unhardened(key.public_key, uint32(i))
+                    pk = master_pk_to_wallet_pk_unhardened(key.observation_root, uint32(i))
                 wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(pk), prefix)
                 if non_observer_derivation:
                     hd_path = f"m/12381n/8444n/2n/{i}n"
