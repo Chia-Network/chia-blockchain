@@ -14,7 +14,6 @@ from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.server.start_service import Service
 from chia.simulator.block_tools import create_block_tools_async, test_constants
-from chia.simulator.setup_nodes import setup_farmer_multi_harvester
 from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
@@ -22,6 +21,7 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 from tests.conftest import ConsensusMode
 from tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
+from tests.util.setup_nodes import setup_farmer_multi_harvester
 from tests.util.time_out_assert import time_out_assert
 
 

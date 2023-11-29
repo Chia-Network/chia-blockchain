@@ -16,7 +16,6 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import Message, make_msg
 from chia.simulator.block_tools import test_constants
-from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -30,6 +29,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import Balance, WalletNode
 from tests.conftest import ConsensusMode
 from tests.util.misc import CoinGenerator
+from tests.util.setup_nodes import SimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert
 
 

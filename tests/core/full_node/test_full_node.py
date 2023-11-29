@@ -32,7 +32,6 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
-from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -66,6 +65,7 @@ from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.make_block_generator import make_spend_bundle
 from tests.core.mempool.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
+from tests.util.setup_nodes import SimulatorsAndWalletsServices
 from tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
 
