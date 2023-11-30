@@ -981,11 +981,6 @@ class Blockchain(BlockchainInterface):
                 hashes.append(header_hash)
 
         blocks: List[FullBlock] = []
-        for hash in hashes.copy():
-            block = self.block_store.block_cache.get(hash)
-            if block is not None:
-                blocks.append(block)
-                hashes.remove(hash)
         blocks_on_disk: List[FullBlock] = await self.block_store.get_blocks_by_hash(hashes)
         blocks.extend(blocks_on_disk)
         header_blocks: Dict[bytes32, HeaderBlock] = {}
