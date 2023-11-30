@@ -9,13 +9,13 @@ from chia.rpc.rpc_server import RpcServer
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from tests.environments.common import ServiceForTest
+from tests.environments.common import ServiceEnvironment
 
 
 @dataclass
 class FullNodeEnvironment:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[ServiceForTest[FullNode, FullNodeRpcApi, FullNodeSimulator]] = cast(
+        _protocol_check: ClassVar[ServiceEnvironment[FullNode, FullNodeRpcApi, FullNodeSimulator]] = cast(
             "FullNodeEnvironment",
             None,
         )

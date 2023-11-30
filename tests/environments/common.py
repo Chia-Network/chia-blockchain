@@ -14,7 +14,7 @@ T_PeerApi = TypeVar("T_PeerApi", bound=ApiProtocol)
 
 
 @dataclass
-class ServiceForTest(Protocol[T_Node, T_RpcApi, T_PeerApi]):
+class ServiceEnvironment(Protocol[T_Node, T_RpcApi, T_PeerApi]):
     service: Service[T_Node, T_PeerApi]
 
     __match_args__: ClassVar[Tuple[str, ...]] = ()

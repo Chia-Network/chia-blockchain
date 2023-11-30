@@ -19,7 +19,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.environments.common import ServiceForTest
+from tests.environments.common import ServiceEnvironment
 
 OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
 
@@ -53,7 +53,7 @@ class WalletStateTransition:
 @dataclass
 class WalletEnvironment:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[ServiceForTest[WalletNode, WalletRpcApi, WalletNodeAPI]] = cast(
+        _protocol_check: ClassVar[ServiceEnvironment[WalletNode, WalletRpcApi, WalletNodeAPI]] = cast(
             "WalletEnvironment", None
         )
 
