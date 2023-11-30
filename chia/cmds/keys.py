@@ -73,12 +73,12 @@ def show_cmd(
     show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint)
 
 
-@keys_cmd.command("add", help="Add a private key by mnemonic")
+@keys_cmd.command("add", help="Add a private key by mnemonic or public key as hex")
 @click.option(
     "--filename",
     "-f",
     default=None,
-    help="The filename containing the secret key mnemonic to add",
+    help="The filename containing the secret key mnemonic or public key hex to add",
     type=str,
     required=False,
 )
@@ -93,15 +93,15 @@ def show_cmd(
 @click.pass_context
 def add_cmd(ctx: click.Context, filename: str, label: Optional[str]) -> None:
     from .init_funcs import check_keys
-    from .keys_funcs import query_and_add_private_key_seed
+    from .keys_funcs import query_and_add_key_info
 
-    mnemonic = None
+    mnemonic_or_pk = None
     if filename:
         from pathlib import Path
 
-        mnemonic = Path(filename).read_text().rstrip()
+        mnemonic_or_pk = Path(filename).read_text().rstrip()
 
-    query_and_add_private_key_seed(mnemonic, label)
+    query_and_add_key_info(mnemonic_or_pk, label)
     check_keys(ctx.obj["root_path"])
 
 
@@ -318,21 +318,19 @@ def search_cmd(
 ) -> None:
     import sys
 
-    from chia_rs import PrivateKey
-
     from .keys_funcs import resolve_derivation_master_key, search_derive
 
-    private_key: Optional[PrivateKey] = None
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
     filename: Optional[str] = ctx.obj.get("filename", None)
 
     # Specifying the master key is optional for the search command. If not specified, we'll search all keys.
-    if fingerprint is not None or filename is not None:
-        private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+    sk = None
+    if fingerprint is None and filename is not None:
+        sk = resolve_derivation_master_key(filename)
 
     found: bool = search_derive(
         ctx.obj["root_path"],
-        private_key,
+        fingerprint,
         search_terms,
         limit,
         non_observer_derivation,
@@ -340,6 +338,7 @@ def search_cmd(
         ("all",) if "all" in search_type else search_type,
         derive_from_hd_path,
         prefix,
+        sk,
     )
 
     sys.exit(0 if found else 1)
@@ -375,10 +374,13 @@ def wallet_address_cmd(
 
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
     filename: Optional[str] = ctx.obj.get("filename", None)
-    private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+
+    sk = None
+    if fingerprint is None and filename is not None:
+        sk = resolve_derivation_master_key(filename)
 
     derive_wallet_address(
-        ctx.obj["root_path"], private_key, index, count, prefix, non_observer_derivation, show_hd_path
+        ctx.obj["root_path"], fingerprint, index, count, prefix, non_observer_derivation, show_hd_path, sk
     )
 
 
@@ -443,10 +445,13 @@ def child_key_cmd(
 
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
     filename: Optional[str] = ctx.obj.get("filename", None)
-    private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+
+    sk = None
+    if fingerprint is None and filename is not None:
+        sk = resolve_derivation_master_key(filename)
 
     derive_child_key(
-        private_key,
+        fingerprint,
         key_type,
         derive_from_hd_path.lower() if derive_from_hd_path is not None else None,
         index,
@@ -454,4 +459,5 @@ def child_key_cmd(
         non_observer_derivation,
         show_private_keys,
         show_hd_path,
+        sk,
     )

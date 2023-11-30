@@ -639,8 +639,7 @@ class WebSocketServer:
 
             for i in range(index, index + count):
                 if non_observer_derivation:
-                    # semantics above guarantee that key.secrets is not None here
-                    sk = master_sk_to_wallet_sk(key.secrets.private_key, uint32(i))  # type: ignore[union-attr]
+                    sk = master_sk_to_wallet_sk(key.private_key, uint32(i))
                     pk = sk.get_g1()
                 else:
                     pk = master_pk_to_wallet_pk_unhardened(key.public_key, uint32(i))
@@ -665,8 +664,6 @@ class WebSocketServer:
 
         keys_for_plot: Dict[uint32, Any] = {}
         for key in keys:
-            if key.secrets is None and fingerprints is None:
-                continue
             sk = key.private_key
             farmer_public_key: G1Element = master_sk_to_farmer_sk(sk).get_g1()
             pool_public_key: G1Element = master_sk_to_pool_sk(sk).get_g1()
