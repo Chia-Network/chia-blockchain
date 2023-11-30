@@ -97,7 +97,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
-        self.rpc_server: Optional[RpcServer] = None
+        self.rpc_server: Optional[RpcServer[_T_RpcApiProtocol]] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
         self.reconnect_retry_seconds: int = 3
