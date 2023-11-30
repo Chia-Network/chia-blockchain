@@ -54,11 +54,11 @@ from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
-from tests.environments import SimulatorsAndWallets
 from tests.simulation.test_simulation import test_constants_modified
 from tests.util.misc import BenchmarkRunner, GcMode, _AssertRuntime, measure_overhead
 from tests.util.setup_nodes import (
     OldSimulatorsAndWallets,
+    SimulatorsAndWallets,
     setup_full_system,
     setup_n_nodes,
     setup_simulators_and_wallets,

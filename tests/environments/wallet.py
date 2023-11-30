@@ -3,17 +3,13 @@ from __future__ import annotations
 import json
 import operator
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Protocol, Tuple, TypeVar, Union, cast
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, Union, cast
 
-from chia.full_node.full_node import FullNode
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-from chia.rpc.rpc_server import RpcServer, RpcServiceProtocol
+from chia.rpc.rpc_server import RpcServer
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.server.api_protocol import ApiProtocol
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
-from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.util.ints import uint32
 from chia.wallet.derivation_record import DerivationRecord
@@ -23,6 +19,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_state_manager import WalletStateManager
+from tests.environments.common import ServiceForTest
 
 OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
 
@@ -337,80 +334,3 @@ class WalletTestFramework:
                     assert ph_indexes_before[wallet_id] == (
                         await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
                     )
-
-
-T_Node = TypeVar("T_Node", bound=RpcServiceProtocol)
-T_RpcApi = TypeVar("T_RpcApi", covariant=True)
-T_PeerApi = TypeVar("T_PeerApi", bound=ApiProtocol)
-
-
-@dataclass
-class ServiceForTest(Protocol[T_Node, T_RpcApi, T_PeerApi]):
-    service: Service[T_Node, T_PeerApi]
-
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
-
-    # TODO: node doesn't seem right...  but maybe?
-    @property
-    def node(self) -> T_Node:
-        ...
-
-    @property
-    def rpc_api(self) -> T_RpcApi:
-        ...
-
-    @property
-    def rpc_server(self) -> RpcServer:
-        ...
-
-    @property
-    def peer_api(self) -> T_PeerApi:
-        ...
-
-    @property
-    def peer_server(self) -> ChiaServer:
-        ...
-
-
-# TODO: gotta make a naming scheme, or module that we import and use classes from `themodule.Wallet` etc.
-# TODO: some common pattern across all the services?
-@dataclass
-class NodeForTest:
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[ServiceForTest[FullNode, FullNodeRpcApi, FullNodeSimulator]] = cast(
-            "NodeForTest", None
-        )
-
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
-
-    service: Service[FullNode, FullNodeSimulator]
-
-    @property
-    def node(self) -> FullNode:
-        return self.service._node
-
-    @property
-    def rpc_api(self) -> FullNodeRpcApi:
-        assert self.service.rpc_server is not None
-        # TODO: hinting...?
-        return self.service.rpc_server.rpc_api  # type: ignore[return-value]
-
-    @property
-    def rpc_server(self) -> RpcServer:
-        assert self.service.rpc_server is not None
-        return self.service.rpc_server
-
-    @property
-    def peer_api(self) -> FullNodeSimulator:
-        return self.service._api
-
-    @property
-    def peer_server(self) -> ChiaServer:
-        return self.service._server
-
-
-@dataclass
-class SimulatorsAndWallets:
-    simulators: List[NodeForTest]
-    wallets: List[WalletEnvironment]
-    bt: BlockTools

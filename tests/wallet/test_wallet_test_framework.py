@@ -3,7 +3,12 @@ from __future__ import annotations
 import pytest
 
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from tests.environments import BalanceCheckingError, WalletEnvironment, WalletStateTransition, WalletTestFramework
+from tests.environments.wallet import (
+    BalanceCheckingError,
+    WalletEnvironment,
+    WalletStateTransition,
+    WalletTestFramework,
+)
 
 
 @pytest.mark.parametrize(

@@ -48,7 +48,8 @@ from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
-from tests.environments import NodeForTest, SimulatorsAndWallets, WalletEnvironment
+from tests.environments.full_node import NodeForTest
+from tests.environments.wallet import WalletEnvironment
 
 OldSimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
 SimulatorsAndWalletsServices = Tuple[
@@ -66,6 +67,13 @@ class FullSystem:
     timelord: Service[Timelord, TimelordAPI]
     timelord_bluebox: Service[Timelord, TimelordAPI]
     daemon: WebSocketServer
+
+
+@dataclass
+class SimulatorsAndWallets:
+    simulators: List[NodeForTest]
+    wallets: List[WalletEnvironment]
+    bt: BlockTools
 
 
 def cleanup_keyring(keyring: TempKeyring) -> None:

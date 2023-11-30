@@ -12,7 +12,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
-from tests.environments import WalletEnvironment, WalletState, WalletTestFramework
+from tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
 from tests.util.setup_nodes import setup_simulators_and_wallets_service
 
 

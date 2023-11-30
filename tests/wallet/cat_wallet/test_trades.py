@@ -26,7 +26,7 @@ from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from tests.conftest import SOFTFORK_HEIGHTS, ConsensusMode
-from tests.environments import WalletEnvironment, WalletStateTransition, WalletTestFramework
+from tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from tests.util.time_out_assert import time_out_assert
 from tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
 
