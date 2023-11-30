@@ -19,12 +19,12 @@ from chia.timelord.timelord_api import TimelordAPI
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
-TimelordService = Service[Timelord, TimelordAPI]
 CrawlerService = Service[Crawler, CrawlerAPI]
-FullNodeService = Service[FullNode, FullNodeAPI]
-SimulatorFullNodeService = Service[FullNode, FullNodeSimulator]
-WalletService = Service[WalletNode, WalletNodeAPI]
-FarmerService = Service[Farmer, FarmerAPI]
-HarvesterService = Service[Harvester, HarvesterAPI]
 DataLayerService = Service[DataLayer, DataLayerAPI]
+FarmerService = Service[Farmer, FarmerAPI]
+FullNodeService = Service[FullNode, FullNodeAPI]
+HarvesterService = Service[Harvester, HarvesterAPI]
 IntroducerService = Service[Introducer, IntroducerAPI]
+SimulatorFullNodeService = Service[FullNode, FullNodeSimulator]
+TimelordService = Service[Timelord, TimelordAPI]
+WalletService = Service[WalletNode, WalletNodeAPI]
