@@ -679,6 +679,8 @@ class DataLayer:
             return await self.data_store.get_subscriptions()
 
     async def add_mirror(self, store_id: bytes32, urls: List[str], amount: uint64, fee: uint64) -> None:
+        if not urls:
+            raise RuntimeError("URL list can't be empty")
         bytes_urls = [bytes(url, "utf8") for url in urls]
         await self.wallet_rpc.dl_new_mirror(store_id, amount, bytes_urls, fee)
 
@@ -686,7 +688,8 @@ class DataLayer:
         await self.wallet_rpc.dl_delete_mirror(coin_id, fee)
 
     async def get_mirrors(self, tree_id: bytes32) -> List[Mirror]:
-        return await self.wallet_rpc.dl_get_mirrors(tree_id)
+        mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(tree_id)
+        return [mirror for mirror in mirrors if mirror.urls]
 
     async def update_subscriptions_from_wallet(self, tree_id: bytes32) -> None:
         mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(tree_id)
