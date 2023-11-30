@@ -21,15 +21,9 @@ import pytest
 from _pytest.fixtures import SubRequest
 
 from chia.clvm.spend_sim import CostLogger
-
-# Set spawn after stdlib imports, but before other imports
 from chia.consensus.constants import ConsensusConstants
-from chia.farmer.farmer import Farmer
-from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -43,6 +37,18 @@ from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_int
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
+
+# Set spawn after stdlib imports, but before other imports
+from chia.types.aliases import (
+    CrawlerService,
+    DataLayerService,
+    FarmerService,
+    FullNodeService,
+    HarvesterService,
+    SimulatorFullNodeService,
+    TimelordService,
+    WalletService,
+)
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
@@ -582,9 +588,7 @@ async def two_wallet_nodes(request, blockchain_constants: ConsensusConstants):
 @pytest.fixture(scope="function")
 async def two_wallet_nodes_services(
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[
-    Tuple[List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools]
-]:
+) -> AsyncIterator[Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]]:
     async with setup_simulators_and_wallets_service(1, 2, blockchain_constants) as _:
         yield _
 
@@ -733,15 +737,7 @@ async def two_nodes_one_block(blockchain_constants: ConsensusConstants):
 async def farmer_one_harvester_simulator_wallet(
     tmp_path: Path,
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[
-    Tuple[
-        Service[Harvester, HarvesterAPI],
-        Service[Farmer, FarmerAPI],
-        Service[FullNode, FullNodeSimulator],
-        Service[WalletNode, WalletNodeAPI],
-        BlockTools,
-    ]
-]:
+) -> AsyncIterator[Tuple[HarvesterService, FarmerService, SimulatorFullNodeService, WalletService, BlockTools,]]:
     async with setup_simulators_and_wallets_service(1, 1, blockchain_constants) as (nodes, wallets, bt):
         async with setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as (
             harvester_services,
@@ -751,7 +747,7 @@ async def farmer_one_harvester_simulator_wallet(
             yield harvester_services[0], farmer_service, nodes[0], wallets[0], bt
 
 
-FarmerOneHarvester = Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]
+FarmerOneHarvester = Tuple[List[HarvesterService], FarmerService, BlockTools]
 
 
 @pytest.fixture(scope="function")
@@ -966,15 +962,13 @@ async def timelord(bt):
 
 
 @pytest.fixture(scope="function")
-async def timelord_service(bt: BlockTools) -> AsyncIterator[Service[Timelord, TimelordAPI]]:
+async def timelord_service(bt: BlockTools) -> AsyncIterator[TimelordService]:
     async with setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path) as _:
         yield _
 
 
 @pytest.fixture(scope="function")
-async def crawler_service(
-    root_path_populated_with_config: Path, database_uri: str
-) -> AsyncIterator[Service[Crawler, CrawlerAPI]]:
+async def crawler_service(root_path_populated_with_config: Path, database_uri: str) -> AsyncIterator[CrawlerService]:
     async with setup_crawler(root_path_populated_with_config, database_uri) as service:
         yield service
 
@@ -1053,14 +1047,12 @@ async def simulation(bt, get_b_tools):
         yield full_system, get_b_tools
 
 
-HarvesterFarmerEnvironment = Tuple[
-    Service[Farmer, FarmerAPI], FarmerRpcClient, Service[Harvester, HarvesterAPI], HarvesterRpcClient, BlockTools
-]
+HarvesterFarmerEnvironment = Tuple[FarmerService, FarmerRpcClient, HarvesterService, HarvesterRpcClient, BlockTools]
 
 
 @pytest.fixture(scope="function")
 async def harvester_farmer_environment(
-    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools],
+    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools],
     self_hostname: str,
 ) -> AsyncIterator[HarvesterFarmerEnvironment]:
     harvesters, farmer_service, bt = farmer_one_harvester

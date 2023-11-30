@@ -19,7 +19,6 @@ import pytest
 from chia.cmds.data_funcs import clear_pending_roots, wallet_log_in_cmd
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, Status, StoreProofs
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
@@ -28,10 +27,10 @@ from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.start_data_layer import create_data_layer_service
-from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.aliases import DataLayerService, WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
@@ -43,7 +42,6 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.util.setup_nodes import SimulatorsAndWalletsServices
 from tests.util.time_out_assert import time_out_assert
 
@@ -66,10 +64,10 @@ async def init_data_layer_service(
     wallet_rpc_port: uint16,
     bt: BlockTools,
     db_path: Optional[Path] = None,
-    wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
+    wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
-) -> AsyncIterator[Service[DataLayer, DataLayerAPI]]:
+) -> AsyncIterator[DataLayerService]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
     # TODO: running the data server causes the RPC tests to hang at the end
@@ -95,7 +93,7 @@ async def init_data_layer(
     wallet_rpc_port: uint16,
     bt: BlockTools,
     db_path: Path,
-    wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
+    wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
 ) -> AsyncIterator[DataLayer]:

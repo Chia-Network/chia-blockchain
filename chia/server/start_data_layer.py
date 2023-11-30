@@ -13,13 +13,12 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.ssl.create_ssl import create_all_ssl
+from chia.types.aliases import DataLayerService, WalletService
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 from chia.util.misc import SignalHandlers
-from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_node_api import WalletNodeAPI
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -34,9 +33,9 @@ def create_data_layer_service(
     config: Dict[str, Any],
     downloaders: List[PluginRemote],
     uploaders: List[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
-    wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
+    wallet_service: Optional[WalletService] = None,
     connect_to_daemon: bool = True,
-) -> Service[DataLayer, DataLayerAPI]:
+) -> DataLayerService:
     if uploaders is None:
         uploaders = []
     if downloaders is None:
