@@ -154,7 +154,7 @@ class TestSimpleSyncProtocol:
         assert all_coins == notified_all_coins
 
         wsm: WalletStateManager = wallet_node.wallet_state_manager
-        wallet: Wallet = wsm.wallets[1]
+        wallet: MainWalletProtocol = wsm.wallets[1]
         puzzle_hash = await wallet.get_new_puzzlehash()
 
         for i in range(0, num_blocks):
@@ -238,7 +238,7 @@ class TestSimpleSyncProtocol:
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
         wsm: WalletStateManager = wallet_node.wallet_state_manager
-        standard_wallet: Wallet = wsm.wallets[1]
+        standard_wallet: MainWalletProtocol = wsm.wallets[1]
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
@@ -340,7 +340,7 @@ class TestSimpleSyncProtocol:
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
         wsm: WalletStateManager = wallet_node.wallet_state_manager
-        standard_wallet: Wallet = wsm.wallets[1]
+        standard_wallet: MainWalletProtocol = wsm.wallets[1]
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
@@ -415,7 +415,7 @@ class TestSimpleSyncProtocol:
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
         wsm: WalletStateManager = wallet_node.wallet_state_manager
-        standard_wallet: Wallet = wsm.wallets[1]
+        standard_wallet: MainWalletProtocol = wsm.wallets[1]
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)

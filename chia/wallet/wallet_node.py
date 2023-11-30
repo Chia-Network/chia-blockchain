@@ -77,6 +77,7 @@ from chia.wallet.util.wallet_sync_utils import (
     subscribe_to_phs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler, get_wp_fork_point
 
@@ -430,6 +431,7 @@ class WalletNode:
             self.server,
             self.root_path,
             self,
+            Wallet,
             observation_root,
         )
 

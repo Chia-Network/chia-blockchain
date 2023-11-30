@@ -34,7 +34,7 @@ from chia.wallet.util.signer_protocol import (
     clvm_serialization_mode,
 )
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG
-from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_protocol import MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.wallet.conftest import WalletStateTransition, WalletTestFramework
 
@@ -155,7 +155,7 @@ def test_signing_serialization() -> None:
 )
 @pytest.mark.anyio
 async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFramework) -> None:
-    wallet: Wallet = wallet_environments.environments[0].xch_wallet
+    wallet: MainWalletProtocol = wallet_environments.environments[0].xch_wallet
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
 

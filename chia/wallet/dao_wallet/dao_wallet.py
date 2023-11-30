@@ -74,9 +74,9 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import MainWalletProtocol
 
 
 class DAOWallet:
@@ -112,13 +112,13 @@ class DAOWallet:
     wallet_info: WalletInfo
     dao_info: DAOInfo
     dao_rules: DAORules
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     wallet_id: uint32
 
     @staticmethod
     async def create_new_dao_and_wallet(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         amount_of_cats: uint64,
         dao_rules: DAORules,
         tx_config: TXConfig,
@@ -148,7 +148,7 @@ class DAOWallet:
 
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
-        std_wallet_id = self.standard_wallet.wallet_id
+        std_wallet_id = self.standard_wallet.id()
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount_of_cats > bal:
             raise ValueError(f"Your balance of {bal} mojos is not enough to create {amount_of_cats} CATs")
@@ -172,7 +172,7 @@ class DAOWallet:
             name, WalletType.DAO.value, info_as_string
         )
         self.wallet_id = self.wallet_info.id
-        std_wallet_id = self.standard_wallet.wallet_id
+        std_wallet_id = self.standard_wallet.id()
 
         try:
             txs = await self.generate_new_dao(
@@ -205,7 +205,7 @@ class DAOWallet:
     @staticmethod
     async def create_new_dao_wallet_for_existing_dao(
         wallet_state_manager: Any,
-        main_wallet: Wallet,
+        main_wallet: MainWalletProtocol,
         treasury_id: bytes32,
         filter_amount: uint64 = uint64(1),
         name: Optional[str] = None,
@@ -271,7 +271,7 @@ class DAOWallet:
     @staticmethod
     async def create(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
     ) -> DAOWallet:
@@ -1529,7 +1529,7 @@ class DAOWallet:
     ) -> List[TransactionRecord]:
         if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
-            wallet: Wallet = funding_wallet  # type: ignore[assignment]
+            wallet: MainWalletProtocol = funding_wallet  # type: ignore[assignment]
             return await wallet.generate_signed_transaction(
                 amount,
                 p2_singleton_puzhash,

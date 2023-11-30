@@ -27,15 +27,15 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_protocol import MainWalletProtocol
 from tests.util.time_out_assert import time_out_assert_not_none
 from tests.wallet.conftest import WalletEnvironment, WalletStateTransition, WalletTestFramework
 
 
 async def mint_cr_cat(
     num_blocks: int,
-    wallet_0: Wallet,
+    wallet_0: MainWalletProtocol,
     wallet_node_0: WalletNode,
     client_0: WalletRpcClient,
     full_node_api: FullNodeSimulator,

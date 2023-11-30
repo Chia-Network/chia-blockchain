@@ -39,9 +39,9 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import MainWalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -61,7 +61,7 @@ class DAOCATWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     dao_cat_info: DAOCATInfo
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     cost_of_single_tx: Optional[int]
     lineage_store: CATLineageStore
 
@@ -72,7 +72,7 @@ class DAOCATWallet:
     @staticmethod
     async def create(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
     ) -> DAOCATWallet:
         self = DAOCATWallet()
@@ -93,7 +93,7 @@ class DAOCATWallet:
     @staticmethod
     async def get_or_create_wallet_for_cat(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         limitations_program_hash_hex: str,
         name: Optional[str] = None,
     ) -> DAOCATWallet:

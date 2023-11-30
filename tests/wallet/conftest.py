@@ -17,8 +17,8 @@ from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
+from chia.wallet.wallet_protocol import MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
@@ -54,7 +54,7 @@ class WalletStateTransition:
 class WalletEnvironment:
     wallet_node: WalletNode
     wallet_state_manager: WalletStateManager
-    xch_wallet: Wallet
+    xch_wallet: MainWalletProtocol
     rpc_client: WalletRpcClient
     wallet_states: Dict[uint32, WalletState]
     wallet_aliases: Dict[str, int] = field(default_factory=dict)

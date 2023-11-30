@@ -1,18 +1,31 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional, Set, Tuple, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, TypeVar
 
-from chia_rs import G1Element
-from typing_extensions import NotRequired, Protocol, TypedDict
+from chia_rs import G1Element, G2Element
+from typing_extensions import NotRequired, Protocol, TypedDict, Unpack
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
+from chia.wallet.conditions import Condition
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
-from chia.wallet.util.tx_config import CoinSelectionConfig
+from chia.wallet.payment import Payment
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.signer_protocol import (
+    PathHint,
+    SignedTransaction,
+    SigningInstructions,
+    SigningResponse,
+    Spend,
+    SumHint,
+)
+from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -74,6 +87,90 @@ class WalletProtocol(Protocol[T]):
     # WalletStateManager is only imported for type hinting thus leaving pylint
     # unable to process this
     wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment
+
+
+class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
+    @property
+    def max_send_quantity(self) -> int:
+        ...
+
+    @staticmethod
+    async def create(
+        wallet_state_manager: Any,
+        info: WalletInfo,
+        name: str = ...,
+    ) -> MainWalletProtocol:
+        ...
+
+    async def get_new_puzzle(self) -> Program:
+        ...
+
+    async def get_new_puzzlehash(self) -> bytes32:
+        ...
+
+    # This isn't part of the WalletProtocol but it should be
+    # Also this doesn't likely conform to the eventual one that ends up in WalletProtocol
+    async def generate_signed_transaction(
+        self,
+        amount: uint64,
+        puzzle_hash: bytes32,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+        coins: Optional[Set[Coin]] = None,
+        primaries: Optional[List[Payment]] = None,
+        memos: Optional[List[bytes]] = None,
+        puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+        **kwargs: Unpack[GSTOptionalArgs],
+    ) -> List[TransactionRecord]:
+        ...
+
+    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+        ...
+
+    async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
+        ...
+
+    async def sign_message(self, message: str, puzzle_hash: bytes32, mode: SigningMode) -> Tuple[G1Element, G2Element]:
+        ...
+
+    async def get_puzzle_hash(self, new: bool) -> bytes32:
+        ...
+
+    async def apply_signatures(
+        self, spends: List[Spend], signing_responses: List[SigningResponse]
+    ) -> SignedTransaction:
+        ...
+
+    async def execute_signing_instructions(
+        self, signing_instructions: SigningInstructions, partial_allowed: bool = False
+    ) -> List[SigningResponse]:
+        ...
+
+    async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:
+        ...
+
+    async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
+        ...
+
+    async def create_tandem_xch_tx(
+        self,
+        fee: uint64,
+        tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+    ) -> TransactionRecord:
+        ...
+
+    def make_solution(
+        self,
+        primaries: List[Payment],
+        conditions: Tuple[Condition, ...] = tuple(),
+        fee: uint64 = uint64(0),
+    ) -> Program:
+        ...
+
+    async def get_puzzle(self, new: bool) -> Program:
+        ...
 
 
 class GSTOptionalArgs(TypedDict):

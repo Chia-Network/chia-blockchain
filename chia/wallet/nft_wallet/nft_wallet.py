@@ -54,11 +54,10 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_nft_store import WalletNftStore
-from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol, WalletProtocol
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
@@ -71,7 +70,7 @@ class NFTWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     nft_wallet_info: NFTWalletInfo
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     wallet_id: int
     nft_store: WalletNftStore
 
@@ -83,7 +82,7 @@ class NFTWallet:
     async def create_new_nft_wallet(
         cls: Type[_T_NFTWallet],
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         did_id: Optional[bytes32] = None,
         name: Optional[str] = None,
     ) -> _T_NFTWallet:
@@ -103,7 +102,7 @@ class NFTWallet:
         )
         self.wallet_id = self.wallet_info.id
         self.nft_store = wallet_state_manager.nft_store
-        self.log.debug("NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.wallet_id)
+        self.log.debug("NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.id())
 
         await self.wallet_state_manager.add_new_wallet(self)
         self.log.debug("Generated a new NFT wallet: %s", self.__dict__)
@@ -113,7 +112,7 @@ class NFTWallet:
     async def create(
         cls: Type[_T_NFTWallet],
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
     ) -> _T_NFTWallet:
@@ -553,7 +552,7 @@ class NFTWallet:
     async def create_from_puzzle_info(
         cls: Any,
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
     ) -> Any:

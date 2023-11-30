@@ -60,11 +60,10 @@ from chia.wallet.util.signer_protocol import UnsignedTransaction
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType, WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import MainWalletProtocol, WalletProtocol
 from tests.conftest import ConsensusMode
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.wallet.test_wallet_coin_store import (
@@ -102,7 +101,7 @@ class WalletBundle:
     service: Service
     node: WalletNode
     rpc_client: WalletRpcClient
-    wallet: Wallet
+    wallet: MainWalletProtocol
 
 
 @dataclasses.dataclass
@@ -204,7 +203,9 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
                 yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
 
 
-async def create_tx_outputs(wallet: Wallet, output_args: List[Tuple[int, Optional[List[str]]]]) -> List[Dict[str, Any]]:
+async def create_tx_outputs(
+    wallet: MainWalletProtocol, output_args: List[Tuple[int, Optional[List[str]]]]
+) -> List[Dict[str, Any]]:
     outputs = []
     for args in output_args:
         output = {"amount": uint64(args[0]), "puzzle_hash": await wallet.get_new_puzzlehash()}
@@ -295,7 +296,7 @@ def update_verify_signature_request(request: Dict[str, Any], prefix_hex_values: 
 async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
-    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_2: MainWalletProtocol = env.wallet_2.wallet
     wallet_node: WalletNode = env.wallet_1.node
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -368,7 +369,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
 async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
-    wallet: Wallet = env.wallet_1.wallet
+    wallet: MainWalletProtocol = env.wallet_1.wallet
     wallet_node: WalletNode = env.wallet_1.node
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -401,7 +402,7 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
 @pytest.mark.anyio
 async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
     env = wallet_rpc_environment
-    wallet: Wallet = env.wallet_1.wallet
+    wallet: MainWalletProtocol = env.wallet_1.wallet
     wallet_node: WalletNode = env.wallet_1.node
     full_node_api: FullNodeSimulator = env.full_node.api
     wallet_rpc_client = env.wallet_1.rpc_client
@@ -418,7 +419,7 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
 @pytest.mark.anyio
 async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironment):
     env = wallet_rpc_environment
-    wallet: Wallet = env.wallet_1.wallet
+    wallet: MainWalletProtocol = env.wallet_1.wallet
     full_node_api: FullNodeSimulator = env.full_node.api
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
@@ -443,7 +444,7 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
 @pytest.mark.anyio
 async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestEnvironment):
     env = wallet_rpc_environment
-    wallet: Wallet = env.wallet_1.wallet
+    wallet: MainWalletProtocol = env.wallet_1.wallet
     full_node_api: FullNodeSimulator = env.full_node.api
     wallet_rpc_client = env.wallet_1.rpc_client
     wallet_node: WalletNode = env.wallet_1.node
@@ -509,7 +510,7 @@ async def test_create_signed_transaction(
 ):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
-    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_2: MainWalletProtocol = env.wallet_2.wallet
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
     full_node_api: FullNodeSimulator = env.full_node.api
@@ -590,7 +591,7 @@ async def test_create_signed_transaction(
 async def test_create_signed_transaction_with_coin_announcement(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
-    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_2: MainWalletProtocol = env.wallet_2.wallet
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
     client_node: FullNodeRpcClient = env.full_node.rpc_client
@@ -621,7 +622,7 @@ async def test_create_signed_transaction_with_coin_announcement(wallet_rpc_envir
 async def test_create_signed_transaction_with_puzzle_announcement(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
-    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_2: MainWalletProtocol = env.wallet_2.wallet
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
     client_node: FullNodeRpcClient = env.full_node.rpc_client
@@ -651,7 +652,7 @@ async def test_create_signed_transaction_with_puzzle_announcement(wallet_rpc_env
 @pytest.mark.anyio
 async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
-    wallet_1: Wallet = env.wallet_1.wallet
+    wallet_1: MainWalletProtocol = env.wallet_1.wallet
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
     full_node_api: FullNodeSimulator = env.full_node.api
     full_node_rpc: FullNodeRpcClient = env.full_node.rpc_client
@@ -807,7 +808,7 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
 async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
-    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_2: MainWalletProtocol = env.wallet_2.wallet
     wallet_node: WalletNode = env.wallet_1.node
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -857,7 +858,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
 async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
-    wallet: Wallet = env.wallet_1.wallet
+    wallet: MainWalletProtocol = env.wallet_1.wallet
     wallet_node: WalletNode = env.wallet_1.node
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -1403,8 +1404,8 @@ async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEn
 async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
-    wallet_1: Wallet = env.wallet_1.wallet
-    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_1: MainWalletProtocol = env.wallet_1.wallet
+    wallet_2: MainWalletProtocol = env.wallet_2.wallet
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_2_node: WalletNode = env.wallet_2.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
@@ -1536,7 +1537,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
-    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_2: MainWalletProtocol = env.wallet_2.wallet
     wallet_2_node: WalletNode = env.wallet_2.node
     wallet_2_rpc: WalletRpcClient = env.wallet_2.rpc_client
     full_node_api: FullNodeSimulator = env.full_node.api
@@ -1628,7 +1629,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
-    wallet: Wallet = env.wallet_1.wallet
+    wallet: MainWalletProtocol = env.wallet_1.wallet
     wallet_node: WalletNode = env.wallet_1.node
     client: WalletRpcClient = env.wallet_1.rpc_client
 
@@ -1762,7 +1763,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
-    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_2: MainWalletProtocol = env.wallet_2.wallet
     wallet_node: WalletNode = env.wallet_1.node
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -2055,7 +2056,7 @@ async def test_get_coin_records_rpc_failures(
 async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
-    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_2: MainWalletProtocol = env.wallet_2.wallet
     wallet_node: WalletNode = env.wallet_1.node
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
