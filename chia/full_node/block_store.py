@@ -17,7 +17,6 @@ from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
 from chia.util.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.ints import uint32
-from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 
@@ -39,19 +38,14 @@ def decompress_blob(block_bytes: bytes) -> bytes:
 @typing_extensions.final
 @dataclasses.dataclass
 class BlockStore:
-    block_cache: LRUCache[bytes32, FullBlock]
     db_wrapper: DBWrapper2
-    ses_challenge_cache: LRUCache[bytes32, List[SubEpochChallengeSegment]]
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2, *, use_cache: bool = True) -> BlockStore:
         if db_wrapper.db_version != 2:
             raise RuntimeError(f"BlockStore does not support database schema v{db_wrapper.db_version}")
 
-        if use_cache:
-            self = cls(LRUCache(1000), db_wrapper, LRUCache(50))
-        else:
-            self = cls(LRUCache(0), db_wrapper, LRUCache(0))
+        self = cls(db_wrapper)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating block store tables and indexes.")
@@ -119,8 +113,6 @@ class BlockStore:
 
         block_bytes: bytes = compress(block)
 
-        self.block_cache.put(header_hash, block)
-
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 "UPDATE full_blocks SET block=?,is_fully_compactified=? WHERE header_hash=?",
@@ -132,8 +124,6 @@ class BlockStore:
             )
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
-        self.block_cache.put(header_hash, block)
-
         ses: Optional[bytes] = (
             None if block_record.sub_epoch_summary_included is None else bytes(block_record.sub_epoch_summary_included)
         )
@@ -175,10 +165,6 @@ class BlockStore:
         self,
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
-        cached: Optional[List[SubEpochChallengeSegment]] = self.ses_challenge_cache.get(ses_block_hash)
-        if cached is not None:
-            return cached
-
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT challenge_segments from sub_epoch_segments_v3 WHERE ses_block_hash=?",
@@ -188,35 +174,22 @@ class BlockStore:
 
         if row is not None:
             challenge_segments: List[SubEpochChallengeSegment] = SubEpochSegments.from_bytes(row[0]).challenge_segments
-            self.ses_challenge_cache.put(ses_block_hash, challenge_segments)
             return challenge_segments
         return None
 
     def rollback_cache_block(self, header_hash: bytes32) -> None:
-        try:
-            self.block_cache.remove(header_hash)
-        except KeyError:
-            # this is best effort. When rolling back, we may not have added the
-            # block to the cache yet
-            pass
+        pass
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
-        cached: Optional[FullBlock] = self.block_cache.get(header_hash)
-        if cached is not None:
-            return cached
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
                 row = await cursor.fetchone()
         if row is not None:
             block = decompress(row[0])
-            self.block_cache.put(header_hash, block)
             return block
         return None
 
     async def get_full_block_bytes(self, header_hash: bytes32) -> Optional[bytes]:
-        cached = self.block_cache.get(header_hash)
-        if cached is not None:
-            return bytes(cached)
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
                 row = await cursor.fetchone()
@@ -239,12 +212,6 @@ class BlockStore:
                 return ret
 
     async def get_block_info(self, header_hash: bytes32) -> Optional[GeneratorBlockInfo]:
-        cached = self.block_cache.get(header_hash)
-        if cached is not None:
-            return GeneratorBlockInfo(
-                cached.foliage.prev_block_hash, cached.transactions_generator, cached.transactions_generator_ref_list
-            )
-
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(conn, formatted_str, (header_hash,))
@@ -265,10 +232,6 @@ class BlockStore:
                 )
 
     async def get_generator(self, header_hash: bytes32) -> Optional[SerializedProgram]:
-        cached = self.block_cache.get(header_hash)
-        if cached is not None:
-            return cached.transactions_generator
-
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(conn, formatted_str, (header_hash,))
@@ -347,10 +310,6 @@ class BlockStore:
         Returns the header hash preceeding the input header hash.
         Throws an exception if the block is not present
         """
-        cached = self.block_cache.get(header_hash)
-        if cached is not None:
-            return cached.prev_header_hash
-
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT prev_hash FROM full_blocks WHERE header_hash=?",
@@ -409,7 +368,6 @@ class BlockStore:
                     header_hash = bytes32(row[0])
                     full_block: FullBlock = decompress(row[1])
                     all_blocks[header_hash] = full_block
-                    self.block_cache.put(header_hash, full_block)
         ret: List[FullBlock] = []
         for hh in header_hashes:
             if hh not in all_blocks:
