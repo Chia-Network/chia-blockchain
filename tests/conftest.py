@@ -24,18 +24,6 @@ from chia.clvm.spend_sim import CostLogger
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
-
-# Set spawn after stdlib imports, but before other imports
-from chia.hints import (
-    CrawlerService,
-    DataLayerService,
-    FarmerService,
-    FullNodeService,
-    HarvesterService,
-    SimulatorFullNodeService,
-    TimelordService,
-    WalletService,
-)
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -49,6 +37,18 @@ from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_int
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
+
+# Set spawn after stdlib imports, but before other imports
+from chia.types.hints import (
+    CrawlerService,
+    DataLayerService,
+    FarmerService,
+    FullNodeService,
+    HarvesterService,
+    SimulatorFullNodeService,
+    TimelordService,
+    WalletService,
+)
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri

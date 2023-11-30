@@ -7,7 +7,6 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 import pytest
 
 from chia.farmer.farmer_api import FarmerAPI
-from chia.hints import HarvesterService
 from chia.protocols import farmer_protocol
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
@@ -15,6 +14,7 @@ from chia.simulator.block_tools import create_block_tools_async, test_constants
 from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
+from chia.types.hints import HarvesterService
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 from tests.conftest import ConsensusMode

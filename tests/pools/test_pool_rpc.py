@@ -16,7 +16,6 @@ from _pytest.fixtures import SubRequest
 from chia_rs import G1Element
 
 from chia.consensus.constants import ConsensusConstants
-from chia.hints import SimulatorFullNodeService, WalletService
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -24,6 +23,7 @@ from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.hints import SimulatorFullNodeService, WalletService
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes

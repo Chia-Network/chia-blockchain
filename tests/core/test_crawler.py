@@ -7,13 +7,13 @@ from typing import cast
 import pytest
 
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.hints import CrawlerService
 from chia.protocols.full_node_protocol import NewPeak
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import RequestChildren
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.outbound_message import make_msg
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.hints import CrawlerService
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
 from tests.util.setup_nodes import SimulatorsAndWalletsServices

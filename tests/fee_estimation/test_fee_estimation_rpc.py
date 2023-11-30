@@ -5,7 +5,6 @@ from typing import Any, List, Tuple
 
 import pytest
 
-from chia.hints import SimulatorFullNodeService, WalletService
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.simulator.block_tools import BlockTools
@@ -14,6 +13,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.hints import SimulatorFullNodeService, WalletService
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 

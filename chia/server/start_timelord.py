@@ -7,12 +7,12 @@ from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.hints import TimelordService
 from chia.rpc.timelord_rpc_api import TimelordRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
+from chia.types.hints import TimelordService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH

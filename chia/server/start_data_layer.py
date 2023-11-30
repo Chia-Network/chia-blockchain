@@ -8,12 +8,12 @@ from typing import Any, Dict, List, Optional, cast
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_util import PluginRemote
-from chia.hints import DataLayerService, WalletService
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.ssl.create_ssl import create_all_ssl
+from chia.types.hints import DataLayerService, WalletService
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH

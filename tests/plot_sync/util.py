@@ -6,11 +6,11 @@ from dataclasses import dataclass
 from typing import AsyncIterator, Optional
 
 from chia.harvester.harvester import Harvester
-from chia.hints import FarmerService, HarvesterService
 from chia.plot_sync.sender import Sender
 from chia.protocols.harvester_protocol import PlotSyncIdentifier
 from chia.server.outbound_message import Message, NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.hints import FarmerService, HarvesterService
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16, uint64
 from chia.util.misc import SplitAsyncManager, split_async_manager

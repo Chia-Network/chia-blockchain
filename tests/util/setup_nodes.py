@@ -14,14 +14,6 @@ from chia.daemon.server import WebSocketServer
 from chia.farmer.farmer import Farmer
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
-from chia.hints import (
-    FarmerService,
-    FullNodeService,
-    HarvesterService,
-    SimulatorFullNodeService,
-    TimelordService,
-    WalletService,
-)
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
@@ -41,6 +33,14 @@ from chia.simulator.setup_services import (
 )
 from chia.simulator.socket import find_available_listen_port
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.hints import (
+    FarmerService,
+    FullNodeService,
+    HarvesterService,
+    SimulatorFullNodeService,
+    TimelordService,
+    WalletService,
+)
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32

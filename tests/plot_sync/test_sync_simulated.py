@@ -16,7 +16,6 @@ from chia_rs import G1Element
 
 from chia.farmer.farmer import Farmer
 from chia.harvester.harvester import Harvester
-from chia.hints import FarmerService, HarvesterService
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants
@@ -28,6 +27,7 @@ from chia.server.outbound_message import make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.hints import FarmerService, HarvesterService
 from chia.util.ints import int16, uint8, uint64
 from chia.util.misc import to_batches
 from tests.plot_sync.util import start_harvester_service

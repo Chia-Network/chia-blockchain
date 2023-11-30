@@ -13,7 +13,6 @@ from pytest_mock import MockerFixture
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.farmer.farmer import Farmer, increment_pool_stats, strip_old_entries
-from chia.hints import FarmerService, HarvesterService
 from chia.pools.pool_config import PoolWalletConfig
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
@@ -26,6 +25,7 @@ from chia.types.blockchain_format.proof_of_space import (
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.hints import FarmerService, HarvesterService
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from tests.conftest import HarvesterFarmerEnvironment
