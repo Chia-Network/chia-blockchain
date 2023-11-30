@@ -48,7 +48,7 @@ from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
-from tests.environments.full_node import NodeForTest
+from tests.environments.full_node import FullNodeEnvironment
 from tests.environments.wallet import WalletEnvironment
 
 OldSimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
@@ -71,7 +71,7 @@ class FullSystem:
 
 @dataclass
 class SimulatorsAndWallets:
-    simulators: List[NodeForTest]
+    simulators: List[FullNodeEnvironment]
     wallets: List[WalletEnvironment]
     bt: BlockTools
 
@@ -198,7 +198,7 @@ async def setup_simulators_and_wallets(
                     wallets.append(WalletEnvironment(service=service, rpc_client=rpc_client))
 
                 yield SimulatorsAndWallets(
-                    simulators=[NodeForTest(service=service) for service in simulators],
+                    simulators=[FullNodeEnvironment(service=service) for service in simulators],
                     wallets=wallets,
                     bt=bt_tools[0],
                 )

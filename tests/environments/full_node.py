@@ -12,13 +12,12 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from tests.environments.common import ServiceForTest
 
 
-# TODO: gotta make a naming scheme, or module that we import and use classes from `themodule.Wallet` etc.
-# TODO: some common pattern across all the services?
 @dataclass
-class NodeForTest:
+class FullNodeEnvironment:
     if TYPE_CHECKING:
         _protocol_check: ClassVar[ServiceForTest[FullNode, FullNodeRpcApi, FullNodeSimulator]] = cast(
-            "NodeForTest", None
+            "FullNodeEnvironment",
+            None,
         )
 
     __match_args__: ClassVar[Tuple[str, ...]] = ()
