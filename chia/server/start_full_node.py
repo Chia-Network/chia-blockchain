@@ -49,7 +49,7 @@ async def create_full_node_service(
     if service_config["enable_upnp"]:
         upnp_list = [service_config["port"]]
     network_id = service_config["selected_network"]
-    rpc_info: Optional[RpcInfo] = None
+    rpc_info: Optional[RpcInfo[FullNodeRpcApi]] = None
     if service_config["start_rpc_server"]:
         rpc_info = (FullNodeRpcApi, service_config["rpc_port"])
     return Service(

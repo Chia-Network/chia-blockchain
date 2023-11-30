@@ -10,21 +10,29 @@ from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
+from chia.rpc.crawler_rpc_api import CrawlerRpcApi
+from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
+from chia.rpc.farmer_rpc_api import FarmerRpcApi
+from chia.rpc.full_node_rpc_api import FullNodeRpcApi
+from chia.rpc.harvester_rpc_api import HarvesterRpcApi
+from chia.rpc.timelord_rpc_api import TimelordRpcApi
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.simulator_full_node_rpc_api import SimulatorFullNodeRpcApi
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
-CrawlerService = Service[Crawler, CrawlerAPI]
-DataLayerService = Service[DataLayer, DataLayerAPI]
-FarmerService = Service[Farmer, FarmerAPI]
-FullNodeService = Service[FullNode, FullNodeAPI]
-HarvesterService = Service[Harvester, HarvesterAPI]
-IntroducerService = Service[Introducer, IntroducerAPI]
-SimulatorFullNodeService = Service[FullNode, FullNodeSimulator]
-TimelordService = Service[Timelord, TimelordAPI]
-WalletService = Service[WalletNode, WalletNodeAPI]
+CrawlerService = Service[Crawler, CrawlerAPI, CrawlerRpcApi]
+DataLayerService = Service[DataLayer, DataLayerAPI, DataLayerRpcApi]
+FarmerService = Service[Farmer, FarmerAPI, FarmerRpcApi]
+FullNodeService = Service[FullNode, FullNodeAPI, FullNodeRpcApi]
+HarvesterService = Service[Harvester, HarvesterAPI, HarvesterRpcApi]
+IntroducerService = Service[Introducer, IntroducerAPI, FullNodeRpcApi]
+SimulatorFullNodeService = Service[FullNode, FullNodeSimulator, SimulatorFullNodeRpcApi]
+TimelordService = Service[Timelord, TimelordAPI, TimelordRpcApi]
+WalletService = Service[WalletNode, WalletNodeAPI, WalletRpcApi]

@@ -52,7 +52,7 @@ def create_wallet_service(
 
     network_id = service_config["selected_network"]
     rpc_port = service_config.get("rpc_port")
-    rpc_info: Optional[RpcInfo] = None
+    rpc_info: Optional[RpcInfo[WalletRpcApi]] = None
     if rpc_port is not None:
         rpc_info = (WalletRpcApi, service_config["rpc_port"])
 
