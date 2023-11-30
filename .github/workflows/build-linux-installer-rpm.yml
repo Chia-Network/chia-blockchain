@@ -183,6 +183,12 @@ jobs:
         cd ./build_scripts
         bash build_linux_rpm-2-installer.sh amd64
 
+    - name: Upload debug spec
+      uses: actions/upload-artifact@v3
+      with:
+        name: spec
+        path: dist/fpm_generated.spec
+
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v3
       with:
