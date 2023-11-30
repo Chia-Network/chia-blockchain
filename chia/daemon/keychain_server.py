@@ -5,12 +5,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
-from chia_rs import G1Element, PrivateKey
+from chia_rs import PrivateKey
 
 from chia.cmds.init_funcs import check_keys
 from chia.util.errors import KeychainException, KeychainFingerprintNotFound
 from chia.util.ints import uint32
-from chia.util.keychain import Keychain, KeyData
+from chia.util.keychain import KEY_TYPES_TO_TYPES, Keychain, KeyData
+from chia.util.observation_root import ObservationRoot
 from chia.util.streamable import Streamable, streamable
 
 # Commands that are handled by the KeychainServer
@@ -394,12 +395,14 @@ class KeychainServer:
         if self.get_keychain_for_request(request).is_keyring_locked():  # pragma: no cover
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
-        public_keys = self.get_keychain_for_request(request).get_all_public_keys()
+        public_keys = self.get_keychain_for_request(request).get_all_public_keys_of_type(
+            KEY_TYPES_TO_TYPES[request["type"]]
+        )
         if len(public_keys) == 0:  # pragma: no cover
             return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
 
         fingerprint = request.get("fingerprint", None)
-        public_key: Optional[G1Element] = None
+        public_key: Optional[ObservationRoot] = None
         if fingerprint is not None:
             for pk in public_keys:
                 if pk.get_fingerprint() == fingerprint:

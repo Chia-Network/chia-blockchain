@@ -58,6 +58,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain
 from chia.util.misc import to_batches
+from chia.util.observation_root import ObservationRoot
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.streamable import Streamable, streamable
@@ -222,12 +223,14 @@ class WalletNode:
 
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool = False
-    ) -> Optional[Union[PrivateKey, G1Element]]:
+    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
             # Returns first key if fingerprint is None
             if private:
-                key: Optional[Union[PrivateKey, G1Element]] = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+                key: Optional[Union[PrivateKey, ObservationRoot]] = await keychain_proxy.get_key_for_fingerprint(
+                    fingerprint
+                )
             else:
                 key = await keychain_proxy.get_public_key_for_fingerprint(fingerprint)
         except KeychainIsEmpty:
@@ -246,13 +249,17 @@ class WalletNode:
 
         return key
 
-    async def get_key(self, fingerprint: Optional[int], private: bool = True) -> Optional[Union[PrivateKey, G1Element]]:
+    async def get_key(
+        self, fingerprint: Optional[int], private: bool = True
+    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
         """
         Attempt to get the private key for the given fingerprint. If the fingerprint is None,
         get_key_for_fingerprint() will return the first private key. Similarly, if a key isn't
         returned for the provided fingerprint, the first key will be returned.
         """
-        key: Optional[Union[PrivateKey, G1Element]] = await self.get_key_for_fingerprint(fingerprint, private=private)
+        key: Optional[Union[PrivateKey, ObservationRoot]] = await self.get_key_for_fingerprint(
+            fingerprint, private=private
+        )
 
         if key is None and fingerprint is not None:
             key = await self.get_key_for_fingerprint(None, private=private)
@@ -389,17 +396,17 @@ class WalletNode:
         self.synced_peers = set()
         private_key = await self.get_key(fingerprint, private=True)
         if private_key is None:
-            public_key = await self.get_key(fingerprint, private=False)
+            observation_root = await self.get_key(fingerprint, private=False)
         else:
             assert isinstance(private_key, PrivateKey)
-            public_key = private_key.get_g1()
-        if public_key is None:
+            observation_root = private_key.get_g1()
+        if observation_root is None:
             self.log_out()
             return False
-        assert isinstance(public_key, G1Element)
+        assert not isinstance(observation_root, PrivateKey)
         # override with private key fetched in case it's different from what was passed
         if fingerprint is None:
-            fingerprint = public_key.get_fingerprint()
+            fingerprint = observation_root.get_fingerprint()
         if self.config.get("enable_profiler", False):
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
@@ -423,7 +430,7 @@ class WalletNode:
             self.server,
             self.root_path,
             self,
-            public_key,
+            observation_root,
         )
 
         if self.state_changed_callback is not None:

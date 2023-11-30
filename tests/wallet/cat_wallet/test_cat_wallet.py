@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List
 
 import pytest
+from chia_rs import G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols.wallet_protocol import CoinState
@@ -928,8 +929,9 @@ class TestCATWallet:
 
         # Mint CAT to ourselves, immediately spend it to an unhinted puzzle hash that we have manually added to the DB
         # We should pick up this coin as balance even though it is unhinted because it is "change"
+        assert isinstance(wallet_node_0.wallet_state_manager.observation_root, G1Element)
         pubkey_unhardened = master_pk_to_wallet_pk_unhardened(
-            wallet_node_0.wallet_state_manager.root_pubkey, uint32(100000000)
+            wallet_node_0.wallet_state_manager.observation_root, uint32(100000000)
         )
         inner_puzhash = puzzle_hash_for_pk(pubkey_unhardened)
         puzzlehash_unhardened = construct_cat_puzzle(

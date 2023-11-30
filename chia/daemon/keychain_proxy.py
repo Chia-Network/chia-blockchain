@@ -30,7 +30,8 @@ from chia.util.errors import (
     KeychainMalformedResponse,
     KeychainProxyConnectionTimeout,
 )
-from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, mnemonic_to_seed
+from chia.util.keychain import KEY_TYPES_TO_TYPES, Keychain, KeyData, bytes_to_mnemonic, mnemonic_to_seed
+from chia.util.observation_root import ObservationRoot
 from chia.util.ws_message import WsRpcMessage
 
 
@@ -373,11 +374,11 @@ class KeychainProxy(DaemonProxy):
 
         return key
 
-    async def get_public_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[G1Element]:
+    async def get_public_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[ObservationRoot]:
         """
         Locates and returns a private key matching the provided fingerprint
         """
-        key: Optional[G1Element] = None
+        key: Optional[ObservationRoot] = None
         if self.use_local_keychain():
             public_keys = self.keychain.get_all_public_keys()
             if len(public_keys) == 0:
@@ -403,7 +404,7 @@ class KeychainProxy(DaemonProxy):
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
                 else:
-                    key = G1Element.from_bytes(bytes.fromhex(pk_str))
+                    key = KEY_TYPES_TO_TYPES[response["data"]["type"]].from_bytes(bytes.fromhex(pk_str))
             else:
                 self.handle_error(response)
 

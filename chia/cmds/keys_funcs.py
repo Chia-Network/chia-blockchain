@@ -498,7 +498,7 @@ def search_derive(
         search_private_key = True
 
     if fingerprint is None and private_key is None:
-        public_keys: List[G1Element] = Keychain().get_all_public_keys()
+        public_keys: List[G1Element] = Keychain().get_all_public_keys_of_type(G1Element)
         private_keys: List[Optional[PrivateKey]] = [
             data.private_key if data.secrets is not None else None for data in Keychain().get_keys(include_secrets=True)
         ]

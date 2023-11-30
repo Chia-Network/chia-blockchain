@@ -82,6 +82,9 @@ class TestKeychain:
         assert kc._get_free_private_key_index() == 2
         assert len(kc.get_all_private_keys()) == 2
         assert len(kc.get_all_public_keys()) == 2
+        all_pks: List[G1Element] = kc.get_all_public_keys_of_type(G1Element)
+        assert len(all_pks) == 2
+
         assert kc.get_all_private_keys()[0] == kc.get_first_private_key()
         assert kc.get_all_public_keys()[0] == kc.get_first_public_key()
 

@@ -7,7 +7,7 @@ from enum import Enum
 from functools import cached_property
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 import pkg_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
@@ -36,6 +36,9 @@ DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
 DEFAULT_SERVICE = f"chia-{DEFAULT_USER}"  # e.g. chia-user-chia-1.8
 MAX_KEYS = 100
 MIN_PASSPHRASE_LEN = 8
+
+
+_T_ObservationRoot = TypeVar("_T_ObservationRoot", bound=ObservationRoot)
 
 
 def supports_os_passphrase_storage() -> bool:
@@ -219,6 +222,10 @@ class KeyDataSecrets(Streamable):
 
 class KeyTypes(str, Enum):
     G1_ELEMENT = "G1 Element"
+
+
+TYPES_TO_KEY_TYPES: Dict[Type[ObservationRoot], KeyTypes] = {G1Element: KeyTypes.G1_ELEMENT}
+KEY_TYPES_TO_TYPES: Dict[KeyTypes, Type[ObservationRoot]] = {v: k for k, v in TYPES_TO_KEY_TYPES.items()}
 
 
 @final
@@ -491,15 +498,26 @@ class Keychain:
                 pass
         return all_keys
 
-    def get_all_public_keys(self) -> List[G1Element]:
+    def get_all_public_keys(self) -> List[ObservationRoot]:
         """
         Returns all public keys.
         """
-        all_keys: List[G1Element] = []
+        all_keys: List[ObservationRoot] = []
         for index in range(MAX_KEYS + 1):
             try:
                 key_data = self._get_key_data(index)
-                if isinstance(key_data.observation_root, G1Element):
+                all_keys.append(key_data.observation_root)
+            except KeychainUserNotFound:
+                pass
+        return all_keys
+
+    def get_all_public_keys_of_type(self, key_type: Type[_T_ObservationRoot]) -> List[_T_ObservationRoot]:
+        all_keys: List[_T_ObservationRoot] = []
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index)
+                if key_data.key_type == TYPES_TO_KEY_TYPES[key_type]:
+                    assert isinstance(key_data.observation_root, key_type)
                     all_keys.append(key_data.observation_root)
             except KeychainUserNotFound:
                 pass

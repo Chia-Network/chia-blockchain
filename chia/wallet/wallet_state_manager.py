@@ -59,6 +59,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
+from chia.util.observation_root import ObservationRoot
 from chia.util.path import path_from_root
 from chia.util.streamable import Streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -193,7 +194,7 @@ class WalletStateManager:
     main_wallet: Wallet
     wallets: Dict[uint32, WalletProtocol[Any]]
     private_key: Optional[PrivateKey]
-    root_pubkey: G1Element
+    observation_root: ObservationRoot
 
     trade_manager: TradeManager
     notification_manager: NotificationManager
@@ -221,7 +222,7 @@ class WalletStateManager:
         server: ChiaServer,
         root_path: Path,
         wallet_node: WalletNode,
-        root_pubkey: Optional[G1Element] = None,
+        observation_root: Optional[ObservationRoot] = None,
     ) -> WalletStateManager:
         self = WalletStateManager()
 
@@ -276,17 +277,17 @@ class WalletStateManager:
 
         self.private_key = private_key
         if private_key is None:  # pragma: no cover
-            if root_pubkey is None:
+            if observation_root is None:
                 raise ValueError("WalletStateManager requires either a root private key or root public key")
             else:
-                self.root_pubkey = root_pubkey
+                self.observation_root = observation_root
         else:
             calculated_root_public_key: G1Element = private_key.get_g1()
-            if root_pubkey is not None:
-                assert root_pubkey == calculated_root_public_key
-            self.root_pubkey = calculated_root_public_key
+            if observation_root is not None:
+                assert observation_root == calculated_root_public_key
+            self.observation_root = calculated_root_public_key
 
-        fingerprint = self.root_pubkey.get_fingerprint()
+        fingerprint = self.observation_root.get_fingerprint()
         puzzle_decorators = self.config.get("puzzle_decorators", {}).get(fingerprint, [])
         self.decorator_manager = PuzzleDecoratorManager.create(puzzle_decorators)
 
@@ -364,7 +365,9 @@ class WalletStateManager:
         return self
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
-        return master_pk_to_wallet_pk_unhardened(self.root_pubkey, index)
+        if not isinstance(self.observation_root, G1Element):
+            raise ValueError("Public key derivation is not supported for non-G1Element keys")
+        return master_pk_to_wallet_pk_unhardened(self.observation_root, index)
 
     async def get_private_key(self, puzzle_hash: bytes32) -> PrivateKey:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
@@ -446,7 +449,11 @@ class WalletStateManager:
                 self.log.info(f"Start: {creating_msg}")
                 if self.private_key is not None:
                     intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
-                intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.root_pubkey)
+                # This function shoul work for other types of observation roots too
+                # However to generalize this function beyond pubkeys is beyond the scope of current work
+                # So we're just going to sanitize and move on
+                assert isinstance(self.observation_root, G1Element)
+                intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.observation_root)
                 for index in range(start_index, last_index):
                     if target_wallet.type() == WalletType.POOLING_WALLET:
                         continue
