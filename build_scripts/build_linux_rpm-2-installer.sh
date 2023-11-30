@@ -62,7 +62,8 @@ rvm use ruby-3
 # /usr/lib64/libcrypt.so.1 is marked as a dependency specifically because newer versions of fedora bundle
 # libcrypt.so.2 by default, and the libxcrypt-compat package needs to be installed for the other version
 # Marking as a dependency allows yum/dnf to automatically install the libxcrypt-compat package as well
-fpm -s dir -t rpm \
+export FPM_EDITOR="cat dist/fpm_generated.spec"
+fpm -e -s dir -t rpm \
   -C "dist/$CLI_RPM_BASE" \
   -p "dist/$CLI_RPM_BASE.rpm" \
   --name chia-blockchain-cli \
