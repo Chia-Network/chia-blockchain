@@ -30,8 +30,8 @@ from chia.server.start_data_layer import create_data_layer_service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.aliases import DataLayerService, WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.hints import DataLayerService, WalletService
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config

@@ -22,8 +22,8 @@ from chia.plotting.util import add_plot_directory, remove_plot_directory
 from chia.protocols.harvester_protocol import Plot
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
+from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.hints import FarmerService, HarvesterService
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.misc import SplitAsyncManager, split_async_manager

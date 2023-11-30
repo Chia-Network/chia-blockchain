@@ -39,7 +39,7 @@ from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 
 # Set spawn after stdlib imports, but before other imports
-from chia.types.hints import (
+from chia.types.aliases import (
     CrawlerService,
     DataLayerService,
     FarmerService,

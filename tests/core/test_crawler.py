@@ -12,8 +12,8 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import RequestChildren
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.outbound_message import make_msg
+from chia.types.aliases import CrawlerService
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.hints import CrawlerService
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
 from tests.util.setup_nodes import SimulatorsAndWalletsServices

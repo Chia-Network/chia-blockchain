@@ -19,13 +19,13 @@ from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.protocols.pool_protocol import PoolErrorCode
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
+from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
     generate_plot_public_key,
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.hints import FarmerService, HarvesterService
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from tests.conftest import HarvesterFarmerEnvironment

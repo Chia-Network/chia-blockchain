@@ -30,8 +30,7 @@ from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_pri
 from chia.simulator.start_simulator import create_full_node_simulator_service
 from chia.ssl.create_ssl import create_all_ssl
 from chia.timelord.timelord_launcher import VDFClientProcessMgr, find_vdf_client, spawn_process
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.hints import (
+from chia.types.aliases import (
     CrawlerService,
     FarmerService,
     FullNodeService,
@@ -41,6 +40,7 @@ from chia.types.hints import (
     TimelordService,
     WalletService,
 )
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config, set_peer_info

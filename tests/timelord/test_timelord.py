@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from chia.types.hints import TimelordService
+from chia.types.aliases import TimelordService
 
 
 @pytest.mark.anyio

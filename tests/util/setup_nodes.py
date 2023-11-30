@@ -32,8 +32,7 @@ from chia.simulator.setup_services import (
     setup_wallet_node,
 )
 from chia.simulator.socket import find_available_listen_port
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.hints import (
+from chia.types.aliases import (
     FarmerService,
     FullNodeService,
     HarvesterService,
@@ -41,6 +40,7 @@ from chia.types.hints import (
     TimelordService,
     WalletService,
 )
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
