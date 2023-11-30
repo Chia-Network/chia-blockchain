@@ -50,6 +50,7 @@ class TimelordAPI:
                 if self.check_heavier_unfinished_block(new_peak) is True:
                     log.info("there is a heavier unfinished block that does not belong to this chain - " "skip peak")
                     self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
+                    return
 
                 log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
                 log.info(
