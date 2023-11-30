@@ -4,6 +4,7 @@ import pathlib
 import sys
 from typing import Any, Dict, Optional
 
+from chia.hints import IntroducerService
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.server.outbound_message import NodeType
@@ -24,7 +25,7 @@ def create_introducer_service(
     config: Dict[str, Any],
     advertised_port: Optional[int] = None,
     connect_to_daemon: bool = True,
-) -> Service[Introducer, IntroducerAPI]:
+) -> IntroducerService:
     service_config = config[SERVICE_NAME]
 
     if advertised_port is None:

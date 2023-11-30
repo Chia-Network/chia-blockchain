@@ -11,6 +11,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.hints import FullNodeService
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
@@ -34,7 +35,7 @@ async def create_full_node_service(
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
     override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
-) -> Service[FullNode, FullNodeAPI]:
+) -> FullNodeService:
     service_config = config[SERVICE_NAME]
 
     full_node = await FullNode.create(

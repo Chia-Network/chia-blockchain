@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.hints import TimelordService
 from chia.rpc.timelord_rpc_api import TimelordRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
@@ -31,7 +32,7 @@ def create_timelord_service(
     config: Dict[str, Any],
     constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-) -> Service[Timelord, TimelordAPI]:
+) -> TimelordService:
     service_config = config[SERVICE_NAME]
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = constants.replace_str_to_bytes(**overrides)

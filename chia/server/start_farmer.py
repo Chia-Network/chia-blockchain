@@ -8,6 +8,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI
+from chia.hints import FarmerService
 from chia.rpc.farmer_rpc_api import FarmerRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
@@ -30,7 +31,7 @@ def create_farmer_service(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
-) -> Service[Farmer, FarmerAPI]:
+) -> FarmerService:
     service_config = config[SERVICE_NAME]
 
     network_id = service_config["selected_network"]

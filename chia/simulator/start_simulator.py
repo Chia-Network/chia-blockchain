@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from chia.full_node.full_node import FullNode
+from chia.hints import SimulatorFullNodeService
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import Service, async_run
 from chia.simulator.block_tools import BlockTools, test_constants
@@ -36,7 +37,7 @@ async def create_full_node_simulator_service(
     bt: BlockTools,
     connect_to_daemon: bool = True,
     override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
-) -> Service[FullNode, FullNodeSimulator]:
+) -> SimulatorFullNodeService:
     service_config = config[SERVICE_NAME]
     constants = bt.constants
 
@@ -66,7 +67,7 @@ async def create_full_node_simulator_service(
 
 @dataclass
 class StartedSimulator:
-    service: Service[FullNode, FullNodeSimulator]
+    service: SimulatorFullNodeService
     exit_code: int
 
 

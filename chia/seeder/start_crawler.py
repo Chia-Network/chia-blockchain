@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.hints import CrawlerService
 from chia.rpc.crawler_rpc_api import CrawlerRpcApi
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
@@ -30,7 +31,7 @@ def create_full_node_crawler_service(
     config: Dict[str, Any],
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-) -> Service[Crawler, CrawlerAPI]:
+) -> CrawlerService:
     service_config = config[SERVICE_NAME]
     crawler_config = service_config["crawler"]
 

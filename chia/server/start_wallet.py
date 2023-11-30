@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.hints import WalletService
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
@@ -33,7 +34,7 @@ def create_wallet_service(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
-) -> Service[WalletNode, WalletNodeAPI]:
+) -> WalletService:
     service_config = config[SERVICE_NAME]
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
