@@ -91,12 +91,12 @@ if [ "$REDHAT_PLATFORM" = "arm64" ]; then
 fi
 PRODUCT_NAME="chia"
 echo npx electron-builder build --linux rpm "${OPT_ARCH}" \
-  --config=../../../build_scripts/npm_linux/package.json \
+  --config=../../../build_scripts/npm_linux/electron-builder.json \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
   --config.rpm.packageName="chia-blockchain"
 npx electron-builder build --linux rpm "${OPT_ARCH}" \
-  --config=../../../build_scripts/npm_linux/package.json \
+  --config=../../../build_scripts/npm_linux/electron-builder.json \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
   --config.rpm.packageName="chia-blockchain"
