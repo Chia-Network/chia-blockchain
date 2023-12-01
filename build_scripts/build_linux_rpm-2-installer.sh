@@ -65,6 +65,7 @@ rvm use ruby-3
 export FPM_EDITOR="cat > dist/fpm_generated.spec <"
 fpm -e -s dir -t rpm \
   -C "dist/$CLI_RPM_BASE" \
+  --directories "/opt/chia"
   -p "dist/$CLI_RPM_BASE.rpm" \
   --name chia-blockchain-cli \
   --license Apache-2.0 \
