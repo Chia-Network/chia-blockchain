@@ -26,6 +26,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_protocol import MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
 from tests.util.time_out_assert import time_out_assert
