@@ -1,5 +1,0 @@
-{
-  "rpm": {
-    "fpm": ["--directory=/opt/chia"]
-  }
-}
