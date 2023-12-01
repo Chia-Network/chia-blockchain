@@ -388,6 +388,10 @@ jobs:
       run: |
         chia version
 
+    - name: Verify /opt/chia present
+      run: |
+        [ -e /opt/chia ]
+
     - name: Remove package
       run: |
         yum remove -y ${{ matrix.mode.file }}
