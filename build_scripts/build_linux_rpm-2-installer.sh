@@ -90,13 +90,12 @@ if [ "$REDHAT_PLATFORM" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
 PRODUCT_NAME="chia"
+python -c 'import json, pathlib; path = pathlib.Path("../../package.json"); root = json.loads(path.read_text()); root.setdefault("rpm", {}); root["rpm"]["fpm"] = ["--directories=/opt/chia"]; path.write_text(json.dumps(root, indent=2))'
 echo npx electron-builder build --linux rpm "${OPT_ARCH}" \
-  --config=../../../build_scripts/npm_linux/electron-builder.json \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
   --config.rpm.packageName="chia-blockchain"
 npx electron-builder build --linux rpm "${OPT_ARCH}" \
-  --config=../../../build_scripts/npm_linux/electron-builder.json \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
   --config.rpm.packageName="chia-blockchain"
