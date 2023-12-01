@@ -96,6 +96,7 @@ from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
+from chia.util.structured_log import MessageType, PeerConnected, StructuredLog
 
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
@@ -168,6 +169,8 @@ class FullNode:
     # hashes of peaks that failed long sync on chip13 Validation
     bad_peak_cache: Dict[bytes32, uint32] = dataclasses.field(default_factory=dict)
     wallet_sync_task: Optional[asyncio.Task[None]] = None
+    event_log: Optional[StructuredLog] = None
+    next_peer_id: int = 1
 
     @property
     def server(self) -> ChiaServer:
@@ -294,6 +297,9 @@ class FullNode:
 
             if self.config.get("enable_memory_profiler", False):
                 asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
+
+            if self.config.get("enable_event_log", False):
+                self.event_log = await StructuredLog.create()
 
             time_taken = time.time() - start_time
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -854,6 +860,22 @@ class FullNode:
         self._state_changed("sync_mode")
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.on_connect(connection))
+
+        if self.event_log is not None:
+            connection.sequence_number = uint32(self.next_peer_id)
+            self.next_peer_id += 1
+            assert connection.connection_type is not None
+            log_msg = PeerConnected(
+                connection.version,
+                str(connection.protocol_version),
+                connection.is_outbound,
+                connection.peer_info._port,
+                connection.peer_node_id,
+                str(connection.peer_info._ip),
+                uint8(connection.connection_type.value),
+            )
+
+            await self.event_log.log(MessageType.NEW_PEER_CONNECTION, connection.sequence_number, log_msg)
 
         if self.initialized is False:
             return None

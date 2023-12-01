@@ -440,6 +440,11 @@ full_node:
   # analyze with chia/utils/profiler.py
   enable_profiler: False
 
+  # when enabled, the full node will log peer connections, UnfinishedBlocks,
+  # incoming Transactions and other events of interest in a structured (binary)
+  # log format under CHIA_ROOT/log
+  enable_event_log: False
+
   enable_memory_profiler: False
 
   # this is a debug and profiling facility that logs all SQLite commands to a

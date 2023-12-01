@@ -64,6 +64,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.merkle_set import MerkleSet
+from chia.util.structured_log import MessageType
 
 if TYPE_CHECKING:
     from chia.full_node.full_node import FullNode
@@ -127,6 +128,10 @@ class FullNodeAPI:
         A peer notifies us that they have added a new peak to their blockchain. If we don't have it,
         we can ask for it.
         """
+
+        if self.full_node.event_log is not None:
+            await self.full_node.event_log.log(MessageType.NEW_PEAK, peer.sequence_number, request)
+
         # this semaphore limits the number of tasks that can call new_peak() at
         # the same time, since it can be expensive
         try:
@@ -249,6 +254,9 @@ class FullNodeAPI:
         If tx is added to mempool, send tx_id to others. (new_transaction)
         """
         assert tx_bytes != b""
+        if self.full_node.event_log is not None:
+            await self.full_node.event_log.log(MessageType.INCOMING_TRANSACTION, peer.sequence_number, tx.transaction)
+
         spend_name = std_hash(tx_bytes)
         if spend_name in self.full_node.full_node_store.pending_tx_request:
             self.full_node.full_node_store.pending_tx_request.pop(spend_name)
@@ -446,9 +454,11 @@ class FullNodeAPI:
 
         return msg
 
-    @api_request(reply_types=[ProtocolMessageTypes.respond_unfinished_block])
+    @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_unfinished_block])
     async def request_unfinished_block(
-        self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock
+        self,
+        request_unfinished_block: full_node_protocol.RequestUnfinishedBlock,
+        peer: WSChiaConnection,
     ) -> Optional[Message]:
         unfinished_block: Optional[UnfinishedBlock] = self.full_node.full_node_store.get_unfinished_block(
             request_unfinished_block.unfinished_reward_hash
@@ -458,6 +468,10 @@ class FullNodeAPI:
                 ProtocolMessageTypes.respond_unfinished_block,
                 full_node_protocol.RespondUnfinishedBlock(unfinished_block),
             )
+            if self.full_node.event_log is not None:
+                await self.full_node.event_log.log(
+                    MessageType.OUTGOING_UNFINISHED_BLOCK, peer.sequence_number, unfinished_block
+                )
             return msg
         return None
 
@@ -468,6 +482,11 @@ class FullNodeAPI:
         peer: WSChiaConnection,
         respond_unfinished_block_bytes: bytes = b"",
     ) -> Optional[Message]:
+        if self.full_node.event_log is not None:
+            await self.full_node.event_log.log(
+                MessageType.INCOMING_UNFINISHED_BLOCK, peer.sequence_number, respond_unfinished_block.unfinished_block
+            )
+
         if self.full_node.sync_store.get_sync_mode():
             return None
         await self.full_node.add_unfinished_block(
@@ -605,6 +624,9 @@ class FullNodeAPI:
     async def respond_signage_point(
         self, request: full_node_protocol.RespondSignagePoint, peer: WSChiaConnection
     ) -> Optional[Message]:
+        if self.full_node.event_log is not None:
+            await self.full_node.event_log.log(MessageType.INCOMING_SIGNAGE_POINT, peer.sequence_number, request)
+
         if self.full_node.sync_store.get_sync_mode():
             return None
         async with self.full_node.timelord_lock:

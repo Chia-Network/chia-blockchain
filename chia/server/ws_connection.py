@@ -31,7 +31,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
 from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
-from chia.util.ints import int16, uint8, uint16
+from chia.util.ints import int16, uint8, uint16, uint32
 from chia.util.log_exceptions import log_exceptions
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
@@ -122,6 +122,8 @@ class WSChiaConnection:
         default_factory=create_default_last_message_time_dict,
         repr=False,
     )
+    # a unique, monotonically increasing serial number for this peer connection
+    sequence_number: uint32 = uint32(0)
 
     @classmethod
     def create(

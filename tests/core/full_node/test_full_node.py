@@ -1506,11 +1506,11 @@ class TestFullNodeProtocol:
         )
 
         # Don't have
-        res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
+        res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash), peer)
         assert res is None
         await full_node_1.full_node.add_unfinished_block(unf, peer)
         # Have
-        res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
+        res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash), peer)
         assert res is not None
 
     @pytest.mark.anyio
