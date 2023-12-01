@@ -392,7 +392,11 @@ jobs:
 
     - name: Verify /opt/chia present
       run: |
-        [ -e /opt/chia ]
+        if [ ! -e /opt/chia ]
+        then
+          ls -l /opt
+          false
+        fi
 
     - name: Remove package
       run: |
@@ -400,4 +404,8 @@ jobs:
 
     - name: Verify /opt/chia not present
       run: |
-        [ ! -e /opt/chia ]
+        if [ -e /opt/chia ]
+        then
+          ls -lR /opt/chia
+          false
+        fi
