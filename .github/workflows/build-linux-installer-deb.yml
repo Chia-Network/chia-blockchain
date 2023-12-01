@@ -377,8 +377,10 @@ jobs:
         mode:
         - name: GUI
           file: chia-blockchain_*.deb
+          package: chia-blockchain
         - name: CLI
           file: chia-blockchain-cli_*.deb
+          package: chia-blockchain-cli
         arch:
         - name: ARM64
           matrix: arm
@@ -412,3 +414,15 @@ jobs:
     - name: Run chia version
       run: |
         chia version
+
+    - name: Verify /opt/chia present
+      run: |
+        [ -e /opt/chia ]
+
+    - name: Remove package
+      run: |
+        apt-get remove --yes ${{ matrix.mode.package }}
+
+    - name: Verify /opt/chia not present
+      run: |
+        [ ! -e /opt/chia ]
