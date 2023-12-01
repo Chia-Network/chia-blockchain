@@ -84,13 +84,16 @@ cd ../chia-blockchain-gui/packages/gui || exit 1
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
+cat package.json | jq
+python -c 'import json, pathlib; path = pathlib.Path("package.json"); root = json.loads(path.read_text()); root.setdefault("rpm", {}); root["rpm"]["fpm"] = ["--directories=/opt/chia"]; path.write_text(json.dumps(root, indent=2))'
+cat package.json | jq
+
 echo "Building Linux(rpm) Electron app"
 OPT_ARCH="--x64"
 if [ "$REDHAT_PLATFORM" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
 PRODUCT_NAME="chia"
-python -c 'import json, pathlib; path = pathlib.Path("../../package.json"); root = json.loads(path.read_text()); root.setdefault("rpm", {}); root["rpm"]["fpm"] = ["--directories=/opt/chia"]; path.write_text(json.dumps(root, indent=2))'
 echo npx electron-builder build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
