@@ -14,5 +14,8 @@
   },
   "devDependencies": {
     "electron-builder": "^24.6.3"
+  },
+  "rpm": {
+    "fpm": ["--directory=/opt/chia"]
   }
 }
