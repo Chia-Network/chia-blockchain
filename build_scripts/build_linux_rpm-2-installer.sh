@@ -85,7 +85,7 @@ cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
 cat package.json | jq
-python -c 'import json, pathlib; path = pathlib.Path("package.json"); root = json.loads(path.read_text()); root.setdefault("rpm", {}); root["rpm"]["fpm"] = ["--directories=/opt/chia"]; path.write_text(json.dumps(root, indent=2))'
+python -c 'import json, pathlib; path = pathlib.Path("package.json"); root = json.loads(path.read_text()); build = root.setdefault("build", {}); fpm = build.setdefault("fpm", []); fpm.append("--directories=/opt/chia"); path.write_text(json.dumps(root, indent=2))'
 cat package.json | jq
 
 echo "Building Linux(rpm) Electron app"
