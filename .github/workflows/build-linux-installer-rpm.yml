@@ -387,3 +387,11 @@ jobs:
     - name: Run chia version
       run: |
         chia version
+
+    - name: Remove package
+      run: |
+        yum remove -y ${{ matrix.mode.file }}
+
+    - name: Verify /opt/chia not present
+      run: |
+        [ ! -e /opt/chia ]
