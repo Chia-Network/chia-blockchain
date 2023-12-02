@@ -92,11 +92,13 @@ PRODUCT_NAME="chia"
 echo npx electron-builder build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
-  --config.rpm.packageName="chia-blockchain"
+  --config.rpm.packageName="chia-blockchain"\
+  --rpm-rpmbuild-define="__os_install_post /usr/lib/rpm/brp-compress %{nil}"
 npx electron-builder build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
-  --config.rpm.packageName="chia-blockchain"
+  --config.rpm.packageName="chia-blockchain"\
+  --rpm-rpmbuild-define="__os_install_post /usr/lib/rpm/brp-compress %{nil}"
 LAST_EXIT_CODE=$?
 ls -l dist/linux*-unpacked/resources
 
