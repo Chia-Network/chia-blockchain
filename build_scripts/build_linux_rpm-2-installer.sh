@@ -73,6 +73,7 @@ fpm -s dir -t rpm \
   --rpm-tag 'Recommends: libxcrypt-compat' \
   --rpm-tag '%define _build_id_links none' \
   --rpm-tag '%undefine _missing_build_ids_terminate_build' \
+  --rpm-rpmbuild-define="__os_install_post /usr/lib/rpm/brp-compress %{nil}" \
   .
 # CLI only rpm done
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
@@ -92,13 +93,11 @@ PRODUCT_NAME="chia"
 echo npx electron-builder build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
-  --config.rpm.packageName="chia-blockchain"\
-  --rpm-rpmbuild-define="__os_install_post /usr/lib/rpm/brp-compress %{nil}"
+  --config.rpm.packageName="chia-blockchain"
 npx electron-builder build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
-  --config.rpm.packageName="chia-blockchain"\
-  --rpm-rpmbuild-define="__os_install_post /usr/lib/rpm/brp-compress %{nil}"
+  --config.rpm.packageName="chia-blockchain"
 LAST_EXIT_CODE=$?
 ls -l dist/linux*-unpacked/resources
 
