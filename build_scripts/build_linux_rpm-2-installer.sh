@@ -60,7 +60,7 @@ ln -s ../../opt/chia/chia "dist/$CLI_RPM_BASE/usr/bin/chia"
 . /etc/profile.d/rvm.sh
 rvm use ruby-3
 
-export FPM_EDITOR="cat >cli.spec <"
+export FPM_EDITOR="cat >dist/cli.spec <"
 
 # /usr/lib64/libcrypt.so.1 is marked as a dependency specifically because newer versions of fedora bundle
 # libcrypt.so.2 by default, and the libxcrypt-compat package needs to be installed for the other version
@@ -98,7 +98,7 @@ if [ "$REDHAT_PLATFORM" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
 PRODUCT_NAME="chia"
-export FPM_EDITOR="cat >gui.spec <"
+export FPM_EDITOR="cat >../../../build_scripts/dist/gui.spec <"
 echo npx electron-builder build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
@@ -117,8 +117,6 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-builder failed!"
 	exit $LAST_EXIT_CODE
 fi
-
-mv *.spec "../../../build_scripts/dist/"
 
 GUI_RPM_NAME="chia-blockchain-${CHIA_INSTALLER_VERSION}-1.${REDHAT_PLATFORM}.rpm"
 mv "dist/${PRODUCT_NAME}-${CHIA_INSTALLER_VERSION}.rpm" "../../../build_scripts/dist/${GUI_RPM_NAME}"
