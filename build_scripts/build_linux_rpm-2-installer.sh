@@ -59,10 +59,14 @@ ln -s ../../opt/chia/chia "dist/$CLI_RPM_BASE/usr/bin/chia"
 # shellcheck disable=SC1091
 . /etc/profile.d/rvm.sh
 rvm use ruby-3
+
+export FPM_EDITOR="cat >cli.spec <"
+
 # /usr/lib64/libcrypt.so.1 is marked as a dependency specifically because newer versions of fedora bundle
 # libcrypt.so.2 by default, and the libxcrypt-compat package needs to be installed for the other version
 # Marking as a dependency allows yum/dnf to automatically install the libxcrypt-compat package as well
 fpm -s dir -t rpm \
+  --edit \
   -C "dist/$CLI_RPM_BASE" \
   -p "dist/$CLI_RPM_BASE.rpm" \
   --name chia-blockchain-cli \
@@ -83,12 +87,18 @@ cd ../chia-blockchain-gui/packages/gui || exit 1
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
+cat package.json | jq
+python -c 'import json, pathlib; path = pathlib.Path("package.json"); root = json.loads(path.read_text()); build = root.setdefault("build", {}); rpm = build.setdefault("rpm", {}); fpm = rpm.setdefault("fpm", []); fpm.append("--edit"); path.write_text(json.dumps(root, indent=2))'
+cat package.json | jq
+
+
 echo "Building Linux(rpm) Electron app"
 OPT_ARCH="--x64"
 if [ "$REDHAT_PLATFORM" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
 PRODUCT_NAME="chia"
+export FPM_EDITOR="cat >gui.spec <"
 echo npx electron-builder build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
