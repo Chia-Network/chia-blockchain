@@ -443,7 +443,7 @@ jobs:
     - name: Verify /opt/chia contains only touched file
       if: matrix.state.matrix == 'dirty'
       run: |
-        ACTUAL=$(ls -a ../oc)
+        ACTUAL=$(ls -a /opt/chia)
         EXPECTED=$(echo -e '.\n..\ntouched')
         if [ "${ACTUAL}" == "${EXPECTED}" ]; echo $?
         echo "  actual: ${ACTUAL}"
