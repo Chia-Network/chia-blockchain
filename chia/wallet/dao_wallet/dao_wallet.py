@@ -681,7 +681,7 @@ class DAOWallet:
                 "treasury_id": launcher_coin.name(),
                 "coins": different_coins,
             }
-            new_cat_wallet = await CATWallet.create_new_cat_wallet(
+            new_cat_wallet, _ = await CATWallet.create_new_cat_wallet(
                 self.wallet_state_manager,
                 self.standard_wallet,
                 cat_tail_info,

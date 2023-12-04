@@ -796,7 +796,7 @@ class NFTWallet:
         tx_config: TXConfig,
         fee: uint64,
         extra_conditions: Tuple[Condition, ...],
-    ) -> Offer:
+    ) -> Tuple[Offer, List[TransactionRecord]]:
         # First, let's take note of all the royalty enabled NFTs
         royalty_nft_asset_dict: Dict[bytes32, int] = {}
         for asset, amount in offer_dict.items():
@@ -1089,7 +1089,7 @@ class NFTWallet:
         txs_bundle = SpendBundle.aggregate([tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None])
         aggregate_bundle = SpendBundle.aggregate([txs_bundle, *additional_bundles])
         offer = Offer(notarized_payments, aggregate_bundle, driver_dict)
-        return offer
+        return offer, all_transactions
 
     async def set_bulk_nft_did(
         self,

@@ -88,7 +88,7 @@ class CRCATWallet(CATWallet):
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> CATWallet:  # pragma: no cover
+    ) -> Tuple[CATWallet, List[TransactionRecord]]:  # pragma: no cover
         raise NotImplementedError("create_new_cat_wallet is a legacy method and is not available on CR-CAT wallets")
 
     @staticmethod
