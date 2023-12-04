@@ -76,7 +76,6 @@ class TimelordAPI:
             self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
 
     def check_unfinished_block_with_more_iterations(self, new_peak):
-        self.log.info(f"reward chain hashes {new_peak.previous_reward_challenges}")
         for unf_block in self.timelord.unfinished_blocks:
             if unf_block.reward_chain_block.total_iters > new_peak.reward_chain_block.total_iters:
                 found = False
