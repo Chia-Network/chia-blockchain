@@ -73,7 +73,8 @@ fpm -s dir -t rpm \
   --rpm-tag 'Recommends: libxcrypt-compat' \
   --rpm-tag '%define _build_id_links none' \
   --rpm-tag '%undefine _missing_build_ids_terminate_build' \
-  --rpm-rpmbuild-define="__os_install_post /usr/lib/rpm/brp-compress %{nil}" \
+  --rpm-compression xzmt \
+  --rpm-compression-level 9 \
   .
 # CLI only rpm done
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
