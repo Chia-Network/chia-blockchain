@@ -445,7 +445,6 @@ jobs:
       run: |
         ACTUAL=$(ls -a /opt/chia)
         EXPECTED=$(echo -e '.\n..\ntouched')
-        if [ "${ACTUAL}" == "${EXPECTED}" ]; echo $?
         echo "  actual: ${ACTUAL}"
         echo "expected: ${EXPECTED}"
         if [ "${ACTUAL}" != "${EXPECTED}"]
