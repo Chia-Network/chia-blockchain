@@ -49,7 +49,7 @@ class TestBlockchainTransactions:
 
         spend_block = blocks[2]
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
@@ -113,7 +113,7 @@ class TestBlockchainTransactions:
 
         spend_block = blocks[2]
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
@@ -154,7 +154,7 @@ class TestBlockchainTransactions:
         spend_block = blocks[2]
 
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
@@ -193,7 +193,7 @@ class TestBlockchainTransactions:
         spend_block = blocks[2]
 
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
@@ -304,7 +304,7 @@ class TestBlockchainTransactions:
         spend_block = blocks[2]
 
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
@@ -399,7 +399,7 @@ class TestBlockchainTransactions:
 
         spend_block = new_blocks[-1]
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
@@ -434,7 +434,7 @@ class TestBlockchainTransactions:
 
         spend_block = blocks[-1]
         spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
@@ -491,11 +491,11 @@ class TestBlockchainTransactions:
         bad_block = blocks[3]
         spend_coin = None
         bad_spend_coin = None
-        for coin in list(spend_block.get_included_reward_coins()):
+        for coin in spend_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
         assert spend_coin is not None
-        for coin in list(bad_block.get_included_reward_coins()):
+        for coin in bad_block.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 bad_spend_coin = coin
         assert bad_spend_coin is not None
@@ -563,11 +563,11 @@ class TestBlockchainTransactions:
 
         spend_coin_block_1 = None
         spend_coin_block_2 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
-        for coin in list(block2.get_included_reward_coins()):
+        for coin in block2.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_2 = coin
         assert spend_coin_block_2 is not None
@@ -647,11 +647,11 @@ class TestBlockchainTransactions:
 
         spend_coin_block_1 = None
         spend_coin_block_2 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
-        for coin in list(block2.get_included_reward_coins()):
+        for coin in block2.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_2 = coin
         assert spend_coin_block_2 is not None
@@ -728,7 +728,7 @@ class TestBlockchainTransactions:
         # Coinbase that gets spent
         block1 = blocks[2]
         spend_coin_block_1 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
@@ -794,7 +794,7 @@ class TestBlockchainTransactions:
         # Coinbase that gets spent
         block1 = blocks[2]
         spend_coin_block_1 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
@@ -862,7 +862,7 @@ class TestBlockchainTransactions:
         # Coinbase that gets spent
         block1 = blocks[2]
         spend_coin_block_1 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
@@ -934,7 +934,7 @@ class TestBlockchainTransactions:
         # Coinbase that gets spent
         block1 = blocks[2]
         spend_coin_block_1 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
@@ -1008,7 +1008,7 @@ class TestBlockchainTransactions:
         # Coinbase that gets spent
         block1 = blocks[2]
         spend_coin_block_1 = None
-        for coin in list(block1.get_included_reward_coins()):
+        for coin in block1.get_included_reward_coins():
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
         assert spend_coin_block_1 is not None
