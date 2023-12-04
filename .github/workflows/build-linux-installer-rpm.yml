@@ -361,15 +361,18 @@ jobs:
           type: rocky
           url: "docker://rockylinux:9"
           # bypass this error for now: Problem: The operation would result in removing the following protected packages: systemd-udev
-          noautoremove: --noautoremove
+          noautoremove:
+            gui: --noautoremove
         - name: build image
           type: rocky
           url: "docker://chianetwork/rocky8-builder:latest"
         mode:
         - name: GUI
+          matrix: gui
           file: chia-blockchain-[0,1,2,3,4,5,6,7,8,9]*.rpm
           package: chia-blockchain
         - name: CLI
+          matrix: cli
           file: chia-blockchain-cli-[0,1,2,3,4,5,6,7,8,9]*.rpm
           package: chia-blockchain-cli
 
@@ -402,7 +405,7 @@ jobs:
 
     - name: Remove package
       run: |
-        yum remove -y ${{ matrix.distribution.noautoremove }} ${{ matrix.mode.package }}
+        yum remove -y ${{ matrix.distribution.noautoremove[matrix.mode.matrix] }} ${{ matrix.mode.package }}
 
     - name: Verify /opt/chia not present
       run: |
