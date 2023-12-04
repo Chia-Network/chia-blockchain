@@ -409,11 +409,14 @@ jobs:
         EXPECTED: ${{ needs.build.outputs.chia-installer-version }}
       run: |
         ACTUAL=$(chia version)
+        echo "  actual version: ${ACTUAL}"
+        echo "expected version: ${EXPECTED}"
         if [ "${ACTUAL}" != "${EXPECTED}"]
         then
-          echo "  actual version: ${ACTUAL}"
-          echo "expected version: ${EXPECTED}"
+          echo "  !!! they do not match"
           false
+        else
+          echo "  :] they match"
         fi
 
     - name: Verify /opt/chia present
