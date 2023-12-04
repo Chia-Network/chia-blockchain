@@ -540,6 +540,9 @@ class DAOWallet:
                 int_from_bytes(cond.at("rrf").as_atom()) == 1
             ):
                 cat_tail_hash = bytes32(cond.at("rrrff").as_atom())
+                cat_origin_id = bytes32(cond.at("rrrfrf").as_atom())
+                cat_launcher_id = bytes32(cond.at("rrrfrrf").as_atom())
+                cat_tail = generate_cat_tail(cat_origin_id, cat_launcher_id)
                 break
         assert cat_tail_hash
 
@@ -560,6 +563,7 @@ class DAOWallet:
             )
 
         assert cat_wallet is not None
+        await cat_wallet.set_tail_program(bytes(cat_tail).hex())
         cat_wallet_id = cat_wallet.wallet_info.id
         dao_info = dataclasses.replace(
             self.dao_info,
@@ -732,7 +736,7 @@ class DAOWallet:
             origin_id=origin.name(),
             coins=set(coins),
             coin_announcements_to_consume=announcement_set,
-            memos=[new_cat_wallet.cat_info.limitations_program_hash],
+            memos=[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name(), launcher_coin.name()],
         )
         tx_record: TransactionRecord = tx_records[0]
 
