@@ -42,7 +42,7 @@
   )
 
   (defun lte (atom_a atom_b)
-    (or (< atom_a atom_b) (= atom_a atom_b))
+    (or (> atom_b atom_a) (= atom_a atom_b))
   )
 
 )
