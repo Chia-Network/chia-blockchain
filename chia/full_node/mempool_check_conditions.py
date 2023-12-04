@@ -49,14 +49,13 @@ def get_flags_for_height_and_constants(height: int, constants: ConsensusConstant
     if height >= constants.SOFT_FORK2_HEIGHT:
         flags = flags | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
 
-    if height >= constants.SOFT_FORK3_HEIGHT:
-        # the soft-fork initiated with 2.0. To activate end of October 2023
-        # * the number of announces created and asserted are limited per spend
-        # * the total number of CLVM objects (atoms or pairs) are limited
-        # * BLS operators enabled, behind the softfork op. This set of operators
-        #   also includes coinid, % and modpow
-        # * secp operators enabled
-        flags = flags | LIMIT_ANNOUNCES | LIMIT_OBJECTS | ENABLE_BLS_OPS | ENABLE_SECP_OPS
+    # the soft-fork initiated with 2.0 and activated in November 2023
+    # * the number of announces created and asserted are limited per spend
+    # * the total number of CLVM objects (atoms or pairs) are limited
+    # * BLS operators enabled, behind the softfork op. This set of operators
+    #   also includes coinid, % and modpow
+    # * secp operators enabled
+    flags = flags | LIMIT_ANNOUNCES | LIMIT_OBJECTS | ENABLE_BLS_OPS | ENABLE_SECP_OPS
 
     if height >= constants.HARD_FORK_HEIGHT:
         # the hard-fork initiated with 2.0. To activate June 2024

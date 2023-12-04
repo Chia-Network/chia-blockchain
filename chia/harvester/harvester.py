@@ -131,26 +131,18 @@ class Harvester:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        await self._start()
+        self._refresh_lock = asyncio.Lock()
+        self.event_loop = asyncio.get_running_loop()
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
+            self._shut_down = True
+            self.executor.shutdown(wait=True)
+            self.plot_manager.stop_refreshing()
+            self.plot_manager.reset()
+            self.plot_sync_sender.stop()
 
-    async def _start(self) -> None:
-        self._refresh_lock = asyncio.Lock()
-        self.event_loop = asyncio.get_running_loop()
-
-    def _close(self) -> None:
-        self._shut_down = True
-        self.executor.shutdown(wait=True)
-        self.plot_manager.stop_refreshing()
-        self.plot_manager.reset()
-        self.plot_sync_sender.stop()
-
-    async def _await_closed(self) -> None:
-        await self.plot_sync_sender.await_closed()
+            await self.plot_sync_sender.await_closed()
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)

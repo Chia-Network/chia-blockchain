@@ -223,7 +223,7 @@ class KeyringWrapper:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
-                passphrase_store.set_password(  # type: ignore[no-untyped-call]
+                passphrase_store.set_password(
                     MASTER_PASSPHRASE_SERVICE_NAME,
                     MASTER_PASSPHRASE_USER_NAME,
                     passphrase,
@@ -237,7 +237,7 @@ class KeyringWrapper:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
-                passphrase_store.delete_password(  # type: ignore[no-untyped-call]
+                passphrase_store.delete_password(
                     MASTER_PASSPHRASE_SERVICE_NAME,
                     MASTER_PASSPHRASE_USER_NAME,
                 )
@@ -256,7 +256,7 @@ class KeyringWrapper:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
-                return passphrase_store.get_password(  # type: ignore[no-any-return,no-untyped-call]
+                return passphrase_store.get_password(  # type: ignore[no-any-return]
                     MASTER_PASSPHRASE_SERVICE_NAME,
                     MASTER_PASSPHRASE_USER_NAME,
                 )

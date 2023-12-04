@@ -76,7 +76,9 @@ def wrap_http_handler(f) -> Callable:
 
 
 def tx_endpoint(push: bool = False, merge_spends: bool = True) -> Callable[[RpcEndpoint], RpcEndpoint]:
-    def _inner(func: RpcEndpoint) -> RpcEndpoint:
+    def _inner(
+        func: RpcEndpoint,
+    ) -> RpcEndpoint:
         async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)

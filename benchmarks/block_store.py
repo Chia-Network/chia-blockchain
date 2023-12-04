@@ -30,7 +30,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
-from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint8, uint32, uint64, uint128
 
 # to run this benchmark:
@@ -44,7 +43,6 @@ random.seed(123456789)
 
 async def run_add_block_benchmark(version: int) -> None:
     verbose: bool = "--verbose" in sys.argv
-    db_wrapper: DBWrapper2 = await setup_db("block-store-benchmark.db", version)
 
     # keep track of benchmark total time
     all_test_time = 0.0
@@ -54,7 +52,7 @@ async def run_add_block_benchmark(version: int) -> None:
 
     header_hashes = []
 
-    try:
+    async with setup_db("block-store-benchmark.db", version) as db_wrapper:
         block_store = await BlockStore.create(db_wrapper)
 
         block_height = 1
@@ -494,9 +492,6 @@ async def run_add_block_benchmark(version: int) -> None:
 
         db_size = os.path.getsize(Path("block-store-benchmark.db"))
         print(f"database size: {db_size/1000000:.3f} MB")
-
-    finally:
-        await db_wrapper.close()
 
 
 if __name__ == "__main__":
