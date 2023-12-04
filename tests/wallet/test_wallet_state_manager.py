@@ -7,7 +7,6 @@ import pytest
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import NodeType
-from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -16,6 +15,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
+from tests.util.setup_nodes import SimulatorsAndWallets
 
 
 @asynccontextmanager

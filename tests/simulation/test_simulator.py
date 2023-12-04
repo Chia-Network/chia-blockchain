@@ -8,11 +8,11 @@ from chia.cmds.units import units
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
+from tests.util.setup_nodes import SimulatorsAndWallets
 
 
 @pytest.mark.anyio
