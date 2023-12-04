@@ -360,11 +360,11 @@ jobs:
         - name: rockylinux:9
           type: rocky
           url: "docker://rockylinux:9"
+          # bypass this error for now: Problem: The operation would result in removing the following protected packages: systemd-udev
+          noautoremove: --noautoremove
         - name: build image
           type: rocky
           url: "docker://chianetwork/rocky8-builder:latest"
-          # bypass this error for now: Problem: The operation would result in removing the following protected packages: systemd-udev
-          noautoremove: --noautoremove
         mode:
         - name: GUI
           file: chia-blockchain-[0,1,2,3,4,5,6,7,8,9]*.rpm
