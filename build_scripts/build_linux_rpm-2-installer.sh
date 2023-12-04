@@ -90,11 +90,6 @@ jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json 
 export FPM_EDITOR="cat >../../../build_scripts/dist/gui.spec <"
 jq '.build.rpm.fpm |= . + ["--edit"]' package.json > temp.json && mv temp.json package.json
 
-cat package.json | jq
-python -c 'import json, pathlib; path = pathlib.Path("package.json"); root = json.loads(path.read_text()); build = root.setdefault("build", {}); rpm = build.setdefault("rpm", {}); fpm = rpm.setdefault("fpm", []); fpm.append("--edit"); path.write_text(json.dumps(root, indent=2))'
-cat package.json | jq
-
-
 echo "Building Linux(rpm) Electron app"
 OPT_ARCH="--x64"
 if [ "$REDHAT_PLATFORM" = "arm64" ]; then
