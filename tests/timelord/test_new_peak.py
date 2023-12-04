@@ -19,6 +19,7 @@ from chia.types.full_block import FullBlock
 from chia.util.ints import uint128
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.blockchain import create_blockchain
+from tests.util.time_out_assert import time_out_assert
 
 
 class TestNewPeak:
@@ -69,7 +70,7 @@ class TestNewPeak:
         return None
 
     @pytest.mark.anyio
-    async def test_timelord_new_peak_heavier_unfinished(
+    async def test_timelord_new_peak_heavier_unfinished_same_chain(
         self, bt: BlockTools, timelord: Tuple[TimelordAPI, ChiaServer], default_1000_blocks: List[FullBlock]
     ) -> None:
         b1, db_wrapper1 = await create_blockchain(bt.constants, 2)
@@ -85,7 +86,7 @@ class TestNewPeak:
         assert timelord_api.timelord.new_peak is None
         await timelord_api.new_peak_timelord(peak)
         assert timelord_api.timelord.new_peak is not None
-        assert timelord_api.timelord.new_peak.reward_chain_block.height == peak.reward_chain_block.height
+        assert timelord_api.timelord.new_peak.reward_chain_block.get_hash() == peak.reward_chain_block.get_hash()
 
         # make two new blocks on tip
         blocks_1 = bt.get_consecutive_blocks(2, default_1000_blocks)
@@ -135,8 +136,13 @@ class TestNewPeak:
         await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
         assert timelord_api.timelord.unfinished_blocks[-1].get_hash() == timelord_unf_block.get_hash()
-        await timelord_api.new_peak_timelord(timelord_peak_from_block(block_2, b2, bt.constants))
-        assert timelord_api.timelord.last_state.get_height() == peak.reward_chain_block.height
+        peak = timelord_peak_from_block(block_2, b2, bt.constants)
+        assert timelord_unf_block.reward_chain_block.total_iters > peak.reward_chain_block.total_iters
+        await timelord_api.new_peak_timelord(peak)
+
+        await time_out_assert(60, peak_new_peak_is_none, True, timelord_api)
+
+        assert timelord_api.timelord.last_state.peak.reward_chain_block.get_hash() == peak.reward_chain_block.get_hash()
 
         await db_wrapper1.close()
         await db_wrapper2.close()
@@ -205,3 +211,7 @@ def timelord_peak_from_block(
         last_csb_or_eos,
         passed_ses_height_but_not_yet_included,
     )
+
+
+def peak_new_peak_is_none(timelord: TimelordAPI) -> bool:
+    return timelord.timelord.new_peak is None
