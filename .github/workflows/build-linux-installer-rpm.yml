@@ -411,7 +411,7 @@ jobs:
         ACTUAL=$(chia version)
         echo "  actual version: ${ACTUAL}"
         echo "expected version: ${EXPECTED}"
-        if [ "${ACTUAL}" != "${EXPECTED}"]
+        if [ "${ACTUAL}" != "${EXPECTED}" ]
         then
           echo "  !!! they do not match"
           false
@@ -447,7 +447,7 @@ jobs:
         EXPECTED=$(echo -e '.\n..\ntouched')
         echo "  actual: ${ACTUAL}"
         echo "expected: ${EXPECTED}"
-        if [ "${ACTUAL}" != "${EXPECTED}"]
+        if [ "${ACTUAL}" != "${EXPECTED}" ]
         then
           echo "  !!! they do not match"
           ls -lR /opt/chia
