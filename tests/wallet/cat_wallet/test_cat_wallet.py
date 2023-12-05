@@ -12,7 +12,6 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -36,6 +35,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from tests.conftest import ConsensusMode
+from tests.util.setup_nodes import SimulatorsAndWalletsServices
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
@@ -1054,10 +1054,9 @@ class TestCATWallet:
 async def test_unacknowledged_cat_table() -> None:
     db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
     db_name.parent.mkdir(parents=True, exist_ok=True)
-    db_wrapper = await DBWrapper2.create(
+    async with DBWrapper2.managed(
         database=db_name,
-    )
-    try:
+    ) as db_wrapper:
         interested_store = await WalletInterestedStore.create(db_wrapper)
 
         def asset_id(i: int) -> bytes32:
@@ -1091,5 +1090,3 @@ async def test_unacknowledged_cat_table() -> None:
         assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
         await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(0))
         assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == []
-    finally:
-        await db_wrapper.close()

@@ -147,14 +147,6 @@ class Timelord:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        await self._start()
-        try:
-            yield
-        finally:
-            self._close()
-            await self._await_closed()
-
-    async def _start(self) -> None:
         self.lock: asyncio.Lock = asyncio.Lock()
         self.vdf_server = await asyncio.start_server(
             self._handle_client,
@@ -181,6 +173,16 @@ class Timelord:
             else:
                 self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
         log.info(f"Started timelord, listening on port {self.get_vdf_server_port()}")
+        try:
+            yield
+        finally:
+            self._shut_down = True
+            for task in self.process_communication_tasks:
+                task.cancel()
+            if self.main_loop is not None:
+                self.main_loop.cancel()
+            if self.bluebox_pool is not None:
+                self.bluebox_pool.shutdown()
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
@@ -192,18 +194,6 @@ class Timelord:
         if self.vdf_server is not None:
             return uint16(self.vdf_server.sockets[0].getsockname()[1])
         return None
-
-    def _close(self) -> None:
-        self._shut_down = True
-        for task in self.process_communication_tasks:
-            task.cancel()
-        if self.main_loop is not None:
-            self.main_loop.cancel()
-        if self.bluebox_pool is not None:
-            self.bluebox_pool.shutdown()
-
-    async def _await_closed(self) -> None:
-        pass
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback

@@ -19,7 +19,6 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
-from chia.simulator.setup_nodes import FullSystem, SimulatorsAndWallets
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -29,6 +28,7 @@ from chia.util.ws_message import create_payload
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
+from tests.util.setup_nodes import FullSystem, SimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert
 
 chiapos_version = pkg_resources.get_distribution("chiapos").version
