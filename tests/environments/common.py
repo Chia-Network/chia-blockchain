@@ -19,7 +19,6 @@ class ServiceEnvironment(Protocol[T_Node, T_RpcApi, T_PeerApi]):
 
     __match_args__: ClassVar[Tuple[str, ...]] = ()
 
-    # TODO: node doesn't seem right...  but maybe?
     @property
     def node(self) -> T_Node:
         ...
