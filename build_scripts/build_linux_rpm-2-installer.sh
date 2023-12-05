@@ -64,6 +64,7 @@ rvm use ruby-3
 # Marking as a dependency allows yum/dnf to automatically install the libxcrypt-compat package as well
 fpm -s dir -t rpm \
   -C "dist/$CLI_RPM_BASE" \
+  --directories "/opt/chia" \
   -p "dist/$CLI_RPM_BASE.rpm" \
   --name chia-blockchain-cli \
   --license Apache-2.0 \
