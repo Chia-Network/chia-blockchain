@@ -12,6 +12,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
+from chia.types.aliases import TimelordService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -31,7 +32,7 @@ def create_timelord_service(
     config: Dict[str, Any],
     constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-) -> Service[Timelord, TimelordAPI]:
+) -> TimelordService:
     service_config = config[SERVICE_NAME]
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = constants.replace_str_to_bytes(**overrides)
