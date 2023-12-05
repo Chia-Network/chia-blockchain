@@ -359,7 +359,7 @@ async def next_block(full_node_1, wallet_a, bt) -> Coin:
         await full_node_1.full_node.add_block(block)
 
     await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 1)
-    return list(blocks[-1].get_included_reward_coins())[0]
+    return blocks[-1].get_included_reward_coins()[0]
 
 
 co = ConditionOpcode
@@ -522,7 +522,7 @@ class TestMempoolManager:
             await full_node_1.full_node.add_block(block)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
-        spend_bundle1 = generate_test_spend_bundle(wallet_a, list(blocks[-1].get_included_reward_coins())[0])
+        spend_bundle1 = generate_test_spend_bundle(wallet_a, blocks[-1].get_included_reward_coins()[0])
 
         assert spend_bundle1 is not None
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
@@ -532,7 +532,7 @@ class TestMempoolManager:
 
         spend_bundle2 = generate_test_spend_bundle(
             wallet_a,
-            list(blocks[-1].get_included_reward_coins())[0],
+            blocks[-1].get_included_reward_coins()[0],
             new_puzzle_hash=BURN_PUZZLE_HASH_2,
         )
         assert spend_bundle2 is not None
@@ -741,8 +741,8 @@ class TestMempoolManager:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
-        coin_1 = list(blocks[-2].get_included_reward_coins())[0]
-        coin_2 = list(blocks[-1].get_included_reward_coins())[0]
+        coin_1 = blocks[-2].get_included_reward_coins()[0]
+        coin_2 = blocks[-1].get_included_reward_coins()[0]
 
         bundle = test_fun(coin_1, coin_2)
 
@@ -1604,9 +1604,9 @@ class TestMempoolManager:
 
         fee = 9
 
-        coin_1 = list(blocks[-2].get_included_reward_coins())[0]
+        coin_1 = blocks[-2].get_included_reward_coins()[0]
         coin_2 = None
-        for coin in list(blocks[-1].get_included_reward_coins()):
+        for coin in blocks[-1].get_included_reward_coins():
             if coin.amount == coin_1.amount:
                 coin_2 = coin
         spend_bundle1 = generate_test_spend_bundle(wallet_a, coin_1, dic, uint64(fee))
@@ -1650,7 +1650,7 @@ class TestMempoolManager:
             await full_node_1.full_node.add_block(block)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-        # coin = list(blocks[-1].get_included_reward_coins())[0]
+        # coin = blocks[-1].get_included_reward_coins()[0]
         # spend_bundle1 = generate_test_spend_bundle(wallet_a, coin)
         coin = await next_block(full_node_1, wallet_a, bt)
         spend_bundle1 = generate_test_spend_bundle(wallet_a, coin)
@@ -1697,7 +1697,7 @@ class TestMempoolManager:
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         coin = await next_block(full_node_1, wallet_a, bt)
-        # coin = list(blocks[-1].get_included_reward_coins())[0]
+        # coin = blocks[-1].get_included_reward_coins()[0]
         spend_bundle_0 = generate_test_spend_bundle(wallet_a, coin)
         unsigned: List[CoinSpend] = spend_bundle_0.coin_spends
 
@@ -2589,12 +2589,8 @@ class TestMaliciousGenerators:
         "opcode", [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
     )
     def test_duplicate_coin_announces(self, opcode, softfork_height, benchmark_runner: BenchmarkRunner):
-        # with soft-fork3, we only allow 1024 create- or assert announcements
-        # per spend
-        if softfork_height >= test_constants.SOFT_FORK3_HEIGHT:
-            condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=1024)
-        else:
-            condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
+        # we only allow 1024 create- or assert announcements per spend
+        condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=1024)
 
         with benchmark_runner.assert_runtime(seconds=14):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
@@ -2652,7 +2648,7 @@ class TestMaliciousGenerators:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
-        spend_bundle = generate_test_spend_bundle(wallet_a, list(blocks[-1].get_included_reward_coins())[0])
+        spend_bundle = generate_test_spend_bundle(wallet_a, blocks[-1].get_included_reward_coins()[0])
         cs = spend_bundle.coin_spends[0]
         c = cs.coin
         coin_0 = Coin(c.parent_coin_info, bytes32([1] * 32), c.amount)
