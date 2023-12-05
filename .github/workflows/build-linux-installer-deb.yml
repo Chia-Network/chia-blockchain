@@ -428,7 +428,7 @@ jobs:
       run: |
         ACTUAL=$(chia version)
         echo "  actual version: ${ACTUAL}"
-        if [ "${ACTUAL}" == "None" ]
+        if [ "${ACTUAL}" = "None" ]
         then
           echo "  !!! should not be None"
           false
