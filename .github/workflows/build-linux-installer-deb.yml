@@ -345,7 +345,7 @@ jobs:
         curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
 
   test:
-    name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
+    name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }} ${{ matrix.state.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
     - build
@@ -377,8 +377,10 @@ jobs:
         mode:
         - name: GUI
           file: chia-blockchain_*.deb
+          package: chia-blockchain
         - name: CLI
           file: chia-blockchain-cli_*.deb
+          package: chia-blockchain-cli
         arch:
         - name: ARM64
           matrix: arm
@@ -386,6 +388,11 @@ jobs:
         - name: Intel
           matrix: intel
           artifact-name: amd64
+        state:
+          - name: Dirty
+            matrix: dirty
+          - name: Clean
+            matrix: clean
 
     env:
       DEBIAN_FRONTEND: noninteractive
@@ -404,6 +411,14 @@ jobs:
       run: |
         apt-get update --yes
 
+    - name: Dirty the environment for the sake of testing
+      if: matrix.state.matrix == 'dirty'
+      run: |
+        # this has been known to mess up the version detection, the empty directory should be removed
+        mkdir --parents /opt/chia/chia_blockchain-0.1.dist-info
+        # making sure that files are not removed
+        touch /opt/chia/touched
+
     - name: Install package
       run: |
         ls -l "${{ steps.download.outputs.download-path }}"
@@ -411,4 +426,42 @@ jobs:
 
     - name: Run chia version
       run: |
-        chia version
+        ACTUAL=$(chia version)
+        echo "  actual version: ${ACTUAL}"
+        if [ "${ACTUAL}" == "None" ]
+        then
+          echo "  !!! should not be None"
+          false
+        else
+          echo "  :] at least it isn't None"
+        fi
+
+    - name: Verify /opt/chia present
+      run: |
+        if [ ! -e /opt/chia ]
+        then
+          ls -l /opt
+          false
+        fi
+
+    - name: Remove package
+      run: |
+        apt-get remove --yes ${{ matrix.mode.package }}
+
+    - name: Verify /opt/chia not present
+      if: matrix.state.matrix == 'clean'
+      run: |
+        if [ -e /opt/chia ]
+        then
+          ls -lR /opt/chia
+          false
+        fi
+
+    - name: Verify /opt/chia contains only touched file
+      if: matrix.state.matrix == 'dirty'
+      run: |
+        if [ "$(ls -a /opt/chia)" != ". .. touched" ]
+        then
+          ls -lR /opt/chia
+          false
+        fi
