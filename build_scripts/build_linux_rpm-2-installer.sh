@@ -85,8 +85,6 @@ cd ../chia-blockchain-gui/packages/gui || exit 1
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
-jq '.build.rpm.fpm |= . + ["--before-install=../../../build_scripts/assets/rpm/before-install.sh", "--rpm-tag=Requires(pre): findutils"]' package.json > temp.json && mv temp.json package.json
-
 echo "Building Linux(rpm) Electron app"
 OPT_ARCH="--x64"
 if [ "$REDHAT_PLATFORM" = "arm64" ]; then
