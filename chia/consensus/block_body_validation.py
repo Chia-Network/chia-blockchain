@@ -44,6 +44,21 @@ log = logging.getLogger(__name__)
 #           :
 
 
+@dataclass(frozen=True)
+class ForkAdd:
+    coin: Coin
+    confirmed_height: uint32
+    timestamp: uint64
+    hint: Optional[bytes]
+    is_coinbase: bool
+
+
+@dataclass(frozen=True)
+class ForkRem:
+    puzzle_hash: bytes32
+    height: uint32
+
+
 @dataclass
 class ForkInfo:
     # defines the last block shared by the fork and the main chain. additions
@@ -58,27 +73,48 @@ class ForkInfo:
     # the header hash of the peak block of this fork
     peak_hash: bytes32
     # The additions include coinbase additions
-    # coin, creation-height, timestamp
-    additions_since_fork: Dict[bytes32, Tuple[Coin, uint32, uint64]] = field(default_factory=dict)
-    # coin-id
-    removals_since_fork: Set[bytes32] = field(default_factory=set)
+    additions_since_fork: Dict[bytes32, ForkAdd] = field(default_factory=dict)
+    # coin-id, ForkRem
+    removals_since_fork: Dict[bytes32, ForkRem] = field(default_factory=dict)
+    # the header hashes of the blocks, starting with the one-past fork_height
+    # i.e. the header hash of fork_height + 1 is stored in block_hashes[0]
+    # followed by fork_height + 2, and so on.
+    block_hashes: List[bytes32] = field(default_factory=list)
 
-    def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock) -> None:
+    def reset(self, fork_height: int, header_hash: bytes32) -> None:
+        self.fork_height = fork_height
+        self.peak_height = fork_height
+        self.peak_hash = header_hash
+        self.additions_since_fork = {}
+        self.removals_since_fork = {}
+        self.block_hashes = []
+
+    def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock, header_hash: bytes32) -> None:
         height = block.height
+
+        assert self.peak_height == height - 1
+
+        assert len(self.block_hashes) == self.peak_height - self.fork_height
+        assert block.height == self.fork_height + 1 + len(self.block_hashes)
+        self.block_hashes.append(header_hash)
+
+        self.peak_height = int(block.height)
+        self.peak_hash = header_hash
+
         if npc_result is not None:
             assert npc_result.conds is not None
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
             for spend in npc_result.conds.spends:
-                self.removals_since_fork.add(bytes32(spend.coin_id))
-                for puzzle_hash, amount, _ in spend.create_coin:
+                self.removals_since_fork[bytes32(spend.coin_id)] = ForkRem(bytes32(spend.puzzle_hash), height)
+                for puzzle_hash, amount, hint in spend.create_coin:
                     coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
-                    self.additions_since_fork[coin.name()] = (coin, height, timestamp)
+                    self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
         for coin in block.get_included_reward_coins():
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
             assert coin.name() not in self.additions_since_fork
-            self.additions_since_fork[coin.name()] = (coin, block.height, timestamp)
+            self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
 
 
 async def validate_block_body(
@@ -397,13 +433,13 @@ async def validate_block_body(
             # Check for spending a coin that does not exist in this fork
             log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
             return Err.UNKNOWN_UNSPENT, None
-        new_coin, confirmed_height, confirmed_timestamp = fork_info.additions_since_fork[rem]
+        addition: ForkAdd = fork_info.additions_since_fork[rem]
         new_coin_record: CoinRecord = CoinRecord(
-            new_coin,
-            confirmed_height,
+            addition.coin,
+            addition.confirmed_height,
             uint32(0),
             False,
-            confirmed_timestamp,
+            addition.timestamp,
         )
         removal_coin_records[new_coin_record.name] = new_coin_record
 

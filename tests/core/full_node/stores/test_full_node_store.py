@@ -49,20 +49,16 @@ async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConst
         DISCRIMINANT_SIZE_BITS=32,
         SUB_SLOT_ITERS_STARTING=uint64(2**12),
     )
-    bc1, db_wrapper = await create_blockchain(patched_constants, db_version)
-    yield bc1
-    await db_wrapper.close()
-    bc1.shut_down()
+    async with create_blockchain(patched_constants, db_version) as (bc1, db_wrapper):
+        yield bc1
 
 
 @pytest.fixture(scope="function")
 async def empty_blockchain_with_original_constants(
     db_version: int, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[Blockchain]:
-    bc1, db_wrapper = await create_blockchain(blockchain_constants, db_version)
-    yield bc1
-    await db_wrapper.close()
-    bc1.shut_down()
+    async with create_blockchain(blockchain_constants, db_version) as (bc1, db_wrapper):
+        yield bc1
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
