@@ -11,6 +11,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
+from chia.types.aliases import WalletService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -33,7 +34,7 @@ def create_wallet_service(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
-) -> Service[WalletNode, WalletNodeAPI]:
+) -> WalletService:
     service_config = config[SERVICE_NAME]
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
