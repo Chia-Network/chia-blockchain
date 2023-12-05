@@ -51,8 +51,9 @@ main_pid: Optional[int] = None
 T = TypeVar("T")
 _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
 _T_ApiProtocol = TypeVar("_T_ApiProtocol", bound=ApiProtocol)
+_T_RpcApiProtocol = TypeVar("_T_RpcApiProtocol", bound=RpcApiProtocol)
 
-RpcInfo = Tuple[Type[RpcApiProtocol], int]
+RpcInfo = Tuple[Type[_T_RpcApiProtocol], int]
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ class ServiceException(Exception):
     pass
 
 
-class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
+class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol]):
     def __init__(
         self,
         root_path: Path,
@@ -76,7 +77,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         upnp_ports: Optional[List[int]] = None,
         connect_peers: Optional[Set[UnresolvedPeerInfo]] = None,
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
-        rpc_info: Optional[RpcInfo] = None,
+        rpc_info: Optional[RpcInfo[_T_RpcApiProtocol]] = None,
         connect_to_daemon: bool = True,
         max_request_body_size: Optional[int] = None,
         override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
@@ -96,7 +97,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
-        self.rpc_server: Optional[RpcServer] = None
+        self.rpc_server: Optional[RpcServer[_T_RpcApiProtocol]] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
         self.reconnect_retry_seconds: int = 3
