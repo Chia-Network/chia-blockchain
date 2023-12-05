@@ -552,27 +552,19 @@ class PoolWallet:
                 pool_reward_prefix,
                 escape_puzzle_hash,
             ) = uncurry_pool_member_inner_puzzle(inner_puzzle)
-            pk_bytes: bytes = bytes(pubkey_as_program.as_atom())
-            assert len(pk_bytes) == 48
-            owner_pubkey = G1Element.from_bytes(pk_bytes)
-            assert owner_pubkey == pool_wallet_info.current.owner_pubkey
         elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
             (
                 target_puzzle_hash,  # payout_puzzle_hash
                 relative_lock_height,
-                owner_pubkey,
+                pubkey_as_program,
                 p2_singleton_hash,
             ) = uncurry_pool_waitingroom_inner_puzzle(inner_puzzle)
-            pk_bytes = bytes(owner_pubkey.as_atom())
-            assert len(pk_bytes) == 48
-            assert owner_pubkey == pool_wallet_info.current.owner_pubkey
         else:
             raise RuntimeError("Invalid state")
 
         unsigned_spend_bundle = SpendBundle([outgoing_coin_spend], G2Element())
         assert unsigned_spend_bundle.removals()[0].puzzle_hash == singleton.puzzle_hash
         assert unsigned_spend_bundle.removals()[0].name() == singleton.name()
-        assert unsigned_spend_bundle is not None
         fee_tx: Optional[TransactionRecord] = None
         if fee > 0:
             fee_tx = await self.generate_fee_transaction(fee, tx_config)
