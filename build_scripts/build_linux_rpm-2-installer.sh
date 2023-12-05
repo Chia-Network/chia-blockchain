@@ -74,6 +74,7 @@ fpm -s dir -t rpm \
   --rpm-tag '%define _build_id_links none' \
   --rpm-tag '%undefine _missing_build_ids_terminate_build' \
   --before-install=assets/rpm/before-install.sh \
+  --rpm-tag 'Requires(pre): findutils' \
   .
 # CLI only rpm done
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
@@ -84,7 +85,7 @@ cd ../chia-blockchain-gui/packages/gui || exit 1
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
-jq '.build.rpm.fpm |= . + ["--before-install=../../../build_scripts/assets/rpm/before-install.sh"]' package.json > temp.json && mv temp.json package.json
+jq '.build.rpm.fpm |= . + ["--before-install=../../../build_scripts/assets/rpm/before-install.sh", "--rpm-tag=Requires(pre): findutils"]' package.json > temp.json && mv temp.json package.json
 
 echo "Building Linux(rpm) Electron app"
 OPT_ARCH="--x64"
