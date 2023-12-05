@@ -180,7 +180,6 @@ async def setup_simulators_and_wallets(
             config_overrides,
             disable_capabilities,
         ) as (bt_tools, simulators, wallets_services):
-            # TODO: does this belong here?
             async with contextlib.AsyncExitStack() as exit_stack:
                 wallets: List[WalletEnvironment] = []
                 for service in wallets_services:
