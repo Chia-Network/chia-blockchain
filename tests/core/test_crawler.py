@@ -10,11 +10,9 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import NewPeak
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import RequestChildren
-from chia.seeder.crawler import Crawler
-from chia.seeder.crawler_api import CrawlerAPI
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.outbound_message import make_msg
-from chia.server.start_service import Service
+from chia.types.aliases import CrawlerService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
@@ -26,7 +24,7 @@ from tests.util.time_out_assert import time_out_assert
 async def test_unknown_messages(
     self_hostname: str,
     one_node: SimulatorsAndWalletsServices,
-    crawler_service: Service[Crawler, CrawlerAPI],
+    crawler_service: CrawlerService,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_service], _, _ = one_node
@@ -50,7 +48,7 @@ async def test_unknown_messages(
 async def test_valid_message(
     self_hostname: str,
     one_node: SimulatorsAndWalletsServices,
-    crawler_service: Service[Crawler, CrawlerAPI],
+    crawler_service: CrawlerService,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_service], _, _ = one_node
@@ -73,9 +71,7 @@ async def test_valid_message(
 
 
 @pytest.mark.anyio
-async def test_crawler_to_db(
-    crawler_service: Service[Crawler, CrawlerAPI], one_node: SimulatorsAndWalletsServices
-) -> None:
+async def test_crawler_to_db(crawler_service: CrawlerService, one_node: SimulatorsAndWalletsServices) -> None:
     """
     This is a lot more of an integration test, but it tests the whole process. We add a node to the crawler, then we
     save it to the db and validate.

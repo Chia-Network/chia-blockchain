@@ -59,7 +59,7 @@ class WalletEnvironment:
 
     __match_args__: ClassVar[Tuple[str, ...]] = ()
 
-    service: Service[WalletNode, WalletNodeAPI]
+    service: Service[WalletNode, WalletNodeAPI, WalletRpcApi]
     # TODO: maybe put this in the protocol?
     rpc_client: WalletRpcClient
     # TODO: added the default, but should think through implementing it etc.  `.create()`?
@@ -73,11 +73,10 @@ class WalletEnvironment:
     @property
     def rpc_api(self) -> WalletRpcApi:
         assert self.service.rpc_server is not None
-        # TODO: hinting...?
-        return self.service.rpc_server.rpc_api  # type: ignore[return-value]
+        return self.service.rpc_server.rpc_api
 
     @property
-    def rpc_server(self) -> RpcServer:
+    def rpc_server(self) -> RpcServer[WalletRpcApi]:
         assert self.service.rpc_server is not None
         return self.service.rpc_server
 
