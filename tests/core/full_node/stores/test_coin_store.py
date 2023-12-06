@@ -105,7 +105,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                 else:
                     tx_removals, tx_additions = [], []
 
-                assert block.get_included_reward_coins() == should_be_included_prev
+                assert set(block.get_included_reward_coins()) == should_be_included_prev
 
                 if block.is_transaction_block():
                     assert block.foliage_transaction_block is not None

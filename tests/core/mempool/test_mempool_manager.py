@@ -24,7 +24,6 @@ from chia.full_node.mempool_manager import (
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -47,6 +46,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_node import WalletNode
+from tests.util.setup_nodes import SimulatorsAndWallets
 
 IDENTITY_PUZZLE = SerializedProgram.from_program(Program.to(1))
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()

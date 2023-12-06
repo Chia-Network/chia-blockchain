@@ -61,9 +61,8 @@ def tree_id_fixture() -> bytes32:
 
 @pytest.fixture(name="raw_data_store", scope="function")
 async def raw_data_store_fixture(database_uri: str) -> AsyncIterable[DataStore]:
-    store = await DataStore.create(database=database_uri, uri=True)
-    yield store
-    await store.close()
+    async with DataStore.managed(database=database_uri, uri=True) as store:
+        yield store
 
 
 @pytest.fixture(name="data_store", scope="function")
