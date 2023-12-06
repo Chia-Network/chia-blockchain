@@ -20,7 +20,7 @@ dependencies = [
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.1.4",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
-    "colorlog==6.7.0",  # Adds color to logs
+    "colorlog==6.8.0",  # Adds color to logs
     "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
     "cryptography==41.0.7",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.13.1",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
