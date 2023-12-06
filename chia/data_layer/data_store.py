@@ -856,6 +856,85 @@ class DataStore:
 
         return keys
 
+    async def get_ancestors_common(
+        self,
+        node_hash: bytes32,
+        tree_id: bytes32,
+        root_hash: Optional[bytes32],
+        generation: Optional[int] = None,
+        use_optimized: bool = True,
+    ) -> List[InternalNode]:
+        if use_optimized:
+            ancestors: List[InternalNode] = await self.get_ancestors_optimized(
+                node_hash=node_hash,
+                tree_id=tree_id,
+                generation=generation,
+                root_hash=root_hash,
+            )
+        else:
+            ancestors = await self.get_ancestors_optimized(
+                node_hash=node_hash,
+                tree_id=tree_id,
+                generation=generation,
+                root_hash=root_hash,
+            )
+            ancestors_2: List[InternalNode] = await self.get_ancestors(
+                node_hash=node_hash, tree_id=tree_id, root_hash=root_hash
+            )
+            if ancestors != ancestors_2:
+                raise RuntimeError("Ancestors optimized didn't produce the expected result.")
+
+        if len(ancestors) >= 62:
+            raise RuntimeError("Tree exceeds max height of 62.")
+        return ancestors
+
+    async def update_ancestor_hashes_on_insert(
+        self,
+        tree_id: bytes32,
+        left: bytes32,
+        right: bytes32,
+        traversal_node_hash: bytes32,
+        ancestors: List[InternalNode],
+        status: Status,
+        root: Root,
+    ) -> Root:
+        # update ancestors after inserting root, to keep table constraints.
+        insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
+        new_generation = root.generation + 1
+        # create first new internal node
+        new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+        insert_ancestors_cache.append((left, right, tree_id))
+
+        # create updated replacements for the rest of the internal nodes
+        for ancestor in ancestors:
+            if not isinstance(ancestor, InternalNode):
+                raise Exception(f"Expected an internal node but got: {type(ancestor).__name__}")
+
+            if ancestor.left_hash == traversal_node_hash:
+                left = new_hash
+                right = ancestor.right_hash
+            elif ancestor.right_hash == traversal_node_hash:
+                left = ancestor.left_hash
+                right = new_hash
+
+            traversal_node_hash = ancestor.hash
+
+            new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+            insert_ancestors_cache.append((left, right, tree_id))
+
+        new_root = await self._insert_root(
+            tree_id=tree_id,
+            node_hash=new_hash,
+            status=status,
+            generation=new_generation,
+        )
+
+        if status == Status.COMMITTED:
+            for left_hash, right_hash, tree_id in insert_ancestors_cache:
+                await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
+
+        return new_root
+
     async def insert(
         self,
         key: bytes,
@@ -912,26 +991,6 @@ class DataStore:
                 if root.node_hash is None:
                     raise Exception("Internal error.")
 
-                if use_optimized:
-                    ancestors: List[InternalNode] = await self.get_ancestors_optimized(
-                        node_hash=reference_node_hash,
-                        tree_id=tree_id,
-                        generation=root.generation,
-                        root_hash=root.node_hash,
-                    )
-                else:
-                    ancestors = await self.get_ancestors_optimized(
-                        node_hash=reference_node_hash,
-                        tree_id=tree_id,
-                        generation=root.generation,
-                        root_hash=root.node_hash,
-                    )
-                    ancestors_2: List[InternalNode] = await self.get_ancestors(
-                        node_hash=reference_node_hash, tree_id=tree_id, root_hash=root.node_hash
-                    )
-                    if ancestors != ancestors_2:
-                        raise RuntimeError("Ancestors optimized didn't produce the expected result.")
-
                 if side == Side.LEFT:
                     left = new_terminal_node_hash
                     right = reference_node_hash
@@ -939,48 +998,25 @@ class DataStore:
                     left = reference_node_hash
                     right = new_terminal_node_hash
 
-                if len(ancestors) >= 62:
-                    raise RuntimeError("Tree exceeds max height of 62.")
-
-                # update ancestors after inserting root, to keep table constraints.
-                insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
-                new_generation = root.generation + 1
-                # create first new internal node
-                new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
-                insert_ancestors_cache.append((left, right, tree_id))
-                traversal_node_hash = reference_node_hash
-
-                # create updated replacements for the rest of the internal nodes
-                for ancestor in ancestors:
-                    if not isinstance(ancestor, InternalNode):
-                        raise Exception(f"Expected an internal node but got: {type(ancestor).__name__}")
-
-                    if ancestor.left_hash == traversal_node_hash:
-                        left = new_hash
-                        right = ancestor.right_hash
-                    elif ancestor.right_hash == traversal_node_hash:
-                        left = ancestor.left_hash
-                        right = new_hash
-
-                    traversal_node_hash = ancestor.hash
-
-                    new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
-                    insert_ancestors_cache.append((left, right, tree_id))
-
-                new_root = await self._insert_root(
+                ancestors = await self.get_ancestors_common(
+                    node_hash=reference_node_hash,
                     tree_id=tree_id,
-                    node_hash=new_hash,
+                    root_hash=root.node_hash,
+                    generation=root.generation,
+                )
+                new_root = await self.update_ancestor_hashes_on_insert(
+                    tree_id=tree_id,
+                    left=left,
+                    right=right,
+                    traversal_node_hash=reference_node_hash,
+                    ancestors=ancestors,
                     status=status,
-                    generation=new_generation,
+                    root=root,
                 )
 
-                if status == Status.COMMITTED:
-                    for left_hash, right_hash, tree_id in insert_ancestors_cache:
-                        await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
-
-        if hint_keys_values is not None:
-            hint_keys_values[bytes(key)] = value
-        return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
+            if hint_keys_values is not None:
+                hint_keys_values[bytes(key)] = value
+            return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def delete(
         self,
@@ -1003,22 +1039,11 @@ class DataStore:
                 node_hash = leaf_hash(key=key, value=value)
                 node = TerminalNode(node_hash, key, value)
                 del hint_keys_values[bytes(key)]
-            if use_optimized:
-                ancestors: List[InternalNode] = await self.get_ancestors_optimized(
-                    node_hash=node.hash, tree_id=tree_id, root_hash=root_hash
-                )
-            else:
-                ancestors = await self.get_ancestors_optimized(
-                    node_hash=node.hash, tree_id=tree_id, root_hash=root_hash
-                )
-                ancestors_2: List[InternalNode] = await self.get_ancestors(
-                    node_hash=node.hash, tree_id=tree_id, root_hash=root_hash
-                )
-                if ancestors != ancestors_2:
-                    raise RuntimeError("Ancestors optimized didn't produce the expected result.")
 
-            if len(ancestors) > 62:
-                raise RuntimeError("Tree exceeded max height of 62.")
+            ancestors: List[InternalNode] = await self.get_ancestors_optimized(
+                node_hash=node.hash, tree_id=tree_id, root_hash=root_hash
+            )
+            
             if len(ancestors) == 0:
                 # the only node is being deleted
                 return await self._insert_root(
@@ -1072,6 +1097,30 @@ class DataStore:
                     await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
 
         return new_root
+
+    async def upsert(
+        self,
+        key: bytes,
+        new_value: bytes,
+        tree_id: bytes32,
+        hint_keys_values: Optional[Dict[bytes, bytes]] = None,
+        use_optimized: bool = True,
+        status: Status = Status.PENDING,
+        root: Optional[Root] = None,
+    ) -> InsertResult:
+        async with self.db_wrapper.writer():
+            if root is None:
+                raise ValueError("Upsert operation on an empty tree")
+            if hint_keys_values is None:
+                node = await self.get_node_by_key(key=key, tree_id=tree_id)
+                node_hash = node.hash
+            else:
+                if bytes(key) not in hint_keys_values:
+                    raise RuntimeError(f"Key not present in store for upsert operation: {key.hex()}")
+                value = hint_keys_values[bytes(key)]
+                node_hash = leaf_hash(key=key, value=value)
+                node = TerminalNode(node_hash, key, value)
+                del hint_keys_values[bytes(key)]
 
     async def clean_node_table(self, writer: aiosqlite.Connection) -> None:
         await writer.execute(
@@ -1140,6 +1189,12 @@ class DataStore:
                     key = change["key"]
                     intermediate_root = await self.delete(
                         key, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
+                    )
+                elif change["action"] == "upsert":
+                    key = change["key"]
+                    new_value = change["value"]
+                    intermediate_root = await self.upsert(
+                        key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
                     )
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
