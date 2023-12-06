@@ -111,6 +111,54 @@ class PeerSubscriptions:
                 )
                 break
 
+    def remove_ph_subscriptions(self, peer_id: bytes32, phs: List[bytes32]) -> None:
+        puzzle_hash_peers = self._peer_puzzle_hash.get(peer_id)
+
+        # there are no subscriptions to remove
+        if puzzle_hash_peers is None:
+            return
+
+        for ph in phs:
+            if ph not in puzzle_hash_peers:
+                continue
+
+            ph_subs = self._ph_subscriptions[ph]
+            ph_subs.remove(peer_id)
+
+            if len(ph_subs) == 0:
+                del self._ph_subscriptions[ph]
+
+            puzzle_hash_peers.remove(ph)
+            self._peer_sub_counter[peer_id] -= 1
+
+        # if the peer is no longer subscribed to anything, it's safe to remove it
+        if len(puzzle_hash_peers) == 0:
+            del self._peer_puzzle_hash[peer_id]
+
+    def remove_coin_subscriptions(self, peer_id: bytes32, coin_ids: List[bytes32]) -> None:
+        peer_coin_ids = self._peer_coin_ids.get(peer_id)
+
+        # there are no subscriptions to remove
+        if peer_coin_ids is None:
+            return
+
+        for coin_id in coin_ids:
+            if coin_id not in peer_coin_ids:
+                continue
+
+            coin_subs = self._coin_subscriptions[coin_id]
+            coin_subs.remove(peer_id)
+
+            if len(coin_subs) == 0:
+                del self._coin_subscriptions[coin_id]
+
+            peer_coin_ids.remove(coin_id)
+            self._peer_sub_counter[peer_id] -= 1
+
+        # if the peer is no longer subscribed to anything, it's safe to remove it
+        if len(peer_coin_ids) == 0:
+            del self._peer_coin_ids[peer_id]
+
     def remove_peer(self, peer_id: bytes32) -> None:
         counter = 0
         puzzle_hashes = self._peer_puzzle_hash.get(peer_id)

@@ -146,6 +146,8 @@ rate_limits = {
             ProtocolMessageTypes.respond_to_ph_update: RLSettings(1000, 100 * 1024 * 1024),
             ProtocolMessageTypes.register_interest_in_coin: RLSettings(1000, 100 * 1024 * 1024),
             ProtocolMessageTypes.respond_to_coin_update: RLSettings(1000, 100 * 1024 * 1024),
+            ProtocolMessageTypes.unregister_interest_in_puzzle_hash: RLSettings(1000, 100 * 1024 * 1024),
+            ProtocolMessageTypes.unregister_interest_in_coin: RLSettings(1000, 100 * 1024 * 1024),
             ProtocolMessageTypes.request_ses_hashes: RLSettings(2000, 1 * 1024 * 1024),
             ProtocolMessageTypes.respond_ses_hashes: RLSettings(2000, 1 * 1024 * 1024),
             ProtocolMessageTypes.request_children: RLSettings(2000, 1024 * 1024),

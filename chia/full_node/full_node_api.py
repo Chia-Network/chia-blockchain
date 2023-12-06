@@ -1586,6 +1586,18 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
         return msg
 
+    @api_request(peer_required=True)
+    async def unregister_interest_in_puzzle_hash(
+        self, request: wallet_protocol.UnregisterPhUpdates, peer: WSChiaConnection
+    ) -> None:
+        self.full_node.subscriptions.remove_ph_subscriptions(peer.peer_node_id, request.puzzle_hashes)
+
+    @api_request(peer_required=True)
+    async def unregister_interest_in_coin(
+        self, request: wallet_protocol.UnregisterCoinUpdates, peer: WSChiaConnection
+    ) -> None:
+        self.full_node.subscriptions.remove_coin_subscriptions(peer.peer_node_id, request.coin_ids)
+
     @api_request()
     async def request_children(self, request: wallet_protocol.RequestChildren) -> Optional[Message]:
         coin_records: List[CoinRecord] = await self.full_node.coin_store.get_coin_records_by_parent_ids(

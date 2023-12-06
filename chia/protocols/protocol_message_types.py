@@ -114,4 +114,8 @@ class ProtocolMessageTypes(Enum):
     request_fee_estimates = 89
     respond_fee_estimates = 90
 
+    # Extended wallet protocol
+    unregister_interest_in_puzzle_hash = 92
+    unregister_interest_in_coin = 93
+
     error = 255

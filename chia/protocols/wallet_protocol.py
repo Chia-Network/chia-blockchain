@@ -229,6 +229,18 @@ class RespondToCoinUpdates(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class UnregisterPhUpdates(Streamable):
+    puzzle_hashes: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class UnregisterCoinUpdates(Streamable):
+    coin_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
 class CoinStateUpdate(Streamable):
     height: uint32
     fork_height: uint32
