@@ -65,8 +65,6 @@ class TestNewPeak:
         self, bt: BlockTools, timelord: Tuple[TimelordAPI, ChiaServer], default_1000_blocks: List[FullBlock]
     ) -> None:
         async with create_blockchain(bt.constants, 2) as (b1, db_wrapper1):
-
-
             timelord_api, _ = timelord
             for block in default_1000_blocks:
                 await _validate_and_add_block(b1, block)
@@ -129,7 +127,9 @@ class TestNewPeak:
                 assert timelord_api.timelord.new_peak is None
                 await timelord_api.new_peak_timelord(peak)
                 assert timelord_api.timelord.new_peak is not None
-                assert timelord_api.timelord.new_peak.reward_chain_block.get_hash() == peak.reward_chain_block.get_hash()
+                assert (
+                    timelord_api.timelord.new_peak.reward_chain_block.get_hash() == peak.reward_chain_block.get_hash()
+                )
 
                 # make two new blocks on tip
                 blocks_1 = bt.get_consecutive_blocks(1, default_1000_blocks, time_per_block=9)
@@ -147,13 +147,21 @@ class TestNewPeak:
                 )
 
                 sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-                    bt.constants, len(block_1.finished_sub_slots) > 0, b1.block_record(blocks_1[-1].prev_header_hash), b1
+                    bt.constants,
+                    len(block_1.finished_sub_slots) > 0,
+                    b1.block_record(blocks_1[-1].prev_header_hash),
+                    b1,
                 )
 
                 rc_prev = await get_rc_prev(b1, block_1)
 
                 timelord_unf_block = timelord_protocol.NewUnfinishedBlockTimelord(
-                    block_1.reward_chain_block.get_unfinished(), difficulty, sub_slot_iters, block_1.foliage, ses, rc_prev
+                    block_1.reward_chain_block.get_unfinished(),
+                    difficulty,
+                    sub_slot_iters,
+                    block_1.foliage,
+                    ses,
+                    rc_prev,
                 )
                 await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
@@ -164,8 +172,10 @@ class TestNewPeak:
 
                 await time_out_assert(60, peak_new_peak_is_none, True, timelord_api)
 
-                assert timelord_api.timelord.last_state.peak.reward_chain_block.get_hash() == peak.reward_chain_block.get_hash()
-
+                assert (
+                    timelord_api.timelord.last_state.peak.reward_chain_block.get_hash()
+                    == peak.reward_chain_block.get_hash()
+                )
 
 
 async def get_rc_prev(blockchain: Blockchain, block: FullBlock) -> bytes32:
