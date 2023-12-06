@@ -85,7 +85,9 @@ def wrap_http_handler(f) -> Callable:
 
 
 def tx_endpoint(push: bool = False, merge_spends: bool = True) -> Callable[[RpcEndpoint], RpcEndpoint]:
-    def _inner(func: RpcEndpoint) -> RpcEndpoint:
+    def _inner(
+        func: RpcEndpoint,
+    ) -> RpcEndpoint:
         async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
@@ -203,6 +205,8 @@ def tx_endpoint(push: bool = False, merge_spends: bool = True) -> Callable[[RpcE
                     response["tx"] = response["transactions"][0]
                 else:
                     response["tx"] = new_txs[0].to_json_dict()
+            if "txs" in response:
+                response["txs"] = [tx.to_json_dict() for tx in new_txs]
             if "tx_id" in response:
                 response["tx_id"] = new_txs[0].name
             if "trade_record" in response:

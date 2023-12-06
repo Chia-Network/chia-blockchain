@@ -14,7 +14,6 @@ from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinStateUpdate, RespondToCoinUpdates, RespondToPhUpdates
 from chia.server.outbound_message import NodeType
-from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
@@ -29,6 +28,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_protocol import MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
+from tests.util.setup_nodes import SimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert
 
 

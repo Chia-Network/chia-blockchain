@@ -31,7 +31,6 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.prev_transaction_block import get_prev_transaction_block
-from chia.util.recursive_replace import recursive_replace
 
 log = logging.getLogger(__name__)
 
@@ -452,7 +451,6 @@ def unfinished_block_to_full_block(
         is_transaction_block = True
         new_weight = uint128(difficulty)
         new_height = uint32(0)
-        new_foliage = unfinished_block.foliage
         new_foliage_transaction_block = unfinished_block.foliage_transaction_block
         new_tx_info = unfinished_block.transactions_info
         new_generator = unfinished_block.transactions_generator
@@ -462,44 +460,54 @@ def unfinished_block_to_full_block(
         new_weight = uint128(prev_block.weight + difficulty)
         new_height = uint32(prev_block.height + 1)
         if is_transaction_block:
-            new_fbh = unfinished_block.foliage.foliage_transaction_block_hash
-            new_fbs = unfinished_block.foliage.foliage_transaction_block_signature
             new_foliage_transaction_block = unfinished_block.foliage_transaction_block
             new_tx_info = unfinished_block.transactions_info
             new_generator = unfinished_block.transactions_generator
             new_generator_ref_list = unfinished_block.transactions_generator_ref_list
         else:
-            new_fbh = None
-            new_fbs = None
             new_foliage_transaction_block = None
             new_tx_info = None
             new_generator = None
             new_generator_ref_list = []
+    reward_chain_block = RewardChainBlock(
+        new_weight,
+        new_height,
+        unfinished_block.reward_chain_block.total_iters,
+        unfinished_block.reward_chain_block.signage_point_index,
+        unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash,
+        unfinished_block.reward_chain_block.proof_of_space,
+        unfinished_block.reward_chain_block.challenge_chain_sp_vdf,
+        unfinished_block.reward_chain_block.challenge_chain_sp_signature,
+        cc_ip_vdf,
+        unfinished_block.reward_chain_block.reward_chain_sp_vdf,
+        unfinished_block.reward_chain_block.reward_chain_sp_signature,
+        rc_ip_vdf,
+        icc_ip_vdf,
+        is_transaction_block,
+    )
+    if prev_block is None:
+        new_foliage = replace(
+            unfinished_block.foliage,
+            reward_block_hash=reward_chain_block.get_hash(),
+        )
+    else:
+        if is_transaction_block:
+            new_fbh = unfinished_block.foliage.foliage_transaction_block_hash
+            new_fbs = unfinished_block.foliage.foliage_transaction_block_signature
+        else:
+            new_fbh = None
+            new_fbs = None
         assert (new_fbh is None) == (new_fbs is None)
         new_foliage = replace(
             unfinished_block.foliage,
+            reward_block_hash=reward_chain_block.get_hash(),
             prev_block_hash=prev_block.header_hash,
             foliage_transaction_block_hash=new_fbh,
             foliage_transaction_block_signature=new_fbs,
         )
     ret = FullBlock(
         finished_sub_slots,
-        RewardChainBlock(
-            new_weight,
-            new_height,
-            unfinished_block.reward_chain_block.total_iters,
-            unfinished_block.reward_chain_block.signage_point_index,
-            unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash,
-            unfinished_block.reward_chain_block.proof_of_space,
-            unfinished_block.reward_chain_block.challenge_chain_sp_vdf,
-            unfinished_block.reward_chain_block.challenge_chain_sp_signature,
-            cc_ip_vdf,
-            unfinished_block.reward_chain_block.reward_chain_sp_vdf,
-            unfinished_block.reward_chain_block.reward_chain_sp_signature,
-            rc_ip_vdf,
-            icc_ip_vdf,
-            is_transaction_block,
-        ),
+        reward_chain_block,
         unfinished_block.challenge_chain_sp_proof,
         cc_ip_proof,
         unfinished_block.reward_chain_sp_proof,
@@ -510,10 +518,5 @@ def unfinished_block_to_full_block(
         new_tx_info,
         new_generator,
         new_generator_ref_list,
-    )
-    ret = recursive_replace(
-        ret,
-        "foliage.reward_block_hash",
-        ret.reward_chain_block.get_hash(),
     )
     return ret
