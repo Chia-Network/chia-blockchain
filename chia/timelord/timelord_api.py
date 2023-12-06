@@ -5,6 +5,7 @@ import time
 from typing import Optional
 
 from chia.protocols import timelord_protocol
+from chia.protocols.timelord_protocol import NewPeakTimelord
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord import Timelord
@@ -49,9 +50,9 @@ class TimelordAPI:
                 # if there is an unfinished block with more iterations from a diff chain, skip
                 if (
                     new_peak.reward_chain_block.height == self.timelord.last_state.last_height + 1
-                    and self.check_unfinished_block_with_more_iterations(new_peak) is True
+                    and self.check_orphaned_unfinished_block(new_peak) is True
                 ):
-                    log.info("there is an unfinished block with more iterations - " "skip peak")
+                    log.info("there is an unfinished block that this peak would orphan - " "skip peak")
                     self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
                     return
 
@@ -75,18 +76,15 @@ class TimelordAPI:
 
             self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
 
-    def check_unfinished_block_with_more_iterations(self, new_peak):
+    def check_orphaned_unfinished_block(self, new_peak: NewPeakTimelord):
         for unf_block in self.timelord.unfinished_blocks:
-            if unf_block.reward_chain_block.total_iters > new_peak.reward_chain_block.total_iters:
-                found = False
-                for rc, total_iters in new_peak.previous_reward_challenges:
-                    if rc == unf_block.rc_prev:
-                        found = True
-                        break
-
-                if not found:
-                    # there is an unfinished block with more iterations that does not belong to the new peak chain
-                    return True
+            if unf_block.reward_chain_block.total_iters <= new_peak.reward_chain_block.total_iters:
+                # there is an unfinished block that would be orphaned by this peak
+                return True
+        for unf_block in self.timelord.overflow_blocks:
+            if unf_block.reward_chain_block.total_iters <= new_peak.reward_chain_block.total_iters:
+                # there is an unfinished block (overflow) that would be orphaned by this peak
+                return True
         return False
 
     @api_request()
