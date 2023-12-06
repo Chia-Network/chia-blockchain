@@ -68,7 +68,7 @@ Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-builder create package directory"
-npx electron-builder build --win --x64 --config.productName="Chia" --dir
+npx electron-builder build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
 Get-ChildItem dist\win-unpacked\resources
 Write-Output "   ---"
 
@@ -88,7 +88,7 @@ If ($env:HAS_SIGNING_SECRET) {
 
 Write-Output "   ---"
 Write-Output "electron-builder create installer"
-npx electron-builder build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked"
+npx electron-builder build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked" --config ../../../build_scripts/electron-builder.json
 Write-Output "   ---"
 
 If ($env:HAS_SIGNING_SECRET) {

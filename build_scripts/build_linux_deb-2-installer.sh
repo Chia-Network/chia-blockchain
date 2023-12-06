@@ -93,21 +93,25 @@ if [ "$PLATFORM" = "arm64" ]; then
   echo USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
   USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
 else
   echo electron-builder build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
   npx electron-builder build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
 fi
 ls -l dist/linux*-unpacked/resources
