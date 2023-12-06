@@ -6,7 +6,6 @@ import json
 import logging
 import re
 import time
-from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -69,7 +68,6 @@ from chia.wallet.singleton import (
     get_singleton_id_from_puzzle,
     get_singleton_struct_for_id,
 )
-from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.transaction_type import TransactionType
@@ -423,11 +421,6 @@ class DAOWallet:
             cs = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
             parent_spend = await fetch_coin_spend(cs.spent_height, cs.coin, peer)
 
-            # check if it's a singleton and add to singleton_store
-            singleton_id = get_singleton_id_from_puzzle(parent_spend.puzzle_reveal)
-
-            if singleton_id:
-                await self.wallet_state_manager.singleton_store.add_spend(self.id(), parent_spend, height)
             puzzle = Program.from_bytes(bytes(parent_spend.puzzle_reveal))
             solution = Program.from_bytes(bytes(parent_spend.solution))
             uncurried = uncurry_puzzle(puzzle)
@@ -792,7 +785,7 @@ class DAOWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=full_spend.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -843,7 +836,6 @@ class DAOWallet:
 
         dao_info = dataclasses.replace(self.dao_info, current_treasury_coin=next_coin)
         await self.save_info(dao_info)
-        await self.wallet_state_manager.singleton_store.add_spend(self.id(), eve_coin_spend)
         return eve_spend_bundle
 
     async def generate_new_proposal(
@@ -956,7 +948,7 @@ class DAOWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=full_spend.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -1139,7 +1131,7 @@ class DAOWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=spend_bundle.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -1499,7 +1491,7 @@ class DAOWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=full_spend.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -1646,7 +1638,7 @@ class DAOWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=full_spend.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -1774,23 +1766,6 @@ class DAOWallet:
         # CoinSpend of one of the coins that we cared about. This coin was spent in a block, but might be in a reorg
         # If we return a value, it is a coin that we are also interested in (to support two transitions per block)
         return get_most_recent_singleton_coin_from_coin_spend(spend)
-
-    async def get_tip(self, singleton_id: bytes32) -> Optional[Tuple[uint32, SingletonRecord]]:
-        ret: List[
-            Tuple[uint32, SingletonRecord]
-        ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
-        if len(ret) == 0:  # pragma: no cover
-            return None
-        return ret[-1]
-
-    async def get_tip_created_height(self, singleton_id: bytes32) -> Optional[int]:  # pragma: no cover
-        ret: List[
-            Tuple[uint32, SingletonRecord]
-        ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
-        if len(ret) < 1:
-            return None
-        assert isinstance(ret[-2], SingletonRecord)
-        return ret[-2].removed_height
 
     async def add_or_update_proposal_info(
         self,
@@ -2103,14 +2078,6 @@ class DAOWallet:
         await self.add_parent(new_state.coin.name(), future_parent)
         return
 
-    async def get_spend_history(self, singleton_id: bytes32) -> List[Tuple[uint32, CoinSpend]]:  # pragma: no cover
-        ret: List[
-            Tuple[uint32, CoinSpend]
-        ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
-        if len(ret) == 0:
-            raise ValueError(f"No records found in singleton store for singleton id {singleton_id}")
-        return ret
-
     async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """
         We are being notified of a singleton state transition. A Singleton has been spent.
@@ -2123,20 +2090,6 @@ class DAOWallet:
         singleton_id = get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         if not singleton_id:  # pragma: no cover
             raise ValueError("Received a non singleton coin for dao wallet")
-        tip: Optional[Tuple[uint32, SingletonRecord]] = await self.get_tip(singleton_id)
-        if tip is None:  # pragma: no cover
-            # this is our first time, just store it
-            await self.wallet_state_manager.singleton_store.add_spend(self.wallet_id, new_state, block_height)
-        else:
-            assert isinstance(tip, SingletonRecord)
-            tip_spend = tip.parent_coinspend
-
-            tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
-            assert tip_coin is not None
-            # TODO: Add check for pending transaction on our behalf in here
-            # if we have pending transaction that is now invalidated, then:
-            # check if we should auto re-create spend or flash error to use (should we have a failed tx db?)
-            await self.wallet_state_manager.singleton_store.add_spend(self.id(), new_state, block_height)
 
         # Consume new DAOBlockchainInfo
         # Determine if this is a treasury spend or a proposal spend
