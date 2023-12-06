@@ -65,7 +65,7 @@ dev_dependencies = [
     "types-aiofiles==23.2.0.0",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.12",
-    "types-setuptools==68.2.0.2",
+    "types-setuptools==69.0.0.0",
 ]
 
 legacy_keyring_dependencies = [
