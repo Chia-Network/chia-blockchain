@@ -48,21 +48,6 @@ class Result:
         return f"{prefix}{self.file_path.as_posix()}{line_separator}{self.line}"
 
 
-def sub(matchobj: re.Match[str]) -> str:
-    result = ""
-
-    if matchobj.group("start") == "[":
-        result += "["
-
-    if matchobj.group("start") == matchobj.group("end") == "-":
-        result += "-"
-
-    if matchobj.group("end") == "]":
-        result += "]"
-
-    return result
-
-
 @final
 @dataclasses.dataclass(frozen=True)
 class EventId:
