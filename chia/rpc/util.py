@@ -17,6 +17,9 @@ from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
 log = logging.getLogger(__name__)
 
+# TODO: consolidate this with chia.rpc.rpc_server.Endpoint
+# Not all endpoints only take a dictionary so that definition is imperfect
+# This definition is weaker than that one however because the arguments can be anything
 RpcEndpoint = Callable[..., Coroutine[Any, Any, Dict[str, Any]]]
 MarshallableRpcEndpoint = Callable[..., Coroutine[Any, Any, Streamable]]
 
