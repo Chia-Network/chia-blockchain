@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import traceback
 from dataclasses import dataclass
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, Type, TypeVar, get_type_hints
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, Type, get_type_hints
 
 import aiohttp
 from typing_extensions import TypedDict, dataclass_transform
@@ -28,11 +28,8 @@ class RequestType(TypedDict):
     pass
 
 
-_T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
-
-
 @dataclass_transform()
-def get_streamable_from_request_type(cls: Type[RequestType]) -> Type[_T_Streamable]:
+def get_streamable_from_request_type(cls: Type[RequestType]) -> Type[Streamable]:
     return streamable(
         dataclass(frozen=True)(type("_" + cls.__name__, (Streamable,), {"__annotations__": cls.__annotations__}))
     )
@@ -42,12 +39,10 @@ def marshall(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     hints = get_type_hints(func)
     request_class: Type[RequestType] = hints["request"]
 
-    async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
+    async def rpc_endpoint(self, request: Dict[str, Any], *args: object, **kwargs: object) -> Dict[str, Any]:
         response_obj: Streamable = await func(
             self,
-            request_class(
-                get_streamable_from_request_type(request_class).from_json_dict(request).__dict__  # type: ignore
-            ),
+            get_streamable_from_request_type(request_class).from_json_dict(request).__dict__,
             *args,
             **kwargs,
         )
