@@ -660,9 +660,15 @@ async def test_cat_trades(
         Offer.from_bytes(trade_make.offer),
         peer,
         wallet_environments.tx_config,
+        fee=uint64(1),
     )
     assert trade_take is not None
     assert tx_records is not None
+
+    # Testing a precious display bug real quick
+    xch_tx: TransactionRecord = next(tx for tx in tx_records if tx.wallet_id == 1)
+    assert xch_tx.amount == 3
+    assert xch_tx.fee_amount == 1
 
     await wallet_environments.process_pending_states(
         [
@@ -696,9 +702,9 @@ async def test_cat_trades(
             WalletStateTransition(
                 pre_block_balance_updates={
                     "xch": {
-                        "unconfirmed_wallet_balance": -3,
-                        "<=#spendable_balance": -3,
-                        "<=#max_send_amount": -3,
+                        "unconfirmed_wallet_balance": -4,  # -3 for offer, -1 for fee
+                        "<=#spendable_balance": -4,
+                        "<=#max_send_amount": -4,
                         "pending_coin_removal_count": 1,
                     },
                     "cat": {
@@ -723,7 +729,7 @@ async def test_cat_trades(
                 },
                 post_block_balance_updates={
                     "xch": {
-                        "confirmed_wallet_balance": -3,
+                        "confirmed_wallet_balance": -4,
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
                         "pending_coin_removal_count": -1,
