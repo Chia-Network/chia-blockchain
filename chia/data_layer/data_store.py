@@ -1043,7 +1043,7 @@ class DataStore:
             ancestors: List[InternalNode] = await self.get_ancestors_optimized(
                 node_hash=node.hash, tree_id=tree_id, root_hash=root_hash
             )
-            
+
             if len(ancestors) == 0:
                 # the only node is being deleted
                 return await self._insert_root(
@@ -1112,15 +1112,56 @@ class DataStore:
             if root is None:
                 raise ValueError("Upsert operation on an empty tree")
             if hint_keys_values is None:
-                node = await self.get_node_by_key(key=key, tree_id=tree_id)
-                node_hash = node.hash
+                old_node = await self.get_node_by_key(key=key, tree_id=tree_id)
+                old_node_hash = old_node.hash
             else:
                 if bytes(key) not in hint_keys_values:
                     raise RuntimeError(f"Key not present in store for upsert operation: {key.hex()}")
                 value = hint_keys_values[bytes(key)]
-                node_hash = leaf_hash(key=key, value=value)
-                node = TerminalNode(node_hash, key, value)
+                old_node_hash = leaf_hash(key=key, value=value)
                 del hint_keys_values[bytes(key)]
+
+            # create new terminal node
+            new_terminal_node_hash = await self._insert_terminal_node(key=key, value=new_value)
+
+            ancestors = await self.get_ancestors_common(
+                node_hash=old_node_hash,
+                tree_id=tree_id,
+                root_hash=root.node_hash,
+                generation=root.generation,
+            )
+
+            # Store contains only the old root, replace it with a new root having the terminal node.
+            if len(ancestors) == 0:
+                new_root = await self._insert_root(
+                    tree_id=tree_id,
+                    node_hash=new_terminal_node_hash,
+                    status=status,
+                )
+            else:
+                parent = ancestors[0]
+                if parent.left_hash == old_node_hash:
+                    left = new_terminal_node_hash
+                    right = parent.right_hash
+                elif parent.right_hash == old_node_hash:
+                    left = parent.left_hash
+                    right = new_terminal_node_hash
+                else:
+                    raise Exception("Internal error.")
+
+                new_root = await self.update_ancestor_hashes_on_insert(
+                    tree_id=tree_id,
+                    left=left,
+                    right=right,
+                    traversal_node_hash=parent.hash,
+                    ancestors=ancestors[1:],
+                    status=status,
+                    root=root,
+                )
+
+            if hint_keys_values is not None:
+                hint_keys_values[bytes(key)] = value
+            return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def clean_node_table(self, writer: aiosqlite.Connection) -> None:
         await writer.execute(
@@ -1193,9 +1234,10 @@ class DataStore:
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
-                    intermediate_root = await self.upsert(
-                        key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
+                    insert_result = await self.upsert(
+                        key, new_value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
                     )
+                    intermediate_root = insert_result.root
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
