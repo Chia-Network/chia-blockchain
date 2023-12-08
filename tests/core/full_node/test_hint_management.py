@@ -29,7 +29,7 @@ additions = [
 ]
 
 
-def no_sub(c: bytes32) -> bool:
+async def no_sub(c: bytes32) -> bool:
     return False
 
 
@@ -42,7 +42,7 @@ async def test_hints_to_add(bt: BlockTools, empty_blockchain: Blockchain) -> Non
     assert br is not None
 
     scs = StateChangeSummary(br, uint32(0), [], removals, additions, [])
-    hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, no_sub, no_sub)
+    hints_to_add, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, no_sub, no_sub)
     assert len(lookup_coin_ids) == 0
 
     first_coin_id: bytes32 = Coin(bytes32(coin_ids[0]), bytes32(phs[4]), uint64(3)).name()
@@ -67,38 +67,47 @@ async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> 
     scs = StateChangeSummary(br, uint32(0), [], removals, additions, rewards)
 
     # Removal ID and addition PH
-    has_coin_sub = lambda c: c == coin_ids[1]  # noqa: E731
-    has_ph_sub = lambda ph: ph == phs[4]  # noqa: E731
+    async def has_coin_sub(c: bytes32) -> bool:
+        return c == coin_ids[1]
 
-    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
+    async def has_ph_sub(ph: bytes32) -> bool:
+        return ph == phs[4]
+
+    _, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
 
     first_coin_id: bytes32 = Coin(bytes32(coin_ids[0]), bytes32(phs[4]), uint64(3)).name()
     second_coin_id: bytes32 = Coin(bytes32(coin_ids[2]), bytes32(phs[4]), uint64(6)).name()
     assert set(lookup_coin_ids) == {coin_ids[1], first_coin_id, second_coin_id}
 
     # Removal PH and addition ID
-    has_coin_sub = lambda c: c == first_coin_id  # noqa: E731
-    has_ph_sub = lambda ph: ph == phs[0]  # noqa: E731
+    async def has_coin_sub(c: bytes32) -> bool:  # type: ignore[no-redef]
+        return c == first_coin_id
 
-    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
+    async def has_ph_sub(ph: bytes32) -> bool:  # type: ignore[no-redef]
+        return ph == phs[0]
+
+    _, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {first_coin_id, coin_ids[0], coin_ids[2]}
 
     # Subscribe to hint
     third_coin_id: bytes32 = Coin(bytes32(coin_ids[2]), phs[9], uint64(123)).name()
 
-    has_ph_sub = lambda ph: ph == bytes32(b"1" * 32)  # noqa: E731
+    async def has_ph_sub(ph: bytes32) -> bool:  # type: ignore[no-redef]
+        return ph == bytes32(b"1" * 32)
 
-    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, no_sub, has_ph_sub)
+    _, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, no_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {first_coin_id, third_coin_id}
 
     # Reward PH
-    has_ph_sub = lambda ph: ph == rewards[0].puzzle_hash  # noqa: E731
+    async def has_ph_sub(ph: bytes32) -> bool:  # type: ignore[no-redef]
+        return ph == rewards[0].puzzle_hash
 
-    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, no_sub, has_ph_sub)
+    _, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, no_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {rewards[0].name(), rewards[2].name()}
 
     # Reward coin id + reward ph
-    has_coin_sub = lambda c: c == rewards[1].name()  # noqa: E731
+    async def has_coin_sub(c: bytes32) -> bool:  # type: ignore[no-redef]
+        return c == rewards[1].name()
 
-    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
+    _, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {rewards[1].name(), rewards[0].name(), rewards[2].name()}

@@ -1505,7 +1505,7 @@ class FullNodeAPI:
         # the returned puzzle hashes are the ones we ended up subscribing to.
         # It will have filtered duplicates and ones exceeding the subscription
         # limit.
-        puzzle_hashes = self.full_node.subscriptions.add_ph_subscriptions(
+        puzzle_hashes = await self.full_node.subscriptions.add_puzzle_subscriptions(
             peer.peer_node_id, request.puzzle_hashes, max_subscriptions
         )
 
@@ -1576,7 +1576,9 @@ class FullNodeAPI:
         # TODO: apparently we have tests that expect to receive a
         # RespondToCoinUpdates even when subscribing to the same coin multiple
         # times, so we can't optimize away such DB lookups (yet)
-        self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, request.coin_ids, max_subscriptions)
+        await self.full_node.subscriptions.add_coin_subscriptions(
+            peer.peer_node_id, request.coin_ids, max_subscriptions
+        )
 
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
             include_spent_coins=True, coin_ids=set(request.coin_ids), min_height=request.min_height, max_items=max_items
@@ -1590,13 +1592,13 @@ class FullNodeAPI:
     async def unregister_interest_in_puzzle_hash(
         self, request: wallet_protocol.UnregisterPhUpdates, peer: WSChiaConnection
     ) -> None:
-        self.full_node.subscriptions.remove_ph_subscriptions(peer.peer_node_id, request.puzzle_hashes)
+        await self.full_node.subscriptions.remove_puzzle_subscriptions(peer.peer_node_id, request.puzzle_hashes)
 
     @api_request(peer_required=True)
     async def unregister_interest_in_coin(
         self, request: wallet_protocol.UnregisterCoinUpdates, peer: WSChiaConnection
     ) -> None:
-        self.full_node.subscriptions.remove_coin_subscriptions(peer.peer_node_id, request.coin_ids)
+        await self.full_node.subscriptions.remove_coin_subscriptions(peer.peer_node_id, request.coin_ids)
 
     @api_request()
     async def request_children(self, request: wallet_protocol.RequestChildren) -> Optional[Message]:

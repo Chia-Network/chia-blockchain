@@ -1059,7 +1059,7 @@ class TestCATWallet:
         await time_out_assert(20, check_wallets, 2, wallet_node_0)
         cat_wallet = wallet_node_0.wallet_state_manager.wallets[uint32(2)]
         await time_out_assert(20, cat_wallet.get_confirmed_balance, cat_amount_1)
-        assert not full_node_api.full_node.subscriptions.has_ph_subscription(puzzlehash_unhardened)
+        assert not full_node_api.full_node.subscriptions.is_puzzle_subscribed(puzzlehash_unhardened)
 
 
 @pytest.mark.anyio

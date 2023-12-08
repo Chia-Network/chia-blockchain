@@ -173,7 +173,7 @@ class Harvester:
         if event == PlotRefreshEvents.done:
             self.plot_sync_sender.sync_done(update_result.removed, update_result.duration)
 
-    def on_disconnect(self, connection: WSChiaConnection) -> None:
+    async def on_disconnect(self, connection: WSChiaConnection) -> None:
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection")
         self.plot_sync_sender.stop()
