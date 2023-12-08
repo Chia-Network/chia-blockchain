@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import random
 from dataclasses import dataclass
 from typing import List, Set, final
 
@@ -17,7 +18,10 @@ class PeerSubscriptions:
 
     @classmethod
     async def create(cls) -> PeerSubscriptions:
-        db_wrapper = await DBWrapper2.create(database=":memory:")
+        unique_database_uri = (
+            f"file:db_{cls.__module__}.{cls.__qualname__}_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+        )
+        db_wrapper = await DBWrapper2.create(database=unique_database_uri)
         self = PeerSubscriptions(db_wrapper)
 
         async with self.db_wrapper.writer() as conn:
