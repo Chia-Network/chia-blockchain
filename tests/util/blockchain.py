@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import os
 import pickle
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import AsyncIterator, List, Optional, Tuple
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.constants import ConsensusConstants
@@ -15,15 +16,20 @@ from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 
-async def create_blockchain(constants: ConsensusConstants, db_version: int) -> Tuple[Blockchain, DBWrapper2]:
+@contextlib.asynccontextmanager
+async def create_blockchain(
+    constants: ConsensusConstants, db_version: int
+) -> AsyncIterator[Tuple[Blockchain, DBWrapper2]]:
     db_uri = generate_in_memory_db_uri()
-    wrapper = await DBWrapper2.create(database=db_uri, uri=True, reader_count=1, db_version=db_version)
-
-    coin_store = await CoinStore.create(wrapper)
-    store = await BlockStore.create(wrapper)
-    bc1 = await Blockchain.create(coin_store, store, constants, Path("."), 2, single_threaded=True)
-    assert bc1.get_peak() is None
-    return bc1, wrapper
+    async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:
+        coin_store = await CoinStore.create(wrapper)
+        store = await BlockStore.create(wrapper)
+        bc1 = await Blockchain.create(coin_store, store, constants, Path("."), 2, single_threaded=True)
+        try:
+            assert bc1.get_peak() is None
+            yield bc1, wrapper
+        finally:
+            bc1.shut_down()
 
 
 def persistent_blocks(
