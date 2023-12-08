@@ -8,12 +8,12 @@ import statistics
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, cast
 
 import aiosqlite
 import pytest
 
-from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
@@ -469,6 +469,76 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
 
     all_kv = await data_store.get_keys_values(tree_id)
     assert {node.key: node.value for node in all_kv} == keys_values
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "use_optimized",
+    [True, False],
+)
+async def test_upsert_checks_for_invalid_arguments(
+    data_store: DataStore,
+    tree_id: bytes32,
+    use_optimized: bool,
+) -> None:
+    key = b"key"
+    value = b"value1"
+    hint_keys_values: Optional[Dict[bytes, bytes]] = {} if use_optimized else None
+
+    await data_store.autoinsert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key, tree_id)
+    assert node.value == value
+
+    new_value = b"value2"
+    await data_store.upsert(
+        key=key,
+        new_value=new_value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key, tree_id)
+    assert node.value == new_value
+
+    with pytest.raises(ValueError, match="^New value matches old value in upsert operation"):
+        await data_store.upsert(
+            key=key,
+            new_value=new_value,
+            tree_id=tree_id,
+            hint_keys_values=hint_keys_values,
+            use_optimized=use_optimized,
+            status=Status.COMMITTED,
+        )
+
+    key2 = b"key2"
+    if use_optimized:
+        with pytest.raises(ValueError, match="^Key not present in store for upsert operation"):
+            await data_store.upsert(
+                key=key2,
+                new_value=new_value,
+                tree_id=tree_id,
+                hint_keys_values=hint_keys_values,
+                use_optimized=use_optimized,
+                status=Status.COMMITTED,
+            )
+    else:
+        with pytest.raises(KeyNotFoundError):
+            await data_store.upsert(
+                key=key2,
+                new_value=new_value,
+                tree_id=tree_id,
+                hint_keys_values=hint_keys_values,
+                use_optimized=use_optimized,
+                status=Status.COMMITTED,
+            )
 
 
 @pytest.mark.parametrize(argnames="side", argvalues=list(Side))
