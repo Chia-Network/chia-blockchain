@@ -1950,26 +1950,29 @@ class DAOWallet:
                 parent_coin_id = child_coin.name()
 
         # If we reach here then we don't currently know about this coin
-        new_proposal_info = ProposalInfo(
-            singleton_id,
-            puzzle,
-            uint64(new_total_votes),
-            uint64(new_yes_votes),
-            current_coin,
-            current_innerpuz,
-            timer_coin,  # if this is None then the proposal has finished
-            block_height,  # block height that current proposal singleton coin was created
-            passed,
-            ended,
-        )
-        new_dao_info.proposals_list.append(new_proposal_info)
-        await self.save_info(new_dao_info)
-        future_parent = LineageProof(
-            new_state.coin.parent_coin_info,
-            puzzle.get_tree_hash(),
-            uint64(new_state.coin.amount),
-        )
-        await self.add_parent(new_state.coin.name(), future_parent)
+        # We only want to add this coin if it has a timer coin since fake proposals without a timer can
+        # be created.
+        if found:
+            new_proposal_info = ProposalInfo(
+                singleton_id,
+                puzzle,
+                uint64(new_total_votes),
+                uint64(new_yes_votes),
+                current_coin,
+                current_innerpuz,
+                timer_coin,  # if this is None then the proposal has finished
+                block_height,  # block height that current proposal singleton coin was created
+                passed,
+                ended,
+            )
+            new_dao_info.proposals_list.append(new_proposal_info)
+            await self.save_info(new_dao_info)
+            future_parent = LineageProof(
+                new_state.coin.parent_coin_info,
+                puzzle.get_tree_hash(),
+                uint64(new_state.coin.amount),
+            )
+            await self.add_parent(new_state.coin.name(), future_parent)
         return
 
     async def update_closed_proposal_coin(self, new_state: CoinSpend, block_height: uint32) -> None:
