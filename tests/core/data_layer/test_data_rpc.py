@@ -243,7 +243,7 @@ async def test_create_insert_get(
 
         # test upsert
         new_value = b"\x00\x02"
-        changelist: List[Dict[str, str]] = [{"action": "upsert", "key": key.hex(), "value": new_value.hex()}]
+        changelist = [{"action": "upsert", "key": key.hex(), "value": new_value.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec1 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
