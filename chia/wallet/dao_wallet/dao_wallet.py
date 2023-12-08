@@ -432,6 +432,8 @@ class DAOWallet:
                     asset_id = None
                 else:
                     asset_id = get_asset_id_from_puzzle(parent_spend.puzzle_reveal.to_program())
+                # to prevent fake p2_singletons being added
+                assert coin.puzzle_hash == get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
                 if asset_id not in self.dao_info.assets:
                     new_asset_list = self.dao_info.assets.copy()
                     new_asset_list.append(asset_id)
@@ -541,10 +543,12 @@ class DAOWallet:
             ):
                 cat_tail_hash = bytes32(cond.at("rrrff").as_atom())
                 cat_origin_id = bytes32(cond.at("rrrfrf").as_atom())
-                cat_launcher_id = bytes32(cond.at("rrrfrrf").as_atom())
-                cat_tail = generate_cat_tail(cat_origin_id, cat_launcher_id)
+                # Calculate the CAT tail from the memo data. If someone tries to use a fake tail hash in
+                # the memo field, it won't match with the DAO's actual treasury ID.
+                cat_tail = generate_cat_tail(cat_origin_id, self.dao_info.treasury_id)
                 break
         assert cat_tail_hash
+        assert cat_tail.get_tree_hash() == cat_tail_hash
 
         cat_wallet: Optional[CATWallet] = None
 
@@ -736,7 +740,7 @@ class DAOWallet:
             origin_id=origin.name(),
             coins=set(coins),
             coin_announcements_to_consume=announcement_set,
-            memos=[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name(), launcher_coin.name()],
+            memos=[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name()],
         )
         tx_record: TransactionRecord = tx_records[0]
 
@@ -1823,6 +1827,7 @@ class DAOWallet:
                     )
                     await self.add_parent(new_state.coin.name(), future_parent)
                     return
+                index = index + 1
 
         # check if we are the finished state
         if current_innerpuz == get_finished_state_inner_puzzle(singleton_id):
