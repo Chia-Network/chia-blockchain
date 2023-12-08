@@ -1110,14 +1110,20 @@ class DataStore:
     ) -> InsertResult:
         async with self.db_wrapper.writer():
             if root is None:
+                root = await self.get_tree_root(tree_id=tree_id)
+            if root is None:
                 raise ValueError("Upsert operation on an empty tree")
             if hint_keys_values is None:
                 old_node = await self.get_node_by_key(key=key, tree_id=tree_id)
+                if old_node.value == new_value:
+                    raise RuntimeError(f"New value matches old value in upsert operation: {key.hex()}")
                 old_node_hash = old_node.hash
             else:
                 if bytes(key) not in hint_keys_values:
                     raise RuntimeError(f"Key not present in store for upsert operation: {key.hex()}")
                 value = hint_keys_values[bytes(key)]
+                if value == new_value:
+                    raise RuntimeError(f"New value matches old value in upsert operation: {key.hex()}")
                 old_node_hash = leaf_hash(key=key, value=value)
                 del hint_keys_values[bytes(key)]
 
@@ -1160,7 +1166,7 @@ class DataStore:
                 )
 
             if hint_keys_values is not None:
-                hint_keys_values[bytes(key)] = value
+                hint_keys_values[bytes(key)] = new_value
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def clean_node_table(self, writer: aiosqlite.Connection) -> None:

@@ -386,10 +386,11 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
         random.seed(100, version=2)
 
         batch: List[Dict[str, Any]] = []
-        keys: List[bytes] = []
+        keys_values: Dict[bytes, bytes] = {}
         hint_keys_values: Dict[bytes, bytes] = {}
         for operation in range(num_batches * num_ops_per_batch):
-            if random.randint(0, 4) > 0 or len(keys) == 0:
+            op_type = random.randint(0, 5)
+            if op_type > 1 or len(keys_values) == 0:
                 key = operation.to_bytes(4, byteorder="big")
                 value = (2 * operation).to_bytes(4, byteorder="big")
                 if use_optimized:
@@ -405,10 +406,10 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                         key=key, value=value, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
                     )
                 batch.append({"action": "insert", "key": key, "value": value})
-                keys.append(key)
-            else:
-                key = random.choice(keys)
-                keys.remove(key)
+                keys_values[key] = value
+            elif op_type == 0:
+                key = random.choice(list(keys_values.keys()))
+                del keys_values[key]
                 if use_optimized:
                     await single_op_data_store.delete(
                         key=key, tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
@@ -418,6 +419,21 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                         key=key, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
                     )
                 batch.append({"action": "delete", "key": key})
+            else:
+                key = random.choice(list(keys_values.keys()))
+                old_value = keys_values[key]
+                new_value_int = int.from_bytes(old_value, byteorder="big") + 1
+                new_value = new_value_int.to_bytes(4, byteorder="big")
+                await single_op_data_store.upsert(
+                    key=key,
+                    new_value=new_value,
+                    tree_id=tree_id,
+                    hint_keys_values=hint_keys_values if use_optimized else None,
+                    use_optimized=use_optimized,
+                    status=Status.COMMITTED,
+                )
+                keys_values[key] = new_value
+                batch.append({"action": "upsert", "key": key, "value": new_value})
             if (operation + 1) % num_ops_per_batch == 0:
                 saved_batches.append(batch)
                 batch = []
@@ -450,6 +466,9 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 queue.append(node.right_hash)
                 ancestors[node.left_hash] = node_hash
                 ancestors[node.right_hash] = node_hash
+
+    all_kv = await data_store.get_keys_values(tree_id)
+    assert {node.key: node.value for node in all_kv} == keys_values
 
 
 @pytest.mark.parametrize(argnames="side", argvalues=list(Side))
