@@ -432,6 +432,8 @@ class DAOWallet:
                     asset_id = None
                 else:
                     asset_id = get_asset_id_from_puzzle(parent_spend.puzzle_reveal.to_program())
+                # to prevent fake p2_singletons being added
+                assert coin.puzzle_hash == get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
                 if asset_id not in self.dao_info.assets:
                     new_asset_list = self.dao_info.assets.copy()
                     new_asset_list.append(asset_id)
@@ -540,8 +542,13 @@ class DAOWallet:
                 int_from_bytes(cond.at("rrf").as_atom()) == 1
             ):
                 cat_tail_hash = bytes32(cond.at("rrrff").as_atom())
+                cat_origin_id = bytes32(cond.at("rrrfrf").as_atom())
+                # Calculate the CAT tail from the memo data. If someone tries to use a fake tail hash in
+                # the memo field, it won't match with the DAO's actual treasury ID.
+                cat_tail = generate_cat_tail(cat_origin_id, self.dao_info.treasury_id)
                 break
         assert cat_tail_hash
+        assert cat_tail.get_tree_hash() == cat_tail_hash
 
         cat_wallet: Optional[CATWallet] = None
 
@@ -560,6 +567,7 @@ class DAOWallet:
             )
 
         assert cat_wallet is not None
+        await cat_wallet.set_tail_program(bytes(cat_tail).hex())
         cat_wallet_id = cat_wallet.wallet_info.id
         dao_info = dataclasses.replace(
             self.dao_info,
@@ -732,7 +740,7 @@ class DAOWallet:
             origin_id=origin.name(),
             coins=set(coins),
             coin_announcements_to_consume=announcement_set,
-            memos=[new_cat_wallet.cat_info.limitations_program_hash],
+            memos=[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name()],
         )
         tx_record: TransactionRecord = tx_records[0]
 
@@ -1819,6 +1827,7 @@ class DAOWallet:
                     )
                     await self.add_parent(new_state.coin.name(), future_parent)
                     return
+                index = index + 1
 
         # check if we are the finished state
         if current_innerpuz == get_finished_state_inner_puzzle(singleton_id):
@@ -1941,26 +1950,29 @@ class DAOWallet:
                 parent_coin_id = child_coin.name()
 
         # If we reach here then we don't currently know about this coin
-        new_proposal_info = ProposalInfo(
-            singleton_id,
-            puzzle,
-            uint64(new_total_votes),
-            uint64(new_yes_votes),
-            current_coin,
-            current_innerpuz,
-            timer_coin,  # if this is None then the proposal has finished
-            block_height,  # block height that current proposal singleton coin was created
-            passed,
-            ended,
-        )
-        new_dao_info.proposals_list.append(new_proposal_info)
-        await self.save_info(new_dao_info)
-        future_parent = LineageProof(
-            new_state.coin.parent_coin_info,
-            puzzle.get_tree_hash(),
-            uint64(new_state.coin.amount),
-        )
-        await self.add_parent(new_state.coin.name(), future_parent)
+        # We only want to add this coin if it has a timer coin since fake proposals without a timer can
+        # be created.
+        if found:
+            new_proposal_info = ProposalInfo(
+                singleton_id,
+                puzzle,
+                uint64(new_total_votes),
+                uint64(new_yes_votes),
+                current_coin,
+                current_innerpuz,
+                timer_coin,  # if this is None then the proposal has finished
+                block_height,  # block height that current proposal singleton coin was created
+                passed,
+                ended,
+            )
+            new_dao_info.proposals_list.append(new_proposal_info)
+            await self.save_info(new_dao_info)
+            future_parent = LineageProof(
+                new_state.coin.parent_coin_info,
+                puzzle.get_tree_hash(),
+                uint64(new_state.coin.amount),
+            )
+            await self.add_parent(new_state.coin.name(), future_parent)
         return
 
     async def update_closed_proposal_coin(self, new_state: CoinSpend, block_height: uint32) -> None:
