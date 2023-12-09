@@ -266,6 +266,7 @@ class DAOWallet:
         await self.wallet_state_manager.add_interested_puzzle_hashes(
             [self.dao_info.treasury_id, funding_inner_hash], [self.id(), self.id()]
         )
+        await new_dao_cat_wallet.resync_dao_cats()
         return self
 
     @staticmethod

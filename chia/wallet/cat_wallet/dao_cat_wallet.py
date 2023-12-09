@@ -392,6 +392,20 @@ class DAOCATWallet:
         await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle_hash], [self.id()])
         return txs
 
+    async def resync_dao_cats(self) -> None:
+        puzzle_hashes = await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes(self.id())
+        for puzzle_hash in puzzle_hashes:
+            record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
+            inner_puzzle = self.standard_wallet.puzzle_for_pk(record.pubkey)
+            puzzle = get_lockup_puzzle(
+                self.dao_cat_info.limitations_program_hash,
+                [],
+                inner_puzzle,
+            )
+            cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, puzzle)
+            await self.wallet_state_manager.add_interested_puzzle_hashes([puzzle.get_tree_hash()], [self.id()])
+            await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle.get_tree_hash()], [self.id()])
+
     async def exit_vote_state(
         self,
         coins: List[LockedCoinInfo],
