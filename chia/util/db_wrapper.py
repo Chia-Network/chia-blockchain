@@ -113,6 +113,9 @@ class DBWrapper2:
     _current_writer: Optional[asyncio.Task[object]]
     _savepoint_name: int
     _log_file: Optional[TextIO]
+    _wjb_database: Path
+    _wjb_uri: bool
+    _wjb_log_file: Path
 
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
@@ -167,6 +170,10 @@ class DBWrapper2:
         write_connection.row_factory = row_factory
 
         self = cls(connection=write_connection, db_version=db_version, log_file=log_file)
+
+        self._wjb_database=database
+        self._wjb_uri=uri
+        self._wjb_log_file=log_file
 
         for index in range(reader_count):
             read_connection = await _create_connection(
@@ -298,7 +305,7 @@ class DBWrapper2:
         if task in self._in_use:
             yield self._in_use[task]
         else:
-            c = await self._read_connections.get()
+            c = await _create_connection(database=self._wjb_database, uri=self._wjb_uri, log_file=self._wjb_log_file, name="wjb" )
             try:
                 # record our connection in this dict to allow nested calls in
                 # the same task to use the same connection
@@ -306,4 +313,4 @@ class DBWrapper2:
                 yield c
             finally:
                 del self._in_use[task]
-                self._read_connections.put_nowait(c)
+                await c.close()
