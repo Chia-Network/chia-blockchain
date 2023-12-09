@@ -10,7 +10,7 @@ from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
@@ -232,7 +232,7 @@ class TestCATLifecycle:
             ].coin
             acs_bundle = SpendBundle(
                 [
-                    CoinSpend(
+                    make_spend(
                         acs_coin,
                         temp_p,
                         Program.to([]),
@@ -373,7 +373,7 @@ class TestCATLifecycle:
 
             await sim_client.push_tx(
                 SpendBundle(
-                    [CoinSpend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
+                    [make_spend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
                     G2Element(),
                 )
             )
@@ -415,7 +415,7 @@ class TestCATLifecycle:
 
             await sim_client.push_tx(
                 SpendBundle(
-                    [CoinSpend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
+                    [make_spend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
                     G2Element(),
                 )
             )
@@ -521,7 +521,7 @@ class TestCATLifecycle:
             ].coin
             acs_bundle = SpendBundle(
                 [
-                    CoinSpend(
+                    make_spend(
                         acs_coin,
                         temp_p,
                         Program.to([]),
@@ -569,7 +569,7 @@ class TestCATLifecycle:
 
             await sim_client.push_tx(
                 SpendBundle(
-                    [CoinSpend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
+                    [make_spend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
                     G2Element(),
                 )
             )

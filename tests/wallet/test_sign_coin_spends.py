@@ -10,7 +10,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.ints import uint32
@@ -52,12 +52,12 @@ solution_h = SerializedProgram.from_program(
 solution_u = SerializedProgram.from_program(
     Program.to([[ConditionOpcode.AGG_SIG_UNSAFE, pk1_u, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_u, msg2]])
 )
-spend_h: CoinSpend = CoinSpend(
+spend_h: CoinSpend = make_spend(
     coin,
     puzzle,
     solution_h,
 )
-spend_u: CoinSpend = CoinSpend(
+spend_u: CoinSpend = make_spend(
     coin,
     puzzle,
     solution_u,

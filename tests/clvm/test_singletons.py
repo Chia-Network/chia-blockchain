@@ -10,7 +10,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
@@ -124,7 +124,7 @@ async def test_singleton_top_layer(version, cost_logger):
         delegated_puzzle: Program = p2_conditions.puzzle_for_conditions(conditions)  # noqa
         full_solution: Program = p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)  # noqa
 
-        starting_coinsol = CoinSpend(
+        starting_coinsol = make_spend(
             starting_coin,
             starting_puzzle,
             full_solution,
@@ -173,7 +173,7 @@ async def test_singleton_top_layer(version, cost_logger):
             inner_solution,
         )
 
-        singleton_eve_coinsol = CoinSpend(
+        singleton_eve_coinsol = make_spend(
             singleton_eve,
             puzzle_reveal,
             full_solution,
@@ -200,7 +200,7 @@ async def test_singleton_top_layer(version, cost_logger):
             inner_solution,
         )
 
-        singleton_coinsol = CoinSpend(
+        singleton_coinsol = make_spend(
             singleton,
             puzzle_reveal,
             full_solution,
@@ -249,7 +249,7 @@ async def test_singleton_top_layer(version, cost_logger):
             singleton_eve.amount,
             inner_solution,
         )
-        singleton_claim_coinsol = CoinSpend(
+        singleton_claim_coinsol = make_spend(
             singleton_child,
             puzzle_reveal,
             full_solution,
@@ -307,7 +307,7 @@ async def test_singleton_top_layer(version, cost_logger):
             singleton_eve.amount,
             inner_solution,
         )
-        delay_claim_coinsol = CoinSpend(
+        delay_claim_coinsol = make_spend(
             singleton_child,
             puzzle_reveal,
             full_solution,
@@ -364,7 +364,7 @@ async def test_singleton_top_layer(version, cost_logger):
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        multi_odd_coinsol = CoinSpend(
+        multi_odd_coinsol = make_spend(
             singleton_child,
             puzzle_reveal,
             full_solution,
@@ -400,7 +400,7 @@ async def test_singleton_top_layer(version, cost_logger):
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        no_odd_coinsol = CoinSpend(
+        no_odd_coinsol = make_spend(
             singleton_child,
             puzzle_reveal,
             full_solution,
@@ -442,7 +442,7 @@ async def test_singleton_top_layer(version, cost_logger):
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        singleton_even_coinsol = CoinSpend(
+        singleton_even_coinsol = make_spend(
             singleton_child,
             puzzle_reveal,
             full_solution,
@@ -482,7 +482,7 @@ async def test_singleton_top_layer(version, cost_logger):
             inner_solution,
         )
 
-        evil_coinsol = CoinSpend(
+        evil_coinsol = make_spend(
             evil_coin,
             puzzle_reveal,
             full_solution,
@@ -520,7 +520,7 @@ async def test_singleton_top_layer(version, cost_logger):
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        melt_coinsol = CoinSpend(
+        melt_coinsol = make_spend(
             singleton_child,
             puzzle_reveal,
             full_solution,

@@ -31,7 +31,7 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.eligible_coin_spends import DedupCoinSpend, EligibleCoinSpends, run_for_cost
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -325,7 +325,7 @@ def test_compute_assert_height(conds: SpendBundleConditions, expected: TimelockC
 
 def spend_bundle_from_conditions(conditions: List[List[Any]], coin: Coin = TEST_COIN) -> SpendBundle:
     solution = Program.to(conditions)
-    coin_spend = CoinSpend(coin, IDENTITY_PUZZLE, solution)
+    coin_spend = make_spend(coin, IDENTITY_PUZZLE, solution)
     return SpendBundle([coin_spend], G2Element())
 
 
@@ -665,7 +665,7 @@ def mk_item(
 ) -> MempoolItem:
     # we don't actually care about the puzzle and solutions for the purpose of
     # can_replace()
-    spends = [CoinSpend(c, SerializedProgram.to(None), SerializedProgram.to(None)) for c in coins]
+    spends = [make_spend(c, SerializedProgram.to(None), SerializedProgram.to(None)) for c in coins]
     spend_bundle = SpendBundle(spends, G2Element())
     npc_result = NPCResult(None, make_test_conds(cost=cost, spend_ids=[c.name() for c in coins]), uint64(cost))
     return MempoolItem(
@@ -910,7 +910,7 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
     async def make_coin_spends(coins: List[Coin], *, high_fees: bool = True) -> List[CoinSpend]:
         spends_list = []
         for i in range(0, len(coins)):
-            coin_spend = CoinSpend(
+            coin_spend = make_spend(
                 coins[i],
                 IDENTITY_PUZZLE,
                 Program.to(
@@ -1195,14 +1195,14 @@ async def test_replacing_one_with_an_eligible_coin() -> None:
 @pytest.mark.parametrize("amount", [0, 1])
 def test_run_for_cost(amount: int) -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, amount]]
-    solution = Program.to(conditions)
+    solution = SerializedProgram.to(conditions)
     cost = run_for_cost(IDENTITY_PUZZLE, solution, additions_count=1, max_cost=uint64(10000000))
     assert cost == uint64(1800044)
 
 
 def test_run_for_cost_max_cost() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
-    solution = Program.to(conditions)
+    solution = SerializedProgram.to(conditions)
     with pytest.raises(ValueError, match="cost exceeded"):
         run_for_cost(IDENTITY_PUZZLE, solution, additions_count=1, max_cost=uint64(43))
 
