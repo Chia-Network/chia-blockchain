@@ -155,12 +155,12 @@ class UncurriedNFT(Streamable):
             if mod == NFT_OWNERSHIP_LAYER:
                 supports_did = True
                 log.debug("Parsing ownership layer")
-                _, current_did, transfer_program, p2_puzzle = ol_args.as_iter()
+                _, current_did_node, transfer_program, p2_puzzle = ol_args.as_iter()
                 transfer_program_mod, transfer_program_args = transfer_program.uncurry()
-                _, royalty_address_p, royalty_percentage = transfer_program_args.as_iter()
-                royalty_percentage = uint16(royalty_percentage.as_int())
-                royalty_address = royalty_address_p.atom
-                current_did = current_did.atom
+                _, royalty_address_p, royalty_percentage_node = transfer_program_args.as_iter()
+                royalty_percentage = uint16(royalty_percentage_node.as_int())
+                royalty_address = bytes32(royalty_address_p.as_atom())
+                current_did = current_did_node.as_atom()
                 if current_did == b"":
                     # For unassigned NFT, set owner DID to None
                     current_did = None
@@ -172,11 +172,11 @@ class UncurriedNFT(Streamable):
             return None
 
         return cls(
-            nft_mod_hash=bytes32(nft_mod_hash.atom),
+            nft_mod_hash=bytes32(nft_mod_hash.as_atom()),
             nft_state_layer=nft_state_layer,
             singleton_struct=singleton_struct,
             singleton_mod_hash=singleton_mod_hash,
-            singleton_launcher_id=singleton_launcher_id.atom,
+            singleton_launcher_id=singleton_launcher_id.as_atom(),
             launcher_puzhash=launcher_puzhash,
             metadata=metadata,
             data_uris=data_uris,

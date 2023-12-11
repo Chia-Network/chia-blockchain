@@ -796,8 +796,8 @@ class WalletStateManager:
         if cat_curried_args is not None:
             cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
             cat_data: CATCoinData = CATCoinData(
-                bytes32(cat_mod_hash.atom),
-                bytes32(tail_program_hash.atom),
+                bytes32(cat_mod_hash.as_atom()),
+                bytes32(tail_program_hash.as_atom()),
                 cat_inner_puzzle,
                 parent_coin_state.coin.parent_coin_info,
                 uint64(parent_coin_state.coin.amount),
@@ -828,7 +828,7 @@ class WalletStateManager:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
-                bytes32(recovery_list_hash.atom),
+                bytes32(recovery_list_hash.as_atom()),
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
@@ -1177,7 +1177,7 @@ class WalletStateManager:
         assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
-        launch_id: bytes32 = bytes32(parent_data.singleton_struct.rest().first().atom)
+        launch_id: bytes32 = bytes32(parent_data.singleton_struct.at("rf").as_atom())
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             # Check if it was owned by us

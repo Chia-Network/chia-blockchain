@@ -2175,16 +2175,16 @@ class WalletRpcApi:
         return {
             "success": True,
             "did_id": encode_puzzle_hash(
-                bytes32.from_hexstr(singleton_struct.rest().first().atom.hex()),
+                bytes32.from_hexstr(singleton_struct.at("rf").as_atom().hex()),
                 AddressType.DID.hrp(self.service.config),
             ),
             "latest_coin": coin_state.coin.name().hex(),
             "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
-            "public_key": public_key.atom.hex(),
-            "recovery_list_hash": recovery_list_hash.atom.hex(),
+            "public_key": public_key.as_atom().hex(),
+            "recovery_list_hash": recovery_list_hash.as_atom().hex(),
             "num_verification": num_verification.as_int(),
             "metadata": did_program_to_metadata(metadata),
-            "launcher_id": singleton_struct.rest().first().atom.hex(),
+            "launcher_id": singleton_struct.at("rf").as_atom().hex(),
             "full_puzzle": full_puzzle,
             "solution": Program.from_bytes(bytes(coin_spend.solution)).as_python(),
             "hints": hints,
@@ -2216,7 +2216,7 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            bytes32(recovery_list_hash.atom),
+            bytes32(recovery_list_hash.as_atom()),
             uint16(num_verification.as_int()),
             singleton_struct,
             metadata,
