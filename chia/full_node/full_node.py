@@ -238,7 +238,7 @@ class FullNode:
             reader_count=4,
             log_path=sql_log_path,
             synchronous=db_sync,
-        ) as self._db_wrapper:
+        ) as self._db_wrapper, PeerSubscriptions.managed() as self._subscriptions:
             if self.db_wrapper.db_version != 2:
                 async with self.db_wrapper.reader_no_transaction() as conn:
                     async with conn.execute(
@@ -259,7 +259,6 @@ class FullNode:
             self._block_store = await BlockStore.create(self.db_wrapper)
             self._hint_store = await HintStore.create(self.db_wrapper)
             self._coin_store = await CoinStore.create(self.db_wrapper)
-            self._subscriptions = await PeerSubscriptions.create()
             self.log.info("Initializing blockchain from disk")
             start_time = time.time()
             reserved_cores = self.config.get("reserved_cores", 0)
