@@ -30,7 +30,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import Balance, WalletNode, WalletServiceManagementMessage
 from tests.conftest import ConsensusMode
 from tests.util.misc import CoinGenerator
-from tests.util.setup_nodes import OldSimulatorsAndWallets
+from tests.util.setup_nodes import OldSimulatorsAndWallets, SimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert
 
 
@@ -395,17 +395,20 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
 async def test_get_balance(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+    simulator_and_wallet_new: SimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
-    full_node_server = full_node_api.full_node.server
+    full_node_api = simulator_and_wallet_new.simulators[0].peer_api
+    wallet_node = simulator_and_wallet_new.wallets[0].node
+    wallet_server = simulator_and_wallet_new.wallets[0].peer_server
+    full_node_server = simulator_and_wallet_new.simulators[0].peer_server
 
     def wallet_synced() -> bool:
         return full_node_server.node_id in wallet_node.synced_peers
 
     async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
         # TODO: private...  cut it out
-        await wallet_server.api._management_request(  # type: ignore[attr-defined]
+        assert simulator_and_wallet_new.wallets[0].rpc_api._management_request is not None
+        await simulator_and_wallet_new.wallets[0].rpc_api._management_request(
             WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint)
         )
 
