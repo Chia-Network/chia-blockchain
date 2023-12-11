@@ -1237,7 +1237,7 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
     assert servers_info[0].url == "http://127.0.0.1/8000"
     await data_store.received_correct_file(tree_id=tree_id, server_info=servers_info[0])
 
-    ban_times = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60] * 10
+    ban_times = [5 * 60] * 3 + [15 * 60] * 3 + [30 * 60] * 2 + [60 * 60] * 10
     for ban_time in ban_times:
         servers_info = await data_store.get_available_servers_for_store(tree_id=tree_id, timestamp=current_timestamp)
         assert len(servers_info) == 1
