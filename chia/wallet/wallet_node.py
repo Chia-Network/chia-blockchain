@@ -195,6 +195,8 @@ class WalletNode:
                 self._retry_failed_states_task.cancel()
             if self._secondary_peer_sync_task is not None:
                 self._secondary_peer_sync_task.cancel()
+            if self._retry_failed_states_task is not None:
+                self._retry_failed_states_task.cancel()
 
             self.log.info("self._await_closed")
             if self._server is not None:
@@ -558,7 +560,7 @@ class WalletNode:
         while not self._shut_down:
             try:
                 await asyncio.sleep(self.coin_state_retry_seconds)
-                if self.wallet_state_manager is None:
+                if self._wallet_state_manager is None:
                     continue
                 states_to_retry = await self.wallet_state_manager.retry_store.get_all_states_to_retry()
                 for state, peer_id, fork_height in states_to_retry:

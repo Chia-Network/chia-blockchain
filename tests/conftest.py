@@ -600,8 +600,8 @@ async def two_not_started_wallet_nodes(request, blockchain_constants: ConsensusC
     params = {}
     if request and request.param_index > 0:
         params = request.param
-    async with setup_simulators_and_wallets(1, 2, blockchain_constants, start_wallet_services=False, **params) as _:
-        yield _
+    async with setup_simulators_and_wallets(1, 2, blockchain_constants, start_wallet_services=False, **params) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
