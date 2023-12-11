@@ -1,37 +1,77 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Dict, List, Set
+import random
+from dataclasses import dataclass
+from typing import List, Set, final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.db_wrapper import DBWrapper2
 
 log = logging.getLogger(__name__)
 
 
-# The PeerSubscriptions class is essentially a multi-index container. It can be
-# indexed by peer_id, coin_id and puzzle_hash.
-@dataclass(frozen=True)
+@final
+@dataclass
 class PeerSubscriptions:
-    # TODO: use NewType all over to describe these various uses of the same types
-    # Puzzle Hash : Set[Peer ID]
-    _coin_subscriptions: Dict[bytes32, Set[bytes32]] = field(default_factory=dict, init=False)
-    # Puzzle Hash : Set[Peer ID]
-    _ph_subscriptions: Dict[bytes32, Set[bytes32]] = field(default_factory=dict, init=False)
-    # Peer ID: Set[Coin ids]
-    _peer_coin_ids: Dict[bytes32, Set[bytes32]] = field(default_factory=dict, init=False)
-    # Peer ID: Set[puzzle_hash]
-    _peer_puzzle_hash: Dict[bytes32, Set[bytes32]] = field(default_factory=dict, init=False)
-    # Peer ID: subscription count
-    _peer_sub_counter: Dict[bytes32, int] = field(default_factory=dict, init=False)
+    db_wrapper: DBWrapper2
 
-    def has_ph_subscription(self, ph: bytes32) -> bool:
-        return ph in self._ph_subscriptions
+    @classmethod
+    async def create(cls) -> PeerSubscriptions:
+        unique_database_uri = (
+            f"file:db_{cls.__module__}.{cls.__qualname__}_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+        )
+        db_wrapper = await DBWrapper2.create(database=unique_database_uri)
+        self = PeerSubscriptions(db_wrapper)
 
-    def has_coin_subscription(self, coin_id: bytes32) -> bool:
-        return coin_id in self._coin_subscriptions
+        async with self.db_wrapper.writer() as conn:
+            log.info("DB: Creating peer subscription tables")
+            await conn.execute(
+                """
+                CREATE TABLE puzzle_subscriptions (
+                    id INT PRIMARY KEY,
+                    peer_id BLOB,
+                    puzzle_hash BLOB,
+                    UNIQUE (peer_id, puzzle_hash)
+                )
+                """
+            )
+            await conn.execute(
+                """
+                CREATE TABLE coin_subscriptions (
+                    id INT PRIMARY KEY,
+                    peer_id BLOB,
+                    coin_id BLOB,
+                    UNIQUE (peer_id, coin_id)
+                )
+                """
+            )
 
-    def add_ph_subscriptions(self, peer_id: bytes32, phs: List[bytes32], max_items: int) -> Set[bytes32]:
+        return self
+
+    async def is_puzzle_subscribed(self, puzzle_hash: bytes32) -> bool:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT COUNT(*) FROM puzzle_subscriptions WHERE puzzle_hash=?", (puzzle_hash,)
+            ) as cursor:
+                row = await cursor.fetchone()
+
+        assert row is not None
+
+        return int(row[0]) > 0
+
+    async def is_coin_subscribed(self, coin_id: bytes32) -> bool:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute("SELECT COUNT(*) FROM coin_subscriptions WHERE coin_id=?", (coin_id,)) as cursor:
+                row = await cursor.fetchone()
+
+        assert row is not None
+
+        return int(row[0]) > 0
+
+    async def add_puzzle_subscriptions(
+        self, peer_id: bytes32, puzzle_hashes: List[bytes32], max_items: int
+    ) -> Set[bytes32]:
         """
         returns the puzzle hashes that were actually subscribed to. These may be
         fewer than requested in case:
@@ -40,105 +80,82 @@ class PeerSubscriptions:
         * the max_items limit is exceeded
         """
 
-        puzzle_hash_peers = self._peer_puzzle_hash.setdefault(peer_id, set())
-        existing_sub_count = self._peer_sub_counter.setdefault(peer_id, 0)
+        async with self.db_wrapper.writer() as conn:
+            async with conn.execute("SELECT COUNT(*) FROM puzzle_subscriptions WHERE peer_id=?", (peer_id,)) as cursor:
+                row = await cursor.fetchone()
 
-        ret: Set[bytes32] = set()
+            assert row is not None
 
-        # if we've reached the limit on number of subscriptions, just bail
-        if existing_sub_count >= max_items:
-            log.info(
-                "peer_id: %s reached max number of puzzle-hash subscriptions. "
-                "Not all its coin states will be reported",
-                peer_id,
-            )
-            return ret
+            existing_sub_count = int(row[0])
+            inserted: Set[bytes32] = set()
 
-        # decrement this counter as we go, to know if we've hit the limit of
-        # number of subscriptions
-        subscriptions_left = max_items - existing_sub_count
-
-        for ph in phs:
-            ph_sub = self._ph_subscriptions.setdefault(ph, set())
-            if peer_id in ph_sub:
-                continue
-
-            ret.add(ph)
-            ph_sub.add(peer_id)
-            puzzle_hash_peers.add(ph)
-            self._peer_sub_counter[peer_id] += 1
-            subscriptions_left -= 1
-
-            if subscriptions_left == 0:
+            # if we've reached the limit on number of subscriptions, just bail
+            if existing_sub_count >= max_items:
                 log.info(
                     "peer_id: %s reached max number of puzzle-hash subscriptions. "
                     "Not all its coin states will be reported",
                     peer_id,
                 )
-                break
-        return ret
+                return inserted
 
-    def add_coin_subscriptions(self, peer_id: bytes32, coin_ids: List[bytes32], max_items: int) -> None:
-        coin_id_peers = self._peer_coin_ids.setdefault(peer_id, set())
-        existing_sub_count = self._peer_sub_counter.setdefault(peer_id, 0)
+            # decrement this counter as we go, to know if we've hit the limit of
+            # number of subscriptions
+            subscriptions_left = max_items - existing_sub_count
 
-        # if we've reached the limit on number of subscriptions, just bail
-        if existing_sub_count >= max_items:
-            log.info(
-                "peer_id: %s reached max number of coin subscriptions. Not all its coin states will be reported",
-                peer_id,
-            )
-            return
+            for puzzle_hash in puzzle_hashes:
+                async with conn.execute(
+                    "SELECT COUNT(*) FROM puzzle_subscriptions WHERE peer_id=? AND puzzle_hash=?",
+                    (peer_id, puzzle_hash),
+                ) as cursor:
+                    row = await cursor.fetchone()
 
-        # decrement this counter as we go, to know if we've hit the limit of
-        # number of subscriptions
-        subscriptions_left = max_items - existing_sub_count
+                assert row is not None
 
-        for coin_id in coin_ids:
-            coin_sub = self._coin_subscriptions.setdefault(coin_id, set())
-            if peer_id in coin_sub:
-                continue
+                if int(row[0]) > 0:
+                    continue
 
-            coin_sub.add(peer_id)
-            coin_id_peers.add(coin_id)
-            self._peer_sub_counter[peer_id] += 1
-            subscriptions_left -= 1
-
-            if subscriptions_left == 0:
-                log.info(
-                    "peer_id: %s reached max number of coin subscriptions. Not all its coin states will be reported",
-                    peer_id,
+                await conn.execute(
+                    "INSERT INTO puzzle_subscriptions (peer_id, puzzle_hash) VALUES (?, ?)", (peer_id, puzzle_hash)
                 )
-                break
+                inserted.add(puzzle_hash)
+                subscriptions_left -= 1
 
-    def remove_peer(self, peer_id: bytes32) -> None:
-        counter = 0
-        puzzle_hashes = self._peer_puzzle_hash.get(peer_id)
-        if puzzle_hashes is not None:
-            for ph in puzzle_hashes:
-                subs = self._ph_subscriptions[ph]
-                subs.remove(peer_id)
-                counter += 1
-                if subs == set():
-                    self._ph_subscriptions.pop(ph)
-            self._peer_puzzle_hash.pop(peer_id)
+                if subscriptions_left == 0:
+                    log.info(
+                        "peer_id: %s reached max number of puzzle-hash subscriptions. "
+                        "Not all its coin states will be reported",
+                        peer_id,
+                    )
+                    break
 
-        coin_ids = self._peer_coin_ids.get(peer_id)
-        if coin_ids is not None:
-            for coin_id in coin_ids:
-                subs = self._coin_subscriptions[coin_id]
-                subs.remove(peer_id)
-                counter += 1
-                if subs == set():
-                    self._coin_subscriptions.pop(coin_id)
-            self._peer_coin_ids.pop(peer_id)
+            return inserted
 
-        if peer_id in self._peer_sub_counter:
-            num_subs = self._peer_sub_counter.pop(peer_id)
-            assert num_subs == counter
+    async def add_coin_subscriptions(self, peer_id: bytes32, coin_ids: List[bytes32], max_items: int) -> None:
+        return None
 
-    def peers_for_coin_id(self, coin_id: bytes32) -> Set[bytes32]:
-        return self._coin_subscriptions.get(coin_id, set())
+    async def remove_puzzle_subscriptions(self, peer_id: bytes32, puzzle_hashes: List[bytes32]) -> None:
+        return None
 
-    def peers_for_puzzle_hash(self, puzzle_hash: bytes32) -> Set[bytes32]:
-        return self._ph_subscriptions.get(puzzle_hash, set())
+    async def remove_coin_subscriptions(self, peer_id: bytes32, coin_ids: List[bytes32]) -> None:
+        return None
+
+    async def remove_peer(self, peer_id: bytes32) -> None:
+        async with self.db_wrapper.writer() as conn:
+            await conn.execute("DELETE FROM puzzle_subscriptions WHERE peer_id=?", (peer_id,))
+            await conn.execute("DELETE FROM coin_subscriptions WHERE peer_id=?", (peer_id,))
+
+    async def peers_for_coin_id(self, coin_id: bytes32) -> Set[bytes32]:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute("SELECT peer_id FROM coin_subscriptions WHERE coin_id=?", (coin_id,)) as cursor:
+                rows = await cursor.fetchall()
+
+        return {bytes32(row[0]) for row in rows}
+
+    async def peers_for_puzzle_hash(self, puzzle_hash: bytes32) -> Set[bytes32]:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT peer_id FROM puzzle_subscriptions WHERE puzzle_hash=?", (puzzle_hash,)
+            ) as cursor:
+                rows = await cursor.fetchall()
+
+        return {bytes32(row[0]) for row in rows}

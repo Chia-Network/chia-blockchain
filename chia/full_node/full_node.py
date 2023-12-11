@@ -145,7 +145,7 @@ class FullNode:
     #       config would end up on stdout if handled here.
     multiprocessing_context: Optional[BaseContext] = None
     _ui_tasks: Set[asyncio.Task[None]] = dataclasses.field(default_factory=set)
-    subscriptions: PeerSubscriptions = dataclasses.field(default_factory=PeerSubscriptions)
+    _subscriptions: Optional[PeerSubscriptions] = None
     _transaction_queue_task: Optional[asyncio.Task[None]] = None
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
     _sync_task: Optional[asyncio.Task[None]] = None
@@ -259,6 +259,7 @@ class FullNode:
             self._block_store = await BlockStore.create(self.db_wrapper)
             self._hint_store = await HintStore.create(self.db_wrapper)
             self._coin_store = await CoinStore.create(self.db_wrapper)
+            self._subscriptions = await PeerSubscriptions.create()
             self.log.info("Initializing blockchain from disk")
             start_time = time.time()
             reserved_cores = self.config.get("reserved_cores", 0)
@@ -416,6 +417,11 @@ class FullNode:
     def hint_store(self) -> HintStore:
         assert self._hint_store is not None
         return self._hint_store
+
+    @property
+    def subscriptions(self) -> PeerSubscriptions:
+        assert self._subscriptions is not None
+        return self._subscriptions
 
     @property
     def new_peak_sem(self) -> LimitedSemaphore:
@@ -902,7 +908,7 @@ class FullNode:
         if self.sync_store is not None:
             self.sync_store.peer_disconnected(connection.peer_node_id)
         # Remove all ph | coin id subscription for this peer
-        self.subscriptions.remove_peer(connection.peer_node_id)
+        await self.subscriptions.remove_peer(connection.peer_node_id)
 
     async def _sync(self) -> None:
         """
@@ -1150,10 +1156,10 @@ class FullNode:
                 if state_change_summary is not None:
                     assert peak is not None
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
-                    hints_to_add, _ = get_hints_and_subscription_coin_ids(
+                    hints_to_add, _ = await get_hints_and_subscription_coin_ids(
                         state_change_summary,
-                        self.subscriptions.has_coin_subscription,
-                        self.subscriptions.has_ph_subscription,
+                        self.subscriptions.is_coin_subscribed,
+                        self.subscriptions.is_puzzle_subscribed,
                     )
                     await self.hint_store.add_hints(hints_to_add)
                 # Note that end_height is not necessarily the peak at this
@@ -1198,11 +1204,13 @@ class FullNode:
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
         for coin_record in wallet_update.coin_records:
             coin_id = coin_record.name
-            subscribed_peers = self.subscriptions.peers_for_coin_id(coin_id)
-            subscribed_peers.update(self.subscriptions.peers_for_puzzle_hash(coin_record.coin.puzzle_hash))
+            subscribed_peers = await self.subscriptions.peers_for_coin_id(coin_id)
+            puzzle_peers = await self.subscriptions.peers_for_puzzle_hash(coin_record.coin.puzzle_hash)
+            subscribed_peers.update(puzzle_peers)
             hint = wallet_update.hints.get(coin_id)
             if hint is not None:
-                subscribed_peers.update(self.subscriptions.peers_for_puzzle_hash(hint))
+                hint_peers = await self.subscriptions.peers_for_puzzle_hash(hint)
+                subscribed_peers.update(hint_peers)
             for peer in subscribed_peers:
                 changes_for_peer.setdefault(peer, set()).add(coin_record.coin_state)
 
@@ -1480,10 +1488,10 @@ class FullNode:
         ):
             self.full_node_store.previous_generator = None
 
-        hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
+        hints_to_add, lookup_coin_ids = await get_hints_and_subscription_coin_ids(
             state_change_summary,
-            self.subscriptions.has_coin_subscription,
-            self.subscriptions.has_ph_subscription,
+            self.subscriptions.is_coin_subscribed,
+            self.subscriptions.is_puzzle_subscribed,
         )
         await self.hint_store.add_hints(hints_to_add)
 
