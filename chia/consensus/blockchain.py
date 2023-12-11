@@ -199,9 +199,11 @@ class Blockchain(BlockchainInterface):
             return None
         """ Return list of FullBlocks that are peaks"""
         peak_hash: Optional[bytes32] = self.height_to_hash(self._peak_height)
-        assert peak_hash is not None  # Since we must have the peak block
+        if peak_hash is None:
+            raise ValueError(f"Peak block ({self._peak_height}) not in height_to_hash")
         block = await self.block_store.get_full_block(peak_hash)
-        assert block is not None
+        if block is None:
+            raise ValueError(f"Peak block ({self._peak_height},{peak_hash.hex()}) not in database")
         return block
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
@@ -412,6 +414,7 @@ class Blockchain(BlockchainInterface):
         assert fork_info.peak_height == block.height - 1
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
+        log.info(f"Validating block: {block.height}")
         error_code, _ = await validate_block_body(
             self.constants,
             self,
@@ -479,6 +482,7 @@ class Blockchain(BlockchainInterface):
 
             if state_change_summary is not None:
                 self._peak_height = block_record.height
+                log.info(f"_PEAK_HEIGHT: New peak height {self._peak_height}")
 
         except BaseException as e:
             # Find peak as reported by the on disk DB
@@ -499,6 +503,7 @@ class Blockchain(BlockchainInterface):
                 blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
 
             self._peak_height = rollback_peak_height
+            log.error(f"_PEAK_HEIGHT: Rolling _peak_height back to {rollback_peak_height}")
             log.error(
                 f"Error while adding block {header_hash} height {block.height},"
                 f" rollback to {rollback_peak_hash} height {rollback_peak_height}: {traceback.format_exc()} {e}"

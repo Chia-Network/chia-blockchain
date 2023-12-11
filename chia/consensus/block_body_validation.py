@@ -395,7 +395,7 @@ async def validate_block_body(
         # This coin is not in the current heaviest chain, so it must be in the fork
         if rem not in fork_info.additions_since_fork:
             # Check for spending a coin that does not exist in this fork
-            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
+            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem}, height: {height}, block_hash: {block.header_hash.hex()}")  # NPC RESULT: {npc_result}")
             return Err.UNKNOWN_UNSPENT, None
         new_coin, confirmed_height, confirmed_timestamp = fork_info.additions_since_fork[rem]
         new_coin_record: CoinRecord = CoinRecord(
