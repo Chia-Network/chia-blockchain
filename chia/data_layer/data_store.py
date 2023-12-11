@@ -1120,7 +1120,7 @@ class DataStore:
                 old_node_hash = old_node.hash
             else:
                 if bytes(key) not in hint_keys_values:
-                    raise ValueError(f"Key not present in store for upsert operation: {key.hex()}")
+                    raise KeyNotFoundError(key=key)
                 value = hint_keys_values[bytes(key)]
                 if value == new_value:
                     raise ValueError(f"New value matches old value in upsert operation: {key.hex()}")

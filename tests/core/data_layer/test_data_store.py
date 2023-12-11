@@ -519,26 +519,15 @@ async def test_upsert_checks_for_invalid_arguments(
         )
 
     key2 = b"key2"
-    if use_optimized:
-        with pytest.raises(ValueError, match="^Key not present in store for upsert operation"):
-            await data_store.upsert(
-                key=key2,
-                new_value=new_value,
-                tree_id=tree_id,
-                hint_keys_values=hint_keys_values,
-                use_optimized=use_optimized,
-                status=Status.COMMITTED,
-            )
-    else:
-        with pytest.raises(KeyNotFoundError):
-            await data_store.upsert(
-                key=key2,
-                new_value=new_value,
-                tree_id=tree_id,
-                hint_keys_values=hint_keys_values,
-                use_optimized=use_optimized,
-                status=Status.COMMITTED,
-            )
+    with pytest.raises(KeyNotFoundError):
+        await data_store.upsert(
+            key=key2,
+            new_value=new_value,
+            tree_id=tree_id,
+            hint_keys_values=hint_keys_values,
+            use_optimized=use_optimized,
+            status=Status.COMMITTED,
+        )
 
 
 @pytest.mark.parametrize(argnames="side", argvalues=list(Side))
