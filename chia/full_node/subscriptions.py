@@ -21,7 +21,7 @@ class PeerSubscriptions:
     @contextlib.asynccontextmanager
     async def managed(cls) -> AsyncIterator[PeerSubscriptions]:
         unique_database_uri = (
-            f"file:db_{cls.__module__}.{cls.__qualname__}_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+            f"file:db_{cls.__module__}_{cls.__qualname__}_{random.randint(0, 99999999)}?mode=memory&cache=shared"
         )
 
         async with DBWrapper2.managed(database=unique_database_uri) as db_wrapper:
