@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
-from clvm.casts import int_from_bytes
-
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
@@ -66,8 +64,8 @@ def compute_additions_with_cost(
         if op != ConditionOpcode.CREATE_COIN.value:
             continue
         cost += ConditionCost.CREATE_COIN.value
-        puzzle_hash = next(atoms).atom
-        amount = int_from_bytes(next(atoms).atom)
+        puzzle_hash = next(atoms).as_atom()
+        amount = next(atoms).as_int()
         ret.append(Coin(parent_id, puzzle_hash, amount))
 
     return ret, cost

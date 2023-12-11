@@ -18,7 +18,6 @@ from chia_rs import (
 )
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_block_generator2, run_chia_program
-from clvm.casts import int_from_bytes
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
@@ -158,8 +157,8 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
     for spend in Program.to(ret).first().as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
         puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
-        spends.append(CoinSpend(coin, puzzle, solution))
+        coin = Coin(parent.as_atom(), puzzle_hash, amount.as_int())
+        spends.append(CoinSpend(coin, SerializedProgram.from_program(puzzle), SerializedProgram.from_program(solution)))
 
     return spends
 
@@ -185,9 +184,11 @@ def get_spends_for_block_with_conditions(
     spends: List[CoinSpendWithConditions] = []
 
     for spend in Program.to(ret).first().as_iter():
-        parent, puzzle, amount, solution = spend.as_iter()
+        parent, puzzle_prg, amount, solution_prg = spend.as_iter()
+        puzzle = SerializedProgram.from_program(puzzle_prg)
+        solution = SerializedProgram.from_program(solution_prg)
         puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
+        coin = Coin(parent.as_atom(), puzzle_hash, amount.as_int())
         coin_spend = CoinSpend(coin, puzzle, solution)
         conditions = conditions_for_solution(puzzle, solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
         spends.append(CoinSpendWithConditions(coin_spend, conditions))
