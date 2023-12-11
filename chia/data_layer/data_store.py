@@ -1111,8 +1111,7 @@ class DataStore:
         async with self.db_wrapper.writer():
             if root is None:
                 root = await self.get_tree_root(tree_id=tree_id)
-            if root is None:
-                raise ValueError("Upsert operation on an empty tree")
+
             if hint_keys_values is None:
                 old_node = await self.get_node_by_key(key=key, tree_id=tree_id)
                 if old_node.value == new_value:

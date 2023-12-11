@@ -485,11 +485,12 @@ async def test_upsert_checks_for_invalid_arguments(
     value = b"value1"
     hint_keys_values: Optional[Dict[bytes, bytes]] = {} if use_optimized else None
 
-    with pytest.raises(ValueError, match="^Upsert operation on an empty tree"):
+    tree_id_2 = bytes32(b"\0" * 31 + b"\1")
+    with pytest.raises(Exception, match="^unable to find root for id, generation"):
         await data_store.upsert(
             key=key,
             new_value=value,
-            tree_id=tree_id,
+            tree_id=tree_id_2,
             hint_keys_values=hint_keys_values,
             use_optimized=use_optimized,
             status=Status.COMMITTED,
