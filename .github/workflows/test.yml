@@ -189,7 +189,7 @@ jobs:
           coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='tests/**/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
       - name: Coverage report (diff)
-        if: always()
+        if: (github.base_ref != '' || github.event.before != '') && always()
         env:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
@@ -272,7 +272,7 @@ jobs:
           fi
 
       - name: Add diff coverage report to workflow summary
-        if: always()
+        if: (github.base_ref != '' || github.event.before != '') && always()
         run: |
           cat coverage-reports/diff-cover.md >> "$GITHUB_STEP_SUMMARY"
 

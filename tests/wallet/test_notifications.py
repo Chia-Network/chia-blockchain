@@ -25,10 +25,9 @@ async def test_notification_store_backwards_compat() -> None:
     # First create the DB the way it would have otheriwse been created
     db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
     db_name.parent.mkdir(parents=True, exist_ok=True)
-    db_wrapper = await DBWrapper2.create(
+    async with DBWrapper2.managed(
         database=db_name,
-    )
-    try:
+    ) as db_wrapper:
         async with db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY,msg blob,amount blob)"
@@ -45,8 +44,6 @@ async def test_notification_store_backwards_compat() -> None:
 
         await NotificationStore.create(db_wrapper)
         await NotificationStore.create(db_wrapper)
-    finally:
-        await db_wrapper.close()
 
 
 @pytest.mark.parametrize(

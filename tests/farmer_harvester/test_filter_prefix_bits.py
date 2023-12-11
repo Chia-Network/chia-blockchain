@@ -7,14 +7,11 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 import pytest
 
 from chia.farmer.farmer_api import FarmerAPI
-from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.server.start_service import Service
 from chia.simulator.block_tools import create_block_tools_async, test_constants
-from chia.simulator.setup_nodes import setup_farmer_multi_harvester
+from chia.types.aliases import HarvesterService
 from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
@@ -22,6 +19,7 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 from tests.conftest import ConsensusMode
 from tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
+from tests.util.setup_nodes import setup_farmer_multi_harvester
 from tests.util.time_out_assert import time_out_assert
 
 
@@ -53,7 +51,7 @@ def test_filter_prefix_bits_on_blocks(
 @pytest.fixture(scope="function")
 async def farmer_harvester_with_filter_size_9(
     get_temp_keyring: Keychain, tmp_path: Path, self_hostname: str
-) -> AsyncIterator[Tuple[Service[Harvester, HarvesterAPI], FarmerAPI]]:
+) -> AsyncIterator[Tuple[HarvesterService, FarmerAPI]]:
     async def have_connections() -> bool:
         return len(await farmer_rpc_cl.get_connections()) > 0
 
@@ -89,7 +87,7 @@ async def farmer_harvester_with_filter_size_9(
 @pytest.mark.parametrize(argnames=["peak_height", "eligible_plots"], argvalues=[(5495999, 0), (5496000, 1)])
 @pytest.mark.anyio
 async def test_filter_prefix_bits_with_farmer_harvester(
-    farmer_harvester_with_filter_size_9: Tuple[Service[Harvester, HarvesterAPI], FarmerAPI],
+    farmer_harvester_with_filter_size_9: Tuple[HarvesterService, FarmerAPI],
     peak_height: uint32,
     eligible_plots: int,
 ) -> None:
