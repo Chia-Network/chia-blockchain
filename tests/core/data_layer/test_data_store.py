@@ -485,6 +485,16 @@ async def test_upsert_checks_for_invalid_arguments(
     value = b"value1"
     hint_keys_values: Optional[Dict[bytes, bytes]] = {} if use_optimized else None
 
+    with pytest.raises(ValueError, match="^Upsert operation on an empty tree"):
+        await data_store.upsert(
+            key=key,
+            value=value,
+            tree_id=tree_id,
+            hint_keys_values=hint_keys_values,
+            use_optimized=use_optimized,
+            status=Status.COMMITTED,
+        )
+
     await data_store.autoinsert(
         key=key,
         value=value,
