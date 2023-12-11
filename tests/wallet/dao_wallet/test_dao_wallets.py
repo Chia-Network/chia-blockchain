@@ -3357,7 +3357,7 @@ async def test_dao_votes(
 )
 @pytest.mark.anyio
 async def test_dao_resync(
-    self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
