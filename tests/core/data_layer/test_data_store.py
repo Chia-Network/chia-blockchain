@@ -488,7 +488,7 @@ async def test_upsert_checks_for_invalid_arguments(
     with pytest.raises(ValueError, match="^Upsert operation on an empty tree"):
         await data_store.upsert(
             key=key,
-            value=value,
+            new_value=value,
             tree_id=tree_id,
             hint_keys_values=hint_keys_values,
             use_optimized=use_optimized,
