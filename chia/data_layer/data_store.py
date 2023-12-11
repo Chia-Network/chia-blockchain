@@ -1042,7 +1042,7 @@ class DataStore:
                 del hint_keys_values[bytes(key)]
 
             ancestors: List[InternalNode] = await self.get_ancestors_common(
-                node_hash=node_hash,
+                node_hash=node.hash,
                 tree_id=tree_id,
                 root_hash=root_hash,
                 use_optimized=use_optimized,
