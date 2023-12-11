@@ -12,9 +12,7 @@ import pytest
 from chia_rs import G1Element
 
 from chia.farmer.farmer import Farmer
-from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
@@ -23,8 +21,8 @@ from chia.plotting.manager import PlotManager
 from chia.plotting.util import add_plot_directory, remove_plot_directory
 from chia.protocols.harvester_protocol import Plot
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
+from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64
@@ -112,8 +110,8 @@ class ExpectedResult:
 @dataclass
 class Environment:
     root_path: Path
-    harvester_services: List[Service[Harvester, HarvesterAPI]]
-    farmer_service: Service[Farmer, FarmerAPI]
+    harvester_services: List[HarvesterService]
+    farmer_service: FarmerService
     harvesters: List[Harvester]
     farmer: Farmer
     dir_1: Directory
@@ -124,7 +122,7 @@ class Environment:
     dir_keys_missing: Directory
     dir_duplicates: Directory
     expected: List[ExpectedResult]
-    split_farmer_service_manager: SplitAsyncManager[Service[Farmer, FarmerAPI]]
+    split_farmer_service_manager: SplitAsyncManager[FarmerService]
     split_harvester_managers: List[SplitAsyncManager[Harvester]]
 
     def get_harvester(self, peer_id: bytes32) -> Optional[Harvester]:
@@ -281,9 +279,7 @@ class Environment:
 @pytest.fixture(scope="function")
 async def environment(
     tmp_path: Path,
-    farmer_two_harvester_not_started: Tuple[
-        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
-    ],
+    farmer_two_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
 ) -> AsyncIterator[Environment]:
     def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
@@ -573,7 +569,7 @@ async def test_farmer_restart(environment: Environment) -> None:
 
 @pytest.mark.anyio
 async def test_sync_start_and_disconnect_while_sync_is_active(
-    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]
+    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools]
 ) -> None:
     harvesters, farmer_service, _ = farmer_one_harvester
     harvester_service = harvesters[0]

@@ -9,7 +9,7 @@ import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, AsyncIterator, Awaitable, Callable, ClassVar, Dict, List, Optional, Tuple
+from typing import Any, AsyncIterator, Awaitable, Callable, ClassVar, Dict, Generic, List, Optional, Tuple, TypeVar
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final
@@ -32,6 +32,7 @@ max_message_size = 50 * 1024 * 1024  # 50MB
 
 EndpointResult = Dict[str, Any]
 Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
+_T_RpcApiProtocol = TypeVar("_T_RpcApiProtocol", bound="RpcApiProtocol")
 
 
 class StateChangedProtocol(Protocol):
@@ -156,12 +157,12 @@ def default_get_connections(server: ChiaServer, request_node_type: Optional[Node
 
 @final
 @dataclass
-class RpcServer:
+class RpcServer(Generic[_T_RpcApiProtocol]):
     """
     Implementation of RPC server.
     """
 
-    rpc_api: RpcApiProtocol
+    rpc_api: _T_RpcApiProtocol
     stop_cb: Callable[[], None]
     service_name: str
     ssl_context: SSLContext
@@ -177,13 +178,13 @@ class RpcServer:
     @classmethod
     def create(
         cls,
-        rpc_api: RpcApiProtocol,
+        rpc_api: _T_RpcApiProtocol,
         service_name: str,
         stop_cb: Callable[[], None],
         root_path: Path,
         net_config: Dict[str, Any],
         prefer_ipv6: bool,
-    ) -> RpcServer:
+    ) -> RpcServer[_T_RpcApiProtocol]:
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
         key_path = root_path / net_config["daemon_ssl"]["private_key"]
         ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
@@ -431,7 +432,7 @@ class RpcServer:
 
 
 async def start_rpc_server(
-    rpc_api: RpcApiProtocol,
+    rpc_api: _T_RpcApiProtocol,
     self_hostname: str,
     daemon_port: uint16,
     rpc_port: uint16,
@@ -440,7 +441,7 @@ async def start_rpc_server(
     net_config: Dict[str, object],
     connect_to_daemon: bool = True,
     max_request_body_size: Optional[int] = None,
-) -> RpcServer:
+) -> RpcServer[_T_RpcApiProtocol]:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.

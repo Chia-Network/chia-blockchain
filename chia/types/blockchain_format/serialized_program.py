@@ -5,6 +5,7 @@ from typing import Tuple, Type
 
 from chia_rs import MEMPOOL_MODE, run_chia_program, serialized_length, tree_hash
 from clvm import SExp
+from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -58,6 +59,12 @@ class SerializedProgram:
     def from_program(cls: Type[SerializedProgram], p: Program) -> SerializedProgram:
         ret = SerializedProgram()
         ret._buf = bytes(p)
+        return ret
+
+    @staticmethod
+    def to(o: CastableType) -> SerializedProgram:
+        ret = SerializedProgram()
+        ret._buf = Program.to(o).as_bin()
         return ret
 
     def to_program(self) -> Program:
