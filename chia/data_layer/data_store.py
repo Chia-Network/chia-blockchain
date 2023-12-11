@@ -1003,6 +1003,7 @@ class DataStore:
                     tree_id=tree_id,
                     root_hash=root.node_hash,
                     generation=root.generation,
+                    use_optimized=use_optimized,
                 )
                 new_root = await self.update_ancestor_hashes_on_insert(
                     tree_id=tree_id,
@@ -1040,8 +1041,11 @@ class DataStore:
                 node = TerminalNode(node_hash, key, value)
                 del hint_keys_values[bytes(key)]
 
-            ancestors: List[InternalNode] = await self.get_ancestors_optimized(
-                node_hash=node.hash, tree_id=tree_id, root_hash=root_hash
+            ancestors: List[InternalNode] = await self.get_ancestors_common(
+                node_hash=reference_node_hash,
+                tree_id=tree_id,
+                root_hash=root.node_hash,
+                use_optimized=use_optimized,
             )
 
             if len(ancestors) == 0:
@@ -1134,6 +1138,7 @@ class DataStore:
                 tree_id=tree_id,
                 root_hash=root.node_hash,
                 generation=root.generation,
+                use_optimized=use_optimized,
             )
 
             # Store contains only the old root, replace it with a new root having the terminal node.
