@@ -46,7 +46,7 @@ dev_dependencies = [
     "build==1.0.3",
     "coverage==7.3.2",
     "diff-cover==8.0.1",
-    "pre-commit==3.5.0",
+    "pre-commit==3.6.0",
     "py3createtorrent==1.1.0",
     "pylint==3.0.2",
     "pytest==7.4.3",
