@@ -1979,7 +1979,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
             condition_cost += conditions_cost(result, height >= constants.HARD_FORK_HEIGHT)
 
     else:
-        block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
+        block_program_args = SerializedProgram.to([[bytes(g) for g in generator.generator_refs]])
         clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, MEMPOOL_MODE, [generator.program, block_program_args])
 
         for res in result.first().as_iter():
