@@ -117,6 +117,10 @@ class DBWrapper2:
     _wjb_uri: bool
     _wjb_log_file: Path
     _wjb_throw: bool
+    _wjb_journal_mode: str
+    _wjb_synchronous: str
+    _wjb_foreign_keys: bool
+    _wjb_row_factory: aiosqlite.Row
 
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
@@ -172,6 +176,11 @@ class DBWrapper2:
 
         self = cls(connection=write_connection, db_version=db_version, log_file=log_file)
 
+        self._wjb_journal_mode=journal_mode
+        self._wjb_synchronous=synchronous
+        self._wjb_foreign_keys=foreign_keys
+        self._wjb_row_factory=row_factory
+
         self._wjb_database=database
         self._wjb_uri=uri
         self._wjb_log_file=log_file
@@ -208,6 +217,7 @@ class DBWrapper2:
     async def _savepoint_ctx(self) -> AsyncIterator[None]:
         name = self._next_savepoint()
         await self._write_connection.execute(f"SAVEPOINT {name}")
+        exbool=False
         try:
             yield
             if self._wjb_throw:
@@ -215,11 +225,26 @@ class DBWrapper2:
                 raise ValueError("wjb")
         except:  # noqa E722
             await self._write_connection.execute(f"ROLLBACK TO {name}")
+            exbool=True
             raise
         finally:
             # rollback to a savepoint doesn't cancel the transaction, it
             # just rolls back the state. We need to cancel it regardless
             await self._write_connection.execute(f"RELEASE {name}")
+
+            if exbool:
+                # Close and recreate to make sure we are good
+                await self._write_connection.close()
+
+                self._write_connection = await _create_connection(database=self._wjb_database, uri=self._wjb_uri, log_file=self._wjb_log_file, name="writer")
+                await (await self._write_connection.execute(f"pragma journal_mode={self._wjb_journal_mode}")).close()
+                if self._wjb_synchronous is not None:
+                    await (await self._write_connection.execute(f"pragma synchronous={self._wjb_synchronous}")).close()
+
+                await (await self._write_connection.execute(f"pragma foreign_keys={'ON' if self._wjb_foreign_keys else 'OFF'}")).close()
+
+                self._write_connection.row_factory = self._wjb_row_factory
+
 
     @contextlib.asynccontextmanager
     async def writer(self) -> AsyncIterator[aiosqlite.Connection]:
@@ -311,6 +336,7 @@ class DBWrapper2:
             yield self._in_use[task]
         else:
             c = await _create_connection(database=self._wjb_database, uri=self._wjb_uri, log_file=self._wjb_log_file, name="wjb" )
+            c.row_factory = self._wjb_row_factory
             try:
                 # record our connection in this dict to allow nested calls in
                 # the same task to use the same connection
