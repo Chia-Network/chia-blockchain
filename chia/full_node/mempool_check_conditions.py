@@ -158,7 +158,7 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
         parent, puzzle, amount, solution = spend.as_iter()
         puzzle_hash = puzzle.get_tree_hash()
         coin = Coin(parent.as_atom(), puzzle_hash, amount.as_int())
-        spends.append(CoinSpend(coin, SerializedProgram.from_program(puzzle), SerializedProgram.from_program(solution)))
+        spends.append(CoinSpend(coin, puzzle, solution))
 
     return spends
 
@@ -184,9 +184,7 @@ def get_spends_for_block_with_conditions(
     spends: List[CoinSpendWithConditions] = []
 
     for spend in Program.to(ret).first().as_iter():
-        parent, puzzle_prg, amount, solution_prg = spend.as_iter()
-        puzzle = SerializedProgram.from_program(puzzle_prg)
-        solution = SerializedProgram.from_program(solution_prg)
+        parent, puzzle, amount, solution = spend.as_iter()
         puzzle_hash = puzzle.get_tree_hash()
         coin = Coin(parent.as_atom(), puzzle_hash, amount.as_int())
         coin_spend = CoinSpend(coin, puzzle, solution)
