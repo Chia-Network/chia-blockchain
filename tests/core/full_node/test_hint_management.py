@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Set
 
 import pytest
 
@@ -51,63 +51,62 @@ async def test_hints_to_add(bt: BlockTools, empty_blockchain: Blockchain) -> Non
     assert set(hints_to_add) == {(first_coin_id, b"1" * 32), (second_coin_id, b"1" * 3), (third_coin_id, b"1" * 32)}
 
 
+first_coin_id = Coin(bytes32(coin_ids[0]), bytes32(phs[4]), uint64(3)).name()
+second_coin_id = Coin(bytes32(coin_ids[2]), bytes32(phs[4]), uint64(6)).name()
+third_coin_id = Coin(bytes32(coin_ids[2]), phs[9], uint64(123)).name()
+
+rewards: List[Coin] = [
+    Coin(coin_ids[8], phs[8], uint64(1)),
+    Coin(coin_ids[9], phs[9], uint64(2)),
+    Coin(coin_ids[5], phs[8], uint64(1234)),
+]
+
+
 @pytest.mark.anyio
-async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> None:
+@pytest.mark.parametrize(
+    "coin_check, ph_check, results",
+    [
+        # Removal ID and addition PH
+        (
+            coin_ids[1],
+            phs[4],
+            {
+                coin_ids[1],
+                first_coin_id,
+                second_coin_id,
+            },
+        ),
+        # Removal PH and addition ID
+        (first_coin_id, phs[0], {first_coin_id, coin_ids[0], coin_ids[2]}),
+        # Subscribe to hint
+        (None, bytes32(b"1" * 32), {first_coin_id, third_coin_id}),
+        # Reward PH
+        (None, rewards[0].puzzle_hash, {rewards[0].name(), rewards[2].name()}),
+        # Reward coin id + reward ph
+        (rewards[1].name(), rewards[0].puzzle_hash, {rewards[1].name(), rewards[0].name(), rewards[2].name()}),
+    ],
+)
+async def test_lookup_coin_ids(
+    bt: BlockTools,
+    empty_blockchain: Blockchain,
+    coin_check: Optional[bytes32],
+    ph_check: Optional[bytes32],
+    results: Set[bytes32],
+) -> None:
     blocks = bt.get_consecutive_blocks(2)
     await _validate_and_add_block(empty_blockchain, blocks[0])
     await _validate_and_add_block(empty_blockchain, blocks[1])
     br: Optional[BlockRecord] = empty_blockchain.get_peak()
     assert br is not None
 
-    rewards: List[Coin] = [
-        Coin(coin_ids[8], phs[8], uint64(1)),
-        Coin(coin_ids[9], phs[9], uint64(2)),
-        Coin(coin_ids[5], phs[8], uint64(1234)),
-    ]
     scs = StateChangeSummary(br, uint32(0), [], removals, additions, rewards)
 
-    # Removal ID and addition PH
     async def has_coin_sub(c: bytes32) -> bool:
-        return c == coin_ids[1]
+        return c == coin_check
 
     async def has_ph_sub(ph: bytes32) -> bool:
-        return ph == phs[4]
+        return ph == ph_check
 
     _, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
 
-    first_coin_id: bytes32 = Coin(bytes32(coin_ids[0]), bytes32(phs[4]), uint64(3)).name()
-    second_coin_id: bytes32 = Coin(bytes32(coin_ids[2]), bytes32(phs[4]), uint64(6)).name()
-    assert set(lookup_coin_ids) == {coin_ids[1], first_coin_id, second_coin_id}
-
-    # Removal PH and addition ID
-    async def has_coin_sub(c: bytes32) -> bool:  # type: ignore[no-redef] # noqa: E0102
-        return c == first_coin_id
-
-    async def has_ph_sub(ph: bytes32) -> bool:  # type: ignore[no-redef] # noqa: E0102
-        return ph == phs[0]
-
-    _, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
-    assert set(lookup_coin_ids) == {first_coin_id, coin_ids[0], coin_ids[2]}
-
-    # Subscribe to hint
-    third_coin_id: bytes32 = Coin(bytes32(coin_ids[2]), phs[9], uint64(123)).name()
-
-    async def has_ph_sub(ph: bytes32) -> bool:  # type: ignore[no-redef] # noqa: E0102
-        return ph == bytes32(b"1" * 32)
-
-    _, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, no_sub, has_ph_sub)
-    assert set(lookup_coin_ids) == {first_coin_id, third_coin_id}
-
-    # Reward PH
-    async def has_ph_sub(ph: bytes32) -> bool:  # type: ignore[no-redef] # noqa: E0102
-        return ph == rewards[0].puzzle_hash
-
-    _, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, no_sub, has_ph_sub)
-    assert set(lookup_coin_ids) == {rewards[0].name(), rewards[2].name()}
-
-    # Reward coin id + reward ph
-    async def has_coin_sub(c: bytes32) -> bool:  # type: ignore[no-redef] # noqa: E0102
-        return c == rewards[1].name()
-
-    _, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
-    assert set(lookup_coin_ids) == {rewards[1].name(), rewards[0].name(), rewards[2].name()}
+    assert set(lookup_coin_ids) == results
