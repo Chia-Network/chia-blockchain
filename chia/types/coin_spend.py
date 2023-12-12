@@ -3,16 +3,25 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
-from clvm.casts import int_from_bytes
+from chia_rs import (
+    AGG_SIG_ARGS,
+    ALLOW_BACKREFS,
+    ENABLE_ASSERT_BEFORE,
+    ENABLE_BLS_OPS,
+    ENABLE_BLS_OPS_OUTSIDE_GUARD,
+    ENABLE_FIXED_DIV,
+    ENABLE_SECP_OPS,
+    ENABLE_SOFTFORK_CONDITION,
+    LIMIT_ANNOUNCES,
+    LIMIT_OBJECTS,
+    run_puzzle,
+)
 
-from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.errors import Err, ValidationError
 from chia.util.streamable import Streamable, streamable
 
 
@@ -43,34 +52,28 @@ def compute_additions_with_cost(
     puzzle and solution may have been decompressed, the true byte-cost can only be
     measured at the block generator level.
     """
+    flags = (
+        ENABLE_ASSERT_BEFORE
+        | LIMIT_ANNOUNCES
+        | LIMIT_OBJECTS
+        | ENABLE_BLS_OPS
+        | ENABLE_SECP_OPS
+        | ENABLE_SOFTFORK_CONDITION
+        | ENABLE_BLS_OPS_OUTSIDE_GUARD
+        | ENABLE_FIXED_DIV
+        | AGG_SIG_ARGS
+        | ALLOW_BACKREFS
+    )
     parent_id = cs.coin.name()
     ret: List[Coin] = []
-    cost, r = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
-    for cond in Program.to(r).as_iter():
-        if cost > max_cost:
-            raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions() for CoinSpend")
-        atoms = cond.as_iter()
-        op = next(atoms).atom
-        if op in [
-            ConditionOpcode.AGG_SIG_PARENT,
-            ConditionOpcode.AGG_SIG_PUZZLE,
-            ConditionOpcode.AGG_SIG_AMOUNT,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-            ConditionOpcode.AGG_SIG_UNSAFE,
-            ConditionOpcode.AGG_SIG_ME,
-        ]:
-            cost += ConditionCost.AGG_SIG.value
-            continue
-        if op != ConditionOpcode.CREATE_COIN.value:
-            continue
-        cost += ConditionCost.CREATE_COIN.value
-        puzzle_hash = next(atoms).atom
-        amount = int_from_bytes(next(atoms).atom)
-        ret.append(Coin(parent_id, puzzle_hash, amount))
-
-    return ret, cost
+    conditions = run_puzzle(
+        bytes(cs.puzzle_reveal), bytes(cs.solution), cs.coin.parent_coin_info, cs.coin.amount, max_cost, flags
+    )
+    assert len(conditions.spends) == 1
+    for create_coin in conditions.spends[0].create_coin:
+        coin = Coin(parent_id, create_coin[0], create_coin[1])
+        ret.append(coin)
+    return ret, conditions.cost
 
 
 def compute_additions(cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM) -> List[Coin]:
