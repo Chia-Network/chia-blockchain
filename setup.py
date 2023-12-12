@@ -61,7 +61,7 @@ dev_dependencies = [
     "black==23.11.0",
     "lxml==4.9.3",
     "aiohttp_cors==0.7.0",  # For blackd
-    "pyinstaller==5.13.0",
+    "pyinstaller==6.3.0",
     "types-aiofiles==23.2.0.0",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.12",
