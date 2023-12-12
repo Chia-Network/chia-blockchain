@@ -28,7 +28,6 @@ from chia_rs import (
     solution_generator,
 )
 from chiabip158 import PyBIP158
-from clvm.casts import int_from_bytes
 
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
@@ -183,8 +182,8 @@ def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
             op = next(atoms).atom
             if op != ConditionOpcode.CREATE_COIN.value:
                 continue
-            puzzle_hash = next(atoms).atom
-            amount = int_from_bytes(next(atoms).atom)
+            puzzle_hash = next(atoms).as_atom()
+            amount = next(atoms).as_int()
             ret.append(Coin(parent_id, puzzle_hash, amount))
     return ret
 
