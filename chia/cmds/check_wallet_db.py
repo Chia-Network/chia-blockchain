@@ -206,7 +206,7 @@ def print_min_max_derivation_for_wallets(derivation_paths: List[DerivationPath])
 class WalletDBReader:
     db_wrapper: DBWrapper2  # TODO: Remove db_wrapper member
     config = {"db_readers": 1}
-    sql_log_path = None
+    sql_log_path: Optional[Path] = None
     verbose = False
 
     async def get_all_wallets(self) -> List[Wallet]:

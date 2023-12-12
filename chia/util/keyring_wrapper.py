@@ -63,7 +63,7 @@ class KeyringWrapper:
     """
 
     # Static members
-    __shared_instance = None
+    __shared_instance: Optional[KeyringWrapper] = None
     __keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH
 
     # Instance members
