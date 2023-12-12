@@ -2958,6 +2958,8 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
 
 def test_get_puzzle_and_solution_for_coin_failure():
     with pytest.raises(
-        ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: failed to fill whole buffer"
+        ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: \\('coin not found', '80'\\)"
     ):
-        get_puzzle_and_solution_for_coin(BlockGenerator(SerializedProgram(), [], []), TEST_COIN, 0, test_constants)
+        get_puzzle_and_solution_for_coin(
+            BlockGenerator(SerializedProgram.to(None), [], []), TEST_COIN, 0, test_constants
+        )

@@ -29,8 +29,8 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from tests.util.time_out_assert import time_out_assert_not_none
-from tests.wallet.conftest import WalletEnvironment, WalletStateTransition, WalletTestFramework
 
 
 async def mint_cr_cat(
@@ -126,8 +126,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     full_node_api: FullNodeSimulator = wallet_environments.full_node
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
-    wallet_node_0 = wallet_environments.environments[0].wallet_node
-    wallet_node_1 = wallet_environments.environments[1].wallet_node
+    wallet_node_0 = wallet_environments.environments[0].node
+    wallet_node_1 = wallet_environments.environments[1].node
     wallet_0 = wallet_environments.environments[0].xch_wallet
     wallet_1 = wallet_environments.environments[1].xch_wallet
     client_0 = wallet_environments.environments[0].rpc_client
@@ -620,7 +620,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     # Setup
     env_0: WalletEnvironment = wallet_environments.environments[0]
-    wallet_node_0 = env_0.wallet_node
+    wallet_node_0 = env_0.node
     wallet_0 = env_0.xch_wallet
     client_0 = env_0.rpc_client
 
