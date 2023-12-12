@@ -143,6 +143,22 @@ class PeerSubscriptions:
 
         return puzzle_subscription_count + coin_subscription_count
 
+    def total_puzzle_subscriptions(self) -> int:
+        with self._db_conn as conn:
+            row = conn.execute("SELECT COUNT(*) FROM puzzle_subscriptions").fetchone()
+            assert row is not None
+            puzzle_subscription_count = int(row[0])
+
+        return puzzle_subscription_count
+
+    def total_coin_subscriptions(self) -> int:
+        with self._db_conn as conn:
+            row = conn.execute("SELECT COUNT(*) FROM coin_subscriptions").fetchone()
+            assert row is not None
+            coin_subscription_count = int(row[0])
+
+        return coin_subscription_count
+
     def remove_peer(self, peer_id: bytes32) -> None:
         with self._db_conn as conn:
             conn.execute("DELETE FROM puzzle_subscriptions WHERE peer_id=?", (peer_id,))
