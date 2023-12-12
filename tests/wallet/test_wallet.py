@@ -35,6 +35,7 @@ from chia.wallet.util.wallet_types import CoinType
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.conftest import ConsensusMode
+from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
@@ -85,33 +86,37 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [{"num_environments": 2, "blocks_needed": [1, 1]}],
+        indirect=["wallet_environments"],
     )
     @pytest.mark.anyio
     async def test_wallet_make_transaction(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
+        wallet_environments: WalletTestFramework,
         self_hostname: str,
     ) -> None:
-        num_blocks = 5
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_api = full_nodes[0]
+        full_node_api = wallet_environments.full_node
         server_1 = full_node_api.full_node.server
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
+
+        env_0 = wallet_environments.environments[0]
+        wallet_node = env_0.node
+        server_2 = env_0.peer_server
+
+        env_1 = wallet_environments.environments[1]
+        wallet_node_2 = env_1.node
+
+        env_0.wallet_aliases = {
+            "xch": 1,
+        }
+
+        env_1.wallet_aliases = {
+            "xch": 1,
+        }
+
         wallet = wallet_node.wallet_state_manager.main_wallet
-        if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
 
         await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
-
-        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
         tx_amount = 10
 
@@ -122,16 +127,51 @@ class TestWalletSimulator:
             uint64(0),
         )
         await wallet.push_transaction(tx)
-        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
 
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance - tx_amount
-
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-        expected_confirmed_balance -= tx_amount
-
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        "xch": {
+                            "unconfirmed_wallet_balance": -tx_amount,
+                            "<=#spendable_balance": -tx_amount,
+                            "<=#max_send_amount": -tx_amount,
+                            # TODO: this might be naughty to be using here
+                            "set_remainder": True,
+                        },
+                    },
+                    post_block_balance_updates={
+                        "xch": {
+                            "confirmed_wallet_balance": -tx_amount,
+                            "<=#spendable_balance": -tx_amount,
+                            "<=#max_send_amount": -tx_amount,
+                            # TODO: this might be naughty to be using here
+                            "set_remainder": True,
+                        },
+                    },
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        "xch": {
+                            "unconfirmed_wallet_balance": 0,
+                            "spendable_balance": 0,
+                            "max_send_amount": 0,
+                            # TODO: this might be naughty to be using here
+                            "set_remainder": True,
+                        },
+                    },
+                    post_block_balance_updates={
+                        "xch": {
+                            "unconfirmed_wallet_balance": tx_amount,
+                            "spendable_balance": tx_amount,
+                            "max_send_amount": tx_amount,
+                            # TODO: this might be naughty to be using here
+                            "set_remainder": True,
+                        },
+                    },
+                ),
+            ]
+        )
 
         # Test match_hinted_coin
         selected_coin = list(await wallet.select_coins(uint64(0), DEFAULT_COIN_SELECTION_CONFIG))[0]
