@@ -466,6 +466,7 @@ class WalletRpcApi:
     async def delete_key(self, request: Dict[str, Any]) -> EndpointResult:
         await self._stop_wallet()
         fingerprint = request["fingerprint"]
+        await self.service.ensure_keychain_proxy()
         try:
             await self.service.keychain_proxy.delete_key_by_fingerprint(fingerprint)
         except Exception as e:

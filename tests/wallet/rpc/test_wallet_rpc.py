@@ -1753,21 +1753,35 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     assert sk_dict["used_for_pool_rewards"] is False
 
     await client.delete_key(pks[0])
-    await client.log_in(pks[1])
-    assert len(await client.get_public_keys()) == 1
+    async with env.wallet_1.service.run
+    async with WalletRpcClient.create_as_context(
+        self_hostname=env.wallet_1.service.self_hostname,
+        port=env.wallet_1.service.rpc_server.listen_port,
+        root_path=env.wallet_1.service.root_path,
+        net_config=env.wallet_1.service.config,
+    ) as client:
+        await client.log_in(pks[1])
+        assert len(await client.get_public_keys()) == 1
 
-    assert not (await client.get_sync_status())
+        assert not (await client.get_sync_status())
 
-    wallets = await client.get_wallets()
-    assert len(wallets) == 1
-    assert await get_unconfirmed_balance(client, int(wallets[0]["id"])) == 0
+        wallets = await client.get_wallets()
+        assert len(wallets) == 1
+        assert await get_unconfirmed_balance(client, int(wallets[0]["id"])) == 0
 
-    with pytest.raises(ValueError):
-        await client.send_transaction(wallets[0]["id"], uint64(100), addr, DEFAULT_TX_CONFIG)
+        with pytest.raises(ValueError):
+            await client.send_transaction(wallets[0]["id"], uint64(100), addr, DEFAULT_TX_CONFIG)
 
-    # Delete all keys
-    await client.delete_all_keys()
-    assert len(await client.get_public_keys()) == 0
+        # Delete all keys
+        await client.delete_all_keys()
+
+    async with WalletRpcClient.create_as_context(
+        self_hostname=env.wallet_1.service.self_hostname,
+        port=env.wallet_1.service.rpc_server.listen_port,
+        root_path=env.wallet_1.service.root_path,
+        net_config=env.wallet_1.service.config,
+    ) as client:
+        assert len(await client.get_public_keys()) == 0
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
