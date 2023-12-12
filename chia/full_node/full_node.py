@@ -131,6 +131,7 @@ class FullNode:
     log: logging.Logger
     db_path: Path
     wallet_sync_queue: asyncio.Queue[WalletUpdate]
+    subscriptions: PeerSubscriptions
     _segment_task: Optional[asyncio.Task[None]] = None
     initialized: bool = False
     _server: Optional[ChiaServer] = None
@@ -145,7 +146,6 @@ class FullNode:
     #       config would end up on stdout if handled here.
     multiprocessing_context: Optional[BaseContext] = None
     _ui_tasks: Set[asyncio.Task[None]] = dataclasses.field(default_factory=set)
-    _subscriptions: Optional[PeerSubscriptions] = None
     _transaction_queue_task: Optional[asyncio.Task[None]] = None
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
     _sync_task: Optional[asyncio.Task[None]] = None
@@ -200,6 +200,7 @@ class FullNode:
             log=logging.getLogger(name),
             db_path=db_path,
             wallet_sync_queue=asyncio.Queue(),
+            subscriptions=PeerSubscriptions(),
         )
 
     @contextlib.asynccontextmanager
@@ -238,7 +239,7 @@ class FullNode:
             reader_count=4,
             log_path=sql_log_path,
             synchronous=db_sync,
-        ) as self._db_wrapper, PeerSubscriptions.managed() as self._subscriptions:
+        ) as self._db_wrapper:
             if self.db_wrapper.db_version != 2:
                 async with self.db_wrapper.reader_no_transaction() as conn:
                     async with conn.execute(
@@ -416,11 +417,6 @@ class FullNode:
     def hint_store(self) -> HintStore:
         assert self._hint_store is not None
         return self._hint_store
-
-    @property
-    def subscriptions(self) -> PeerSubscriptions:
-        assert self._subscriptions is not None
-        return self._subscriptions
 
     @property
     def new_peak_sem(self) -> LimitedSemaphore:
@@ -907,7 +903,7 @@ class FullNode:
         if self.sync_store is not None:
             self.sync_store.peer_disconnected(connection.peer_node_id)
         # Remove all ph | coin id subscription for this peer
-        await self.subscriptions.remove_peer(connection.peer_node_id)
+        self.subscriptions.remove_peer(connection.peer_node_id)
 
     async def _sync(self) -> None:
         """
@@ -1155,7 +1151,7 @@ class FullNode:
                 if state_change_summary is not None:
                     assert peak is not None
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
-                    hints_to_add, _ = await get_hints_and_subscription_coin_ids(
+                    hints_to_add, _ = get_hints_and_subscription_coin_ids(
                         state_change_summary,
                         self.subscriptions.is_coin_subscribed,
                         self.subscriptions.is_puzzle_subscribed,
@@ -1203,12 +1199,12 @@ class FullNode:
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
         for coin_record in wallet_update.coin_records:
             coin_id = coin_record.name
-            subscribed_peers = await self.subscriptions.peers_for_coin_id(coin_id)
-            puzzle_peers = await self.subscriptions.peers_for_puzzle_hash(coin_record.coin.puzzle_hash)
+            subscribed_peers = self.subscriptions.peers_for_coin_id(coin_id)
+            puzzle_peers = self.subscriptions.peers_for_puzzle_hash(coin_record.coin.puzzle_hash)
             subscribed_peers.update(puzzle_peers)
             hint = wallet_update.hints.get(coin_id)
             if hint is not None:
-                hint_peers = await self.subscriptions.peers_for_puzzle_hash(hint)
+                hint_peers = self.subscriptions.peers_for_puzzle_hash(hint)
                 subscribed_peers.update(hint_peers)
             for peer in subscribed_peers:
                 changes_for_peer.setdefault(peer, set()).add(coin_record.coin_state)
@@ -1487,7 +1483,7 @@ class FullNode:
         ):
             self.full_node_store.previous_generator = None
 
-        hints_to_add, lookup_coin_ids = await get_hints_and_subscription_coin_ids(
+        hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
             state_change_summary,
             self.subscriptions.is_coin_subscribed,
             self.subscriptions.is_puzzle_subscribed,

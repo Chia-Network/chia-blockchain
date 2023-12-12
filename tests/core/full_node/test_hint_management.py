@@ -29,7 +29,7 @@ additions = [
 ]
 
 
-async def no_sub(c: bytes32) -> bool:
+def no_sub(c: bytes32) -> bool:
     return False
 
 
@@ -42,7 +42,7 @@ async def test_hints_to_add(bt: BlockTools, empty_blockchain: Blockchain) -> Non
     assert br is not None
 
     scs = StateChangeSummary(br, uint32(0), [], removals, additions, [])
-    hints_to_add, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, no_sub, no_sub)
+    hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, no_sub, no_sub)
     assert len(lookup_coin_ids) == 0
 
     first_coin_id: bytes32 = Coin(bytes32(coin_ids[0]), bytes32(phs[4]), uint64(3)).name()
@@ -101,12 +101,12 @@ async def test_lookup_coin_ids(
 
     scs = StateChangeSummary(br, uint32(0), [], removals, additions, rewards)
 
-    async def has_coin_sub(c: bytes32) -> bool:
+    def has_coin_sub(c: bytes32) -> bool:
         return c == coin_check
 
-    async def has_ph_sub(ph: bytes32) -> bool:
+    def has_ph_sub(ph: bytes32) -> bool:
         return ph == ph_check
 
-    _, lookup_coin_ids = await get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
+    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
 
     assert set(lookup_coin_ids) == results
