@@ -14,8 +14,6 @@ class SupportsTrunc(Protocol):
 
 
 def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream]:
-    # TODO: turn this around to calculate the PACK from the size and signedness
-
     name_signedness, _, name_bit_size = cls.__name__.partition("int")
     cls.SIGNED = False if name_signedness == "u" else True
     try:
