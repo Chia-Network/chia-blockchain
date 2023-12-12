@@ -53,6 +53,7 @@ from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.priority_mutex import PriorityMutex
 from chia.util.setproctitle import getproctitle, setproctitle
+import random
 
 log = logging.getLogger(__name__)
 
@@ -456,6 +457,9 @@ class Blockchain(BlockchainInterface):
         try:
             # Always add the block to the database
             async with self.block_store.db_wrapper.writer():
+                if random.randint(0,500)==0:
+                    self.block_store.db_wrapper._wjb_throw=True
+
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(

@@ -116,6 +116,7 @@ class DBWrapper2:
     _wjb_database: Path
     _wjb_uri: bool
     _wjb_log_file: Path
+    _wjb_throw: bool
 
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
@@ -174,6 +175,7 @@ class DBWrapper2:
         self._wjb_database=database
         self._wjb_uri=uri
         self._wjb_log_file=log_file
+        self._wjb_throw=False
 
         for index in range(reader_count):
             read_connection = await _create_connection(
@@ -208,6 +210,9 @@ class DBWrapper2:
         await self._write_connection.execute(f"SAVEPOINT {name}")
         try:
             yield
+            if self._wjb_throw:
+                self._wjb_throw=False
+                raise ValueError("wjb")
         except:  # noqa E722
             await self._write_connection.execute(f"ROLLBACK TO {name}")
             raise
