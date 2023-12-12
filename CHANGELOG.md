@@ -6,7 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-
 ## 2.1.2 Chia blockchain 2023-12-13
 
 ### Fixed
@@ -30,7 +29,7 @@ for setuptools_scm/PEP 440 reasons.
 * Fix set_status accidental arg (fixes #16817)
 * Fix issues with upgrading Chia via RPM by claiming ownership of `/opt/chia` in the RPM
 * clean out `/opt/chia` before install and after removal of rpm
- 
+
 ### Added
 * Allow DApps to use WalletConnect to sign customized puzzles by extending sign APIs
 * Add support for lists of peers in the config (thanks @felixbrucker)
