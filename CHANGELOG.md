@@ -10,7 +10,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 * Fix deep reorgs and add tests
-* Reduce possible Signage Point bursts by only forward 4 most recent cached SPs
+* Reduce possible Signage Point bursts by forwarding 4 most recent cached SPs only
 * Fix condition serialization in RPC client
 * Fix DID resync to not create DID wallets that don't belong to the current key
 * Fix `get_block_spends` to work correctly post hard-fork
