@@ -37,14 +37,20 @@ from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import (
     SimulatorsAndWallets,
-    setup_full_node,
     setup_full_system,
     setup_n_nodes,
     setup_simulators_and_wallets,
     setup_simulators_and_wallets_service,
     setup_two_nodes,
 )
-from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord
+from chia.simulator.setup_services import (
+    setup_crawler,
+    setup_daemon,
+    setup_full_node,
+    setup_introducer,
+    setup_seeder,
+    setup_timelord,
+)
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord import Timelord
