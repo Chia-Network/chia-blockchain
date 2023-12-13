@@ -59,7 +59,7 @@ def test_finished_state() -> None:
     """
     Once a proposal has closed, it becomes a 'beacon' singleton which announces its proposal ID. This is referred to as the finished state and is used to confirm that a proposal has closed in order to release voting CATs from the lockup puzzle.
     """
-    proposal_id: Program = Program.to("proposal_id").get_tree_hash()
+    proposal_id = Program.to("proposal_id").get_tree_hash()
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
@@ -87,9 +87,9 @@ def test_proposal() -> None:
     - Self-destruct a broken proposal
     """
     proposal_pass_percentage: uint64 = uint64(5100)
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
-    treasury_id: Program = Program.to("treasury").get_tree_hash()
-    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
+    treasury_id = Program.to("treasury").get_tree_hash()
+    singleton_id = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
@@ -381,9 +381,9 @@ def test_proposal_timer() -> None:
     It creates/asserts announcements to pair it with the finishing spend of a proposal.
     The timer puzzle only has one spend path so there is only one test case for this puzzle.
     """
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
-    treasury_id: Program = Program.to("treasury").get_tree_hash()
-    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
+    treasury_id = Program.to("treasury").get_tree_hash()
+    singleton_id = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
@@ -471,13 +471,13 @@ def test_validator() -> None:
     - Executing an update proposal that changes the DAO rules.
     """
     # Setup the treasury
-    treasury_id: Program = Program.to("treasury_id").get_tree_hash()
+    treasury_id = Program.to("treasury_id").get_tree_hash()
     treasury_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
 
     # Setup the proposal
-    proposal_id: Program = Program.to("proposal_id").get_tree_hash()
+    proposal_id = Program.to("proposal_id").get_tree_hash()
     proposal_struct: Program = Program.to((SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER_HASH)))
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
     acs: Program = Program.to(1)
     acs_ph: bytes32 = acs.get_tree_hash()
 
@@ -591,7 +591,7 @@ def test_validator() -> None:
 
 def test_spend_p2_singleton() -> None:
     # Curried values
-    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    singleton_id = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     p2_singleton_puzhash = P2_SINGLETON_MOD.curry(singleton_struct, P2_SINGLETON_AGGREGATOR_MOD).get_tree_hash()
     cat_tail_1 = Program.to("cat_tail_1").get_tree_hash()
@@ -665,7 +665,7 @@ def test_merge_p2_singleton() -> None:
     """
     # Setup a singleton struct
     singleton_inner: Program = Program.to(1)
-    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    singleton_id = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
 
     # Setup p2_singleton_via_delegated puz
@@ -746,9 +746,9 @@ def test_treasury() -> None:
     - Oracle Path: The treasury can make announcements about itself that are used to close invalid proposals
     """
     # Setup the treasury
-    treasury_id: Program = Program.to("treasury_id").get_tree_hash()
+    treasury_id = Program.to("treasury_id").get_tree_hash()
     treasury_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
 
     proposal_id: Program = Program.to("singleton_id").get_tree_hash()
     proposal_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
@@ -849,7 +849,7 @@ def test_lockup() -> None:
     The lockup puzzle tracks the voting records of DAO CATs. When a proposal is voted on the proposal ID is added to a list against which future votes are checked.
     This test checks the addition of new votes to the lockup, and that you can't re-vote on a proposal twice.
     """
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
 
     INNERPUZ = Program.to(1)
     previous_votes = [0xFADEDDAB]
@@ -977,7 +977,7 @@ def test_proposal_lifecycle() -> None:
     self_destruct_time: uint64 = uint64(1000)
     oracle_spend_delay: uint64 = uint64(10)
     min_amt: uint64 = uint64(1)
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
 
     dao_rules = DAORules(
         proposal_timelock=proposal_timelock,
@@ -990,7 +990,7 @@ def test_proposal_lifecycle() -> None:
     )
 
     # Setup the treasury
-    treasury_id: Program = Program.to("treasury_id").get_tree_hash()
+    treasury_id = Program.to("treasury_id").get_tree_hash()
     treasury_singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
     treasury_amount = 1
 
@@ -1057,7 +1057,7 @@ def test_proposal_lifecycle() -> None:
     spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash])
 
     # Setup Proposal
-    proposal_id: Program = Program.to("proposal_id").get_tree_hash()
+    proposal_id = Program.to("proposal_id").get_tree_hash()
     proposal_singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
 
     current_votes = 1200
