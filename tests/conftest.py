@@ -1132,10 +1132,10 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
     tmp_path: Path, get_temp_keyring: Keychain
 ) -> AsyncIterator[
     Tuple[
-        Service[Farmer, FarmerAPI],
-        Service[Harvester, HarvesterAPI],
-        Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]],
-        Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]],
+        FarmerService,
+        HarvesterService,
+        Union[FullNodeService, SimulatorFullNodeService],
+        Union[FullNodeService, SimulatorFullNodeService],
         BlockTools,
     ]
 ]:
@@ -1168,7 +1168,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
             for _ in range(2)
         ]
 
-        simulators: List[Service[FullNode, FullNodeSimulator]] = [
+        simulators: List[SimulatorFullNodeService] = [
             await async_exit_stack.enter_async_context(
                 # Passing simulator=True gets us this type guaranteed
                 setup_full_node(  # type: ignore[arg-type]
