@@ -13,37 +13,6 @@ THIS_IS_MAC = platform.system().lower().startswith("darwin")
 ROOT = pathlib.Path(importlib.import_module("chia").__file__).absolute().parent.parent
 
 
-def solve_name_collision_problem(analysis):
-    """
-    There is a collision between the `chia` file name (which is the executable)
-    and the `chia` directory, which contains non-code resources like `english.txt`.
-    We move all the resources in the zipped area so there is no
-    need to create the `chia` directory, since the names collide.
-
-    Fetching data now requires going into a zip file, so it will be slower.
-    It's best if files that are used frequently are cached.
-
-    A sample large compressible file (1 MB of `/dev/zero`), seems to be
-    about eight times slower.
-
-    Note that this hack isn't documented, but seems to work.
-    """
-
-    zipped = []
-    datas = []
-    for data in analysis.datas:
-        if str(data[0]).startswith("chia/"):
-            zipped.append(data)
-        else:
-            datas.append(data)
-
-    # items in this field are included in the binary
-    analysis.zipped_data = zipped
-
-    # these items will be dropped in the root folder uncompressed
-    analysis.datas = datas
-
-
 keyring_imports = collect_submodules("keyring.backends")
 
 # keyring uses entrypoints to read keyring.backends from metadata file entry_points.txt.
@@ -176,8 +145,6 @@ def add_binary(name, path_to_script, collect_args):
         noarchive=False,
     )
 
-    solve_name_collision_problem(analysis)
-
     binary_pyz = PYZ(analysis.pure, analysis.zipped_data, cipher=block_cipher)
 
     binary_exe = EXE(
@@ -204,16 +171,16 @@ def add_binary(name, path_to_script, collect_args):
 COLLECT_ARGS = []
 
 add_binary("chia", f"{ROOT}/chia/cmds/chia.py", COLLECT_ARGS)
-add_binary("daemon", f"{ROOT}/chia/daemon/server.py", COLLECT_ARGS)
-
-for server in SERVERS:
-    add_binary(f"start_{server}", f"{ROOT}/chia/server/start_{server}.py", COLLECT_ARGS)
-
-add_binary("start_crawler", f"{ROOT}/chia/seeder/start_crawler.py", COLLECT_ARGS)
-add_binary("start_seeder", f"{ROOT}/chia/seeder/dns_server.py", COLLECT_ARGS)
-add_binary("start_data_layer_http", f"{ROOT}/chia/data_layer/data_layer_server.py", COLLECT_ARGS)
-add_binary("start_data_layer_s3_plugin", f"{ROOT}/chia/data_layer/s3_plugin_service.py", COLLECT_ARGS)
-add_binary("timelord_launcher", f"{ROOT}/chia/timelord/timelord_launcher.py", COLLECT_ARGS)
+# add_binary("daemon", f"{ROOT}/chia/daemon/server.py", COLLECT_ARGS)
+#
+# for server in SERVERS:
+#     add_binary(f"start_{server}", f"{ROOT}/chia/server/start_{server}.py", COLLECT_ARGS)
+#
+# add_binary("start_crawler", f"{ROOT}/chia/seeder/start_crawler.py", COLLECT_ARGS)
+# add_binary("start_seeder", f"{ROOT}/chia/seeder/dns_server.py", COLLECT_ARGS)
+# add_binary("start_data_layer_http", f"{ROOT}/chia/data_layer/data_layer_server.py", COLLECT_ARGS)
+# add_binary("start_data_layer_s3_plugin", f"{ROOT}/chia/data_layer/s3_plugin_service.py", COLLECT_ARGS)
+# add_binary("timelord_launcher", f"{ROOT}/chia/timelord/timelord_launcher.py", COLLECT_ARGS)
 
 COLLECT_KWARGS = dict(
     strip=False,
