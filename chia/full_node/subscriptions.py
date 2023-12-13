@@ -78,17 +78,10 @@ class PeerSubscriptions:
             subscriptions_left = max_items - existing_sub_count
 
             for item in items:
-                row = conn.execute(
-                    f"SELECT COUNT(*) FROM {table_name} WHERE peer_id=? AND {item_name}=?",
-                    (peer_id, item),
-                ).fetchone()
-
-                assert row is not None
-
-                if int(row[0]) > 0:
+                cursor = conn.execute(f"INSERT INTO {table_name} (peer_id, {item_name}) VALUES (?, ?)", (peer_id, item))
+                if cursor.rowcount == 0:
                     continue
 
-                conn.execute(f"INSERT INTO {table_name} (peer_id, {item_name}) VALUES (?, ?)", (peer_id, item))
                 inserted.add(item)
                 subscriptions_left -= 1
 
