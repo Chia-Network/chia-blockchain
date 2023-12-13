@@ -779,9 +779,7 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
         ),
     )
 
-    await data_store.delete(
-        key=b"\x04", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
+    await data_store.delete(key=b"\x04", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -818,12 +816,8 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
         ),
     )
 
-    await data_store.delete(
-        key=b"\x04", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
-    await data_store.delete(
-        key=b"\x05", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
+    await data_store.delete(key=b"\x04", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
+    await data_store.delete(key=b"\x05", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -863,9 +857,7 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
         ),
     )
 
-    await data_store.delete(
-        key=b"\x03", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
+    await data_store.delete(key=b"\x03", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -902,12 +894,8 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
         ),
     )
 
-    await data_store.delete(
-        key=b"\x03", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
-    await data_store.delete(
-        key=b"\x02", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
+    await data_store.delete(key=b"\x03", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
+    await data_store.delete(key=b"\x02", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
