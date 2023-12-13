@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
+import os
 from logging.handlers import SysLogHandler
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
@@ -31,11 +32,11 @@ def get_file_log_handler(
 ) -> ConcurrentRotatingFileHandler:
     log_path = path_from_root(root_path, str(logging_config.get("log_filename", "log/debug.log")))
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    maxrotation = logging_config.get("log_maxfilesrotation", 7)
-    maxbytesrotation = logging_config.get("log_maxbytesrotation", 50 * 1024 * 1024)
-    use_gzip = logging_config.get("log_use_gzip", False)
+    maxrotation = cast(int, logging_config.get("log_maxfilesrotation", 7))
+    maxbytesrotation = cast(int, logging_config.get("log_maxbytesrotation", 50 * 1024 * 1024))
+    use_gzip = cast(bool, logging_config.get("log_use_gzip", False))
     handler = ConcurrentRotatingFileHandler(
-        log_path, "a", maxBytes=maxbytesrotation, backupCount=maxrotation, use_gzip=use_gzip
+        os.fspath(log_path), "a", maxBytes=maxbytesrotation, backupCount=maxrotation, use_gzip=use_gzip
     )
     handler.setFormatter(formatter)
     return handler
