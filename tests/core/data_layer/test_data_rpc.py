@@ -249,6 +249,8 @@ async def test_create_insert_get(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
         res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
         assert hexstr_to_bytes(res["value"]) == new_value
+        wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
+        upsert_wallet_root = wallet_root["hash"]
 
         # test upsert unknown key acts as insert
         new_value = b"\x00\x02"
@@ -260,10 +262,19 @@ async def test_create_insert_get(
         assert hexstr_to_bytes(res["value"]) == new_value
 
         # test delete
+        changelist = [{"action": "delete", "key": unknown_key.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec3 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec3, wallet_rpc_api)
+        with pytest.raises(Exception):
+            await data_rpc_api.get_value({"id": store_id.hex(), "key": unknown_key.hex()})
+        wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
+        assert wallet_root["hash"] == upsert_wallet_root
+
         changelist = [{"action": "delete", "key": key.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
-        update_tx_rec1 = res["tx_id"]
-        await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
+        update_tx_rec4 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec4, wallet_rpc_api)
         with pytest.raises(Exception):
             await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
         wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
