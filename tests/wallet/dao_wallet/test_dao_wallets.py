@@ -3397,7 +3397,7 @@ async def test_dao_resync(
     dao_rules = DAORules(
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
-        attendance_required=uint64(1000),  # 10%
+        attendance_required=uint64(10),
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
         oracle_spend_delay=uint64(10),
@@ -3487,6 +3487,13 @@ async def test_dao_resync(
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
+    xch_funds = uint64(500000)
+    funding_tx = await dao_wallet_0.create_add_funds_to_treasury_spend(xch_funds, DEFAULT_TX_CONFIG)
+    await wallet_0.wallet_state_manager.add_pending_transaction(funding_tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=[funding_tx], timeout=60)
+    await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
     # set flag to reset wallet sync data on start
     await wallet_api_0.set_wallet_resync_on_startup({"enable": True})
     fingerprint_0 = wallet_node_0.logged_in_fingerprint
@@ -3535,3 +3542,47 @@ async def test_dao_resync(
     assert len(new_dao_wallet.dao_info.proposals_list) == 2
     assert new_dao_wallet.dao_info.proposals_list[0].yes_votes == 10
     assert new_dao_wallet.dao_info.proposals_list[1].yes_votes == 100
+
+    # close proposals
+    prop_0 = new_dao_wallet.dao_info.proposals_list[0].proposal_id
+    prop_1 = new_dao_wallet.dao_info.proposals_list[1].proposal_id
+
+    for _ in range(20):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    prop_0_close_tx = await new_dao_wallet.create_proposal_close_spend(prop_0, DEFAULT_TX_CONFIG)
+    await wallet_0.wallet_state_manager.add_pending_transaction(prop_0_close_tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=[prop_0_close_tx], timeout=60)
+    await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
+
+    prop_1_close_tx = await new_dao_wallet.create_proposal_close_spend(prop_1, DEFAULT_TX_CONFIG)
+    await wallet_0.wallet_state_manager.add_pending_transaction(prop_1_close_tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=[prop_1_close_tx], timeout=60)
+    await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
+
+    # free coins
+
+    release_tx = await new_dao_wallet.free_coins_from_finished_proposals(DEFAULT_TX_CONFIG)
+    await wallet_0.wallet_state_manager.add_pending_transaction(release_tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=[release_tx], timeout=60)
+    await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
+
+    await time_out_assert(20, new_cat_wallet.get_confirmed_balance, cat_amt - dao_cat_amt)
+    await time_out_assert(20, new_dao_cat_wallet.get_confirmed_balance, dao_cat_amt)
+
+    coins = []
+    for lci in new_dao_cat_wallet.dao_cat_info.locked_coins:
+        if lci.active_votes == []:
+            coins.append(lci)
+
+    unlock_tx = await new_dao_cat_wallet.exit_vote_state(coins, DEFAULT_TX_CONFIG)
+    await wallet_0.wallet_state_manager.add_pending_transaction(unlock_tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=[unlock_tx], timeout=60)
+    await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
+
+    await time_out_assert(20, new_cat_wallet.get_confirmed_balance, cat_amt)
+    await time_out_assert(20, new_dao_cat_wallet.get_confirmed_balance, 0)
