@@ -20,7 +20,6 @@ class PeerSubscriptions:
             conn.execute(
                 """
                 CREATE TABLE puzzle_subscriptions (
-                    id INT PRIMARY KEY,
                     peer_id BLOB,
                     puzzle_hash BLOB,
                     UNIQUE (peer_id, puzzle_hash)
@@ -30,7 +29,6 @@ class PeerSubscriptions:
             conn.execute(
                 """
                 CREATE TABLE coin_subscriptions (
-                    id INT PRIMARY KEY,
                     peer_id BLOB,
                     coin_id BLOB,
                     UNIQUE (peer_id, coin_id)
