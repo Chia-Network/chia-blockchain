@@ -22,6 +22,7 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
+    cast,
 )
 
 from chia.cmds.init_funcs import chia_full_version_str
@@ -91,7 +92,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         self.root_path = root_path
         self.config = config
         ping_interval = self.config.get("ping_interval")
-        self.self_hostname = self.config.get("self_hostname")
+        self.self_hostname = cast(str, self.config.get("self_hostname"))
         self.daemon_port = self.config.get("daemon_port")
         assert ping_interval is not None
         self._connect_to_daemon = connect_to_daemon

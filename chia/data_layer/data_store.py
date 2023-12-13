@@ -1582,7 +1582,8 @@ class DataStore:
         await self.update_server_info(tree_id, new_server_info)
 
     async def server_misses_file(self, tree_id: bytes32, server_info: ServerInfo, timestamp: int) -> None:
-        BAN_TIME_BY_MISSING_COUNT = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60]
+        # Max banned time is 1 hour.
+        BAN_TIME_BY_MISSING_COUNT = [5 * 60] * 3 + [15 * 60] * 3 + [30 * 60] * 2 + [60 * 60]
         index = min(server_info.num_consecutive_failures, len(BAN_TIME_BY_MISSING_COUNT) - 1)
         new_server_info = replace(
             server_info,

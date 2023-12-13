@@ -495,21 +495,23 @@ class VCWallet:
             for cc in [c for c in crcat_spend.inner_conditions if c.at("f").as_int() == 51]:
                 if not (
                     (  # it's coming to us
-                        await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(bytes32(cc.at("rf").atom))
+                        await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                            bytes32(cc.at("rf").as_atom())
+                        )
                         is not None
                     )
                     or (  # it's going back where it came from
-                        bytes32(cc.at("rf").atom) == crcat_spend.crcat.inner_puzzle_hash
+                        bytes32(cc.at("rf").as_atom()) == crcat_spend.crcat.inner_puzzle_hash
                     )
                     or (  # it's going to the pending state
                         cc.at("rrr") != Program.to(None)
                         and cc.at("rrrf").atom is None
-                        and bytes32(cc.at("rf").atom)
+                        and bytes32(cc.at("rf").as_atom())
                         == construct_pending_approval_state(
-                            bytes32(cc.at("rrrff").atom), uint64(cc.at("rrf").as_int())
+                            bytes32(cc.at("rrrff").as_atom()), uint64(cc.at("rrf").as_int())
                         ).get_tree_hash()
                     )
-                    or bytes32(cc.at("rf").atom) == Offer.ph()  # it's going to the offer mod
+                    or bytes32(cc.at("rf").as_atom()) == Offer.ph()  # it's going to the offer mod
                 ):
                     outputs_ok = False  # pragma: no cover
             if our_crcat or outputs_ok:

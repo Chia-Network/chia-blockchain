@@ -27,7 +27,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
-from tests.util.setup_nodes import SimulatorsAndWallets
+from tests.util.setup_nodes import OldSimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert
 
 
@@ -545,7 +545,7 @@ class TestSimpleSyncProtocol:
 
     @pytest.mark.anyio
     async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
-        self, simulator_and_wallet: SimulatorsAndWallets, self_hostname: str
+        self, simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str
     ) -> None:
         [full_node_api], [[_, wallet_server]], bt = simulator_and_wallet
         full_node_server = full_node_api.full_node.server

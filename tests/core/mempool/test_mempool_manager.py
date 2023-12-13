@@ -46,7 +46,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_node import WalletNode
-from tests.util.setup_nodes import SimulatorsAndWallets
+from tests.util.setup_nodes import OldSimulatorsAndWallets
 
 IDENTITY_PUZZLE = SerializedProgram.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
@@ -1401,7 +1401,9 @@ async def test_bundle_coin_spends() -> None:
 
 
 @pytest.mark.anyio
-async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsAndWallets, self_hostname: str) -> None:
+async def test_identical_spend_aggregation_e2e(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str
+) -> None:
     def get_sb_names_by_coin_id(
         full_node_api: FullNodeSimulator,
         spent_coin_id: bytes32,
