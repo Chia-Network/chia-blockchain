@@ -489,7 +489,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
     "use_optimized",
     [True, False],
 )
-async def test_upsert_ignores_invalid_arguments(
+async def test_upsert_ignores_existing_arguments(
     data_store: DataStore,
     tree_id: bytes32,
     use_optimized: bool,
@@ -780,7 +780,7 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
     )
 
     await data_store.delete(
-        key=bytes(Program.to(b"\x04")), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+        key=b"\x04", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
     )
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
@@ -819,10 +819,10 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
     )
 
     await data_store.delete(
-        key=bytes(Program.to(b"\x04")), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+        key=b"\x04", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
     )
     await data_store.delete(
-        key=bytes(Program.to(b"\x05")), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+        key=b"\x05", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
     )
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
@@ -864,7 +864,7 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
     )
 
     await data_store.delete(
-        key=bytes(Program.to(b"\x03")), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+        key=b"\x03", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
     )
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
@@ -903,10 +903,10 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
     )
 
     await data_store.delete(
-        key=bytes(Program.to(b"\x03")), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+        key=b"\x03", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
     )
     await data_store.delete(
-        key=bytes(Program.to(b"\x02")), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+        key=b"\x02", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
     )
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
