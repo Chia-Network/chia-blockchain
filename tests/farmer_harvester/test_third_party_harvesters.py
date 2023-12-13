@@ -24,10 +24,9 @@ from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignat
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
-from chia.server.start_service import Service
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
-from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.types.aliases import FarmerService, FullNodeService, HarvesterService, SimulatorFullNodeService
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -46,10 +45,10 @@ SPList = List[SPType]
 @pytest.mark.anyio
 async def test_harvester_receive_source_signing_data(
     farmer_harvester_2_simulators_zero_bits_plot_filter: Tuple[
-        Service[Farmer, FarmerAPI],
-        Service[Harvester, HarvesterAPI],
-        Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]],
-        Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]],
+        FarmerService,
+        HarvesterService,
+        Union[FullNodeService, SimulatorFullNodeService],
+        Union[FullNodeService, SimulatorFullNodeService],
         BlockTools,
     ],
     mocker: MockerFixture,
@@ -239,10 +238,10 @@ async def test_harvester_receive_source_signing_data(
 @pytest.mark.anyio
 async def test_harvester_fee_convention(
     farmer_harvester_2_simulators_zero_bits_plot_filter: Tuple[
-        Service[Farmer, FarmerAPI],
-        Service[Harvester, HarvesterAPI],
-        Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]],
-        Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]],
+        FarmerService,
+        HarvesterService,
+        Union[FullNodeService, SimulatorFullNodeService],
+        Union[FullNodeService, SimulatorFullNodeService],
         BlockTools,
     ],
     caplog: pytest.LogCaptureFixture,
