@@ -56,6 +56,7 @@ class ProtocolMessageTypes(Enum):
     new_compact_vdf = 42
     request_peers = 43
     respond_peers = 44
+    none_response = 91
 
     # Wallet protocol (wallet <-> full_node)
     request_puzzle_solution = 45
@@ -112,3 +113,5 @@ class ProtocolMessageTypes(Enum):
     respond_block_headers = 88
     request_fee_estimates = 89
     respond_fee_estimates = 90
+
+    error = 255

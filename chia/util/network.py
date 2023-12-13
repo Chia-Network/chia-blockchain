@@ -5,8 +5,8 @@ import logging
 import socket
 import ssl
 from dataclasses import dataclass
-from ipaddress import IPv4Network, IPv6Network, ip_address
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
+from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union
 
 from aiohttp import web
 from aiohttp.log import web_logger
@@ -14,46 +14,115 @@ from typing_extensions import final
 
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+
+
+@dataclass(frozen=True)
+class IPAddress:
+    _inner: Union[IPv4Address, IPv6Address]
+
+    @classmethod
+    def create(cls, ip: str) -> IPAddress:
+        return cls(ip_address(ip))
+
+    def __int__(self) -> int:
+        return int(self._inner)
+
+    def __str__(self) -> str:
+        return str(self._inner)
+
+    def __repr__(self) -> str:
+        return repr(self._inner)
+
+    @property
+    def packed(self) -> bytes:
+        return self._inner.packed
+
+    @property
+    def is_private(self) -> bool:
+        return self._inner.is_private
+
+    @property
+    def is_v4(self) -> bool:
+        return self._inner.version == 4
+
+    @property
+    def is_v6(self) -> bool:
+        return self._inner.version == 6
 
 
 @final
 @dataclass
 class WebServer:
     runner: web.AppRunner
+    hostname: str
     listen_port: uint16
+    scheme: Literal["http", "https"]
+    _ssl_context: Optional[ssl.SSLContext] = None
     _close_task: Optional[asyncio.Task[None]] = None
+    _prefer_ipv6: bool = False
 
     @classmethod
     async def create(
         cls,
         hostname: str,
         port: uint16,
-        routes: List[web.RouteDef],
+        routes: Iterable[web.RouteDef] = (),
         max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
         ssl_context: Optional[ssl.SSLContext] = None,
         keepalive_timeout: int = 75,  # Default from aiohttp.web
-        shutdown_timeout: int = 60,  # Default `shutdown_timeout` from web.TCPSite
+        shutdown_timeout: int = 60,  # Default `shutdown_timeout` from aiohttp.web_runner.BaseRunner
         prefer_ipv6: bool = False,
         logger: logging.Logger = web_logger,
+        start: bool = True,
     ) -> WebServer:
         app = web.Application(client_max_size=max_request_body_size, logger=logger)
-        runner = web.AppRunner(app, access_log=None, keepalive_timeout=keepalive_timeout)
+        runner = web.AppRunner(
+            app,
+            access_log=None,
+            keepalive_timeout=keepalive_timeout,
+            shutdown_timeout=shutdown_timeout,
+        )
 
-        runner.app.add_routes(routes)
-        await runner.setup()
-        site = web.TCPSite(runner, hostname, int(port), ssl_context=ssl_context, shutdown_timeout=shutdown_timeout)
+        self = cls(
+            runner=runner,
+            hostname=hostname,
+            listen_port=uint16(port),
+            scheme="https" if ssl_context is not None else "http",
+            _ssl_context=ssl_context,
+            _prefer_ipv6=prefer_ipv6,
+        )
+
+        self.add_routes(routes)
+
+        if start:
+            await self.start()
+
+        return self
+
+    async def start(self) -> None:
+        await self.runner.setup()
+        site = web.TCPSite(
+            self.runner,
+            self.hostname,
+            int(self.listen_port),
+            ssl_context=self._ssl_context,
+        )
         await site.start()
 
         #
         # On a dual-stack system, we want to get the (first) IPv4 port unless
         # prefer_ipv6 is set in which case we use the IPv6 port
         #
-        if port == 0:
-            port = select_port(prefer_ipv6, runner.addresses)
+        if self.listen_port == 0:
+            self.listen_port = select_port(self._prefer_ipv6, self.runner.addresses)
 
-        return cls(runner=runner, listen_port=uint16(port))
+    def add_routes(self, routes: Iterable[web.RouteDef]) -> None:
+        self.runner.app.add_routes(routes)
+
+    def url(self, *segments: str) -> str:
+        path = "/".join(segments)
+        return f"{self.scheme}://{self.hostname}:{self.listen_port}/{path}"
 
     async def _close(self) -> None:
         await self.runner.shutdown()
@@ -77,7 +146,11 @@ def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Netw
 
 
 def is_localhost(peer_host: str) -> bool:
-    return peer_host == "127.0.0.1" or peer_host == "localhost" or peer_host == "::1" or peer_host == "0:0:0:0:0:0:0:1"
+    return peer_host in ["127.0.0.1", "localhost", "::1", "0:0:0:0:0:0:0:1"]
+
+
+def is_trusted_peer(host: str, node_id: bytes32, trusted_peers: Dict[str, Any], testing: bool = False) -> bool:
+    return not testing and is_localhost(host) or node_id.hex() in trusted_peers
 
 
 def class_for_type(type: NodeType) -> Any:
@@ -108,43 +181,30 @@ def class_for_type(type: NodeType) -> Any:
     raise ValueError("No class for type")
 
 
-def get_host_addr(host: Union[PeerInfo, str], prefer_ipv6: Optional[bool]) -> str:
-    # If there was no preference passed in (from config), set the system-wise
-    # default here.  Not a great place to locate a default value, and we should
-    # probably do something to write it into the config, but.  For now...
-    if prefer_ipv6 is None:
-        prefer_ipv6 = False
-    # Use PeerInfo.is_valid() to see if it's already an address
-    if isinstance(host, PeerInfo):
-        hoststr = host.host
-        if host.is_valid(True):
-            return hoststr
-    else:
-        hoststr = host
-        if PeerInfo(hoststr, uint16(0)).is_valid(True):
-            return hoststr
+async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
+    try:
+        return IPAddress.create(host)
+    except ValueError:
+        pass
     addrset: List[
-        Tuple["socket.AddressFamily", "socket.SocketKind", int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
-    ] = socket.getaddrinfo(hoststr, None)
-    # Addrset is never empty, an exception is thrown or data is returned.
-    for t in addrset:
-        if prefer_ipv6 and t[0] == socket.AF_INET6:
-            return t[4][0]
-        if not prefer_ipv6 and t[0] == socket.AF_INET:
-            return t[4][0]
-    # If neither matched preference, just return the first available
-    return addrset[0][4][0]
-
-
-def is_trusted_inner(peer_host: str, peer_node_id: bytes32, trusted_peers: Dict, testing: bool) -> bool:
-    if trusted_peers is None:
-        return False
-    if not testing and peer_host == "127.0.0.1":
-        return True
-    if peer_node_id.hex() not in trusted_peers:
-        return False
-
-    return True
+        Tuple[socket.AddressFamily, socket.SocketKind, int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
+    ] = await asyncio.get_event_loop().getaddrinfo(host, None)
+    # The list returned by getaddrinfo is never empty, an exception is thrown or data is returned.
+    ips_v4 = []
+    ips_v6 = []
+    for family, _, _, _, ip_port in addrset:
+        ip = IPAddress.create(ip_port[0])
+        if family == socket.AF_INET:
+            ips_v4.append(ip)
+        if family == socket.AF_INET6:
+            ips_v6.append(ip)
+    preferred, alternative = (ips_v6, ips_v4) if prefer_ipv6 else (ips_v4, ips_v6)
+    if len(preferred) > 0:
+        return preferred[0]
+    elif len(alternative) > 0:
+        return alternative[0]
+    else:
+        raise ValueError(f"failed to resolve {host} into an IP address")
 
 
 def select_port(prefer_ipv6: bool, addresses: List[Any]) -> uint16:

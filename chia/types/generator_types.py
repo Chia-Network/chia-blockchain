@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
@@ -20,7 +20,7 @@ class CompressorArg:
     """`CompressorArg` is used as input to the Block Compressor"""
 
     block_height: uint32
-    generator: SerializedProgram
+    generator: SerializedProgram = field(repr=False)
     start: int
     end: int
 

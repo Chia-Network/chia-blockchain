@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 from typing import Dict
 from unittest import TestCase
 
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.full_node.generator import create_block_generator
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import GeneratorBlockCacheInterface
-from chia.full_node.generator import create_block_generator, create_generator_args
 from chia.util.ints import uint32
 
 gen0 = SerializedProgram.from_bytes(
@@ -34,18 +37,16 @@ class BlockDict(GeneratorBlockCacheInterface):
 
 
 class TestGeneratorTypes(TestCase):
-    def test_make_generator(self):
+    def test_make_generator(self) -> None:
         block_dict = BlockDict({uint32(1): gen1})
         gen = create_block_generator(gen2, [uint32(1)], block_dict)
         print(gen)
 
-    def test_make_generator_args(self):
-        generator_ref_list = [gen1]
-        gen_args = create_generator_args(generator_ref_list)
-        gen_args_as_program = Program.from_bytes(bytes(gen_args))
+    def test_make_generator_args(self) -> None:
+        gen_args = Program.to([[bytes(gen1)]])
 
         # First Argument to the block generator is the first template generator
-        arg2 = gen_args_as_program.first().first()
+        arg2 = gen_args.first().first()
         print(arg2)
         assert arg2 == bytes(gen1)
 

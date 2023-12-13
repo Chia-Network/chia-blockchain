@@ -2,20 +2,18 @@ from __future__ import annotations
 
 import os
 import pathlib
-import random
 import sys
 import time
 from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator
 
 import pytest
-import pytest_asyncio
 
 # https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 
 from chia.data_layer.data_layer_util import NodeType, Status
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.tree_hash import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.core.data_layer.util import (
     ChiaRoot,
     Example,
@@ -54,11 +52,6 @@ def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32]
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest.fixture(name="database_uri")
-def database_uri_fixture() -> str:
-    return f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
-
-
 @pytest.fixture(name="tree_id", scope="function")
 def tree_id_fixture() -> bytes32:
     base = b"a tree id"
@@ -66,14 +59,13 @@ def tree_id_fixture() -> bytes32:
     return bytes32(pad + base)
 
 
-@pytest_asyncio.fixture(name="raw_data_store", scope="function")
+@pytest.fixture(name="raw_data_store", scope="function")
 async def raw_data_store_fixture(database_uri: str) -> AsyncIterable[DataStore]:
-    store = await DataStore.create(database=database_uri, uri=True)
-    yield store
-    await store.close()
+    async with DataStore.managed(database=database_uri, uri=True) as store:
+        yield store
 
 
-@pytest_asyncio.fixture(name="data_store", scope="function")
+@pytest.fixture(name="data_store", scope="function")
 async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> AsyncIterable[DataStore]:
     await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
 
@@ -87,7 +79,7 @@ def node_type_fixture(request: SubRequest) -> NodeType:
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest_asyncio.fixture(name="valid_node_values")
+@pytest.fixture(name="valid_node_values")
 async def valid_node_values_fixture(
     data_store: DataStore,
     tree_id: bytes32,

@@ -1,0 +1,115 @@
+(mod
+  (
+    TREASURY_MOD_HASH
+    PROPOSAL_VALIDATOR  ; this is the curryed proposal validator
+    PROPOSAL_LENGTH
+    PROPOSAL_SOFTCLOSE_LENGTH
+    ATTENDANCE_REQUIRED
+    PASS_MARGIN  ; this is a percentage 0 - 10,000 - 51% would be 5100
+    PROPOSAL_SELF_DESTRUCT_TIME  ; time in seconds after which proposals can be automatically closed
+    ORACLE_SPEND_DELAY  ; timelock delay for oracle spend
+    (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args))
+    proposal_validator_solution
+    delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
+    delegated_solution  ; this is not secure unless the delegated puzzle secures it
+    my_singleton_struct
+  )
+  (include utility_macros.clib)
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+  (include *standard-cl-21*)
+
+  (defun-inline recreate_self (
+      TREASURY_MOD_HASH
+      PROPOSAL_VALIDATOR
+      PROPOSAL_LENGTH
+      PROPOSAL_SOFTCLOSE_LENGTH
+      ATTENDANCE_REQUIRED
+      PASS_MARGIN
+      PROPOSAL_SELF_DESTRUCT_TIME
+      ORACLE_SPEND_DELAY
+    )
+    (puzzle-hash-of-curried-function TREASURY_MOD_HASH
+      (sha256 ONE ORACLE_SPEND_DELAY)
+      (sha256 ONE PROPOSAL_SELF_DESTRUCT_TIME)
+      (sha256 ONE PASS_MARGIN)
+      (sha256 ONE ATTENDANCE_REQUIRED)
+      (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
+      (sha256 ONE PROPOSAL_LENGTH)
+      (sha256tree PROPOSAL_VALIDATOR)
+      (sha256 ONE TREASURY_MOD_HASH)
+    )
+  )
+
+  (defun calculate_singleton_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+    (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+      inner_puzzle_hash
+      (sha256tree SINGLETON_STRUCT)
+    )
+  )
+
+  (defun stager (ORACLE_SPEND_DELAY my_inner_puzhash singleton_struct)
+    (c
+      (if singleton_struct
+          (list ASSERT_MY_COIN_ID
+            (calculate_coin_id
+              (f (r singleton_struct))
+              (calculate_singleton_puzzle_hash singleton_struct my_inner_puzhash)
+              ONE
+            )
+            ;; TODO: When the new condition codes are available, use ASSERT_EPHEMERAL to ensure this
+            ;; spend path is only used in the eve spend.
+            ;; (list ASSERT_EPHEMERAL)
+          )
+          (list ASSERT_HEIGHT_RELATIVE ORACLE_SPEND_DELAY)
+      )
+      (list (list CREATE_COIN my_inner_puzhash ONE))
+    )
+  )
+
+  (c
+    (list CREATE_PUZZLE_ANNOUNCEMENT 0)  ; the arguments are secured implicitly in the puzzle of the treasury
+    (if delegated_puzzle_reveal
+        ; if we're checking a proposal (testing if it has passed)
+        (if (= (sha256tree delegated_puzzle_reveal) delegated_puzzle_hash)
+            ; Merge the treasury conditions with the proposal validator conditions
+            ; If the update case then the validator returns the new treasury create coin
+            ; If the spend case then we need to recreate the treasury outselves
+            ; treasury specific conditions
+
+            (c
+              (list ASSERT_COIN_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list delegated_puzzle_hash announcement_args))))  ; announcement source is validated inside the ProposalValidator
+              (c
+                (list ASSERT_HEIGHT_RELATIVE 1)
+                (a
+                  PROPOSAL_VALIDATOR
+                  (list
+                    ATTENDANCE_REQUIRED
+                    PASS_MARGIN
+                    proposal_announcement
+                    proposal_validator_solution
+                    (a delegated_puzzle_reveal delegated_solution)
+                  )
+                )
+              )
+            )
+            (x)
+        )
+        ; no proposal_flag so create the oracle announcement
+        (stager
+          ORACLE_SPEND_DELAY
+          (recreate_self
+            TREASURY_MOD_HASH
+            PROPOSAL_VALIDATOR
+            PROPOSAL_LENGTH
+            PROPOSAL_SOFTCLOSE_LENGTH
+            ATTENDANCE_REQUIRED
+            PASS_MARGIN
+            PROPOSAL_SELF_DESTRUCT_TIME
+            ORACLE_SPEND_DELAY
+          )
+          my_singleton_struct
+        )
+    )
+  )
+)

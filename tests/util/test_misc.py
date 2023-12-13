@@ -1,11 +1,25 @@
+from __future__ import annotations
+
+import contextlib
+from typing import AsyncIterator, Iterator, List
+
 import pytest
+
 from chia.util.errors import InvalidPathError
-from chia.util.misc import format_bytes, validate_directory_writable
-from chia.util.misc import format_minutes
+from chia.util.misc import (
+    SplitAsyncManager,
+    SplitManager,
+    format_bytes,
+    format_minutes,
+    split_async_manager,
+    split_manager,
+    to_batches,
+    validate_directory_writable,
+)
 
 
 class TestMisc:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_format_bytes(self):
         assert format_bytes(None) == "Invalid"
         assert format_bytes(dict()) == "Invalid"
@@ -25,7 +39,7 @@ class TestMisc:
         assert format_bytes(1024**10) == "1048576.000 YiB"
         assert format_bytes(1024**20).endswith("YiB")
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_format_minutes(self):
         assert format_minutes(None) == "Invalid"
         assert format_minutes(dict()) == "Invalid"
@@ -68,3 +82,227 @@ def test_validate_directory_writable(tmp_path) -> None:
     with pytest.raises(InvalidPathError, match="Directory not writable") as exc_info:
         validate_directory_writable(tmp_path)
     assert exc_info.value.path == tmp_path
+
+
+def test_empty_lists() -> None:
+    # An empty list should return an empty iterator and skip the loop's body.
+    empty: List[int] = []
+    with pytest.raises(StopIteration):
+        next(to_batches(empty, 1))
+
+
+@pytest.mark.parametrize("collection_type", [list, set])
+def test_valid(collection_type: type) -> None:
+    for k in range(1, 10):
+        test_collection = collection_type([x for x in range(0, k)])
+        for i in range(1, len(test_collection) + 1):  # Test batch_size 1 to 11 (length + 1)
+            checked = 0
+            for batch in to_batches(test_collection, i):
+                assert batch.remaining == max(len(test_collection) - checked - i, 0)
+                assert len(batch.entries) <= i
+                entries = []
+                for j, entry in enumerate(test_collection):
+                    if j < checked:
+                        continue
+                    if j >= min(checked + i, len(test_collection)):
+                        break
+                    entries.append(entry)
+                assert batch.entries == entries
+                checked += len(batch.entries)
+            assert checked == len(test_collection)
+
+
+def test_invalid_batch_sizes() -> None:
+    with pytest.raises(ValueError):
+        next(to_batches([], 0))
+
+    with pytest.raises(ValueError):
+        next(to_batches([], -1))
+
+
+def test_invalid_input_type() -> None:
+    with pytest.raises(ValueError, match="Unsupported type"):
+        next(to_batches(dict({1: 2}), 1))
+
+
+@contextlib.contextmanager
+def sync_manager(y: List[str]) -> Iterator[None]:
+    y.append("entered")
+    yield
+    y.append("exited")
+
+
+def test_split_manager_class_works() -> None:
+    x: List[str] = []
+
+    split = SplitManager(manager=sync_manager(y=x), object=None)
+    assert x == []
+
+    split.enter()
+    assert x == ["entered"]
+
+    split.exit()
+    assert x == ["entered", "exited"]
+
+
+def test_split_manager_function_exits_if_needed() -> None:
+    x: List[str] = []
+
+    with split_manager(manager=sync_manager(y=x), object=None) as split:
+        assert x == []
+
+        split.enter()
+        assert x == ["entered"]
+
+    assert x == ["entered", "exited"]
+
+
+def test_split_manager_function_skips_if_not_needed() -> None:
+    x: List[str] = []
+
+    with split_manager(manager=sync_manager(y=x), object=None) as split:
+        assert x == []
+
+        split.enter()
+        assert x == ["entered"]
+
+        split.exit()
+        assert x == ["entered", "exited"]
+
+    assert x == ["entered", "exited"]
+
+
+def test_split_manager_raises_on_second_entry() -> None:
+    x: List[str] = []
+
+    split = SplitManager(manager=sync_manager(y=x), object=None)
+    split.enter()
+
+    with pytest.raises(Exception, match="^already entered$"):
+        split.enter()
+
+
+def test_split_manager_raises_on_second_entry_after_exiting() -> None:
+    x: List[str] = []
+
+    split = SplitManager(manager=sync_manager(y=x), object=None)
+    split.enter()
+    split.exit()
+
+    with pytest.raises(Exception, match="^already entered, already exited$"):
+        split.enter()
+
+
+def test_split_manager_raises_on_second_exit() -> None:
+    x: List[str] = []
+
+    split = SplitManager(manager=sync_manager(y=x), object=None)
+    split.enter()
+    split.exit()
+
+    with pytest.raises(Exception, match="^already exited$"):
+        split.exit()
+
+
+def test_split_manager_raises_on_exit_without_entry() -> None:
+    x: List[str] = []
+
+    split = SplitManager(manager=sync_manager(y=x), object=None)
+
+    with pytest.raises(Exception, match="^not yet entered$"):
+        split.exit()
+
+
+@contextlib.asynccontextmanager
+async def async_manager(y: List[str]) -> AsyncIterator[None]:
+    y.append("entered")
+    yield
+    y.append("exited")
+
+
+@pytest.mark.anyio
+async def test_split_async_manager_class_works() -> None:
+    x: List[str] = []
+
+    split = SplitAsyncManager(manager=async_manager(y=x), object=None)
+    assert x == []
+
+    await split.enter()
+    assert x == ["entered"]
+
+    await split.exit()
+    assert x == ["entered", "exited"]
+
+
+@pytest.mark.anyio
+async def test_split_async_manager_function_exits_if_needed() -> None:
+    x: List[str] = []
+
+    async with split_async_manager(manager=async_manager(y=x), object=None) as split:
+        assert x == []
+
+        await split.enter()
+        assert x == ["entered"]
+
+    assert x == ["entered", "exited"]
+
+
+@pytest.mark.anyio
+async def test_split_async_manager_function_skips_if_not_needed() -> None:
+    x: List[str] = []
+
+    async with split_async_manager(manager=async_manager(y=x), object=None) as split:
+        assert x == []
+
+        await split.enter()
+        assert x == ["entered"]
+
+        await split.exit()
+        assert x == ["entered", "exited"]
+
+    assert x == ["entered", "exited"]
+
+
+@pytest.mark.anyio
+async def test_split_async_manager_raises_on_second_entry() -> None:
+    x: List[str] = []
+
+    split = SplitAsyncManager(manager=async_manager(y=x), object=None)
+    await split.enter()
+
+    with pytest.raises(Exception, match="^already entered$"):
+        await split.enter()
+
+
+@pytest.mark.anyio
+async def test_split_async_manager_raises_on_second_entry_after_exiting() -> None:
+    x: List[str] = []
+
+    split = SplitAsyncManager(manager=async_manager(y=x), object=None)
+    await split.enter()
+    await split.exit()
+
+    with pytest.raises(Exception, match="^already entered, already exited$"):
+        await split.enter()
+
+
+@pytest.mark.anyio
+async def test_split_async_manager_raises_on_second_exit() -> None:
+    x: List[str] = []
+
+    split = SplitAsyncManager(manager=async_manager(y=x), object=None)
+    await split.enter()
+    await split.exit()
+
+    with pytest.raises(Exception, match="^already exited$"):
+        await split.exit()
+
+
+@pytest.mark.anyio
+async def test_split_async_manager_raises_on_exit_without_entry() -> None:
+    x: List[str] = []
+
+    split = SplitAsyncManager(manager=async_manager(y=x), object=None)
+
+    with pytest.raises(Exception, match="^not yet entered$"):
+        await split.exit()

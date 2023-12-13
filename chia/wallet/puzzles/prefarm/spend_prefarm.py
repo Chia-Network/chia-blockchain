@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 import asyncio
 
-from blspy import G2Element
+from chia_rs import G2Element
 from clvm_tools import binutils
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
@@ -13,17 +16,14 @@ from chia.util.bech32m import decode_puzzle_hash
 from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint32, uint16
+from chia.util.ints import uint16, uint32
 
 
-def print_conditions(spend_bundle: SpendBundle):
+def print_conditions(spend_bundle: SpendBundle) -> None:
     print("\nConditions:")
     for coin_spend in spend_bundle.coin_spends:
         result = Program.from_bytes(bytes(coin_spend.puzzle_reveal)).run(Program.from_bytes(bytes(coin_spend.solution)))
-        error, result_human = parse_sexp_to_conditions(result)
-        assert error is None
-        assert result_human is not None
-        for cvp in result_human:
+        for cvp in parse_sexp_to_conditions(result):
             print(f"{ConditionOpcode(cvp.opcode).name}: {[var.hex() for var in cvp.vars]}")
     print("")
 
@@ -35,8 +35,11 @@ async def main() -> None:
     config = load_config(path, "config.yaml")
     client = await FullNodeRpcClient.create(self_hostname, rpc_port, path, config)
     try:
-        farmer_prefarm = (await client.get_block_record_by_height(1)).reward_claims_incorporated[1]
-        pool_prefarm = (await client.get_block_record_by_height(1)).reward_claims_incorporated[0]
+        block_record = await client.get_block_record_by_height(1)
+        assert block_record is not None
+        assert block_record.reward_claims_incorporated is not None
+        farmer_prefarm = block_record.reward_claims_incorporated[1]
+        pool_prefarm = block_record.reward_claims_incorporated[0]
 
         pool_amounts = int(calculate_pool_reward(uint32(0)) / 2)
         farmer_amounts = int(calculate_base_farmer_reward(uint32(0)) / 2)
@@ -49,11 +52,15 @@ async def main() -> None:
         ph1 = decode_puzzle_hash(address1)
         ph2 = decode_puzzle_hash(address2)
 
-        p_farmer_2 = Program.to(
-            binutils.assemble(f"(q . ((51 0x{ph1.hex()} {farmer_amounts}) (51 0x{ph2.hex()} {farmer_amounts})))")
+        p_farmer_2 = SerializedProgram.to(
+            binutils.assemble(
+                f"(q . ((51 0x{ph1.hex()} {farmer_amounts}) " f"(51 0x{ph2.hex()} {farmer_amounts})))"
+            )  # type: ignore[no-untyped-call]
         )
-        p_pool_2 = Program.to(
-            binutils.assemble(f"(q . ((51 0x{ph1.hex()} {pool_amounts}) (51 0x{ph2.hex()} {pool_amounts})))")
+        p_pool_2 = SerializedProgram.to(
+            binutils.assemble(
+                f"(q . ((51 0x{ph1.hex()} {pool_amounts}) " f"(51 0x{ph2.hex()} {pool_amounts})))"
+            )  # type: ignore[no-untyped-call]
         )
 
         print(f"Ph1: {ph1.hex()}")
@@ -61,7 +68,7 @@ async def main() -> None:
         assert ph1.hex() == "1b7ab2079fa635554ad9bd4812c622e46ee3b1875a7813afba127bb0cc9794f9"
         assert ph2.hex() == "6f184a7074c925ef8688ce56941eb8929be320265f824ec7e351356cc745d38a"
 
-        p_solution = Program.to(binutils.assemble("()"))
+        p_solution = SerializedProgram.to(binutils.assemble("()"))  # type: ignore[no-untyped-call]
 
         sb_farmer = SpendBundle([CoinSpend(farmer_prefarm, p_farmer_2, p_solution)], G2Element())
         sb_pool = SpendBundle([CoinSpend(pool_prefarm, p_pool_2, p_solution)], G2Element())

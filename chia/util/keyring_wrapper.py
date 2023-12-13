@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from sys import platform
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, overload
 
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
 from keyring.errors import KeyringError, PasswordDeleteError
+from typing_extensions import Literal
 
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.file_keyring import FileKeyring
@@ -27,9 +28,9 @@ OSPassphraseStore = Union[MacKeyring, WinKeyring]
 
 def get_os_passphrase_store() -> Optional[OSPassphraseStore]:
     if platform == "darwin":
-        return MacKeyring()
+        return MacKeyring()  # type: ignore[no-untyped-call]
     elif platform == "win32" or platform == "cygwin":
-        return WinKeyring()
+        return WinKeyring()  # type: ignore[no-untyped-call]
     return None
 
 
@@ -103,14 +104,29 @@ class KeyringWrapper:
         return passphrase
 
     @staticmethod
-    def set_keys_root_path(keys_root_path: Path):
+    def set_keys_root_path(keys_root_path: Path) -> None:
         """
         Used to set the keys_root_path prior to instantiating the __shared_instance
         """
         KeyringWrapper.__keys_root_path = keys_root_path
 
+    @overload
     @staticmethod
-    def get_shared_instance(create_if_necessary: bool = True):
+    def get_shared_instance() -> KeyringWrapper:
+        ...
+
+    @overload
+    @staticmethod
+    def get_shared_instance(create_if_necessary: Literal[True]) -> KeyringWrapper:
+        ...
+
+    @overload
+    @staticmethod
+    def get_shared_instance(create_if_necessary: bool) -> Optional[KeyringWrapper]:
+        ...
+
+    @staticmethod
+    def get_shared_instance(create_if_necessary: bool = True) -> Optional[KeyringWrapper]:
         if not KeyringWrapper.__shared_instance and create_if_necessary:
             KeyringWrapper.__shared_instance = KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
 
@@ -120,7 +136,7 @@ class KeyringWrapper:
     def cleanup_shared_instance() -> None:
         KeyringWrapper.__shared_instance = None
 
-    def get_keyring(self):
+    def get_keyring(self) -> FileKeyring:
         """
         Return the current keyring backend.
         """
@@ -135,7 +151,7 @@ class KeyringWrapper:
         """
         return self.cached_passphrase, self.cached_passphrase_is_validated
 
-    def set_cached_master_passphrase(self, passphrase: Optional[str], validated=False) -> None:
+    def set_cached_master_passphrase(self, passphrase: Optional[str], validated: bool = False) -> None:
         """
         Cache the provided passphrase and optionally indicate whether the passphrase
         has been validated.
@@ -207,7 +223,11 @@ class KeyringWrapper:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
-                passphrase_store.set_password(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME, passphrase)
+                passphrase_store.set_password(
+                    MASTER_PASSPHRASE_SERVICE_NAME,
+                    MASTER_PASSPHRASE_USER_NAME,
+                    passphrase,
+                )
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise
@@ -217,7 +237,10 @@ class KeyringWrapper:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
-                passphrase_store.delete_password(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME)
+                passphrase_store.delete_password(
+                    MASTER_PASSPHRASE_SERVICE_NAME,
+                    MASTER_PASSPHRASE_USER_NAME,
+                )
             except PasswordDeleteError:
                 if (
                     passphrase_store.get_credential(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME)
@@ -233,7 +256,10 @@ class KeyringWrapper:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
-                return passphrase_store.get_password(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME)
+                return passphrase_store.get_password(  # type: ignore[no-any-return]
+                    MASTER_PASSPHRASE_SERVICE_NAME,
+                    MASTER_PASSPHRASE_USER_NAME,
+                )
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise
@@ -244,13 +270,13 @@ class KeyringWrapper:
 
     # Keyring interface
 
-    def get_passphrase(self, service: str, user: str) -> str:
+    def get_passphrase(self, service: str, user: str) -> Optional[str]:
         return self.get_keyring().get_password(service, user)
 
-    def set_passphrase(self, service: str, user: str, passphrase: str):
+    def set_passphrase(self, service: str, user: str, passphrase: str) -> None:
         self.get_keyring().set_password(service, user, passphrase)
 
-    def delete_passphrase(self, service: str, user: str):
+    def delete_passphrase(self, service: str, user: str) -> None:
         self.get_keyring().delete_password(service, user)
 
     def get_label(self, fingerprint: int) -> Optional[str]:

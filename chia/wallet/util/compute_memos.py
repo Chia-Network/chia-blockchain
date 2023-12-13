@@ -1,4 +1,6 @@
-from typing import List, Dict
+from __future__ import annotations
+
+from typing import Dict, List
 
 from clvm.casts import int_from_bytes
 
@@ -17,7 +19,7 @@ def compute_memos_for_spend(coin_spend: CoinSpend) -> Dict[bytes32, List[bytes]]
         if condition[0] == ConditionOpcode.CREATE_COIN and len(condition) >= 4:
             # If only 3 elements (opcode + 2 args), there is no memo, this is ph, amount
             coin_added = Coin(coin_spend.coin.name(), bytes32(condition[1]), int_from_bytes(condition[2]))
-            if type(condition[3]) != list:
+            if type(condition[3]) is not list:
                 # If it's not a list, it's not the correct format
                 continue
             memos[coin_added.name()] = condition[3]

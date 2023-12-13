@@ -3,12 +3,16 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+import random
 import sqlite3
+import sys
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterable, Optional, TextIO, Type, Union
 
 import aiosqlite
+import anyio
 from typing_extensions import final
 
 if aiosqlite.sqlite_version_info < (3, 32, 0):
@@ -16,9 +20,17 @@ if aiosqlite.sqlite_version_info < (3, 32, 0):
 else:
     SQLITE_MAX_VARIABLE_NUMBER = 32700
 
+# integers in sqlite are limited by int64
+SQLITE_INT_MAX = 2**63 - 1
+
+
+def generate_in_memory_db_uri() -> str:
+    # We need to use shared cache as our DB wrapper uses different types of connections
+    return f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+
 
 async def execute_fetchone(
-    c: aiosqlite.Connection, sql: str, parameters: Iterable[Any] = None
+    c: aiosqlite.Connection, sql: str, parameters: Optional[Iterable[Any]] = None
 ) -> Optional[sqlite3.Row]:
     rows = await c.execute_fetchall(sql, parameters)
     for row in rows:
@@ -44,19 +56,17 @@ async def _create_connection(
 async def manage_connection(
     database: Union[str, Path],
     uri: bool = False,
-    log_path: Optional[Path] = None,
+    log_file: Optional[TextIO] = None,
     name: Optional[str] = None,
 ) -> AsyncIterator[aiosqlite.Connection]:
-    if log_path is not None:
-        with log_path.open("a", encoding="utf-8") as file:
-            connection = await _create_connection(database=database, uri=uri, log_file=file, name=name)
-    else:
-        connection = await _create_connection(database=database, uri=uri, name=name)
+    connection: aiosqlite.Connection
+    connection = await _create_connection(database=database, uri=uri, log_file=log_file, name=name)
 
     try:
         yield connection
     finally:
-        await connection.close()
+        with anyio.CancelScope(shield=True):
+            await connection.close()
 
 
 def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> None:
@@ -68,17 +78,40 @@ def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> No
     file.write(line)
 
 
+def get_host_parameter_limit() -> int:
+    # NOTE: This does not account for dynamically adjusted limits since it makes a
+    #       separate db and connection.  If aiosqlite adds support we should use it.
+    if sys.version_info >= (3, 11):
+        connection = sqlite3.connect(":memory:")
+
+        # sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER exists in 3.11, pylint
+        limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER  # pylint: disable=E1101
+        host_parameter_limit = connection.getlimit(limit_number)
+    else:
+        # guessing based on defaults, seems you can't query
+
+        # https://www.sqlite.org/changes.html#version_3_32_0
+        # Increase the default upper bound on the number of parameters from 999 to 32766.
+        if sqlite3.sqlite_version_info >= (3, 32, 0):
+            host_parameter_limit = 32766
+        else:
+            host_parameter_limit = 999
+    return host_parameter_limit
+
+
 @final
+@dataclass
 class DBWrapper2:
-    db_version: int
-    _lock: asyncio.Lock
-    _read_connections: asyncio.Queue[aiosqlite.Connection]
     _write_connection: aiosqlite.Connection
-    _num_read_connections: int
-    _in_use: Dict[asyncio.Task, aiosqlite.Connection]
-    _current_writer: Optional[asyncio.Task]
-    _savepoint_name: int
-    _log_file: Optional[TextIO]
+    db_version: int = 1
+    _log_file: Optional[TextIO] = None
+    host_parameter_limit: int = get_host_parameter_limit()
+    _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    _read_connections: asyncio.Queue[aiosqlite.Connection] = field(default_factory=asyncio.Queue)
+    _num_read_connections: int = 0
+    _in_use: Dict[asyncio.Task[object], aiosqlite.Connection] = field(default_factory=dict)
+    _current_writer: Optional[asyncio.Task[object]] = None
+    _savepoint_name: int = 0
 
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
@@ -87,21 +120,60 @@ class DBWrapper2:
         self._read_connections.put_nowait(c)
         self._num_read_connections += 1
 
-    def __init__(
-        self,
-        connection: aiosqlite.Connection,
+    @classmethod
+    @contextlib.asynccontextmanager
+    async def managed(
+        cls,
+        database: Union[str, Path],
+        *,
         db_version: int = 1,
-        log_file: Optional[TextIO] = None,
-    ) -> None:
-        self._read_connections = asyncio.Queue()
-        self._write_connection = connection
-        self._lock = asyncio.Lock()
-        self.db_version = db_version
-        self._num_read_connections = 0
-        self._in_use = {}
-        self._current_writer = None
-        self._savepoint_name = 0
-        self._log_file = log_file
+        uri: bool = False,
+        reader_count: int = 4,
+        log_path: Optional[Path] = None,
+        journal_mode: str = "WAL",
+        synchronous: Optional[str] = None,
+        foreign_keys: bool = False,
+        row_factory: Optional[Type[aiosqlite.Row]] = None,
+    ) -> AsyncIterator[DBWrapper2]:
+        async with contextlib.AsyncExitStack() as async_exit_stack:
+            if log_path is None:
+                log_file = None
+            else:
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_file = async_exit_stack.enter_context(log_path.open("a", encoding="utf-8"))
+
+            write_connection = await async_exit_stack.enter_async_context(
+                manage_connection(database=database, uri=uri, log_file=log_file, name="writer"),
+            )
+            await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
+            if synchronous is not None:
+                await (await write_connection.execute(f"pragma synchronous={synchronous}")).close()
+
+            await (await write_connection.execute(f"pragma foreign_keys={'ON' if foreign_keys else 'OFF'}")).close()
+
+            write_connection.row_factory = row_factory
+
+            self = cls(_write_connection=write_connection, db_version=db_version, _log_file=log_file)
+
+            for index in range(reader_count):
+                read_connection = await async_exit_stack.enter_async_context(
+                    manage_connection(
+                        database=database,
+                        uri=uri,
+                        log_file=log_file,
+                        name=f"reader-{index}",
+                    ),
+                )
+                read_connection.row_factory = row_factory
+                await self.add_connection(c=read_connection)
+
+            try:
+                yield self
+            finally:
+                with anyio.CancelScope(shield=True):
+                    while self._num_read_connections > 0:
+                        await self._read_connections.get()
+                        self._num_read_connections -= 1
 
     @classmethod
     async def create(
@@ -117,9 +189,11 @@ class DBWrapper2:
         foreign_keys: bool = False,
         row_factory: Optional[Type[aiosqlite.Row]] = None,
     ) -> DBWrapper2:
+        # WARNING: please use .managed() instead
         if log_path is None:
             log_file = None
         else:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
             log_file = log_path.open("a", encoding="utf-8")
         write_connection = await _create_connection(database=database, uri=uri, log_file=log_file, name="writer")
         await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
@@ -130,7 +204,7 @@ class DBWrapper2:
 
         write_connection.row_factory = row_factory
 
-        self = cls(connection=write_connection, db_version=db_version, log_file=log_file)
+        self = cls(_write_connection=write_connection, db_version=db_version, _log_file=log_file)
 
         for index in range(reader_count):
             read_connection = await _create_connection(
@@ -145,6 +219,7 @@ class DBWrapper2:
         return self
 
     async def close(self) -> None:
+        # WARNING: please use .managed() instead
         try:
             while self._num_read_connections > 0:
                 await (await self._read_connections.get()).close()

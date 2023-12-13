@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Generic, List, Optional, TypeVar
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final
@@ -21,7 +22,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import str2bool
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
-from chia.util.network import WebServer
+from chia.util.network import WebServer, resolve
 from chia.util.ws_message import WsRpcMessage, create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -30,10 +31,11 @@ max_message_size = 50 * 1024 * 1024  # 50MB
 
 EndpointResult = Dict[str, Any]
 Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
+_T_RpcApiProtocol = TypeVar("_T_RpcApiProtocol", bound="RpcApiProtocol")
 
 
 class StateChangedProtocol(Protocol):
-    def __call__(self, change: str, change_data: Dict[str, Any]) -> None:
+    def __call__(self, change: str, change_data: Optional[Dict[str, Any]]) -> None:
         ...
 
 
@@ -64,29 +66,13 @@ class RpcServiceProtocol(Protocol):
         """Called when a new connection is established to the server."""
         ...
 
-    def _close(self) -> None:
-        """Request that the service shuts down.
-
-        Initiate the shutdown procedure such that multiple activities are triggered
-        in preparation.  Follow by awaiting `._await_closed()` to wait for all tasks
-        to complete.
-        """
-        ...
-
-    async def _await_closed(self) -> None:
-        """Wait for all tasks to terminate.
-
-        To be called only after `._close()` is called to initiate the shutdown.
-        """
-        ...
-
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         """Register the callable that will process state change events."""
         ...
 
-    async def _start(self) -> None:
-        """Launch all necessary tasks and do any setup needed to be fully running."""
-        ...
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        yield  # pragma: no cover
 
 
 class RpcApiProtocol(Protocol):
@@ -120,8 +106,8 @@ def default_get_connections(server: ChiaServer, request_node_type: Optional[Node
         {
             "type": con.connection_type,
             "local_port": con.local_port,
-            "peer_host": con.peer_host,
-            "peer_port": con.peer_port,
+            "peer_host": con.peer_info.host,
+            "peer_port": con.peer_info.port,
             "peer_server_port": con.peer_server_port,
             "node_id": con.peer_node_id,
             "creation_time": con.creation_time,
@@ -136,44 +122,61 @@ def default_get_connections(server: ChiaServer, request_node_type: Optional[Node
 
 @final
 @dataclass
-class RpcServer:
+class RpcServer(Generic[_T_RpcApiProtocol]):
     """
     Implementation of RPC server.
     """
 
-    rpc_api: RpcApiProtocol
+    rpc_api: _T_RpcApiProtocol
     stop_cb: Callable[[], None]
     service_name: str
     ssl_context: SSLContext
     ssl_client_context: SSLContext
     webserver: Optional[WebServer] = None
+    daemon_heartbeat: int = 300
     daemon_connection_task: Optional[asyncio.Task[None]] = None
     shut_down: bool = False
     websocket: Optional[ClientWebSocketResponse] = None
     client_session: Optional[ClientSession] = None
+    prefer_ipv6: bool = False
 
     @classmethod
     def create(
-        cls, rpc_api: Any, service_name: str, stop_cb: Callable[[], None], root_path: Path, net_config: Dict[str, Any]
-    ) -> RpcServer:
+        cls,
+        rpc_api: _T_RpcApiProtocol,
+        service_name: str,
+        stop_cb: Callable[[], None],
+        root_path: Path,
+        net_config: Dict[str, Any],
+        prefer_ipv6: bool,
+    ) -> RpcServer[_T_RpcApiProtocol]:
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
         key_path = root_path / net_config["daemon_ssl"]["private_key"]
         ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
         ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
+        daemon_heartbeat = net_config.get("daemon_heartbeat", 300)
         ssl_context = ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
-        return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context)
+        return cls(
+            rpc_api,
+            stop_cb,
+            service_name,
+            ssl_context,
+            ssl_client_context,
+            daemon_heartbeat=daemon_heartbeat,
+            prefer_ipv6=prefer_ipv6,
+        )
 
-    async def start(self, self_hostname: str, rpc_port: uint16, max_request_body_size: int, prefer_ipv6: bool) -> None:
+    async def start(self, self_hostname: str, rpc_port: uint16, max_request_body_size: int) -> None:
         if self.webserver is not None:
             raise RuntimeError("RpcServer already started")
         self.webserver = await WebServer.create(
             hostname=self_hostname,
             port=rpc_port,
             max_request_body_size=max_request_body_size,
-            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()],
+            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self._get_routes().items()],
             ssl_context=self.ssl_context,
-            prefer_ipv6=prefer_ipv6,
+            prefer_ipv6=self.prefer_ipv6,
         )
 
     def close(self) -> None:
@@ -200,7 +203,6 @@ class RpcServer:
         if change == "add_connection" or change == "close_connection" or change == "peer_changed_peak":
             data = await self.get_connections({})
             if data is not None:
-
                 payload = create_payload_dict(
                     "get_connections",
                     data,
@@ -230,21 +232,21 @@ class RpcServer:
             raise RuntimeError("RpcServer is not started")
         return self.webserver.listen_port
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def _get_routes(self) -> Dict[str, Endpoint]:
         return {
             **self.rpc_api.get_routes(),
             "/get_connections": self.get_connections,
             "/open_connection": self.open_connection,
             "/close_connection": self.close_connection,
             "/stop_node": self.stop_node,
-            "/get_routes": self._get_routes,
+            "/get_routes": self.get_routes,
             "/healthz": self.healthz,
         }
 
-    async def _get_routes(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_routes(self, request: Dict[str, Any]) -> EndpointResult:
         return {
             "success": True,
-            "routes": list(self.get_routes().keys()),
+            "routes": list(self._get_routes().keys()),
         }
 
     async def get_connections(self, request: Dict[str, Any]) -> EndpointResult:
@@ -260,13 +262,13 @@ class RpcServer:
     async def open_connection(self, request: Dict[str, Any]) -> EndpointResult:
         host = request["host"]
         port = request["port"]
-        target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
+        target_node: PeerInfo = PeerInfo(await resolve(host, prefer_ipv6=self.prefer_ipv6), uint16(int(port)))
         on_connect = None
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect
         if not await self.rpc_api.service.server.start_client(target_node, on_connect):
-            raise ValueError("Start client failed, or server is not set")
-        return {}
+            return {"success": False, "error": f"could not connect to {target_node}"}
+        return {"success": True}
 
     async def close_connection(self, request: Dict[str, Any]) -> EndpointResult:
         node_id = hexstr_to_bytes(request["node_id"])
@@ -373,7 +375,7 @@ class RpcServer:
                         f"wss://{self_hostname}:{daemon_port}",
                         autoclose=True,
                         autoping=True,
-                        heartbeat=60,
+                        heartbeat=self.daemon_heartbeat,
                         ssl_context=self.ssl_client_context,
                         max_msg_size=max_message_size,
                     )
@@ -395,7 +397,7 @@ class RpcServer:
 
 
 async def start_rpc_server(
-    rpc_api: RpcApiProtocol,
+    rpc_api: _T_RpcApiProtocol,
     self_hostname: str,
     daemon_port: uint16,
     rpc_port: uint16,
@@ -404,7 +406,7 @@ async def start_rpc_server(
     net_config: Dict[str, object],
     connect_to_daemon: bool = True,
     max_request_body_size: Optional[int] = None,
-) -> RpcServer:
+) -> RpcServer[_T_RpcApiProtocol]:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
@@ -413,10 +415,13 @@ async def start_rpc_server(
         if max_request_body_size is None:
             max_request_body_size = 1024**2
 
-        rpc_server = RpcServer.create(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
-        rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
         prefer_ipv6 = str2bool(str(net_config.get("prefer_ipv6", False)))
-        await rpc_server.start(self_hostname, rpc_port, max_request_body_size, prefer_ipv6)
+
+        rpc_server = RpcServer.create(
+            rpc_api, rpc_api.service_name, stop_cb, root_path, net_config, prefer_ipv6=prefer_ipv6
+        )
+        rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
+        await rpc_server.start(self_hostname, rpc_port, max_request_body_size)
 
         if connect_to_daemon:
             rpc_server.connect_to_daemon(self_hostname, daemon_port)

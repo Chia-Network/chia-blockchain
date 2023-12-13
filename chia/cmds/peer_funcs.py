@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from chia.cmds.cmds_util import get_any_service_client
+from chia.cmds.cmds_util import NODE_TYPES, get_any_service_client
 from chia.rpc.rpc_client import RpcClient
 
 
@@ -17,7 +17,10 @@ async def add_node_connection(rpc_client: RpcClient, add_connection: str) -> Non
         )
         print(f"Connecting to {ip}, {port}")
         try:
-            await rpc_client.open_connection(ip, int(port))
+            result = await rpc_client.open_connection(ip, int(port))
+            err = result.get("error")
+            if result["success"] is False or err is not None:
+                print(err)
         except Exception:
             print(f"Failed to connect to {ip}:{port}")
 
@@ -50,7 +53,7 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
     import time
 
     from chia.server.outbound_message import NodeType
-    from chia.util.network import is_trusted_inner
+    from chia.util.network import is_trusted_peer
 
     connections = await rpc_client.get_connections()
     print("Connections:")
@@ -65,7 +68,7 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
         # Strip IPv6 brackets
         host = host.strip("[]")
 
-        trusted: bool = is_trusted_inner(host, con["node_id"], trusted_peers, False)
+        trusted: bool = is_trusted_peer(host, con["node_id"], trusted_peers, False)
         # Nodetype length is 9 because INTRODUCER will be deprecated
         if NodeType(con["type"]) is NodeType.FULL_NODE:
             peak_height = con.get("peak_height", None)
@@ -110,16 +113,14 @@ async def peer_async(
     add_connection: str,
     remove_connection: str,
 ) -> None:
-    rpc_client: Optional[RpcClient]
-    async with get_any_service_client(node_type, rpc_port, root_path) as node_config_fp:
-        rpc_client, config, _ = node_config_fp
-        if rpc_client is not None:
-            # Check or edit node connections
-            if show_connections:
-                trusted_peers: Dict[str, Any] = config["full_node"].get("trusted_peers", {})
-                await print_connections(rpc_client, trusted_peers)
-                # if called together with state, leave a blank line
-            if add_connection:
-                await add_node_connection(rpc_client, add_connection)
-            if remove_connection:
-                await remove_node_connection(rpc_client, remove_connection)
+    client_type = NODE_TYPES[node_type]
+    async with get_any_service_client(client_type, rpc_port, root_path) as (rpc_client, config):
+        # Check or edit node connections
+        if show_connections:
+            trusted_peers: Dict[str, Any] = config["full_node"].get("trusted_peers", {})
+            await print_connections(rpc_client, trusted_peers)
+            # if called together with state, leave a blank line
+        if add_connection:
+            await add_node_connection(rpc_client, add_connection)
+        if remove_connection:
+            await remove_node_connection(rpc_client, remove_connection)

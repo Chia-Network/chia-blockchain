@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import List, Optional
 
-from chia.types.fee_rate import FeeRate
+from chia.types.fee_rate import FeeRate, FeeRateV2
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
@@ -24,6 +25,21 @@ class FeeEstimate(Streamable):
     error: Optional[str]
     time_target: uint64  # unix time stamp in seconds
     estimated_fee_rate: FeeRate  # Mojos per clvm cost
+
+
+@dataclass(frozen=True)
+class FeeEstimateV2:
+    error: Optional[str]
+    time_target: uint64  # unix time stamp in seconds
+    estimated_fee_rate: FeeRateV2  # Mojos per clvm cost
+
+
+def fee_rate_v2_to_v1(fee_rate: FeeRateV2) -> FeeRate:
+    return FeeRate(uint64(math.ceil(fee_rate.mojos_per_clvm_cost)))
+
+
+def fee_estimate_v2_to_v1(fe: FeeEstimateV2) -> FeeEstimate:
+    return FeeEstimate(fe.error, fe.time_target, FeeRate(uint64(math.ceil(fe.estimated_fee_rate.mojos_per_clvm_cost))))
 
 
 @streamable

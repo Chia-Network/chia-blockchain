@@ -3,12 +3,14 @@
 set -o errexit
 
 USAGE_TEXT="\
-Usage: $0 [-adsph]
+Usage: $0 [-adilpsh]
 
   -a                          automated install, no questions
   -d                          install development dependencies
-  -s                          skip python package installation and just do pip install
+  -i                          install non-editable
+  -l                          install legacy keyring dependencies (linux only)
   -p                          additional plotters installation
+  -s                          skip python package installation and just do pip install
   -h                          display this help and exit
 "
 
@@ -20,17 +22,22 @@ PACMAN_AUTOMATED=
 EXTRAS=
 SKIP_PACKAGE_INSTALL=
 PLOTTER_INSTALL=
+EDITABLE='-e'
 
-while getopts adsph flag
+while getopts adilpsh flag
 do
   case "${flag}" in
     # automated
     a) PACMAN_AUTOMATED=--noconfirm;;
     # development
     d) EXTRAS=${EXTRAS}dev,;;
+    # non-editable
+    i) EDITABLE='';;
+    # legacy keyring
+    l) EXTRAS=${EXTRAS}legacy_keyring,;;
+    p) PLOTTER_INSTALL=1;;
     # simple install
     s) SKIP_PACKAGE_INSTALL=1;;
-    p) PLOTTER_INSTALL=1;;
     h) usage; exit 0;;
     *) echo; usage; exit 1;;
   esac
@@ -65,8 +72,6 @@ git submodule update --init mozilla-ca
 
 UBUNTU_PRE_20=0
 UBUNTU_20=0
-UBUNTU_21=0
-UBUNTU_22=0
 
 if $UBUNTU; then
   LSB_RELEASE=$(lsb_release -rs)
@@ -77,12 +82,8 @@ if $UBUNTU; then
   # Mint 20.04 responds with 20 here so 20 instead of 20.04
   if [ "$(echo "$LSB_RELEASE<20" | bc)" = "1" ]; then
     UBUNTU_PRE_20=1
-  elif [ "$(echo "$LSB_RELEASE<21" | bc)" = "1" ]; then
-    UBUNTU_20=1
-  elif [ "$(echo "$LSB_RELEASE<22" | bc)" = "1" ]; then
-    UBUNTU_21=1
   else
-    UBUNTU_22=1
+    UBUNTU_20=1
   fi
 fi
 
@@ -143,7 +144,7 @@ OPENSSL_VERSION_INT=
 find_python() {
   set +e
   unset BEST_VERSION
-  for V in 310 3.10 39 3.9 38 3.8 37 3.7 3; do
+  for V in 311 3.11 310 3.10 39 3.9 38 3.8 3; do
     if command -v python$V >/dev/null; then
       if [ "$BEST_VERSION" = "" ]; then
         BEST_VERSION=$V
@@ -196,17 +197,9 @@ elif [ "$(uname)" = "Linux" ]; then
     # misconfiguration of the secondary Python version 3.7.  The primary is Python 3.6.
     sudo apt-get install -y python3.7-venv python3.7-distutils openssl
   elif [ "$UBUNTU_20" = "1" ]; then
-    echo "Installing on Ubuntu 20.*."
+    echo "Installing on Ubuntu 20.* or newer."
     sudo apt-get update
-    sudo apt-get install -y python3.8-venv openssl
-  elif [ "$UBUNTU_21" = "1" ]; then
-    echo "Installing on Ubuntu 21.*."
-    sudo apt-get update
-    sudo apt-get install -y python3.9-venv openssl
-  elif [ "$UBUNTU_22" = "1" ]; then
-    echo "Installing on Ubuntu 22.* or newer."
-    sudo apt-get update
-    sudo apt-get install -y python3.10-venv openssl
+    sudo apt-get install -y python3-venv openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update
@@ -281,8 +274,8 @@ if ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
   exit 1
 fi
 
-if [ "$PYTHON_MAJOR_VER" -ne "3" ] || [ "$PYTHON_MINOR_VER" -lt "7" ] || [ "$PYTHON_MINOR_VER" -ge "11" ]; then
-  echo "Chia requires Python version >= 3.7 and  < 3.11.0" >&2
+if [ "$PYTHON_MAJOR_VER" -ne "3" ] || [ "$PYTHON_MINOR_VER" -lt "7" ] || [ "$PYTHON_MINOR_VER" -ge "12" ]; then
+  echo "Chia requires Python version >= 3.7 and  < 3.12.0" >&2
   echo "Current Python version = $INSTALL_PYTHON_VERSION" >&2
   # If Arch, direct to Arch Wiki
   if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
@@ -339,7 +332,7 @@ python -m pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
 python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-python -m pip install -e ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
+python -m pip install ${EDITABLE} ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
@@ -353,12 +346,12 @@ fi
 
 echo ""
 echo "Chia blockchain install.sh complete."
-echo "For assistance join us on Keybase in the #support chat channel:"
-echo "https://keybase.io/team/chia_network.public"
+echo "For assistance join us on Discord in the #support chat channel:"
+echo "https://discord.gg/chia"
 echo ""
 echo "Try the Quick Start Guide to running chia-blockchain:"
 echo "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
 echo ""
-echo "To install the GUI type 'sh install-gui.sh' after '. ./activate'."
+echo "To install the GUI run '. ./activate' then 'sh install-gui.sh'."
 echo ""
 echo "Type '. ./activate' and then 'chia init' to begin."

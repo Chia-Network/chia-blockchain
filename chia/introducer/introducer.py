@@ -1,17 +1,25 @@
+from __future__ import annotations
+
 import asyncio
+import contextlib
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, cast
 
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
+from chia.server.introducer_peers import VettedPeer
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
-from chia.server.introducer_peers import VettedPeer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.ints import uint64
 
 
 class Introducer:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Introducer", None)
+
     @property
     def server(self) -> ChiaServer:
         # This is a stop gap until the class usage is refactored such the values of
@@ -28,21 +36,20 @@ class Introducer:
         self._server: Optional[ChiaServer] = None
         self.log = logging.getLogger(__name__)
 
-    async def _start(self):
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
         self._vetting_task = asyncio.create_task(self._vetting_loop())
-
-    def _close(self):
-        self._shut_down = True
-        self._vetting_task.cancel()
-
-    async def _await_closed(self):
-        pass
-        # await self._vetting_task
+        try:
+            yield
+        finally:
+            self._shut_down = True
+            self._vetting_task.cancel()
+            # await self._vetting_task
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
         pass
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         # TODO: fill this out?
         pass
 

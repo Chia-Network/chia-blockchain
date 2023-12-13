@@ -1,9 +1,11 @@
+from __future__ import annotations
+
+import time
 from dataclasses import dataclass
 from enum import Enum
-import time
 from typing import Optional
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -171,5 +173,5 @@ def get_current_authentication_token(timeout: uint8) -> uint64:
 
 
 # Validate a given authentication token against our local time
-def validate_authentication_token(token: uint64, timeout: uint8):
+def validate_authentication_token(token: uint64, timeout: uint8) -> bool:
     return abs(token - get_current_authentication_token(timeout)) <= timeout

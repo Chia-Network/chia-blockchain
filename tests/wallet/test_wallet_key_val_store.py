@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 from chia.types.full_block import FullBlock
@@ -7,7 +9,7 @@ from tests.util.db_connection import DBConnection
 
 
 class TestWalletKeyValStore:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_store(self, bt):
         async with DBConnection(1) as db_wrapper:
             store = await KeyValStore.create(db_wrapper)

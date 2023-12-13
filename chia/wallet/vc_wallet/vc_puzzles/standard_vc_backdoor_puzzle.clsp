@@ -1,0 +1,74 @@
+; This is the standard puzzle that a VerifiedCredential provider will put into the backdoor slot of viral_backdoor.clsp
+
+; The goal of this puzzle is to recreate the VC exactly as it is except for three things:
+; 1) There is no longer a viral backdoor layer
+; 2) The metadata in the ownership layer becomes ()
+; 3) The transfer program in the ownership layer becomes a curried default
+(mod
+  (
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_HASH_HASH
+    OWNERSHIP_LAYER_MOD_HASH
+    VIRAL_BACKDOOR_MOD_HASH
+    DEFAULT_TRANSFER_PROGRAM_HASH
+    ; most of the specific information is solved rather than curried in because we don't care about committing to it
+    launcher_id  ; of the singleton this is inside of
+    metadata_hash  ; of the EML this is inside of
+    tp_hash  ; of the EML this is inside of
+    this_hash_hash  ; the hash of this puzzle with all of its curried arguments hashed AGAIN with (sha256 1 this_hash)
+    inner_puzzle_hash  ; that determines ownership of this coin
+    my_amount  ; this coin's amount
+    ownership_lineage_proof  ; need to solve the covenant layer one last time
+    previous_metadata_hash  ; like metadata_hash above but for the previous coin
+    announcement_nonce  ; Anything to announce (for fees/DID to hook onto)
+    (
+      provider_innerpuzhash  ; DID needs to authorize the transfer program (and therefore this backdoor)
+      my_coin_id
+    )
+  )
+
+  (include condition_codes.clib)
+  (include curry.clib)
+
+  (defconstant ONE 1)
+
+  (list
+    ; The purpose of this condition is just to make sure we're telling the truth about the current inner puzzle hash
+    (list ASSERT_MY_PUZZLEHASH
+      (curry_hashes SINGLETON_MOD_HASH
+        (sha256 TWO
+          (sha256 ONE SINGLETON_MOD_HASH)
+          (sha256 TWO
+            (sha256 ONE launcher_id)
+            SINGLETON_LAUNCHER_HASH_HASH
+          )
+        )
+        (curry_hashes OWNERSHIP_LAYER_MOD_HASH
+          (sha256 ONE OWNERSHIP_LAYER_MOD_HASH)
+          metadata_hash
+          tp_hash
+          (sha256 ONE tp_hash)
+          (curry_hashes VIRAL_BACKDOOR_MOD_HASH
+            (sha256 ONE VIRAL_BACKDOOR_MOD_HASH)
+            this_hash_hash
+            (sha256 ONE inner_puzzle_hash)
+          )
+        )
+      )
+    )
+    (list ASSERT_MY_AMOUNT my_amount)
+    (list CREATE_COIN inner_puzzle_hash my_amount)
+    (list CREATE_COIN_ANNOUNCEMENT announcement_nonce)  ; For fee hooks
+    (list
+      -10
+      ownership_lineage_proof  ; for covenant layer
+      (list previous_metadata_hash launcher_id)  ; for covenant layer parent morpher
+      (list  ; for transfer program
+        provider_innerpuzhash
+        my_coin_id
+        ()
+        DEFAULT_TRANSFER_PROGRAM_HASH
+      )
+    )
+  )
+)

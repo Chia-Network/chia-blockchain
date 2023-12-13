@@ -3,10 +3,16 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
-from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup
+from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, FeeEstimateV2, fee_estimate_v2_to_v1
 from chia.full_node.fee_estimation import FeeMempoolInfo
-from chia.full_node.fee_tracker import BucketResult, EstimateResult, FeeTracker, get_estimate_time_intervals
-from chia.types.fee_rate import FeeRate
+from chia.full_node.fee_tracker import (
+    BucketResult,
+    EstimateResult,
+    FeeTracker,
+    get_bucket_index,
+    get_estimate_time_intervals,
+)
+from chia.types.fee_rate import FeeRate, FeeRateV2
 from chia.util.ints import uint32, uint64
 
 
@@ -33,20 +39,20 @@ class SmartFeeEstimator:
         # get_bucket_index returns left (-1) bucket (-1). Start value is already -1
         # We want +1 from the lowest bucket it failed at. Thus +3
         max_val = len(self.fee_tracker.buckets) - 1
-        start_index = min(self.fee_tracker.get_bucket_index(fail_bucket.start) + 3, max_val)
+        start_index = min(get_bucket_index(self.fee_tracker.buckets, fail_bucket.start) + 3, max_val)
 
         fee_val: float = self.fee_tracker.buckets[start_index]
-        return fee_val
+        return fee_val / 1000.0
 
-    def get_estimate_for_block(self, block: uint32) -> FeeEstimate:
+    def get_estimate_for_block(self, block: uint32) -> FeeEstimateV2:
         estimate_result = self.fee_tracker.estimate_fee_for_block(block)
         return self.estimate_result_to_fee_estimate(estimate_result)
 
-    def get_estimate(self, time_offset_seconds: int) -> FeeEstimate:
+    def get_estimate(self, time_offset_seconds: int) -> FeeEstimateV2:
         estimate_result = self.fee_tracker.estimate_fee(time_offset_seconds)
         return self.estimate_result_to_fee_estimate(estimate_result)
 
-    def get_estimates(self, mempool_info: FeeMempoolInfo, ignore_mempool: bool = False) -> FeeEstimateGroup:
+    def get_estimates(self, info: FeeMempoolInfo, ignore_mempool: bool = False) -> FeeEstimateGroup:
         self.log.error(self.fee_tracker.buckets)
         short_time_seconds, med_time_seconds, long_time_seconds = get_estimate_time_intervals()
 
@@ -57,7 +63,7 @@ class SmartFeeEstimator:
         if tracking_length < 20:
             return FeeEstimateGroup(error="Not enough data", estimates=[])
 
-        if ignore_mempool is False and mempool_info.current_mempool_cost < int(mempool_info.MAX_BLOCK_COST_CLVM * 0.8):
+        if ignore_mempool is False and info.current_mempool_cost < int(info.mempool_info.max_block_clvm_cost * 0.8):
             return FeeEstimateGroup(
                 error=None,
                 estimates=[
@@ -72,13 +78,13 @@ class SmartFeeEstimator:
         short = self.estimate_result_to_fee_estimate(short_result)
         med = self.estimate_result_to_fee_estimate(med_result)
         long = self.estimate_result_to_fee_estimate(long_result)
+        estimates = [fee_estimate_v2_to_v1(e) for e in [short, med, long]]
+        return FeeEstimateGroup(error=None, estimates=estimates)
 
-        return FeeEstimateGroup(error=None, estimates=[short, med, long])
-
-    def estimate_result_to_fee_estimate(self, r: EstimateResult) -> FeeEstimate:
+    def estimate_result_to_fee_estimate(self, r: EstimateResult) -> FeeEstimateV2:
         fee: float = self.parse(r)
-        if fee == -1 or r.median == -1:
-            return FeeEstimate("Not enough data", r.requested_time, FeeRate(uint64(0)))
+        if fee == -1:
+            return FeeEstimateV2("Not enough data", r.requested_time, FeeRateV2(0))
         else:
             # convert from mojo / 1000 clvm_cost to mojo / 1 clvm_cost
-            return FeeEstimate(None, r.requested_time, FeeRate(uint64(fee / 1000)))
+            return FeeEstimateV2(None, r.requested_time, FeeRateV2(fee / 1000))

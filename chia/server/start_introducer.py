@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import pathlib
 import sys
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import Service, async_run
+from chia.types.aliases import IntroducerService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.misc import SignalHandlers
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -20,10 +22,10 @@ SERVICE_NAME = "introducer"
 
 def create_introducer_service(
     root_path: pathlib.Path,
-    config: Dict,
+    config: Dict[str, Any],
     advertised_port: Optional[int] = None,
     connect_to_daemon: bool = True,
-) -> Service[Introducer]:
+) -> IntroducerService:
     service_config = config[SERVICE_NAME]
 
     if advertised_port is None:
@@ -39,7 +41,6 @@ def create_introducer_service(
         peer_api=node__api,
         node_type=NodeType.INTRODUCER,
         service_name=SERVICE_NAME,
-        server_listen_ports=[service_config["port"]],
         network_id=network_id,
         advertised_port=advertised_port,
         connect_to_daemon=connect_to_daemon,
@@ -53,8 +54,9 @@ async def async_main() -> int:
     config[SERVICE_NAME] = service_config
     service = create_introducer_service(DEFAULT_ROOT_PATH, config)
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
-    await service.setup_process_global_state()
-    await service.run()
+    async with SignalHandlers.manage() as signal_handlers:
+        await service.setup_process_global_state(signal_handlers=signal_handlers)
+        await service.run()
 
     return 0
 

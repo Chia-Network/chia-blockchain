@@ -78,7 +78,7 @@ async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32
         dot_connections.append(f"""node_{hash} -> node_{left} [label="L"];""")
         dot_connections.append(f"""node_{hash} -> node_{right} [label="R"];""")
         dot_pair_boxes.append(
-            f"node [shape = box]; " f"{{rank = same; node_{left}->node_{right}[style=invis]; rankdir = LR}}"
+            f"node [shape = box]; {{rank = same; node_{left}->node_{right}[style=invis]; rankdir = LR}}"
         )
 
     lines = [
@@ -112,7 +112,7 @@ class Side(IntEnum):
     LEFT = 0
     RIGHT = 1
 
-    def other(self) -> "Side":
+    def other(self) -> Side:
         if self == Side.LEFT:
             return Side.RIGHT
 
@@ -154,7 +154,7 @@ class TerminalNode:
         return Program.to(self.key), Program.to(self.value)
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
+    def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
@@ -173,9 +173,9 @@ class ProofOfInclusionLayer:
     @classmethod
     def from_internal_node(
         cls,
-        internal_node: "InternalNode",
+        internal_node: InternalNode,
         traversal_child_hash: bytes32,
-    ) -> "ProofOfInclusionLayer":
+    ) -> ProofOfInclusionLayer:
         return ProofOfInclusionLayer(
             other_hash_side=internal_node.other_child_side(hash=traversal_child_hash),
             other_hash=internal_node.other_child_hash(hash=traversal_child_hash),
@@ -183,7 +183,7 @@ class ProofOfInclusionLayer:
         )
 
     @classmethod
-    def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> "ProofOfInclusionLayer":
+    def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> ProofOfInclusionLayer:
         combined_hash = calculate_internal_hash(
             hash=primary_hash,
             other_hash_side=other_hash_side,
@@ -250,7 +250,7 @@ class InternalNode:
     atom: None = None
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "InternalNode":
+    def from_row(cls, row: aiosqlite.Row) -> InternalNode:
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
@@ -285,7 +285,7 @@ class Root:
     status: Status
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "Root":
+    def from_row(cls, row: aiosqlite.Row) -> Root:
         raw_node_hash = row["node_hash"]
         if raw_node_hash is None:
             node_hash = None
@@ -298,6 +298,31 @@ class Root:
             generation=row["generation"],
             status=Status(row["status"]),
         )
+
+    def to_row(self) -> Dict[str, Any]:
+        return {
+            "tree_id": self.tree_id,
+            "node_hash": self.node_hash,
+            "generation": self.generation,
+            "status": self.status.value,
+        }
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Root:
+        return cls(
+            tree_id=bytes32.from_hexstr(marshalled["tree_id"]),
+            node_hash=None if marshalled["node_hash"] is None else bytes32.from_hexstr(marshalled["node_hash"]),
+            generation=marshalled["generation"],
+            status=Status(marshalled["status"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "tree_id": self.tree_id.hex(),
+            "node_hash": None if self.node_hash is None else self.node_hash.hex(),
+            "generation": self.generation,
+            "status": self.status.value,
+        }
 
 
 node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]] = {
@@ -617,9 +642,86 @@ class CancelOfferResponse:
         }
 
 
+@final
+@dataclasses.dataclass(frozen=True)
+class ClearPendingRootsRequest:
+    store_id: bytes32
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> ClearPendingRootsRequest:
+        return cls(
+            store_id=bytes32.from_hexstr(marshalled["store_id"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "store_id": self.store_id.hex(),
+        }
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class ClearPendingRootsResponse:
+    success: bool
+
+    root: Optional[Root]
+    # tree_id: bytes32
+    # node_hash: Optional[bytes32]
+    # generation: int
+    # status: Status
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> ClearPendingRootsResponse:
+        return cls(
+            success=marshalled["success"],
+            root=None if marshalled["root"] is None else Root.unmarshal(marshalled["root"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+            "root": None if self.root is None else self.root.marshal(),
+        }
+
+
 @dataclasses.dataclass(frozen=True)
 class SyncStatus:
     root_hash: bytes32
     generation: int
     target_root_hash: bytes32
     target_generation: int
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class PluginRemote:
+    url: str
+    # repr=False to avoid leaking secrets
+    headers: Dict[str, str] = dataclasses.field(default_factory=dict, hash=False, repr=False)
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> PluginRemote:
+        return cls(
+            url=marshalled["url"],
+            headers=marshalled["headers"],
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class PluginStatus:
+    uploaders: Dict[str, Dict[str, Any]]
+    downloaders: Dict[str, Dict[str, Any]]
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "plugin_status": {
+                "uploaders": self.uploaders,
+                "downloaders": self.downloaders,
+            }
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class InsertResult:
+    node_hash: bytes32
+    root: Root

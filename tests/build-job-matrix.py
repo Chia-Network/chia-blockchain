@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import logging
 import types
@@ -9,7 +10,7 @@ from typing import Any, Dict, List
 
 import testconfig
 
-root_path = Path(__file__).parent.resolve()
+root_path = Path(__file__).parent.absolute()
 project_root_path = root_path.parent
 
 
@@ -18,8 +19,6 @@ def skip(path: Path) -> bool:
 
 
 def subdirs(per: str) -> List[Path]:
-    dirs: List[Path]
-
     if per == "directory":
         glob_pattern = "**/"
     elif per == "file":
@@ -46,7 +45,7 @@ def subdirs(per: str) -> List[Path]:
 
 
 def module_dict(module: types.ModuleType) -> Dict[str, Any]:
-    return {k: v for k, v in module.__dict__.items() if not k.startswith("_")}
+    return {k: v for k, v in module.__dict__.items() if not k.startswith("_") and k != "annotations"}
 
 
 def dir_config(dir: Path) -> Dict[str, Any]:
@@ -59,14 +58,30 @@ def dir_config(dir: Path) -> Dict[str, Any]:
         return {}
 
 
+@dataclasses.dataclass
+class SpecifiedDefaultsError(Exception):
+    overlap: Dict[str, Any]
+
+    def __post_init__(self) -> None:
+        super().__init__()
+
+
 # Overwrite with directory specific values
 def update_config(parent: Dict[str, Any], child: Dict[str, Any]) -> Dict[str, Any]:
     if child is None:
         return parent
     conf = child
+
+    # avoid manual configuration set to default values
+    common_keys = set(parent.keys()).intersection(child.keys())
+    specified_defaulted_values = {k: parent[k] for k in common_keys if parent[k] == child[k]}
+    if len(specified_defaulted_values) > 0:
+        raise SpecifiedDefaultsError(overlap=specified_defaulted_values)
+
     for k, v in parent.items():
         if k not in child:
             conf[k] = v
+
     return conf
 
 
@@ -76,6 +91,7 @@ arg_parser.add_argument("--per", type=str, choices=["directory", "file"], requir
 arg_parser.add_argument("--verbose", "-v", action="store_true")
 arg_parser.add_argument("--only", action="append", default=[])
 arg_parser.add_argument("--duplicates", type=int, default=1)
+arg_parser.add_argument("--timeout-multiplier", type=float, default=1)
 args = arg_parser.parse_args()
 
 if args.verbose:
@@ -91,37 +107,74 @@ test_paths = [path for path in test_paths for _ in range(args.duplicates)]
 
 configuration = []
 
+specified_defaults: Dict[Path, Dict[str, Any]] = {}
+pytest_monitor_enabling_paths: List[Path] = []
+
 for path in test_paths:
     if path.is_dir():
         test_files = sorted(path.glob("test_*.py"))
         test_file_paths = [file.relative_to(project_root_path) for file in test_files]
         paths_for_cli = " ".join(path.as_posix() for path in test_file_paths)
+        config_path = path
     else:
         paths_for_cli = path.relative_to(project_root_path).as_posix()
+        config_path = path.parent
 
-    conf = update_config(module_dict(testconfig), dir_config(path))
+    try:
+        conf = update_config(module_dict(testconfig), dir_config(config_path))
+    except SpecifiedDefaultsError as e:
+        specified_defaults[root_path.joinpath(config_path, "config.py")] = e.overlap
+        continue
 
     # TODO: design a configurable system for this
     process_count = {
         "macos": {False: 0, True: 4}.get(conf["parallel"], conf["parallel"]),
         "ubuntu": {False: 0, True: 4}.get(conf["parallel"], conf["parallel"]),
-        "windows": {False: 0, True: 2}.get(conf["parallel"], conf["parallel"]),
+        "windows": {False: 0, True: 3}.get(conf["parallel"], conf["parallel"]),
     }
     pytest_parallel_args = {os: f" -n {count}" for os, count in process_count.items()}
 
+    enable_pytest_monitor = conf["check_resource_usage"]
+
+    if enable_pytest_monitor:
+        # NOTE: do not use until the hangs are fixed
+        #       https://github.com/CFMTech/pytest-monitor/issues/53
+        #       https://github.com/pythonprofilers/memory_profiler/issues/342
+
+        pytest_monitor_enabling_paths.append(path)
+
     for_matrix = {
         "check_resource_usage": conf["check_resource_usage"],
-        "enable_pytest_monitor": "-p monitor" if conf["check_resource_usage"] else "",
-        "job_timeout": conf["job_timeout"],
+        "enable_pytest_monitor": "-p monitor" if enable_pytest_monitor else "",
+        "job_timeout": round(conf["job_timeout"] * args.timeout_multiplier),
         "pytest_parallel_args": pytest_parallel_args,
         "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
         "install_timelord": conf["install_timelord"],
         "test_files": paths_for_cli,
         "name": ".".join(path.relative_to(root_path).with_suffix("").parts),
+        "legacy_keyring_required": conf.get("legacy_keyring_required", False),
     }
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
 
+messages: List[str] = []
+
+if len(specified_defaults) > 0:
+    message = f"Found {len(specified_defaults)} directories with specified defaults"
+    messages.append(message)
+    logging.error(f"{message}:")
+    for path, overlap in sorted(specified_defaults.items()):
+        logging.error(f" {path} : {overlap}")
+
+if len(pytest_monitor_enabling_paths) > 0:
+    message = f"Found {len(pytest_monitor_enabling_paths)} directories with pytest-monitor enabled"
+    messages.append(message)
+    logging.error(f"{message}:")
+    for path in sorted(pytest_monitor_enabling_paths):
+        logging.error(f" {path}")
+
+if len(messages) > 0:
+    raise Exception("\n".join(messages))
 
 configuration_json = json.dumps(configuration)
 

@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional, Tuple
+from decimal import Decimal
+from typing import Optional, Sequence
 
 import click
 
-from chia.cmds.cmds_util import execute_with_wallet
-from chia.util.config import load_config, selected_network_address_prefix
+from chia.cmds import options
 
 
-@click.group("coins", short_help="Manage your wallets coins")
+@click.group("coins", help="Manage your wallets coins")
 @click.pass_context
 def coins_cmd(ctx: click.Context) -> None:
     pass
 
 
-@coins_cmd.command("list", short_help="List all coins")
+@coins_cmd.command("list", help="List all coins")
 @click.option(
     "-p",
     "--wallet-rpc-port",
@@ -23,34 +23,32 @@ def coins_cmd(ctx: click.Context) -> None:
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-u", "--show_unconfirmed", help="Separately display unconfirmed coins.", is_flag=True)
+@click.option("-u", "--show-unconfirmed", help="Separately display unconfirmed coins.", is_flag=True)
 @click.option(
-    "-a",
-    "--min-coin-amount",
+    "--min-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
     default="0",
 )
 @click.option(
-    "-l",
-    "--max-coin-amount",
+    "--max-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
     type=str,
     default="0",
 )
 @click.option(
-    "-e",
-    "--excluded-coin-ids",
+    "--exclude-coin",
+    "coins_to_exclude",
     multiple=True,
     help="prevent this coin from being included.",
 )
 @click.option(
-    "-x",
-    "--excluded-coin-amounts",
+    "--exclude-amount",
+    "amounts_to_exclude",
     multiple=True,
-    help="Exclude any coins with this amount from being included.",
+    help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
     "--paginate/--no-paginate",
@@ -64,30 +62,30 @@ def list_cmd(
     fingerprint: int,
     id: int,
     show_unconfirmed: bool,
-    min_coin_amount: str,
-    max_coin_amount: str,
-    excluded_coin_ids: Tuple[str],
-    excluded_coin_amounts: Tuple[int],
+    min_amount: str,
+    max_amount: str,
+    coins_to_exclude: Sequence[str],
+    amounts_to_exclude: Sequence[str],
     paginate: Optional[bool],
 ) -> None:
-    config = load_config(ctx.obj["root_path"], "config.yaml", "wallet")
-    address_prefix = selected_network_address_prefix(config)
-    extra_params = {
-        "id": id,
-        "max_coin_amount": max_coin_amount,
-        "min_coin_amount": min_coin_amount,
-        "excluded_amounts": excluded_coin_amounts,
-        "excluded_coin_ids": list(excluded_coin_ids),
-        "addr_prefix": address_prefix,
-        "show_unconfirmed": show_unconfirmed,
-        "paginate": paginate,
-    }
     from .coin_funcs import async_list
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_list))
+    asyncio.run(
+        async_list(
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            wallet_id=id,
+            max_coin_amount=max_amount,
+            min_coin_amount=min_amount,
+            excluded_amounts=amounts_to_exclude,
+            excluded_coin_ids=coins_to_exclude,
+            show_unconfirmed=show_unconfirmed,
+            paginate=paginate,
+        )
+    )
 
 
-@coins_cmd.command("combine", short_help="Combine dust coins")
+@coins_cmd.command("combine", help="Combine dust coins")
 @click.option(
     "-p",
     "--wallet-rpc-port",
@@ -95,27 +93,27 @@ def list_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
     "-a",
-    "--target-coin-amount",
-    help="An optional target coin amount, if you want to create a coin with a specific amount.",
+    "--target-amount",
+    help="Select coins until this amount (in XCH or CAT) is reached. \
+    Combine all selected coins into one coin, which will have a value of at least target-amount",
     type=str,
     default="0",
 )
 @click.option(
-    "-b",
-    "--min-coin-amount",
+    "--min-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
     default="0",
 )
 @click.option(
-    "-e",
-    "--excluded-coin-amounts",
+    "--exclude-amount",
+    "amounts_to_exclude",
     multiple=True,
-    help="Exclude any coins with this amount from being included.",
+    help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
     "-n",
@@ -126,12 +124,10 @@ def list_cmd(
     help="The number of coins we are combining.",
 )
 @click.option(
-    "-x",
-    "--max-dust-amount",
+    "--max-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
     type=str,
-    show_default=True,
-    default="0.000001000000",  # 1000000 mojo
+    default="0",  # 0 means no limit
 )
 @click.option(
     "-m",
@@ -143,47 +139,50 @@ def list_cmd(
     required=True,
 )
 @click.option(
-    "-t",
-    "--target_coin_ids",
+    "--input-coin",
+    "input_coins",
     multiple=True,
     help="Only combine coins with these ids.",
 )
 @click.option(
-    "-l",
-    "--largest_coins_first",
-    help="Sort coins from largest to smallest instead of smallest to largest.",
-    is_flag=True,
+    "--largest-first/--smallest-first",
+    "largest_first",
+    default=False,
+    help="Sort coins from largest to smallest or smallest to largest.",
 )
 def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
-    target_coin_amount: str,
-    min_coin_amount: str,
-    excluded_coin_amounts: Tuple[int],
+    target_amount: str,
+    min_amount: str,
+    amounts_to_exclude: Sequence[str],
     number_of_coins: int,
-    max_dust_amount: str,
+    max_amount: str,
     fee: str,
-    target_coin_ids: Tuple[str],
-    largest_coins_first: bool,
+    input_coins: Sequence[str],
+    largest_first: bool,
 ) -> None:
-    extra_params = {
-        "id": id,
-        "target_coin_amount": target_coin_amount,
-        "min_coin_amount": min_coin_amount,
-        "excluded_amounts": excluded_coin_amounts,
-        "number_of_coins": number_of_coins,
-        "max_dust_amount": max_dust_amount,
-        "fee": fee,
-        "target_coin_ids": list(target_coin_ids),
-        "largest": largest_coins_first,
-    }
     from .coin_funcs import async_combine
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_combine))
+    asyncio.run(
+        async_combine(
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            wallet_id=id,
+            fee=Decimal(fee),
+            max_coin_amount=max_amount,
+            min_coin_amount=min_amount,
+            excluded_amounts=amounts_to_exclude,
+            number_of_coins=number_of_coins,
+            target_coin_amount=Decimal(target_amount),
+            target_coin_ids_str=input_coins,
+            largest_first=largest_first,
+        )
+    )
 
 
-@coins_cmd.command("split", short_help="Split up larger coins")
+@coins_cmd.command("split", help="Split up larger coins")
 @click.option(
     "-p",
     "--wallet-rpc-port",
@@ -191,13 +190,14 @@ def combine_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
     "-n",
     "--number-of-coins",
     type=int,
     help="The number of coins we are creating.",
+    required=True,
 )
 @click.option(
     "-m",
@@ -215,7 +215,6 @@ def combine_cmd(
     type=str,
     required=True,
 )
-@click.option("-u", "--unique_addresses", is_flag=True, help="Generate a new address for each coin.")
 @click.option("-t", "--target-coin-id", type=str, required=True, help="The coin id of the coin we are splitting.")
 def split_cmd(
     wallet_rpc_port: Optional[int],
@@ -224,17 +223,18 @@ def split_cmd(
     number_of_coins: int,
     fee: str,
     amount_per_coin: str,
-    unique_addresses: bool,
     target_coin_id: str,
 ) -> None:
-    extra_params = {
-        "id": id,
-        "number_of_coins": number_of_coins,
-        "fee": fee,
-        "amount_per_coin": amount_per_coin,
-        "unique_addresses": unique_addresses,
-        "target_coin_id": target_coin_id,
-    }
     from .coin_funcs import async_split
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_split))
+    asyncio.run(
+        async_split(
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            wallet_id=id,
+            fee=Decimal(fee),
+            number_of_coins=number_of_coins,
+            amount_per_coin=Decimal(amount_per_coin),
+            target_coin_id_str=target_coin_id,
+        )
+    )

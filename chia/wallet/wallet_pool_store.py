@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import List, Tuple
 
@@ -110,4 +112,9 @@ class WalletPoolStore:
             cursor = await conn.execute(
                 "DELETE FROM pool_state_transitions WHERE height>? AND wallet_id=?", (height, wallet_id_arg)
             )
+            await cursor.close()
+
+    async def delete_wallet(self, wallet_id: uint32) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute("DELETE FROM pool_state_transitions WHERE wallet_id=?", (wallet_id,))
             await cursor.close()

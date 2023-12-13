@@ -17,8 +17,17 @@ from chia.util.service_groups import services_for_groups
 
 def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     os.environ["CHIA_ROOT"] = str(root_path)
-    # TODO: use startupinfo=subprocess.DETACHED_PROCESS on windows
-    process = subprocess.Popen([sys.argv[0], "run_daemon", "--wait-for-unlock"], stdout=subprocess.PIPE)
+    creationflags = 0
+    if sys.platform == "win32":
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
+
+    process = subprocess.Popen(
+        [sys.argv[0], "run_daemon", "--wait-for-unlock"],
+        encoding="utf-8",
+        stdout=subprocess.PIPE,
+        creationflags=creationflags,
+    )
+
     return process
 
 
@@ -38,7 +47,7 @@ async def create_start_daemon_connection(root_path: Path, config: Dict[str, Any]
         passphrase = None
         if await connection.is_keyring_locked():
             passphrase = Keychain.get_cached_master_passphrase()
-            if not Keychain.master_passphrase_is_valid(passphrase):
+            if passphrase is None or not Keychain.master_passphrase_is_valid(passphrase):
                 with ThreadPoolExecutor(max_workers=1, thread_name_prefix="get_current_passphrase") as executor:
                     passphrase = await asyncio.get_running_loop().run_in_executor(executor, get_current_passphrase)
 
@@ -50,7 +59,7 @@ async def create_start_daemon_connection(root_path: Path, config: Dict[str, Any]
     return None
 
 
-async def async_start(root_path: Path, config: Dict[str, Any], group: str, restart: bool) -> None:
+async def async_start(root_path: Path, config: Dict[str, Any], group: tuple[str, ...], restart: bool) -> None:
     try:
         daemon = await create_start_daemon_connection(root_path, config)
     except KeychainMaxUnlockAttempts:

@@ -26,71 +26,63 @@ def rand_bytes(num) -> bytes:
     return bytes(ret)
 
 
-class TestDbUpgrade:
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize("with_hints", [True, False])
-    async def test_blocks(self, default_1000_blocks, with_hints: bool):
+@pytest.mark.anyio
+@pytest.mark.parametrize("with_hints", [True, False])
+@pytest.mark.skip("we no longer support DB v1")
+async def test_blocks(default_1000_blocks, with_hints: bool):
+    blocks = default_1000_blocks
 
-        blocks = default_1000_blocks
+    hints: List[Tuple[bytes32, bytes]] = []
+    for i in range(351):
+        hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
 
-        hints: List[Tuple[bytes32, bytes]] = []
-        for i in range(351):
-            hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
+    # the v1 schema allows duplicates in the hints table
+    for i in range(10):
+        coin_id = bytes32(rand_bytes(32))
+        hint = rand_bytes(20)
+        hints.append((coin_id, hint))
+        hints.append((coin_id, hint))
 
-        # the v1 schema allows duplicates in the hints table
-        for i in range(10):
-            coin_id = bytes32(rand_bytes(32))
-            hint = rand_bytes(20)
-            hints.append((coin_id, hint))
-            hints.append((coin_id, hint))
+    for i in range(2000):
+        hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
 
-        for i in range(2000):
-            hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
+    for i in range(5):
+        coin_id = bytes32(rand_bytes(32))
+        hint = rand_bytes(20)
+        hints.append((coin_id, hint))
+        hints.append((coin_id, hint))
 
-        for i in range(5):
-            coin_id = bytes32(rand_bytes(32))
-            hint = rand_bytes(20)
-            hints.append((coin_id, hint))
-            hints.append((coin_id, hint))
+    with TempFile() as in_file, TempFile() as out_file:
+        async with DBWrapper2.managed(
+            database=in_file,
+            reader_count=1,
+            db_version=1,
+            journal_mode="OFF",
+            synchronous="OFF",
+        ) as db_wrapper1:
+            block_store1 = await BlockStore.create(db_wrapper1)
+            coin_store1 = await CoinStore.create(db_wrapper1)
+            if with_hints:
+                hint_store1: Optional[HintStore] = await HintStore.create(db_wrapper1)
+                for h in hints:
+                    assert hint_store1 is not None
+                    await hint_store1.add_hints([(h[0], h[1])])
+            else:
+                hint_store1 = None
 
-        with TempFile() as in_file, TempFile() as out_file:
+            bc = await Blockchain.create(coin_store1, block_store1, test_constants, Path("."), reserved_cores=0)
 
-            db_wrapper1 = await DBWrapper2.create(
-                database=in_file,
-                reader_count=1,
-                db_version=1,
-                journal_mode="OFF",
-                synchronous="OFF",
-            )
+            for block in blocks:
+                # await _validate_and_add_block(bc, block)
+                results = PreValidationResult(None, uint64(1), None, False)
+                result, err, _ = await bc.add_block(block, results)
+                assert err is None
 
-            try:
-                block_store1 = await BlockStore.create(db_wrapper1)
-                coin_store1 = await CoinStore.create(db_wrapper1)
-                if with_hints:
-                    hint_store1: Optional[HintStore] = await HintStore.create(db_wrapper1)
-                    for h in hints:
-                        assert hint_store1 is not None
-                        await hint_store1.add_hints([(h[0], h[1])])
-                else:
-                    hint_store1 = None
+        # now, convert v1 in_file to v2 out_file
+        convert_v1_to_v2(in_file, out_file)
 
-                bc = await Blockchain.create(coin_store1, block_store1, test_constants, Path("."), reserved_cores=0)
-
-                for block in blocks:
-                    # await _validate_and_add_block(bc, block)
-                    results = PreValidationResult(None, uint64(1), None, False)
-                    result, err, _ = await bc.receive_block(block, results)
-                    assert err is None
-            finally:
-                await db_wrapper1.close()
-
-            # now, convert v1 in_file to v2 out_file
-            convert_v1_to_v2(in_file, out_file)
-
-            db_wrapper1 = await DBWrapper2.create(database=in_file, reader_count=1, db_version=1)
-            db_wrapper2 = await DBWrapper2.create(database=out_file, reader_count=1, db_version=2)
-
-            try:
+        async with DBWrapper2.managed(database=in_file, reader_count=1, db_version=1) as db_wrapper1:
+            async with DBWrapper2.managed(database=out_file, reader_count=1, db_version=2) as db_wrapper2:
                 block_store1 = await BlockStore.create(db_wrapper1)
                 coin_store1 = await CoinStore.create(db_wrapper1)
                 hint_store1 = None
@@ -136,6 +128,3 @@ class TestDbUpgrade:
                     for c in coins:
                         n = c.coin.name()
                         assert await coin_store1.get_coin_record(n) == await coin_store2.get_coin_record(n)
-            finally:
-                await db_wrapper1.close()
-                await db_wrapper2.close()

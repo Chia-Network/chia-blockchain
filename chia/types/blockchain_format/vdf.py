@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=200)
-def get_discriminant(challenge, size_bites) -> int:
+def get_discriminant(challenge: bytes32, size_bites: int) -> int:
     return int(
         create_discriminant(challenge, size_bites),
         16,
@@ -34,9 +34,9 @@ def verify_vdf(
     number_of_iterations: uint64,
     discriminant_size: int,
     witness_type: uint8,
-):
-
-    return verify_n_wesolowski(
+) -> bool:
+    # TODO: chiavdf needs hinted
+    return verify_n_wesolowski(  # type:ignore[no-any-return]
         str(disc),
         input_el,
         output,
@@ -61,35 +61,36 @@ class VDFProof(Streamable):
     witness: bytes
     normalized_to_identity: bool
 
-    def is_valid(
-        self,
-        constants: ConsensusConstants,
-        input_el: ClassgroupElement,
-        info: VDFInfo,
-        target_vdf_info: Optional[VDFInfo] = None,
-    ) -> bool:
-        """
-        If target_vdf_info is passed in, it is compared with info.
-        """
-        if target_vdf_info is not None and info != target_vdf_info:
-            tb = traceback.format_stack()
-            log.error(f"{tb} INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
-            return False
-        if self.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
-            return False
-        try:
-            disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
-            # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
-            return verify_vdf(
-                disc,
-                input_el.data,
-                info.output.data + bytes(self.witness),
-                info.number_of_iterations,
-                constants.DISCRIMINANT_SIZE_BITS,
-                self.witness_type,
-            )
-        except Exception:
-            return False
+
+def validate_vdf(
+    proof: VDFProof,
+    constants: ConsensusConstants,
+    input_el: ClassgroupElement,
+    info: VDFInfo,
+    target_vdf_info: Optional[VDFInfo] = None,
+) -> bool:
+    """
+    If target_vdf_info is passed in, it is compared with info.
+    """
+    if target_vdf_info is not None and info != target_vdf_info:
+        tb = traceback.format_stack()
+        log.error(f"{tb} INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
+        return False
+    if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
+        return False
+    try:
+        disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
+        # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
+        return verify_vdf(
+            disc,
+            input_el.data,
+            info.output.data + bytes(proof.witness),
+            info.number_of_iterations,
+            constants.DISCRIMINANT_SIZE_BITS,
+            proof.witness_type,
+        )
+    except Exception:
+        return False
 
 
 # Stores, for a given VDF, the field that uses it.

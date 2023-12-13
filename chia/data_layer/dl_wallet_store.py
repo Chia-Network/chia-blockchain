@@ -55,41 +55,42 @@ class DataLayerStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS singleton_records("
-                    "coin_id blob PRIMARY KEY,"
-                    " launcher_id blob,"
-                    " root blob,"
-                    " inner_puzzle_hash blob,"
-                    " confirmed tinyint,"
-                    " confirmed_at_height int,"
-                    " proof blob,"
-                    " generation int,"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
-                    " timestamp int)"
-                )
+                "CREATE TABLE IF NOT EXISTS singleton_records("
+                "coin_id blob PRIMARY KEY,"
+                " launcher_id blob,"
+                " root blob,"
+                " inner_puzzle_hash blob,"
+                " confirmed tinyint,"
+                " confirmed_at_height int,"
+                " proof blob,"
+                " generation int,"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
+                " timestamp int)"
             )
 
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS mirrors("
-                    "coin_id blob PRIMARY KEY,"
-                    "launcher_id blob,"
-                    "amount blob,"
-                    "urls blob,"
-                    "ours tinyint)"
-                )
+                "CREATE TABLE IF NOT EXISTS mirrors("
+                "coin_id blob PRIMARY KEY,"
+                "launcher_id blob,"
+                "amount blob,"
+                "urls blob,"
+                "ours tinyint)"
             )
 
-            await conn.execute("CREATE INDEX IF NOT EXISTS coin_id on singleton_records(coin_id)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS launcher_id on singleton_records(launcher_id)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS root on singleton_records(root)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS inner_puzzle_hash on singleton_records(inner_puzzle_hash)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS confirmed_at_height on singleton_records(root)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS generation on singleton_records(generation)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS singleton_records_launcher_id_index ON singleton_records(launcher_id)"
+            )
+            await conn.execute("CREATE INDEX IF NOT EXISTS singleton_records_root_index ON singleton_records(root)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS singleton_records_confirmed_at_height_index "
+                "ON singleton_records(confirmed_at_height)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS singleton_records_generation_index ON singleton_records(generation)"
+            )
 
-            await conn.execute(("CREATE TABLE IF NOT EXISTS launchers(id blob PRIMARY KEY, coin blob)"))
+            await conn.execute("CREATE TABLE IF NOT EXISTS launchers(id blob PRIMARY KEY, coin blob)")
 
-            await conn.execute("CREATE INDEX IF NOT EXISTS id on launchers(id)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS mirrors_launcher_id_index ON mirrors(launcher_id)")
 
         return self
 
@@ -246,7 +247,9 @@ class DataLayerStore:
         """
         Add a new launcher coin's information to the DB
         """
-        launcher_bytes: bytes = launcher.parent_coin_info + launcher.puzzle_hash + bytes(uint64(launcher.amount))
+        launcher_bytes: bytes = (
+            launcher.parent_coin_info + launcher.puzzle_hash + uint64(launcher.amount).stream_to_bytes()
+        )
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO launchers VALUES (?, ?)",
@@ -304,8 +307,10 @@ class DataLayerStore:
                 (
                     mirror.coin_id,
                     mirror.launcher_id,
-                    bytes(mirror.amount),
-                    b"".join([bytes(uint16(len(url))) + url for url in mirror.urls]),  # prefix each item with a length
+                    mirror.amount.stream_to_bytes(),
+                    b"".join(
+                        [uint16(len(url)).stream_to_bytes() + url for url in mirror.urls]
+                    ),  # prefix each item with a length
                     1 if mirror.ours else 0,
                 ),
             )

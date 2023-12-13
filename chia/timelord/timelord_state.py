@@ -49,7 +49,7 @@ class LastState:
         self.passed_ses_height_but_not_yet_included = False
         self.infused_ses = False
 
-    def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]):
+    def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]) -> None:
         if isinstance(state, timelord_protocol.NewPeakTimelord):
             self.state_type = StateType.PEAK
             self.peak = state
@@ -59,6 +59,7 @@ class LastState:
                 state.reward_chain_block,
                 state.sub_slot_iters,
                 state.difficulty,
+                state.reward_chain_block.height,
             )
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary

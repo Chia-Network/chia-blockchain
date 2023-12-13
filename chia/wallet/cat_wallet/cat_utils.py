@@ -1,21 +1,34 @@
-import dataclasses
-from typing import List, Iterator, Optional
+from __future__ import annotations
 
-from blspy import G2Element
+import dataclasses
+from typing import Iterator, List, Optional
+
+from chia_rs import G2Element
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import CoinSpend, SpendBundle
+from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 NULL_SIGNATURE = G2Element()
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
+CAT_MOD = load_clvm_maybe_recompile("cat_v2.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles")
+CAT_MOD_HASH = CAT_MOD.get_tree_hash()
+CAT_MOD_HASH_HASH: bytes32 = Program.to(CAT_MOD_HASH).get_tree_hash()
+
+
+def empty_program() -> Program:
+    # ignoring hint error here for:
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
+    return Program.to([])  # type: ignore[no-any-return]
 
 
 # information needed to spend a cc
@@ -25,10 +38,10 @@ class SpendableCAT:
     limitations_program_hash: bytes32
     inner_puzzle: Program
     inner_solution: Program
-    limitations_solution: Program = Program.to([])
+    limitations_solution: Program = dataclasses.field(default_factory=empty_program)
     lineage_proof: LineageProof = LineageProof()
     extra_delta: int = 0
-    limitations_program_reveal: Program = Program.to([])
+    limitations_program_reveal: Program = dataclasses.field(default_factory=empty_program)
 
 
 def match_cat_puzzle(puzzle: UncurriedPuzzle) -> Optional[Iterator[Program]]:
@@ -101,14 +114,11 @@ def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_li
     # figure out what the deltas are by running the inner puzzles & solutions
     deltas: List[int] = []
     for spend_info in spendable_cat_list:
-        error, conditions, cost = conditions_dict_for_solution(
-            spend_info.inner_puzzle, spend_info.inner_solution, INFINITE_COST
-        )
+        conditions = conditions_dict_for_solution(spend_info.inner_puzzle, spend_info.inner_solution, INFINITE_COST)
         total = spend_info.extra_delta * -1
-        if conditions:
-            for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
-                if _.vars[1] != b"\x8f":  # -113 in bytes
-                    total += Program.to(_.vars[1]).as_int()
+        for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
+            if _.vars[1] != b"\x8f":  # -113 in bytes
+                total += Program.to(_.vars[1]).as_int()
         deltas.append(spend_info.coin.amount - total)
 
     if sum(deltas) != 0:

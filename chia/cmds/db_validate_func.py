@@ -41,7 +41,6 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
 
     print(f"opening file for reading: {in_path}")
     with closing(sqlite3.connect(in_path)) as in_db:
-
         # read the database version
         try:
             with closing(in_db.execute("SELECT * FROM database_version")) as cursor:
@@ -91,9 +90,7 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
                 "FROM full_blocks ORDER BY height DESC"
             )
         ) as cursor:
-
             for row in cursor:
-
                 hh = row[0]
                 prev = row[1]
                 height = row[2]
@@ -111,7 +108,7 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
                     actual_prev_hash = block.prev_header_hash
                     if actual_header_hash != hh:
                         raise RuntimeError(
-                            f"Block {hh.hex()} has a blob with mismatching " f"hash: {actual_header_hash.hex()}"
+                            f"Block {hh.hex()} has a blob with mismatching hash: {actual_header_hash.hex()}"
                         )
                     if block_record.header_hash != hh:
                         raise RuntimeError(
@@ -130,7 +127,7 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
                         )
                     if block.height != height:
                         raise RuntimeError(
-                            f"Block {hh.hex()} has a mismatching " f"height: {block.height} expected {height}"
+                            f"Block {hh.hex()} has a mismatching height: {block.height} expected {height}"
                         )
 
                 if height != current_height:
@@ -146,7 +143,7 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
 
                 if hh == expect_hash:
                     if next_hash is not None:
-                        raise RuntimeError(f"Database has multiple blocks with hash {hh.hex()}, " f"at height {height}")
+                        raise RuntimeError(f"Database has multiple blocks with hash {hh.hex()}, at height {height}")
                     if not in_main_chain:
                         raise RuntimeError(
                             f"block {hh.hex()} (height: {height}) is part of the main chain, "
@@ -168,9 +165,7 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
 
                 else:
                     if in_main_chain:
-                        raise RuntimeError(
-                            f"block {hh.hex()} (height: {height}) is orphaned, " "but in_main_chain is set"
-                        )
+                        raise RuntimeError(f"block {hh.hex()} (height: {height}) is orphaned, but in_main_chain is set")
                     num_orphans += 1
         print("")
 

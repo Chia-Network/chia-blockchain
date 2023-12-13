@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 MIN_FEE_RATE = 0  # Value of first bucket
-INITIAL_STEP = 100  # First bucket after zero value
-MAX_FEE_RATE = 40000000  # Mojo per 1000 cost unit
-INFINITE_FEE_RATE = 1000000000
+INITIAL_STEP = 5.0  # First bucket after zero value
+MAX_FEE_RATE = 40000000.0  # Mojo per 1000 cost unit
+INFINITE_FEE_RATE = 1000000000.0
 
 STEP_SIZE = 1.05  # bucket increase by 1.05
 
@@ -29,7 +29,9 @@ LONG_DECAY = 0.99931
 HALF_SUCCESS_PCT = 0.6  # Require 60 % success rate for target confirmations
 SUCCESS_PCT = 0.85  # Require 85 % success rate for target confirmations
 DOUBLE_SUCCESS_PCT = 0.95  # Require 95 % success rate for target confirmations
-SUFFICIENT_FEE_TXS = 0.1  # Require an avg of 0.1 tx in the combined fee rate bucket per block to have stat significance
+
+# Require an avg of SUFFICIENT_FEE_TXS tx in the combined fee rate bucket per block to have stat. significance
+SUFFICIENT_FEE_TXS = 0.01
 
 FEE_ESTIMATOR_VERSION = 1
 

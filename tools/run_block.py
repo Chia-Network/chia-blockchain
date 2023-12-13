@@ -43,12 +43,11 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import click
-from clvm.casts import int_from_bytes
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -61,7 +60,7 @@ from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
-    "chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles"
+    "chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles"
 )
 
 
@@ -103,15 +102,13 @@ def npc_to_dict(npc: NPC):
 
 
 def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> List[CAT]:
-
     block_args = [bytes(a) for a in block_generator.generator_refs]
-    cost, block_result = block_generator.program.run_with_cost(max_cost, DESERIALIZE_MOD, block_args)
+    cost, block_result = block_generator.program.run_with_cost(max_cost, [DESERIALIZE_MOD, block_args])
 
     coin_spends = block_result.first()
 
     cat_list: List[CAT] = []
     for spend in coin_spends.as_iter():
-
         parent, puzzle, amount, solution = spend.as_iter()
         args = match_cat_puzzle(uncurry_puzzle(puzzle))
 
@@ -136,7 +133,7 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
                 continue
 
             # If only 3 elements (opcode + 2 args), there is no memo, this is ph, amount
-            if type(condition[3]) != list:
+            if type(condition[3]) is not list:
                 # If it's not a list, it's not the correct format
                 conds[op].append(ConditionWithArgs(op, [i for i in condition[1:3]]))
                 continue
@@ -158,7 +155,7 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
             break
 
         puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
+        coin = Coin(bytes32(parent.as_atom()), puzzle_hash, amount.as_int())
         cat_list.append(
             CAT(
                 asset_id=bytes(asset_id).hex()[2:],

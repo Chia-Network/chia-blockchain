@@ -7,6 +7,7 @@ import pprint
 import traceback
 from enum import Enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     BinaryIO,
     Callable,
@@ -22,13 +23,15 @@ from typing import (
     get_type_hints,
 )
 
-from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal, get_args, get_origin
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
+
+if TYPE_CHECKING:
+    from _typeshed import DataclassInstance
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
@@ -78,17 +81,7 @@ class ConversionError(StreamableError):
         )
 
 
-# TODO: Remove hack, this allows streaming these objects from binary
-size_hints = {
-    "PrivateKey": PrivateKey.PRIVATE_KEY_SIZE,
-    "G1Element": G1Element.SIZE,
-    "G2Element": G2Element.SIZE,
-    "ConditionOpcode": 1,
-}
 unhashable_types = [
-    "PrivateKey",
-    "G1Element",
-    "G2Element",
     "Program",
     "SerializedProgram",
 ]
@@ -114,7 +107,7 @@ class Field:
 StreamableFields = Tuple[Field, ...]
 
 
-def create_fields(cls: Type[object]) -> StreamableFields:
+def create_fields(cls: Type[DataclassInstance]) -> StreamableFields:
     hints = get_type_hints(cls)
     fields = []
     for field in dataclasses.fields(cls):
@@ -249,14 +242,14 @@ def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
         convert_inner_func = function_to_convert_one_item(inner_type)
         # Ignoring for now as the proper solution isn't obvious
         return lambda items: convert_list(convert_inner_func, items)  # type: ignore[arg-type]
+    elif f_type.__name__ in unhashable_types:
+        # Type is unhashable (bls type), so cast from hex string
+        return lambda item: convert_unhashable_type(f_type, item)
     elif hasattr(f_type, "from_json_dict"):
         return lambda item: f_type.from_json_dict(item)
     elif issubclass(f_type, bytes):
         # Type is bytes, data is a hex string or bytes
         return lambda item: convert_byte_type(f_type, item)
-    elif f_type.__name__ in unhashable_types:
-        # Type is unhashable (bls type), so cast from hex string
-        return lambda item: convert_unhashable_type(f_type, item)
     else:
         # Type is a primitive, cast with correct class
         return lambda item: convert_primitive(f_type, item)
@@ -328,7 +321,7 @@ def recurse_jsonify(d: Any) -> Any:
         return d
     elif isinstance(d, int):
         return int(d)
-    elif d is None or type(d) == str:
+    elif d is None or type(d) is str:
         return d
     elif hasattr(d, "to_json_dict"):
         ret: Union[List[Any], Dict[str, Any], str, None, int] = d.to_json_dict()
@@ -399,15 +392,6 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[ParseFunctionType]) -
     return tuple(full_list)
 
 
-def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int, unchecked: bool) -> Any:
-    bytes_read = f.read(bytes_to_read)
-    assert bytes_read is not None and len(bytes_read) == bytes_to_read
-    if unchecked:
-        return f_type.from_bytes_unchecked(bytes_read)
-    else:
-        return f_type.from_bytes(bytes_read)
-
-
 def parse_str(f: BinaryIO) -> str:
     str_size = parse_uint32(f)
     str_read_bytes = f.read(str_size)
@@ -442,12 +426,6 @@ def function_to_parse_one_item(f_type: Type[Any]) -> ParseFunctionType:
         inner_types = get_args(f_type)
         list_parse_inner_type_f = [function_to_parse_one_item(_) for _ in inner_types]
         return lambda f: parse_tuple(f, list_parse_inner_type_f)
-    if hasattr(f_type, "from_bytes_unchecked") and f_type.__name__ in size_hints:
-        bytes_to_read = size_hints[f_type.__name__]
-        return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=True)
-    if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
-        bytes_to_read = size_hints[f_type.__name__]
-        return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=False)
     if f_type is str:
         return parse_str
     raise UnsupportedType(f"Type {f_type} does not have parse")
@@ -559,7 +537,7 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
 
     cls._streamable_fields = create_fields(cls)
 
-    return cls
+    return cls  # type: ignore[return-value]
 
 
 class Streamable:
@@ -575,7 +553,6 @@ class Streamable:
     * BLS signatures serialized in bls format (96 bytes)
     * bool serialized into 1 byte (0x01 or 0x00)
     * bytes serialized as a 4 byte size prefix and then the bytes.
-    * ConditionOpcode is serialized as a 1 byte value.
     * str serialized as a 4 byte size prefix and then the utf-8 representation in bytes.
 
     An item is one of:
@@ -645,6 +622,11 @@ class Streamable:
         parsed = cls.parse(f)
         assert f.read() == b""
         return parsed
+
+    def stream_to_bytes(self) -> bytes:
+        f = io.BytesIO()
+        self.stream(f)
+        return bytes(f.getvalue())
 
     def __bytes__(self: Any) -> bytes:
         f = io.BytesIO()
