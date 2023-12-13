@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import AsyncExitStack
 import dataclasses
 import datetime
 import functools
@@ -12,6 +11,7 @@ import os
 import random
 import sysconfig
 import tempfile
+from contextlib import AsyncExitStack
 from enum import Enum
 from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Union
 
@@ -1148,9 +1148,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
             num_non_keychain_plots=0,
         )
 
-        config_overrides: Dict[str, int] = {
-            "full_node.max_sync_wait": 0
-        }
+        config_overrides: Dict[str, int] = {"full_node.max_sync_wait": 0}
 
         bts = [
             await create_block_tools_async(
@@ -1182,5 +1180,5 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
         [harvester_service], farmer_service, _ = await async_exit_stack.enter_async_context(
             setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True)
         )
-            
+
         yield farmer_service, harvester_service, simulators[0], simulators[1], bt
