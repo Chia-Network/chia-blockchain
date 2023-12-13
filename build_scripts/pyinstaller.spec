@@ -149,11 +149,11 @@ if THIS_IS_WINDOWS:
 
 datas = []
 
-datas.append((f"{ROOT}/chia/util/english.txt", "chia/util"))
-datas.append((f"{ROOT}/chia/util/initial-config.yaml", "chia/util"))
+datas.append((f"{ROOT}/chia/util/english.txt", "chia.util"))
+datas.append((f"{ROOT}/chia/util/initial-config.yaml", "chia.util"))
 for path in sorted({path.parent for path in ROOT.joinpath("chia").rglob("*.hex")}):
-    datas.append((f"{path}/*.hex", path.relative_to(ROOT)))
-datas.append((f"{ROOT}/chia/ssl/*", "chia/ssl"))
+    datas.append((f"{path}/*.hex", ".".join(path.relative_to(ROOT).parts)))
+datas.append((f"{ROOT}/chia/ssl/*", "chia.ssl"))
 datas.append((f"{ROOT}/mozilla-ca/*", "mozilla-ca"))
 datas.extend(version_data)
 
