@@ -13,7 +13,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, c
 import aiosqlite
 import pytest
 
-from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
@@ -476,7 +476,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
     "use_optimized",
     [True, False],
 )
-async def test_upsert_checks_for_invalid_arguments(
+async def test_upsert_ignores_invalid_arguments(
     data_store: DataStore,
     tree_id: bytes32,
     use_optimized: bool,
@@ -508,26 +508,28 @@ async def test_upsert_checks_for_invalid_arguments(
     node = await data_store.get_node_by_key(key, tree_id)
     assert node.value == new_value
 
-    with pytest.raises(ValueError, match="^New value matches old value in upsert operation"):
-        await data_store.upsert(
-            key=key,
-            new_value=new_value,
-            tree_id=tree_id,
-            hint_keys_values=hint_keys_values,
-            use_optimized=use_optimized,
-            status=Status.COMMITTED,
-        )
+    await data_store.upsert(
+        key=key,
+        new_value=new_value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key, tree_id)
+    assert node.value == new_value
 
     key2 = b"key2"
-    with pytest.raises(KeyNotFoundError):
-        await data_store.upsert(
-            key=key2,
-            new_value=new_value,
-            tree_id=tree_id,
-            hint_keys_values=hint_keys_values,
-            use_optimized=use_optimized,
-            status=Status.COMMITTED,
-        )
+    await data_store.upsert(
+        key=key2,
+        new_value=value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key2, tree_id)
+    assert node.value == value
 
 
 @pytest.mark.parametrize(argnames="side", argvalues=list(Side))

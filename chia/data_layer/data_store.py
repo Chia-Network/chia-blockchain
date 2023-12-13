@@ -960,7 +960,7 @@ class DataStore:
                     if any(key == node.key for node in pairs):
                         raise Exception(f"Key already present: {key.hex()}")
                 else:
-                    if bytes(key) in hint_keys_values:
+                    if key in hint_keys_values:
                         raise Exception(f"Key already present: {key.hex()}")
 
             if reference_node_hash is None:
@@ -1016,7 +1016,7 @@ class DataStore:
                 )
 
             if hint_keys_values is not None:
-                hint_keys_values[bytes(key)] = value
+                hint_keys_values[key] = value
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def delete(
@@ -1033,13 +1033,13 @@ class DataStore:
             if hint_keys_values is None:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id)
             else:
-                if bytes(key) not in hint_keys_values:
+                if key not in hint_keys_values:
                     log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
                     return root
-                value = hint_keys_values[bytes(key)]
+                value = hint_keys_values[key]
                 node_hash = leaf_hash(key=key, value=value)
                 node = TerminalNode(node_hash, key, value)
-                del hint_keys_values[bytes(key)]
+                del hint_keys_values[key]
 
             ancestors: List[InternalNode] = await self.get_ancestors_common(
                 node_hash=node.hash,
@@ -1117,18 +1117,41 @@ class DataStore:
                 root = await self.get_tree_root(tree_id=tree_id)
 
             if hint_keys_values is None:
-                old_node = await self.get_node_by_key(key=key, tree_id=tree_id)
+                try:
+                    old_node = await self.get_node_by_key(key=key, tree_id=tree_id)
+                except KeyNotFoundError:
+                    log.debug(f"Key not found: {key.hex()}. Doing an autoinsert instead")
+                    return await self.autoinsert(
+                        key=key,
+                        value=new_value,
+                        tree_id=tree_id,
+                        hint_keys_values=hint_keys_values,
+                        use_optimized=use_optimized,
+                        status=status,
+                        root=root,
+                    )
                 if old_node.value == new_value:
-                    raise ValueError(f"New value matches old value in upsert operation: {key.hex()}")
+                    log.debug(f"New value matches old value in upsert operation: {key.hex()}. Ignoring upsert")
+                    return InsertResult(leaf_hash(key, new_value), root)
                 old_node_hash = old_node.hash
             else:
-                if bytes(key) not in hint_keys_values:
-                    raise KeyNotFoundError(key=key)
-                value = hint_keys_values[bytes(key)]
+                if key not in hint_keys_values:
+                    log.debug(f"Key not found: {key.hex()}. Doing an autoinsert instead")
+                    return await self.autoinsert(
+                        key=key,
+                        value=new_value,
+                        tree_id=tree_id,
+                        hint_keys_values=hint_keys_values,
+                        use_optimized=use_optimized,
+                        status=status,
+                        root=root,
+                    )
+                value = hint_keys_values[key]
                 if value == new_value:
-                    raise ValueError(f"New value matches old value in upsert operation: {key.hex()}")
+                    log.debug(f"New value matches old value in upsert operation: {key.hex()}")
+                    return InsertResult(leaf_hash(key, new_value), root)
                 old_node_hash = leaf_hash(key=key, value=value)
-                del hint_keys_values[bytes(key)]
+                del hint_keys_values[key]
 
             # create new terminal node
             new_terminal_node_hash = await self._insert_terminal_node(key=key, value=new_value)
@@ -1170,7 +1193,7 @@ class DataStore:
                 )
 
             if hint_keys_values is not None:
-                hint_keys_values[bytes(key)] = new_value
+                hint_keys_values[key] = new_value
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def clean_node_table(self, writer: aiosqlite.Connection) -> None:

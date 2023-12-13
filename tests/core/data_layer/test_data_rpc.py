@@ -250,6 +250,15 @@ async def test_create_insert_get(
         res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
         assert hexstr_to_bytes(res["value"]) == new_value
 
+        # test upsert unknown key acts as insert
+        new_value = b"\x00\x02"
+        changelist = [{"action": "upsert", "key": unknown_key.hex(), "value": new_value.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec2 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec2, wallet_rpc_api)
+        res = await data_rpc_api.get_value({"id": store_id.hex(), "key": unknown_key.hex()})
+        assert hexstr_to_bytes(res["value"]) == new_value
+
         # test delete
         changelist = [{"action": "delete", "key": key.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
