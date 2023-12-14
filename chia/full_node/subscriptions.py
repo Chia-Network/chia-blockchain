@@ -9,136 +9,147 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 log = logging.getLogger(__name__)
 
 
-# The PeerSubscriptions class is essentially a multi-index container. It can be
-# indexed by peer_id, coin_id and puzzle_hash.
+@dataclass(frozen=True)
+class SubscriptionSet:
+    _subscriptions_for_peer: Dict[bytes32, Set[bytes32]] = field(default_factory=dict, init=False)
+    _peers_for_subscription: Dict[bytes32, Set[bytes32]] = field(default_factory=dict, init=False)
+
+    def add_subscription(self, peer_id: bytes32, item: bytes32) -> bool:
+        peers = self._peers_for_subscription.setdefault(item, set())
+
+        if peer_id in peers:
+            return False
+
+        subscriptions = self._subscriptions_for_peer.setdefault(peer_id, set())
+        subscriptions.add(item)
+        peers.add(peer_id)
+
+        return True
+
+    def has_subscription(self, item: bytes32) -> bool:
+        return item in self._peers_for_subscription
+
+    def count_subscriptions(self, peer_id: bytes32) -> int:
+        if peer_id not in self._subscriptions_for_peer:
+            return 0
+
+        return len(self._subscriptions_for_peer[peer_id])
+
+    def remove_peer(self, peer_id: bytes32) -> None:
+        if peer_id not in self._subscriptions_for_peer:
+            return
+
+        for item in self._subscriptions_for_peer[peer_id]:
+            self._peers_for_subscription[item].remove(peer_id)
+
+            if len(self._peers_for_subscription[item]) == 0:
+                self._peers_for_subscription.pop(item)
+
+        self._subscriptions_for_peer.pop(peer_id)
+
+    def peers(self, item: bytes32) -> Set[bytes32]:
+        return self._peers_for_subscription.get(item, set())
+
+    def total_count(self) -> int:
+        return len(self._peers_for_subscription)
+
+
 @dataclass(frozen=True)
 class PeerSubscriptions:
-    # TODO: use NewType all over to describe these various uses of the same types
-    # Puzzle Hash : Set[Peer ID]
-    _coin_subscriptions: Dict[bytes32, Set[bytes32]] = field(default_factory=dict, init=False)
-    # Puzzle Hash : Set[Peer ID]
-    _ph_subscriptions: Dict[bytes32, Set[bytes32]] = field(default_factory=dict, init=False)
-    # Peer ID: Set[Coin ids]
-    _peer_coin_ids: Dict[bytes32, Set[bytes32]] = field(default_factory=dict, init=False)
-    # Peer ID: Set[puzzle_hash]
-    _peer_puzzle_hash: Dict[bytes32, Set[bytes32]] = field(default_factory=dict, init=False)
-    # Peer ID: subscription count
-    _peer_sub_counter: Dict[bytes32, int] = field(default_factory=dict, init=False)
+    _ph_subscriptions: SubscriptionSet = field(default_factory=SubscriptionSet)
+    _coin_subscriptions: SubscriptionSet = field(default_factory=SubscriptionSet)
 
     def has_ph_subscription(self, ph: bytes32) -> bool:
-        return ph in self._ph_subscriptions
+        return self._ph_subscriptions.has_subscription(ph)
 
     def has_coin_subscription(self, coin_id: bytes32) -> bool:
-        return coin_id in self._coin_subscriptions
+        return self._coin_subscriptions.has_subscription(coin_id)
+
+    def peer_subscription_count(self, peer_id: bytes32) -> int:
+        ph_subscriptions = self._ph_subscriptions.count_subscriptions(peer_id)
+        coin_subscriptions = self._coin_subscriptions.count_subscriptions(peer_id)
+        return ph_subscriptions + coin_subscriptions
 
     def add_ph_subscriptions(self, peer_id: bytes32, phs: List[bytes32], max_items: int) -> Set[bytes32]:
         """
-        returns the puzzle hashes that were actually subscribed to. These may be
-        fewer than requested in case:
-        * there are duplicate puzzle_hashes
-        * some puzzle hashes are already subscribed to
-        * the max_items limit is exceeded
+        Adds subscriptions until max_items is reached. Filters out duplicates and returns all additions.
         """
 
-        puzzle_hash_peers = self._peer_puzzle_hash.setdefault(peer_id, set())
-        existing_sub_count = self._peer_sub_counter.setdefault(peer_id, 0)
+        subscription_count = self.peer_subscription_count(peer_id)
+        added: Set[bytes32] = set()
 
-        ret: Set[bytes32] = set()
-
-        # if we've reached the limit on number of subscriptions, just bail
-        if existing_sub_count >= max_items:
+        def limit_reached() -> Set[bytes32]:
             log.info(
-                "peer_id: %s reached max number of puzzle-hash subscriptions. "
-                "Not all its coin states will be reported",
+                "Peer %s reached the subscription limit.",
                 peer_id,
             )
-            return ret
+            return added
 
-        # decrement this counter as we go, to know if we've hit the limit of
-        # number of subscriptions
-        subscriptions_left = max_items - existing_sub_count
+        # If the subscription limit is reached, bail.
+        if subscription_count >= max_items:
+            return limit_reached()
+
+        # Decrement this counter to know if we've hit the subscription limit.
+        subscriptions_left = max_items - subscription_count
 
         for ph in phs:
-            ph_sub = self._ph_subscriptions.setdefault(ph, set())
-            if peer_id in ph_sub:
+            if not self._ph_subscriptions.add_subscription(peer_id, ph):
                 continue
 
-            ret.add(ph)
-            ph_sub.add(peer_id)
-            puzzle_hash_peers.add(ph)
-            self._peer_sub_counter[peer_id] += 1
             subscriptions_left -= 1
+            added.add(ph)
 
             if subscriptions_left == 0:
-                log.info(
-                    "peer_id: %s reached max number of puzzle-hash subscriptions. "
-                    "Not all its coin states will be reported",
-                    peer_id,
-                )
-                break
-        return ret
+                return limit_reached()
 
-    def add_coin_subscriptions(self, peer_id: bytes32, coin_ids: List[bytes32], max_items: int) -> None:
-        coin_id_peers = self._peer_coin_ids.setdefault(peer_id, set())
-        existing_sub_count = self._peer_sub_counter.setdefault(peer_id, 0)
+        return added
 
-        # if we've reached the limit on number of subscriptions, just bail
-        if existing_sub_count >= max_items:
+    def add_coin_subscriptions(self, peer_id: bytes32, coin_ids: List[bytes32], max_items: int) -> Set[bytes32]:
+        """
+        Adds subscriptions until max_items is reached. Filters out duplicates and returns all additions.
+        """
+
+        subscription_count = self.peer_subscription_count(peer_id)
+        added: Set[bytes32] = set()
+
+        def limit_reached() -> Set[bytes32]:
             log.info(
-                "peer_id: %s reached max number of coin subscriptions. Not all its coin states will be reported",
+                "Peer %s reached the subscription limit.",
                 peer_id,
             )
-            return
+            return added
 
-        # decrement this counter as we go, to know if we've hit the limit of
-        # number of subscriptions
-        subscriptions_left = max_items - existing_sub_count
+        # If the subscription limit is reached, bail.
+        if subscription_count >= max_items:
+            return limit_reached()
+
+        # Decrement this counter to know if we've hit the subscription limit.
+        subscriptions_left = max_items - subscription_count
 
         for coin_id in coin_ids:
-            coin_sub = self._coin_subscriptions.setdefault(coin_id, set())
-            if peer_id in coin_sub:
+            if not self._coin_subscriptions.add_subscription(peer_id, coin_id):
                 continue
 
-            coin_sub.add(peer_id)
-            coin_id_peers.add(coin_id)
-            self._peer_sub_counter[peer_id] += 1
             subscriptions_left -= 1
+            added.add(coin_id)
 
             if subscriptions_left == 0:
-                log.info(
-                    "peer_id: %s reached max number of coin subscriptions. Not all its coin states will be reported",
-                    peer_id,
-                )
-                break
+                return limit_reached()
+
+        return added
 
     def remove_peer(self, peer_id: bytes32) -> None:
-        counter = 0
-        puzzle_hashes = self._peer_puzzle_hash.get(peer_id)
-        if puzzle_hashes is not None:
-            for ph in puzzle_hashes:
-                subs = self._ph_subscriptions[ph]
-                subs.remove(peer_id)
-                counter += 1
-                if subs == set():
-                    self._ph_subscriptions.pop(ph)
-            self._peer_puzzle_hash.pop(peer_id)
-
-        coin_ids = self._peer_coin_ids.get(peer_id)
-        if coin_ids is not None:
-            for coin_id in coin_ids:
-                subs = self._coin_subscriptions[coin_id]
-                subs.remove(peer_id)
-                counter += 1
-                if subs == set():
-                    self._coin_subscriptions.pop(coin_id)
-            self._peer_coin_ids.pop(peer_id)
-
-        if peer_id in self._peer_sub_counter:
-            num_subs = self._peer_sub_counter.pop(peer_id)
-            assert num_subs == counter
+        self._ph_subscriptions.remove_peer(peer_id)
+        self._coin_subscriptions.remove_peer(peer_id)
 
     def peers_for_coin_id(self, coin_id: bytes32) -> Set[bytes32]:
-        return self._coin_subscriptions.get(coin_id, set())
+        return self._coin_subscriptions.peers(coin_id)
 
     def peers_for_puzzle_hash(self, puzzle_hash: bytes32) -> Set[bytes32]:
-        return self._ph_subscriptions.get(puzzle_hash, set())
+        return self._ph_subscriptions.peers(puzzle_hash)
+
+    def coin_subscription_count(self) -> int:
+        return self._coin_subscriptions.total_count()
+
+    def puzzle_subscription_count(self) -> int:
+        return self._ph_subscriptions.total_count()
