@@ -143,7 +143,7 @@ def create_tp_covenant_adapter(covenant_layer: Program) -> Program:
     return EML_TP_COVENANT_ADAPTER.curry(covenant_layer)
 
 
-def match_tp_covenant_adapter(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[Program]]:  # pragma: no cover
+def match_tp_covenant_adapter(uncurried_puzzle: UncurriedPuzzle) -> Optional[Program]:  # pragma: no cover
     if uncurried_puzzle.mod == EML_TP_COVENANT_ADAPTER:
         return uncurried_puzzle.args.at("f")
     else:
@@ -174,7 +174,7 @@ def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[()]]:
 
 
 def solve_did_tp(
-    provider_innerpuzhash: bytes32, my_coin_id: bytes32, new_metadata: Program, new_transfer_program: Program
+    provider_innerpuzhash: bytes32, my_coin_id: bytes32, new_metadata: Program, new_transfer_program: bytes32
 ) -> Program:
     solution: Program = Program.to(
         [
@@ -547,7 +547,7 @@ class VerifiedCredential(Streamable):
         layer_below_eml: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton.args.at("rrrrf"))
         if layer_below_eml.mod != VIRAL_BACKDOOR:
             return False, "VC did not have a provider backdoor"  # pragma: no cover
-        hidden_puzzle_hash: bytes32 = layer_below_eml.args.at("rf")
+        hidden_puzzle_hash = bytes32(layer_below_eml.args.at("rf").as_atom())
         if hidden_puzzle_hash != STANDARD_BRICK_PUZZLE_HASH:
             return (
                 False,

@@ -8,14 +8,14 @@ from setuptools import find_packages, setup
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.1.0",
-    "boto3==1.33.8",  # AWS S3 for DL s3 plugin
+    "boto3==1.33.13",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.1",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
     "chiapos==2.0.3",  # proof of space
     "clvm==0.9.8",
     "clvm_tools==0.4.7",  # Currying, Program.to, other conveniences
     "chia_rs==0.2.13",
-    "clvm-tools-rs==0.1.39",  # Rust implementation of clvm_tools' compiler
+    "clvm-tools-rs==0.1.40",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.9.1",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.1.4",  # Binary data management library
@@ -46,7 +46,8 @@ dev_dependencies = [
     "build==1.0.3",
     "coverage==7.3.2",
     "diff-cover==8.0.1",
-    "pre-commit==3.5.0",
+    "pre-commit==3.5.0; python_version < '3.9'",
+    "pre-commit==3.6.0; python_version >= '3.9'",
     "py3createtorrent==1.1.0",
     "pylint==3.0.2",
     "pytest==7.4.3",
