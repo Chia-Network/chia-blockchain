@@ -1149,9 +1149,6 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
         bt = await create_block_tools_async(
             zero_bit_plot_filter_consts,
             keychain=get_temp_keyring,
-            num_og_plots=0,
-            num_pool_plots=20,
-            num_non_keychain_plots=0,
         )
 
         config_overrides: Dict[str, int] = {"full_node.max_sync_wait": 0}
