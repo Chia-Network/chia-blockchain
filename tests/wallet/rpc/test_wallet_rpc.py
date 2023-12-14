@@ -2197,13 +2197,13 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 "signature": (
                     "b0b38236629ffe865377e4d8e40bc7ca126b4d140e84c813e0ea2f555014d8779ee2551df3b6436d41d5a6c"
                     "de6e4a5a107a770ea0e2e95f5670023938409105616ee729d2ebdbe13436ec1d00c1355e1dd60d2142e8525"
-                    "baafdeb4f8427d23ed" 
+                    "baafdeb4f8427d23ed"
                 ),
                 "signing_mode": SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS.value,
                 "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
             },
-            {"isValid": True },
-        ), 
+            {"isValid": True},
+        ),
         (
             # Invalid signature
             {
@@ -2212,16 +2212,15 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                     "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
                     "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
                 ),
-               "signature": (
+                "signature": (
                     "b0b38236629ffe865377e4d8e40bc7ca126b4d140e84c813e0ea2f555014d8779ee2551df3b6436d41d5a6c"
                     "de6e4a5a107a770ea0e2e95f5670023938409105616ee729d2ebdbe13436ec1d00c1355e1dd60d2142e8525"
-                    "baafdeb4f8427d23ed" 
-                ), 
+                    "baafdeb4f8427d23ed"
+                ),
                 "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
             },
             {"isValid": False, "error": "Public key doesn't match the address"},
         ),
- 
     ],
 )
 @pytest.mark.parametrize("prefix_hex_strings", [True, False], ids=["with 0x", "no 0x"])
