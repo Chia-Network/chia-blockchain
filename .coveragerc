@@ -25,3 +25,4 @@ exclude_also =
   if typing.TYPE_CHECKING:
   if TYPE_CHECKING:
   ^ *@pytest.mark.skip($|\()
+  benchmark_runner: BenchmarkRunner

@@ -44,7 +44,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build==1.0.3",
-    "coverage==7.3.2",
+    "coverage==7.3.3",
     "diff-cover==8.0.1",
     "pre-commit==3.5.0",
     "py3createtorrent==1.1.0",
