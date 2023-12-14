@@ -1508,8 +1508,7 @@ class WalletRpcApi:
             puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
             expected_puzzle_hash: Optional[bytes32] = None 
             if  signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
-                puzzle = p2_delegated_conditions.puzzle_for_pk(
-                    G1Element.from_bytes(hexstr_to_bytes(request["pubkey"])) )
+                puzzle = p2_delegated_conditions.puzzle_for_pk(Program.to(hexstr_to_bytes(request["pubkey"])))
                 expected_puzzle_hash = bytes32(puzzle.get_tree_hash())
             else:
                 expected_puzzle_hash = puzzle_hash_for_synthetic_public_key(
