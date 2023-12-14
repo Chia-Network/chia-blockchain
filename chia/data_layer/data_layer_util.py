@@ -147,12 +147,6 @@ class TerminalNode:
     key: bytes
     value: bytes
 
-    atom: None = field(init=False, default=None)
-
-    @property
-    def pair(self) -> Tuple[bytes32, bytes32]:
-        return Program.to(self.key), Program.to(self.value)
-
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
         return cls(
@@ -245,9 +239,6 @@ class InternalNode:
     # generation: int
     left_hash: bytes32
     right_hash: bytes32
-
-    pair: Optional[Tuple[Node, Node]] = None
-    atom: None = None
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> InternalNode:
