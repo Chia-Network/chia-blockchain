@@ -91,7 +91,7 @@ cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
 export FPM_EDITOR="cat >../../../build_scripts/dist/gui.spec <"
-jq '.build.rpm.fpm |= . + ["--edit"]' package.json > temp.json && mv temp.json package.json
+jq '.rpm.fpm |= . + ["--edit"]' package.json > temp.json && mv temp.json package.json
 
 echo "Building Linux(rpm) Electron app"
 OPT_ARCH="--x64"
