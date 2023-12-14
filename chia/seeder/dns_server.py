@@ -33,7 +33,7 @@ DnsCallback = Callable[[DNSRecord], Awaitable[DNSRecord]]
 
 class DomainName(str):
     def __getattr__(self, item: str) -> DomainName:
-        return DomainName(item + "." + self)  # DomainName.NS becomes DomainName("NS.DomainName")
+        return DomainName(f"{item}.{self}")  # DomainName.NS becomes DomainName("NS.DomainName")
 
 
 @dataclass(frozen=True)
@@ -465,7 +465,7 @@ class DNSServer:
         # DNS labels are mixed case with DNS resolvers that implement the use of bit 0x20 to improve
         # transaction identity. See https://datatracker.ietf.org/doc/html/draft-vixie-dnsext-dns0x20-00
         qname_str = str(qname).lower()
-        if qname_str != self.domain and not qname_str.endswith("." + self.domain):
+        if qname_str != self.domain and not qname_str.endswith(f".{self.domain}"):
             # we don't answer for other domains (we have the not recursive bit set)
             log.warning(f"Invalid request for {qname_str}, returning REFUSED.")
             reply.header.rcode = RCODE.REFUSED
