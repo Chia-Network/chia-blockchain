@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
-from chia.wallet.puzzles import p2_delegated_conditions
+
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_wallet import DataLayerWallet
@@ -79,6 +79,7 @@ from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles import p2_delegated_conditions
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.singleton import (
