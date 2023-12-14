@@ -2157,13 +2157,13 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4c6574277320656174204772616e646d61",  # Let's eat Grandma
                 "pubkey": (
-                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02"
-                    "eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
+                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
                 ),
                 "signature": (
-                    "8006f63537563f038321eeda25f3838613d8f938e95f19d1d19ccbe634e9ee4d69552536aab08b4fe961305"
-                    "e534ffddf096199ae936b272dac88c936e8774bfc7a6f24025085026db3b7c3c41b472db3daf99b5e6cabf2"
-                    "6034d8782d10ef148d"
+                    "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
+                    "5218bbe0e17677c9a23a9f18dbe488b7026be59d476161f5e6f0eea109cd7be22b1f74fda9c80c6b845ecc6"
+                    "91246eb1c7f1b66a6a"
                 ),
             },
             {"isValid": False, "error": "Signature is invalid."},
