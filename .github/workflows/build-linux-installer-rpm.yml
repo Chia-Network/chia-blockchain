@@ -188,7 +188,9 @@ jobs:
       with:
         if-no-files-found: error
         name: spec
-        path: build_scripts/dist/*.spec
+        path: |
+          build_scripts/dist/cli.spec
+          build_scripts/dist/gui.spec
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v3
