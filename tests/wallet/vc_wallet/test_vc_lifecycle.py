@@ -209,7 +209,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         provider_innerpuzhash: bytes32 = ACS_PH
         my_coin_id: bytes32 = eml_coin.name()
         new_metadata: Program = Program.to("SUCCESS")
-        new_tp_hash: Program = Program.to("NEW TP").get_tree_hash()
+        new_tp_hash = Program.to("NEW TP").get_tree_hash()
         bad_data: bytes32 = bytes32([0] * 32)
 
         # Try to update metadata and tp without any announcement
