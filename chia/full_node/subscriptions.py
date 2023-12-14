@@ -76,7 +76,13 @@ class PeerSubscriptions:
             subscriptions_left = max_items - existing_sub_count
 
             for item in items:
-                cursor = conn.execute(f"INSERT INTO {table_name} (peer_id, {item_name}) VALUES (?, ?)", (peer_id, item))
+                try:
+                    cursor = conn.execute(
+                        f"INSERT INTO {table_name} (peer_id, {item_name}) VALUES (?, ?)", (peer_id, item)
+                    )
+                except sqlite3.Error:
+                    continue
+
                 if cursor.rowcount == 0:
                     continue
 
