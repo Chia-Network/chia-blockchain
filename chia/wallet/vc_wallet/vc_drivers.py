@@ -106,7 +106,7 @@ def create_covenant_layer(initial_puzzle_hash: bytes32, parent_morpher: Program,
 def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[bytes32, Program, Program]]:
     if uncurried_puzzle.mod == COVENANT_LAYER:
         return (
-            bytes32(uncurried_puzzle.args.at("f").atom),
+            bytes32(uncurried_puzzle.args.at("f").as_atom()),
             uncurried_puzzle.args.at("rf"),
             uncurried_puzzle.args.at("rrf"),
         )
@@ -200,7 +200,7 @@ def create_viral_backdoor(hidden_puzzle_hash: bytes32, inner_puzzle_hash: bytes3
 
 def match_viral_backdoor(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[bytes32, bytes32]]:
     if uncurried_puzzle.mod == VIRAL_BACKDOOR:
-        return bytes32(uncurried_puzzle.args.at("rf").atom), bytes32(uncurried_puzzle.args.at("rrf").atom)
+        return bytes32(uncurried_puzzle.args.at("rf").as_atom()), bytes32(uncurried_puzzle.args.at("rrf").as_atom())
     else:
         return None  # pragma: no cover
 
@@ -572,7 +572,7 @@ class VerifiedCredential(Streamable):
         solution: Program = parent_spend.solution.to_program()
 
         singleton: UncurriedPuzzle = uncurry_puzzle(puzzle)
-        launcher_id: bytes32 = bytes32(singleton.args.at("frf").atom)
+        launcher_id: bytes32 = bytes32(singleton.args.at("frf").as_atom())
         layer_below_singleton: Program = singleton.args.at("rf")
         singleton_lineage_proof: LineageProof = LineageProof(
             parent_name=parent_coin.parent_coin_info,
@@ -590,9 +590,9 @@ class VerifiedCredential(Streamable):
 
             conditions: List[Program] = list(dpuz.run(dsol).as_iter())
             remark_condition: Program = next(c for c in conditions if c.at("f").as_int() == 1)
-            inner_puzzle_hash = bytes32(remark_condition.at("rf").atom)
+            inner_puzzle_hash = bytes32(remark_condition.at("rf").as_atom())
             magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
-            proof_provider = bytes32(magic_condition.at("rf").atom)
+            proof_provider = bytes32(magic_condition.at("rf").as_atom())
         else:
             metadata_layer: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton)
 
@@ -603,7 +603,7 @@ class VerifiedCredential(Streamable):
             new_singleton_condition: Program = next(
                 c for c in conditions if c.at("f").as_int() == 51 and c.at("rrf").as_int() % 2 != 0
             )
-            inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").atom)
+            inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_atom())
             magic_condition = next(c for c in conditions if c.at("f").as_int() == -10)
             if magic_condition.at("rrrf") == Program.to(None):
                 proof_hash_as_prog: Program = metadata_layer.args.at("rfr")
@@ -612,16 +612,16 @@ class VerifiedCredential(Streamable):
             else:
                 proof_hash_as_prog = magic_condition.at("rrrfrrf")
 
-            proof_hash = None if proof_hash_as_prog == Program.to(None) else bytes32(proof_hash_as_prog.atom)
+            proof_hash = None if proof_hash_as_prog == Program.to(None) else bytes32(proof_hash_as_prog.as_atom())
 
-            proof_provider = bytes32(metadata_layer.args.at("rff").atom)
+            proof_provider = bytes32(metadata_layer.args.at("rff").as_atom())
 
             parent_proof_hash: bytes32 = metadata_layer.args.at("rf").get_tree_hash()
             eml_lineage_proof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info,
                 inner_puzzle_hash=create_viral_backdoor(
                     STANDARD_BRICK_PUZZLE_HASH,
-                    bytes32(uncurry_puzzle(metadata_layer.args.at("rrrrf")).args.at("rrf").atom),
+                    bytes32(uncurry_puzzle(metadata_layer.args.at("rrrrf")).args.at("rrf").as_atom()),
                 ).get_tree_hash(),
                 amount=uint64(parent_coin.amount),
                 parent_proof_hash=None if parent_proof_hash == Program.to(None) else parent_proof_hash,
@@ -743,7 +743,7 @@ class VerifiedCredential(Streamable):
         new_singleton_condition: Program = next(
             c for c in inner_puzzle.run(inner_solution).as_iter() if c.at("f") == 51 and c.at("rrf").as_int() % 2 != 0
         )
-        new_inner_puzzle_hash: bytes32 = bytes32(new_singleton_condition.at("rf").atom)
+        new_inner_puzzle_hash: bytes32 = bytes32(new_singleton_condition.at("rf").as_atom())
 
         return (
             expected_announcement,

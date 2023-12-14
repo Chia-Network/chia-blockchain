@@ -41,7 +41,9 @@ async def sign_coin_spends(
     msg_list: List[bytes] = []
     for coin_spend in coin_spends:
         # Get AGG_SIG conditions
-        conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, max_cost)
+        conditions_dict = conditions_dict_for_solution(
+            coin_spend.puzzle_reveal.to_program(), coin_spend.solution.to_program(), max_cost
+        )
         # Create signature
         for pk_bytes, msg in pkm_pairs_for_conditions_dict(conditions_dict, coin_spend.coin, additional_data):
             pk = G1Element.from_bytes(pk_bytes)

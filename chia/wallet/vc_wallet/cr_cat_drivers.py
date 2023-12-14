@@ -132,7 +132,7 @@ def match_cr_layer(
     extra_uncurried_puzzle = uncurry_puzzle(uncurried_puzzle.mod)
     if extra_uncurried_puzzle.mod == CREDENTIAL_RESTRICTION:
         return (
-            [bytes32(provider.atom) for provider in extra_uncurried_puzzle.args.at("rf").as_iter()],
+            [bytes32(provider.as_atom()) for provider in extra_uncurried_puzzle.args.at("rf").as_iter()],
             extra_uncurried_puzzle.args.at("rrf"),
             uncurried_puzzle.args.at("rf"),
         )
@@ -318,9 +318,9 @@ class CRCAT:
         second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
         return CRCAT(
             spend.coin,
-            bytes32(uncurried_puzzle.args.at("rf").atom),
+            bytes32(uncurried_puzzle.args.at("rf").as_atom()),
             spend.solution.to_program().at("rf"),
-            [bytes32(ap.atom) for ap in second_uncurried_cr_layer.args.at("rf").as_iter()],
+            [bytes32(ap.as_atom()) for ap in second_uncurried_cr_layer.args.at("rf").as_iter()],
             second_uncurried_cr_layer.args.at("rrf"),
             first_uncurried_cr_layer.args.at("rf").get_tree_hash(),
         )
@@ -353,7 +353,7 @@ class CRCAT:
                 conditions = potential_cr_layer.run(inner_solution)
             for condition in conditions.as_iter():
                 if condition.at("f") == Program.to(1):
-                    new_inner_puzzle_hash = bytes32(condition.at("rf").atom)
+                    new_inner_puzzle_hash = bytes32(condition.at("rf").as_atom())
                     authorized_providers_as_prog: Program = condition.at("rrf")
                     proofs_checker: Program = condition.at("rrrf")
                     break
@@ -378,7 +378,7 @@ class CRCAT:
             ).get_tree_hash_precalc(inner_puzzle_hash)
 
         # Convert all of the old stuff into python
-        authorized_providers: List[bytes32] = [bytes32(p.atom) for p in authorized_providers_as_prog.as_iter()]
+        authorized_providers: List[bytes32] = [bytes32(p.as_atom()) for p in authorized_providers_as_prog.as_iter()]
         new_lineage_proof: LineageProof = LineageProof(
             parent_spend.coin.parent_coin_info,
             lineage_inner_puzhash,
@@ -393,11 +393,11 @@ class CRCAT:
         partially_completed_crcats: List[CRCAT] = [
             CRCAT(
                 Coin(coin_name, bytes(32), uint64(condition.at("rrf").as_int())),
-                bytes32(tail_hash_as_prog.atom),
+                bytes32(tail_hash_as_prog.as_atom()),
                 new_lineage_proof,
                 authorized_providers,
                 proofs_checker,
-                bytes32(condition.at("rf").atom) if new_inner_puzzle_hash is None else new_inner_puzzle_hash,
+                bytes32(condition.at("rf").as_atom()) if new_inner_puzzle_hash is None else new_inner_puzzle_hash,
             )
             for condition in all_conditions
             if condition.at("f").as_int() == 51 and condition.at("rrf") != Program.to(-113)
@@ -453,7 +453,7 @@ class CRCAT:
         assert conditions is not None
         for condition in conditions:
             if condition.at("f").as_int() == 51 and condition.at("rrf").as_int() != -113:
-                new_inner_puzzle_hash: bytes32 = bytes32(condition.at("rf").atom)
+                new_inner_puzzle_hash: bytes32 = bytes32(condition.at("rf").as_atom())
                 new_amount: uint64 = uint64(condition.at("rrf").as_int())
                 announcements.append(
                     Announcement(self.coin.name(), b"\xcd" + std_hash(new_inner_puzzle_hash + int_to_bytes(new_amount)))
@@ -643,7 +643,7 @@ class ProofsChecker(Streamable):
         if uncurried_puzzle.mod != PROOF_FLAGS_CHECKER:
             raise ValueError("Puzzle was not a proof checker")  # pragma: no cover
 
-        return cls([flag.at("f").atom.decode("utf8") for flag in uncurried_puzzle.args.at("f").as_iter()])
+        return cls([flag.at("f").as_atom().decode("utf8") for flag in uncurried_puzzle.args.at("f").as_iter()])
 
 
 class CRCATVersion(IntEnum):

@@ -2739,6 +2739,8 @@ class WalletRpcApi:
                 if lci.active_votes == []:
                     coins.append(lci)
         fee = uint64(request.get("fee", 0))
+        if not coins:  # pragma: no cover
+            raise ValueError("There are not coins available to exit lockup")
         exit_tx = await dao_cat_wallet.exit_vote_state(
             coins,
             tx_config,

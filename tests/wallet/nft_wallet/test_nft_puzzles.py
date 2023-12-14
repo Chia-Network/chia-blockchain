@@ -3,8 +3,6 @@ from __future__ import annotations
 import random
 from typing import Tuple
 
-from clvm.casts import int_from_bytes
-
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.nft_wallet import uncurry_nft
@@ -102,7 +100,7 @@ def test_nft_transfer_puzzle_hashes(seeded_random: random.Random):
     # get the new NFT puzhash
     for cond in conds.as_iter():
         if cond.first().as_int() == 51:
-            expected_ph = bytes32(cond.at("rf").atom)
+            expected_ph = bytes32(cond.at("rf").as_atom())
 
     # recreate the puzzle for new_puzhash
     new_ownership_puz = NFT_OWNERSHIP_LAYER.curry(NFT_OWNERSHIP_LAYER.get_tree_hash(), None, transfer_puz, taker_p2_puz)
@@ -170,11 +168,11 @@ def make_a_new_nft_puzzle(curried_ownership_layer: Program, metadata: Program) -
 def get_updated_nft_puzzle(puzzle: Program, solution: Program) -> bytes32:
     result = puzzle.run(solution)
     for condition in result.as_iter():
-        code = int_from_bytes(condition.first().atom)
+        code = condition.first().as_int()
         if code == 51:
-            if int_from_bytes(condition.rest().rest().first().atom) == 1:
+            if condition.at("rrf").as_int() == 1:
                 # this is our new puzzle hash
-                return bytes32(condition.rest().first().atom)
+                return bytes32(condition.at("rf").as_atom())
     raise ValueError("No create coin condition found")
 
 

@@ -2194,7 +2194,7 @@ class TestBodyValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         original_block: FullBlock = blocks[-1]
 
-        block = recursive_replace(original_block, "transactions_generator", SerializedProgram())
+        block = recursive_replace(original_block, "transactions_generator", SerializedProgram.to(None))
         await _validate_and_add_block(
             empty_blockchain, block, expected_error=Err.NOT_BLOCK_BUT_HAS_DATA, skip_prevalidation=True
         )
