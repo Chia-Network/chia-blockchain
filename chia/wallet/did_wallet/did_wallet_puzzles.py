@@ -7,7 +7,7 @@ from chia_rs import G1Element
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
@@ -144,7 +144,7 @@ def create_spend_for_message(
     puzzle = create_recovery_message_puzzle(recovering_coin, newpuz, pubkey)
     coin = Coin(parent_of_message, puzzle.get_tree_hash(), uint64(0))
     solution = Program.to([])
-    coinsol = CoinSpend(coin, puzzle, solution)
+    coinsol = make_spend(coin, puzzle, solution)
     return coinsol
 
 

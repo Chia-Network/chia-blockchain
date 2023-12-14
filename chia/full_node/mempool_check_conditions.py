@@ -27,7 +27,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions, SpendInfo
+from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions, SpendInfo, make_spend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.condition_tools import conditions_for_solution
@@ -158,7 +158,7 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
         parent, puzzle, amount, solution = spend.as_iter()
         puzzle_hash = puzzle.get_tree_hash()
         coin = Coin(parent.as_atom(), puzzle_hash, amount.as_int())
-        spends.append(CoinSpend(coin, puzzle, solution))
+        spends.append(make_spend(coin, puzzle, solution))
 
     return spends
 
@@ -187,8 +187,12 @@ def get_spends_for_block_with_conditions(
         parent, puzzle, amount, solution = spend.as_iter()
         puzzle_hash = puzzle.get_tree_hash()
         coin = Coin(parent.as_atom(), puzzle_hash, amount.as_int())
-        coin_spend = CoinSpend(coin, puzzle, solution)
-        conditions = conditions_for_solution(puzzle, solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
+        coin_spend = make_spend(coin, puzzle, solution)
+        conditions = conditions_for_solution(
+            SerializedProgram.from_program(puzzle),
+            SerializedProgram.from_program(solution),
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        )
         spends.append(CoinSpendWithConditions(coin_spend, conditions))
 
     return spends

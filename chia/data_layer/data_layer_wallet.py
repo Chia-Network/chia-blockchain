@@ -491,7 +491,7 @@ class DataLayerWallet:
             second_coin_spend = CoinSpend(
                 second_coin,
                 SerializedProgram.from_program(second_full_puz),
-                Program.to(
+                SerializedProgram.to(
                     [
                         LineageProof(
                             current_coin.parent_coin_info,
@@ -796,7 +796,7 @@ class DataLayerWallet:
         mirror_spend = CoinSpend(
             mirror_coin,
             SerializedProgram.from_program(create_mirror_puzzle()),
-            Program.to(
+            SerializedProgram.to(
                 [
                     parent_coin.parent_coin_info,
                     parent_inner_puzzle,

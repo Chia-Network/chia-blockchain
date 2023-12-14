@@ -16,7 +16,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtoco
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2
@@ -990,7 +990,7 @@ class TestCATWallet:
         )
         eve_spend = await wallet_node_0.wallet_state_manager.sign_transaction(
             [
-                CoinSpend(
+                make_spend(
                     cat_coin,
                     cat_puzzle,
                     Program.to(
@@ -1015,7 +1015,7 @@ class TestCATWallet:
                         ]
                     ),
                 ),
-                CoinSpend(
+                make_spend(
                     next_coin,
                     construct_cat_puzzle(
                         CAT_MOD,

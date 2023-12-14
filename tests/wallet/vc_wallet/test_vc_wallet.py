@@ -12,7 +12,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
@@ -69,7 +69,7 @@ async def mint_cr_cat(
     cat_coin = next(c for c in spend_bundle.additions() if c.amount == CAT_AMOUNT_0)
     eve_spend = SpendBundle(
         [
-            CoinSpend(
+            make_spend(
                 cat_coin,
                 cat_puzzle,
                 Program.to(
