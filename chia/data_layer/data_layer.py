@@ -115,6 +115,7 @@ class DataLayer:
     periodically_manage_data_task: Optional[asyncio.Task[None]] = None
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
+    unsubscribe_data_queue: List[UnsubscribeData]
 
     @property
     def server(self) -> ChiaServer:
@@ -174,6 +175,7 @@ class DataLayer:
             downloaders=downloaders,
             uploaders=uploaders,
             maximum_full_file_count=config.get("maximum_full_file_count", 1),
+            unsubscribe_data_queue=[],
         )
 
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -646,6 +648,11 @@ class DataLayer:
             await self.data_store.remove_subscriptions(store_id, parsed_urls)
 
     async def unsubscribe(self, tree_id: bytes32, retain_data: bool) -> None:
+        async with self.subscription_lock:
+            # Unsubscribe is processed later, after all fetching of data is done, to avoid races.
+            self.unsubscribe_data_queue.append(UnsubscribeData(tree_id, retain_data))
+
+    async def process_unsubscribe(self, tree_id: bytes32, retain_data: bool) -> None:
         subscriptions = await self.get_subscriptions()
         if tree_id not in (subscription.tree_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given tree_id.")
@@ -741,16 +748,20 @@ class DataLayer:
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
                         )
 
-            async with self.subscription_lock:
-                for subscription in subscriptions:
-                    try:
-                        await self.update_subscriptions_from_wallet(subscription.tree_id)
-                        await self.fetch_and_validate(subscription.tree_id)
-                        await self.upload_files(subscription.tree_id)
-                        await self.clean_old_full_tree_files(subscription.tree_id)
-                    except Exception as e:
-                        self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
+            for subscription in subscriptions:
+                try:
+                    await self.update_subscriptions_from_wallet(subscription.tree_id)
+                    await self.fetch_and_validate(subscription.tree_id)
+                    await self.upload_files(subscription.tree_id)
+                    await self.clean_old_full_tree_files(subscription.tree_id)
+                except Exception as e:
+                    self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
 
+            # Do unsubscribes after the fetching of data is complete, to avoid races.
+            async with self.subscription_lock:
+                for unsubscribe_data in self.unsubscribe_data_queue:
+                    await self.process_unsubscribe(unsubscribe_data.tree_id, unsubscribe_data.retain_data)
+                self.unsubscribe_data_queue.clear()
             await asyncio.sleep(manage_data_interval)
 
     async def build_offer_changelist(
