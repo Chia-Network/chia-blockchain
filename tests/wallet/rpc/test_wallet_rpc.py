@@ -2219,7 +2219,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 ), 
                 "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
             },
-            {"isValid": False, "error": "Signing mode wrong for Tangem signature"},
+            {"isValid": False, "error": "Public key doesn't match the address"},
         ),
  
     ],
