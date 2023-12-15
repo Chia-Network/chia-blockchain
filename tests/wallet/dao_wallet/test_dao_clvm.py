@@ -10,7 +10,7 @@ from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
@@ -1229,7 +1229,7 @@ async def do_spend(
 ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
     spends = []
     for coin, puzzle, solution in zip(coins, puzzles, solutions):
-        spends.append(CoinSpend(coin, puzzle, solution))
+        spends.append(make_spend(coin, puzzle, solution))
     spend_bundle = SpendBundle(spends, AugSchemeMPL.aggregate([]))
     result = await sim_client.push_tx(spend_bundle)
     await sim.farm_block()

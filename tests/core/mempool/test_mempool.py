@@ -32,7 +32,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.eligible_coin_spends import run_for_cost
@@ -2652,7 +2652,7 @@ class TestMaliciousGenerators:
         cs = spend_bundle.coin_spends[0]
         c = cs.coin
         coin_0 = Coin(c.parent_coin_info, bytes32([1] * 32), c.amount)
-        coin_spend_0 = CoinSpend(coin_0, cs.puzzle_reveal, cs.solution)
+        coin_spend_0 = make_spend(coin_0, cs.puzzle_reveal, cs.solution)
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0] + spend_bundle.coin_spends[1:])
         assert spend_bundle is not None
         res = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)

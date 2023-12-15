@@ -15,8 +15,9 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
@@ -193,7 +194,7 @@ class VCWallet:
         )
         solution = solution_for_conditions(dpuz.rest())
         original_puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(original_coin.puzzle_hash)
-        coin_spends.append(CoinSpend(original_coin, original_puzzle, solution))
+        coin_spends.append(make_spend(original_coin, original_puzzle, solution))
         spend_bundle = await self.wallet_state_manager.sign_transaction(coin_spends)
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
@@ -545,12 +546,14 @@ class VCWallet:
                     other_spends.append(
                         dataclasses.replace(
                             spend_to_fix,
-                            solution=spend_to_fix.solution.to_program().replace(
-                                ff=coin_args[coin_name][0],
-                                frf=Program.to(None),  # not general
-                                frrf=bytes32.from_hexstr(coin_args[coin_name][2]),
-                                frrrf=bytes32.from_hexstr(coin_args[coin_name][3]),
-                                frrrrf=bytes32.from_hexstr(coin_args[coin_name][4]),
+                            solution=SerializedProgram.from_program(
+                                spend_to_fix.solution.to_program().replace(
+                                    ff=coin_args[coin_name][0],
+                                    frf=Program.to(None),  # not general
+                                    frrf=bytes32.from_hexstr(coin_args[coin_name][2]),
+                                    frrrf=bytes32.from_hexstr(coin_args[coin_name][3]),
+                                    frrrrf=bytes32.from_hexstr(coin_args[coin_name][4]),
+                                )
                             ),
                         )
                     )

@@ -11,7 +11,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, streamable
@@ -250,7 +250,7 @@ class CRCAT:
 
         return (
             dpuz,
-            CoinSpend(
+            make_spend(
                 eve_coin,
                 eve_cat_puzzle,
                 Program.to(  # solve_cat
@@ -462,7 +462,7 @@ class CRCAT:
 
         return (
             announcements,
-            CoinSpend(
+            make_spend(
                 self.coin,
                 self.construct_puzzle(inner_puzzle),
                 Program.to(  # solve_cat

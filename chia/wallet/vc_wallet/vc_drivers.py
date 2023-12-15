@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple, Type, TypeVar
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
@@ -420,12 +420,12 @@ class VerifiedCredential(Streamable):
         return (
             dpuz,
             [
-                CoinSpend(
+                make_spend(
                     launcher_coin,
                     SINGLETON_LAUNCHER,
                     launcher_solution,
                 ),
-                CoinSpend(
+                make_spend(
                     second_launcher_coin,
                     curried_eve_singleton,
                     solution_for_singleton(
@@ -747,7 +747,7 @@ class VerifiedCredential(Streamable):
 
         return (
             expected_announcement,
-            CoinSpend(
+            make_spend(
                 self.coin,
                 self.construct_puzzle(),
                 vc_solution,
@@ -799,7 +799,7 @@ class VerifiedCredential(Streamable):
 
         return (
             expected_announcement,
-            CoinSpend(self.coin, self.construct_puzzle(), vc_solution),
+            make_spend(self.coin, self.construct_puzzle(), vc_solution),
         )
 
     ####################################################################################################################
