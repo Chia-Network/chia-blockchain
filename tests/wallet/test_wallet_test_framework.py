@@ -3,7 +3,12 @@ from __future__ import annotations
 import pytest
 
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from tests.wallet.conftest import BalanceCheckingError, WalletEnvironment, WalletStateTransition, WalletTestFramework
+from tests.environments.wallet import (
+    BalanceCheckingError,
+    WalletEnvironment,
+    WalletStateTransition,
+    WalletTestFramework,
+)
 
 
 @pytest.mark.parametrize(
@@ -31,11 +36,11 @@ async def test_basic_functionality(wallet_environments: WalletTestFramework) -> 
     assert await env_0.xch_wallet.get_confirmed_balance() == 2_000_000_000_000
     assert await env_1.xch_wallet.get_confirmed_balance() == 0
 
-    assert env_0.wallet_node.config["foo"] == "bar"
+    assert env_0.node.config["foo"] == "bar"
     assert env_0.wallet_state_manager.config["foo"] == "bar"
     assert wallet_environments.full_node.full_node.config["foo"] == "bar"
 
-    assert env_0.wallet_node.config["min_mainnet_k_size"] == 2
+    assert env_0.node.config["min_mainnet_k_size"] == 2
     assert env_0.wallet_state_manager.config["min_mainnet_k_size"] == 2
     assert wallet_environments.full_node.full_node.config["min_mainnet_k_size"] == 2
 
@@ -60,7 +65,7 @@ async def test_balance_checking(
     env_0: WalletEnvironment = wallet_environments.environments[0]
     await env_0.check_balances()
     await wallet_environments.full_node.farm_blocks_to_wallet(count=1, wallet=env_0.xch_wallet)
-    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_0.wallet_node, timeout=20)
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_0.node, timeout=20)
     with pytest.raises(BalanceCheckingError, match="2000000000000 compared to balance response 4000000000000"):
         await env_0.check_balances()
     with pytest.raises(KeyError):
@@ -184,7 +189,7 @@ async def test_balance_checking(
 
     # Test special operators
     await wallet_environments.full_node.farm_blocks_to_wallet(count=1, wallet=env_0.xch_wallet)
-    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_0.wallet_node, timeout=20)
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_0.node, timeout=20)
     with pytest.raises(ValueError, match=r"\+ 2000000000000"):
         await env_0.change_balances(
             {

@@ -63,6 +63,7 @@ from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
 from tests.util.misc import BenchmarkRunner, GcMode, _AssertRuntime, measure_overhead
 from tests.util.setup_nodes import (
+    OldSimulatorsAndWallets,
     SimulatorsAndWallets,
     setup_full_system,
     setup_n_nodes,
@@ -80,6 +81,14 @@ from chia.simulator.block_tools import BlockTools, create_block_tools_async, tes
 from chia.simulator.keyring import TempKeyring
 from chia.util.keyring_wrapper import KeyringWrapper
 from tests.util.setup_nodes import setup_farmer_multi_harvester
+
+
+def make_old_setup_simulators_and_wallets(new: SimulatorsAndWallets) -> OldSimulatorsAndWallets:
+    return (
+        [simulator.peer_api for simulator in new.simulators],
+        [(wallet.node, wallet.peer_server) for wallet in new.wallets],
+        new.bt,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -495,12 +504,12 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
 
 
 @pytest.fixture(scope="function")
-async def node_with_params(request, blockchain_constants: ConsensusConstants):
+async def node_with_params(request, blockchain_constants: ConsensusConstants) -> AsyncIterator[FullNodeSimulator]:
     params = {}
     if request:
         params = request.param
-    async with setup_simulators_and_wallets(1, 0, blockchain_constants, **params) as (sims, wallets, bt):
-        yield sims[0]
+    async with setup_simulators_and_wallets(1, 0, blockchain_constants, **params) as new:
+        yield new.simulators[0].peer_api
 
 
 @pytest.fixture(scope="function")
@@ -511,8 +520,8 @@ async def two_nodes(db_version: int, self_hostname, blockchain_constants: Consen
 
 @pytest.fixture(scope="function")
 async def setup_two_nodes_fixture(db_version: int, blockchain_constants: ConsensusConstants):
-    async with setup_simulators_and_wallets(2, 0, blockchain_constants, db_version=db_version) as _:
-        yield _
+    async with setup_simulators_and_wallets(2, 0, blockchain_constants, db_version=db_version) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
@@ -534,7 +543,8 @@ async def wallet_nodes(blockchain_constants, consensus_mode):
         2,
         1,
         dataclasses.replace(blockchain_constants, MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
-    ) as (nodes, wallets, bt):
+    ) as new:
+        (nodes, wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
         server_1 = full_node_1.full_node.server
@@ -546,8 +556,8 @@ async def wallet_nodes(blockchain_constants, consensus_mode):
 
 @pytest.fixture(scope="function")
 async def setup_four_nodes(db_version, blockchain_constants: ConsensusConstants):
-    async with setup_simulators_and_wallets(4, 0, blockchain_constants, db_version=db_version) as _:
-        yield _
+    async with setup_simulators_and_wallets(4, 0, blockchain_constants, db_version=db_version) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
@@ -564,16 +574,16 @@ async def one_wallet_and_one_simulator_services(blockchain_constants: ConsensusC
 
 @pytest.fixture(scope="function")
 async def wallet_node_100_pk(blockchain_constants: ConsensusConstants):
-    async with setup_simulators_and_wallets(1, 1, blockchain_constants, initial_num_public_keys=100) as _:
-        yield _
+    async with setup_simulators_and_wallets(1, 1, blockchain_constants, initial_num_public_keys=100) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
 async def simulator_and_wallet(
     blockchain_constants: ConsensusConstants,
 ) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
-    async with setup_simulators_and_wallets(1, 1, blockchain_constants) as _:
-        yield _
+    async with setup_simulators_and_wallets(1, 1, blockchain_constants) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
@@ -581,8 +591,8 @@ async def two_wallet_nodes(request, blockchain_constants: ConsensusConstants):
     params = {}
     if request and request.param_index > 0:
         params = request.param
-    async with setup_simulators_and_wallets(1, 2, blockchain_constants, **params) as _:
-        yield _
+    async with setup_simulators_and_wallets(1, 2, blockchain_constants, **params) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
@@ -597,65 +607,64 @@ async def two_wallet_nodes_services(
 async def two_wallet_nodes_custom_spam_filtering(
     spam_filter_after_n_txs, xch_spam_amount, blockchain_constants: ConsensusConstants
 ):
-    async with setup_simulators_and_wallets(1, 2, blockchain_constants, spam_filter_after_n_txs, xch_spam_amount) as _:
-        yield _
+    async with setup_simulators_and_wallets(
+        1, 2, blockchain_constants, spam_filter_after_n_txs, xch_spam_amount
+    ) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
 async def three_sim_two_wallets(blockchain_constants: ConsensusConstants):
-    async with setup_simulators_and_wallets(3, 2, blockchain_constants) as _:
-        yield _
+    async with setup_simulators_and_wallets(3, 2, blockchain_constants) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
 async def setup_two_nodes_and_wallet(blockchain_constants: ConsensusConstants):
-    async with setup_simulators_and_wallets(2, 1, blockchain_constants, db_version=2) as _:
-        yield _
+    async with setup_simulators_and_wallets(2, 1, blockchain_constants, db_version=2) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
 async def setup_two_nodes_and_wallet_fast_retry(blockchain_constants: ConsensusConstants):
     async with setup_simulators_and_wallets(
         1, 1, blockchain_constants, config_overrides={"wallet.tx_resend_timeout_secs": 1}, db_version=2
-    ) as _:
-        yield _
+    ) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
 async def three_wallet_nodes(blockchain_constants: ConsensusConstants):
-    async with setup_simulators_and_wallets(1, 3, blockchain_constants) as _:
-        yield _
+    async with setup_simulators_and_wallets(1, 3, blockchain_constants) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
 async def wallet_two_node_simulator(blockchain_constants: ConsensusConstants):
-    async with setup_simulators_and_wallets(2, 1, blockchain_constants) as _:
-        yield _
+    async with setup_simulators_and_wallets(2, 1, blockchain_constants) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
 async def wallet_nodes_mempool_perf(bt):
     key_seed = bt.farmer_master_sk_entropy
-    async with setup_simulators_and_wallets(1, 1, bt.constants, key_seed=key_seed) as _:
-        yield _
+    async with setup_simulators_and_wallets(1, 1, bt.constants, key_seed=key_seed) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
-async def two_nodes_two_wallets_with_same_keys(bt) -> AsyncIterator[SimulatorsAndWallets]:
+async def two_nodes_two_wallets_with_same_keys(bt) -> AsyncIterator[OldSimulatorsAndWallets]:
     key_seed = bt.farmer_master_sk_entropy
-    async with setup_simulators_and_wallets(2, 2, bt.constants, key_seed=key_seed) as _:
-        yield _
+    async with setup_simulators_and_wallets(2, 2, bt.constants, key_seed=key_seed) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture
 async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
     async with setup_simulators_and_wallets(
         1, 1, blockchain_constants, config_overrides={"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000}
-    ) as (
-        nodes,
-        wallets,
-        bt,
-    ):
+    ) as new:
+        (nodes, wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
         server_1 = full_node_1.full_node.server
         wallet_a = bt.get_pool_wallet_tool()
@@ -665,8 +674,8 @@ async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
 
 @pytest.fixture(scope="function")
 async def three_nodes_two_wallets(blockchain_constants: ConsensusConstants):
-    async with setup_simulators_and_wallets(3, 2, blockchain_constants) as _:
-        yield _
+    async with setup_simulators_and_wallets(3, 2, blockchain_constants) as new:
+        yield make_old_setup_simulators_and_wallets(new=new)
 
 
 @pytest.fixture(scope="function")
@@ -681,7 +690,8 @@ async def one_node(
 async def one_node_one_block(
     blockchain_constants: ConsensusConstants,
 ) -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
-    async with setup_simulators_and_wallets(1, 0, blockchain_constants) as (nodes, _, bt):
+    async with setup_simulators_and_wallets(1, 0, blockchain_constants) as new:
+        (nodes, _, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
         server_1 = full_node_1.full_node.server
         wallet_a = bt.get_pool_wallet_tool()
@@ -707,7 +717,8 @@ async def one_node_one_block(
 
 @pytest.fixture(scope="function")
 async def two_nodes_one_block(blockchain_constants: ConsensusConstants):
-    async with setup_simulators_and_wallets(2, 0, blockchain_constants) as (nodes, _, bt):
+    async with setup_simulators_and_wallets(2, 0, blockchain_constants) as new:
+        (nodes, _, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
         server_1 = full_node_1.full_node.server

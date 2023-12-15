@@ -12,7 +12,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
-from tests.util.setup_nodes import SimulatorsAndWallets
+from tests.util.setup_nodes import OldSimulatorsAndWallets
 
 
 @pytest.mark.anyio
@@ -186,7 +186,7 @@ async def test_process_transaction_records(
     ],
 )
 async def test_create_coins_with_amounts(
-    self_hostname: str, amounts: List[uint64], simulator_and_wallet: SimulatorsAndWallets
+    self_hostname: str, amounts: List[uint64], simulator_and_wallet: OldSimulatorsAndWallets
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)

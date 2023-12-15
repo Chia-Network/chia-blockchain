@@ -9,7 +9,7 @@ from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
@@ -84,7 +84,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
             fake_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(fake_puzzle.get_tree_hash()))[0].coin
 
             # Create the spend
-            fake_spend = CoinSpend(
+            fake_spend = make_spend(
                 fake_coin,
                 fake_puzzle,
                 Program.to([[[62, "$"]]]),
@@ -97,7 +97,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
                 else:
                     proofs_of_inclusion.append((0, []))
 
-            graftroot_spend = CoinSpend(
+            graftroot_spend = make_spend(
                 graftroot_coin,
                 graftroot_puzzle,
                 Program.to(
@@ -129,7 +129,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
                 await sim.rewind(same_height)
 
                 # try with a bad merkle root announcement
-                new_fake_spend = CoinSpend(
+                new_fake_spend = make_spend(
                     fake_coin,
                     ACS.curry(fake_struct, ACS.curry(ACS_PH, (bytes32([0] * 32), None), None, None)),
                     Program.to([[[62, "$"]]]),

@@ -522,7 +522,9 @@ class ChiaServer:
 
         return False
 
-    def connection_closed(self, connection: WSChiaConnection, ban_time: int, closed_connection: bool = False) -> None:
+    async def connection_closed(
+        self, connection: WSChiaConnection, ban_time: int, closed_connection: bool = False
+    ) -> None:
         # closed_connection is true if the callback is being called with a connection that was previously closed
         # in this case we still want to do the banning logic and remove the conection from the list
         # but the other cleanup should already have been done so we skip that
@@ -555,7 +557,7 @@ class ChiaServer:
             connection.cancel_tasks()
             on_disconnect = getattr(self.node, "on_disconnect", None)
             if on_disconnect is not None:
-                on_disconnect(connection)
+                await on_disconnect(connection)
 
     async def validate_broadcast_message_type(self, messages: List[Message], node_type: NodeType) -> None:
         for message in messages:

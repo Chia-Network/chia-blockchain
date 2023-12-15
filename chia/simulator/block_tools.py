@@ -28,7 +28,6 @@ from chia_rs import (
     solution_generator,
 )
 from chiabip158 import PyBIP158
-from clvm.casts import int_from_bytes
 
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
@@ -183,8 +182,8 @@ def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
             op = next(atoms).atom
             if op != ConditionOpcode.CREATE_COIN.value:
                 continue
-            puzzle_hash = next(atoms).atom
-            amount = int_from_bytes(next(atoms).atom)
+            puzzle_hash = next(atoms).as_atom()
+            amount = next(atoms).as_int()
             ret.append(Coin(parent_id, puzzle_hash, amount))
     return ret
 
@@ -1980,7 +1979,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
             condition_cost += conditions_cost(result, height >= constants.HARD_FORK_HEIGHT)
 
     else:
-        block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
+        block_program_args = SerializedProgram.to([[bytes(g) for g in generator.generator_refs]])
         clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, MEMPOOL_MODE, [generator.program, block_program_args])
 
         for res in result.first().as_iter():

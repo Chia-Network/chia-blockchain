@@ -22,8 +22,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
         if os.path.exists(db_path):
             os.remove(db_path)
 
-        data_store = await DataStore.create(database=db_path)
-        try:
+        async with DataStore.managed(database=db_path) as data_store:
             hint_keys_values: Dict[bytes, bytes] = {}
 
             tree_id = bytes32(b"0" * 32)
@@ -107,8 +106,6 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
             print(f"Total time for {num_nodes} operations: {insert_time + autoinsert_time + delete_time}")
             root = await data_store.get_tree_root(tree_id=tree_id)
             print(f"Root hash: {root.node_hash}")
-        finally:
-            await data_store.close()
 
 
 if __name__ == "__main__":

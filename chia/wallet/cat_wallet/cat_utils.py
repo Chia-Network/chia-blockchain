@@ -8,7 +8,7 @@ from chia_rs import G2Element
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
@@ -155,7 +155,7 @@ def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_li
             subtotals[index],
             spend_info.extra_delta,
         ]
-        coin_spend = CoinSpend(spend_info.coin, puzzle_reveal, Program.to(solution))
+        coin_spend = make_spend(spend_info.coin, puzzle_reveal, Program.to(solution))
         coin_spends.append(coin_spend)
 
     return SpendBundle(coin_spends, NULL_SIGNATURE)

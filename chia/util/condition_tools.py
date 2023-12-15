@@ -184,12 +184,14 @@ def created_outputs_for_conditions_dict(
 
 
 def conditions_dict_for_solution(
-    puzzle_reveal: SerializedProgram,
-    solution: SerializedProgram,
+    puzzle_reveal: Program,
+    solution: Program,
     max_cost: int,
 ) -> Dict[ConditionOpcode, List[ConditionWithArgs]]:
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]] = {}
-    for cvp in conditions_for_solution(puzzle_reveal, solution, max_cost):
+    puzz = SerializedProgram.from_program(puzzle_reveal)
+    sol = SerializedProgram.from_program(solution)
+    for cvp in conditions_for_solution(puzz, sol, max_cost):
         conditions_dict.setdefault(cvp.opcode, list()).append(cvp)
     return conditions_dict
 

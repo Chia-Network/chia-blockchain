@@ -61,7 +61,7 @@ def create_data_layer_service(
     api = DataLayerAPI(data_layer)
     network_id = service_config["selected_network"]
     rpc_port = service_config.get("rpc_port")
-    rpc_info: Optional[RpcInfo] = None
+    rpc_info: Optional[RpcInfo[DataLayerRpcApi]] = None
     if rpc_port is not None:
         rpc_info = (DataLayerRpcApi, cast(int, service_config["rpc_port"]))
 
