@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, Type, get_type_hints
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Type, get_type_hints
 
 import aiohttp
 
@@ -18,8 +18,8 @@ log = logging.getLogger(__name__)
 # TODO: consolidate this with chia.rpc.rpc_server.Endpoint
 # Not all endpoints only take a dictionary so that definition is imperfect
 # This definition is weaker than that one however because the arguments can be anything
-RpcEndpoint = Callable[..., Coroutine[Any, Any, Dict[str, Any]]]
-MarshallableRpcEndpoint = Callable[..., Coroutine[Any, Any, Streamable]]
+RpcEndpoint = Callable[..., Awaitable[Dict[str, Any]]]
+MarshallableRpcEndpoint = Callable[..., Awaitable[Streamable]]
 
 
 def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
