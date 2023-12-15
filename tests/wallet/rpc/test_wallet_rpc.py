@@ -2151,19 +2151,36 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             },
             {"isValid": True},
         ),
+        (
+            {
+                "message": "4f5a4f4e45",  # OZONE
+                "pubkey": (
+                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
+                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
+                ),
+                "signature": (
+                    "b0b38236629ffe865377e4d8e40bc7ca126b4d140e84c813e0ea2f555014d8779ee2551df3b6436d41d5a6c"
+                    "de6e4a5a107a770ea0e2e95f5670023938409105616ee729d2ebdbe13436ec1d00c1355e1dd60d2142e8525"
+                    "baafdeb4f8427d23ed"
+                ),
+                "signing_mode": SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS.value,
+                "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
+            },
+            {"isValid": True},
+        ),
         # Negative tests
         (
             # Message was modified
             {
                 "message": "4c6574277320656174204772616e646d61",  # Let's eat Grandma
                 "pubkey": (
-                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
-                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02"
+                    "eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
                 ),
                 "signature": (
-                    "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
-                    "5218bbe0e17677c9a23a9f18dbe488b7026be59d476161f5e6f0eea109cd7be22b1f74fda9c80c6b845ecc6"
-                    "91246eb1c7f1b66a6a"
+                    "8006f63537563f038321eeda25f3838613d8f938e95f19d1d19ccbe634e9ee4d69552536aab08b4fe961305"
+                    "e534ffddf096199ae936b272dac88c936e8774bfc7a6f24025085026db3b7c3c41b472db3daf99b5e6cabf2"
+                    "6034d8782d10ef148d"
                 ),
             },
             {"isValid": False, "error": "Signature is invalid."},
@@ -2183,41 +2200,6 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 ),
                 "signing_mode": SigningMode.CHIP_0002.value,
                 "address": "xch1d0rekc2javy5gpruzmcnk4e4qq834jzlvxt5tcgl2ylt49t26gdsjen7t0",
-            },
-            {"isValid": False, "error": "Public key doesn't match the address"},
-        ),
-        (
-            # Valid signature
-            {
-                "message": "4f5a4f4e45",  # OZONE
-                "pubkey": (
-                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
-                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
-                ),
-                "signature": (
-                    "b0b38236629ffe865377e4d8e40bc7ca126b4d140e84c813e0ea2f555014d8779ee2551df3b6436d41d5a6c"
-                    "de6e4a5a107a770ea0e2e95f5670023938409105616ee729d2ebdbe13436ec1d00c1355e1dd60d2142e8525"
-                    "baafdeb4f8427d23ed"
-                ),
-                "signing_mode": SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS.value,
-                "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
-            },
-            {"isValid": True},
-        ),
-        (
-            # Invalid signature
-            {
-                "message": "4f5a4f4e45",  # OZONE
-                "pubkey": (
-                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
-                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
-                ),
-                "signature": (
-                    "b0b38236629ffe865377e4d8e40bc7ca126b4d140e84c813e0ea2f555014d8779ee2551df3b6436d41d5a6c"
-                    "de6e4a5a107a770ea0e2e95f5670023938409105616ee729d2ebdbe13436ec1d00c1355e1dd60d2142e8525"
-                    "baafdeb4f8427d23ed"
-                ),
-                "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
             },
             {"isValid": False, "error": "Public key doesn't match the address"},
         ),
