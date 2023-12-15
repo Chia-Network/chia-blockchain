@@ -717,8 +717,8 @@ async def test_subscriptions(
         response = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
         assert response is not None
 
-        # wait for unsubscribe to be process
-        await asyncio.sleep(5 * interval)
+        # wait for unsubscribe to be processed
+        await asyncio.sleep(interval * 3)
 
         response = await data_rpc_api.subscriptions(request={})
         assert store_id.hex() not in response.get("store_ids", [])
@@ -2191,6 +2191,10 @@ async def test_unsubscribe_removes_files(
             assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
 
         res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})
+
+        # wait for unsubscribe to be processed
+        await asyncio.sleep(manage_data_interval * 3)
+
         filenames = {path.name for path in data_layer.server_files_location.iterdir()}
         assert len(filenames) == (2 * update_count if retain else 0)
 
