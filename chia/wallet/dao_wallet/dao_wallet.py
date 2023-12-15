@@ -1220,7 +1220,7 @@ class DAOWallet:
                 proposal_info.proposal_id,
                 self.dao_info.treasury_id,
             )
-            c_a, curried_args = uncurry_proposal(proposal_info.current_innerpuz)
+            c_a, curried_args_prg = uncurry_proposal(proposal_info.current_innerpuz)
             (
                 SELF_HASH,
                 PROPOSAL_ID,
@@ -1261,7 +1261,7 @@ class DAOWallet:
                 ]
             )
 
-            proposal_type, curried_args = get_proposal_args(puzzle_reveal)
+            proposal_type, curried_args_prg = get_proposal_args(puzzle_reveal)
             if proposal_type == ProposalType.SPEND:
                 (
                     TREASURY_SINGLETON_STRUCT,
@@ -1269,7 +1269,7 @@ class DAOWallet:
                     CONDITIONS,
                     LIST_OF_TAILHASH_CONDITIONS,
                     P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
-                ) = curried_args.as_iter()
+                ) = curried_args_prg.as_iter()
 
                 sum = 0
                 coin_spends = []
@@ -1286,7 +1286,7 @@ class DAOWallet:
                             cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
                             cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
                             mint_amount = cond.rest().rest().first().as_int()
-                            new_cat_puzhash = cond.rest().rest().rest().first().first().as_atom()
+                            new_cat_puzhash = bytes32(cond.rest().rest().rest().first().first().as_atom())
                             eve_puzzle = curry_cat_eve(new_cat_puzhash)
                             if genesis_id is None:
                                 tail_reconstruction = cat_wallet.cat_info.my_tail
@@ -1349,7 +1349,7 @@ class DAOWallet:
                         coin_spends.append(make_spend(xch_coin, p2_singleton_puzzle, solution))
                     delegated_puzzle_sb = SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))
                 for tail_hash_conditions_pair in LIST_OF_TAILHASH_CONDITIONS.as_iter():
-                    tail_hash: bytes32 = tail_hash_conditions_pair.first().as_atom()
+                    tail_hash = bytes32(tail_hash_conditions_pair.first().as_atom())
                     conditions: Program = tail_hash_conditions_pair.rest().first()
                     sum_of_conditions = 0
                     sum_of_coins = 0
@@ -1436,7 +1436,7 @@ class DAOWallet:
                     PASS_MARGIN,
                     PROPOSAL_SELF_DESTRUCT_TIME,
                     ORACLE_SPEND_DELAY,
-                ) = curried_args.as_iter()
+                ) = curried_args_prg.as_iter()
                 coin_spends = []
                 treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
                 delegated_solution = Program.to([])
@@ -1893,8 +1893,8 @@ class DAOWallet:
                 new_proposal_info = ProposalInfo(
                     singleton_id,
                     puzzle,
-                    new_total_votes,
-                    new_yes_votes,
+                    uint64(new_total_votes),
+                    uint64(new_yes_votes),
                     current_coin,
                     current_innerpuz,
                     current_info.timer_coin,
@@ -1928,7 +1928,7 @@ class DAOWallet:
                 raise ValueError("self.dao_info.current_treasury_innerpuz is None")
 
             timer_coin_puzhash = get_proposal_timer_puzzle(
-                cat_tail_hash.as_atom(),
+                bytes32(cat_tail_hash.as_atom()),
                 singleton_id,
                 self.dao_info.treasury_id,
             ).get_tree_hash()
