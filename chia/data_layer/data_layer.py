@@ -48,6 +48,7 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     SyncStatus,
     TerminalNode,
+    UnsubscribeData,
     leaf_hash,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
