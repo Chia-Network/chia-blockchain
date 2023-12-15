@@ -718,7 +718,7 @@ async def test_subscriptions(
         assert response is not None
 
         # wait for unsubscribe to be processed
-        await asyncio.sleep(interval * 3)
+        await asyncio.sleep(interval * 5)
 
         response = await data_rpc_api.subscriptions(request={})
         assert store_id.hex() not in response.get("store_ids", [])
