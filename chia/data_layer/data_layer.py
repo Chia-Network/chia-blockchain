@@ -116,7 +116,7 @@ class DataLayer:
     periodically_manage_data_task: Optional[asyncio.Task[None]] = None
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
-    unsubscribe_data_queue: List[UnsubscribeData]
+    unsubscribe_data_queue: List[UnsubscribeData] = []
 
     @property
     def server(self) -> ChiaServer:
@@ -176,7 +176,6 @@ class DataLayer:
             downloaders=downloaders,
             uploaders=uploaders,
             maximum_full_file_count=config.get("maximum_full_file_count", 1),
-            unsubscribe_data_queue=[],
         )
 
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
