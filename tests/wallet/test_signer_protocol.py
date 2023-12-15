@@ -12,15 +12,15 @@ from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.util.streamable import ConversionError, Streamable, streamable
 from chia.wallet.conditions import AggSigMe
-from chia.wallet.util.signer_protocol import (
+from chia.wallet.signer_protocol import (
     KeyHints,
     SigningInstructions,
     SigningTarget,
     Spend,
     TransactionInfo,
     UnsignedTransaction,
-    clvm_serialization_mode,
 )
+from chia.wallet.util.clvm_streamable import clvm_serialization_mode
 
 
 def test_signing_lifecycle() -> None:
