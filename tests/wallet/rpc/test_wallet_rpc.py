@@ -2153,15 +2153,15 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
         ),
         (
             {
-                "message": "4f5a4f4e45",  # OZONE
+                "message": "4f7a6f6e65",  # Ozone
                 "pubkey": (
                     "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
                     "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
                 ),
                 "signature": (
-                    "b0b38236629ffe865377e4d8e40bc7ca126b4d140e84c813e0ea2f555014d8779ee2551df3b6436d41d5a6c"
-                    "de6e4a5a107a770ea0e2e95f5670023938409105616ee729d2ebdbe13436ec1d00c1355e1dd60d2142e8525"
-                    "baafdeb4f8427d23ed"
+                    "b2b5ef6babea394f554710965b3c2d11c5a70c6a780fe60cea44e25242f42eca14476f2176f28d3ffa5d8b9"
+                    "41c310d9b183469584c967d9de4c4d8860e1eff9b925d78a3ed4f4f765631324e91cd7d93428fdad5cefd2c"
+                    "e5871fd4345d8f35b8"
                 ),
                 "signing_mode": SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS.value,
                 "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
@@ -2200,6 +2200,22 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 ),
                 "signing_mode": SigningMode.CHIP_0002.value,
                 "address": "xch1d0rekc2javy5gpruzmcnk4e4qq834jzlvxt5tcgl2ylt49t26gdsjen7t0",
+            },
+            {"isValid": False, "error": "Public key doesn't match the address"},
+        ),
+        (
+            {
+                "message": "4f7a6f6e65",  # Ozone
+                "pubkey": (
+                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
+                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
+                ),
+                "signature": (
+                    "b2b5ef6babea394f554710965b3c2d11c5a70c6a780fe60cea44e25242f42eca14476f2176f28d3ffa5d8b9"
+                    "41c310d9b183469584c967d9de4c4d8860e1eff9b925d78a3ed4f4f765631324e91cd7d93428fdad5cefd2c"
+                    "e5871fd4345d8f35b8"
+                ),
+                "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
             },
             {"isValid": False, "error": "Public key doesn't match the address"},
         ),
