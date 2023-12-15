@@ -978,7 +978,7 @@ class DataStore:
                         await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
 
         if hint_keys_values is not None:
-            hint_keys_values[bytes(key)] = value
+            hint_keys_values[key] = value
         return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def delete(
@@ -995,13 +995,13 @@ class DataStore:
             if hint_keys_values is None:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id)
             else:
-                if bytes(key) not in hint_keys_values:
+                if key not in hint_keys_values:
                     log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
                     return root
-                value = hint_keys_values[bytes(key)]
+                value = hint_keys_values[key]
                 node_hash = leaf_hash(key=key, value=value)
                 node = TerminalNode(node_hash, key, value)
-                del hint_keys_values[bytes(key)]
+                del hint_keys_values[key]
             if use_optimized:
                 ancestors: List[InternalNode] = await self.get_ancestors_optimized(
                     node_hash=node.hash, tree_id=tree_id, root_hash=root_hash
