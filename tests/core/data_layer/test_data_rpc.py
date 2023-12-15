@@ -690,6 +690,12 @@ async def test_subscriptions(
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
+
+    interval = 1
+    config = bt.config
+    config["data_layer"]["manage_data_interval"] = interval
+    bt.change_config(new_config=config)
+
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
 
@@ -710,6 +716,9 @@ async def test_subscriptions(
         # test unsubscribe
         response = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
         assert response is not None
+
+        # wait for unsubscribe to be process
+        await asyncio.sleep(5 * interval)
 
         response = await data_rpc_api.subscriptions(request={})
         assert store_id.hex() not in response.get("store_ids", [])
