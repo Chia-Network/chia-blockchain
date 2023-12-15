@@ -2,15 +2,13 @@ from __future__ import annotations
 
 import logging
 import traceback
-from dataclasses import dataclass
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, Type, get_type_hints
 
 import aiohttp
-from typing_extensions import TypedDict, dataclass_transform
 
 from chia.types.blockchain_format.coin import Coin
 from chia.util.json_util import obj_to_response
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_from_json_dicts, parse_timelock_info
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
@@ -24,25 +22,14 @@ RpcEndpoint = Callable[..., Coroutine[Any, Any, Dict[str, Any]]]
 MarshallableRpcEndpoint = Callable[..., Coroutine[Any, Any, Streamable]]
 
 
-class RequestType(TypedDict):
-    pass
-
-
-@dataclass_transform()
-def get_streamable_from_request_type(cls: Type[RequestType]) -> Type[Streamable]:
-    return streamable(
-        dataclass(frozen=True)(type("_" + cls.__name__, (Streamable,), {"__annotations__": cls.__annotations__}))
-    )
-
-
-def marshall(func: MarshallableRpcEndpoint) -> RpcEndpoint:
+def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     hints = get_type_hints(func)
-    request_class: Type[RequestType] = hints["request"]
+    request_class: Type[Streamable] = hints["request"]
 
     async def rpc_endpoint(self, request: Dict[str, Any], *args: object, **kwargs: object) -> Dict[str, Any]:
         response_obj: Streamable = await func(
             self,
-            get_streamable_from_request_type(request_class).from_json_dict(request).__dict__,
+            request_class.from_json_dict(request),
             *args,
             **kwargs,
         )
