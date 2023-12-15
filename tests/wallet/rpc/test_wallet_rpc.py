@@ -2159,9 +2159,9 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                     "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
                 ),
                 "signature": (
-                    "b2b5ef6babea394f554710965b3c2d11c5a70c6a780fe60cea44e25242f42eca14476f2176f28d3ffa5d8b9"
-                    "41c310d9b183469584c967d9de4c4d8860e1eff9b925d78a3ed4f4f765631324e91cd7d93428fdad5cefd2c"
-                    "e5871fd4345d8f35b8"
+                    "92a5124d53b74e4197d075277d0b31eda1571353415c4a87952035aa392d4e9206b35e4af959e7135e45db1"
+                    "c884b8b970f9cbffd42291edc1acdb124554f04608b8d842c19e1404d306f881fa79c0e287bdfcf36a6e5da"
+                    "334981b974a6cebfd0"
                 ),
                 "signing_mode": SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS.value,
                 "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
@@ -2209,11 +2209,11 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 "pubkey": (
                     "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
                     "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
-                ),
+                ), 
                 "signature": (
-                    "b2b5ef6babea394f554710965b3c2d11c5a70c6a780fe60cea44e25242f42eca14476f2176f28d3ffa5d8b9"
-                    "41c310d9b183469584c967d9de4c4d8860e1eff9b925d78a3ed4f4f765631324e91cd7d93428fdad5cefd2c"
-                    "e5871fd4345d8f35b8"
+                    "92a5124d53b74e4197d075277d0b31eda1571353415c4a87952035aa392d4e9206b35e4af959e7135e45db1"
+                    "c884b8b970f9cbffd42291edc1acdb124554f04608b8d842c19e1404d306f881fa79c0e287bdfcf36a6e5da"
+                    "334981b974a6cebfd0"
                 ),
                 "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
             },
