@@ -2209,7 +2209,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 "pubkey": (
                     "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
                     "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
-                ), 
+                ),
                 "signature": (
                     "92a5124d53b74e4197d075277d0b31eda1571353415c4a87952035aa392d4e9206b35e4af959e7135e45db1"
                     "c884b8b970f9cbffd42291edc1acdb124554f04608b8d842c19e1404d306f881fa79c0e287bdfcf36a6e5da"
