@@ -130,7 +130,10 @@ async def setup_full_node(
 
     if not reuse_db and db_version > 1:
         with sqlite3.connect(db_path, uri=uri) as connection:
-            connection.execute("CREATE TABLE database_version(version int)")
+            try:
+                connection.execute("CREATE TABLE database_version(version int)")
+            except sqlite3.OperationalError as e:
+                raise Exception(f"db uri: {uri!r}") from e
             connection.execute("INSERT INTO database_version VALUES (?)", (db_version,))
             connection.commit()
 
