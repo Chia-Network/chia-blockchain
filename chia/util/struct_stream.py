@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import BinaryIO, ClassVar, SupportsIndex, SupportsInt, Type, TypeVar, Union
+import warnings
+from typing import BinaryIO, ClassVar, NoReturn, SupportsIndex, SupportsInt, Type, TypeVar, Union
 
 from typing_extensions import Protocol
 
@@ -91,4 +92,6 @@ class StructStream(int):
 
     # this is meant to avoid mixing up construcing a bytes object of a specific
     # size (i.e. bytes(int)) vs. serializing the integer to bytes (i.e. bytes(uint32))
-    __bytes__ = None
+    def __bytes__(self) -> NoReturn:
+        warnings.warn(f"use .stream_to_bytes() instead of bytes({type(self).__name__})")
+        raise TypeError(f"cannot convert {type(self).__name__!r} object to bytes")
