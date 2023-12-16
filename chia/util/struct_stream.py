@@ -93,9 +93,10 @@ class StructStream(int):
     # this is meant to avoid mixing up construcing a bytes object of a specific
     # size (i.e. bytes(int)) vs. serializing the integer to bytes (i.e. bytes(uint32))
     def __bytes__(self) -> NoReturn:
-        import traceback
-
-        tb = traceback.format_exc()
-        if "block_creation.py:234: in <listcomp>" not in tb:
-            warnings.warn(f"use .stream_to_bytes() instead of bytes({type(self).__name__})")
+        # import re
+        # import traceback
+        #
+        # if not any(re.search(r"block_creation\.py.*234.*in <listcomp>", line) is not None
+        # for line in traceback.format_stack()):
+        warnings.warn(f"use .stream_to_bytes() instead of bytes({type(self).__name__})")
         raise TypeError(f"cannot convert {type(self).__name__!r} object to bytes")
