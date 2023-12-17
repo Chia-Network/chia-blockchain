@@ -91,4 +91,6 @@ class StructStream(int):
 
     # this is meant to avoid mixing up construcing a bytes object of a specific
     # size (i.e. bytes(int)) vs. serializing the integer to bytes (i.e. bytes(uint32))
-    __bytes__ = None
+    # __bytes__ = None
+    def __bytes__(self) -> bytes:
+        return super().to_bytes(length=self.SIZE, byteorder="big", signed=self.SIGNED)
