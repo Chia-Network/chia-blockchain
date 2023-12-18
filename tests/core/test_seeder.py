@@ -11,8 +11,8 @@ import pytest
 
 from chia.seeder.dns_server import DNSServer
 from chia.seeder.peer_record import PeerRecord, PeerReliability
-from chia.simulator.time_out_assert import time_out_assert
 from chia.util.ints import uint32, uint64
+from tests.util.time_out_assert import time_out_assert
 
 timeout = 0.5
 

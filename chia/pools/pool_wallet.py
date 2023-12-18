@@ -42,7 +42,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes, parse_timelock_info
 from chia.wallet.derive_keys import find_owner_sk
@@ -584,22 +584,21 @@ class PoolWallet:
                 pool_reward_prefix,
                 escape_puzzle_hash,
             ) = uncurry_pool_member_inner_puzzle(inner_puzzle)
-            pk_bytes: bytes = bytes(pubkey_as_program.as_atom())
-            assert len(pk_bytes) == 48
-            owner_pubkey = G1Element.from_bytes(pk_bytes)
-            assert owner_pubkey == pool_wallet_info.current.owner_pubkey
         elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
             (
                 target_puzzle_hash,  # payout_puzzle_hash
                 relative_lock_height,
-                owner_pubkey,
+                pubkey_as_program,
                 p2_singleton_hash,
             ) = uncurry_pool_waitingroom_inner_puzzle(inner_puzzle)
-            pk_bytes = bytes(owner_pubkey.as_atom())
-            assert len(pk_bytes) == 48
-            assert owner_pubkey == pool_wallet_info.current.owner_pubkey
         else:
             raise RuntimeError("Invalid state")
+
+        pk_bytes = pubkey_as_program.as_atom()
+        assert pk_bytes is not None
+        assert len(pk_bytes) == 48
+        owner_pubkey = G1Element.from_bytes(pk_bytes)
+        assert owner_pubkey == pool_wallet_info.current.owner_pubkey
 
         signed_spend_bundle = await self.sign(outgoing_coin_spend)
         assert signed_spend_bundle.removals()[0].puzzle_hash == singleton.puzzle_hash
@@ -892,7 +891,7 @@ class PoolWallet:
             full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
             fee_tx = dataclasses.replace(fee_tx, spend_bundle=None)
 
-        assert full_spend.fees() == fee
+        assert estimate_fees(full_spend) == fee
         current_time = uint64(int(time.time()))
         # The claim spend, minus the fee amount from the main wallet
         absorb_transaction: TransactionRecord = TransactionRecord(

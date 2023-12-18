@@ -217,7 +217,10 @@
           )
           (c
             (list ASSERT_MY_AMOUNT my_amount)
-            output
+            (if TOTAL_VOTES
+                (c (list ASSERT_HEIGHT_RELATIVE 1) output)
+                output
+            )
           )
         )
     )

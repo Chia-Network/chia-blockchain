@@ -1,13 +1,28 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import logging.config
 import os
 import signal
 from pathlib import Path
 from types import FrameType
-from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Set, Tuple, Type, TypeVar
+from typing import (
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
@@ -131,8 +146,6 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
 
         self._api = peer_api
         self._node = node
-        self._did_start = False
-        self._is_stopping = asyncio.Event()
         self._stopped_by_rpc = False
 
         self._on_connect_callback = on_connect_callback
@@ -140,6 +153,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         self._connect_peers = connect_peers
         self._connect_peers_task: Optional[asyncio.Task[None]] = None
         self.upnp: UPnP = UPnP()
+        self.stop_requested = asyncio.Event()
 
     async def _connect_peers_task_handler(self) -> None:
         resolved_peers: Dict[UnresolvedPeerInfo, PeerInfo] = {}
@@ -175,68 +189,91 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                         resolved_peers[unresolved] = resolved_new
             await asyncio.sleep(self.reconnect_retry_seconds)
 
-    async def start(self) -> None:
-        # TODO: move those parameters to `__init__`
-        if self._did_start:
-            return None
-
-        assert self.self_hostname is not None
-        assert self.daemon_port is not None
-
-        self._did_start = True
-
-        await self._node._start()
-        self._node._shut_down = False
-
-        if len(self._upnp_ports) > 0:
-            self.upnp.setup()
-
-            for port in self._upnp_ports:
-                self.upnp.remap(port)
-
-        await self._server.start(
-            prefer_ipv6=self.config.get("prefer_ipv6", False),
-            on_connect=self._on_connect_callback,
-        )
-        try:
-            self._advertised_port = self._server.get_port()
-        except ValueError:
-            pass
-
-        self._connect_peers_task = asyncio.create_task(self._connect_peers_task_handler())
-
-        self._log.info(
-            f"Started {self._service_name} service on network_id: {self._network_id} "
-            f"at port {self._advertised_port}"
-        )
-
-        if self._rpc_info:
-            rpc_api, rpc_port = self._rpc_info
-            self.rpc_server = await start_rpc_server(
-                rpc_api(self._node),
-                self.self_hostname,
-                self.daemon_port,
-                uint16(rpc_port),
-                self.stop,
-                self.root_path,
-                self.config,
-                self._connect_to_daemon,
-                max_request_body_size=self.max_request_body_size,
-            )
-
     async def run(self) -> None:
         try:
             with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
-                try:
-                    await self.start()
-                except:  # noqa E722
-                    self.stop()
-                    raise
-                finally:
-                    await self.wait_closed()
+                async with self.manage():
+                    await self.stop_requested.wait()
         except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
             raise ValueError(f"{self._service_name}: already running") from e
+
+    @contextlib.asynccontextmanager
+    async def manage(self, *, start: bool = True) -> AsyncIterator[None]:
+        # NOTE: avoid start=False, this is presently used for corner case setup type tests
+        async with contextlib.AsyncExitStack() as async_exit_stack:
+            try:
+                if start:
+                    self.stop_requested = asyncio.Event()
+
+                    assert self.self_hostname is not None
+                    assert self.daemon_port is not None
+
+                    await async_exit_stack.enter_async_context(self._node.manage())
+                    self._node._shut_down = False
+
+                    if len(self._upnp_ports) > 0:
+                        async_exit_stack.enter_context(self.upnp.manage(self._upnp_ports))
+
+                    await self._server.start(
+                        prefer_ipv6=self.config.get("prefer_ipv6", False),
+                        on_connect=self._on_connect_callback,
+                    )
+                    try:
+                        self._advertised_port = self._server.get_port()
+                    except ValueError:
+                        pass
+
+                    self._connect_peers_task = asyncio.create_task(self._connect_peers_task_handler())
+
+                    self._log.info(
+                        f"Started {self._service_name} service on network_id: {self._network_id} "
+                        f"at port {self._advertised_port}"
+                    )
+
+                    if self._rpc_info:
+                        rpc_api, rpc_port = self._rpc_info
+                        self.rpc_server = await start_rpc_server(
+                            rpc_api(self._node),
+                            self.self_hostname,
+                            self.daemon_port,
+                            uint16(rpc_port),
+                            self.stop_requested.set,
+                            self.root_path,
+                            self.config,
+                            self._connect_to_daemon,
+                            max_request_body_size=self.max_request_body_size,
+                        )
+                yield
+            finally:
+                self._log.info(f"Stopping service {self._service_name} at port {self._advertised_port} ...")
+
+                # start with UPnP, since this can take a while, we want it to happen
+                # in the background while shutting down everything else
+                for port in self._upnp_ports:
+                    self.upnp.release(port)
+
+                self._log.info("Cancelling reconnect task")
+                if self._connect_peers_task is not None:
+                    self._connect_peers_task.cancel()
+                self._log.info("Closing connections")
+                self._server.close_all()
+
+                if self.rpc_server is not None:
+                    self._log.info("Closing RPC server")
+                    self.rpc_server.close()
+
+                self._log.info("Waiting for socket to be closed (if opened)")
+
+                self._log.info("Waiting for ChiaServer to be closed")
+                await self._server.await_closed()
+
+                if self.rpc_server:
+                    self._log.info("Waiting for RPC server")
+                    await self.rpc_server.await_closed()
+                    self._log.info("Closed RPC server")
+
+                self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully stopped")
 
     def add_peer(self, peer: UnresolvedPeerInfo) -> None:
         self._connect_peers.add(peer)
@@ -274,54 +311,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         if ignore:
             return
 
-        self.stop()
-
-    def stop(self) -> None:
-        if not self._is_stopping.is_set():
-            self._is_stopping.set()
-            self._log.info(f"Stopping service {self._service_name} at port {self._advertised_port} ...")
-
-            # start with UPnP, since this can take a while, we want it to happen
-            # in the background while shutting down everything else
-            for port in self._upnp_ports:
-                self.upnp.release(port)
-
-            self._log.info("Cancelling reconnect task")
-            if self._connect_peers_task is not None:
-                self._connect_peers_task.cancel()
-            self._log.info("Closing connections")
-            self._server.close_all()
-            self._node._close()
-            self._node._shut_down = True
-
-            self._log.info("Calling service stop callback")
-
-            if self.rpc_server is not None:
-                self._log.info("Closing RPC server")
-                self.rpc_server.close()
-
-    async def wait_closed(self) -> None:
-        await self._is_stopping.wait()
-
-        self._log.info("Waiting for socket to be closed (if opened)")
-
-        self._log.info("Waiting for ChiaServer to be closed")
-        await self._server.await_closed()
-
-        if self.rpc_server:
-            self._log.info("Waiting for RPC server")
-            await self.rpc_server.await_closed()
-            self._log.info("Closed RPC server")
-
-        self._log.info("Waiting for service _await_closed callback")
-        await self._node._await_closed()
-
-        # this is a blocking call, waiting for the UPnP thread to exit
-        self.upnp.shutdown()
-
-        self._did_start = False
-        self._is_stopping.clear()
-        self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully stopped")
+        self.stop_requested.set()
 
 
 def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:

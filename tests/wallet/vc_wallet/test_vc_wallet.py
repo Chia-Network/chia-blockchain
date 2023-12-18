@@ -9,7 +9,6 @@ from typing_extensions import Literal
 
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.time_out_assert import time_out_assert_not_none
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -30,6 +29,7 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from tests.util.time_out_assert import time_out_assert_not_none
 from tests.wallet.conftest import WalletEnvironment, WalletStateTransition, WalletTestFramework
 
 
