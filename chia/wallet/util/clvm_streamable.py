@@ -24,12 +24,8 @@ class _ClvmSerializationMode:
     config = contextvars.ContextVar("config", default=threading.local())
 
     @classmethod
-    def has_config(cls) -> bool:
-        return hasattr(cls.config.get(), "config")
-
-    @classmethod
     def get_config(cls) -> ClvmSerializationConfig:
-        return cls.config.get().config  # type: ignore[no-any-return]
+        return getattr(cls.config.get(), "config", ClvmSerializationConfig())
 
     @classmethod
     def set_config(cls, config: ClvmSerializationConfig) -> None:
@@ -38,8 +34,6 @@ class _ClvmSerializationMode:
 
 @contextmanager
 def clvm_serialization_mode(use: bool) -> Iterator[None]:
-    if not _ClvmSerializationMode.has_config():
-        _ClvmSerializationMode.set_config(ClvmSerializationConfig())
     old_config = _ClvmSerializationMode.get_config()
     _ClvmSerializationMode.set_config(ClvmSerializationConfig(use=use))
     yield
