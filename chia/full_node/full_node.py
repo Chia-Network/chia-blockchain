@@ -1054,6 +1054,7 @@ class FullNode:
         buffer_size = 4
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
         peers_with_peak: List[WSChiaConnection] = self.get_peers_with_peak(peak_hash)
+        # check if we are extending our current peak
         fork_point_height = await check_fork_next_block(
             self.blockchain, fork_point_height, peers_with_peak, node_next_block_check
         )
@@ -1061,11 +1062,6 @@ class FullNode:
         # this is called under the priority_mutex, peaks will not change during sync
         peak = self.blockchain.get_peak()
         extending_main_chain: bool = peak is None or fork_point_height == peak.height
-
-        # normally "fork_point" or "fork_height" refers to the first common
-        # block between the main chain and the fork. Here "fork_point_height"
-        # seems to refer to the first diverging block
-
         async def fetch_block_batches(
             batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
         ) -> None:
