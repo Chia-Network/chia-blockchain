@@ -1,32 +1,49 @@
 from __future__ import annotations
 
+import contextvars
+import threading
 from contextlib import contextmanager
 from dataclasses import dataclass, fields
 from io import BytesIO
-from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Type, TypeVar
+from typing import Any, BinaryIO, Callable, Dict, Iterator, Type, TypeVar
 
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
 from typing_extensions import dataclass_transform
 
-from chia.types.blockchain_format.coin import Coin as _Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint64
 from chia.util.streamable import ConversionError, Streamable, streamable
 
-USE_CLVM_SERIALIZATION = False
+
+@dataclass
+class ClvmSerializationConfig:
+    use: bool = False
+
+
+class _ClvmSerializationMode:
+    config = contextvars.ContextVar("config", default=threading.local())
+
+    @classmethod
+    def has_config(cls) -> bool:
+        return hasattr(cls.config.get(), "config")
+
+    @classmethod
+    def get_config(cls) -> ClvmSerializationConfig:
+        return cls.config.get().config  # type: ignore[no-any-return]
+
+    @classmethod
+    def set_config(cls, config: ClvmSerializationConfig) -> None:
+        cls.config.get().config = config
 
 
 @contextmanager
 def clvm_serialization_mode(use: bool) -> Iterator[None]:
-    global USE_CLVM_SERIALIZATION
-    old_mode = USE_CLVM_SERIALIZATION
-    USE_CLVM_SERIALIZATION = use
+    if not _ClvmSerializationMode.has_config():
+        _ClvmSerializationMode.set_config(ClvmSerializationConfig())
+    old_config = _ClvmSerializationMode.get_config()
+    _ClvmSerializationMode.set_config(ClvmSerializationConfig(use=use))
     yield
-    USE_CLVM_SERIALIZATION = old_mode
+    _ClvmSerializationMode.set_config(old_config)
 
 
 @dataclass_transform()
@@ -59,8 +76,7 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
         raise NotImplementedError()  # pragma: no cover
 
     def stream(self, f: BinaryIO) -> None:
-        global USE_CLVM_SERIALIZATION
-        if USE_CLVM_SERIALIZATION:
+        if _ClvmSerializationMode.get_config().use:
             f.write(bytes(self.as_program()))
         else:
             super().stream(f)
@@ -76,8 +92,7 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
             return super().parse(f)
 
     def override_json_serialization(self, default_recurse_jsonify: Callable[[Any], Dict[str, Any]]) -> Any:
-        global USE_CLVM_SERIALIZATION
-        if USE_CLVM_SERIALIZATION:
+        if _ClvmSerializationMode.get_config().use:
             return bytes(self).hex()
         else:
             new_dict = {}
@@ -99,88 +114,3 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
                 raise ConversionError(json_dict, cls, e)
         else:
             return super().from_json_dict(json_dict)
-
-
-class Coin(ClvmStreamable):
-    parent_coin_id: bytes32
-    puzzle_hash: bytes32
-    amount: uint64
-
-
-class Spend(ClvmStreamable):
-    coin: Coin
-    puzzle: Program
-    solution: Program
-
-    @classmethod
-    def from_coin_spend(cls, coin_spend: CoinSpend) -> Spend:
-        return cls(
-            Coin(
-                coin_spend.coin.parent_coin_info,
-                coin_spend.coin.puzzle_hash,
-                uint64(coin_spend.coin.amount),
-            ),
-            coin_spend.puzzle_reveal.to_program(),
-            coin_spend.solution.to_program(),
-        )
-
-    def as_coin_spend(self) -> CoinSpend:
-        return CoinSpend(
-            _Coin(
-                self.coin.parent_coin_id,
-                self.coin.puzzle_hash,
-                self.coin.amount,
-            ),
-            SerializedProgram.from_program(self.puzzle),
-            SerializedProgram.from_program(self.solution),
-        )
-
-
-class TransactionInfo(ClvmStreamable):
-    spends: List[Spend]
-
-
-class SigningTarget(ClvmStreamable):
-    pubkey: bytes
-    message: bytes
-    hook: bytes32
-
-
-class SumHint(ClvmStreamable):
-    fingerprints: List[bytes]
-    synthetic_offset: bytes
-
-
-class PathHint(ClvmStreamable):
-    root_fingerprint: bytes
-    path: List[uint64]
-
-
-class KeyHints(ClvmStreamable):
-    sum_hints: List[SumHint]
-    path_hints: List[PathHint]
-
-
-class SigningInstructions(ClvmStreamable):
-    key_hints: KeyHints
-    targets: List[SigningTarget]
-
-
-class UnsignedTransaction(ClvmStreamable):
-    transaction_info: TransactionInfo
-    signing_instructions: SigningInstructions
-
-
-class SigningResponse(ClvmStreamable):
-    signature: bytes
-    hook: bytes32
-
-
-class Signature(ClvmStreamable):
-    type: str
-    signature: bytes
-
-
-class SignedTransaction(ClvmStreamable):
-    transaction_info: TransactionInfo
-    signatures: List[Signature]

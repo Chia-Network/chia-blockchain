@@ -18,7 +18,7 @@ from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletIn
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
-from chia.rpc.util import marshall, tx_endpoint
+from chia.rpc.util import marshal, tx_endpoint
 from chia.rpc.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
@@ -4512,27 +4512,27 @@ class WalletRpcApi:
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
 
-    @marshall
+    @marshal
     async def gather_signing_info(
         self,
         request: GatherSigningInfo,
     ) -> GatherSigningInfoResponse:
-        return GatherSigningInfoResponse(await self.service.wallet_state_manager.gather_signing_info(request["spends"]))
+        return GatherSigningInfoResponse(await self.service.wallet_state_manager.gather_signing_info(request.spends))
 
-    @marshall
+    @marshal
     async def apply_signatures(
         self,
         request: ApplySignatures,
     ) -> ApplySignaturesResponse:
         return ApplySignaturesResponse(
-            [await self.service.wallet_state_manager.apply_signatures(request["spends"], request["signing_responses"])]
+            [await self.service.wallet_state_manager.apply_signatures(request.spends, request.signing_responses)]
         )
 
-    @marshall
+    @marshal
     async def submit_transactions(
         self,
         request: SubmitTransactions,
     ) -> SubmitTransactionsResponse:
         return SubmitTransactionsResponse(
-            await self.service.wallet_state_manager.submit_transactions(request["signed_transactions"])
+            await self.service.wallet_state_manager.submit_transactions(request.signed_transactions)
         )

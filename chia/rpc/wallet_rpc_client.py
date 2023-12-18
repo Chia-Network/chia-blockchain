@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from typing_extensions import Unpack
-
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
-from chia.rpc.util import get_streamable_from_request_type
 from chia.rpc.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
@@ -1695,33 +1692,33 @@ class WalletRpcClient(RpcClient):
 
     async def gather_signing_info(
         self,
-        **kwargs: Unpack[GatherSigningInfo],
+        args: GatherSigningInfo,
     ) -> GatherSigningInfoResponse:
         return GatherSigningInfoResponse.from_json_dict(
             await self.fetch(
                 "gather_signing_info",
-                get_streamable_from_request_type(GatherSigningInfo)(**kwargs).to_json_dict(),  # type: ignore[misc]
+                args.to_json_dict(),
             )
         )
 
     async def apply_signatures(
         self,
-        **kwargs: Unpack[ApplySignatures],
+        args: ApplySignatures,
     ) -> ApplySignaturesResponse:
         return ApplySignaturesResponse.from_json_dict(
             await self.fetch(
                 "apply_signatures",
-                get_streamable_from_request_type(ApplySignatures)(**kwargs).to_json_dict(),  # type: ignore[misc]
+                args.to_json_dict(),
             )
         )
 
     async def submit_transactions(
         self,
-        **kwargs: Unpack[SubmitTransactions],
+        args: SubmitTransactions,
     ) -> SubmitTransactionsResponse:
         return SubmitTransactionsResponse.from_json_dict(
             await self.fetch(
                 "submit_transactions",
-                get_streamable_from_request_type(SubmitTransactions)(**kwargs).to_json_dict(),  # type: ignore[misc]
+                args.to_json_dict(),
             )
         )
