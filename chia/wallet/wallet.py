@@ -39,10 +39,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition, make_reserve_fee_condition
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
-from chia.wallet.util.signer_protocol import (
+from chia.wallet.signer_protocol import (
     PathHint,
     Signature,
     SignedTransaction,
@@ -52,6 +49,9 @@ from chia.wallet.util.signer_protocol import (
     SumHint,
     TransactionInfo,
 )
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
