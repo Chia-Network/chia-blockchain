@@ -5,7 +5,7 @@ from typing import List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.util.signer_protocol import SignedTransaction, SigningInstructions, SigningResponse, Spend
+from chia.wallet.signer_protocol import SignedTransaction, SigningInstructions, SigningResponse, Spend
 
 
 @streamable

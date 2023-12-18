@@ -95,6 +95,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
+from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     create_singleton_puzzle,
@@ -108,7 +109,6 @@ from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
-from chia.wallet.util.signer_protocol import SigningResponse
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state

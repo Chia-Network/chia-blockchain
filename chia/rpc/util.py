@@ -17,7 +17,7 @@ from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_fr
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.signer_protocol import clvm_serialization_mode
+from chia.wallet.util.clvm_streamable import clvm_serialization_mode
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 

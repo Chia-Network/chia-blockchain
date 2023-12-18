@@ -111,17 +111,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_hash_for_synthetic_public_key,
 )
 from chia.wallet.sign_coin_spends import sign_coin_spends
-from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
-from chia.wallet.trade_manager import TradeManager
-from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.address_type import AddressType
-from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
-from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
-from chia.wallet.util.query_filter import HashFilter
-from chia.wallet.util.signer_protocol import (
+from chia.wallet.signer_protocol import (
     KeyHints,
     PathHint,
     SignedTransaction,
@@ -133,6 +123,16 @@ from chia.wallet.util.signer_protocol import (
     TransactionInfo,
     UnsignedTransaction,
 )
+from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
+from chia.wallet.trade_manager import TradeManager
+from chia.wallet.trading.trade_status import TradeStatus
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
+from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
+from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import (
