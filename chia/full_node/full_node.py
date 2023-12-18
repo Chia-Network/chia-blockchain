@@ -1058,6 +1058,9 @@ class FullNode:
             self.blockchain, fork_point_height, peers_with_peak, node_next_block_check
         )
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+        # this is called under the priority_mutex, peaks will not change during sync
+        peak = self.blockchain.get_peak()
+        extending_main_chain: bool = peak is None or fork_point_height == peak.height
 
         # normally "fork_point" or "fork_height" refers to the first common
         # block between the main chain and the fork. Here "fork_point_height"
@@ -1101,7 +1104,11 @@ class FullNode:
         async def validate_block_batches(
             inner_batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
         ) -> None:
-            fork_info: Optional[ForkInfo] = None
+            fork_info = None
+            if not extending_main_chain and fork_point_height > 0:
+                fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
+                assert fork_hash is not None
+                fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
 
             while True:
                 res: Optional[Tuple[WSChiaConnection, List[FullBlock]]] = await inner_batch_queue.get()
@@ -1111,26 +1118,6 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
-
-                # in case we're validating a reorg fork (i.e. not extending the
-                # main chain), we need to record the coin set from that fork in
-                # fork_info. Otherwise validation is very expensive, especially
-                # for deep reorgs
-                peak: Optional[BlockRecord]
-                if fork_info is None:
-                    peak = self.blockchain.get_peak()
-                    extending_main_chain: bool = peak is None or (
-                        peak.header_hash == blocks[0].prev_header_hash or peak.header_hash == blocks[0].header_hash
-                    )
-                    # if we're simply extending the main chain, it's important
-                    # *not* to pass in a ForkInfo object, as it can potentially
-                    # accrue a large state (with no value, since we can validate
-                    # against the CoinStore)
-                    if not extending_main_chain:
-                        if fork_point_height != 0:
-                            fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
-                            assert fork_hash is not None
-                            fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
 
                 success, state_change_summary, err = await self.add_block_batch(
                     blocks,
@@ -1233,14 +1220,11 @@ class FullNode:
         self,
         all_blocks: List[FullBlock],
         peer_info: PeerInfo,
-        fork_info: Optional[ForkInfo],
+        fork_info: Optional[ForkInfo] = None,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
-        forkpoint: Optional[uint32] = None
-        if fork_info is not None:
-            forkpoint = uint32(fork_info.fork_height)
         block_dict: Dict[bytes32, FullBlock] = {}
         for block in all_blocks:
             block_dict[block.header_hash] = block
@@ -1282,7 +1266,11 @@ class FullNode:
         # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.monotonic()
         pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
-            blocks_to_validate, {}, fork_height=forkpoint, wp_summaries=wp_summaries, validate_signatures=True
+            blocks_to_validate,
+            {},
+            fork_height=None if fork_info is None else fork_info.fork_height,
+            wp_summaries=wp_summaries,
+            validate_signatures=True,
         )
         pre_validate_end = time.monotonic()
         pre_validate_time = pre_validate_end - pre_validate_start
@@ -1727,7 +1715,10 @@ class FullNode:
             # Don't validate signatures because we want to validate them in the main thread later, since we have a
             # cache available
             pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
-                [block], npc_results, validate_signatures=False
+                [block],
+                npc_results,
+                validate_signatures=False,
+                fork_height=None if fork_info is None else fork_info.fork_height,
             )
             added: Optional[AddBlockResult] = None
             pre_validation_time = time.time() - validation_start

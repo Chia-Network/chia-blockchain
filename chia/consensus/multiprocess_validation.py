@@ -174,7 +174,7 @@ async def pre_validate_blocks_multiprocessing(
         [BlockInfo, Optional[int], Dict[bytes32, FullBlock]], Awaitable[Optional[BlockGenerator]]
     ],
     batch_size: int,
-    fork_height: Optional[uint32],
+    fork_height: Optional[int],
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
     validate_signatures: bool = True,

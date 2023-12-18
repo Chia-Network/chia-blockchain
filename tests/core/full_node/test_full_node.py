@@ -2179,7 +2179,9 @@ async def test_long_reorg(
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        await node.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        await node.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), ForkInfo(b.height, b.height, b.header_hash)
+        )
 
     peak = node.full_node.blockchain.get_peak()
     chain_1_height = peak.height

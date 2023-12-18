@@ -519,9 +519,6 @@ class Blockchain(BlockchainInterface):
         else:
             records_to_add = await self.block_store.get_block_records_by_hash(fork_info.block_hashes)
 
-        fork_height = None
-        if fork_info is not None:
-            fork_height = fork_info.fork_height
         for fetched_block_record in records_to_add:
             if not fetched_block_record.is_transaction_block:
                 # Coins are only created in TX blocks so there are no state updates for this block
@@ -764,7 +761,7 @@ class Blockchain(BlockchainInterface):
         wp_summaries: Optional[List[SubEpochSummary]] = None,
         *,
         validate_signatures: bool,
-        fork_height: Optional[uint32] = None,
+        fork_height: Optional[int] = None,
     ) -> List[PreValidationResult]:
         return await pre_validate_blocks_multiprocessing(
             self.constants,

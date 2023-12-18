@@ -4,6 +4,7 @@ from typing import List
 
 import pytest
 
+from chia.consensus.block_body_validation import ForkInfo
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
@@ -41,7 +42,8 @@ async def test_mempool_update_performance(
 
     # We need an initialized mempool as we want to add a transaction, so we use
     # the first block to achieve that
-    await full_node.add_block(blocks[0])
+    b = blocks[0]
+    await full_node.add_block(b)
     await full_node.add_block_batch(blocks[1:], PeerInfo("0.0.0.0", 0), None)
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node.server.get_port()), None)
