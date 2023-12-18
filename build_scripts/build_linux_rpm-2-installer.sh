@@ -91,7 +91,7 @@ cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
 export FPM_EDITOR="cat >../../../build_scripts/dist/gui.spec <"
-jq '.build.rpm.fpm |= . + ["--edit"]' package.json > temp.json && mv temp.json package.json
+jq '.rpm.fpm |= . + ["--edit"]' ../../../build_scripts/electron-builder.json > temp.json && mv temp.json ../../../build_scripts/electron-builder.json
 
 echo "Building Linux(rpm) Electron app"
 OPT_ARCH="--x64"
@@ -102,11 +102,13 @@ PRODUCT_NAME="chia"
 echo npx electron-builder build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
-  --config.rpm.packageName="chia-blockchain"
+  --config.rpm.packageName="chia-blockchain" \
+  --config ../../../build_scripts/electron-builder.json
 npx electron-builder build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
-  --config.rpm.packageName="chia-blockchain"
+  --config.rpm.packageName="chia-blockchain" \
+  --config ../../../build_scripts/electron-builder.json
 LAST_EXIT_CODE=$?
 ls -l dist/linux*-unpacked/resources
 
