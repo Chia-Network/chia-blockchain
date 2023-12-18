@@ -222,7 +222,6 @@ class WalletStateManager:
         server: ChiaServer,
         root_path: Path,
         wallet_node: WalletNode,
-        main_wallet_driver: Type[MainWalletProtocol],
         observation_root: Optional[ObservationRoot] = None,
     ) -> WalletStateManager:
         self = WalletStateManager()
@@ -292,7 +291,7 @@ class WalletStateManager:
         puzzle_decorators = self.config.get("puzzle_decorators", {}).get(fingerprint, [])
         self.decorator_manager = PuzzleDecoratorManager.create(puzzle_decorators)
 
-        self.main_wallet = await main_wallet_driver.create(self, main_wallet_info)
+        self.main_wallet = await self.get_main_wallet_driver(self.observation_root).create(self, main_wallet_info)
 
         self.wallets = {main_wallet_info.id: self.main_wallet}
 
@@ -364,6 +363,13 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
 
         return self
+
+    def get_main_wallet_driver(self, observation_root: ObservationRoot) -> Type[MainWalletProtocol]:
+        root_bytes: bytes = bytes(observation_root)
+        if len(root_bytes) == 48:
+            return Wallet
+
+        raise ValueError(f"Could not find a valid wallet type for observation_root: {root_bytes.hex()}")
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         if not isinstance(self.observation_root, G1Element):
