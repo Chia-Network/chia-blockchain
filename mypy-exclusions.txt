@@ -24,16 +24,13 @@ chia.wallet.chialisp
 chia.wallet.did_wallet.did_wallet
 chia.wallet.did_wallet.did_wallet_puzzles
 chia.wallet.key_val_store
-chia.wallet.lineage_proof
 chia.wallet.nft_wallet.nft_puzzles
 chia.wallet.payment
 chia.wallet.puzzles.load_clvm
 chia.wallet.puzzles.p2_conditions
-chia.wallet.puzzles.p2_delegated_conditions
 chia.wallet.puzzles.p2_delegated_puzzle
 chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle
 chia.wallet.puzzles.p2_m_of_n_delegate_direct
-chia.wallet.puzzles.p2_puzzle_hash
 chia.wallet.puzzles.singleton_top_layer
 chia.wallet.puzzles.tails
 chia.wallet.trading.trade_store
