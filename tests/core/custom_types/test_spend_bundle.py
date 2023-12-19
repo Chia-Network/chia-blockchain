@@ -59,7 +59,7 @@ class TestStructStream(unittest.TestCase):
 
     def test_dont_use_both_legacy_and_modern(self):
         json_1 = BLANK_SPEND_BUNDLE.to_json_dict(include_legacy_keys=True, exclude_modern_keys=False)
-        with self.assertRaises(ValueError):
+        with pytest.warns(UserWarning):
             SpendBundle.from_json_dict(json_1)
 
 
