@@ -10,7 +10,7 @@ from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
@@ -59,7 +59,7 @@ def test_finished_state() -> None:
     """
     Once a proposal has closed, it becomes a 'beacon' singleton which announces its proposal ID. This is referred to as the finished state and is used to confirm that a proposal has closed in order to release voting CATs from the lockup puzzle.
     """
-    proposal_id: Program = Program.to("proposal_id").get_tree_hash()
+    proposal_id = Program.to("proposal_id").get_tree_hash()
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
@@ -87,9 +87,9 @@ def test_proposal() -> None:
     - Self-destruct a broken proposal
     """
     proposal_pass_percentage: uint64 = uint64(5100)
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
-    treasury_id: Program = Program.to("treasury").get_tree_hash()
-    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
+    treasury_id = Program.to("treasury").get_tree_hash()
+    singleton_id = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
@@ -200,7 +200,7 @@ def test_proposal() -> None:
     )
 
     conds_repeated = conditions_dict_for_solution(full_proposal, repeat_solution_1, INFINITE_COST)
-    assert len(conds_repeated) == 4
+    assert len(conds_repeated) == 5
 
     # Try to vote using repeated coin ids
     repeat_solution_2: Program = Program.to(
@@ -381,9 +381,9 @@ def test_proposal_timer() -> None:
     It creates/asserts announcements to pair it with the finishing spend of a proposal.
     The timer puzzle only has one spend path so there is only one test case for this puzzle.
     """
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
-    treasury_id: Program = Program.to("treasury").get_tree_hash()
-    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
+    treasury_id = Program.to("treasury").get_tree_hash()
+    singleton_id = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
@@ -471,13 +471,13 @@ def test_validator() -> None:
     - Executing an update proposal that changes the DAO rules.
     """
     # Setup the treasury
-    treasury_id: Program = Program.to("treasury_id").get_tree_hash()
+    treasury_id = Program.to("treasury_id").get_tree_hash()
     treasury_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
 
     # Setup the proposal
-    proposal_id: Program = Program.to("proposal_id").get_tree_hash()
+    proposal_id = Program.to("proposal_id").get_tree_hash()
     proposal_struct: Program = Program.to((SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER_HASH)))
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
     acs: Program = Program.to(1)
     acs_ph: bytes32 = acs.get_tree_hash()
 
@@ -591,7 +591,7 @@ def test_validator() -> None:
 
 def test_spend_p2_singleton() -> None:
     # Curried values
-    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    singleton_id = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     p2_singleton_puzhash = P2_SINGLETON_MOD.curry(singleton_struct, P2_SINGLETON_AGGREGATOR_MOD).get_tree_hash()
     cat_tail_1 = Program.to("cat_tail_1").get_tree_hash()
@@ -645,6 +645,16 @@ def test_spend_p2_singleton() -> None:
     conds = spend_p2_puz.run(spend_p2_sol)
     assert conds
 
+    # test deduplicate cat_parent_amount_list
+    cat_parent_amt_list = [
+        [cat_tail_1, [[b"b" * 32, 100], [b"c" * 32, 400], [b"b" * 32, 100], [b"b" * 32, 100]]],
+        [cat_tail_2, [[b"e" * 32, 100], [b"f" * 32, 400], [b"f" * 32, 400], [b"e" * 32, 100]]],
+    ]
+
+    spend_p2_sol = Program.to([xch_parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash])
+    dupe_conds = spend_p2_puz.run(spend_p2_sol)
+    assert dupe_conds == conds
+
 
 def test_merge_p2_singleton() -> None:
     """
@@ -655,7 +665,7 @@ def test_merge_p2_singleton() -> None:
     """
     # Setup a singleton struct
     singleton_inner: Program = Program.to(1)
-    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    singleton_id = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
 
     # Setup p2_singleton_via_delegated puz
@@ -702,8 +712,11 @@ def test_merge_p2_singleton() -> None:
         Program.to("fake_parent_3").get_tree_hash(),
     ]
     amounts = [1000, 2000, 3000]
-    parent_puzhash_amounts = [[pid, my_puzhash, amt] for pid, amt in zip(parent_ids, amounts)]
-    merge_coin_ids = [Coin(pid, ph, amt).name() for pid, ph, amt in parent_puzhash_amounts]
+    parent_puzhash_amounts = []
+    merge_coin_ids: List[bytes32] = []
+    for pid, amt in zip(parent_ids, amounts):
+        parent_puzhash_amounts.append([pid, my_puzhash, amt])
+        merge_coin_ids.append(Coin(pid, my_puzhash, amt).name())
 
     output_parent_amount = [output_parent_id, output_coin_amount]
     output_coin_id = Coin(output_parent_id, my_puzhash, output_coin_amount).name()
@@ -736,11 +749,11 @@ def test_treasury() -> None:
     - Oracle Path: The treasury can make announcements about itself that are used to close invalid proposals
     """
     # Setup the treasury
-    treasury_id: Program = Program.to("treasury_id").get_tree_hash()
+    treasury_id = Program.to("treasury_id").get_tree_hash()
     treasury_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
 
-    proposal_id: Program = Program.to("singleton_id").get_tree_hash()
+    proposal_id = Program.to("singleton_id").get_tree_hash()
     proposal_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
     p2_singleton = P2_SINGLETON_MOD.curry(treasury_struct, P2_SINGLETON_AGGREGATOR_MOD)
     p2_singleton_puzhash = p2_singleton.get_tree_hash()
@@ -831,7 +844,7 @@ def test_treasury() -> None:
         ]
     )
     conds = treasury_inner.run(solution)
-    assert len(conds.as_python()) == 9 + len(conditions)
+    assert len(conds.as_python()) == 10 + len(conditions)
 
 
 def test_lockup() -> None:
@@ -839,7 +852,7 @@ def test_lockup() -> None:
     The lockup puzzle tracks the voting records of DAO CATs. When a proposal is voted on the proposal ID is added to a list against which future votes are checked.
     This test checks the addition of new votes to the lockup, and that you can't re-vote on a proposal twice.
     """
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
 
     INNERPUZ = Program.to(1)
     previous_votes = [0xFADEDDAB]
@@ -967,7 +980,7 @@ def test_proposal_lifecycle() -> None:
     self_destruct_time: uint64 = uint64(1000)
     oracle_spend_delay: uint64 = uint64(10)
     min_amt: uint64 = uint64(1)
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+    CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
 
     dao_rules = DAORules(
         proposal_timelock=proposal_timelock,
@@ -980,7 +993,7 @@ def test_proposal_lifecycle() -> None:
     )
 
     # Setup the treasury
-    treasury_id: Program = Program.to("treasury_id").get_tree_hash()
+    treasury_id = Program.to("treasury_id").get_tree_hash()
     treasury_singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
     treasury_amount = 1
 
@@ -1047,7 +1060,7 @@ def test_proposal_lifecycle() -> None:
     spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash])
 
     # Setup Proposal
-    proposal_id: Program = Program.to("proposal_id").get_tree_hash()
+    proposal_id = Program.to("proposal_id").get_tree_hash()
     proposal_singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
 
     current_votes = 1200
@@ -1219,7 +1232,7 @@ async def do_spend(
 ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
     spends = []
     for coin, puzzle, solution in zip(coins, puzzles, solutions):
-        spends.append(CoinSpend(coin, puzzle, solution))
+        spends.append(make_spend(coin, puzzle, solution))
     spend_bundle = SpendBundle(spends, AugSchemeMPL.aggregate([]))
     result = await sim_client.push_tx(spend_bundle)
     await sim.farm_block()

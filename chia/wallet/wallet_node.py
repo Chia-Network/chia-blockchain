@@ -300,7 +300,6 @@ class WalletNode:
             "trade_record_times",
             "tx_times",
             "pool_state_transitions",
-            "singletons",
             "singleton_records",
             "mirrors",
             "launchers",
@@ -692,7 +691,7 @@ class WalletNode:
             )
             asyncio.create_task(self.wallet_peers.start())
 
-    def on_disconnect(self, peer: WSChiaConnection) -> None:
+    async def on_disconnect(self, peer: WSChiaConnection) -> None:
         if self.is_trusted(peer):
             self.local_node_synced = False
             self.initialize_wallet_peers()

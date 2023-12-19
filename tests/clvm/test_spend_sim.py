@@ -6,7 +6,7 @@ from chia_rs import G2Element
 from chia.clvm.spend_sim import sim_and_client
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.spend_bundle import SpendBundle
 
 
@@ -93,7 +93,7 @@ async def test_all_endpoints():
         spendable_coin = spendable_coin[0].coin
         bundle = SpendBundle(
             [
-                CoinSpend(
+                make_spend(
                     spendable_coin,
                     Program.to(1),
                     Program.to([[51, puzzle_hash, 1]]),

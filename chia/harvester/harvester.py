@@ -131,26 +131,18 @@ class Harvester:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        await self._start()
+        self._refresh_lock = asyncio.Lock()
+        self.event_loop = asyncio.get_running_loop()
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
+            self._shut_down = True
+            self.executor.shutdown(wait=True)
+            self.plot_manager.stop_refreshing()
+            self.plot_manager.reset()
+            self.plot_sync_sender.stop()
 
-    async def _start(self) -> None:
-        self._refresh_lock = asyncio.Lock()
-        self.event_loop = asyncio.get_running_loop()
-
-    def _close(self) -> None:
-        self._shut_down = True
-        self.executor.shutdown(wait=True)
-        self.plot_manager.stop_refreshing()
-        self.plot_manager.reset()
-        self.plot_sync_sender.stop()
-
-    async def _await_closed(self) -> None:
-        await self.plot_sync_sender.await_closed()
+            await self.plot_sync_sender.await_closed()
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
@@ -181,7 +173,7 @@ class Harvester:
         if event == PlotRefreshEvents.done:
             self.plot_sync_sender.sync_done(update_result.removed, update_result.duration)
 
-    def on_disconnect(self, connection: WSChiaConnection) -> None:
+    async def on_disconnect(self, connection: WSChiaConnection) -> None:
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection")
         self.plot_sync_sender.stop()

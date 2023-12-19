@@ -15,7 +15,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -603,7 +603,10 @@ class DIDWallet:
             ]
         )
         new_coin = Coin(coin.name(), new_full_puzzle.get_tree_hash(), coin.amount)
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol), CoinSpend(new_coin, new_full_puzzle, new_full_sol)]
+        list_of_coinspends = [
+            make_spend(coin, full_puzzle, fullsol),
+            make_spend(new_coin, new_full_puzzle, new_full_sol),
+        ]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
@@ -701,7 +704,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
@@ -799,7 +802,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         signed_spend_bundle: SpendBundle = await self.sign(unsigned_spend_bundle)
         return TransactionRecord(
@@ -851,7 +854,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         spend_bundle = await self.sign(unsigned_spend_bundle)
 
@@ -932,7 +935,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
@@ -976,36 +979,33 @@ class DIDWallet:
     async def load_attest_files_for_recovery_spend(self, attest_data: List[str]) -> Tuple[List, SpendBundle]:
         spend_bundle_list = []
         info_dict = {}
-        try:
-            for attest in attest_data:
-                info = attest.split(":")
-                info_dict[info[0]] = [
-                    bytes.fromhex(info[2]),
-                    bytes.fromhex(info[3]),
-                    uint64(info[4]),
-                ]
-                new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
-                spend_bundle_list.append(new_sb)
-            # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
-            my_recovery_list: List[bytes32] = self.did_info.backup_ids
+        for attest in attest_data:
+            info = attest.split(":")
+            info_dict[info[0]] = [
+                bytes.fromhex(info[2]),
+                bytes.fromhex(info[3]),
+                uint64(info[4]),
+            ]
+            new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
+            spend_bundle_list.append(new_sb)
+        # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
+        my_recovery_list: List[bytes32] = self.did_info.backup_ids
 
-            # convert info dict into recovery list - same order as wallet
-            info_list = []
-            for entry in my_recovery_list:
-                if entry.hex() in info_dict:
-                    info_list.append(
-                        [
-                            info_dict[entry.hex()][0],
-                            info_dict[entry.hex()][1],
-                            info_dict[entry.hex()][2],
-                        ]
-                    )
-                else:
-                    info_list.append([])
-            message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
-            return info_list, message_spend_bundle
-        except Exception:
-            raise
+        # convert info dict into recovery list - same order as wallet
+        info_list = []
+        for entry in my_recovery_list:
+            if entry.hex() in info_dict:
+                info_list.append(
+                    [
+                        info_dict[entry.hex()][0],
+                        info_dict[entry.hex()][1],
+                        info_dict[entry.hex()][2],
+                    ]
+                )
+            else:
+                info_list.append([])
+        message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
+        return info_list, message_spend_bundle
 
     async def recovery_spend(
         self,
@@ -1049,7 +1049,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
 
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         if index is None:
@@ -1274,7 +1274,7 @@ class DIDWallet:
 
         genesis_launcher_solution = Program.to([did_puzzle_hash, amount, bytes(0x80)])
 
-        launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+        launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
         eve_coin = Coin(launcher_coin.name(), did_puzzle_hash, amount)
         future_parent = LineageProof(
@@ -1361,7 +1361,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return await self.sign(unsigned_spend_bundle)
 

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple
-
-from clvm.casts import int_from_bytes
+from typing import Any, Dict, List, Tuple, Union
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -28,6 +26,26 @@ class CoinSpend(Streamable):
     coin: Coin
     puzzle_reveal: SerializedProgram
     solution: SerializedProgram
+
+
+def make_spend(
+    coin: Coin,
+    puzzle_reveal: Union[Program, SerializedProgram],
+    solution: Union[Program, SerializedProgram],
+) -> CoinSpend:
+    pr: SerializedProgram
+    sol: SerializedProgram
+    if isinstance(puzzle_reveal, SerializedProgram):
+        pr = puzzle_reveal
+    elif isinstance(puzzle_reveal, Program):
+        pr = SerializedProgram.from_program(puzzle_reveal)
+
+    if isinstance(solution, SerializedProgram):
+        sol = solution
+    elif isinstance(solution, Program):
+        sol = SerializedProgram.from_program(solution)
+
+    return CoinSpend(coin, pr, sol)
 
 
 def compute_additions_with_cost(
@@ -66,8 +84,8 @@ def compute_additions_with_cost(
         if op != ConditionOpcode.CREATE_COIN.value:
             continue
         cost += ConditionCost.CREATE_COIN.value
-        puzzle_hash = next(atoms).atom
-        amount = int_from_bytes(next(atoms).atom)
+        puzzle_hash = next(atoms).as_atom()
+        amount = next(atoms).as_int()
         ret.append(Coin(parent_id, puzzle_hash, amount))
 
     return ret, cost

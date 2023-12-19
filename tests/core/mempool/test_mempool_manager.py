@@ -24,7 +24,6 @@ from chia.full_node.mempool_manager import (
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -32,7 +31,7 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.eligible_coin_spends import DedupCoinSpend, EligibleCoinSpends, run_for_cost
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -47,8 +46,9 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_node import WalletNode
+from tests.util.setup_nodes import OldSimulatorsAndWallets
 
-IDENTITY_PUZZLE = SerializedProgram.from_program(Program.to(1))
+IDENTITY_PUZZLE = SerializedProgram.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 TEST_TIMESTAMP = uint64(10040)
@@ -325,7 +325,7 @@ def test_compute_assert_height(conds: SpendBundleConditions, expected: TimelockC
 
 def spend_bundle_from_conditions(conditions: List[List[Any]], coin: Coin = TEST_COIN) -> SpendBundle:
     solution = Program.to(conditions)
-    coin_spend = CoinSpend(coin, IDENTITY_PUZZLE, solution)
+    coin_spend = make_spend(coin, IDENTITY_PUZZLE, solution)
     return SpendBundle([coin_spend], G2Element())
 
 
@@ -665,7 +665,7 @@ def mk_item(
 ) -> MempoolItem:
     # we don't actually care about the puzzle and solutions for the purpose of
     # can_replace()
-    spends = [CoinSpend(c, SerializedProgram(), SerializedProgram()) for c in coins]
+    spends = [make_spend(c, SerializedProgram.to(None), SerializedProgram.to(None)) for c in coins]
     spend_bundle = SpendBundle(spends, G2Element())
     npc_result = NPCResult(None, make_test_conds(cost=cost, spend_ids=[c.name() for c in coins]), uint64(cost))
     return MempoolItem(
@@ -910,7 +910,7 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
     async def make_coin_spends(coins: List[Coin], *, high_fees: bool = True) -> List[CoinSpend]:
         spends_list = []
         for i in range(0, len(coins)):
-            coin_spend = CoinSpend(
+            coin_spend = make_spend(
                 coins[i],
                 IDENTITY_PUZZLE,
                 Program.to(
@@ -1195,14 +1195,14 @@ async def test_replacing_one_with_an_eligible_coin() -> None:
 @pytest.mark.parametrize("amount", [0, 1])
 def test_run_for_cost(amount: int) -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, amount]]
-    solution = Program.to(conditions)
+    solution = SerializedProgram.to(conditions)
     cost = run_for_cost(IDENTITY_PUZZLE, solution, additions_count=1, max_cost=uint64(10000000))
     assert cost == uint64(1800044)
 
 
 def test_run_for_cost_max_cost() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
-    solution = Program.to(conditions)
+    solution = SerializedProgram.to(conditions)
     with pytest.raises(ValueError, match="cost exceeded"):
         run_for_cost(IDENTITY_PUZZLE, solution, additions_count=1, max_cost=uint64(43))
 
@@ -1234,7 +1234,7 @@ def test_dedup_info_eligible_1st_time() -> None:
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
     eligible_coin_spends = EligibleCoinSpends()
-    solution = SerializedProgram.from_program(Program.to(conditions))
+    solution = SerializedProgram.to(conditions)
     unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
     )
@@ -1253,7 +1253,7 @@ def test_dedup_info_eligible_but_different_solution() -> None:
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
-    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    initial_solution = SerializedProgram.to(initial_conditions)
     eligible_coin_spends = EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
@@ -1270,11 +1270,11 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
-    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    initial_solution = SerializedProgram.to(initial_conditions)
     eligible_coin_spends = EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
     sb1 = spend_bundle_from_conditions(initial_conditions, TEST_COIN)
     second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
-    second_solution = SerializedProgram.from_program(Program.to(second_conditions))
+    second_solution = SerializedProgram.to(second_conditions)
     sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
     sb = SpendBundle.aggregate([sb1, sb2])
     mempool_item = mempool_item_from_spendbundle(sb)
@@ -1303,9 +1303,9 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
-    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    initial_solution = SerializedProgram.to(initial_conditions)
     second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
-    second_solution = SerializedProgram.from_program(Program.to(second_conditions))
+    second_solution = SerializedProgram.to(second_conditions)
     saved_cost = uint64(3600044)
     eligible_coin_spends = EligibleCoinSpends(
         {
@@ -1401,7 +1401,9 @@ async def test_bundle_coin_spends() -> None:
 
 
 @pytest.mark.anyio
-async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsAndWallets, self_hostname: str) -> None:
+async def test_identical_spend_aggregation_e2e(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str
+) -> None:
     def get_sb_names_by_coin_id(
         full_node_api: FullNodeSimulator,
         spent_coin_id: bytes32,

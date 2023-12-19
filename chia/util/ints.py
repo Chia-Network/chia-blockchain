@@ -60,8 +60,6 @@ class uint128(StructStream):
 
 
 class int512(StructStream):
-    PACK = None
-
     # Uses 65 bytes to fit in the sign bit
     SIZE = 65
     BITS = 512
