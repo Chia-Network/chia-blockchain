@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.1.3 Chia blockchain 2023-12-18
+
+### Fixed
+* Fixed a regression in 2.1.2 that could cause a farmer to fail to be able to create a block in some cases
+
 ## 2.1.2 Chia blockchain 2023-12-13
 
 ### Fixed
