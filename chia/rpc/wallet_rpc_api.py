@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import time
 import zlib
 from pathlib import Path
 from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
@@ -11,6 +12,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
@@ -49,6 +51,7 @@ from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
     Condition,
+    ConditionValidTimes,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
 )
@@ -88,8 +91,10 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE,
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     create_singleton_puzzle,
+    create_singleton_puzzle_hash,
     get_inner_puzzle_from_singleton,
 )
 from chia.wallet.trade_record import TradeRecord
@@ -104,6 +109,7 @@ from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPE
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.vault.vault_drivers import get_vault_puzzle_hash
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
@@ -281,6 +287,8 @@ class WalletRpcApi:
             "/vc_revoke": self.vc_revoke,
             # CR-CATs
             "/crcat_approve_pending": self.crcat_approve_pending,
+            # VAULT
+            "/vault_create": self.vault_create,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -4495,4 +4503,84 @@ class WalletRpcApi:
 
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+        }
+
+    ##########################################################################################
+    # VAULT
+    ##########################################################################################
+    @tx_endpoint(push=True)
+    async def vault_create(
+        self,
+        request: Dict[str, Any],
+        tx_config: TXConfig = DEFAULT_TX_CONFIG,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        """
+        Create a new vault
+        """
+        assert self.service.wallet_state_manager
+        wallet = self.service.wallet_state_manager.main_wallet
+
+        secp_pk = bytes.fromhex(str(request.get("secp_pk")))
+        entropy = bytes.fromhex(str(request.get("entropy")))
+        bls_pk = G1Element.from_bytes(bytes.fromhex(str(request.get("bls_pk"))))
+        timelock = uint64(request["timelock"])
+        fee = request.get("fee", 0)
+        vault_puzzlehash = get_vault_puzzle_hash(
+            secp_pk, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, entropy, bls_pk, timelock
+        )
+
+        # Get xch coin
+        amount = uint64(1)
+        coins = await wallet.select_coins(uint64(amount + fee), tx_config.coin_selection_config)
+
+        # Create singleton launcher
+        origin = coins.copy().pop()
+        launcher_coin = Coin(origin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, amount)
+
+        vault_full_puzzlehash = create_singleton_puzzle_hash(vault_puzzlehash, launcher_coin.name())
+        announcement_message = Program.to([vault_puzzlehash, amount, bytes(0x80)]).get_tree_hash()
+
+        [tx_record] = await wallet.generate_signed_transaction(
+            amount,
+            SINGLETON_LAUNCHER_PUZZLE_HASH,
+            tx_config,
+            fee,
+            coins,
+            None,
+            origin_id=origin.name(),
+            extra_conditions=(
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
+        )
+
+        genesis_launcher_solution = Program.to([vault_puzzlehash, amount, bytes(0x80)])
+
+        launcher_cs = CoinSpend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
+        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+        assert tx_record.spend_bundle is not None
+        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb])
+
+        vault_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            amount=uint64(amount),
+            to_puzzle_hash=vault_full_puzzlehash,
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=full_spend,
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
+            wallet_id=wallet.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=full_spend.name(),
+            memos=[],
+            valid_times=ConditionValidTimes(),
+        )
+
+        return {
+            "transactions": [vault_record.to_json_dict_convenience(self.service.config)],
         }
