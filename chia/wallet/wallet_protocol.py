@@ -16,8 +16,7 @@ from chia.wallet.conditions import Condition
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.signer_protocol import (
+from chia.wallet.signer_protocol import (
     PathHint,
     SignedTransaction,
     SigningInstructions,
@@ -25,6 +24,7 @@ from chia.wallet.util.signer_protocol import (
     Spend,
     SumHint,
 )
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
