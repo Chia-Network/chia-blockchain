@@ -83,7 +83,7 @@ def add_key_info(mnemonic_or_pk: str, label: Optional[str]) -> None:
             fingerprint = sk.get_g1().get_fingerprint()
             print(f"Added private key with public key fingerprint {fingerprint}")
         else:
-            pk = Keychain().add_public_key(mnemonic_or_pk, label)
+            pk, _ = Keychain().add_public_key(mnemonic_or_pk, label)
             fingerprint = pk.get_fingerprint()
             print(f"Added public key with fingerprint {fingerprint}")
 

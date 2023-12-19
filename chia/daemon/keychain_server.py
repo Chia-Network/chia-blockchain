@@ -255,7 +255,7 @@ class KeychainServer:
             }
 
         try:
-            pk = self.get_keychain_for_request(request).add_public_key(public_key, label)
+            pk, key_type = self.get_keychain_for_request(request).add_public_key(public_key, label)
         except KeyError as e:  # pragma: no cover
             return {
                 "success": False,
@@ -269,7 +269,7 @@ class KeychainServer:
                 "error": str(e),
             }
 
-        return {"success": True, "fingerprint": pk.get_fingerprint()}
+        return {"success": True, "fingerprint": pk.get_fingerprint(), "key_type": key_type}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():

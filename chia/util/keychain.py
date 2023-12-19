@@ -7,7 +7,7 @@ from enum import Enum
 from functools import cached_property
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 import pkg_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
@@ -220,6 +220,13 @@ class KeyDataSecrets(Streamable):
 class KeyTypes(str, Enum):
     G1_ELEMENT = "G1 Element"
 
+    @classmethod
+    def parse_observation_root(cls: Type[KeyTypes], pk_bytes: bytes, key_type: KeyTypes) -> ObservationRoot:
+        if key_type == cls.G1_ELEMENT:
+            return G1Element.from_bytes(pk_bytes)
+        else:
+            raise RuntimeError("Not all key types have been handled in KeyTypes.parse_observation_root")
+
 
 @final
 @streamable
@@ -383,11 +390,16 @@ class Keychain:
 
         return key
 
-    def add_public_key(self, pubkey: str, label: Optional[str] = None) -> G1Element:
+    def add_public_key(self, pubkey: str, label: Optional[str] = None) -> Tuple[ObservationRoot, KeyTypes]:
         """
         Adds a public key to the keychain.
         """
-        key = G1Element.from_bytes(hexstr_to_bytes(pubkey))
+        pk_bytes = hexstr_to_bytes(pubkey)
+        if len(pk_bytes) == 48:
+            key: ObservationRoot = G1Element.from_bytes(pk_bytes)
+            key_type: KeyTypes = KeyTypes.G1_ELEMENT
+        else:
+            raise ValueError(f"Cannot identify type of pubkey {pubkey}")
         index = self._get_free_private_key_index()
         fingerprint = key.get_fingerprint()
 
@@ -411,7 +423,7 @@ class Keychain:
                 self.keyring_wrapper.delete_label(fingerprint)
             raise
 
-        return key
+        return key, key_type
 
     def set_label(self, fingerprint: int, label: str) -> None:
         """
