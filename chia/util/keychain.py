@@ -223,6 +223,13 @@ class KeyDataSecrets(Streamable):
 class KeyTypes(str, Enum):
     G1_ELEMENT = "G1 Element"
 
+    @classmethod
+    def parse_observation_root(cls: Type[KeyTypes], pk_bytes: bytes, key_type: KeyTypes) -> ObservationRoot:
+        if key_type == cls.G1_ELEMENT:
+            return G1Element.from_bytes(pk_bytes)
+        else:
+            raise RuntimeError("Not all key types have been handled in KeyTypes.parse_observation_root")
+
 
 TYPES_TO_KEY_TYPES: Dict[Type[ObservationRoot], KeyTypes] = {G1Element: KeyTypes.G1_ELEMENT}
 KEY_TYPES_TO_TYPES: Dict[KeyTypes, Type[ObservationRoot]] = {v: k for k, v in TYPES_TO_KEY_TYPES.items()}
@@ -390,11 +397,16 @@ class Keychain:
 
         return key
 
-    def add_public_key(self, pubkey: str, label: Optional[str] = None) -> G1Element:
+    def add_public_key(self, pubkey: str, label: Optional[str] = None) -> Tuple[ObservationRoot, KeyTypes]:
         """
         Adds a public key to the keychain.
         """
-        key = G1Element.from_bytes(hexstr_to_bytes(pubkey))
+        pk_bytes = hexstr_to_bytes(pubkey)
+        if len(pk_bytes) == 48:
+            key: ObservationRoot = G1Element.from_bytes(pk_bytes)
+            key_type: KeyTypes = KeyTypes.G1_ELEMENT
+        else:
+            raise ValueError(f"Cannot identify type of pubkey {pubkey}")
         index = self._get_free_private_key_index()
         fingerprint = key.get_fingerprint()
 
@@ -418,7 +430,7 @@ class Keychain:
                 self.keyring_wrapper.delete_label(fingerprint)
             raise
 
-        return key
+        return key, key_type
 
     def set_label(self, fingerprint: int, label: str) -> None:
         """

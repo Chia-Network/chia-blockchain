@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession
-from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, PrivateKey
 
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
@@ -30,7 +30,7 @@ from chia.util.errors import (
     KeychainMalformedResponse,
     KeychainProxyConnectionTimeout,
 )
-from chia.util.keychain import KEY_TYPES_TO_TYPES, Keychain, KeyData, bytes_to_mnemonic, mnemonic_to_seed
+from chia.util.keychain import Keychain, KeyData, KeyTypes, bytes_to_mnemonic, mnemonic_to_seed
 from chia.util.observation_root import ObservationRoot
 from chia.util.ws_message import WsRpcMessage
 
@@ -196,19 +196,20 @@ class KeychainProxy(DaemonProxy):
 
         return key
 
-    async def add_public_key(self, pubkey: str, label: Optional[str] = None) -> G1Element:
+    async def add_public_key(self, pubkey: str, label: Optional[str] = None) -> Tuple[ObservationRoot, KeyTypes]:
         """
         Forwards to Keychain.add_public_key()
         """
-        key: G1Element
+        key: ObservationRoot
+        key_type: KeyTypes
         if self.use_local_keychain():
-            key = self.keychain.add_public_key(pubkey, label)  # pragma: no cover
+            key, key_type = self.keychain.add_public_key(pubkey, label)  # pragma: no cover
         else:
             response, success = await self.get_response_for_request(
                 "add_public_key", {"public_key": pubkey, "label": label}
             )
             if success:
-                key = G1Element.from_bytes(hexstr_to_bytes(pubkey))
+                key = KeyTypes.parse_observation_root(hexstr_to_bytes(pubkey), KeyTypes(response["data"]["key_type"]))
             else:
                 error = response["data"].get("error", None)
                 if error == KEYCHAIN_ERR_KEYERROR:  # pragma: no cover
@@ -218,7 +219,7 @@ class KeychainProxy(DaemonProxy):
                 else:
                     self.handle_error(response)
 
-        return key
+        return key, key_type
 
     async def check_keys(self, root_path: Path) -> None:
         """
@@ -404,7 +405,7 @@ class KeychainProxy(DaemonProxy):
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
                 else:
-                    key = KEY_TYPES_TO_TYPES[response["data"]["type"]].from_bytes(bytes.fromhex(pk_str))
+                    key = KeyTypes.parse_observation_root(bytes.fromhex(pk_str), KeyTypes(response["data"]["key_type"]))
             else:
                 self.handle_error(response)
 
