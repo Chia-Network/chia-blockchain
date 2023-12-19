@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Any, Dict, List, Optional, cast
 
 import pytest
@@ -265,8 +264,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         tail_offer = Offer.from_spend_bundle(SpendBundle(new_spends_list, G2Element()))
         valid_spend = tail_offer.to_valid_spend(random_hash)
         real_blue_spend = [spend for spend in valid_spend.coin_spends if b"hey there" in bytes(spend)][0]
-        real_blue_spend_replaced = replace(
-            real_blue_spend,
+        real_blue_spend_replaced = real_blue_spend.replace(
             solution=SerializedProgram.from_program(
                 real_blue_spend.solution.to_program().replace(
                     ffrfrf=Program.to(-113), ffrfrr=Program.to([str_to_tail("blue"), []])
