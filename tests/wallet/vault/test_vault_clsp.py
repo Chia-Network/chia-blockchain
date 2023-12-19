@@ -6,6 +6,7 @@ from typing import Tuple
 import pytest
 from blspy import PrivateKey
 from chia_rs import ENABLE_SECP_OPS
+from clvm.casts import int_to_bytes
 from ecdsa import NIST256p, SigningKey
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -25,6 +26,7 @@ RECOVERY_FINISH_MOD: Program = load_clvm("vault_recovery_finish.clsp")
 RECOVERY_FINISH_MOD_HASH = RECOVERY_FINISH_MOD.get_tree_hash()
 ACS = Program.to(1)
 ACS_PH = ACS.get_tree_hash()
+ENTROPY = int_to_bytes(101)
 
 
 def run_with_secp(puzzle: Program, solution: Program) -> Tuple[int, Program]:
@@ -43,7 +45,7 @@ def test_recovery_puzzles() -> None:
     coin_id = Program.to("coin_id").get_tree_hash()
     recovery_conditions = Program.to([[51, p2_puzzlehash, amount]])
 
-    escape_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk)
+    escape_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk, ENTROPY)
     escape_puzzlehash = escape_puzzle.get_tree_hash()
     finish_puzzle = RECOVERY_FINISH_MOD.curry(timelock, recovery_conditions)
     finish_puzzlehash = finish_puzzle.get_tree_hash()
@@ -80,7 +82,7 @@ def test_recovery_puzzles() -> None:
     delegated_puzzle = ACS
     delegated_solution = Program.to([[51, ACS_PH, amount]])
     signed_delegated_puzzle = secp_sk.sign_deterministic(
-        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + ENTROPY
     )
     secp_solution = Program.to(
         [delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id, DEFAULT_CONSTANTS.GENESIS_CHALLENGE]
@@ -93,13 +95,13 @@ def test_recovery_puzzles() -> None:
 def test_p2_delegated_secp() -> None:
     secp_sk = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
     secp_pk = secp_sk.verifying_key.to_string("compressed")
-    secp_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk)
+    secp_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk, ENTROPY)
 
     coin_id = Program.to("coin_id").get_tree_hash()
     delegated_puzzle = ACS
     delegated_solution = Program.to([[51, ACS_PH, 1000]])
     signed_delegated_puzzle = secp_sk.sign_deterministic(
-        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + ENTROPY
     )
 
     secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id])
@@ -124,7 +126,7 @@ def test_vault_root_puzzle() -> None:
     # secp puzzle
     secp_sk = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
     secp_pk = secp_sk.verifying_key.to_string("compressed")
-    secp_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk)
+    secp_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk, ENTROPY)
     secp_puzzlehash = secp_puzzle.get_tree_hash()
 
     # recovery keys
@@ -149,7 +151,7 @@ def test_vault_root_puzzle() -> None:
     delegated_puzzle = ACS
     delegated_solution = Program.to([[51, ACS_PH, amount]])
     signed_delegated_puzzle = secp_sk.sign_deterministic(
-        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + ENTROPY
     )
     secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id])
     proof = vault_merkle_tree.generate_proof(secp_puzzlehash)
@@ -160,7 +162,7 @@ def test_vault_root_puzzle() -> None:
 
     # recovery spend path
     recovery_conditions = Program.to([[51, ACS_PH, amount]])
-    curried_escape_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk)
+    curried_escape_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk, ENTROPY)
     curried_finish_puzzle = RECOVERY_FINISH_MOD.curry(timelock, recovery_conditions)
     recovery_merkle_tree = MerkleTree([curried_escape_puzzle.get_tree_hash(), curried_finish_puzzle.get_tree_hash()])
     recovery_merkle_root = recovery_merkle_tree.calculate_root()

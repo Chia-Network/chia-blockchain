@@ -20,8 +20,8 @@ RECOVERY_FINISH_MOD_HASH = RECOVERY_FINISH_MOD.get_tree_hash()
 
 
 # PUZZLES
-def construct_p2_delegated_secp(secp_pk: bytes, genesis_challenge: bytes32) -> Program:
-    return P2_DELEGATED_SECP_MOD.curry(genesis_challenge, secp_pk)
+def construct_p2_delegated_secp(secp_pk: bytes, genesis_challenge: bytes32, entropy: bytes) -> Program:
+    return P2_DELEGATED_SECP_MOD.curry(genesis_challenge, secp_pk, entropy)
 
 
 def construct_recovery_finish(timelock: uint64, recovery_conditions: Program) -> Program:
@@ -48,5 +48,7 @@ def get_vault_proof(merkle_tree: MerkleTree, puzzlehash: bytes32) -> Program:
 
 
 # SECP SIGNATURE
-def construct_secp_message(delegated_puzzlehash: bytes32, coin_id: bytes32, genesis_challenge: bytes32) -> bytes:
-    return delegated_puzzlehash + coin_id + genesis_challenge
+def construct_secp_message(
+    delegated_puzzlehash: bytes32, coin_id: bytes32, genesis_challenge: bytes32, entropy: bytes
+) -> bytes:
+    return delegated_puzzlehash + coin_id + genesis_challenge + entropy

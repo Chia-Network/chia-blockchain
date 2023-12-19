@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
+from clvm.casts import int_to_bytes
 from ecdsa import NIST256p, SigningKey
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
@@ -37,6 +38,7 @@ BLS_PK = BLS_SK.get_g1()
 TIMELOCK = uint64(1000)
 ACS = Program.to(0)
 ACS_PH = ACS.get_tree_hash()
+ENTROPY = int_to_bytes(101)
 
 
 @pytest.mark.anyio
@@ -45,7 +47,7 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         sim.pass_blocks(DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT)  # Make sure secp_verify is available
 
         # Setup puzzles
-        secp_puzzle = construct_p2_delegated_secp(SECP_PK, DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
+        secp_puzzle = construct_p2_delegated_secp(SECP_PK, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, ENTROPY)
         secp_puzzlehash = secp_puzzle.get_tree_hash()
         p2_recovery_puzzle = construct_p2_recovery_puzzle(secp_puzzlehash, BLS_PK, TIMELOCK)
         p2_recovery_puzzlehash = p2_recovery_puzzle.get_tree_hash()
@@ -66,7 +68,7 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         secp_delegated_solution = solution_for_conditions(secp_delegated_puzzle)
         secp_signature = SECP_SK.sign_deterministic(
             construct_secp_message(
-                secp_delegated_puzzle.get_tree_hash(), vault_coin.name(), DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+                secp_delegated_puzzle.get_tree_hash(), vault_coin.name(), DEFAULT_CONSTANTS.GENESIS_CHALLENGE, ENTROPY
             )
         )
 
@@ -151,7 +153,10 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         secp_delegated_solution = solution_for_conditions(secp_delegated_puzzle)
         secp_signature = SECP_SK.sign_deterministic(
             construct_secp_message(
-                secp_delegated_puzzle.get_tree_hash(), recovery_coin.name(), DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+                secp_delegated_puzzle.get_tree_hash(),
+                recovery_coin.name(),
+                DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+                ENTROPY,
             )
         )
         secp_solution = Program.to(
