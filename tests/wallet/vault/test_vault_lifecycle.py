@@ -42,7 +42,7 @@ ACS_PH = ACS.get_tree_hash()
 @pytest.mark.anyio
 async def test_vault_inner(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        sim.pass_blocks(DEFAULT_CONSTANTS.SOFT_FORK3_HEIGHT)  # Make sure secp_verify is available
+        sim.pass_blocks(DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT)  # Make sure secp_verify is available
 
         # Setup puzzles
         secp_puzzle = construct_p2_delegated_secp(SECP_PK, DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
@@ -93,7 +93,7 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         ].coin
 
         recovery_conditions = Program.to([[51, ACS_PH, vault_coin.amount]])
-        recovery_solution = Program.to([vault_puzzlehash, vault_coin.amount, recovery_conditions])
+        recovery_solution = Program.to([vault_coin.amount, recovery_conditions])
         recovery_proof = get_vault_proof(vault_merkle_tree, p2_recovery_puzzlehash)
         vault_solution_recovery = Program.to([recovery_proof, p2_recovery_puzzle, recovery_solution])
         vault_spendbundle = SpendBundle(

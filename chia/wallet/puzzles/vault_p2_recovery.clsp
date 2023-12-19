@@ -10,7 +10,6 @@
     P2_SECP_PUZZLEHASH
     BLS_PK
     TIMELOCK
-    my_puzzlehash
     my_amount
     recovery_conditions
   )
@@ -61,7 +60,6 @@
       my_amount
     )
     (list ASSERT_MY_AMOUNT my_amount)
-    (list ASSERT_MY_PUZZLEHASH my_puzzlehash)
   )
 
 

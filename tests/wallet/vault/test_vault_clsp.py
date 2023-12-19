@@ -38,7 +38,6 @@ def test_recovery_puzzles() -> None:
     secp_pk = secp_sk.verifying_key.to_string("compressed")
 
     p2_puzzlehash = ACS_PH
-    vault_puzzlehash = Program.to("vault_puzzlehash").get_tree_hash()
     amount = 10000
     timelock = 5000
     coin_id = Program.to("coin_id").get_tree_hash()
@@ -53,7 +52,7 @@ def test_recovery_puzzles() -> None:
         P2_1_OF_N_MOD_HASH, RECOVERY_FINISH_MOD_HASH, escape_puzzlehash, bls_pk, timelock
     )
 
-    recovery_solution = Program.to([vault_puzzlehash, amount, recovery_conditions])
+    recovery_solution = Program.to([amount, recovery_conditions])
 
     conds = conditions_dict_for_solution(curried_recovery_puzzle, recovery_solution, INFINITE_COST)
 
@@ -145,7 +144,6 @@ def test_vault_root_puzzle() -> None:
     vault_merkle_tree = MerkleTree([secp_puzzlehash, recovery_puzzlehash])
     vault_merkle_root = vault_merkle_tree.calculate_root()
     vault_puzzle = P2_1_OF_N_MOD.curry(vault_merkle_root)
-    vault_puzzlehash = vault_puzzle.get_tree_hash()
 
     # secp spend path
     delegated_puzzle = ACS
@@ -168,7 +166,7 @@ def test_vault_root_puzzle() -> None:
     recovery_merkle_root = recovery_merkle_tree.calculate_root()
     recovery_merkle_puzzle = P2_1_OF_N_MOD.curry(recovery_merkle_root)
     recovery_merkle_puzzlehash = recovery_merkle_puzzle.get_tree_hash()
-    recovery_solution = Program.to([vault_puzzlehash, amount, recovery_conditions])
+    recovery_solution = Program.to([amount, recovery_conditions])
 
     proof = vault_merkle_tree.generate_proof(recovery_puzzlehash)
     recovery_proof = Program.to((proof[0], proof[1][0]))
