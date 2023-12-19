@@ -228,7 +228,7 @@ jobs:
           mv notchia/ chia/
 
       - name: Publish JUnit results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: junit-data
           path: junit-data/*
@@ -243,7 +243,7 @@ jobs:
           coverage report --rcfile=.coveragerc --show-missing
 
       - name: Publish coverage data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-data
           path: coverage-data/*
