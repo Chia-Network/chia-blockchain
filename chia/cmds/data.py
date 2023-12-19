@@ -307,6 +307,7 @@ def get_root_history(
     "--ids",
     help="List of stores to reconstruct. If not specified, all stores will be reconstructed",
     type=str,
+    multiple=True,
     required=False,
 )
 @click.option(
@@ -320,7 +321,7 @@ def get_root_history(
 @create_rpc_port_option()
 @options.create_fingerprint()
 def add_missing_files(
-    ids: Optional[str],
+    ids: List[str],
     overwrite: bool,
     directory: Optional[str],
     data_rpc_port: int,
@@ -331,7 +332,7 @@ def add_missing_files(
     run(
         add_missing_files_cmd(
             rpc_port=data_rpc_port,
-            ids=None if ids is None else json.loads(ids),
+            ids=ids if ids else None,
             overwrite=overwrite,
             foldername=None if directory is None else Path(directory),
             fingerprint=fingerprint,
