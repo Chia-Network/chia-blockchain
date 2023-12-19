@@ -89,4 +89,4 @@ class StructStream(int):
 
     # this is meant to avoid mixing up construcing a bytes object of a specific
     # size (i.e. bytes(int)) vs. serializing the integer to bytes (i.e. bytes(uint32))
-    __bytes__: None = None
+    __bytes__ = None
