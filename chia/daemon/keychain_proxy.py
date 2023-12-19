@@ -209,7 +209,8 @@ class KeychainProxy(DaemonProxy):
                 "add_public_key", {"public_key": pubkey, "label": label}
             )
             if success:
-                key = KeyTypes.parse_observation_root(hexstr_to_bytes(pubkey), KeyTypes(response["data"]["key_type"]))
+                key_type = KeyTypes(response["data"]["key_type"])
+                key = KeyTypes.parse_observation_root(hexstr_to_bytes(pubkey), key_type)
             else:
                 error = response["data"].get("error", None)
                 if error == KEYCHAIN_ERR_KEYERROR:  # pragma: no cover
