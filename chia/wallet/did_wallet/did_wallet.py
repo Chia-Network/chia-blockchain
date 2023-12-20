@@ -1516,7 +1516,7 @@ class DIDWallet:
         return (
             create_singleton_puzzle(
                 did_wallet_puzzles.create_innerpuz(
-                    hint,  # type: ignore[arg-type]
+                    hint,
                     self.did_info.backup_ids,
                     uint64(self.did_info.num_of_backup_ids_needed),
                     self.did_info.origin_coin.name(),
