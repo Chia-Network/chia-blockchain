@@ -1290,7 +1290,7 @@ class FullNode:
         pre_validate_time = pre_validate_end - pre_validate_start
 
         self.log.log(
-            logging.WARNING if pre_validate_time > 10 else logging.DEBUG,
+            logging.WARNING,  # if pre_validate_time > 10 else logging.DEBUG,
             f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds "
             f"({len(blocks_to_validate)} blocks, start height: {blocks_to_validate[0].height})",
         )
@@ -1798,7 +1798,7 @@ class FullNode:
             else ""
         )
         self.log.log(
-            logging.WARNING if validation_time > 2 else logging.DEBUG,
+            logging.WARNING,  # if validation_time > 2 else logging.DEBUG,
             f"Block validation time: {validation_time:0.2f} seconds, "
             f"pre_validation time: {pre_validation_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
