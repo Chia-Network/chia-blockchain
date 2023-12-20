@@ -47,6 +47,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_node import WalletNode
+from tests.util.misc import invariant_check_mempool
 
 IDENTITY_PUZZLE = SerializedProgram.from_program(Program.to(1))
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
@@ -121,6 +122,7 @@ async def instantiate_mempool_manager(
     mempool_manager = MempoolManager(get_coin_record, constants)
     test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
     await mempool_manager.new_peak(test_block_record, None)
+    invariant_check_mempool(mempool_manager.mempool)
     return mempool_manager
 
 
@@ -333,7 +335,9 @@ async def add_spendbundle(
     mempool_manager: MempoolManager, sb: SpendBundle, sb_name: bytes32
 ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
     npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb_name)
-    return await mempool_manager.add_spend_bundle(sb, npc_result, sb_name, TEST_HEIGHT)
+    ret = await mempool_manager.add_spend_bundle(sb, npc_result, sb_name, TEST_HEIGHT)
+    invariant_check_mempool(mempool_manager.mempool)
+    return ret
 
 
 async def generate_and_add_spendbundle(
@@ -1018,6 +1022,7 @@ async def test_assert_before_expiration(
 
     block_record = create_test_block_record(height=uint32(11), timestamp=uint64(10019))
     await mempool_manager.new_peak(block_record, None)
+    invariant_check_mempool(mempool_manager.mempool)
 
     still_in_pool = mempool_manager.get_spendbundle(bundle_name) == bundle
     assert still_in_pool != expect_eviction
@@ -1370,6 +1375,7 @@ async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(ne
     test_coin_records = {coin_id: CoinRecord(coin, uint32(0), TEST_HEIGHT, False, uint64(0))}
     block_record = create_test_block_record(height=new_height)
     await mempool_manager.new_peak(block_record, [coin_id])
+    invariant_check_mempool(mempool_manager.mempool)
     # As the coin was a spend in all the mempool items we had, nothing should be left now
     assert len(mempool_manager.mempool.get_items_by_coin_id(coin_id)) == 0
     assert mempool_manager.mempool.size() == 0
