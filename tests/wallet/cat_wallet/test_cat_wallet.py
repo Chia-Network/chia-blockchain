@@ -34,9 +34,14 @@ from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
+from chia.wallet.wallet_node import WalletNode
 from tests.conftest import ConsensusMode
 from tests.util.setup_nodes import SimulatorsAndWalletsServices
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
+
+
+def check_wallets(node: WalletNode) -> int:
+    return len(node.wallet_state_manager.wallets.keys())
 
 
 class TestCATWallet:
@@ -850,9 +855,6 @@ class TestCATWallet:
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 40)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 40)
 
-        async def check_wallets(node):
-            return len(node.wallet_state_manager.wallets.keys())
-
         if autodiscovery:
             # Autodiscovery enabled: test that wallet was created at this point
             await time_out_assert(20, check_wallets, 2, wallet_node_2)
@@ -1052,9 +1054,6 @@ class TestCATWallet:
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, eve_spend.name())
         await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-
-        async def check_wallets(node):
-            return len(node.wallet_state_manager.wallets.keys())
 
         await time_out_assert(20, check_wallets, 2, wallet_node_0)
         cat_wallet = wallet_node_0.wallet_state_manager.wallets[uint32(2)]
