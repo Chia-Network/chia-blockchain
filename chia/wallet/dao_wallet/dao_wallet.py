@@ -2097,7 +2097,8 @@ class DAOWallet:
         """
 
         self.log.info(
-            f"DAOWallet.apply_state_transition called with the height: {block_height} and CoinSpend of {new_state.coin.name()}."
+            f"DAOWallet.apply_state_transition called with the height: {block_height} "
+            f"and CoinSpend of {new_state.coin.name()}."
         )
         singleton_id = get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         if not singleton_id:  # pragma: no cover
