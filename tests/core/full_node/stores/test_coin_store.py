@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
@@ -491,6 +492,148 @@ async def test_get_coin_states(db_version: int) -> None:
 
         # if the limit is very high, we should get all of them
         assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(0), max_items=10000)) == 600
+
+
+# Generates pseudorandom puzzle hashes.
+def generate_phs(count: int) -> List[bytes32]:
+    return [std_hash(i.to_bytes(4, byteorder="big")) for i in range(count)]
+
+
+# Generates pseudorandom coin records.
+# This is complex, but it's goal is to test streaming various quantities of realistic coin records.
+# It's meant to simulate various coin records with different or the same heights, puzzle hashes.
+# Duplicate coin ids need to be prevented, so entropy is introduced in various places.
+def generate_crs(
+    phs: List[bytes32],
+    spent_per_ph_modulo: int,
+    unspent_per_ph_modulo: int,
+    duplicates_per_height: int,
+    created_multiplier: int,
+    spent_multiplier: int,
+) -> List[CoinRecord]:
+    assert spent_per_ph_modulo < 256
+    assert unspent_per_ph_modulo < 256
+    crs = []
+
+    for ph in phs:
+        count = ph[0] % spent_per_ph_modulo
+
+        for i in range(count):
+            for j in range(duplicates_per_height):
+                coin_record = CoinRecord(
+                    Coin(std_hash(ph + j.to_bytes(4, byteorder="big") + b"A"), ph, uint64(i * count + j)),
+                    uint32(i * created_multiplier),
+                    uint32(i * spent_multiplier),
+                    False,
+                    uint64(i * j * 100000),
+                )
+                crs.append(coin_record)
+
+        count = ph[0] % unspent_per_ph_modulo
+
+        for i in range(count):
+            for j in range(duplicates_per_height):
+                coin_record = CoinRecord(
+                    Coin(std_hash(ph + j.to_bytes(4, byteorder="big") + b"B"), ph, uint64(i * count + j)),
+                    uint32(i * created_multiplier),
+                    uint32(0),
+                    False,
+                    uint64(i * j * 100000),
+                )
+                crs.append(coin_record)
+
+    return crs
+
+
+@dataclass(frozen=True)
+class CoinRecordPopulation:
+    ph_count: int
+    spent_per_ph_modulo: int
+    unspent_per_ph_modulo: int
+    duplicates_per_height: int
+    created_multiplier: int
+    spent_multiplier: int
+    max_batch_size: int
+    batch_sizes: List[int]
+
+
+@pytest.mark.parametrize(
+    "population",
+    [
+        # A small number of coin records, to make sure small batches work fine.
+        CoinRecordPopulation(
+            ph_count=10,
+            spent_per_ph_modulo=8,
+            unspent_per_ph_modulo=3,
+            duplicates_per_height=1,
+            created_multiplier=13,
+            spent_multiplier=17,
+            max_batch_size=10,
+            batch_sizes=[10, 10, 10, 10, 5],
+        ),
+        # A medium number of coin records, to emulate a fairly normal wallet.
+        CoinRecordPopulation(
+            ph_count=200,
+            spent_per_ph_modulo=3,
+            unspent_per_ph_modulo=2,
+            duplicates_per_height=2,
+            created_multiplier=95,
+            spent_multiplier=160,
+            max_batch_size=150,
+            batch_sizes=[150, 150, 150, 108],
+        ),
+        # A large number of coin records, to emulate a dusted wallet with many addresses.
+        CoinRecordPopulation(
+            ph_count=5000,
+            spent_per_ph_modulo=4,
+            unspent_per_ph_modulo=2,
+            duplicates_per_height=3,
+            created_multiplier=126,
+            spent_multiplier=134,
+            max_batch_size=8000,
+            batch_sizes=[8000, 8000, 8000, 6348],
+        ),
+    ],
+)
+@pytest.mark.anyio
+async def test_stream_coin_states(db_version: int, population: CoinRecordPopulation) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+
+        # 45 deterministic pseudorandom coin records to test small batches against.
+        phs = generate_phs(population.ph_count)
+        crs = generate_crs(
+            phs,
+            population.spent_per_ph_modulo,
+            population.unspent_per_ph_modulo,
+            population.duplicates_per_height,
+            population.created_multiplier,
+            population.spent_multiplier,
+        )
+        await coin_store._add_coin_records(crs)
+
+        stream = coin_store.stream_coin_states_by_puzzle_hashes(set(phs), max_batch_size=population.max_batch_size)
+        batches = [batch async for batch in stream]
+
+        # All batches should be full except for the remainder in the last batch.
+        assert [len(batch) for batch in batches] == population.batch_sizes
+
+        # All coin records should be sorted by the maximum of created and spent height.
+        states = [state for batch in batches for state in batch]
+        for i in range(len(states) - 1):
+            a = states[i]
+            b = states[i + 1]
+
+            assert a.created_height is not None and b.created_height is not None
+
+            if a.spent_height is not None and b.spent_height is not None:
+                assert a.spent_height <= b.spent_height
+            elif a.spent_height is not None:
+                assert a.spent_height <= b.created_height
+            elif b.spent_height is not None:
+                assert a.created_height <= b.spent_height
+            else:
+                assert a.created_height <= b.created_height
 
 
 @pytest.mark.anyio

@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import sqlite3
 import time
-from typing import Any, Collection, Dict, List, Optional, Set, Tuple
+from typing import Any, AsyncGenerator, Collection, Dict, List, Optional, Set, Tuple
 
 import typing_extensions
 from aiosqlite import Cursor
@@ -347,6 +347,73 @@ class CoinStore:
                     break
 
         return coins
+
+    async def stream_coin_states_by_puzzle_hashes(
+        self,
+        puzzle_hashes: Set[bytes32],
+        min_height: uint32 = uint32(0),
+        include_spent: bool = True,
+        include_unspent: bool = True,
+        max_batch_size: int = 50000,
+    ) -> AsyncGenerator[List[CoinState], None]:
+        if len(puzzle_hashes) == 0:
+            return
+
+        next_batch: List[CoinState] = []
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursors: List[Cursor] = []
+            state_for_batch: List[CoinState] = []
+
+            for select_batch in to_batches(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
+                select_batch_db: Tuple[bytes32, ...] = tuple(select_batch.entries)
+
+                cursor = await conn.execute(
+                    f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                    f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
+                    f'WHERE puzzle_hash in ({"?," * (len(select_batch.entries) - 1)}?) '
+                    f"AND (confirmed_index>=? OR spent_index>=?) "
+                    f"{'' if include_spent else 'AND spent_index=0'} "
+                    f"{'' if include_unspent else 'AND spent_index>0'} "
+                    f"ORDER BY MAX(confirmed_index, spent_index) ASC",
+                    select_batch_db + (min_height, min_height),
+                )
+
+                row = await cursor.fetchone()
+                if row is None:
+                    continue
+
+                cursors.append(cursor)
+                state_for_batch.append(self.row_to_coin_state(row))
+
+            while len(cursors) > 0:
+                next_index = 0
+                next_height = 0
+
+                for i in range(len(cursors)):
+                    coin_state = state_for_batch[i]
+                    height = max(coin_state.created_height or 0, coin_state.spent_height or 0)
+
+                    if height < next_height:
+                        next_index = i
+                        next_height = height
+
+                coin_state = state_for_batch[next_index]
+
+                if len(next_batch) >= max_batch_size:
+                    yield next_batch
+                    next_batch = []
+                next_batch.append(coin_state)
+
+                row = await cursors[next_index].fetchone()
+                if row is None:
+                    cursors.pop(next_index)
+                    state_for_batch.pop(next_index)
+                    continue
+
+                state_for_batch[next_index] = self.row_to_coin_state(row)
+
+        yield next_batch
 
     async def get_coin_records_by_parent_ids(
         self,

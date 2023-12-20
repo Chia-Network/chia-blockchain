@@ -26,6 +26,24 @@ class SubscriptionSet:
 
         return True
 
+    def remove_subscription(self, peer_id: bytes32, item: bytes32) -> bool:
+        subscriptions = self._subscriptions_for_peer.get(peer_id)
+
+        if subscriptions is None or item not in subscriptions:
+            return False
+
+        peers = self._peers_for_subscription[item]
+        peers.remove(peer_id)
+        subscriptions.remove(item)
+
+        if len(subscriptions) == 0:
+            self._subscriptions_for_peer.pop(peer_id)
+
+        if len(peers) == 0:
+            self._peers_for_subscription.pop(item)
+
+        return True
+
     def has_subscription(self, item: bytes32) -> bool:
         return item in self._peers_for_subscription
 
@@ -46,6 +64,9 @@ class SubscriptionSet:
                 self._peers_for_subscription.pop(item)
 
         self._subscriptions_for_peer.pop(peer_id)
+
+    def subscriptions(self, peer_id: bytes32) -> Set[bytes32]:
+        return self._subscriptions_for_peer.get(peer_id, set())
 
     def peers(self, item: bytes32) -> Set[bytes32]:
         return self._peers_for_subscription.get(item, set())
@@ -138,9 +159,45 @@ class PeerSubscriptions:
 
         return added
 
+    def remove_ph_subscriptions(self, peer_id: bytes32, phs: List[bytes32]) -> Set[bytes32]:
+        """
+        Removes subscriptions. Filters out duplicates and returns all removals.
+        """
+
+        removed: Set[bytes32] = set()
+
+        for ph in phs:
+            if not self._ph_subscriptions.remove_subscription(peer_id, ph):
+                continue
+
+            removed.add(ph)
+
+        return removed
+
+    def remove_coin_subscriptions(self, peer_id: bytes32, coin_ids: List[bytes32]) -> Set[bytes32]:
+        """
+        Removes subscriptions. Filters out duplicates and returns all removals.
+        """
+
+        removed: Set[bytes32] = set()
+
+        for coin_id in coin_ids:
+            if not self._coin_subscriptions.remove_subscription(peer_id, coin_id):
+                continue
+
+            removed.add(coin_id)
+
+        return removed
+
     def remove_peer(self, peer_id: bytes32) -> None:
         self._ph_subscriptions.remove_peer(peer_id)
         self._coin_subscriptions.remove_peer(peer_id)
+
+    def coin_subscriptions(self, peer_id: bytes32) -> Set[bytes32]:
+        return self._coin_subscriptions.subscriptions(peer_id)
+
+    def puzzle_subscriptions(self, peer_id: bytes32) -> Set[bytes32]:
+        return self._ph_subscriptions.subscriptions(peer_id)
 
     def peers_for_coin_id(self, coin_id: bytes32) -> Set[bytes32]:
         return self._coin_subscriptions.peers(coin_id)
