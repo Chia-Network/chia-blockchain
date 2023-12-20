@@ -276,3 +276,104 @@ class RequestFeeEstimates(Streamable):
 @dataclass(frozen=True)
 class RespondFeeEstimates(Streamable):
     estimates: FeeEstimateGroup
+
+
+@streamable
+@dataclass(frozen=True)
+class StateFilters(Streamable):
+    include_spent: bool
+    include_unspent: bool
+    include_hinted: bool
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestAddPhSubscriptions(Streamable):
+    puzzle_hashes: List[bytes32]
+    min_height: uint32
+    header_hash: Optional[bytes32]
+    initial_state_filters: StateFilters
+
+
+@streamable
+@dataclass(frozen=True)
+class RejectAddPhSubscriptions(Streamable):
+    puzzle_hashes: List[bytes32]
+    rejected_puzzle_hashes: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondAddPhSubscriptions(Streamable):
+    puzzle_hashes: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestAddCoinSubscriptions(Streamable):
+    coin_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RejectAddCoinSubscriptions(Streamable):
+    coin_ids: List[bytes32]
+    rejected_coin_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondAddCoinSubscriptions(Streamable):
+    coin_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestRemovePhSubscriptions(Streamable):
+    puzzle_hashes: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondRemovePhSubscriptions(Streamable):
+    puzzle_hashes: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestRemoveCoinSubscriptions(Streamable):
+    coin_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondRemoveCoinSubscriptions(Streamable):
+    coin_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestResetSubscriptions(Streamable):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondResetSubscriptions(Streamable):
+    puzzle_hashes: List[bytes32]
+    coin_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestPhState(Streamable):
+    puzzle_hashes: List[bytes32]
+    min_height: uint32
+    filters: StateFilters
+
+
+@streamable
+@dataclass(frozen=True)
+class PhStateBatch(Streamable):
+    puzzle_hashes: List[bytes32]
+    coin_states: List[CoinState]

@@ -114,4 +114,20 @@ class ProtocolMessageTypes(Enum):
     request_fee_estimates = 89
     respond_fee_estimates = 90
 
+    # Extended wallet protocol
+    request_add_ph_subscriptions = 92
+    reject_add_ph_subscriptions = 93
+    respond_add_ph_subscriptions = 94
+    request_add_coin_subscriptions = 95
+    reject_add_coin_subscriptions = 96
+    respond_add_coin_subscriptions = 97
+    request_remove_ph_subscriptions = 98
+    respond_remove_ph_subscriptions = 99
+    request_remove_coin_subscriptions = 100
+    respond_remove_coin_subscriptions = 101
+    request_reset_subscriptions = 102
+    respond_reset_subscriptions = 103
+    request_ph_state = 104
+    ph_state_batch = 105
+
     error = 255
