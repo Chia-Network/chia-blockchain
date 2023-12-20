@@ -7,6 +7,12 @@ from typing import Any
 def recursive_replace(root_obj: Any, replace_str: str, replace_with: Any) -> Any:
     split_str = replace_str.split(".")
     if len(split_str) == 1:
-        return replace(root_obj, **{split_str[0]: replace_with})
+        if hasattr(root_obj, "replace"):
+            return root_obj.replace(**{split_str[0]: replace_with})
+        else:
+            return replace(root_obj, **{split_str[0]: replace_with})
     sub_obj = recursive_replace(getattr(root_obj, split_str[0]), ".".join(split_str[1:]), replace_with)
-    return replace(root_obj, **{split_str[0]: sub_obj})
+    if hasattr(root_obj, "replace"):
+        return root_obj.replace(**{split_str[0]: sub_obj})
+    else:
+        return replace(root_obj, **{split_str[0]: sub_obj})

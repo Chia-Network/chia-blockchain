@@ -576,7 +576,7 @@ class FullNodeAPI:
         else:
             if self.full_node.full_node_store.get_sub_slot(request.challenge_hash) is None:
                 if request.challenge_hash != self.full_node.constants.GENESIS_CHALLENGE:
-                    self.log.info(f"Don't have challenge hash {request.challenge_hash}")
+                    self.log.info(f"Don't have challenge hash {request.challenge_hash.hex()}")
 
             sp: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index(
                 request.challenge_hash,
@@ -651,7 +651,8 @@ class FullNodeAPI:
             else:
                 self.log.debug(
                     f"Signage point {request.index_from_challenge} not added, CC challenge: "
-                    f"{request.challenge_chain_vdf.challenge}, RC challenge: {request.reward_chain_vdf.challenge}"
+                    f"{request.challenge_chain_vdf.challenge.hex()}, "
+                    f"RC challenge: {request.reward_chain_vdf.challenge.hex()}"
                 )
 
             return None
@@ -706,7 +707,7 @@ class FullNodeAPI:
                 if sp_vdfs.rc_vdf.output.get_hash() != request.reward_chain_sp:
                     self.log.debug(
                         f"Received proof of space for a potentially old signage point {request.challenge_chain_sp}. "
-                        f"Current sp: {sp_vdfs.rc_vdf.output.get_hash()}"
+                        f"Current sp: {sp_vdfs.rc_vdf.output.get_hash().hex()}"
                     )
                     return None
 
@@ -1093,7 +1094,7 @@ class FullNodeAPI:
         if not added:
             self.log.error(
                 f"Was not able to add end of sub-slot: "
-                f"{request.end_of_sub_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}. "
+                f"{request.end_of_sub_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge.hex()}. "
                 f"Re-sending new-peak to timelord"
             )
             await self.full_node.send_peak_to_timelords(peer=peer)
