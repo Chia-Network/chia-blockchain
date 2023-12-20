@@ -1209,6 +1209,33 @@ async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
 
 
 @pytest.mark.anyio
+async def test_kv_diff_3(data_store: DataStore, tree_id: bytes32) -> None:
+    insert_result = await data_store.autoinsert(
+        key=b"000",
+        value=b"000",
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+    await data_store.delete(tree_id=tree_id, key=b"000", status=Status.COMMITTED)
+    insert_result_2 = await data_store.autoinsert(
+        key=b"000",
+        value=b"001",
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+    diff_1 = await data_store.get_kv_diff(tree_id, insert_result.node_hash, insert_result_2.node_hash)
+    assert diff_1 == {DiffData(OperationType.DELETE, b"000", b"000"), DiffData(OperationType.INSERT, b"000", b"001")}
+    insert_result_3 = await data_store.upsert(
+        key=b"000",
+        new_value=b"002",
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+    diff_2 = await data_store.get_kv_diff(tree_id, insert_result_2.node_hash, insert_result_3.node_hash)
+    assert diff_2 == {DiffData(OperationType.DELETE, b"000", b"001"), DiffData(OperationType.INSERT, b"000", b"002")}
+
+
+@pytest.mark.anyio
 async def test_rollback_to_generation(data_store: DataStore, tree_id: bytes32) -> None:
     await add_0123_example(data_store, tree_id)
     expected_hashes = []
