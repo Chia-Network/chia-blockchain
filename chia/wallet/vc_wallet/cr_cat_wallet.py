@@ -891,7 +891,7 @@ class CRCATWallet(CATWallet):
             construct_cat_puzzle(
                 Program.to(CAT_MOD_HASH),
                 self.info.limitations_program_hash,
-                hint_inner_hash,  # type: ignore
+                hint_inner_hash,
                 mod_code_hash=CAT_MOD_HASH_HASH,
             ).get_tree_hash_precalc(hint, CAT_MOD_HASH, CAT_MOD_HASH_HASH, hint_inner_hash)
             == coin.puzzle_hash
@@ -907,7 +907,7 @@ class CRCATWallet(CATWallet):
             construct_cat_puzzle(
                 Program.to(CAT_MOD_HASH),
                 self.info.limitations_program_hash,
-                pending_approval_inner_hash,  # type: ignore
+                pending_approval_inner_hash,
                 mod_code_hash=CAT_MOD_HASH_HASH,
             ).get_tree_hash_precalc(CAT_MOD_HASH, CAT_MOD_HASH_HASH, pending_approval_inner_hash)
             == coin.puzzle_hash

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Iterator, List, Optional
+from typing import Iterator, List, Optional, Union
 
 from chia_rs import G2Element
 
@@ -65,14 +65,19 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Program:
 
 
 def construct_cat_puzzle(
-    mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program, mod_code_hash: Optional[bytes32] = None
+    mod_code: Program,
+    limitations_program_hash: bytes32,
+    inner_puzzle_or_hash: Union[Program, bytes32],
+    mod_code_hash: Optional[bytes32] = None,
 ) -> Program:
     """
-    Given an inner puzzle hash and tail hash calculate a puzzle program for a specific cc.
+    Given an inner puzzle and a tail hash, calculate a puzzle program for a specific cc.
+    We can also receive an inner puzzle hash instead, which wouldn't calculate a valid
+    puzzle, but that can be useful if calling `.get_tree_hash_precalc()` on it."
     """
     if mod_code_hash is None:
         mod_code_hash = mod_code.get_tree_hash()
-    return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle)
+    return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle_or_hash)
 
 
 def subtotals_for_deltas(deltas: List[int]) -> List[int]:

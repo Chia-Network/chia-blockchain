@@ -207,11 +207,9 @@ class CRCAT:
             proofs_checker,
             payment.puzzle_hash,  # type: ignore
         ).get_tree_hash_precalc(payment.puzzle_hash)
-        new_cat_puzhash: bytes32 = construct_cat_puzzle(
-            CAT_MOD,
-            tail_hash,
-            new_cr_layer_hash,  # type: ignore
-        ).get_tree_hash_precalc(new_cr_layer_hash)
+        new_cat_puzhash = construct_cat_puzzle(CAT_MOD, tail_hash, new_cr_layer_hash).get_tree_hash_precalc(
+            new_cr_layer_hash
+        )
 
         eve_innerpuz: Program = Program.to(
             (
