@@ -355,3 +355,33 @@ def test_ph_subscription_duplicates() -> None:
     assert sub.has_ph_subscription(ph2) is False
     assert sub.has_ph_subscription(ph3) is False
     assert sub.has_ph_subscription(ph4) is False
+
+
+def test_remove_ph_subscriptions() -> None:
+    sub = PeerSubscriptions()
+
+    added = sub.add_ph_subscriptions(peer1, [ph1, ph2, ph3, ph4, ph4], 100)
+    assert added == {ph1, ph2, ph3, ph4}
+
+    removed = sub.remove_ph_subscriptions(peer1, list(added))
+    assert removed == added
+
+    assert sub.peer_subscription_count(peer1) == 0
+
+    for ph in removed:
+        assert not sub.has_ph_subscription(ph)
+
+
+def test_remove_coin_subscriptions() -> None:
+    sub = PeerSubscriptions()
+
+    added = sub.add_coin_subscriptions(peer1, [coin1, coin2, coin3, coin4, coin4], 100)
+    assert added == {coin1, coin2, coin3, coin4}
+
+    removed = sub.remove_coin_subscriptions(peer1, list(added))
+    assert removed == added
+
+    assert sub.peer_subscription_count(peer1) == 0
+
+    for coin_id in removed:
+        assert not sub.has_coin_subscription(coin_id)
