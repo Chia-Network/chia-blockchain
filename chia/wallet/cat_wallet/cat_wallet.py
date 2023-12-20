@@ -395,9 +395,11 @@ class CATWallet:
                     cat_curried_args = match_cat_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal.to_program()))
                     if cat_curried_args is not None:
                         cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
+                        assert cat_mod_hash.atom is not None
+                        assert tail_program_hash.atom is not None
                         parent_coin_data = CATCoinData(
-                            cat_mod_hash.atom,
-                            tail_program_hash.atom,
+                            bytes32(cat_mod_hash.atom),
+                            bytes32(tail_program_hash.atom),
                             cat_inner_puzzle,
                             coin_state[0].coin.parent_coin_info,
                             uint64(coin_state[0].coin.amount),

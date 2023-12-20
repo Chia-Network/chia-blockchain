@@ -7,6 +7,7 @@ import re
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
+from clvm.SExp import CastableType
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia.protocols.wallet_protocol import CoinState
@@ -359,9 +360,10 @@ class DIDWallet:
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
             assert did_curried_args is not None
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
+            assert recovery_list_hash.atom is not None
             did_data = DIDCoinData(
                 p2_puzzle,
-                recovery_list_hash.atom,
+                bytes32(recovery_list_hash.atom),
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
@@ -830,7 +832,8 @@ class DIDWallet:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
-        message_puz = Program.to((1, [[51, puzhash, coin.amount - 1, [puzhash]], [51, 0x00, -113]]))
+        message_puz_python: Tuple[int, List[CastableType]] = (1, [[51, puzhash, coin.amount - 1, [puzhash]], [51, 0x00, -113]])
+        message_puz = Program.to(message_puz_python)
 
         # innerpuz solution is (mode p2_solution)
         innersol: Program = Program.to([1, [[], message_puz, []]])
@@ -1159,15 +1162,21 @@ class DIDWallet:
         assert self.did_info.current_inner is not None
         uncurried_args = uncurry_innerpuz(self.did_info.current_inner)
         assert uncurried_args is not None
-        old_recovery_list_hash: Optional[Program] = None
-        p2_puzzle, old_recovery_list_hash, _, _, _ = uncurried_args
+        old_recovery_list: Optional[Program]
+        p2_puzzle, old_recovery_list, _, _, _ = uncurried_args
         if record is None:
             record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                 p2_puzzle.get_tree_hash()
             )
         if not (self.did_info.num_of_backup_ids_needed > 0 and len(self.did_info.backup_ids) == 0):
             # We have the recovery list, don't reset it
-            old_recovery_list_hash = None
+            old_recovery_list = None
+
+        old_recovery_list_hash: Optional[bytes32]
+        if old_recovery_list is not None:
+            old_recovery_list_hash = bytes32(old_recovery_list)
+        else:
+            old_recovery_list_hash = old_recovery_list
 
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
             puzzle_for_pk(record.pubkey),

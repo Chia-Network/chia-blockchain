@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any, List, Optional, Set, Union
 
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -128,8 +129,8 @@ def match_clawback_puzzle(
         return None
     # Fetch Remark condition
     conditions = conditions_for_solution(
-        inner_puzzle,
-        inner_solution,
+        SerializedProgram.from_program(inner_puzzle),
+        SerializedProgram.from_program(inner_solution),
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8,
     )
     metadata: Optional[ClawbackMetadata] = None

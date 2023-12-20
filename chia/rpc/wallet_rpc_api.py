@@ -2179,10 +2179,14 @@ class WalletRpcApi:
         if coin_state.coin.name() in memos:
             for memo in memos[coin_state.coin.name()]:
                 hints.append(memo.hex())
+        assert recovery_list_hash.atom is not None
+        launcher_id = singleton_struct.rest().first().atom
+        assert launcher_id is not None
+        assert public_key.atom is not None
         return {
             "success": True,
             "did_id": encode_puzzle_hash(
-                bytes32.from_hexstr(singleton_struct.rest().first().atom.hex()),
+                bytes32.from_hexstr(launcher_id.hex()),
                 AddressType.DID.hrp(self.service.config),
             ),
             "latest_coin": coin_state.coin.name().hex(),
@@ -2191,7 +2195,7 @@ class WalletRpcApi:
             "recovery_list_hash": recovery_list_hash.atom.hex(),
             "num_verification": num_verification.as_int(),
             "metadata": did_program_to_metadata(metadata),
-            "launcher_id": singleton_struct.rest().first().atom.hex(),
+            "launcher_id": launcher_id.hex(),
             "full_puzzle": full_puzzle,
             "solution": Program.from_bytes(bytes(coin_spend.solution)).as_python(),
             "hints": hints,
@@ -2221,6 +2225,7 @@ class WalletRpcApi:
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
+        assert recovery_list_hash.atom is not None
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
             bytes32(recovery_list_hash.atom),
@@ -3411,7 +3416,7 @@ class WalletRpcApi:
         full_puzzle = nft_puzzles.create_full_puzzle(
             uncurried_nft.singleton_launcher_id,
             metadata,
-            uncurried_nft.metadata_updater_hash,
+            bytes32(uncurried_nft.metadata_updater_hash),
             inner_puzzle,
         )
 

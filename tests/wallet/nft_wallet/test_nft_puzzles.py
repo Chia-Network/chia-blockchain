@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import random
-from typing import Tuple
+from typing import List, Tuple
+
+from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -177,7 +179,7 @@ def get_updated_nft_puzzle(puzzle: Program, solution: Program) -> bytes32:
 
 
 def test_transfer_puzzle_builder() -> None:
-    metadata = [
+    metadata: List[Tuple[str, CastableType]] = [
         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
     ]

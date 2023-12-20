@@ -1273,8 +1273,8 @@ class DAOWallet:
 
                 sum = 0
                 coin_spends = []
-                xch_parent_amount_list = []
-                tailhash_parent_amount_list = []
+                xch_parent_amount_list: List[List[Union[bytes32, int]]] = []
+                tailhash_parent_amount_list: List[List[Union[bytes32, List[List[Union[bytes32, int]]]]]] = []
                 treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
                 p2_singleton_puzzle = get_p2_singleton_puzzle(self.dao_info.treasury_id)
                 cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
@@ -1358,7 +1358,7 @@ class DAOWallet:
                         if condition.first().as_int() == 51:
                             sum_of_conditions += condition.rest().rest().first().as_int()
                     cat_coins = await self.select_coins_for_asset_type(uint64(sum_of_conditions), tail_hash)
-                    parent_amount_list = []
+                    parent_amount_list: List[List[Union[bytes32, int]]] = []
                     for cat_coin in cat_coins:
                         sum_of_coins += cat_coin.amount
                         parent_amount_list.append([cat_coin.parent_coin_info, cat_coin.amount])

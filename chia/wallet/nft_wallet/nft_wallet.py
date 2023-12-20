@@ -210,6 +210,7 @@ class NFTWallet:
             minter_did = await self.wallet_state_manager.get_minter_did(launcher_coin_states[0].coin, peer)
         else:
             inner_puzzle = p2_puzzle
+        assert uncurried_nft.metadata_updater_hash.atom is not None
         child_puzzle: Program = nft_puzzles.create_full_puzzle(
             singleton_id,
             Program.to(metadata),

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 
 from chia_rs import G1Element, G2Element
 from clvm.EvalError import EvalError
+from clvm.SExp import CastableType
 from typing_extensions import Unpack, final
 
 from chia.consensus.block_record import BlockRecord
@@ -466,20 +467,20 @@ class DataLayerWallet:
 
         # Optionally add an ephemeral spend to announce
         if announce_new_state:
-            announce_only: Program = Program.to(
-                (
-                    1,
+            announce_only_python: Tuple[int, List[List[CastableType]]] = (
+                1,
+                [
                     [
-                        [
-                            51,
-                            new_puz_hash,
-                            singleton_record.lineage_proof.amount,
-                            [launcher_id, root_hash, new_puz_hash],
-                        ],
-                        [62, b"$"],
+                        51,
+                        new_puz_hash,
+                        singleton_record.lineage_proof.amount,
+                        [launcher_id, root_hash, new_puz_hash],
                     ],
-                )
+                    [62, b"$"],
+                ],
             )
+
+            announce_only: Program = Program.to(announce_only_python)
             second_full_puz: Program = create_host_fullpuz(
                 announce_only,
                 root_hash,

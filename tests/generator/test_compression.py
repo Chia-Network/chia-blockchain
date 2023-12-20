@@ -7,7 +7,7 @@ from typing import Any, List
 
 import pytest
 from chia_rs import ALLOW_BACKREFS
-from clvm import SExp
+from clvm.SExp import SExp
 from clvm.serialize import sexp_from_stream
 from clvm_tools import binutils
 

@@ -302,6 +302,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     coin_spends = result.first()
     for spend in coin_spends.as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
+        assert parent.atom is not None and amount.atom is not None
         spends.append(Coin(bytes32(parent.atom), Program.to(puzzle).get_tree_hash(), int_from_bytes(amount.atom)))
 
     print(f"found {len(spends)} spent coins in block")

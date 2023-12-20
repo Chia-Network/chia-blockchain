@@ -281,11 +281,13 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: SerializedProgram) -> Tup
             continue
         condition_code = condition.first().as_int()
         log.debug("Checking condition code: %r", condition_code)
+        atom = condition.rest().rest().first().atom
+        assert atom is not None
         if condition_code == -24:
             # metadata update
             metadata = update_metadata(metadata, condition)
             metadata = Program.to(metadata)
-        elif condition_code == 51 and int_from_bytes(condition.rest().rest().first().atom) == 1:
+        elif condition_code == 51 and int_from_bytes(atom) == 1:
             # destination puzhash
             if puzhash_for_derivation is not None:
                 # ignore duplicated create coin conditions
@@ -305,11 +307,15 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: 
     for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
-            new_did_id = condition.at("rf").atom
+            atom = condition.at("rf").atom
+            if atom is None:
+                new_did_id = atom
+            else:
+                new_did_id = bytes32(atom)
         elif condition.first().as_int() == 51:
             new_puzhash = condition.at("rf").atom
     # assert new_puzhash and new_did_id
-    log.debug(f"Found NFT puzzle details: {new_did_id} {new_puzhash}")
+    log.debug(f"Found NFT puzzle details: {new_did_id!r} {new_puzhash!r}")
     assert unft.transfer_program
     new_ownership_puzzle = construct_ownership_layer(new_did_id, unft.transfer_program, new_inner_puzzle)
 
@@ -318,9 +324,13 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: 
 
 def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Optional[bytes32]:
     conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution))
-    new_did_id = None
+    new_did_id: Optional[bytes32] = None
     for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
-            new_did_id = condition.at("rf").atom
+            atom = condition.at("rf").atom
+            if atom is None:
+                new_did_id = atom
+            else:
+                new_did_id = bytes32(atom)
     return new_did_id

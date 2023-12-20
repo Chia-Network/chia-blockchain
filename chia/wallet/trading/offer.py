@@ -619,7 +619,7 @@ class Offer:
                 notarized_payments: List[NotarizedPayment] = []
                 for payment_group in coin_spend.solution.to_program().as_iter():
                     nonce = bytes32(payment_group.first().as_python())
-                    payment_args_list: List[Program] = payment_group.rest().as_iter()
+                    payment_args_list = payment_group.rest().as_iter()
                     notarized_payments.extend(
                         [NotarizedPayment.from_condition_and_nonce(condition, nonce) for condition in payment_args_list]
                     )

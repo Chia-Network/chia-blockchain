@@ -37,7 +37,7 @@ async def do_spend(
     sim_client: SimClient,
     tail: Program,
     coins: List[Coin],
-    lineage_proofs: List[Program],
+    lineage_proofs: List[LineageProof],
     inner_solutions: List[Program],
     expected_result: Tuple[MempoolInclusionStatus, Err],
     reveal_limitations_program: bool = True,
