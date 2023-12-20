@@ -614,6 +614,12 @@ class MempoolManager:
                     spendbundle_ids_to_remove.add(item.name)
             self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
         else:
+            log.warning(
+                "updating the mempool using the slow-path. "
+                f"peak: {self.peak.header_hash} "
+                f"new-peak-prev: {new_peak.prev_transaction_block_hash} "
+                f"coins: {'not set' if spent_coins is None else 'set'}"
+            )
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
             self.seen_bundle_hashes = {}
