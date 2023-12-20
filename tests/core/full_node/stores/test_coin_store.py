@@ -600,7 +600,6 @@ async def test_stream_coin_states(db_version: int, population: CoinRecordPopulat
     async with DBConnection(db_version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
 
-        # 45 deterministic pseudorandom coin records to test small batches against.
         phs = generate_phs(population.ph_count)
         crs = generate_crs(
             phs,
