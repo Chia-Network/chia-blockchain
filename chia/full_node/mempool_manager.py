@@ -596,6 +596,13 @@ class MempoolManager:
         if self.peak == new_peak:
             return []
         assert new_peak.timestamp is not None
+
+        log.info(
+            f"Size of mempool: {self.mempool.size()} spends, "
+            f"cost: {self.mempool.total_mempool_cost()} "
+            f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
+        )
+
         self.fee_estimator.new_block_height(new_peak.height)
         included_items: List[MempoolItemInfo] = []
 
@@ -645,11 +652,6 @@ class MempoolManager:
             )
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
-        log.info(
-            f"Size of mempool: {self.mempool.size()} spends, "
-            f"cost: {self.mempool.total_mempool_cost()} "
-            f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
-        )
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
         return txs_added
 
