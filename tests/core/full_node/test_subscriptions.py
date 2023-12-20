@@ -366,6 +366,9 @@ def test_remove_ph_subscriptions() -> None:
     removed = sub.remove_ph_subscriptions(peer1, list(added))
     assert removed == added
 
+    # These have already been removed.
+    assert len(sub.remove_coin_subscriptions(peer1, [ph1, ph2])) == 0
+
     assert sub.peer_subscription_count(peer1) == 0
 
     for ph in removed:
@@ -380,6 +383,9 @@ def test_remove_coin_subscriptions() -> None:
 
     removed = sub.remove_coin_subscriptions(peer1, list(added))
     assert removed == added
+
+    # These have already been removed.
+    assert len(sub.remove_coin_subscriptions(peer1, [coin1, coin2])) == 0
 
     assert sub.peer_subscription_count(peer1) == 0
 
