@@ -113,9 +113,9 @@ class TestCATLifecycle:
                 [
                     Program.to(
                         [
-                            [51, acs.get_tree_hash(), starting_coin.amount - 3, [b"memo"]],
-                            [51, acs.get_tree_hash(), 1],
-                            [51, acs.get_tree_hash(), 2],
+                            [51, acs_ph, starting_coin.amount - 3, [b"memo"]],
+                            [51, acs_ph, 1],
+                            [51, acs_ph, 2],
                             [51, 0, -113, tail, checker_solution],
                         ]
                     )
@@ -142,10 +142,7 @@ class TestCATLifecycle:
                 [NO_LINEAGE_PROOF] * 2,
                 [
                     Program.to(
-                        [
-                            [51, acs.get_tree_hash(), coins[0].amount + coins[1].amount],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
+                        [[51, acs_ph, coins[0].amount + coins[1].amount], [51, 0, -113, tail, checker_solution]]
                     ),
                     Program.to([[51, 0, -113, tail, checker_solution]]),
                 ],
@@ -168,12 +165,7 @@ class TestCATLifecycle:
                 coins,
                 [NO_LINEAGE_PROOF] * 3,
                 [
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), total_amount],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    ),
+                    Program.to([[51, acs_ph, total_amount], [51, 0, -113, tail, checker_solution]]),
                     Program.to([[51, 0, -113, tail, checker_solution]]),
                     Program.to([[51, 0, -113, tail, checker_solution]]),
                 ],
@@ -194,7 +186,7 @@ class TestCATLifecycle:
                 tail,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [lineage_proof],
-                [Program.to([[51, acs.get_tree_hash(), total_amount]])],
+                [Program.to([[51, acs_ph, total_amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 reveal_limitations_program=False,
                 cost_logger=cost_logger,
@@ -208,14 +200,7 @@ class TestCATLifecycle:
                 tail,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
-                [
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), total_amount - 1],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    )
-                ],
+                [Program.to([[51, acs_ph, total_amount - 1], [51, 0, -113, tail, checker_solution]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[-1],
                 limitations_solutions=[checker_solution],
@@ -224,22 +209,11 @@ class TestCATLifecycle:
             )
 
             # Mint some value
-            temp_p = Program.to(1)
-            temp_ph: bytes32 = temp_p.get_tree_hash()
-            await sim.farm_block(temp_ph)
-            acs_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(temp_ph, include_spent_coins=False))[
+            await sim.farm_block(acs_ph)
+            acs_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[
                 0
             ].coin
-            acs_bundle = SpendBundle(
-                [
-                    make_spend(
-                        acs_coin,
-                        temp_p,
-                        Program.to([]),
-                    )
-                ],
-                G2Element(),
-            )
+            acs_bundle = SpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
             await do_spend(
                 sim,
                 sim_client,
@@ -247,12 +221,7 @@ class TestCATLifecycle:
                 [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
                 [
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), total_amount],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    )
+                    Program.to([[51, acs_ph, total_amount], [51, 0, -113, tail, checker_solution]])
                 ],  # We subtracted 1 last time so it's normal now
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[1],
@@ -287,18 +256,8 @@ class TestCATLifecycle:
                 [parent_of_mint, parent_of_melt],
                 [NO_LINEAGE_PROOF, NO_LINEAGE_PROOF],
                 [
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), parent_of_mint.amount],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    ),
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), parent_of_melt.amount],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    ),
+                    Program.to([[51, acs_ph, parent_of_mint.amount], [51, 0, -113, tail, checker_solution]]),
+                    Program.to([[51, acs_ph, parent_of_melt.amount], [51, 0, -113, tail, checker_solution]]),
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 2,
@@ -325,30 +284,10 @@ class TestCATLifecycle:
                 [eve_to_mint, eve_to_melt, standard_to_mint, standard_to_melt],
                 [NO_LINEAGE_PROOF, NO_LINEAGE_PROOF, mint_lineage, melt_lineage],
                 [
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), eve_to_mint.amount + 13],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    ),
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), eve_to_melt.amount - 21],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    ),
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), standard_to_mint.amount + 21],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    ),
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), standard_to_melt.amount - 13],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    ),
+                    Program.to([[51, acs_ph, eve_to_mint.amount + 13], [51, 0, -113, tail, checker_solution]]),
+                    Program.to([[51, acs_ph, eve_to_melt.amount - 21], [51, 0, -113, tail, checker_solution]]),
+                    Program.to([[51, acs_ph, standard_to_mint.amount + 21], [51, 0, -113, tail, checker_solution]]),
+                    Program.to([[51, acs_ph, standard_to_melt.amount - 13], [51, 0, -113, tail, checker_solution]]),
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 4,
@@ -361,11 +300,9 @@ class TestCATLifecycle:
     @pytest.mark.anyio
     async def test_genesis_by_id(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
-            standard_acs = Program.to(1)
-            standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
-            await sim.farm_block(standard_acs_ph)
+            await sim.farm_block(acs_ph)
 
-            starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
+            starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph))[0].coin
             tail: Program = GenesisById.construct([Program.to(starting_coin.name())])
             checker_solution: Program = GenesisById.solve([], {})
             cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
@@ -373,8 +310,7 @@ class TestCATLifecycle:
 
             await sim_client.push_tx(
                 SpendBundle(
-                    [make_spend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
-                    G2Element(),
+                    [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
                 )
             )
             await sim.farm_block()
@@ -385,14 +321,7 @@ class TestCATLifecycle:
                 tail,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
-                [
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), starting_coin.amount],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    )
-                ],
+                [Program.to([[51, acs_ph, starting_coin.amount], [51, 0, -113, tail, checker_solution]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
                 cost_logger=cost_logger,
@@ -403,11 +332,9 @@ class TestCATLifecycle:
     @pytest.mark.anyio
     async def test_genesis_by_puzhash(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
-            standard_acs = Program.to(1)
-            standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
-            await sim.farm_block(standard_acs_ph)
+            await sim.farm_block(acs_ph)
 
-            starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
+            starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph))[0].coin
             tail: Program = GenesisByPuzhash.construct([Program.to(starting_coin.puzzle_hash)])
             checker_solution: Program = GenesisByPuzhash.solve([], starting_coin.to_json_dict())
             cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
@@ -415,8 +342,7 @@ class TestCATLifecycle:
 
             await sim_client.push_tx(
                 SpendBundle(
-                    [make_spend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
-                    G2Element(),
+                    [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
                 )
             )
             await sim.farm_block()
@@ -427,14 +353,7 @@ class TestCATLifecycle:
                 tail,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
-                [
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), starting_coin.amount],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    )
-                ],
+                [Program.to([[51, acs_ph, starting_coin.amount], [51, 0, -113, tail, checker_solution]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
                 cost_logger=cost_logger,
@@ -465,14 +384,7 @@ class TestCATLifecycle:
                 tail,
                 [starting_coin],
                 [NO_LINEAGE_PROOF],
-                [
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), starting_coin.amount],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    )
-                ],
+                [Program.to([[51, acs_ph, starting_coin.amount], [51, 0, -113, tail, checker_solution]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
                 signatures=[signature],
@@ -492,14 +404,7 @@ class TestCATLifecycle:
                 tail,
                 [coin],
                 [NO_LINEAGE_PROOF],
-                [
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), coin.amount - 1],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    )
-                ],
+                [Program.to([[51, acs_ph, coin.amount - 1], [51, 0, -113, tail, checker_solution]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[-1],
                 limitations_solutions=[checker_solution],
@@ -513,22 +418,11 @@ class TestCATLifecycle:
             signature = AugSchemeMPL.sign(sk, (int_to_bytes(1) + coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA))
 
             # Need something to fund the minting
-            temp_p = Program.to(1)
-            temp_ph: bytes32 = temp_p.get_tree_hash()
-            await sim.farm_block(temp_ph)
-            acs_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(temp_ph, include_spent_coins=False))[
+            await sim.farm_block(acs_ph)
+            acs_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[
                 0
             ].coin
-            acs_bundle = SpendBundle(
-                [
-                    make_spend(
-                        acs_coin,
-                        temp_p,
-                        Program.to([]),
-                    )
-                ],
-                G2Element(),
-            )
+            acs_bundle = SpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
 
             await do_spend(
                 sim,
@@ -536,14 +430,7 @@ class TestCATLifecycle:
                 tail,
                 [coin],
                 [NO_LINEAGE_PROOF],
-                [
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), coin.amount + 1],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    )
-                ],
+                [Program.to([[51, acs_ph, coin.amount + 1], [51, 0, -113, tail, checker_solution]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[1],
                 limitations_solutions=[checker_solution],
@@ -557,11 +444,9 @@ class TestCATLifecycle:
     @pytest.mark.anyio
     async def test_delegated_tail(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
-            standard_acs = Program.to(1)
-            standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
-            await sim.farm_block(standard_acs_ph)
+            await sim.farm_block(acs_ph)
 
-            starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
+            starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph))[0].coin
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             tail: Program = DelegatedLimitations.construct([Program.to(sk.get_g1())])
             cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
@@ -569,8 +454,7 @@ class TestCATLifecycle:
 
             await sim_client.push_tx(
                 SpendBundle(
-                    [make_spend(starting_coin, standard_acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
-                    G2Element(),
+                    [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
                 )
             )
             await sim.farm_block()
@@ -596,14 +480,7 @@ class TestCATLifecycle:
                 tail,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
                 [NO_LINEAGE_PROOF],
-                [
-                    Program.to(
-                        [
-                            [51, acs.get_tree_hash(), starting_coin.amount],
-                            [51, 0, -113, tail, checker_solution],
-                        ]
-                    )
-                ],
+                [Program.to([[51, acs_ph, starting_coin.amount], [51, 0, -113, tail, checker_solution]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 signatures=[signature],
                 limitations_solutions=[checker_solution],
