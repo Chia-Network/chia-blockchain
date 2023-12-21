@@ -361,7 +361,7 @@ class DIDWallet:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data = DIDCoinData(
                 p2_puzzle,
-                recovery_list_hash.atom,
+                recovery_list_hash.as_atom(),
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,

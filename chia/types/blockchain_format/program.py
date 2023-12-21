@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import io
-from typing import Any, Callable, Dict, Optional, Set, Tuple
+from typing import Any, BinaryIO, Callable, Dict, Generator, Optional, Set, Tuple
 
 from chia_rs import ALLOW_BACKREFS, run_chia_program, tree_hash
 from clvm import SExp
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
+from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -18,20 +19,87 @@ from .tree_hash import sha256_treehash
 INFINITE_COST = 11000000000
 
 
-class Program(SExp):
+class Program:
     """
     A thin wrapper around s-expression data intended to be invoked with "eval".
     """
 
-    @classmethod
-    def parse(cls, f) -> Program:
-        return sexp_from_stream(f, cls.to)
+    _inner: SExp
 
-    def stream(self, f):
-        sexp_to_stream(self, f)
+    def __init__(self, inner: SExp):
+        self._inner = inner
 
-    @classmethod
-    def from_bytes(cls, blob: bytes) -> Program:
+    def as_pair(self) -> Optional[Tuple[Program, Program]]:
+        pair: Optional[Tuple[SExp, SExp]] = self._inner.as_pair()
+        if pair is None:
+            return None
+        return (Program(pair[0]), Program(pair[1]))
+
+    def first(self) -> Program:
+        return Program(self._inner.first())
+
+    def rest(self) -> Program:
+        return Program(self._inner.rest())
+
+    def as_iter(self) -> Generator[Program, None, None]:
+        v = self._inner
+        while not v.nullp():
+            yield Program(v.first())
+            v = v.rest()
+
+    def listp(self) -> bool:
+        ret: bool = self._inner.listp()
+        return ret
+
+    def nullp(self) -> bool:
+        ret: bool = self._inner.nullp()
+        return ret
+
+    def cons(self, right: CastableType) -> Program:
+        return Program.to((self._inner, Program.to(right)))
+
+    def __eq__(self, other: CastableType) -> bool:
+        ret: bool = self._inner == other
+        return ret
+
+    def list_len(self) -> int:
+        ret: int = self._inner.list_len()
+        return ret
+
+    def as_bin(self) -> bytes:
+        ret: bytes = self._inner.as_bin()
+        return ret
+
+    def as_python(self) -> Any:
+        return self._inner.as_python()
+
+    @property
+    def atom(self) -> Optional[bytes]:
+        ret: Optional[bytes] = self._inner.atom
+        return ret
+
+    @property
+    def pair(self) -> Optional[Tuple[Program, Program]]:
+        pair: Optional[Tuple[SExp, SExp]] = self._inner.as_pair()
+        if pair is None:
+            return None
+        return (Program(pair[0]), Program(pair[1]))
+
+    @staticmethod
+    def to(v: CastableType) -> Program:
+        if isinstance(v, Program):
+            return v
+        return Program(SExp.to(v))
+
+    @staticmethod
+    def parse(f: BinaryIO) -> Program:
+        return Program(sexp_from_stream(f, Program.to))
+
+    def stream(self, f: io.BytesIO) -> None:
+        sexp_to_stream(self._inner, f)
+
+    @staticmethod
+    def from_bytes(blob: bytes) -> Program:
         # this runs the program "1", which just returns the first argument.
         # the first argument is the buffer we want to parse. This effectively
         # leverages the rust parser and LazyNode, making it a lot faster to
@@ -44,9 +112,9 @@ class Program(SExp):
         )
         return Program.to(ret)
 
-    @classmethod
-    def fromhex(cls, hexstr: str) -> Program:
-        return cls.from_bytes(hexstr_to_bytes(hexstr))
+    @staticmethod
+    def fromhex(hexstr: str) -> Program:
+        return Program.from_bytes(hexstr_to_bytes(hexstr))
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
@@ -54,7 +122,10 @@ class Program(SExp):
         return f.getvalue()
 
     def __str__(self) -> str:
-        return bytes(self).hex()
+        return self.as_bin().hex()
+
+    def __repr__(self) -> str:
+        return f"Program({self})"
 
     def at(self, position: str) -> Program:
         """
@@ -75,7 +146,7 @@ class Program(SExp):
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
 
-    def replace(self, **kwargs) -> Program:
+    def replace(self, **kwargs: CastableType) -> Program:
         """
         Create a new program replacing the given paths (using `at` syntax).
         Example:
@@ -96,14 +167,14 @@ class Program(SExp):
         Note that `Program` objects are immutable. This function returns a new object; the
         original is left as-is.
         """
-        return _sexp_replace(self, self.to, **kwargs)
+        return Program(_sexp_replace(self, self.to, **kwargs))
 
     def get_tree_hash_precalc(self, *args: bytes32) -> bytes32:
         """
         Any values in `args` that appear in the tree
         are presumed to have been hashed already.
         """
-        return sha256_treehash(self, set(args))
+        return sha256_treehash(self._inner, set(args))
 
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(bytes(self)))
@@ -136,11 +207,11 @@ class Program(SExp):
     #
     # Resulting in a function which places its own arguments after those
     # curried in in the form of a proper list.
-    def curry(self, *args) -> Program:
-        fixed_args: Any = 1
+    def curry(self, *args: CastableType) -> Program:
+        fixed_args: CastableType = 1
         for arg in reversed(args):
             fixed_args = [4, (1, arg), fixed_args]
-        return Program.to([2, (1, self), fixed_args])
+        return Program.to([2, (1, self._inner), fixed_args])
 
     def uncurry(self) -> Tuple[Program, Program]:
         def match(o: SExp, expected: bytes) -> None:
@@ -151,31 +222,38 @@ class Program(SExp):
             # (2 (1 . <mod>) <args>)
             ev, quoted_inner, args_list = self.as_iter()
             match(ev, b"\x02")
-            match(quoted_inner.pair[0], b"\x01")
-            mod = quoted_inner.pair[1]
+            pair = quoted_inner.pair
+            if pair is None:
+                raise ValueError("expected pair for quoted inner function")
+            match(pair[0], b"\x01")
+            mod = pair[1]
             args = []
             while args_list.pair is not None:
                 # (4 (1 . <arg>) <rest>)
                 cons, quoted_arg, rest = args_list.as_iter()
                 match(cons, b"\x04")
-                match(quoted_arg.pair[0], b"\x01")
-                args.append(quoted_arg.pair[1])
+                pair = quoted_arg.pair
+                if pair is None:
+                    raise ValueError("expected pair for quoted inner function")
+                match(pair[0], b"\x01")
+                args.append(pair[1])
                 args_list = rest
             match(args_list, b"\x01")
             return Program.to(mod), Program.to(args)
         except ValueError:  # too many values to unpack
             # when unpacking as_iter()
             # or when a match() fails
-            return self, self.to(0)
+            return self, Program.to(0)
         except TypeError:  # NoneType not subscriptable
             # when an object is not a pair or atom as expected
-            return self, self.to(0)
+            return self, Program.to(0)
         except EvalError:  # first of non-cons
             # when as_iter() fails
-            return self, self.to(0)
+            return self, Program.to(0)
 
     def as_int(self) -> int:
-        return int_from_bytes(self.as_atom())
+        ret: int = int_from_bytes(self.as_atom())
+        return ret
 
     def as_atom(self) -> bytes:
         ret: Optional[bytes] = self.atom
@@ -183,8 +261,8 @@ class Program(SExp):
             raise ValueError("expected atom")
         return ret
 
-    def __deepcopy__(self, memo):
-        return type(self).from_bytes(bytes(self))
+    def __deepcopy__(self) -> Program:
+        return Program.from_bytes(bytes(self))
 
     EvalError = EvalError
 
@@ -208,7 +286,7 @@ def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
 NIL = Program.from_bytes(b"\x80")
 
 
-def _sexp_replace(sexp: SExp, to_sexp: Callable[[Any], SExp], **kwargs) -> SExp:
+def _sexp_replace(sexp: SExp, to_sexp: Callable[[CastableType], SExp], **kwargs: Dict[str, CastableType]) -> SExp:
     # if `kwargs == {}` then `return sexp` unchanged
     if len(kwargs) == 0:
         return sexp

@@ -286,8 +286,6 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner) -> None:
 
 @pytest.mark.anyio
 async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: BenchmarkRunner) -> None:
-    from clvm.casts import int_from_bytes
-
     from chia.full_node.mempool_check_conditions import DESERIALIZE_MOD
     from tests.core.large_block import LARGE_BLOCK
 
@@ -302,7 +300,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     coin_spends = result.first()
     for spend in coin_spends.as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
-        spends.append(Coin(bytes32(parent.atom), Program.to(puzzle).get_tree_hash(), int_from_bytes(amount.atom)))
+        spends.append(Coin(bytes32(parent.as_atom()), Program.to(puzzle).get_tree_hash(), amount.as_int()))
 
     print(f"found {len(spends)} spent coins in block")
 
