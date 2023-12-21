@@ -148,7 +148,7 @@ class UncurriedNFT(Streamable):
             transfer_program = None
             transfer_program_args = None
             royalty_address = None
-            royalty_percentage = None
+            royalty_percentage: Optional[uint16] = None
             nft_inner_puzzle_mod = None
             mod, ol_args = inner_puzzle.uncurry()
             supports_did = False
@@ -157,8 +157,8 @@ class UncurriedNFT(Streamable):
                 log.debug("Parsing ownership layer")
                 _, current_did, transfer_program, p2_puzzle = ol_args.as_iter()
                 transfer_program_mod, transfer_program_args = transfer_program.uncurry()
-                _, royalty_address_p, royalty_percentage = transfer_program_args.as_iter()
-                royalty_percentage = uint16(royalty_percentage.as_int())
+                _, royalty_address_p, royalty_percentage_program = transfer_program_args.as_iter()
+                royalty_percentage = uint16(royalty_percentage_program.as_int())
                 royalty_address = royalty_address_p.atom
                 current_did = current_did.atom
                 if current_did == b"":

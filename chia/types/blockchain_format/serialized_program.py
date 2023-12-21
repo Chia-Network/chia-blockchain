@@ -4,15 +4,14 @@ import io
 from typing import Tuple
 
 from chia_rs import MEMPOOL_MODE, run_chia_program, serialized_length, tree_hash
-from clvm import SExp
-from clvm.SExp import CastableType
+from clvm.SExp import CastableType, SExp
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 
-def _serialize(node: object) -> bytes:
+def _serialize(node: CastableType) -> bytes:
     if isinstance(node, list):
         serialized_list = bytearray()
         for a in node:
@@ -93,13 +92,13 @@ class SerializedProgram:
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(self._buf))
 
-    def run_mempool_with_cost(self, max_cost: int, arg: object) -> Tuple[int, Program]:
+    def run_mempool_with_cost(self, max_cost: int, arg: CastableType) -> Tuple[int, Program]:
         return self._run(max_cost, MEMPOOL_MODE, arg)
 
-    def run_with_cost(self, max_cost: int, arg: object) -> Tuple[int, Program]:
+    def run_with_cost(self, max_cost: int, arg: CastableType) -> Tuple[int, Program]:
         return self._run(max_cost, 0, arg)
 
-    def _run(self, max_cost: int, flags: int, arg: object) -> Tuple[int, Program]:
+    def _run(self, max_cost: int, flags: int, arg: CastableType) -> Tuple[int, Program]:
         # when multiple arguments are passed, concatenate them into a serialized
         # buffer. Some arguments may already be in serialized form (e.g.
         # SerializedProgram) so we don't want to de-serialize those just to
