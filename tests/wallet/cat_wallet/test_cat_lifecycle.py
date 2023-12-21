@@ -9,7 +9,6 @@ from clvm.casts import int_to_bytes
 from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
@@ -37,9 +36,9 @@ async def do_spend(
     sim_client: SimClient,
     tail: Program,
     coins: List[Coin],
-    lineage_proofs: List[Program],
+    lineage_proofs: List[LineageProof],
     inner_solutions: List[Program],
-    expected_result: Tuple[MempoolInclusionStatus, Err],
+    expected_result: Tuple[MempoolInclusionStatus, Optional[Err]],
     reveal_limitations_program: bool = True,
     signatures: List[G2Element] = [],
     extra_deltas: Optional[List[int]] = None,
@@ -70,17 +69,10 @@ async def do_spend(
             )
         )
 
-    spend_bundle: SpendBundle = unsigned_spend_bundle_for_spendable_cats(
-        CAT_MOD,
-        spendable_cat_list,
-    )
+    spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
     agg_sig = AugSchemeMPL.aggregate(signatures)
     final_bundle = SpendBundle.aggregate(
-        [
-            *additional_spends,
-            spend_bundle,
-            SpendBundle([], agg_sig),  # "Signing" the spend bundle
-        ]
+        [*additional_spends, spend_bundle, SpendBundle([], agg_sig)]  # "Signing" the spend bundle
     )
     if cost_logger is not None:
         final_bundle = cost_logger.add_cost(cost_log_msg, final_bundle)
@@ -93,14 +85,14 @@ async def do_spend(
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
-async def test_cat_mod(cost_logger, consensus_mode):
+async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
         tail = Program.to([])
         checker_solution = Program.to([])
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-        cat_ph: bytes32 = cat_puzzle.get_tree_hash()
+        cat_puzzle = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
+        cat_ph = cat_puzzle.get_tree_hash()
         await sim.farm_block(cat_ph)
-        starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph))[0].coin
+        starting_coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph))[0].coin
 
         # Testing the eve spend
         await do_spend(
@@ -128,7 +120,7 @@ async def test_cat_mod(cost_logger, consensus_mode):
         # There's 4 total coins at this point. A farming reward and the three children of the spend above.
 
         # Testing a combination of two
-        coins: List[Coin] = [
+        coins = [
             record.coin
             for record in (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
         ]
@@ -154,7 +146,7 @@ async def test_cat_mod(cost_logger, consensus_mode):
             record.coin
             for record in (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
         ]
-        total_amount: uint64 = uint64(sum([c.amount for c in coins]))
+        total_amount = uint64(sum([c.amount for c in coins]))
         await do_spend(
             sim,
             sim_client,
@@ -173,10 +165,12 @@ async def test_cat_mod(cost_logger, consensus_mode):
         )
 
         # Spend with a standard lineage proof
-        parent_coin: Coin = coins[0]  # The first one is the one we didn't light on fire
+        parent_coin = coins[0]  # The first one is the one we didn't light on fire
         _, curried_args = cat_puzzle.uncurry()
         _, _, innerpuzzle = curried_args.as_iter()
-        lineage_proof = LineageProof(parent_coin.parent_coin_info, innerpuzzle.get_tree_hash(), parent_coin.amount)
+        lineage_proof = LineageProof(
+            parent_coin.parent_coin_info, innerpuzzle.get_tree_hash(), uint64(parent_coin.amount)
+        )
         await do_spend(
             sim,
             sim_client,
@@ -207,7 +201,7 @@ async def test_cat_mod(cost_logger, consensus_mode):
 
         # Mint some value
         await sim.farm_block(acs_ph)
-        acs_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[0].coin
+        acs_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[0].coin
         acs_bundle = SpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
         await do_spend(
             sim,
@@ -229,12 +223,12 @@ async def test_cat_mod(cost_logger, consensus_mode):
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
-async def test_complex_spend(cost_logger, consensus_mode):
+async def test_complex_spend(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
         tail = Program.to([])
         checker_solution = Program.to([])
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-        cat_ph: bytes32 = cat_puzzle.get_tree_hash()
+        cat_puzzle = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
+        cat_ph = cat_puzzle.get_tree_hash()
         await sim.farm_block(cat_ph)
         await sim.farm_block(cat_ph)
 
@@ -262,8 +256,8 @@ async def test_complex_spend(cost_logger, consensus_mode):
         )
 
         # Make the lineage proofs for the non-eves
-        mint_lineage = LineageProof(parent_of_mint.parent_coin_info, acs_ph, parent_of_mint.amount)
-        melt_lineage = LineageProof(parent_of_melt.parent_coin_info, acs_ph, parent_of_melt.amount)
+        mint_lineage = LineageProof(parent_of_mint.parent_coin_info, acs_ph, uint64(parent_of_mint.amount))
+        melt_lineage = LineageProof(parent_of_melt.parent_coin_info, acs_ph, uint64(parent_of_melt.amount))
 
         # Find the two new coins
         all_cats = await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False)
@@ -295,15 +289,15 @@ async def test_complex_spend(cost_logger, consensus_mode):
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
-async def test_genesis_by_id(cost_logger, consensus_mode):
+async def test_genesis_by_id(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
         await sim.farm_block(acs_ph)
 
-        starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph))[0].coin
-        tail: Program = GenesisById.construct([Program.to(starting_coin.name())])
-        checker_solution: Program = GenesisById.solve([], {})
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-        cat_ph: bytes32 = cat_puzzle.get_tree_hash()
+        starting_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph))[0].coin
+        tail = GenesisById.construct([Program.to(starting_coin.name())])
+        checker_solution = GenesisById.solve([], {})
+        cat_puzzle = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
+        cat_ph = cat_puzzle.get_tree_hash()
 
         await sim_client.push_tx(
             SpendBundle([make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element())
@@ -326,15 +320,15 @@ async def test_genesis_by_id(cost_logger, consensus_mode):
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
-async def test_genesis_by_puzhash(cost_logger, consensus_mode):
+async def test_genesis_by_puzhash(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
         await sim.farm_block(acs_ph)
 
-        starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph))[0].coin
-        tail: Program = GenesisByPuzhash.construct([Program.to(starting_coin.puzzle_hash)])
-        checker_solution: Program = GenesisByPuzhash.solve([], starting_coin.to_json_dict())
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-        cat_ph: bytes32 = cat_puzzle.get_tree_hash()
+        starting_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph))[0].coin
+        tail = GenesisByPuzhash.construct([Program.to(starting_coin.puzzle_hash)])
+        checker_solution = GenesisByPuzhash.solve([], starting_coin.to_json_dict())
+        cat_puzzle = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
+        cat_ph = cat_puzzle.get_tree_hash()
 
         await sim_client.push_tx(
             SpendBundle([make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element())
@@ -357,19 +351,19 @@ async def test_genesis_by_puzhash(cost_logger, consensus_mode):
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
-async def test_everything_with_signature(cost_logger, consensus_mode):
+async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
         sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
-        tail: Program = EverythingWithSig.construct([Program.to(sk.get_g1())])
-        checker_solution: Program = EverythingWithSig.solve([], {})
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-        cat_ph: bytes32 = cat_puzzle.get_tree_hash()
+        tail = EverythingWithSig.construct([Program.to(sk.get_g1())])
+        checker_solution = EverythingWithSig.solve([], {})
+        cat_puzzle = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
+        cat_ph = cat_puzzle.get_tree_hash()
         await sim.farm_block(cat_ph)
 
         # Test eve spend
         # We don't sign any message data because CLVM 0 translates to b'' apparently
-        starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph))[0].coin
-        signature: G2Element = AugSchemeMPL.sign(sk, (starting_coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA))
+        starting_coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph))[0].coin
+        signature = AugSchemeMPL.sign(sk, (starting_coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA))
 
         await do_spend(
             sim,
@@ -386,7 +380,7 @@ async def test_everything_with_signature(cost_logger, consensus_mode):
         )
 
         # Test melting value
-        coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin
+        coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin
         signature = AugSchemeMPL.sign(sk, (int_to_bytes(-1) + coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA))
 
         await do_spend(
@@ -410,7 +404,7 @@ async def test_everything_with_signature(cost_logger, consensus_mode):
 
         # Need something to fund the minting
         await sim.farm_block(acs_ph)
-        acs_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[0].coin
+        acs_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[0].coin
         acs_bundle = SpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
 
         await do_spend(
@@ -432,15 +426,15 @@ async def test_everything_with_signature(cost_logger, consensus_mode):
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
-async def test_delegated_tail(cost_logger, consensus_mode):
+async def test_delegated_tail(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
         await sim.farm_block(acs_ph)
 
-        starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph))[0].coin
+        starting_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph))[0].coin
         sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
-        tail: Program = DelegatedLimitations.construct([Program.to(sk.get_g1())])
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-        cat_ph: bytes32 = cat_puzzle.get_tree_hash()
+        tail = DelegatedLimitations.construct([Program.to(sk.get_g1())])
+        cat_puzzle = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
+        cat_ph = cat_puzzle.get_tree_hash()
 
         await sim_client.push_tx(
             SpendBundle([make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element())
@@ -449,18 +443,15 @@ async def test_delegated_tail(cost_logger, consensus_mode):
 
         # We're signing a different tail to use here
         name_as_program = Program.to(starting_coin.name())
-        new_tail: Program = GenesisById.construct([name_as_program])
-        checker_solution: Program = DelegatedLimitations.solve(
+        new_tail = GenesisById.construct([name_as_program])
+        checker_solution = DelegatedLimitations.solve(
             [name_as_program],
             {
-                "signed_program": {
-                    "identifier": "genesis_by_id",
-                    "args": [str(name_as_program)],
-                },
+                "signed_program": {"identifier": "genesis_by_id", "args": [str(name_as_program)]},
                 "program_arguments": {},
             },
         )
-        signature: G2Element = AugSchemeMPL.sign(sk, new_tail.get_tree_hash())
+        signature = AugSchemeMPL.sign(sk, new_tail.get_tree_hash())
 
         await do_spend(
             sim,
