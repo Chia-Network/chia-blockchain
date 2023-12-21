@@ -162,7 +162,7 @@ class TestSimulation:
                 f"wss://127.0.0.1:{full_system.daemon.daemon_port}",
                 autoclose=True,
                 autoping=True,
-                ssl_context=bt.get_daemon_ssl_context(),
+                ssl=bt.get_daemon_ssl_context(),
                 max_msg_size=100 * 1024 * 1024,
             )
             service_name = "test_service_name"
