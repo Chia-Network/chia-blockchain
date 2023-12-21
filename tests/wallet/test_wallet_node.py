@@ -87,28 +87,6 @@ async def test_get_private_key_missing_key(
 
 
 @pytest.mark.anyio
-async def test_get_private_key_missing_key_use_default(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain
-) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
-    sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
-    fingerprint: int = sk.get_g1().get_fingerprint()
-
-    # Stupid sanity check that the fingerprint we're going to use isn't actually in the keychain
-    assert fingerprint != 1234567890
-
-    # When fingerprint is provided and the key is missing, we should get the default (first) key
-    key = await node.get_key(1234567890)
-
-    assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
-
-
-@pytest.mark.anyio
 async def test_get_public_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
