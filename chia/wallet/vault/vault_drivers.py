@@ -10,7 +10,7 @@ from chia.wallet.util.merkle_tree import MerkleTree
 
 # MODS
 P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions.clsp")
-P2_DELEGATED_SECP_MOD: Program = load_clvm("p2_delegated_secp.clsp")
+P2_DELEGATED_SECP_MOD: Program = load_clvm("p2_delegated_or_hidden_secp.clsp")
 P2_1_OF_N_MOD: Program = load_clvm("p2_1_of_n.clsp")
 P2_1_OF_N_MOD_HASH = P2_1_OF_N_MOD.get_tree_hash()
 P2_RECOVERY_MOD: Program = load_clvm("vault_p2_recovery.clsp")
