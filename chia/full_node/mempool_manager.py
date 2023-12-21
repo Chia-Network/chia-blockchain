@@ -95,6 +95,7 @@ def validate_clvm_and_signature(
 @dataclass
 class TimelockConditions:
     assert_height: uint32 = uint32(0)
+    assert_seconds: uint64 = uint64(0)
     assert_before_height: Optional[uint32] = None
     assert_before_seconds: Optional[uint64] = None
 
@@ -111,6 +112,7 @@ def compute_assert_height(
 
     ret = TimelockConditions()
     ret.assert_height = uint32(conds.height_absolute)
+    ret.assert_seconds = uint64(conds.seconds_absolute)
     ret.assert_before_height = (
         uint32(conds.before_height_absolute) if conds.before_height_absolute is not None else None
     )
@@ -122,6 +124,10 @@ def compute_assert_height(
         if spend.height_relative is not None:
             h = uint32(removal_coin_records[bytes32(spend.coin_id)].confirmed_block_index + spend.height_relative)
             ret.assert_height = max(ret.assert_height, h)
+
+        if spend.seconds_relative is not None:
+            s = uint64(removal_coin_records[bytes32(spend.coin_id)].timestamp + spend.seconds_relative)
+            ret.assert_seconds = max(ret.assert_seconds, s)
 
         if spend.before_height_relative is not None:
             h = uint32(
@@ -503,6 +509,13 @@ class MempoolManager:
         )
 
         timelocks: TimelockConditions = compute_assert_height(removal_record_dict, npc_result.conds)
+
+        if timelocks.assert_before_height is not None and timelocks.assert_before_height <= timelocks.assert_height:
+            # returning None as the "potential" means it failed. We won't store it
+            # in the pending cache
+            return Err.IMPOSSIBLE_HEIGHT_ABSOLUTE_CONSTRAINTS, None, []  # MempoolInclusionStatus.FAILED
+        if timelocks.assert_before_seconds is not None and timelocks.assert_before_seconds <= timelocks.assert_seconds:
+            return Err.IMPOSSIBLE_SECONDS_ABSOLUTE_CONSTRAINTS, None, []  # MempoolInclusionStatus.FAILED
 
         potential = MempoolItem(
             new_spend,
