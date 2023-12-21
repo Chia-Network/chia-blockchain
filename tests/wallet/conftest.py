@@ -59,6 +59,20 @@ class WalletEnvironment:
     wallet_states: Dict[uint32, WalletState]
     wallet_aliases: Dict[str, int] = field(default_factory=dict)
 
+    async def restart(self, new_fingerprint: Optional[int]) -> None:
+        old_peer_info = next(v for v in self.wallet_node.server.all_connections.values()).peer_info
+        await self.rpc_client.log_in(
+            new_fingerprint
+            if new_fingerprint is not None
+            else self.wallet_state_manager.observation_root.get_fingerprint()
+        )
+
+        await self.wallet_node.server.start_client(old_peer_info, None)
+
+        self.wallet_state_manager = self.wallet_node.wallet_state_manager
+        self.xch_wallet = self.wallet_state_manager.main_wallet
+        self.wallet_states = {}
+
     def dealias_wallet_id(self, wallet_id_or_alias: Union[int, str]) -> uint32:
         """
         This function turns something that is either a wallet id or a wallet alias into a wallet id.
@@ -364,9 +378,12 @@ async def wallet_environments(
 
             wallet_states: List[WalletState] = []
             for service, blocks_needed in zip(wallet_services, request.param["blocks_needed"]):
-                await full_node[0]._api.farm_blocks_to_wallet(
-                    count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
-                )
+                if blocks_needed > 0:
+                    await full_node[0]._api.farm_blocks_to_wallet(
+                        count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
+                    )
+                else:
+                    await full_node[0]._api.farm_blocks_to_puzzlehash(1)
                 await full_node[0]._api.wait_for_wallet_synced(wallet_node=service._node, timeout=20)
                 wallet_states.append(
                     WalletState(

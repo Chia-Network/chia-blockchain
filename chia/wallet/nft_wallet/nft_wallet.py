@@ -1689,3 +1689,9 @@ class NFTWallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return False
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:
+        raise NotImplementedError()

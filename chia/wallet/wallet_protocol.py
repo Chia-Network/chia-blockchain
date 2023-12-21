@@ -13,6 +13,7 @@ from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import Condition
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
@@ -81,6 +82,12 @@ class WalletProtocol(Protocol[T]):
         ...
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        ...
+
+    def handle_own_derivation(self) -> bool:
+        ...
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:
         ...
 
     wallet_info: WalletInfo

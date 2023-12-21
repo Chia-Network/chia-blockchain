@@ -261,14 +261,12 @@ class WalletNode:
             fingerprint, private=private
         )
 
-        if key is None and fingerprint is not None:
-            key = await self.get_key_for_fingerprint(None, private=private)
-            if key is not None:
-                if isinstance(key, PrivateKey):
-                    fp = key.get_g1().get_fingerprint()
-                else:
-                    fp = key.get_fingerprint()
-                self.log.info(f"Using first key found (fingerprint: {fp})")
+        if fingerprint is None and key is not None:
+            if isinstance(key, PrivateKey):
+                fp = key.get_g1().get_fingerprint()
+            else:
+                fp = key.get_fingerprint()
+            self.log.info(f"Using first key found (fingerprint: {fp})")
 
         return key
 
@@ -390,6 +388,8 @@ class WalletNode:
         self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
         if not fingerprint:
             fingerprint = self.get_last_used_fingerprint()
+            if fingerprint is not None and await self.get_key_for_fingerprint(fingerprint) is None:
+                fingerprint = None
         multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
         multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)

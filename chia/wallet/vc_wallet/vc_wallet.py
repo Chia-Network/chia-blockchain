@@ -28,6 +28,7 @@ from chia.wallet.conditions import (
     UnknownCondition,
     parse_timelock_info,
 )
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver
@@ -637,6 +638,12 @@ class VCWallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return False
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:
+        raise NotImplementedError()
 
 
 if TYPE_CHECKING:

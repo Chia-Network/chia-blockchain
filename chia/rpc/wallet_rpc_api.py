@@ -382,7 +382,7 @@ class WalletRpcApi:
         if started is True:
             return {"fingerprint": fingerprint}
 
-        return {"success": False, "error": "Unknown Error"}
+        return {"success": False, "error": f"fingerprint {fingerprint} not found in keychain or keychain is empty"}
 
     async def get_logged_in_fingerprint(self, request: Dict[str, Any]) -> EndpointResult:
         return {"fingerprint": self.service.logged_in_fingerprint}

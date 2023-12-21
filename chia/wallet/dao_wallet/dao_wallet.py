@@ -60,6 +60,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     uncurry_proposal,
     uncurry_treasury,
 )
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import (
     get_inner_puzzle_from_singleton,
@@ -2106,3 +2107,9 @@ class DAOWallet:
             raise ValueError(f"Unsupported spend in DAO Wallet: {self.id()}")
 
         return True
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:
+        raise NotImplementedError()

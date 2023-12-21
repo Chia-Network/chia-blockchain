@@ -1461,3 +1461,9 @@ class DIDWallet:
             ).get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:
+        raise NotImplementedError()
