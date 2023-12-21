@@ -57,7 +57,10 @@ DAO_UPDATE_MOD_HASH: bytes32 = DAO_UPDATE_MOD.get_tree_hash()
 
 def test_finished_state() -> None:
     """
-    Once a proposal has closed, it becomes a 'beacon' singleton which announces its proposal ID. This is referred to as the finished state and is used to confirm that a proposal has closed in order to release voting CATs from the lockup puzzle.
+    Once a proposal has closed, it becomes a 'beacon' singleton which announces
+    its proposal ID. This is referred to as the finished state and is used to
+    confirm that a proposal has closed in order to release voting CATs from
+    the lockup puzzle.
     """
     proposal_id = Program.to("proposal_id").get_tree_hash()
     singleton_struct: Program = Program.to(
@@ -462,12 +465,15 @@ def test_proposal_timer() -> None:
 def test_validator() -> None:
     """
     The proposal validator is run by the treasury when a passing proposal is closed.
-    Its main purpose is to check that the proposal's vote amounts adehere to the DAO rules contained in the treasury (which are passed in from the treasury as Truth values).
-    It creates a puzzle announcement of the proposal ID, that the proposal itself asserts.
-    It also spends the value held in the proposal to the excess payout puzhash.
+    Its main purpose is to check that the proposal's vote amounts adehere to
+    the DAO rules contained in the treasury (which are passed in from the
+    treasury as Truth values). It creates a puzzle announcement of the
+    proposal ID, that the proposal itself asserts. It also spends the value
+    held in the proposal to the excess payout puzhash.
 
     The test cases covered are:
-    - Executing a spend proposal in which the validator executes the spend of a 'spend_p2_singleton` coin. This is just a proposal that spends some the treasury
+    - Executing a spend proposal in which the validator executes the spend of a
+      `spend_p2_singleton` coin. This is just a proposal that spends some the treasury
     - Executing an update proposal that changes the DAO rules.
     """
     # Setup the treasury
@@ -658,7 +664,9 @@ def test_spend_p2_singleton() -> None:
 
 def test_merge_p2_singleton() -> None:
     """
-    The treasury funds are held by p2_singleton_via_delegated puzzles. Because a DAO can have a large number of these coins, it's possible to merge them together without requiring a treasury spend.
+    The treasury funds are held by `p2_singleton_via_delegated` puzzles.
+    Because a DAO can have a large number of these coins, it's possible to
+    merge them together without requiring a treasury spend.
     There are two cases tested:
     - For the merge coins that do not create the single output coin, and
     - For the coin that does create the output.
@@ -745,8 +753,10 @@ def test_merge_p2_singleton() -> None:
 def test_treasury() -> None:
     """
     The treasury has two spend paths:
-    - Proposal Path: when a proposal is being closed the treasury spend runs the validator and the actual proposed code (if passed)
-    - Oracle Path: The treasury can make announcements about itself that are used to close invalid proposals
+    - Proposal Path: when a proposal is being closed the treasury spend runs the
+      validator and the actual proposed code (if passed)
+    - Oracle Path: The treasury can make announcements about itself that are
+      used to close invalid proposals
     """
     # Setup the treasury
     treasury_id = Program.to("treasury_id").get_tree_hash()
@@ -849,8 +859,11 @@ def test_treasury() -> None:
 
 def test_lockup() -> None:
     """
-    The lockup puzzle tracks the voting records of DAO CATs. When a proposal is voted on the proposal ID is added to a list against which future votes are checked.
-    This test checks the addition of new votes to the lockup, and that you can't re-vote on a proposal twice.
+    The lockup puzzle tracks the voting records of DAO CATs. When a proposal is
+    voted on, the proposal ID is added to a list, against which, future votes
+    are checked.
+    This test checks the addition of new votes to the lockup, and that you can't
+    re-vote on a proposal twice.
     """
     CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
 
@@ -971,7 +984,10 @@ def test_lockup() -> None:
 
 def test_proposal_lifecycle() -> None:
     """
-    This test covers the whole lifecycle of a proposal and treasury. It's main function is to check that the announcement pairs between treasury and proposal are accurate. It covers the spend proposal and update proposal types.
+    This test covers the whole lifecycle of a proposal and treasury.
+    Its main function is to check that the announcement pairs between treasury
+    and proposal are accurate.
+    It covers the spend proposal and update proposal types.
     """
     proposal_pass_percentage: uint64 = uint64(5100)
     attendance_required: uint64 = uint64(1000)

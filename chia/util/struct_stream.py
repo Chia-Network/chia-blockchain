@@ -87,6 +87,5 @@ class StructStream(int):
     def stream_to_bytes(self) -> bytes:
         return super().to_bytes(length=self.SIZE, byteorder="big", signed=self.SIGNED)
 
-    # this is meant to avoid mixing up construcing a bytes object of a specific
-    # size (i.e. bytes(int)) vs. serializing the integer to bytes (i.e. bytes(uint32))
-    __bytes__ = None
+    def __bytes__(self) -> bytes:
+        return self.stream_to_bytes()

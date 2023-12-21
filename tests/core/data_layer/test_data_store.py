@@ -8,7 +8,7 @@ import statistics
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, cast
 
 import aiosqlite
 import pytest
@@ -382,38 +382,67 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
         random.seed(100, version=2)
 
         batch: List[Dict[str, Any]] = []
-        keys: List[bytes] = []
-        hint_keys_values: Dict[bytes, bytes] = {}
+        keys_values: Dict[bytes, bytes] = {}
+        hint_keys_values: Optional[Dict[bytes, bytes]] = {} if use_optimized else None
         for operation in range(num_batches * num_ops_per_batch):
-            if random.randint(0, 4) > 0 or len(keys) == 0:
+            [op_type] = random.choices(
+                ["insert", "upsert-insert", "upsert-update", "delete"],
+                [0.4, 0.2, 0.2, 0.2],
+                k=1,
+            )
+            if op_type == "insert" or op_type == "upsert-insert" or len(keys_values) == 0:
+                if len(keys_values) == 0:
+                    op_type = "insert"
                 key = operation.to_bytes(4, byteorder="big")
                 value = (2 * operation).to_bytes(4, byteorder="big")
-                if use_optimized:
+                if op_type == "insert":
                     await single_op_data_store.autoinsert(
                         key=key,
                         value=value,
                         tree_id=tree_id,
                         hint_keys_values=hint_keys_values,
+                        use_optimized=use_optimized,
                         status=Status.COMMITTED,
                     )
                 else:
-                    await single_op_data_store.autoinsert(
-                        key=key, value=value, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
+                    await single_op_data_store.upsert(
+                        key=key,
+                        new_value=value,
+                        tree_id=tree_id,
+                        hint_keys_values=hint_keys_values,
+                        use_optimized=use_optimized,
+                        status=Status.COMMITTED,
                     )
-                batch.append({"action": "insert", "key": key, "value": value})
-                keys.append(key)
-            else:
-                key = random.choice(keys)
-                keys.remove(key)
-                if use_optimized:
-                    await single_op_data_store.delete(
-                        key=key, tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-                    )
-                else:
-                    await single_op_data_store.delete(
-                        key=key, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
-                    )
+                action = "insert" if op_type == "insert" else "upsert"
+                batch.append({"action": action, "key": key, "value": value})
+                keys_values[key] = value
+            elif op_type == "delete":
+                key = random.choice(list(keys_values.keys()))
+                del keys_values[key]
+                await single_op_data_store.delete(
+                    key=key,
+                    tree_id=tree_id,
+                    hint_keys_values=hint_keys_values,
+                    use_optimized=use_optimized,
+                    status=Status.COMMITTED,
+                )
                 batch.append({"action": "delete", "key": key})
+            else:
+                assert op_type == "upsert-update"
+                key = random.choice(list(keys_values.keys()))
+                old_value = keys_values[key]
+                new_value_int = int.from_bytes(old_value, byteorder="big") + 1
+                new_value = new_value_int.to_bytes(4, byteorder="big")
+                await single_op_data_store.upsert(
+                    key=key,
+                    new_value=new_value,
+                    tree_id=tree_id,
+                    hint_keys_values=hint_keys_values,
+                    use_optimized=use_optimized,
+                    status=Status.COMMITTED,
+                )
+                keys_values[key] = new_value
+                batch.append({"action": "upsert", "key": key, "value": new_value})
             if (operation + 1) % num_ops_per_batch == 0:
                 saved_batches.append(batch)
                 batch = []
@@ -444,6 +473,70 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 queue.append(node.right_hash)
                 ancestors[node.left_hash] = node_hash
                 ancestors[node.right_hash] = node_hash
+
+    all_kv = await data_store.get_keys_values(tree_id)
+    assert {node.key: node.value for node in all_kv} == keys_values
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "use_optimized",
+    [True, False],
+)
+async def test_upsert_ignores_existing_arguments(
+    data_store: DataStore,
+    tree_id: bytes32,
+    use_optimized: bool,
+) -> None:
+    key = b"key"
+    value = b"value1"
+    hint_keys_values: Optional[Dict[bytes, bytes]] = {} if use_optimized else None
+
+    await data_store.autoinsert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key, tree_id)
+    assert node.value == value
+
+    new_value = b"value2"
+    await data_store.upsert(
+        key=key,
+        new_value=new_value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key, tree_id)
+    assert node.value == new_value
+
+    await data_store.upsert(
+        key=key,
+        new_value=new_value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key, tree_id)
+    assert node.value == new_value
+
+    key2 = b"key2"
+    await data_store.upsert(
+        key=key2,
+        new_value=value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key2, tree_id)
+    assert node.value == value
 
 
 @pytest.mark.parametrize(argnames="side", argvalues=list(Side))

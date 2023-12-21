@@ -902,24 +902,18 @@ class TestDIDWallet:
         # Test non-singleton coin
         coin = (await wallet.select_coins(uint64(1), DEFAULT_COIN_SELECTION_CONFIG)).pop()
         assert coin.amount % 2 == 1
-        response = await api_0.did_get_info({"coin_id": coin.name().hex()})
+        coin_id = coin.name()
+        response = await api_0.did_get_info({"coin_id": coin_id.hex()})
         assert not response["success"]
 
         # Test multiple odd coins
         odd_amount = uint64(1)
         coin_1 = (
-            await wallet.select_coins(
-                odd_amount, DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[coin.name()])
-            )
+            await wallet.select_coins(odd_amount, DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[coin_id]))
         ).pop()
         assert coin_1.amount % 2 == 0
         [tx] = await wallet.generate_signed_transaction(
-            odd_amount,
-            ph1,
-            DEFAULT_TX_CONFIG.override(
-                excluded_coin_ids=[coin.name()],
-            ),
-            fee,
+            odd_amount, ph1, DEFAULT_TX_CONFIG.override(excluded_coin_ids=[coin_id]), fee
         )
         await wallet.push_transaction(tx)
         await full_node_api.process_transaction_records(records=[tx])

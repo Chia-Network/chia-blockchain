@@ -354,10 +354,7 @@ def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     _, inner_puzzle = list(args.as_iter())
     if not is_pool_singleton_inner_puzzle(inner_puzzle):
         return None
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return inner_puzzle  # type: ignore[no-any-return]
+    return inner_puzzle
 
 
 def pool_state_from_extra_data(extra_data: Program) -> Optional[PoolState]:

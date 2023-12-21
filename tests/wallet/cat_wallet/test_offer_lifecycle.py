@@ -61,15 +61,17 @@ async def generate_coins(
         for amount in amounts:
             if tail_str:
                 tail: Program = str_to_tail(tail_str)  # Making a fake but unique TAIL
-                cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-                payments.append(Payment(cat_puzzle.get_tree_hash(), amount))
+                tail_hash = tail.get_tree_hash()
+                cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail_hash, acs)
+                cat_puzzle_hash = cat_puzzle.get_tree_hash()
+                payments.append(Payment(cat_puzzle_hash, amount))
                 cat_bundles.append(
                     unsigned_spend_bundle_for_spendable_cats(
                         CAT_MOD,
                         [
                             SpendableCAT(
-                                Coin(parent_coin.name(), cat_puzzle.get_tree_hash(), amount),
-                                tail.get_tree_hash(),
+                                Coin(parent_coin.name(), cat_puzzle_hash, amount),
+                                tail_hash,
                                 acs,
                                 Program.to([[51, acs_ph, amount], [51, 0, -113, tail, []]]),
                             )
@@ -99,7 +101,7 @@ async def generate_coins(
     coin_dict: Dict[Optional[str], List[Coin]] = {}
     for tail_str, _ in requested_coins.items():
         if tail_str:
-            tail_hash: bytes32 = str_to_tail_hash(tail_str)
+            tail_hash = str_to_tail_hash(tail_str)
             cat_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail_hash, acs).get_tree_hash()
             coin_dict[tail_str] = [
                 cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False)

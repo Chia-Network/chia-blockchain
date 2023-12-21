@@ -241,11 +241,40 @@ async def test_create_insert_get(
         with pytest.raises(ValueError, match="Changelist resulted in no change to tree data"):
             await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
 
-        # test delete
-        changelist = [{"action": "delete", "key": key.hex()}]
+        # test upsert
+        new_value = b"\x00\x02"
+        changelist = [{"action": "upsert", "key": key.hex(), "value": new_value.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec1 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
+        res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
+        assert hexstr_to_bytes(res["value"]) == new_value
+        wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
+        upsert_wallet_root = wallet_root["hash"]
+
+        # test upsert unknown key acts as insert
+        new_value = b"\x00\x02"
+        changelist = [{"action": "upsert", "key": unknown_key.hex(), "value": new_value.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec2 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec2, wallet_rpc_api)
+        res = await data_rpc_api.get_value({"id": store_id.hex(), "key": unknown_key.hex()})
+        assert hexstr_to_bytes(res["value"]) == new_value
+
+        # test delete
+        changelist = [{"action": "delete", "key": unknown_key.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec3 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec3, wallet_rpc_api)
+        with pytest.raises(Exception):
+            await data_rpc_api.get_value({"id": store_id.hex(), "key": unknown_key.hex()})
+        wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
+        assert wallet_root["hash"] == upsert_wallet_root
+
+        changelist = [{"action": "delete", "key": key.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec4 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec4, wallet_rpc_api)
         with pytest.raises(Exception):
             await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
         wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
@@ -690,6 +719,12 @@ async def test_subscriptions(
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
+
+    interval = 1
+    config = bt.config
+    config["data_layer"]["manage_data_interval"] = interval
+    bt.change_config(new_config=config)
+
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
 
@@ -710,6 +745,9 @@ async def test_subscriptions(
         # test unsubscribe
         response = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
         assert response is not None
+
+        # wait for unsubscribe to be processed
+        await asyncio.sleep(interval * 5)
 
         response = await data_rpc_api.subscriptions(request={})
         assert store_id.hex() not in response.get("store_ids", [])
@@ -2182,6 +2220,10 @@ async def test_unsubscribe_removes_files(
             assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
 
         res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})
+
+        # wait for unsubscribe to be processed
+        await asyncio.sleep(manage_data_interval * 3)
+
         filenames = {path.name for path in data_layer.server_files_location.iterdir()}
         assert len(filenames) == (2 * update_count if retain else 0)
 

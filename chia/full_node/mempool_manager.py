@@ -244,11 +244,12 @@ class MempoolManager:
         if cost == 0:
             return False
         fees_per_cost = fees / cost
-        if not self.mempool.at_full_capacity(cost) or (
-            fees_per_cost >= self.nonzero_fee_minimum_fpc and fees_per_cost > self.mempool.get_min_fee_rate(cost)
-        ):
+        if not self.mempool.at_full_capacity(cost):
             return True
-        return False
+        if fees_per_cost < self.nonzero_fee_minimum_fpc:
+            return False
+        min_fee_rate = self.mempool.get_min_fee_rate(cost)
+        return min_fee_rate is not None and fees_per_cost > min_fee_rate
 
     def add_and_maybe_pop_seen(self, spend_name: bytes32) -> None:
         self.seen_bundle_hashes[spend_name] = spend_name
@@ -465,8 +466,12 @@ class MempoolManager:
         if self.mempool.at_full_capacity(cost):
             if fees_per_cost < self.nonzero_fee_minimum_fpc:
                 return Err.INVALID_FEE_TOO_CLOSE_TO_ZERO, None, []
-            if fees_per_cost <= self.mempool.get_min_fee_rate(cost):
+            min_fee_rate = self.mempool.get_min_fee_rate(cost)
+            if min_fee_rate is None:
+                return Err.INVALID_COST_RESULT, None, []
+            if fees_per_cost <= min_fee_rate:
                 return Err.INVALID_FEE_LOW_FEE, None, []
+
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
         fail_reason, conflicts = self.check_removals(non_eligible_coin_ids, removal_record_dict)

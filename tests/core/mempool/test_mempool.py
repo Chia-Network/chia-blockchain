@@ -310,8 +310,7 @@ class TestMempool:
         mempool = Mempool(mempool_info, fee_estimator)
         assert mempool.get_min_fee_rate(104000) == 0
 
-        with pytest.raises(ValueError):
-            mempool.get_min_fee_rate(max_mempool_cost + 1)
+        assert mempool.get_min_fee_rate(max_mempool_cost + 1) is None
 
         coin = await next_block(full_node_1, wallet_a, bt)
         spend_bundle = generate_test_spend_bundle(wallet_a, coin)

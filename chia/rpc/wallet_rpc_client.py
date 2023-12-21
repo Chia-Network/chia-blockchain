@@ -193,30 +193,20 @@ class WalletRpcClient(RpcClient):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> TransactionRecord:
-        if memos is None:
-            send_dict: Dict = {
-                "wallet_id": wallet_id,
-                "amount": amount,
-                "address": address,
-                "fee": fee,
-                "puzzle_decorator": puzzle_decorator_override,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                **timelock_info.to_json_dict(),
-            }
-        else:
-            send_dict = {
-                "wallet_id": wallet_id,
-                "amount": amount,
-                "address": address,
-                "fee": fee,
-                "memos": memos,
-                "puzzle_decorator": puzzle_decorator_override,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                **timelock_info.to_json_dict(),
-            }
-        send_dict.update(tx_config.to_json_dict())
-        res = await self.fetch("send_transaction", send_dict)
-        return TransactionRecord.from_json_dict_convenience(res["transaction"])
+        request = {
+            "wallet_id": wallet_id,
+            "amount": amount,
+            "address": address,
+            "fee": fee,
+            "puzzle_decorator": puzzle_decorator_override,
+            "extra_conditions": conditions_to_json_dicts(extra_conditions),
+            **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
+        }
+        if memos is not None:
+            request["memos"] = memos
+        response = await self.fetch("send_transaction", request)
+        return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
     async def send_transaction_multi(
         self,

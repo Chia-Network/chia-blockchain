@@ -21,10 +21,7 @@ if TYPE_CHECKING:
 
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash)  # type: ignore[no-any-return] # noqa: E501
+    return Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash)
 
 
 def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> bytes32:
@@ -37,10 +34,7 @@ def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: by
 
 
 def leaf_hash(key: bytes, value: bytes) -> bytes32:
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to((key, value)).get_tree_hash()  # type: ignore[no-any-return]
+    return Program.to((key, value)).get_tree_hash()
 
 
 async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
@@ -216,9 +210,7 @@ class ProofOfInclusion:
         return [layer.other_hash for layer in self.layers]
 
     def as_program(self) -> Program:
-        # https://github.com/Chia-Network/clvm/pull/102
-        # https://github.com/Chia-Network/clvm/pull/106
-        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])  # type: ignore[no-any-return]
+        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])
 
     def valid(self) -> bool:
         existing_hash = self.node_hash
@@ -725,3 +717,9 @@ class PluginStatus:
 class InsertResult:
     node_hash: bytes32
     root: Root
+
+
+@dataclasses.dataclass(frozen=True)
+class UnsubscribeData:
+    tree_id: bytes32
+    retain_data: bool

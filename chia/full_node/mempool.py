@@ -184,32 +184,33 @@ class Mempool:
                 items.extend(self._row_to_item(row) for row in cursor)
         return items
 
-    def get_min_fee_rate(self, cost: int) -> float:
+    def get_min_fee_rate(self, cost: int) -> Optional[float]:
         """
         Gets the minimum fpc rate that a transaction with specified cost will need in order to get included.
         """
 
-        if self.at_full_capacity(cost):
-            # TODO: make MempoolItem.cost be CLVMCost
-            current_cost = int(self.total_mempool_cost())
+        if not self.at_full_capacity(cost):
+            return 0
 
-            # Iterates through all spends in increasing fee per cost
-            with self._db_conn:
-                cursor = self._db_conn.execute("SELECT cost,fee_per_cost FROM tx ORDER BY fee_per_cost ASC, seq DESC")
+        # TODO: make MempoolItem.cost be CLVMCost
+        current_cost = int(self.total_mempool_cost())
 
-                item_cost: int
-                fee_per_cost: float
-                for item_cost, fee_per_cost in cursor:
-                    current_cost -= item_cost
-                    # Removing one at a time, until our transaction of size cost fits
-                    if current_cost + cost <= self.mempool_info.max_size_in_cost:
-                        return fee_per_cost
+        # Iterates through all spends in increasing fee per cost
+        with self._db_conn:
+            cursor = self._db_conn.execute("SELECT cost,fee_per_cost FROM tx ORDER BY fee_per_cost ASC, seq DESC")
 
-            raise ValueError(
+            item_cost: int
+            fee_per_cost: float
+            for item_cost, fee_per_cost in cursor:
+                current_cost -= item_cost
+                # Removing one at a time, until our transaction of size cost fits
+                if current_cost + cost <= self.mempool_info.max_size_in_cost:
+                    return fee_per_cost
+
+            log.info(
                 f"Transaction with cost {cost} does not fit in mempool of max cost {self.mempool_info.max_size_in_cost}"
             )
-        else:
-            return 0
+            return None
 
     def new_tx_block(self, block_height: uint32, timestamp: uint64) -> None:
         """
