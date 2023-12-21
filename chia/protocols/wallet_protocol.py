@@ -292,14 +292,7 @@ class RequestAddPhSubscriptions(Streamable):
     puzzle_hashes: List[bytes32]
     min_height: uint32
     header_hash: Optional[bytes32]
-    initial_state_filters: StateFilters
-
-
-@streamable
-@dataclass(frozen=True)
-class RejectAddPhSubscriptions(Streamable):
-    puzzle_hashes: List[bytes32]
-    rejected_puzzle_hashes: List[bytes32]
+    filters: StateFilters
 
 
 @streamable
@@ -312,13 +305,8 @@ class RespondAddPhSubscriptions(Streamable):
 @dataclass(frozen=True)
 class RequestAddCoinSubscriptions(Streamable):
     coin_ids: List[bytes32]
-
-
-@streamable
-@dataclass(frozen=True)
-class RejectAddCoinSubscriptions(Streamable):
-    coin_ids: List[bytes32]
-    rejected_coin_ids: List[bytes32]
+    min_height: uint32
+    header_hash: Optional[bytes32]
 
 
 @streamable
@@ -374,6 +362,16 @@ class RequestPhState(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class PhStateBatch(Streamable):
-    puzzle_hashes: List[bytes32]
+class RequestCoinState(Streamable):
+    coin_ids: List[bytes32]
+    min_height: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CoinStateBatch(Streamable):
+    height: uint32
+    header_hash: Optional[bytes32]
+    batch_number: uint32
+    finished: bool
     coin_states: List[CoinState]

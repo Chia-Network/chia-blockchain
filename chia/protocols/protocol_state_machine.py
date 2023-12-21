@@ -45,11 +45,13 @@ VALID_REPLY_MESSAGE_MAP = {
     pmt.request_peers_introducer: [pmt.respond_peers_introducer],
     pmt.request_puzzle_solution: [pmt.respond_puzzle_solution, pmt.reject_puzzle_solution],
     pmt.send_transaction: [pmt.transaction_ack],
-    pmt.request_add_ph_subscriptions: [pmt.respond_add_ph_subscriptions, pmt.reject_add_ph_subscriptions],
-    pmt.request_add_coin_subscriptions: [pmt.respond_add_coin_subscriptions, pmt.reject_add_coin_subscriptions],
+    pmt.request_add_ph_subscriptions: [pmt.respond_add_ph_subscriptions],
+    pmt.request_add_coin_subscriptions: [pmt.respond_add_coin_subscriptions],
     pmt.request_remove_ph_subscriptions: [pmt.respond_remove_ph_subscriptions],
     pmt.request_remove_coin_subscriptions: [pmt.respond_remove_coin_subscriptions],
     pmt.request_reset_subscriptions: [pmt.respond_reset_subscriptions],
+    pmt.request_ph_state: [pmt.coin_state_batch],
+    pmt.request_coin_state: [pmt.coin_state_batch],
 }
 
 

@@ -116,10 +116,8 @@ class ProtocolMessageTypes(Enum):
 
     # Extended wallet protocol
     request_add_ph_subscriptions = 92
-    reject_add_ph_subscriptions = 93
     respond_add_ph_subscriptions = 94
     request_add_coin_subscriptions = 95
-    reject_add_coin_subscriptions = 96
     respond_add_coin_subscriptions = 97
     request_remove_ph_subscriptions = 98
     respond_remove_ph_subscriptions = 99
@@ -128,6 +126,7 @@ class ProtocolMessageTypes(Enum):
     request_reset_subscriptions = 102
     respond_reset_subscriptions = 103
     request_ph_state = 104
-    ph_state_batch = 105
+    request_coin_state = 105
+    coin_state_batch = 106
 
     error = 255

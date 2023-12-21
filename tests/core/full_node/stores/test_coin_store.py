@@ -12,6 +12,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
@@ -599,6 +600,7 @@ class CoinRecordPopulation:
 async def test_stream_coin_states(db_version: int, population: CoinRecordPopulation) -> None:
     async with DBConnection(db_version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
+        await HintStore.create(db_wrapper)
 
         phs = generate_phs(population.ph_count)
         crs = generate_crs(
@@ -611,14 +613,21 @@ async def test_stream_coin_states(db_version: int, population: CoinRecordPopulat
         )
         await coin_store._add_coin_records(crs)
 
-        stream = coin_store.stream_coin_states_by_puzzle_hashes(set(phs), max_batch_size=population.max_batch_size)
+        stream = coin_store.stream_coin_states_by_puzzle_hashes(
+            set(phs),
+            min_height=uint32(0),
+            include_spent=True,
+            include_unspent=True,
+            include_hints=True,
+            max_batch_size=population.max_batch_size,
+        )
         batches = [batch async for batch in stream]
 
         # All batches should be full except for the remainder in the last batch.
-        assert [len(batch) for batch in batches] == population.batch_sizes
+        assert [len(batch[0]) for batch in batches] == population.batch_sizes
 
         # All coin records should be sorted by the maximum of created and spent height.
-        states = [state for batch in batches for state in batch]
+        states = [state for batch in batches for state in batch[0]]
         for i in range(len(states) - 1):
             a = states[i]
             b = states[i + 1]

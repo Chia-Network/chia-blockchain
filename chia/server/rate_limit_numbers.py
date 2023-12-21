@@ -152,10 +152,8 @@ rate_limits = {
             ProtocolMessageTypes.respond_children: RLSettings(2000, 1 * 1024 * 1024),
             # Extended wallet protocol
             ProtocolMessageTypes.request_add_ph_subscriptions: RLSettings(2000, 1 * 1024 * 1024),
-            ProtocolMessageTypes.reject_add_ph_subscriptions: RLSettings(2000, 1 * 1024 * 1024),
             ProtocolMessageTypes.respond_add_ph_subscriptions: RLSettings(2000, 1 * 1024 * 1024),
             ProtocolMessageTypes.request_add_coin_subscriptions: RLSettings(2000, 1 * 1024 * 1024),
-            ProtocolMessageTypes.reject_add_coin_subscriptions: RLSettings(2000, 1 * 1024 * 1024),
             ProtocolMessageTypes.respond_add_coin_subscriptions: RLSettings(2000, 1 * 1024 * 1024),
             ProtocolMessageTypes.request_remove_ph_subscriptions: RLSettings(2000, 1 * 1024 * 1024),
             ProtocolMessageTypes.respond_remove_ph_subscriptions: RLSettings(2000, 1 * 1024 * 1024),
@@ -164,7 +162,8 @@ rate_limits = {
             ProtocolMessageTypes.request_reset_subscriptions: RLSettings(2000, 1 * 1024 * 1024),
             ProtocolMessageTypes.respond_reset_subscriptions: RLSettings(2000, 1 * 1024 * 1024),
             ProtocolMessageTypes.request_ph_state: RLSettings(2000, 1 * 1024 * 1024),
-            ProtocolMessageTypes.ph_state_batch: RLSettings(2000, 1 * 1024 * 1024),
+            ProtocolMessageTypes.request_coin_state: RLSettings(2000, 1 * 1024 * 1024),
+            ProtocolMessageTypes.coin_state_batch: RLSettings(2000, 1 * 1024 * 1024),
         },
     },
     2: {

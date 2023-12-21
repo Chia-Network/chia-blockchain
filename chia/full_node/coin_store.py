@@ -351,11 +351,14 @@ class CoinStore:
     async def stream_coin_states_by_puzzle_hashes(
         self,
         puzzle_hashes: Set[bytes32],
-        min_height: uint32 = uint32(0),
-        include_spent: bool = True,
-        include_unspent: bool = True,
+        min_height: uint32,
+        include_spent: bool,
+        include_unspent: bool,
+        include_hints: bool,
         max_batch_size: int = 50000,
-    ) -> AsyncGenerator[List[CoinState], None]:
+    ) -> AsyncGenerator[Tuple[List[CoinState], bool], None]:
+        """Yields a tuple containing the next batch and whether or not the stream is finished."""
+
         if len(puzzle_hashes) == 0:
             return
 
@@ -368,7 +371,8 @@ class CoinStore:
             for select_batch in to_batches(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
                 select_batch_db: Tuple[bytes32, ...] = tuple(select_batch.entries)
 
-                cursor = await conn.execute(
+                # Query for non-hinted coins.
+                ph_cursor = await conn.execute(
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                     f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
                     f'WHERE puzzle_hash in ({"?," * (len(select_batch.entries) - 1)}?) '
@@ -379,12 +383,33 @@ class CoinStore:
                     select_batch_db + (min_height, min_height),
                 )
 
-                row = await cursor.fetchone()
-                if row is None:
+                ph_row = await ph_cursor.fetchone()
+                if ph_row is not None:
+                    cursors.append(ph_cursor)
+                    state_for_batch.append(self.row_to_coin_state(ph_row))
+
+                if not include_hints:
                     continue
 
-                cursors.append(cursor)
-                state_for_batch.append(self.row_to_coin_state(row))
+                # Query for hinted coins.
+                # NOTE: This relies on CoinStore and HintStore to use the same database.
+                hint_cursor = await conn.execute(
+                    f"SELECT cr.confirmed_index, cr.spent_index, cr.coinbase, cr.puzzle_hash, "
+                    f"cr.coin_parent, cr.amount, cr.timestamp FROM coin_record cr "
+                    f"INDEXED BY sqlite_autoindex_coin_record_1 "
+                    f"JOIN hints h ON cr.coin_name = h.coin_id "
+                    f'WHERE h.hint in ({"?," * (len(select_batch.entries) - 1)}?) '
+                    f"AND (cr.confirmed_index>=? OR cr.spent_index>=?) "
+                    f"{'' if include_spent else 'AND cr.spent_index=0'} "
+                    f"{'' if include_unspent else 'AND cr.spent_index>0'} "
+                    f"ORDER BY MAX(cr.confirmed_index, cr.spent_index) ASC",
+                    select_batch_db + (min_height, min_height),
+                )
+
+                hint_row = await hint_cursor.fetchone()
+                if hint_row is not None:
+                    cursors.append(hint_cursor)
+                    state_for_batch.append(self.row_to_coin_state(hint_row))
 
             while len(cursors) > 0:
                 next_index = 0
@@ -401,7 +426,7 @@ class CoinStore:
                 coin_state = state_for_batch[next_index]
 
                 if len(next_batch) >= max_batch_size:
-                    yield next_batch
+                    yield (next_batch, False)
                     next_batch = []
                 next_batch.append(coin_state)
 
@@ -413,7 +438,7 @@ class CoinStore:
 
                 state_for_batch[next_index] = self.row_to_coin_state(row)
 
-        yield next_batch
+        yield (next_batch, True)
 
     async def get_coin_records_by_parent_ids(
         self,

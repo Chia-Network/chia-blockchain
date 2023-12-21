@@ -5,12 +5,15 @@ from time import monotonic
 
 from benchmarks.utils import setup_db
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
+from chia.util.ints import uint32
 from tests.core.full_node.stores.test_coin_store import generate_crs, generate_phs
 
 
 async def run_benchmark(version: int) -> None:
     async with setup_db("state-streaming-benchmark.db", version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
+        await HintStore.create(db_wrapper)
         async with coin_store.db_wrapper.writer() as conn:
             await conn.execute("DELETE FROM coin_record")
 
@@ -43,7 +46,7 @@ async def run_benchmark(version: int) -> None:
         streaming = monotonic()
         batches = []
 
-        async for batch in coin_store.stream_coin_states_by_puzzle_hashes(ph_set):
+        async for (batch, _) in coin_store.stream_coin_states_by_puzzle_hashes(ph_set, uint32(0), True, True, True):
             batches.append(len(batch))
 
         streaming = monotonic() - streaming

@@ -1644,10 +1644,7 @@ class FullNodeAPI:
 
     @api_request(
         peer_required=True,
-        reply_types=[
-            ProtocolMessageTypes.respond_add_ph_subscriptions,
-            ProtocolMessageTypes.reject_add_ph_subscriptions,
-        ],
+        reply_types=[ProtocolMessageTypes.respond_add_ph_subscriptions],
     )
     async def request_add_ph_subscriptions(
         self, request: wallet_protocol.RequestAddPhSubscriptions, peer: WSChiaConnection
@@ -1659,22 +1656,13 @@ class FullNodeAPI:
         new_subscriptions = set(request.puzzle_hashes) - subs.puzzle_subscriptions(peer_id)
         added = subs.add_ph_subscriptions(peer_id, list(new_subscriptions), max_subscriptions)
 
-        if len(added) != len(new_subscriptions):
-            rejected = new_subscriptions - added
-            rejection = wallet_protocol.RejectAddPhSubscriptions(list(added), list(rejected))
-            msg = make_msg(ProtocolMessageTypes.reject_add_ph_subscriptions, rejection)
-        else:
-            response = wallet_protocol.RespondAddPhSubscriptions(list(added))
-            msg = make_msg(ProtocolMessageTypes.respond_add_ph_subscriptions, response)
-
+        response = wallet_protocol.RespondAddPhSubscriptions(list(added))
+        msg = make_msg(ProtocolMessageTypes.respond_add_ph_subscriptions, response)
         return msg
 
     @api_request(
         peer_required=True,
-        reply_types=[
-            ProtocolMessageTypes.respond_add_coin_subscriptions,
-            ProtocolMessageTypes.reject_add_coin_subscriptions,
-        ],
+        reply_types=[ProtocolMessageTypes.respond_add_coin_subscriptions],
     )
     async def request_add_coin_subscriptions(
         self, request: wallet_protocol.RequestAddCoinSubscriptions, peer: WSChiaConnection
@@ -1686,13 +1674,8 @@ class FullNodeAPI:
         new_subscriptions = set(request.coin_ids) - subs.coin_subscriptions(peer_id)
         added = subs.add_coin_subscriptions(peer_id, list(new_subscriptions), max_subscriptions)
 
-        if len(added) != len(new_subscriptions):
-            rejection = wallet_protocol.RejectAddCoinSubscriptions(list(added), list(new_subscriptions - added))
-            msg = make_msg(ProtocolMessageTypes.reject_add_coin_subscriptions, rejection)
-        else:
-            response = wallet_protocol.RespondAddCoinSubscriptions(list(added))
-            msg = make_msg(ProtocolMessageTypes.respond_add_coin_subscriptions, response)
-
+        response = wallet_protocol.RespondAddCoinSubscriptions(list(added))
+        msg = make_msg(ProtocolMessageTypes.respond_add_coin_subscriptions, response)
         return msg
 
     @api_request(
@@ -1706,9 +1689,9 @@ class FullNodeAPI:
         subs = self.full_node.subscriptions
 
         removed = subs.remove_ph_subscriptions(peer_id, request.puzzle_hashes)
+
         response = wallet_protocol.RespondRemovePhSubscriptions(list(removed))
         msg = make_msg(ProtocolMessageTypes.respond_remove_ph_subscriptions, response)
-
         return msg
 
     @api_request(
@@ -1722,9 +1705,9 @@ class FullNodeAPI:
         subs = self.full_node.subscriptions
 
         removed = subs.remove_coin_subscriptions(peer_id, request.coin_ids)
+
         response = wallet_protocol.RespondRemoveCoinSubscriptions(list(removed))
         msg = make_msg(ProtocolMessageTypes.respond_remove_coin_subscriptions, response)
-
         return msg
 
     @api_request(
@@ -1743,7 +1726,6 @@ class FullNodeAPI:
 
         response = wallet_protocol.RespondResetSubscriptions(list(ph_subs), list(coin_subs))
         msg = make_msg(ProtocolMessageTypes.respond_reset_subscriptions, response)
-
         return msg
 
     @api_request(peer_required=True)
@@ -1753,12 +1735,28 @@ class FullNodeAPI:
             request.min_height,
             request.filters.include_spent,
             request.filters.include_unspent,
+            request.filters.include_hinted,
         )
 
-        async for batch in stream:
-            response = wallet_protocol.PhStateBatch(request.puzzle_hashes, batch)
-            msg = make_msg(ProtocolMessageTypes.ph_state_batch, response)
+        batch_number = 0
+
+        async for (batch, finished) in stream:
+            height = uint32(0)
+
+            for coin_state in batch:
+                if coin_state.created_height is not None and coin_state.created_height > height:
+                    height = uint32(coin_state.created_height)
+
+                if coin_state.spent_height is not None and coin_state.spent_height > height:
+                    height = uint32(coin_state.spent_height)
+
+            header_hash = self.full_node.blockchain.height_to_hash(height)
+
+            response = wallet_protocol.CoinStateBatch(height, header_hash, uint32(batch_number), finished, batch)
+            msg = make_msg(ProtocolMessageTypes.coin_state_batch, response)
             await peer.send_message(msg)
+
+            batch_number += 1
 
     def is_trusted(self, peer: WSChiaConnection) -> bool:
         return self.server.is_trusted_peer(peer, self.full_node.config.get("trusted_peers", {}))
