@@ -141,7 +141,7 @@ async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_
     )
 
     sb = await nft_wallet_0.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
-    assert sb
+    assert sb is not None
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
@@ -236,7 +236,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, 2000000000000)
     await time_out_assert(30, wallet_0.get_confirmed_balance, 2000000000000)
     sb = await nft_wallet_0.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
-    assert sb
+    assert sb is not None
     # ensure hints are generated
     assert compute_memos(sb)
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
@@ -269,7 +269,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await time_out_assert(10, wallet_0.get_confirmed_balance, 4000000000000)
 
     sb = await nft_wallet_0.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
-    assert sb
+    assert sb is not None
     # ensure hints are generated
     assert compute_memos(sb)
     await time_out_assert_not_none(10, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
