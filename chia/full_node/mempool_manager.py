@@ -638,9 +638,35 @@ class MempoolManager:
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
             self.seen_bundle_hashes = {}
+
+            # in order to make this a bit quicker, we look-up all the spends in
+            # a single query, rather than one at a time.
+            coin_records: Dict[bytes32, CoinRecord] = {}
+
+            removals: Set[bytes32] = set()
+            for item in old_pool.all_items():
+                for s in item.spend_bundle.coin_spends:
+                    removals.add(s.coin.name())
+
+            for record in await self.get_coin_records(removals):
+                name = record.coin.name()
+                coin_records[name] = record
+
+            async def local_get_coin_records(names: Collection[bytes32]) -> List[CoinRecord]:
+                ret: List[CoinRecord] = []
+                for name in names:
+                    r = coin_records.get(name)
+                    if r is not None:
+                        ret.append(r)
+                return ret
+
             for item in old_pool.all_items():
                 _, result, err = await self.add_spend_bundle(
-                    item.spend_bundle, item.npc_result, item.spend_bundle_name, item.height_added_to_mempool
+                    item.spend_bundle,
+                    item.npc_result,
+                    item.spend_bundle_name,
+                    item.height_added_to_mempool,
+                    local_get_coin_records,
                 )
                 # Only add to `seen` if inclusion worked, so it can be resubmitted in case of a reorg
                 if result == MempoolInclusionStatus.SUCCESS:
