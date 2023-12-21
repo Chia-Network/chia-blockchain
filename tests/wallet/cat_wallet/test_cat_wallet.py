@@ -945,9 +945,7 @@ class TestCATWallet:
         pubkey_unhardened = _derive_path_unhardened(intermediate_sk_un, [100000000]).get_g1()
         inner_puzhash = puzzle_hash_for_pk(pubkey_unhardened)
         puzzlehash_unhardened = construct_cat_puzzle(
-            CAT_MOD,
-            Program.to(None).get_tree_hash(),
-            inner_puzhash,  # type: ignore[arg-type]
+            CAT_MOD, Program.to(None).get_tree_hash(), inner_puzhash
         ).get_tree_hash_precalc(inner_puzhash)
         change_derivation = DerivationRecord(
             uint32(0),
