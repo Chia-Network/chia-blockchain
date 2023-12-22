@@ -38,7 +38,7 @@ def str_to_tail(tail_str: str) -> Program:
 
 
 def str_to_tail_hash(tail_str: str) -> bytes32:
-    return Program.to([3, [], [1, tail_str], []]).get_tree_hash()
+    return str_to_tail(tail_str).get_tree_hash()
 
 
 def str_to_cat_hash(tail_str: str) -> bytes32:
