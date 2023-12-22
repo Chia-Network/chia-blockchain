@@ -180,6 +180,7 @@ class MempoolManager:
         *,
         single_threaded: bool = False,
         max_tx_clvm_cost: Optional[uint64] = None,
+        block_size_limit_factor: float = 0.6,
     ):
         self.constants: ConsensusConstants = consensus_constants
 
@@ -193,8 +194,8 @@ class MempoolManager:
         # spends.
         self.nonzero_fee_minimum_fpc = 5
 
-        BLOCK_SIZE_LIMIT_FACTOR = 0.6
-        self.max_block_clvm_cost = uint64(self.constants.MAX_BLOCK_COST_CLVM * BLOCK_SIZE_LIMIT_FACTOR)
+        log.info(f"Using block_size_limit_factor={block_size_limit_factor}")
+        self.max_block_clvm_cost = uint64(self.constants.MAX_BLOCK_COST_CLVM * block_size_limit_factor)
         self.max_tx_clvm_cost = (
             max_tx_clvm_cost if max_tx_clvm_cost is not None else uint64(self.constants.MAX_BLOCK_COST_CLVM // 2)
         )

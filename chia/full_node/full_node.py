@@ -278,6 +278,7 @@ class FullNode:
                 get_coin_records=self.coin_store.get_coin_records,
                 consensus_constants=self.constants,
                 multiprocessing_context=self.multiprocessing_context,
+                block_size_limit_factor=max(min(float(self.config.get("block_size_limit_factor", 0.6)), 1), 0),
                 single_threaded=single_threaded,
             )
 
