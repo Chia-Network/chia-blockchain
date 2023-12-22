@@ -1861,6 +1861,7 @@ class WalletRpcApi:
                 "summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer),
                 "id": offer.name(),
             }
+
         # This is a bit of a hack in favor of returning some more manageable information about CR-CATs
         # A more general solution surely exists, but I'm not sure what it is right now
         return {
