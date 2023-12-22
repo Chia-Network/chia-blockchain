@@ -58,7 +58,7 @@ from tests.core.mempool.test_mempool_manager import (
     spend_bundle_from_conditions,
 )
 from tests.core.node_height import node_height_at_least
-from tests.util.misc import BenchmarkRunner
+from tests.util.misc import BenchmarkRunner, invariant_check_mempool
 from tests.util.time_out_assert import time_out_assert
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
@@ -335,7 +335,9 @@ async def respond_transaction(
         self.full_node.full_node_store.pending_tx_request.pop(spend_name)
     if spend_name in self.full_node.full_node_store.peers_with_tx:
         self.full_node.full_node_store.peers_with_tx.pop(spend_name)
-    return await self.full_node.add_transaction(tx.transaction, spend_name, peer, test)
+    ret = await self.full_node.add_transaction(tx.transaction, spend_name, peer, test)
+    invariant_check_mempool(self.full_node.mempool_manager.mempool)
+    return ret
 
 
 async def next_block(full_node_1, wallet_a, bt) -> Coin:
@@ -579,6 +581,7 @@ class TestMempoolManager:
         )
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
+        invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
         for block in blocks:
             await full_node_1.full_node.add_block(block)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
@@ -594,12 +597,14 @@ class TestMempoolManager:
         # Fee increase is insufficient, the old spendbundle must stay
         self.assert_sb_in_pool(full_node_1, sb1_1)
         self.assert_sb_not_in_pool(full_node_1, sb1_2)
+        invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb1_3 = await self.gen_and_send_sb(full_node_1, peer, wallet_a, coin1, fee=MEMPOOL_MIN_FEE_INCREASE)
 
         # Fee increase is sufficiently high, sb1_1 gets replaced with sb1_3
         self.assert_sb_not_in_pool(full_node_1, sb1_1)
         self.assert_sb_in_pool(full_node_1, sb1_3)
+        invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb2 = generate_test_spend_bundle(wallet_a, coin2, fee=MEMPOOL_MIN_FEE_INCREASE)
         sb12 = SpendBundle.aggregate((sb2, sb1_3))
@@ -609,6 +614,7 @@ class TestMempoolManager:
         # of coins spent in sb1_3
         self.assert_sb_in_pool(full_node_1, sb12)
         self.assert_sb_not_in_pool(full_node_1, sb1_3)
+        invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb3 = generate_test_spend_bundle(wallet_a, coin3, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
         sb23 = SpendBundle.aggregate((sb2, sb3))
@@ -618,16 +624,19 @@ class TestMempoolManager:
         # coins that are spent in the latter (specifically, coin1)
         self.assert_sb_in_pool(full_node_1, sb12)
         self.assert_sb_not_in_pool(full_node_1, sb23)
+        invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         await self.send_sb(full_node_1, sb3)
         # Adding non-conflicting sb3 should succeed
         self.assert_sb_in_pool(full_node_1, sb3)
+        invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_1 = generate_test_spend_bundle(wallet_a, coin4, fee=MEMPOOL_MIN_FEE_INCREASE)
         sb1234_1 = SpendBundle.aggregate((sb12, sb3, sb4_1))
         await self.send_sb(full_node_1, sb1234_1)
         # sb1234_1 should not be in pool as it decreases total fees per cost
         self.assert_sb_not_in_pool(full_node_1, sb1234_1)
+        invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_2 = generate_test_spend_bundle(wallet_a, coin4, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
         sb1234_2 = SpendBundle.aggregate((sb12, sb3, sb4_2))
@@ -637,6 +646,7 @@ class TestMempoolManager:
         self.assert_sb_in_pool(full_node_1, sb1234_2)
         self.assert_sb_not_in_pool(full_node_1, sb12)
         self.assert_sb_not_in_pool(full_node_1, sb3)
+        invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
     @pytest.mark.anyio
     async def test_invalid_signature(self, one_node_one_block, wallet_a):
@@ -668,6 +678,7 @@ class TestMempoolManager:
         ack: TransactionAck = TransactionAck.from_bytes(res.data)
         assert ack.status == MempoolInclusionStatus.FAILED.value
         assert ack.error == Err.BAD_AGGREGATE_SIGNATURE.name
+        invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
     async def condition_tester(
         self,
@@ -2763,13 +2774,16 @@ def test_full_mempool(items: List[int], add: int, expected: List[int]) -> None:
         CLVMCost(uint64(100)),
     )
     mempool = Mempool(mempool_info, fee_estimator)
+    invariant_check_mempool(mempool)
     fee_rate: float = 3.0
     for i in items:
         mempool.add_to_pool(item_cost(i, fee_rate))
         fee_rate -= 0.1
+        invariant_check_mempool(mempool)
 
     # now, add the item we're testing
     mempool.add_to_pool(item_cost(add, 3.1))
+    invariant_check_mempool(mempool)
 
     ordered_items = list(mempool.items_by_feerate())
 
@@ -2808,12 +2822,14 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
     )
     mempool = Mempool(mempool_info, fee_estimator)
     mempool.new_tx_block(uint32(10), uint64(100000))
+    invariant_check_mempool(mempool)
 
     # fill the mempool with regular transactions (without expiration)
     fee_rate: float = 3.0
     for i in range(1, 20):
         mempool.add_to_pool(item_cost(i, fee_rate))
         fee_rate -= 0.1
+        invariant_check_mempool(mempool)
 
     # now add the expiring transactions from the test case
     fee_rate = 2.7
@@ -2825,6 +2841,7 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
             ret = mempool.add_to_pool(mk_item([coin], cost=cost, fee=int(cost * fee_rate), assert_before_height=15))
         else:
             ret = mempool.add_to_pool(mk_item([coin], cost=cost, fee=int(cost * fee_rate), assert_before_seconds=10400))
+        invariant_check_mempool(mempool)
         if increase_fee:
             fee_rate += 0.1
             assert ret is None
@@ -2848,6 +2865,7 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
         print(f"- cost: {item.cost} TTL: {ttl}")
 
     assert mempool.total_mempool_cost() > 90
+    invariant_check_mempool(mempool)
 
 
 @pytest.mark.parametrize(
@@ -2883,6 +2901,7 @@ def test_get_items_by_coin_ids(items: List[MempoolItem], coin_ids: List[bytes32]
     mempool = Mempool(mempool_info, fee_estimator)
     for i in items:
         mempool.add_to_pool(i)
+        invariant_check_mempool(mempool)
     result = mempool.get_items_by_coin_ids(coin_ids)
     assert set(result) == set(expected)
 
@@ -2905,6 +2924,7 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
         sb = SpendBundle.aggregate(spend_bundles)
         mi = mempool_item_from_spendbundle(sb)
         mempool.add_to_pool(mi)
+        invariant_check_mempool(mempool)
         saved_cost = run_for_cost(
             sb.coin_spends[0].puzzle_reveal, sb.coin_spends[0].solution, len(mi.additions), mi.cost
         )
@@ -2925,9 +2945,11 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
     highest_fee = 58282830
     sb_high_rate = make_test_spendbundle(coins[1], fee=highest_fee)
     agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_high_rate])
+    invariant_check_mempool(mempool)
     # Create a ~2 FPC item that spends the eligible coin using the same solution A
     sb_low_rate = make_test_spendbundle(coins[2], fee=highest_fee // 5)
     saved_cost_on_solution_A = agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
+    invariant_check_mempool(mempool)
     result = mempool.create_bundle_from_mempool_items(always)
     assert result is not None
     agg, _ = result
@@ -2941,6 +2963,7 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
         # (which has ~10 FPC) but before sb_A2 (which has ~2 FPC)
         sb_mid_rate = make_test_spendbundle(coins[i], fee=38004852 - i)
         saved_cost_on_solution_B = agg_and_add_sb_returning_cost_info(mempool, [sb_B, sb_mid_rate])
+        invariant_check_mempool(mempool)
     # We'd save more cost if we went with solution B instead of A
     assert saved_cost_on_solution_B > saved_cost_on_solution_A
     # If we process everything now, the 3 x ~3 FPC items get skipped because
@@ -2953,6 +2976,7 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
     # We ran with solution A and missed bigger savings on solution B
     assert mempool.size() == 5
     assert [c.coin for c in agg.coin_spends] == [coins[0], coins[1], coins[2]]
+    invariant_check_mempool(mempool)
 
 
 def test_get_puzzle_and_solution_for_coin_failure():
