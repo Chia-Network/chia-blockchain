@@ -1380,9 +1380,6 @@ class DIDWallet:
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return await self.sign(unsigned_spend_bundle)
 
-    async def get_frozen_amount(self) -> uint64:
-        return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
-
     async def get_spendable_balance(self, unspent_records=None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.wallet_info.id, unspent_records
