@@ -3416,7 +3416,7 @@ class WalletRpcApi:
         full_puzzle = nft_puzzles.create_full_puzzle(
             uncurried_nft.singleton_launcher_id,
             metadata,
-            bytes32(uncurried_nft.metadata_updater_hash),
+            uncurried_nft.metadata_updater_hash,
             inner_puzzle,
         )
 
