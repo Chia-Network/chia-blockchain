@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
+from clvm.CLVMObject import CLVMStorage
 from typing_extensions import final
 
 from chia.types.blockchain_format.program import Program
@@ -144,7 +145,7 @@ class TerminalNode:
     atom: None = field(init=False, default=None)
 
     @property
-    def pair(self) -> Tuple[bytes32, bytes32]:
+    def pair(self) -> Tuple[CLVMStorage, CLVMStorage]:
         return Program.to(self.key), Program.to(self.value)
 
     @classmethod

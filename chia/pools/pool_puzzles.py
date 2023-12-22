@@ -105,7 +105,7 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSpend) -> Tuple[uint64
     delayed_puzzle_hash: Optional[bytes32] = None
     for key, value in extra_data.as_python():
         if key == b"t":
-            seconds = int_from_bytes(value)
+            seconds = uint64(int_from_bytes(value))
         if key == b"h":
             delayed_puzzle_hash = bytes32(value)
     assert seconds is not None
@@ -130,8 +130,8 @@ def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program) ->
         return False
     inner_f, args = r
     singleton_mod_hash, launcher_id, launcher_puzzle_hash, seconds_delay, delayed_puzzle_hash = list(args.as_iter())
-    seconds_delay = uint64(seconds_delay.as_int())
-    return seconds_delay, delayed_puzzle_hash.as_atom()
+    seconds_delay_uint = uint64(seconds_delay.as_int())
+    return seconds_delay_uint, delayed_puzzle_hash.as_atom()
 
 
 # Verify that a puzzle is a Pool Wallet Singleton

@@ -11,7 +11,7 @@ from clvm.casts import int_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
@@ -44,7 +44,7 @@ class BenchBlockRecord:
         return self.timestamp is not None
 
 
-IDENTITY_PUZZLE = Program.to(1)
+IDENTITY_PUZZLE = SerializedProgram.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 
@@ -62,7 +62,7 @@ def make_spend_bundle(coin: Coin, height: int) -> SpendBundle:
             int_to_bytes(coin.amount // 2 - height * 10),
         ],
     ]
-    spend = CoinSpend(coin, IDENTITY_PUZZLE, Program.to(conditions))
+    spend = CoinSpend(coin, IDENTITY_PUZZLE, SerializedProgram.to(conditions))
     return SpendBundle([spend], G2Element())
 
 
