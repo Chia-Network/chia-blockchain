@@ -920,6 +920,7 @@ class TradeManager:
             "requested": requested,
             "fees": offer.fees(),
             "infos": infos,
+            "offered_coins": [c.name().hex() for c in offer.removals()],
             "valid_times": {
                 k: v
                 for k, v in valid_times.to_json_dict().items()
