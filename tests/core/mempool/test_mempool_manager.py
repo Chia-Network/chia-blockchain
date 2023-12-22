@@ -1757,11 +1757,16 @@ async def test_mempool_timelocks(cond1: List[object], cond2: List[object], expec
     coins.append(coin)
     test_coin_records[coin.name()] = CoinRecord(coin, uint32(20), uint32(0), False, uint64(2000))
 
-    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-        return test_coin_records.get(coin_id)
+    async def get_coin_records(coin_ids: Collection[bytes32]) -> List[CoinRecord]:
+        ret: List[CoinRecord] = []
+        for name in coin_ids:
+            r = test_coin_records.get(name)
+            if r is not None:
+                ret.append(r)
+        return ret
 
     mempool_manager = await instantiate_mempool_manager(
-        get_coin_record, block_height=uint32(21), block_timestamp=uint64(2010)
+        get_coin_records, block_height=uint32(21), block_timestamp=uint64(2010)
     )
 
     coin_spends = [
