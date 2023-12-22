@@ -655,7 +655,6 @@ class TestCATWallet:
         await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 0)
 
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
-        print(len(txs))
         # Test with Memo
         tx_records_3: TransactionRecord = await cat_wallet_1.generate_signed_transaction(
             [uint64(30)], [cat_hash], DEFAULT_TX_CONFIG, memos=[[b"Markus Walburg"]]
