@@ -148,8 +148,7 @@ def create_spend_for_message(
     puzzle = create_recovery_message_puzzle(recovering_coin, newpuz, pubkey)
     coin = Coin(parent_of_message, puzzle.get_tree_hash(), uint64(0))
     solution = Program.to([])
-    coinsol = make_spend(coin, puzzle, solution)
-    return coinsol
+    return make_spend(coin, puzzle, solution)
 
 
 def match_did_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:
