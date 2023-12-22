@@ -326,7 +326,7 @@ class Mempool:
             if self._total_cost + item.cost > self.mempool_info.max_size_in_cost:
                 # pick the items with the lowest fee per cost to remove
                 cursor = self._db_conn.execute(
-                    """SELECT name, cost, fee FROM tx
+                    """SELECT name FROM tx
                     WHERE name NOT IN (
                         SELECT name FROM (
                             SELECT name,
