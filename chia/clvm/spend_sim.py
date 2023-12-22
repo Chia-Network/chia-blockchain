@@ -156,7 +156,7 @@ class SpendSim:
         self.db_wrapper = await DBWrapper2.create(database=uri, uri=True, reader_count=1, db_version=2)
 
         self.coin_store = await CoinStore.create(self.db_wrapper)
-        self.mempool_manager = MempoolManager(self.coin_store.get_coin_record, defaults)
+        self.mempool_manager = MempoolManager(self.coin_store.get_coin_records, defaults)
         self.defaults = defaults
 
         # Load the next data if there is any
