@@ -162,6 +162,7 @@ class MempoolManager:
     seen_cache_size: int
     peak: Optional[BlockRecordProtocol]
     mempool: Mempool
+    _worker_queue_size: int
 
     def __init__(
         self,
@@ -191,6 +192,7 @@ class MempoolManager:
         self._conflict_cache = ConflictTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
         self._pending_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
         self.seen_cache_size = 10000
+        self._worker_queue_size = 0
         if single_threaded:
             self.pool = InlineExecutor()
         else:
@@ -287,14 +289,18 @@ class MempoolManager:
 
         assert self.peak is not None
 
-        err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
-            self.pool,
-            validate_clvm_and_signature,
-            new_spend_bytes,
-            self.max_block_clvm_cost,
-            self.constants,
-            self.peak.height,
-        )
+        self._worker_queue_size += 1
+        try:
+            err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
+                self.pool,
+                validate_clvm_and_signature,
+                new_spend_bytes,
+                self.max_block_clvm_cost,
+                self.constants,
+                self.peak.height,
+            )
+        finally:
+            self._worker_queue_size -= 1
 
         if err is not None:
             raise ValidationError(err)
@@ -305,7 +311,8 @@ class MempoolManager:
         duration = end_time - start_time
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
-            f"pre_validate_spendbundle took {end_time - start_time:0.4f} seconds for {spend_name}",
+            f"pre_validate_spendbundle took {end_time - start_time:0.4f} seconds "
+            f"for {spend_name} (queue-size: {self._worker_queue_size})",
         )
         return ret
 
