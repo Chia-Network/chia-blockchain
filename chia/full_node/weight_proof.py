@@ -707,10 +707,10 @@ def _create_sub_epoch_data(
 ) -> SubEpochData:
     reward_chain_hash: bytes32 = sub_epoch_summary.reward_chain_hash
     #  Number of subblocks overflow in previous slot
-    previous_sub_epoch_overflows: uint8 = sub_epoch_summary.num_blocks_overflow  # total in sub epoch - expected
+    previous_sub_epoch_overflows = uint8(sub_epoch_summary.num_blocks_overflow)  # total in sub epoch - expected
     #  New work difficulty and iterations per sub-slot
-    sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
-    new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
+    sub_slot_iters: Optional[int] = sub_epoch_summary.new_sub_slot_iters
+    new_difficulty: Optional[int] = sub_epoch_summary.new_difficulty
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
 
 
@@ -886,7 +886,7 @@ def _map_sub_epoch_summaries(
 
         # if new epoch update diff and iters
         if data.new_difficulty is not None:
-            curr_difficulty = data.new_difficulty
+            curr_difficulty = uint64(data.new_difficulty)
 
         # add to dict
         summaries.append(ses)
@@ -1208,9 +1208,9 @@ def validate_recent_blocks(
     last_blocks_to_validate = 100  # todo remove cap after benchmarks
     for summary in summaries[:ses_idx]:
         if summary.new_sub_slot_iters is not None:
-            ssi = summary.new_sub_slot_iters
+            ssi = uint64(summary.new_sub_slot_iters)
         if summary.new_difficulty is not None:
-            diff = summary.new_difficulty
+            diff = uint64(summary.new_difficulty)
 
     ses_blocks, sub_slots, transaction_blocks = 0, 0, 0
     challenge, prev_challenge = recent_chain.recent_chain_data[0].reward_chain_block.pos_ss_cc_challenge_hash, None
@@ -1226,15 +1226,15 @@ def validate_recent_blocks(
         for sub_slot in block.finished_sub_slots:
             prev_challenge = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
             challenge = sub_slot.challenge_chain.get_hash()
-            deficit = sub_slot.reward_chain.deficit
+            deficit = uint8(sub_slot.reward_chain.deficit)
             if sub_slot.challenge_chain.subepoch_summary_hash is not None:
                 ses = True
                 assert summaries[ses_idx].get_hash() == sub_slot.challenge_chain.subepoch_summary_hash
                 ses_idx += 1
             if sub_slot.challenge_chain.new_sub_slot_iters is not None:
-                ssi = sub_slot.challenge_chain.new_sub_slot_iters
+                ssi = uint64(sub_slot.challenge_chain.new_sub_slot_iters)
             if sub_slot.challenge_chain.new_difficulty is not None:
-                diff = sub_slot.challenge_chain.new_difficulty
+                diff = uint64(sub_slot.challenge_chain.new_difficulty)
 
         if (challenge is not None) and (prev_challenge is not None):
             overflow = is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index))
@@ -1483,9 +1483,9 @@ def _get_curr_diff_ssi(
     curr_ssi = constants.SUB_SLOT_ITERS_STARTING
     for ses in reversed(summaries[0:idx]):
         if ses.new_sub_slot_iters is not None:
-            curr_ssi = ses.new_sub_slot_iters
+            curr_ssi = uint64(ses.new_sub_slot_iters)
             assert ses.new_difficulty is not None
-            curr_difficulty = ses.new_difficulty
+            curr_difficulty = uint64(ses.new_difficulty)
             break
 
     return curr_difficulty, curr_ssi

@@ -2448,7 +2448,7 @@ class FullNode:
         if field_vdf == CompressibleVDFField.CC_EOS_VDF:
             for index, sub_slot in enumerate(block.finished_sub_slots):
                 if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
-                    new_proofs = dataclasses.replace(sub_slot.proofs, challenge_chain_slot_proof=vdf_proof)
+                    new_proofs = sub_slot.proofs.replace(challenge_chain_slot_proof=vdf_proof)
                     new_subslot = dataclasses.replace(sub_slot, proofs=new_proofs)
                     new_finished_subslots = block.finished_sub_slots
                     new_finished_subslots[index] = new_subslot
@@ -2460,7 +2460,7 @@ class FullNode:
                     sub_slot.infused_challenge_chain is not None
                     and sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf == vdf_info
                 ):
-                    new_proofs = dataclasses.replace(sub_slot.proofs, infused_challenge_chain_slot_proof=vdf_proof)
+                    new_proofs = sub_slot.proofs.replace(infused_challenge_chain_slot_proof=vdf_proof)
                     new_subslot = dataclasses.replace(sub_slot, proofs=new_proofs)
                     new_finished_subslots = block.finished_sub_slots
                     new_finished_subslots[index] = new_subslot

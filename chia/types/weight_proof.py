@@ -3,24 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional
 
+import chia_rs
+
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.header_block import HeaderBlock
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint32, uint128
 from chia.util.streamable import Streamable, streamable
 
-
-@streamable
-@dataclass(frozen=True)
-class SubEpochData(Streamable):
-    reward_chain_hash: bytes32
-    num_blocks_overflow: uint8
-    new_sub_slot_iters: Optional[uint64]
-    new_difficulty: Optional[uint64]
-
+SubEpochData = chia_rs.SubEpochData
 
 # number of challenge blocks
 # Average iters for challenge blocks
