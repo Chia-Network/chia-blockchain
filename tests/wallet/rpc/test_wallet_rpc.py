@@ -1162,6 +1162,8 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
         "offered": {"xch": 5},
         "requested": {cat_asset_id.hex(): 1},
         "infos": driver_dict,
+        "additions": [c.name().hex() for c in offer.additions()],
+        "removals": [c.name().hex() for c in offer.removals()],
         "fees": 1,
         "valid_times": {
             "max_height": None,

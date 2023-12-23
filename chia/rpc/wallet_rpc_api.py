@@ -1840,7 +1840,8 @@ class WalletRpcApi:
                     "offered": offered,
                     "requested": requested,
                     "fees": offer.fees(),
-                    "offered_coins": [c.name().hex() for c in offer.removals()],
+                    "additions": [c.name().hex() for c in offer.additions()],
+                    "removals": [c.name().hex() for c in offer.removals()],
                     "infos": infos,
                     "valid_times": {
                         k: v
