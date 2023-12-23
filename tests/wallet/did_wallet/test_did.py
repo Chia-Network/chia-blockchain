@@ -255,11 +255,9 @@ class TestDIDWallet:
 
         await full_node_api.farm_blocks_to_wallet(1, wallet_0)
 
-        async def get_coins_with_ph():
+        async def get_coins_with_ph() -> bool:
             coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, some_ph)
-            if len(coins) == 1:
-                return True
-            return False
+            return len(coins) == 1
 
         await time_out_assert(15, get_coins_with_ph, True)
         await time_out_assert(45, did_wallet_2.get_confirmed_balance, 0)

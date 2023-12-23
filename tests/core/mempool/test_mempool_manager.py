@@ -46,6 +46,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_node import WalletNode
+from tests.util.misc import invariant_check_mempool
 from tests.util.setup_nodes import OldSimulatorsAndWallets
 
 IDENTITY_PUZZLE = SerializedProgram.to(1)
@@ -121,6 +122,7 @@ async def instantiate_mempool_manager(
     mempool_manager = MempoolManager(get_coin_record, constants)
     test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
     await mempool_manager.new_peak(test_block_record, None)
+    invariant_check_mempool(mempool_manager.mempool)
     return mempool_manager
 
 
@@ -256,9 +258,9 @@ class TestCheckTimeLocks:
 
 
 def expect(
-    *, height: int = 0, before_height: Optional[int] = None, before_seconds: Optional[int] = None
+    *, height: int = 0, seconds: int = 0, before_height: Optional[int] = None, before_seconds: Optional[int] = None
 ) -> TimelockConditions:
-    ret = TimelockConditions(uint32(height))
+    ret = TimelockConditions(uint32(height), uint64(seconds))
     if before_height is not None:
         ret.assert_before_height = uint32(before_height)
     if before_seconds is not None:
@@ -312,6 +314,21 @@ def expect(
         (make_test_conds(before_seconds_absolute=20000, before_seconds_relative=20000), expect(before_seconds=20000)),
         # Same thing but without the absolute seconds
         (make_test_conds(before_seconds_relative=20000), expect(before_seconds=30000)),
+        # ASSERT_SECONDS_*
+        # coin timestamp is 10000
+        # single absolute assert seconds
+        (make_test_conds(seconds_absolute=20000), expect(seconds=20000)),
+        # coin is created at 10000 + 100 relative seconds = 10100
+        (make_test_conds(seconds_relative=100), expect(seconds=10100)),
+        # coin is created at 10000 + 0 relative seconds = 10000
+        (make_test_conds(seconds_relative=0), expect(seconds=10000)),
+        # 20000 is more restrictive than 10100
+        (make_test_conds(seconds_absolute=20000, seconds_relative=100), expect(seconds=20000)),
+        # 20000 is a relative seconds, and since the coin was confirmed at seconds
+        # 10000 that's 300000
+        (make_test_conds(seconds_absolute=20000, seconds_relative=20000), expect(seconds=30000)),
+        # Same thing but without the absolute seconds
+        (make_test_conds(seconds_relative=20000), expect(seconds=30000)),
     ],
 )
 def test_compute_assert_height(conds: SpendBundleConditions, expected: TimelockConditions) -> None:
@@ -333,7 +350,9 @@ async def add_spendbundle(
     mempool_manager: MempoolManager, sb: SpendBundle, sb_name: bytes32
 ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
     npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb_name)
-    return await mempool_manager.add_spend_bundle(sb, npc_result, sb_name, TEST_HEIGHT)
+    ret = await mempool_manager.add_spend_bundle(sb, npc_result, sb_name, TEST_HEIGHT)
+    invariant_check_mempool(mempool_manager.mempool)
+    return ret
 
 
 async def generate_and_add_spendbundle(
@@ -1018,6 +1037,7 @@ async def test_assert_before_expiration(
 
     block_record = create_test_block_record(height=uint32(11), timestamp=uint64(10019))
     await mempool_manager.new_peak(block_record, None)
+    invariant_check_mempool(mempool_manager.mempool)
 
     still_in_pool = mempool_manager.get_spendbundle(bundle_name) == bundle
     assert still_in_pool != expect_eviction
@@ -1370,6 +1390,7 @@ async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(ne
     test_coin_records = {coin_id: CoinRecord(coin, uint32(0), TEST_HEIGHT, False, uint64(0))}
     block_record = create_test_block_record(height=new_height)
     await mempool_manager.new_peak(block_record, [coin_id])
+    invariant_check_mempool(mempool_manager.mempool)
     # As the coin was a spend in all the mempool items we had, nothing should be left now
     assert len(mempool_manager.mempool.get_items_by_coin_id(coin_id)) == 0
     assert mempool_manager.mempool.size() == 0
@@ -1568,3 +1589,167 @@ async def test_identical_spend_aggregation_e2e(
     )
     assert len(eligible_coins) == 1
     assert eligible_coins[0].coin.amount == 42
+
+
+# we have two coins in this test. They have different birth heights (and
+# timestamps)
+# coin1: amount=1, confirmed_height=10, timestamp=1000
+# coin2: amount=2, confirmed_height=20, timestamp=2000
+# the mempool is at height 21 and timestamp 2010
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "cond1,cond2,expected",
+    [
+        # ASSERT HEIGHT ABSOLUTE
+        (
+            [co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 30],
+            [co.ASSERT_HEIGHT_ABSOLUTE, 30],
+            Err.IMPOSSIBLE_HEIGHT_ABSOLUTE_CONSTRAINTS,
+        ),
+        (
+            [co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 31],
+            [co.ASSERT_HEIGHT_ABSOLUTE, 30],
+            None,
+        ),
+        (
+            [co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 21],
+            [co.ASSERT_HEIGHT_ABSOLUTE, 20],
+            Err.ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED,
+        ),
+        # ASSERT SECONDS ABSOLUTE
+        (
+            [co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 3000],
+            [co.ASSERT_SECONDS_ABSOLUTE, 3000],
+            Err.IMPOSSIBLE_SECONDS_ABSOLUTE_CONSTRAINTS,
+        ),
+        (
+            [co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 3001],
+            [co.ASSERT_SECONDS_ABSOLUTE, 3000],
+            Err.ASSERT_SECONDS_ABSOLUTE_FAILED,
+        ),
+        (
+            [co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 2001],
+            [co.ASSERT_SECONDS_ABSOLUTE, 2000],
+            Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED,
+        ),
+        # ASSERT HEIGHT RELATIVE
+        # coin1: height=10
+        # coin2: height=20
+        (
+            [co.ASSERT_BEFORE_HEIGHT_RELATIVE, 15],
+            [co.ASSERT_HEIGHT_RELATIVE, 5],
+            Err.IMPOSSIBLE_HEIGHT_ABSOLUTE_CONSTRAINTS,
+        ),
+        (
+            [co.ASSERT_BEFORE_HEIGHT_RELATIVE, 26],
+            [co.ASSERT_HEIGHT_RELATIVE, 15],
+            None,
+        ),
+        (
+            [co.ASSERT_BEFORE_HEIGHT_RELATIVE, 16],
+            [co.ASSERT_HEIGHT_RELATIVE, 5],
+            None,
+        ),
+        # ASSERT SECONDS RELATIVE
+        # coin1: timestamp=1000
+        # coin2: timestamp=2000
+        (
+            [co.ASSERT_BEFORE_SECONDS_RELATIVE, 1500],
+            [co.ASSERT_SECONDS_RELATIVE, 500],
+            Err.IMPOSSIBLE_SECONDS_ABSOLUTE_CONSTRAINTS,
+        ),
+        # we don't have a pending cache for seconds timelocks, so these fail
+        # immediately
+        (
+            [co.ASSERT_BEFORE_SECONDS_RELATIVE, 2501],
+            [co.ASSERT_SECONDS_RELATIVE, 1500],
+            Err.ASSERT_SECONDS_RELATIVE_FAILED,
+        ),
+        (
+            [co.ASSERT_BEFORE_SECONDS_RELATIVE, 1501],
+            [co.ASSERT_SECONDS_RELATIVE, 500],
+            Err.ASSERT_SECONDS_RELATIVE_FAILED,
+        ),
+        # ASSERT HEIGHT RELATIVE and ASSERT HEIGHT ABSOLUTE
+        # coin1: height=10
+        # coin2: height=20
+        (
+            [co.ASSERT_BEFORE_HEIGHT_RELATIVE, 20],
+            [co.ASSERT_HEIGHT_ABSOLUTE, 30],
+            Err.IMPOSSIBLE_HEIGHT_ABSOLUTE_CONSTRAINTS,
+        ),
+        (
+            [co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 30],
+            [co.ASSERT_HEIGHT_RELATIVE, 10],
+            Err.IMPOSSIBLE_HEIGHT_ABSOLUTE_CONSTRAINTS,
+        ),
+        (
+            [co.ASSERT_BEFORE_HEIGHT_RELATIVE, 21],
+            [co.ASSERT_HEIGHT_ABSOLUTE, 30],
+            None,
+        ),
+        (
+            [co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 31],
+            [co.ASSERT_HEIGHT_RELATIVE, 10],
+            None,
+        ),
+        # ASSERT SECONDS ABSOLUTE and ASSERT SECONDS RELATIVE
+        (
+            [co.ASSERT_BEFORE_SECONDS_RELATIVE, 2000],
+            [co.ASSERT_SECONDS_ABSOLUTE, 3000],
+            Err.IMPOSSIBLE_SECONDS_ABSOLUTE_CONSTRAINTS,
+        ),
+        (
+            [co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 3000],
+            [co.ASSERT_SECONDS_RELATIVE, 1000],
+            Err.IMPOSSIBLE_SECONDS_ABSOLUTE_CONSTRAINTS,
+        ),
+        # we don't have a pending cache for seconds timelocks, so these fail
+        # immediately
+        (
+            [co.ASSERT_BEFORE_SECONDS_RELATIVE, 2001],
+            [co.ASSERT_SECONDS_ABSOLUTE, 3000],
+            Err.ASSERT_SECONDS_ABSOLUTE_FAILED,
+        ),
+        (
+            [co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 3001],
+            [co.ASSERT_SECONDS_RELATIVE, 1000],
+            Err.ASSERT_SECONDS_RELATIVE_FAILED,
+        ),
+    ],
+)
+async def test_mempool_timelocks(cond1: List[object], cond2: List[object], expected: Optional[Err]) -> None:
+    coins = []
+    test_coin_records = {}
+
+    coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(1))
+    coins.append(coin)
+    test_coin_records[coin.name()] = CoinRecord(coin, uint32(10), uint32(0), False, uint64(1000))
+    coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(2))
+    coins.append(coin)
+    test_coin_records[coin.name()] = CoinRecord(coin, uint32(20), uint32(0), False, uint64(2000))
+
+    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+        return test_coin_records.get(coin_id)
+
+    mempool_manager = await instantiate_mempool_manager(
+        get_coin_record, block_height=uint32(21), block_timestamp=uint64(2010)
+    )
+
+    coin_spends = [
+        make_spend(coins[0], IDENTITY_PUZZLE, Program.to([cond1])),
+        make_spend(coins[1], IDENTITY_PUZZLE, Program.to([cond2])),
+    ]
+
+    bundle = SpendBundle(coin_spends, G2Element())
+    bundle_name = bundle.name()
+    try:
+        result = await add_spendbundle(mempool_manager, bundle, bundle_name)
+        print(result)
+        if expected is not None:
+            assert result == (None, MempoolInclusionStatus.FAILED, expected)
+        else:
+            assert result[0] is not None
+            assert result[1] != MempoolInclusionStatus.FAILED
+    except ValidationError as e:
+        assert e.code == expected

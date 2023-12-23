@@ -222,24 +222,11 @@ class WalletRpcClient(RpcClient):
             additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
             if "memos" in ad:
                 additions_hex[-1]["memos"] = ad["memos"]
+        request = {"wallet_id": wallet_id, "additions": additions_hex, "fee": fee, **tx_config.to_json_dict()}
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
-            response: Dict = await self.fetch(
-                "send_transaction_multi",
-                {
-                    "wallet_id": wallet_id,
-                    "additions": additions_hex,
-                    "coins": coins_json,
-                    "fee": fee,
-                    **tx_config.to_json_dict(),
-                },
-            )
-        else:
-            response = await self.fetch(
-                "send_transaction_multi",
-                {"wallet_id": wallet_id, "additions": additions_hex, "fee": fee, **tx_config.to_json_dict()},
-            )
-
+            request["coins"] = coins_json
+        response = await self.fetch("send_transaction_multi", request)
         return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
     async def spend_clawback_coins(
