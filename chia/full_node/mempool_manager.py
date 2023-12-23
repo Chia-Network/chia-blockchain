@@ -198,7 +198,7 @@ class MempoolManager:
                 max_workers=2,
                 mp_context=multiprocessing_context,
                 initializer=setproctitle,
-                initargs=(f"{getproctitle()}_worker",),
+                initargs=(f"{getproctitle()}_mempool_worker",),
             )
 
         # The mempool will correspond to a certain peak
