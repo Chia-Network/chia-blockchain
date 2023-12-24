@@ -6,6 +6,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, U
 import pytest
 from chia_rs import ELIGIBLE_FOR_DEDUP, G1Element, G2Element
 from chiabip158 import PyBIP158
+from clvm.SExp import CastableType
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
@@ -1718,7 +1719,7 @@ async def test_identical_spend_aggregation_e2e(
         ),
     ],
 )
-async def test_mempool_timelocks(cond1: List[object], cond2: List[object], expected: Optional[Err]) -> None:
+async def test_mempool_timelocks(cond1: List[CastableType], cond2: List[CastableType], expected: Optional[Err]) -> None:
     coins = []
     test_coin_records = {}
 

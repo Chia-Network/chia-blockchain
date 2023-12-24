@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -33,7 +33,8 @@ class CATOuterPuzzle:
         if args is None:
             return None
         _, tail_hash, inner_puzzle = args
-        constructor_dict = {
+        assert tail_hash.atom is not None
+        constructor_dict: Dict[str, Any] = {
             "type": "CAT",
             "tail": "0x" + tail_hash.atom.hex(),
         }

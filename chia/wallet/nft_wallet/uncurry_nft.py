@@ -105,6 +105,12 @@ class UncurriedNFT(Streamable):
         try:
             (singleton_struct, nft_state_layer) = curried_args.as_iter()
             singleton_mod_hash = singleton_struct.first()
+
+            # singleton_mod_hash: Optional[bytes32]
+            # if atom is None:
+            #     singleton_mod_hash = None
+            # else:
+            #     singleton_mod_hash = bytes32(atom)
             singleton_launcher_id = singleton_struct.rest().first()
             launcher_puzhash = singleton_struct.rest().rest()
         except ValueError as e:
@@ -118,6 +124,7 @@ class UncurriedNFT(Streamable):
         try:
             # Set nft parameters
             nft_mod_hash, metadata, metadata_updater_hash, inner_puzzle = curried_args.as_iter()
+            assert nft_mod_hash.atom is not None
             data_uris = Program.to([])
             data_hash = Program.to(0)
             meta_uris = Program.to([])
@@ -144,10 +151,10 @@ class UncurriedNFT(Streamable):
                     edition_number = kv_pair.rest()
                 if kv_pair.first().as_atom() == b"st":
                     edition_total = kv_pair.rest()
-            current_did = None
+            current_did: Optional[bytes32] = None
             transfer_program = None
             transfer_program_args = None
-            royalty_address = None
+            royalty_address: Optional[bytes32] = None
             royalty_percentage: Optional[uint16] = None
             nft_inner_puzzle_mod = None
             mod, ol_args = inner_puzzle.uncurry()
@@ -159,11 +166,14 @@ class UncurriedNFT(Streamable):
                 transfer_program_mod, transfer_program_args = transfer_program.uncurry()
                 _, royalty_address_p, royalty_percentage_program = transfer_program_args.as_iter()
                 royalty_percentage = uint16(royalty_percentage_program.as_int())
-                royalty_address = royalty_address_p.atom
-                current_did = current_did_program.atom
-                if current_did == b"":
+                assert royalty_address_p.atom is not None
+                royalty_address = bytes32(royalty_address_p.atom)
+                atom = current_did_program.atom
+                if atom == b"":
                     # For unassigned NFT, set owner DID to None
-                    current_did = None
+                    atom = None
+                if atom is not None:
+                    current_did = bytes32(atom)
             else:
                 log.debug("Creating a standard NFT puzzle")
                 p2_puzzle = inner_puzzle
@@ -171,12 +181,15 @@ class UncurriedNFT(Streamable):
             log.debug("Cannot uncurry NFT state layer: Args %s Error: %s", curried_args, e)
             return None
 
+        assert singleton_launcher_id.atom is not None
+        singleton_launcher_id_bytes32 = bytes32(singleton_launcher_id.atom)
+
         return cls(
             nft_mod_hash=bytes32(nft_mod_hash.atom),
             nft_state_layer=nft_state_layer,
             singleton_struct=singleton_struct,
             singleton_mod_hash=singleton_mod_hash,
-            singleton_launcher_id=singleton_launcher_id.atom,
+            singleton_launcher_id=singleton_launcher_id_bytes32,
             launcher_puzhash=launcher_puzhash,
             metadata=metadata,
             data_uris=data_uris,

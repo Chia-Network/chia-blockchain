@@ -4,6 +4,7 @@ import dataclasses
 from typing import Iterator, List, Optional, Union
 
 from chia_rs import G2Element
+from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
@@ -98,7 +99,7 @@ def subtotals_for_deltas(deltas: List[int]) -> List[int]:
 
 def next_info_for_spendable_cat(spendable_cat: SpendableCAT) -> Program:
     c = spendable_cat.coin
-    list = [c.parent_coin_info, spendable_cat.inner_puzzle.get_tree_hash(), c.amount]
+    list: CastableType = [c.parent_coin_info, spendable_cat.inner_puzzle.get_tree_hash(), c.amount]
     return Program.to(list)
 
 

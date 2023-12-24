@@ -6,6 +6,7 @@ from enum import IntEnum
 from typing import Iterable, List, Optional, Tuple, Type, TypeVar
 
 from clvm.casts import int_to_bytes
+from clvm.SExp import CastableType
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -50,6 +51,15 @@ PENDING_VC_ANNOUNCEMENT: Program = load_clvm_maybe_recompile(
     package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
     include_standard_libraries=True,
 )
+something_a: CastableType = [
+    4,
+    (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
+    [4, (1, create_did_tp()), 1],
+]
+something_b: CastableType = (
+    something_a,
+    None,
+)
 CREDENTIAL_STRUCT: Program = Program.to(
     (
         (
@@ -75,16 +85,7 @@ CREDENTIAL_STRUCT: Program = Program.to(
                 Program.to(
                     int_to_bytes(2) + Program.to((1, COVENANT_LAYER_HASH)).get_tree_hash_precalc(COVENANT_LAYER_HASH)
                 ),
-                Program.to(
-                    (
-                        [
-                            4,
-                            (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
-                            [4, (1, create_did_tp()), 1],
-                        ],
-                        None,
-                    )
-                ).get_tree_hash(),
+                Program.to(something_b).get_tree_hash(),
             ),
         ),
     ),
@@ -211,17 +212,13 @@ class CRCAT:
             new_cr_layer_hash
         )
 
-        eve_innerpuz: Program = Program.to(
-            (
-                1,
-                [
-                    [51, new_cr_layer_hash, payment.amount, payment.memos],
-                    [51, None, -113, tail, tail_solution],
-                    [60, None],
-                    [1, payment.puzzle_hash, authorized_providers, proofs_checker],
-                ],
-            )
-        )
+        something_a: List[List[CastableType]] = [
+            [51, new_cr_layer_hash, payment.amount, payment.memos],
+            [51, None, -113, tail, tail_solution],
+            [60, None],
+            [1, payment.puzzle_hash, authorized_providers, proofs_checker],
+        ]
+        eve_innerpuz: Program = Program.to((1, something_a))
         eve_cat_puzzle: Program = construct_cat_puzzle(
             CAT_MOD,
             tail_hash,
@@ -230,15 +227,11 @@ class CRCAT:
         eve_cat_puzzle_hash: bytes32 = eve_cat_puzzle.get_tree_hash()
 
         eve_coin: Coin = Coin(origin_coin.name(), eve_cat_puzzle_hash, payment.amount)
-        dpuz: Program = Program.to(
-            (
-                1,
-                [
-                    [51, eve_cat_puzzle_hash, payment.amount],
-                    [61, std_hash(eve_coin.name())],
-                ],
-            )
-        )
+        something_b: CastableType = [
+            [51, eve_cat_puzzle_hash, payment.amount],
+            [61, std_hash(eve_coin.name())],
+        ]
+        dpuz: Program = Program.to((1, something_b))
 
         eve_proof: LineageProof = LineageProof(
             eve_coin.parent_coin_info,

@@ -5,6 +5,7 @@ from typing import Any, List, Optional, Tuple
 import pytest
 from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
+from clvm.SExp import CastableType
 
 from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
@@ -541,8 +542,8 @@ def test_validator() -> None:
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
-    parent_amt_list = [[parent_id, locked_amount]]
-    cat_parent_amt_list: List[Optional[Any]] = []
+    parent_amt_list: CastableType = [[parent_id, locked_amount]]
+    cat_parent_amt_list: CastableType = []
     spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner.get_tree_hash()])
 
     output_conds = spend_p2_singleton.run(spend_p2_singleton_solution)
@@ -609,8 +610,8 @@ def test_spend_p2_singleton() -> None:
     ]
 
     # Solution Values
-    xch_parent_amt_list = [[b"x" * 32, 10], [b"y" * 32, 100]]
-    cat_parent_amt_list = [
+    xch_parent_amt_list: CastableType = [[b"x" * 32, 10], [b"y" * 32, 100]]
+    cat_parent_amt_list: CastableType = [
         [cat_tail_1, [["b" * 32, 100], [b"c" * 32, 400]]],
         [cat_tail_2, [[b"e" * 32, 100], [b"f" * 32, 400]]],
     ]
@@ -720,13 +721,13 @@ def test_merge_p2_singleton() -> None:
         Program.to("fake_parent_3").get_tree_hash(),
     ]
     amounts = [1000, 2000, 3000]
-    parent_puzhash_amounts = []
+    parent_puzhash_amounts: List[List[CastableType]] = []
     merge_coin_ids: List[bytes32] = []
     for pid, amt in zip(parent_ids, amounts):
         parent_puzhash_amounts.append([pid, my_puzhash, amt])
         merge_coin_ids.append(Coin(pid, my_puzhash, amt).name())
 
-    output_parent_amount = [output_parent_id, output_coin_amount]
+    output_parent_amount: List[CastableType] = [output_parent_id, output_coin_amount]
     output_coin_id = Coin(output_parent_id, my_puzhash, output_coin_amount).name()
 
     agg_sol = Program.to([[output_coin_id, my_puzhash, output_coin_amount, parent_puzhash_amounts, 0]])
@@ -737,7 +738,8 @@ def test_merge_p2_singleton() -> None:
     agg_acas = [x.vars[0] for x in agg_conds[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT]]
 
     for coin_id, ppa in zip(merge_coin_ids, parent_puzhash_amounts):
-        sol = Program.to([[coin_id, ppa[1], ppa[2], 0, output_parent_amount]])
+        something: CastableType = [[coin_id, ppa[1], ppa[2], 0, output_parent_amount]]
+        sol = Program.to(something)
         merge_conds = conditions_dict_for_solution(p2_singleton, sol, INFINITE_COST)
         # merge coin announces 0
         cca = std_hash(coin_id + merge_conds[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT][0].vars[0])
@@ -824,9 +826,10 @@ def test_treasury() -> None:
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
-    parent_amt_list = [[parent_id, locked_amount]]
+    parent_amt_list: List[List[CastableType]] = [[parent_id, locked_amount]]
     cat_parent_amt_list: List[Optional[Any]] = []
-    spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner.get_tree_hash()])
+    something: CastableType = [parent_amt_list, cat_parent_amt_list, treasury_inner.get_tree_hash()]
+    spend_p2_singleton_solution = Program.to(something)
 
     proposal: Program = proposal_curry_one.curry(
         proposal_curry_one.get_tree_hash(),
@@ -895,7 +898,7 @@ def test_lockup() -> None:
         INNERPUZ,
     ).get_tree_hash()
     message = Program.to([new_proposal, lockup_coin_amount, 1, my_id]).get_tree_hash()
-    generated_conditions = [[51, child_puzhash, lockup_coin_amount], [62, message]]
+    generated_conditions: List[List[CastableType]] = [[51, child_puzhash, lockup_coin_amount], [62, message]]
     solution: Program = Program.to(
         [
             my_id,
@@ -964,7 +967,7 @@ def test_lockup() -> None:
         new_innerpuz,
     ).get_tree_hash()
     message = Program.to([0, 0, 0, my_id]).get_tree_hash()
-    spend_conds = [[51, child_lockup, lockup_coin_amount], [62, message]]
+    spend_conds: List[List[CastableType]] = [[51, child_lockup, lockup_coin_amount], [62, message]]
     transfer_sol = Program.to(
         [
             my_id,
@@ -1071,9 +1074,10 @@ def test_proposal_lifecycle() -> None:
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
-    parent_amt_list = [[parent_id, locked_amount]]
-    cat_parent_amt_list: List[Optional[Any]] = []
-    spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash])
+    parent_amt_list: CastableType = [[parent_id, locked_amount]]
+    cat_parent_amt_list: CastableType = []
+    something: List[CastableType] = [parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash]
+    spend_p2_singleton_solution = Program.to(something)
 
     # Setup Proposal
     proposal_id = Program.to("proposal_id").get_tree_hash()
@@ -1119,7 +1123,7 @@ def test_proposal_lifecycle() -> None:
     )
 
     # lineage_proof my_amount inner_solution
-    lineage_proof = [treasury_id, treasury_inner_puzhash, treasury_amount]
+    lineage_proof: CastableType = [treasury_id, treasury_inner_puzhash, treasury_amount]
     full_treasury_solution = Program.to([lineage_proof, treasury_amount, treasury_solution])
     full_proposal_solution = Program.to([lineage_proof, proposal_amt, proposal_solution])
 

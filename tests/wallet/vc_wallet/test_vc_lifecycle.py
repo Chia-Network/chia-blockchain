@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple
 
 import pytest
 from chia_rs import G2Element
+from clvm.SExp import CastableType
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
@@ -665,6 +666,15 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             "attempt_honest_cat_piggyback",
             None,
         ):
+            something_a: List[CastableType] = [[60, b"\xcd" + bytes(32)]] if error == "make_banned_announcement" else []
+            something_b: CastableType = [
+                [
+                    51,
+                    ACS_PH,
+                    cr_1.coin.amount if error != "use_malicious_cats" else malicious_cr_1.coin.amount,
+                ],
+                *something_a,
+            ]
             # The CR-CAT coin spends
             expected_announcements, cr_cat_spends, new_crcats = CRCAT.spend_many(
                 [
@@ -672,16 +682,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         cr_1 if error != "use_malicious_cats" else malicious_cr_1,
                         0,
                         ACS,
-                        Program.to(
-                            [
-                                [
-                                    51,
-                                    ACS_PH,
-                                    cr_1.coin.amount if error != "use_malicious_cats" else malicious_cr_1.coin.amount,
-                                ],
-                                *([[60, b"\xcd" + bytes(32)]] if error == "make_banned_announcement" else []),
-                            ]
-                        ),
+                        Program.to(something_b),
                     ),
                     (
                         cr_2 if error != "use_malicious_cats" else malicious_cr_2,

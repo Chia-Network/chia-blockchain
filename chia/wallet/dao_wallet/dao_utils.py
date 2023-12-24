@@ -5,6 +5,7 @@ from itertools import chain
 from typing import Any, Iterator, List, Optional, Tuple, Union
 
 from clvm.EvalError import EvalError
+from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -794,7 +795,7 @@ async def generate_mint_proposal_innerpuz(
     # cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
     eve_puz_hash = curry_cat_eve(cats_new_innerpuzhash)
     full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puz_hash)
-    xch_conditions = [
+    xch_conditions: List[List[CastableType]] = [
         [
             51,
             cat_launcher.get_tree_hash(),
