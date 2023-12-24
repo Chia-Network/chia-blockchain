@@ -1589,8 +1589,7 @@ class TestFullNodeProtocol:
             challenge_chain = ss.challenge_chain.replace(
                 new_difficulty=20,
             )
-            slot2 = dataclasses.replace(
-                ss,
+            slot2 = ss.replace(
                 challenge_chain=challenge_chain,
             )
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot2), peer)
