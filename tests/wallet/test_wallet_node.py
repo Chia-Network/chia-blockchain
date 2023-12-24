@@ -352,8 +352,8 @@ async def test_get_timestamp_for_height_from_peer(
     # Clear the cache and add the peak back with a modified timestamp
     cache = wallet_node.get_cache_for_peer(full_node_peer)
     cache.clear_after_height(0)
-    modified_foliage_transaction_block = dataclasses.replace(
-        block_at_peak.foliage_transaction_block, timestamp=uint64(timestamp_at_peak + 1)
+    modified_foliage_transaction_block = block_at_peak.foliage_transaction_block.replace(
+        timestamp=uint64(timestamp_at_peak + 1)
     )
     modified_peak = dataclasses.replace(peak, foliage_transaction_block=modified_foliage_transaction_block)
     cache.add_to_blocks(modified_peak)
