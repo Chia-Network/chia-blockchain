@@ -39,7 +39,7 @@ def block_to_block_record(
         sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
             constants, len(block.finished_sub_slots) > 0, prev_b, blocks
         )
-    overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+    overflow = is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index))
     deficit = calculate_deficit(
         constants,
         block.height,
@@ -148,7 +148,7 @@ def header_block_to_sub_block_record(
         block.height,
         block.weight,
         block.total_iters,
-        block.reward_chain_block.signage_point_index,
+        uint8(block.reward_chain_block.signage_point_index),
         block.reward_chain_block.challenge_chain_ip_vdf.output,
         icc_output,
         block.reward_chain_block.get_hash(),
