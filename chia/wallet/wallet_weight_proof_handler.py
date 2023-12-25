@@ -100,7 +100,7 @@ def get_wp_fork_point(constants: ConsensusConstants, old_wp: Optional[WeightProo
             old_wp_index += 1
         if new_wp_index != 0:
             # We found a matching block, this is the last matching block
-            return new_wp.recent_chain_data[new_wp_index - 1].height
+            return uint32(new_wp.recent_chain_data[new_wp_index - 1].height)
 
     # Just return the matching sub epoch height
     return uint32((constants.SUB_EPOCH_BLOCKS * count) + overflow)

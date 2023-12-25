@@ -2649,7 +2649,7 @@ class FullNode:
                     if sanitize_weight_proof_only:
                         records = await self.blockchain.get_block_records_in_range(h, h)
                     for header in headers.values():
-                        expected_header_hash = self.blockchain.height_to_hash(header.height)
+                        expected_header_hash = self.blockchain.height_to_hash(uint32(header.height))
                         if header.header_hash != expected_header_hash:
                             continue
                         if sanitize_weight_proof_only:
@@ -2664,7 +2664,7 @@ class FullNode:
                                     timelord_protocol.RequestCompactProofOfTime(
                                         sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf,
                                         header.header_hash,
-                                        header.height,
+                                        uint32(header.height),
                                         uint8(CompressibleVDFField.CC_EOS_VDF),
                                     )
                                 )
@@ -2677,7 +2677,7 @@ class FullNode:
                                     timelord_protocol.RequestCompactProofOfTime(
                                         sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
                                         header.header_hash,
-                                        header.height,
+                                        uint32(header.height),
                                         uint8(CompressibleVDFField.ICC_EOS_VDF),
                                     )
                                 )
@@ -2695,7 +2695,7 @@ class FullNode:
                                 timelord_protocol.RequestCompactProofOfTime(
                                     header.reward_chain_block.challenge_chain_sp_vdf,
                                     header.header_hash,
-                                    header.height,
+                                    uint32(header.height),
                                     uint8(CompressibleVDFField.CC_SP_VDF),
                                 )
                             )
@@ -2708,7 +2708,7 @@ class FullNode:
                                 timelord_protocol.RequestCompactProofOfTime(
                                     header.reward_chain_block.challenge_chain_ip_vdf,
                                     header.header_hash,
-                                    header.height,
+                                    uint32(header.height),
                                     uint8(CompressibleVDFField.CC_IP_VDF),
                                 )
                             )

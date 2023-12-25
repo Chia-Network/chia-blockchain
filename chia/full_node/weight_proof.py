@@ -449,7 +449,7 @@ class WeightProofHandler:
                 None,
                 curr.reward_chain_block.challenge_chain_ip_vdf,
                 curr.reward_chain_block.infused_challenge_chain_ip_vdf,
-                curr.total_iters,
+                uint128(curr.total_iters),
             )
             tmp_sub_slots_data.append(ssd)
             header_hash = self.blockchain.height_to_hash(uint32(curr.height + 1))
@@ -511,7 +511,7 @@ class WeightProofHandler:
         if len(tmp_sub_slots_data) > 0:
             sub_slots_data.extend(tmp_sub_slots_data)
         log.debug(f"slot end vdf end height {curr.height} slots {len(sub_slots_data)} ")
-        return sub_slots_data, curr.height
+        return sub_slots_data, uint32(curr.height)
 
     def handle_block_vdfs(self, curr: HeaderBlock, blocks: Dict[bytes32, BlockRecord]) -> SubSlotData:
         cc_sp_proof = None
@@ -556,7 +556,7 @@ class WeightProofHandler:
             None,
             curr.reward_chain_block.challenge_chain_ip_vdf,
             icc_ip_info,
-            curr.total_iters,
+            uint128(curr.total_iters),
         )
 
     def validate_weight_proof_single_proc(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
@@ -1222,7 +1222,7 @@ def validate_recent_blocks(
         required_iters = uint64(0)
         overflow = False
         ses = False
-        height = block.height
+        height = uint32(block.height)
         for sub_slot in block.finished_sub_slots:
             prev_challenge = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
             challenge = sub_slot.challenge_chain.get_hash()
@@ -1303,7 +1303,7 @@ def _validate_pospace_recent_chain(
         constants,
         challenge if not overflow else prev_challenge,
         cc_sp_hash,
-        height=block.height,
+        height=uint32(block.height),
     )
     if q_str is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")
@@ -1580,7 +1580,7 @@ def validate_sub_epoch_sampling(
     rng: random.Random, sub_epoch_weight_list: List[uint128], weight_proof: WeightProof
 ) -> bool:
     tip = weight_proof.recent_chain_data[-1]
-    weight_to_check = _get_weights_for_sampling(rng, tip.weight, weight_proof.recent_chain_data)
+    weight_to_check = _get_weights_for_sampling(rng, uint128(tip.weight), weight_proof.recent_chain_data)
     sampled_sub_epochs: Dict[int, bool] = {}
     for idx in range(1, len(sub_epoch_weight_list)):
         if _sample_sub_epoch(sub_epoch_weight_list[idx - 1], sub_epoch_weight_list[idx], weight_to_check):

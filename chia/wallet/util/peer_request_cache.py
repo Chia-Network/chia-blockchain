@@ -37,11 +37,13 @@ class PeerRequestCache:
         return self._blocks.get(height)
 
     def add_to_blocks(self, header_block: HeaderBlock) -> None:
-        self._blocks.put(header_block.height, header_block)
+        self._blocks.put(uint32(header_block.height), header_block)
         if header_block.is_transaction_block:
             assert header_block.foliage_transaction_block is not None
-            if self._timestamps.get(header_block.height) is None:
-                self._timestamps.put(header_block.height, uint64(header_block.foliage_transaction_block.timestamp))
+            if self._timestamps.get(uint32(header_block.height)) is None:
+                self._timestamps.put(
+                    uint32(header_block.height), uint64(header_block.foliage_transaction_block.timestamp)
+                )
 
     def get_block_request(self, start: uint32, end: uint32) -> Optional[asyncio.Task[Any]]:
         return self._block_requests.get((start, end))
@@ -71,7 +73,7 @@ class PeerRequestCache:
 
     def add_to_block_signatures_validated(self, block: HeaderBlock) -> None:
         sig_hash: bytes32 = self._calculate_sig_hash_from_block(block)
-        self._block_signatures_validated.put(sig_hash, block.height)
+        self._block_signatures_validated.put(sig_hash, uint32(block.height))
 
     @staticmethod
     def _calculate_sig_hash_from_block(block: HeaderBlock) -> bytes32:

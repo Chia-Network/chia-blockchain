@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import List
 
 import pytest
@@ -11,7 +10,7 @@ from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.generator_tools import get_block_header
-from chia.util.ints import uint8, uint32
+from chia.util.ints import uint32
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from tests.conftest import ConsensusMode
@@ -95,9 +94,7 @@ async def test_wallet_blockchain(
         print(res, err)
         assert res == AddBlockResult.DISCONNECTED_BLOCK
 
-        res, err = await chain.add_block(
-            dataclasses.replace(header_blocks[506], challenge_chain_ip_proof=VDFProof(uint8(2), b"123", True))
-        )
+        res, err = await chain.add_block(header_blocks[506].replace(challenge_chain_ip_proof=VDFProof(2, b"123", True)))
         assert res == AddBlockResult.INVALID_BLOCK
 
         peak_block = await chain.get_peak_block()

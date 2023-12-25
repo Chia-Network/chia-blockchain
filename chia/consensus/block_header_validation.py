@@ -986,7 +986,7 @@ def validate_finished_header_block(
         overflow = is_overflow_block(constants, uint8(header_block.reward_chain_block.signage_point_index))
         deficit = calculate_deficit(
             constants,
-            header_block.height,
+            uint32(header_block.height),
             prev_b,
             overflow,
             len(header_block.finished_sub_slots),

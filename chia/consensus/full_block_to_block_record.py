@@ -16,7 +16,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64, uint128
 
 
 def block_to_block_record(
@@ -42,7 +42,7 @@ def block_to_block_record(
     overflow = is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index))
     deficit = calculate_deficit(
         constants,
-        block.height,
+        uint32(block.height),
         prev_b,
         overflow,
         len(block.finished_sub_slots),
@@ -60,7 +60,7 @@ def block_to_block_record(
         ses = make_sub_epoch_summary(
             constants,
             blocks,
-            block.height,
+            uint32(block.height),
             blocks.block_record(prev_b.prev_hash),
             uint64.construct_optional(block.finished_sub_slots[0].challenge_chain.new_difficulty),
             uint64.construct_optional(block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters),
@@ -145,9 +145,9 @@ def header_block_to_sub_block_record(
     return BlockRecord(
         block.header_hash,
         block.prev_header_hash,
-        block.height,
-        block.weight,
-        block.total_iters,
+        uint32(block.height),
+        uint128(block.weight),
+        uint128(block.total_iters),
         uint8(block.reward_chain_block.signage_point_index),
         block.reward_chain_block.challenge_chain_ip_vdf.output,
         icc_output,

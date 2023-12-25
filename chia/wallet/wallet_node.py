@@ -1104,7 +1104,7 @@ class WalletNode:
             # dont disconnect from peer, this might be a reorg
             return
 
-        latest_timestamp = await self.get_timestamp_for_height_from_peer(new_peak_hb.height, peer)
+        latest_timestamp = await self.get_timestamp_for_height_from_peer(uint32(new_peak_hb.height), peer)
         if latest_timestamp is None or not self.is_timestamp_in_sync(latest_timestamp):
             if trusted:
                 self.log.debug(f"Trusted peer {peer.get_peer_info()} is not synced.")
@@ -1128,13 +1128,15 @@ class WalletNode:
     async def new_peak_from_trusted(
         self, new_peak_hb: HeaderBlock, latest_timestamp: uint64, peer: WSChiaConnection
     ) -> None:
-        async with self.wallet_state_manager.set_sync_mode(new_peak_hb.height) as current_height:
+        async with self.wallet_state_manager.set_sync_mode(uint32(new_peak_hb.height)) as current_height:
             await self.wallet_state_manager.blockchain.set_peak_block(new_peak_hb, latest_timestamp)
             # Sync to trusted node if we haven't done so yet. As long as we have synced once (and not
             # disconnected), we assume that the full node will continue to give us state updates, so we do
             # not need to resync.
             if peer.peer_node_id not in self.synced_peers:
-                await self.long_sync(new_peak_hb.height, peer, uint32(max(0, current_height - 256)), rollback=True)
+                await self.long_sync(
+                    uint32(new_peak_hb.height), peer, uint32(max(0, current_height - 256)), rollback=True
+                )
 
     async def new_peak_from_untrusted(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection) -> bool:
         far_behind: bool = (
@@ -1181,8 +1183,8 @@ class WalletNode:
         fork_point_syncing = min(fork_point_rollback, fork_point_weight_proof)
 
         if syncing:
-            async with self.wallet_state_manager.set_sync_mode(new_peak_hb.height):
-                await self.long_sync(new_peak_hb.height, peer, fork_point_syncing, rollback=True)
+            async with self.wallet_state_manager.set_sync_mode(uint32(new_peak_hb.height)):
+                await self.long_sync(uint32(new_peak_hb.height), peer, fork_point_syncing, rollback=True)
             return
 
         # we exit earlier in the case where syncing is False and a Secondary sync is running
@@ -1191,7 +1193,7 @@ class WalletNode:
         # In this case we will not rollback so it's OK to check some older updates as well, to ensure
         # that no recent transactions are being hidden.
         self._secondary_peer_sync_task = asyncio.create_task(
-            self.long_sync(new_peak_hb.height, peer, 0, rollback=False)
+            self.long_sync(uint32(new_peak_hb.height), peer, 0, rollback=False)
         )
 
     async def sync_from_untrusted_close_to_peak(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection) -> bool:
@@ -1289,7 +1291,7 @@ class WalletNode:
 
     async def fetch_and_update_weight_proof(self, peer: WSChiaConnection, peak: HeaderBlock) -> int:
         assert self._weight_proof_handler is not None
-        weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
+        weight_request = RequestProofOfWeight(uint32(peak.height), peak.header_hash)
         wp_timeout = self.config.get("weight_proof_timeout", 360)
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
         weight_proof_response: RespondProofOfWeight = await peer.call_api(
@@ -1393,7 +1395,7 @@ class WalletNode:
         validate_additions_result = await request_and_validate_additions(
             peer,
             peer_request_cache,
-            state_block.height,
+            uint32(state_block.height),
             state_block.header_hash,
             coin_state.coin.puzzle_hash,
             state_block.foliage_transaction_block.additions_root,
@@ -1459,7 +1461,7 @@ class WalletNode:
             assert spent_state_block.foliage_transaction_block is not None
             validate_removals_result = await request_and_validate_removals(
                 peer,
-                spent_state_block.height,
+                uint32(spent_state_block.height),
                 spent_state_block.header_hash,
                 coin_state.coin.name(),
                 spent_state_block.foliage_transaction_block.removals_root,
@@ -1478,8 +1480,8 @@ class WalletNode:
     async def validate_block_inclusion(
         self, block: HeaderBlock, peer: WSChiaConnection, peer_request_cache: PeerRequestCache
     ) -> bool:
-        if self.wallet_state_manager.blockchain.contains_height(block.height):
-            stored_hash = self.wallet_state_manager.blockchain.height_to_hash(block.height)
+        if self.wallet_state_manager.blockchain.contains_height(uint32(block.height)):
+            stored_hash = self.wallet_state_manager.blockchain.height_to_hash(uint32(block.height))
             stored_record = self.wallet_state_manager.blockchain.try_block_record(stored_hash)
             if stored_record is not None:
                 if stored_record.header_hash == block.header_hash:
@@ -1503,7 +1505,7 @@ class WalletNode:
         start = uint32(block.height + 1)
         compare_to_recent = False
         inserted: int = 0
-        first_height_recent = weight_proof.recent_chain_data[0].height
+        first_height_recent = uint32(weight_proof.recent_chain_data[0].height)
         if start > first_height_recent - 1000:
             # compare up to weight_proof.recent_chain_data[0].height
             compare_to_recent = True
@@ -1613,7 +1615,7 @@ class WalletNode:
                     if not prev_block_rc_hash == reward_chain_hash:
                         self.log.error("Failed validation 8")
                         return False
-                blocks_to_cache.append((reward_chain_hash, en_block.height))
+                blocks_to_cache.append((reward_chain_hash, uint32(en_block.height)))
 
         agg_sig: G2Element = AugSchemeMPL.aggregate([sig for (_, _, sig) in pk_m_sig])
         if not AugSchemeMPL.aggregate_verify([pk for (pk, _, _) in pk_m_sig], [m for (_, m, _) in pk_m_sig], agg_sig):
