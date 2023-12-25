@@ -64,7 +64,9 @@ class WalletWeightProofHandler:
         )
         if not valid:
             raise ValueError("weight proof validation failed")
-        log.info(f"It took {time.time() - start_time} time to validate the weight proof {weight_proof.get_hash()}")
+        log.info(
+            f"It took {time.time() - start_time} time to validate the weight proof {weight_proof.get_hash().hex()}"
+        )
         return block_records
 
 
