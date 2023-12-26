@@ -230,7 +230,7 @@ jobs:
       - name: Publish JUnit results
         uses: actions/upload-artifact@v4
         with:
-          name: junit-data
+          name: junit-data-${{ env.JOB_FILE_NAME }}
           path: junit-data/*
           if-no-files-found: error
 
@@ -245,7 +245,7 @@ jobs:
       - name: Publish coverage data
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-data
+          name: coverage-data-${{ env.JOB_FILE_NAME }}
           path: coverage-data/*
           if-no-files-found: error
 

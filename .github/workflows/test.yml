@@ -121,7 +121,7 @@ jobs:
       - name: Download Results
         uses: actions/download-artifact@v4
         with:
-          name: junit-data
+          name: junit-data-*
           path: junit-data
 
       - name: Format JUnit data and prepare results
@@ -152,7 +152,7 @@ jobs:
       - name: Download Coverage
         uses: actions/download-artifact@v4
         with:
-          name: coverage-data
+          name: coverage-data-*
           path: coverage-data
 
       - name: Set up ${{ matrix.python.name }}
