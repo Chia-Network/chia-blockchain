@@ -39,7 +39,7 @@ def compute_block_cost(generator: BlockGenerator, constants: ConsensusConstants,
     result: NPCResult = get_name_puzzle_conditions(
         generator, constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=height, constants=constants
     )
-    return result.cost
+    return uint64(0 if result.conds is None else result.conds.cost)
 
 
 def compute_block_fee(additions: Sequence[Coin], removals: Sequence[Coin]) -> uint64:

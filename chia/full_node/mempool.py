@@ -402,10 +402,11 @@ class Mempool:
             if not item_inclusion_filter(name):
                 continue
             try:
+                cost = uint64(0 if item.npc_result.conds is None else item.npc_result.conds.cost)
                 unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-                    bundle_coin_spends=item.bundle_coin_spends, max_cost=item.npc_result.cost
+                    bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
                 )
-                item_cost = item.npc_result.cost - cost_saving
+                item_cost = cost - cost_saving
                 log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, fee / item_cost)
                 if (
                     item_cost + cost_sum > self.mempool_info.max_block_clvm_cost
