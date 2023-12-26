@@ -119,7 +119,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: junit-data
           path: junit-data
@@ -150,7 +150,7 @@ jobs:
           if-no-files-found: error
 
       - name: Download Coverage
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: coverage-data
           path: coverage-data

@@ -284,7 +284,7 @@ jobs:
           directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
 
       - name: Download constraints file
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: constraints-file-${{ matrix.os.name }}
           path: venv
@@ -294,7 +294,7 @@ jobs:
           pip install --constraint venv/constraints.txt py3createtorrent
 
       - name: Download packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: chia-installers-macos-dmg-${{ matrix.os.name }}
           path: build_scripts/final_installer/
@@ -437,7 +437,7 @@ jobs:
     - uses: Chia-Network/actions/clean-workspace@main
 
     - name: Download packages
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       id: download
       with:
         name: chia-installers-macos-dmg-${{ matrix.arch.artifact-name }}
