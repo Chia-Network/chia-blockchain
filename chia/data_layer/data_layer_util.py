@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import dataclasses
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import IntEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
-from clvm.CLVMObject import CLVMStorage
 from typing_extensions import final
 
 from chia.types.blockchain_format.program import Program
@@ -135,6 +134,7 @@ class CommitState(IntEnum):
 Node = Union["TerminalNode", "InternalNode"]
 
 
+@final
 @dataclass(frozen=True)
 class TerminalNode:
     hash: bytes32
@@ -142,11 +142,13 @@ class TerminalNode:
     key: bytes
     value: bytes
 
-    atom: None = field(init=False, default=None)
-
-    @property
-    def pair(self) -> Tuple[CLVMStorage, CLVMStorage]:
-        return Program.to(self.key), Program.to(self.value)
+    @classmethod
+    def from_key_value(cls, key: bytes, value: bytes) -> TerminalNode:
+        return cls(
+            hash=leaf_hash(key=key, value=value),
+            key=key,
+            value=value,
+        )
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
@@ -232,6 +234,7 @@ class ProofOfInclusion:
         return True
 
 
+@final
 @dataclass(frozen=True)
 class InternalNode:
     hash: bytes32
@@ -239,8 +242,18 @@ class InternalNode:
     left_hash: bytes32
     right_hash: bytes32
 
-    pair: Optional[Tuple[Node, Node]] = None
-    atom: None = None
+    left: Optional[Node] = None
+    right: Optional[Node] = None
+
+    @classmethod
+    def from_child_nodes(cls, left: Node, right: Node) -> InternalNode:
+        return cls(
+            hash=internal_hash(left_hash=left.hash, right_hash=right.hash),
+            left_hash=left.hash,
+            right_hash=right.hash,
+            left=left,
+            right=right,
+        )
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> InternalNode:

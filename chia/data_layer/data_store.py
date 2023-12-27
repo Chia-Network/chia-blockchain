@@ -1390,7 +1390,7 @@ class DataStore:
         node = row_to_node(row=row)
         return node
 
-    async def get_tree_as_program(self, tree_id: bytes32) -> Program:
+    async def get_tree_as_nodes(self, tree_id: bytes32) -> Node:
         async with self.db_wrapper.reader() as reader:
             root = await self.get_tree_root(tree_id=tree_id)
             # TODO: consider actual proper behavior
@@ -1414,13 +1414,12 @@ class DataStore:
             hash_to_node: Dict[bytes32, Node] = {}
             for node in reversed(nodes):
                 if isinstance(node, InternalNode):
-                    node = replace(node, pair=(hash_to_node[node.left_hash], hash_to_node[node.right_hash]))
+                    node = replace(node, left=hash_to_node[node.left_hash], right=hash_to_node[node.right_hash])
                 hash_to_node[node.hash] = node
 
             root_node = hash_to_node[root_node.hash]
-            program = Program.to(root_node)
 
-        return program
+        return root_node
 
     async def get_proof_of_inclusion_by_hash(
         self,

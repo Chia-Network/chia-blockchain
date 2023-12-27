@@ -253,7 +253,7 @@ async def test_build_a_tree(
     example = await create_example(data_store, tree_id)
 
     await _debug_dump(db=data_store.db_wrapper, description="final")
-    actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    actual = await data_store.get_tree_as_nodes(tree_id=tree_id)
     # print("actual  ", actual.as_python())
     # print("expected", example.expected.as_python())
     assert actual == example.expected
@@ -751,30 +751,28 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
     if use_hint:
         hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (
-                    (b"\x02", b"\x12\x02"),
-                    (b"\x03", b"\x13\x03"),
-                ),
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            left=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+                right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
             ),
-            (
-                (b"\x05", b"\x15\x05"),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
+            right=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x02", value=b"\x12\x02"),
+                right=TerminalNode.from_key_value(key=b"\x03", value=b"\x13\x03"),
+            ),
+        ),
+        right=InternalNode.from_child_nodes(
+            left=TerminalNode.from_key_value(key=b"\x05", value=b"\x15\x05"),
+            right=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x06", value=b"\x16\x06"),
+                right=TerminalNode.from_key_value(key=b"\x07", value=b"\x17\x07"),
             ),
         ),
     )
 
     await data_store.delete(key=b"\x04", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
-    result = await data_store.get_tree_as_program(tree_id=tree_id)
+    result = await data_store.get_tree_as_nodes(tree_id=tree_id)
 
     assert result == expected
 
@@ -791,28 +789,26 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
     if use_hint:
         hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (
-                    (b"\x02", b"\x12\x02"),
-                    (b"\x03", b"\x13\x03"),
-                ),
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            left=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+                right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
             ),
-            (
-                (b"\x06", b"\x16\x06"),
-                (b"\x07", b"\x17\x07"),
+            right=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x02", value=b"\x12\x02"),
+                right=TerminalNode.from_key_value(key=b"\x03", value=b"\x13\x03"),
             ),
+        ),
+        right=InternalNode.from_child_nodes(
+            left=TerminalNode.from_key_value(key=b"\x06", value=b"\x16\x06"),
+            right=TerminalNode.from_key_value(key=b"\x07", value=b"\x17\x07"),
         ),
     )
 
     await data_store.delete(key=b"\x04", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
     await data_store.delete(key=b"\x05", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
-    result = await data_store.get_tree_as_program(tree_id=tree_id)
+    result = await data_store.get_tree_as_nodes(tree_id=tree_id)
 
     assert result == expected
 
@@ -829,30 +825,28 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
     if use_hint:
         hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (b"\x02", b"\x12\x02"),
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            left=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+                right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
             ),
-            (
-                (
-                    (b"\x04", b"\x14\x04"),
-                    (b"\x05", b"\x15\x05"),
-                ),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
+            right=TerminalNode.from_key_value(key=b"\x02", value=b"\x12\x02"),
+        ),
+        right=InternalNode.from_child_nodes(
+            left=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x04", value=b"\x14\x04"),
+                right=TerminalNode.from_key_value(key=b"\x05", value=b"\x15\x05"),
+            ),
+            right=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x06", value=b"\x16\x06"),
+                right=TerminalNode.from_key_value(key=b"\x07", value=b"\x17\x07"),
             ),
         ),
     )
 
     await data_store.delete(key=b"\x03", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
-    result = await data_store.get_tree_as_program(tree_id=tree_id)
+    result = await data_store.get_tree_as_nodes(tree_id=tree_id)
 
     assert result == expected
 
@@ -869,28 +863,26 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
     if use_hint:
         hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
-    expected = Program.to(
-        (
-            (
-                (b"\x00", b"\x10\x00"),
-                (b"\x01", b"\x11\x01"),
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+            right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
+        ),
+        right=InternalNode.from_child_nodes(
+            left=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x04", value=b"\x14\x04"),
+                right=TerminalNode.from_key_value(key=b"\x05", value=b"\x15\x05"),
             ),
-            (
-                (
-                    (b"\x04", b"\x14\x04"),
-                    (b"\x05", b"\x15\x05"),
-                ),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
+            right=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x06", value=b"\x16\x06"),
+                right=TerminalNode.from_key_value(key=b"\x07", value=b"\x17\x07"),
             ),
         ),
     )
 
     await data_store.delete(key=b"\x03", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
     await data_store.delete(key=b"\x02", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
-    result = await data_store.get_tree_as_program(tree_id=tree_id)
+    result = await data_store.get_tree_as_nodes(tree_id=tree_id)
 
     assert result == expected
 
