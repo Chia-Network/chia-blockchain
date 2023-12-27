@@ -64,10 +64,8 @@ async def sign_coin_spends(
                 else:
                     raise ValueError(f"no secret key for {pk}")
             signature = AugSchemeMPL.sign(secret_key, msg)
-            assert AugSchemeMPL.verify(pk, msg, signature)
             signatures.append(signature)
 
     # Aggregate signatures
     aggsig = AugSchemeMPL.aggregate(signatures)
-    assert AugSchemeMPL.aggregate_verify(pk_list, msg_list, aggsig)
     return SpendBundle(coin_spends, aggsig)
