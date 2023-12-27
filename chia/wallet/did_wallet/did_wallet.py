@@ -1287,6 +1287,9 @@ class DIDWallet:
             origin_id=origin.name(),
         )
 
+        if tx_record.spend_bundle is None:
+            return None
+
         genesis_launcher_solution = Program.to([did_puzzle_hash, amount, bytes(0x80)])
 
         launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
@@ -1304,9 +1307,6 @@ class DIDWallet:
         )
         await self.add_parent(eve_coin.parent_coin_info, eve_parent)
         await self.add_parent(eve_coin.name(), future_parent)
-
-        if tx_record.spend_bundle is None:
-            return None
 
         # Only want to save this information if the transaction is valid
         did_info = DIDInfo(
