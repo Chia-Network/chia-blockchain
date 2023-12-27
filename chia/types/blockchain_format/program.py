@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Set, Tuple, Type, TypeVar
 
 from chia_rs import ALLOW_BACKREFS, run_chia_program, tree_hash
 from clvm.casts import int_from_bytes
@@ -80,7 +80,7 @@ class Program(SExp):
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
 
-    def replace(self: T_Program, **kwargs) -> T_Program:
+    def replace(self: T_Program, **kwargs: CastableType) -> T_Program:
         """
         Create a new program replacing the given paths (using `at` syntax).
         Example:
@@ -220,23 +220,26 @@ def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
 NIL = Program.from_bytes(b"\x80")
 
 
+# real return type is more like Union[T_Program, CastableType] when considering corner and terminal cases
 def _sexp_replace(
-    sexp: T_CLVMStorage, to_sexp: Callable[[CastableType], T_Program], **kwargs
-) -> Union[T_Program, T_CLVMStorage]:
+    sexp: T_CLVMStorage, to_sexp: Callable[[CastableType], T_Program], **kwargs: CastableType
+) -> T_Program:
     # if `kwargs == {}` then `return sexp` unchanged
     if len(kwargs) == 0:
-        return sexp
+        # yes, the terminal case is hinted incorrectly for now
+        return sexp  # type: ignore[return-value]
 
     if "" in kwargs:
         if len(kwargs) > 1:
             raise ValueError("conflicting paths")
-        return kwargs[""]
+        # yes, the terminal case is hinted incorrectly for now
+        return kwargs[""]  # type: ignore[return-value]
 
     # we've confirmed that no `kwargs` is the empty string.
     # Now split `kwargs` into two groups: those
     # that start with `f` and those that start with `r`
 
-    args_by_prefix: Dict[str, SExp] = {}
+    args_by_prefix: Dict[str, Dict[str, CastableType]] = {}
     for k, v in kwargs.items():
         c = k[0]
         if c not in "fr":
