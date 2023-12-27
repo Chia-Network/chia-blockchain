@@ -464,8 +464,6 @@ async def test_nft_wallet_rpc_creation_and_list(self_hostname: str, two_wallet_n
 )
 @pytest.mark.anyio
 async def test_nft_wallet_rpc_update_metadata(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
-    from chia.types.blockchain_format.sized_bytes import bytes32
-
     num_blocks = 3
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
