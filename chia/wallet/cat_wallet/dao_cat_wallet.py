@@ -84,7 +84,7 @@ class DAOCATWallet:
         try:
             self.dao_cat_info = DAOCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
             self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
-        except AssertionError as e:  # pragma: no cover
+        except AssertionError as e:
             self.log.error(f"Error creating DAO CAT wallet: {e}")
 
         return self
@@ -190,7 +190,7 @@ class DAOCATWallet:
             CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz
         ).get_tree_hash()
 
-        if new_cat_puzhash != coin.puzzle_hash:  # pragma: no cover
+        if new_cat_puzhash != coin.puzzle_hash:
             raise ValueError(f"Cannot add coin - incorrect lockup puzzle: {coin}")
 
         lineage_proof = LineageProof(coin.parent_coin_info, lockup_puz.get_tree_hash(), uint64(coin.amount))
@@ -222,7 +222,7 @@ class DAOCATWallet:
     async def get_lineage_proof_for_coin(self, coin: Coin) -> Optional[LineageProof]:
         return await self.lineage_store.get_lineage_proof(coin.parent_coin_info)
 
-    async def remove_lineage(self, name: bytes32) -> None:  # pragma: no cover
+    async def remove_lineage(self, name: bytes32) -> None:
         self.log.info(f"Removing parent {name} (probably had a non-CAT parent)")
         await self.lineage_store.remove_lineage_proof(name)
 
@@ -232,7 +232,7 @@ class DAOCATWallet:
         for coin in self.dao_cat_info.locked_coins:
             compatible = True
             for active_vote in coin.active_votes:
-                if active_vote == proposal_id:  # pragma: no cover
+                if active_vote == proposal_id:
                     compatible = False
                     break
             if compatible:
@@ -240,7 +240,7 @@ class DAOCATWallet:
                 s += coin.coin.amount
                 if s >= amount:
                     break
-        if s < amount:  # pragma: no cover
+        if s < amount:
             raise ValueError(
                 "We do not have enough CATs in Voting Mode right now. "
                 "Please convert some more or try again with permission to convert."
@@ -264,7 +264,7 @@ class DAOCATWallet:
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
         dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
-        if proposal_puzzle is None:  # pragma: no cover
+        if proposal_puzzle is None:
             proposal_puzzle = dao_wallet.get_proposal_puzzle(proposal_id)
         assert proposal_puzzle is not None
         for lci in coins:
@@ -374,7 +374,7 @@ class DAOCATWallet:
         # check there are enough cats to convert
         cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
         cat_balance = await cat_wallet.get_spendable_balance()
-        if cat_balance < amount:  # pragma: no cover
+        if cat_balance < amount:
             raise ValueError(f"Insufficient CAT balance. Requested: {amount} Available: {cat_balance}")
         # get the lockup puzzle hash
         lockup_puzzle = await self.get_new_puzzle()
@@ -406,7 +406,7 @@ class DAOCATWallet:
         spent_coins = []
         for lci in coins:
             coin = lci.coin
-            if tx_config.reuse_puzhash:  # pragma: no cover
+            if tx_config.reuse_puzhash:
                 new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=False)
             else:
                 new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
@@ -454,7 +454,7 @@ class DAOCATWallet:
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle: SpendBundle = await self.wallet_state_manager.sign_transaction(cat_spend_bundle.coin_spends)
 
-        if fee > 0:  # pragma: no cover
+        if fee > 0:
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
@@ -560,7 +560,7 @@ class DAOCATWallet:
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.wallet_state_manager.sign_transaction(cat_spend_bundle.coin_spends)
 
-        if fee > 0:  # pragma: no cover
+        if fee > 0:
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config=tx_config)
             assert chia_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
@@ -614,7 +614,7 @@ class DAOCATWallet:
         return True
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
-        raise NotImplementedError("Method not implemented for DAO CAT Wallet")  # pragma: no cover
+        raise NotImplementedError("Method not implemented for DAO CAT Wallet")
 
     async def get_spendable_balance(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)

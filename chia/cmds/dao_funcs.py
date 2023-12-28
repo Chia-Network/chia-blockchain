@@ -75,7 +75,7 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int]
         conf_coins, _, _ = await wallet_client.get_spendable_coins(
             wallet_id=1, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
         )
-        if len(conf_coins) < 2:  # pragma: no cover
+        if len(conf_coins) < 2:
             raise ValueError("DAO creation requires at least 2 xch coins in your wallet.")
         res = await wallet_client.create_new_dao_wallet(
             mode="new",
@@ -132,7 +132,7 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
         try:
             typ = await get_wallet_type(wallet_id=funding_wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(typ)
-        except LookupError:  # pragma: no cover
+        except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
             return
 
@@ -166,7 +166,7 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
 
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")
 
 
 async def get_treasury_balance(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -319,7 +319,7 @@ async def vote_on_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int],
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
 
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")
 
 
 async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -354,7 +354,7 @@ async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
 
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")
 
 
 async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -388,7 +388,7 @@ async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp:
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
 
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")
 
 
 async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -418,7 +418,7 @@ async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")
 
 
 async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -449,7 +449,7 @@ async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: 
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")
 
 
 async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -462,7 +462,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
     additions_file = args.get("from_json")
     if additions_file is None and (address is None or amount is None):
         raise ValueError("Must include a json specification or an address / amount pair.")
-    if additions_file:  # pragma: no cover
+    if additions_file:
         with open(additions_file) as f:
             additions_dict = json.load(f)
         additions = []
@@ -501,7 +501,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
             print(f"Created spend proposal for asset: {asset_id_name}")
             print("Successfully created proposal.")
             print("Proposal ID: {}".format(res["proposal_id"]))
-        else:  # pragma: no cover
+        else:
             print("Failed to create proposal.")
 
 
@@ -544,7 +544,7 @@ async def create_update_proposal(args: Dict[str, Any], wallet_rpc_port: Optional
         if res["success"]:
             print("Successfully created proposal.")
             print("Proposal ID: {}".format(res["proposal_id"]))
-        else:  # pragma: no cover
+        else:
             print("Failed to create proposal.")
 
 
@@ -576,5 +576,5 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[i
         if res["success"]:
             print("Successfully created proposal.")
             print("Proposal ID: {}".format(res["proposal_id"]))
-        else:  # pragma: no cover
+        else:
             print("Failed to create proposal.")

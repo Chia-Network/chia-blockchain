@@ -1527,7 +1527,7 @@ class DIDWallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         if self.did_info.origin_coin is None:
-            return False  # pragma: no cover
+            return False
         return (
             create_singleton_puzzle(
                 did_wallet_puzzles.create_innerpuz(

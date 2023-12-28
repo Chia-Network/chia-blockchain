@@ -300,30 +300,30 @@ class WalletStateManager:
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_type == WalletType.DATA_LAYER:  # pragma: no cover
+            elif wallet_type == WalletType.DATA_LAYER:
                 wallet = await DataLayerWallet.create(
                     self,
                     wallet_info,
                 )
-            elif wallet_type == WalletType.DAO:  # pragma: no cover
+            elif wallet_type == WalletType.DAO:
                 wallet = await DAOWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_type == WalletType.DAO_CAT:  # pragma: no cover
+            elif wallet_type == WalletType.DAO_CAT:
                 wallet = await DAOCATWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_type == WalletType.VC:  # pragma: no cover
+            elif wallet_type == WalletType.VC:
                 wallet = await VCWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_type == WalletType.CRCAT:  # pragma: no cover
+            elif wallet_type == WalletType.CRCAT:
                 wallet = await CRCATWallet.create(
                     self,
                     self.main_wallet,
@@ -1046,7 +1046,7 @@ class WalletStateManager:
             fork_height,
         )
         self.state_changed("added_stray_cat")
-        return None  # pragma: no cover
+        return None
 
     async def handle_cat(
         self,
@@ -1083,7 +1083,7 @@ class WalletStateManager:
                 if CRCAT.is_cr_cat(uncurry_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))):
                     is_crcat = True
                 else:
-                    return None  # pragma: no cover
+                    return None
             if is_crcat:
                 # Since CRCAT wallet doesn't have derivation path, every CRCAT will go through this code path
                 crcat: CRCAT = next(
@@ -1099,8 +1099,8 @@ class WalletStateManager:
                         uint64(coin_state.coin.amount),
                     ).get_tree_hash()
                 ):
-                    self.log.error(f"Unknown CRCAT inner puzzle, coin ID:{crcat.coin.name().hex()}")  # pragma: no cover
-                    return None  # pragma: no cover
+                    self.log.error(f"Unknown CRCAT inner puzzle, coin ID:{crcat.coin.name().hex()}")
+                    return None
 
                 # Check if we already have a wallet
                 for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT):
@@ -1308,7 +1308,7 @@ class WalletStateManager:
 
         # TODO: If we can't find the wallet for this DAO but we've got here because we're subscribed,
         #        then create the wallet. (see early in dao-wallet commits for how to do this)
-        return None  # pragma: no cover
+        return None
 
     async def handle_dao_proposal(
         self,
@@ -1342,7 +1342,7 @@ class WalletStateManager:
                     assert isinstance(coin_state.created_height, int)
                     await wallet.add_or_update_proposal_info(coin_spend, uint32(coin_state.created_height))
                     return WalletIdentifier.create(wallet)
-        return None  # pragma: no cover
+        return None
 
     async def handle_dao_finished_proposals(
         self,
@@ -1351,7 +1351,7 @@ class WalletStateManager:
         coin_state: CoinState,
         coin_spend: CoinSpend,
     ) -> Optional[WalletIdentifier]:
-        if coin_state.created_height is None:  # pragma: no cover
+        if coin_state.created_height is None:
             raise ValueError("coin_state argument to handle_dao_finished_proposals cannot have created_height of None")
         (
             SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
@@ -1592,17 +1592,15 @@ class WalletStateManager:
             vc.inner_puzzle_hash
         )
         if derivation_record is None:
-            self.log.warning(
-                f"Verified credential {vc.launcher_id.hex()} is not belong to the current wallet."
-            )  # pragma: no cover
-            return None  # pragma: no cover
+            self.log.warning(f"Verified credential {vc.launcher_id.hex()} is not belong to the current wallet.")
+            return None
         self.log.info(f"Found verified credential {vc.launcher_id.hex()}.")
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.VC):
             return WalletIdentifier(wallet_info.id, WalletType.VC)
         else:
             # Create a new VC wallet
-            vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)  # pragma: no cover
-            return WalletIdentifier(vc_wallet.id(), WalletType.VC)  # pragma: no cover
+            vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)
+            return WalletIdentifier(vc_wallet.id(), WalletType.VC)
 
     async def _add_coin_states(
         self,

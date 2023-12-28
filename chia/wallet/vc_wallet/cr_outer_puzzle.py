@@ -40,7 +40,7 @@ class CROuterPuzzle:
     def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
         args: Optional[Tuple[List[bytes32], Program, Program]] = match_cr_layer(puzzle_reveal)
         if args is None:
-            raise ValueError("This driver is not for the specified puzzle reveal")  # pragma: no cover
+            raise ValueError("This driver is not for the specified puzzle reveal")
         _, _, inner_puzzle = args
         also = constructor.also()
         if also is not None:

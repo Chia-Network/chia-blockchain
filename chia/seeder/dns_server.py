@@ -367,7 +367,7 @@ class DNSServer:
         signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
-    ) -> None:  # pragma: no cover
+    ) -> None:
         log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
         await self.stop()
 
@@ -514,7 +514,7 @@ class DNSServer:
         return reply
 
 
-async def run_dns_server(dns_server: DNSServer) -> None:  # pragma: no cover
+async def run_dns_server(dns_server: DNSServer) -> None:
     async with SignalHandlers.manage() as signal_handlers:
         await dns_server.setup_process_global_state(signal_handlers=signal_handlers)
         async with dns_server.run():
@@ -527,7 +527,7 @@ def create_dns_server_service(config: Dict[str, Any], root_path: Path) -> DNSSer
     return DNSServer(service_config, root_path)
 
 
-def main() -> None:  # pragma: no cover
+def main() -> None:
     freeze_support()
     root_path = DEFAULT_ROOT_PATH
     # TODO: refactor to avoid the double load

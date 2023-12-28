@@ -1897,7 +1897,7 @@ class WalletRpcApi:
 
         hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
-            raise ValueError("Invalid Offer")  # pragma: no cover
+            raise ValueError("Invalid Offer")
         decoded = convertbits(list(data), 5, 8, False)
         decoded_bytes = bytes(decoded)
         try:
@@ -1932,7 +1932,7 @@ class WalletRpcApi:
 
         hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
-            raise ValueError("Invalid Offer")  # pragma: no cover
+            raise ValueError("Invalid Offer")
         decoded = convertbits(list(data), 5, 8, False)
         decoded_bytes = bytes(decoded)
         try:
@@ -2625,7 +2625,7 @@ class WalletRpcApi:
         wallet_type = self.service.wallet_state_manager.wallets[funding_wallet_id].type()
         amount = request.get("amount")
         assert amount
-        if wallet_type not in [WalletType.STANDARD_WALLET, WalletType.CAT]:  # pragma: no cover
+        if wallet_type not in [WalletType.STANDARD_WALLET, WalletType.CAT]:
             raise ValueError(f"Cannot fund a treasury with assets from a {wallet_type.name} wallet")
         funding_tx = await dao_wallet.create_add_funds_to_treasury_spend(
             uint64(amount),
@@ -2734,7 +2734,7 @@ class WalletRpcApi:
             id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
         )
         assert dao_cat_wallet is not None
-        if request["coins"]:  # pragma: no cover
+        if request["coins"]:
             coin_list = [Coin.from_json_dict(coin) for coin in request["coins"]]
             coins: List[LockedCoinInfo] = []
             for lci in dao_cat_wallet.dao_cat_info.locked_coins:
@@ -2746,7 +2746,7 @@ class WalletRpcApi:
                 if lci.active_votes == []:
                     coins.append(lci)
         fee = uint64(request.get("fee", 0))
-        if not coins:  # pragma: no cover
+        if not coins:
             raise ValueError("There are not coins available to exit lockup")
         exit_tx = await dao_cat_wallet.exit_vote_state(
             coins,
@@ -2786,7 +2786,7 @@ class WalletRpcApi:
                     amounts.append(amount)
                     puzzle_hashes.append(receiver_ph)
                     asset_types.append(asset_id)
-            else:  # pragma: no cover
+            else:
                 amounts.append(uint64(request["amount"]))
                 puzzle_hashes.append(decode_puzzle_hash(request["inner_address"]))
                 if request["asset_id"] is not None:
@@ -2825,7 +2825,7 @@ class WalletRpcApi:
                 amount_of_cats,
                 mint_address,
             )
-        else:  # pragma: no cover
+        else:
             return {"success": False, "error": "Unknown proposal type."}
 
         vote_amount = request.get("vote_amount")
@@ -2844,7 +2844,7 @@ class WalletRpcApi:
             if coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
                 proposal_id = coin.name()
                 break
-        else:  # pragma: no cover
+        else:
             raise ValueError("Could not find proposal ID in transaction")
         return {
             "success": True,
@@ -2902,7 +2902,7 @@ class WalletRpcApi:
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
         fee = uint64(request.get("fee", 0))
-        if "genesis_id" in request:  # pragma: no cover
+        if "genesis_id" in request:
             genesis_id = bytes32.from_hexstr(request["genesis_id"])
         else:
             genesis_id = None
@@ -4327,7 +4327,7 @@ class WalletRpcApi:
 
         vc_proofs: Optional[VCProofs] = await vc_wallet.store.get_proofs_for_root(parsed_request.root)
         if vc_proofs is None:
-            raise ValueError("no proofs found for specified root")  # pragma: no cover
+            raise ValueError("no proofs found for specified root")
         return {"proofs": vc_proofs.key_value_pairs}
 
     @tx_endpoint

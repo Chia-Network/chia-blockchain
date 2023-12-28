@@ -111,7 +111,7 @@ def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[by
             uncurried_puzzle.args.at("rrf"),
         )
     else:
-        return None  # pragma: no cover
+        return None
 
 
 def solve_covenant_layer(lineage_proof: LineageProof, morpher_solution: Program, inner_solution: Program) -> Program:
@@ -143,7 +143,7 @@ def create_tp_covenant_adapter(covenant_layer: Program) -> Program:
     return EML_TP_COVENANT_ADAPTER.curry(covenant_layer)
 
 
-def match_tp_covenant_adapter(uncurried_puzzle: UncurriedPuzzle) -> Optional[Program]:  # pragma: no cover
+def match_tp_covenant_adapter(uncurried_puzzle: UncurriedPuzzle) -> Optional[Program]:
     if uncurried_puzzle.mod == EML_TP_COVENANT_ADAPTER:
         return uncurried_puzzle.args.at("f")
     else:
@@ -170,7 +170,7 @@ def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[()]]:
     if uncurried_puzzle.mod == EML_DID_TP:
         return ()
     else:
-        return None  # pragma: no cover
+        return None
 
 
 def solve_did_tp(
@@ -202,7 +202,7 @@ def match_viral_backdoor(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[by
     if uncurried_puzzle.mod == VIRAL_BACKDOOR:
         return bytes32(uncurried_puzzle.args.at("rf").as_atom()), bytes32(uncurried_puzzle.args.at("rrf").as_atom())
     else:
-        return None  # pragma: no cover
+        return None
 
 
 def solve_viral_backdoor(puzzle_reveal: Program, inner_solution: Program, hidden: bool = False) -> Program:
@@ -520,39 +520,39 @@ class VerifiedCredential(Streamable):
                     return (
                         False,
                         "tp indicates VC is launching, but it does not have the correct inner puzzle",
-                    )  # pragma: no cover
+                    )
                 else:
                     return True, ""
             else:
-                return False, "top layer of transfer program is not a covenant layer adapter"  # pragma: no cover
+                return False, "top layer of transfer program is not a covenant layer adapter"
         adapted_transfer_program: UncurriedPuzzle = uncurry_puzzle(full_transfer_program.args.at("f"))
         if adapted_transfer_program.mod != COVENANT_LAYER:
             return (
                 False,
                 "transfer program is adapted to covenant layer, but covenant layer did not follow",
-            )  # pragma: no cover
+            )
         morpher: UncurriedPuzzle = uncurry_puzzle(adapted_transfer_program.args.at("rf"))
         if uncurry_puzzle(morpher.mod).mod != EXTIGENT_METADATA_LAYER_COVENANT_MORPHER:
             return (
                 False,
                 "covenant for exigent metadata layer does not match the one expected for VCs",
-            )  # pragma: no cover
+            )
         if uncurry_puzzle(adapted_transfer_program.args.at("rrf")).mod != EML_DID_TP:
             return (
                 False,
                 "transfer program for exigent metadata layer was not the standard VC transfer program",
-            )  # pragma: no cover
+            )
 
         # ...and layer below EML
         layer_below_eml: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton.args.at("rrrrf"))
         if layer_below_eml.mod != VIRAL_BACKDOOR:
-            return False, "VC did not have a provider backdoor"  # pragma: no cover
+            return False, "VC did not have a provider backdoor"
         hidden_puzzle_hash = bytes32(layer_below_eml.args.at("rf").as_atom())
         if hidden_puzzle_hash != STANDARD_BRICK_PUZZLE_HASH:
             return (
                 False,
                 "VC did not have the standard method to brick in its backdoor hidden puzzle slot",
-            )  # pragma: no cover
+            )
 
         return True, ""
 
