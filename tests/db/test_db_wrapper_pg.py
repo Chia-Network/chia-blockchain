@@ -2,20 +2,20 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import TYPE_CHECKING, Callable, List
+from typing import TYPE_CHECKING, Any, Callable, List
 
-import aiosqlite
+import psycopg
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 
-from chia.util.db_wrapper import DBWrapper2
-from tests.util.db_connection import DBConnection, PathDBConnection
+from chia.util.db_wrapper_pg import DBWrapperPG
+from tests.util.db_connection import DBConnectionPG
 
 if TYPE_CHECKING:
-    ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
-    GetReaderMethod = Callable[[DBWrapper2], Callable[[], ConnectionContextManager]]
+    ConnectionContextManager = contextlib.AbstractAsyncContextManager[psycopg.AsyncConnection[Any]]
+    GetReaderMethod = Callable[[DBWrapperPG], Callable[[], ConnectionContextManager]]
 
 
 class UniqueError(Exception):
@@ -24,9 +24,10 @@ class UniqueError(Exception):
     pass
 
 
-async def increment_counter(db_wrapper: DBWrapper2) -> None:
+async def increment_counter(db_wrapper: DBWrapperPG) -> None:
     async with db_wrapper.writer_maybe_transaction() as connection:
-        async with connection.execute("SELECT value FROM counter") as cursor:
+        async with connection.cursor() as cursor:
+            await cursor.execute("SELECT value FROM counter")
             row = await cursor.fetchone()
 
         assert row is not None
@@ -35,12 +36,13 @@ async def increment_counter(db_wrapper: DBWrapper2) -> None:
         await asyncio.sleep(0)
 
         new_value = old_value + 1
-        await connection.execute("UPDATE counter SET value = :value", {"value": new_value})
+        await connection.execute("UPDATE counter SET value = %s", (new_value,))
 
 
-async def decrement_counter(db_wrapper: DBWrapper2) -> None:
+async def decrement_counter(db_wrapper: DBWrapperPG) -> None:
     async with db_wrapper.writer_maybe_transaction() as connection:
-        async with connection.execute("SELECT value FROM counter") as cursor:
+        async with connection.cursor() as cursor:
+            await cursor.execute("SELECT value FROM counter")
             row = await cursor.fetchone()
 
         assert row is not None
@@ -49,12 +51,13 @@ async def decrement_counter(db_wrapper: DBWrapper2) -> None:
         await asyncio.sleep(0)
 
         new_value = old_value - 1
-        await connection.execute("UPDATE counter SET value = :value", {"value": new_value})
+        await connection.execute("UPDATE counter SET value = %s", (new_value,))
 
 
-async def sum_counter(db_wrapper: DBWrapper2, output: List[int]) -> None:
+async def sum_counter(db_wrapper: DBWrapperPG, output: List[int]) -> None:
     async with db_wrapper.reader_no_transaction() as connection:
-        async with connection.execute("SELECT value FROM counter") as cursor:
+        async with connection.cursor() as cursor:
+            await cursor.execute("SELECT value FROM counter")
             row = await cursor.fetchone()
 
         assert row is not None
@@ -63,28 +66,29 @@ async def sum_counter(db_wrapper: DBWrapper2, output: List[int]) -> None:
         output.append(value)
 
 
-async def setup_table(db: DBWrapper2) -> None:
+async def setup_table(db: DBWrapperPG) -> None:
     async with db.writer_maybe_transaction() as conn:
         await conn.execute("CREATE TABLE counter(value INTEGER NOT NULL)")
         await conn.execute("INSERT INTO counter(value) VALUES(0)")
 
 
-async def get_value(cursor: aiosqlite.Cursor) -> int:
+async def get_value(cursor: psycopg.AsyncCursor[Any]) -> int:
     row = await cursor.fetchone()
     assert row
     return int(row[0])
 
 
-async def query_value(connection: aiosqlite.Connection) -> int:
-    async with connection.execute("SELECT value FROM counter") as cursor:
+async def query_value(connection: psycopg.AsyncConnection[Any]) -> int:
+    async with connection.cursor() as cursor:
+        await cursor.execute("SELECT value FROM counter")
         return await get_value(cursor=cursor)
 
 
-def _get_reader_no_transaction_method(db_wrapper: DBWrapper2) -> Callable[[], ConnectionContextManager]:
+def _get_reader_no_transaction_method(db_wrapper: DBWrapperPG) -> Callable[[], ConnectionContextManager]:
     return db_wrapper.reader_no_transaction
 
 
-def _get_regular_reader_method(db_wrapper: DBWrapper2) -> Callable[[], ConnectionContextManager]:
+def _get_regular_reader_method(db_wrapper: DBWrapperPG) -> Callable[[], ConnectionContextManager]:
     return db_wrapper.reader
 
 
@@ -106,7 +110,7 @@ def get_reader_method_fixture(request: SubRequest) -> Callable[[], ConnectionCon
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
 async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnectionPG(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         concurrent_task_count = 200
@@ -123,7 +127,8 @@ async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetR
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
 
         async with get_reader_method(db_wrapper)() as connection:
-            async with connection.execute("SELECT value FROM counter") as cursor:
+            async with connection.cursor() as cursor:
+                await cursor.execute("SELECT value FROM counter")
                 row = await cursor.fetchone()
 
             assert row is not None
@@ -134,54 +139,40 @@ async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetR
 
 @pytest.mark.anyio
 async def test_writers_nests() -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnectionPG(2) as db_wrapper:
         await setup_table(db_wrapper)
         async with db_wrapper.writer_maybe_transaction() as conn1:
-            async with conn1.execute("SELECT value FROM counter") as cursor:
+            async with conn1.cursor() as cursor:
+                await cursor.execute("SELECT value FROM counter")
                 value = await get_value(cursor)
             async with db_wrapper.writer_maybe_transaction() as conn2:
                 assert conn1 == conn2
                 value += 1
-                await conn2.execute("UPDATE counter SET value = :value", {"value": value})
+                await conn2.execute("UPDATE counter SET value = %s", (value,))
                 async with db_wrapper.writer_maybe_transaction() as conn3:
                     assert conn1 == conn3
-                    async with conn3.execute("SELECT value FROM counter") as cursor:
+                    async with conn3.cursor() as cursor:
+                        await cursor.execute("SELECT value FROM counter")
                         value = await get_value(cursor)
 
     assert value == 1
 
 
 @pytest.mark.anyio
-async def test_writer_journal_mode_wal() -> None:
-    async with PathDBConnection(2) as db_wrapper:
-        async with db_wrapper.writer() as connection:
-            async with connection.execute("PRAGMA journal_mode") as cursor:
-                result = await cursor.fetchone()
-                assert result == ("wal",)
-
-
-@pytest.mark.anyio
-async def test_reader_journal_mode_wal() -> None:
-    async with PathDBConnection(2) as db_wrapper:
-        async with db_wrapper.reader_no_transaction() as connection:
-            async with connection.execute("PRAGMA journal_mode") as cursor:
-                result = await cursor.fetchone()
-                assert result == ("wal",)
-
-
-@pytest.mark.anyio
 async def test_partial_failure() -> None:
     values = []
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnectionPG(2) as db_wrapper:
         await setup_table(db_wrapper)
         async with db_wrapper.writer() as conn1:
             await conn1.execute("UPDATE counter SET value = 42")
-            async with conn1.execute("SELECT value FROM counter") as cursor:
+            async with conn1.cursor() as cursor:
+                await cursor.execute("SELECT value FROM counter")
                 values.append(await get_value(cursor))
             try:
                 async with db_wrapper.writer() as conn2:
                     await conn2.execute("UPDATE counter SET value = 1337")
-                    async with conn1.execute("SELECT value FROM counter") as cursor:
+                    async with conn2.cursor() as cursor:
+                        await cursor.execute("SELECT value FROM counter")
                         values.append(await get_value(cursor))
                     # this simulates a failure, which will cause a rollback of the
                     # write we just made, back to 42
@@ -189,7 +180,8 @@ async def test_partial_failure() -> None:
             except RuntimeError:
                 # we expect to get here
                 values.append(1)
-            async with conn1.execute("SELECT value FROM counter") as cursor:
+            async with conn1.cursor() as cursor:
+                await cursor.execute("SELECT value FROM counter")
                 values.append(await get_value(cursor))
 
     # the write of 1337 failed, and was restored to 42
@@ -198,7 +190,7 @@ async def test_partial_failure() -> None:
 
 @pytest.mark.anyio
 async def test_readers_nests(get_reader_method: GetReaderMethod) -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnectionPG(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with get_reader_method(db_wrapper)() as conn1:
@@ -206,7 +198,8 @@ async def test_readers_nests(get_reader_method: GetReaderMethod) -> None:
                 assert conn1 == conn2
                 async with get_reader_method(db_wrapper)() as conn3:
                     assert conn1 == conn3
-                    async with conn3.execute("SELECT value FROM counter") as cursor:
+                    async with conn3.cursor() as cursor:
+                        await cursor.execute("SELECT value FROM counter")
                         value = await get_value(cursor)
 
     assert value == 0
@@ -214,7 +207,7 @@ async def test_readers_nests(get_reader_method: GetReaderMethod) -> None:
 
 @pytest.mark.anyio
 async def test_readers_nests_writer(get_reader_method: GetReaderMethod) -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnectionPG(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer_maybe_transaction() as conn1:
@@ -222,7 +215,8 @@ async def test_readers_nests_writer(get_reader_method: GetReaderMethod) -> None:
                 assert conn1 == conn2
                 async with db_wrapper.writer_maybe_transaction() as conn3:
                     assert conn1 == conn3
-                    async with conn3.execute("SELECT value FROM counter") as cursor:
+                    async with conn3.cursor() as cursor:
+                        await cursor.execute("SELECT value FROM counter")
                         value = await get_value(cursor)
 
     assert value == 0
@@ -253,7 +247,7 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
 
         assert await query_value(connection=writer) == 1
 
-    async with PathDBConnection(2) as db_wrapper:
+    async with DBConnectionPG(2) as db_wrapper:
         get_reader = db_wrapper.reader if transactioned else db_wrapper.reader_no_transaction
 
         await setup_table(db_wrapper)
@@ -274,23 +268,8 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
 
 
 @pytest.mark.anyio
-async def test_reader_nests_and_ends_transaction() -> None:
-    async with DBConnection(2) as db_wrapper:
-        async with db_wrapper.reader() as reader:
-            assert reader.in_transaction
-
-            async with db_wrapper.reader() as inner_reader:
-                assert inner_reader is reader
-                assert reader.in_transaction
-
-            assert reader.in_transaction
-
-        assert not reader.in_transaction
-
-
-@pytest.mark.anyio
 async def test_writer_in_reader_works() -> None:
-    async with PathDBConnection(2) as db_wrapper:
+    async with DBConnectionPG(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.reader() as reader:
@@ -305,7 +284,7 @@ async def test_writer_in_reader_works() -> None:
 
 @pytest.mark.anyio
 async def test_reader_transaction_is_deferred() -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnectionPG(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.reader() as reader:
@@ -325,7 +304,7 @@ async def test_reader_transaction_is_deferred() -> None:
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
 async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnectionPG(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer_maybe_transaction() as connection:
@@ -354,7 +333,7 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
 async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
-    async with PathDBConnection(2) as db_wrapper:
+    async with DBConnectionPG(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer_maybe_transaction() as connection:
@@ -381,7 +360,8 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
         # we increment and decrement the counter an equal number of times. It should
         # end back at 1.
         async with get_reader_method(db_wrapper)() as connection:
-            async with connection.execute("SELECT value FROM counter") as cursor:
+            async with connection.cursor() as cursor:
+                await cursor.execute("SELECT value FROM counter")
                 row = await cursor.fetchone()
                 assert row is not None
                 assert row[0] == 1
@@ -393,34 +373,15 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
         assert v <= 100
 
 
-@pytest.mark.parametrize(
-    argnames=["manager_method", "expected"],
-    argvalues=[
-        [DBWrapper2.writer, True],
-        [DBWrapper2.writer_maybe_transaction, True],
-        [DBWrapper2.reader, True],
-        [DBWrapper2.reader_no_transaction, False],
-    ],
-)
-@pytest.mark.anyio
-async def test_in_transaction_as_expected(
-    manager_method: Callable[[DBWrapper2], ConnectionContextManager],
-    expected: bool,
-) -> None:
-    async with DBConnection(2) as db_wrapper:
-        await setup_table(db_wrapper)
-
-        async with manager_method(db_wrapper) as connection:
-            assert connection.in_transaction == expected
-
-
 @pytest.mark.anyio
 async def test_cancelled_reader_does_not_cancel_writer() -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnectionPG(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer() as writer:
             await writer.execute("UPDATE counter SET value = 1")
+
+            assert await query_value(connection=writer) == 1
 
             with pytest.raises(UniqueError):
                 async with db_wrapper.reader() as _:
