@@ -7,6 +7,7 @@ import time
 from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator
 
 import pytest
+import psycopg
 
 # https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
@@ -60,9 +61,17 @@ def tree_id_fixture() -> bytes32:
 
 
 @pytest.fixture(name="raw_data_store", scope="function")
-async def raw_data_store_fixture(database_uri: str) -> AsyncIterable[DataStore]:
-    async with DataStore.managed(database=database_uri, uri=True) as store:
+async def raw_data_store_fixture(database_pg: str) -> AsyncIterable[DataStore]:
+    with psycopg.connect("postgresql://postgres:postgres@localhost:5432", autocommit=True) as connection:
+        connection.execute(f"CREATE DATABASE {database_pg};")
+
+    pg_uri = "postgresql://postgres:postgres@localhost:5432/" + database_pg
+
+    async with DataStore.managed(database=pg_uri, uri=True) as store:
         yield store
+
+    with psycopg.connect("postgresql://postgres:postgres@localhost:5432", autocommit=True) as connection:
+        connection.execute(f"DROP DATABASE {database_pg};")
 
 
 @pytest.fixture(name="data_store", scope="function")

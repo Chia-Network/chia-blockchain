@@ -52,6 +52,7 @@ from chia.types.aliases import (
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
+from chia.util.db_wrapper_pg import generate_postgres_db_name
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
@@ -1083,6 +1084,11 @@ async def harvester_farmer_environment(
 @pytest.fixture(name="database_uri")
 def database_uri_fixture() -> str:
     return generate_in_memory_db_uri()
+
+
+@pytest.fixture(name="database_pg")
+def database_pg_fixture() -> str:
+    return generate_postgres_db_name()
 
 
 @pytest.fixture(name="empty_temp_file_keyring")

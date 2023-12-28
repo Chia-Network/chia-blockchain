@@ -8,7 +8,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, Union
 
-import aiosqlite
+import psycopg
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
@@ -33,7 +33,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper_pg import DBWrapperPG
 
 log = logging.getLogger(__name__)
 
@@ -46,15 +46,15 @@ log = logging.getLogger(__name__)
 class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
 
-    db_wrapper: DBWrapper2
+    db_wrapper: DBWrapperPG
 
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
         cls, database: Union[str, Path], uri: bool = False, sql_log_path: Optional[Path] = None
     ) -> AsyncIterator[DataStore]:
-        async with DBWrapper2.managed(
-            database=database,
+        async with DBWrapperPG.managed(
+            database=str(database),
             uri=uri,
             journal_mode="WAL",
             # Setting to FULL despite other locations being configurable.  If there are
@@ -63,7 +63,7 @@ class DataStore:
             # If foreign key checking gets turned off, please add corresponding check
             # methods and enable foreign key checking in the tests.
             foreign_keys=True,
-            row_factory=aiosqlite.Row,
+            row_factory=None,  # aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
             self = cls(db_wrapper=db_wrapper)
@@ -76,22 +76,22 @@ class DataStore:
                         node_type INTEGER NOT NULL CHECK(
                             (
                                 node_type == {int(NodeType.INTERNAL)}
-                                AND left IS NOT NULL
-                                AND right IS NOT NULL
+                                AND left_hash IS NOT NULL
+                                AND right_hash IS NOT NULL
                                 AND key IS NULL
                                 AND value IS NULL
                             )
                             OR
                             (
                                 node_type == {int(NodeType.TERMINAL)}
-                                AND left IS NULL
-                                AND right IS NULL
+                                AND left_hash IS NULL
+                                AND right_hash IS NULL
                                 AND key IS NOT NULL
                                 AND value IS NOT NULL
                             )
                         ),
-                        left BLOB REFERENCES node,
-                        right BLOB REFERENCES node,
+                        left_hash BLOB REFERENCES node,
+                        right_hash BLOB REFERENCES node,
                         key BLOB,
                         value BLOB
                     )
@@ -230,8 +230,8 @@ class DataStore:
         values = {
             "hash": node_hash,
             "node_type": node_type,
-            "left": left_hash,
-            "right": right_hash,
+            "left_hash": left_hash,
+            "right_hash": right_hash,
             "key": key,
             "value": value,
         }
@@ -240,20 +240,21 @@ class DataStore:
             try:
                 await writer.execute(
                     """
-                    INSERT INTO node(hash, node_type, left, right, key, value)
-                    VALUES(:hash, :node_type, :left, :right, :key, :value)
+                    INSERT INTO node(hash, node_type, left_hash, right_hash, key, value)
+                    VALUES(:hash, :node_type, :left_hash, :right_hash, :key, :value)
                     """,
                     values,
                 )
-            except aiosqlite.IntegrityError as e:
+            except psycopg.IntegrityError as e:
                 if not e.args[0].startswith("UNIQUE constraint"):
                     # UNIQUE constraint failed: node.hash
                     raise
 
-                async with writer.execute(
-                    "SELECT * FROM node WHERE hash == :hash LIMIT 1",
-                    {"hash": node_hash},
-                ) as cursor:
+                async with writer.cursor() as cursor:
+                    await cursor.execute(
+                        "SELECT * FROM node WHERE hash == :hash LIMIT 1",
+                        {"hash": node_hash},
+                    )
                     result = await cursor.fetchone()
 
                 if result is None:
@@ -318,20 +319,21 @@ class DataStore:
                         """,
                         values,
                     )
-                except aiosqlite.IntegrityError as e:
+                except psycopg.IntegrityError as e:
                     if not e.args[0].startswith("UNIQUE constraint"):
                         # UNIQUE constraint failed: ancestors.hash, ancestors.tree_id, ancestors.generation
                         raise
 
-                    async with writer.execute(
-                        """
-                        SELECT *
-                        FROM ancestors
-                        WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
-                        LIMIT 1
-                        """,
-                        {"hash": hash, "generation": generation, "tree_id": tree_id},
-                    ) as cursor:
+                    async with writer.cursor() as cursor:
+                        await cursor.execute(
+                            """
+                            SELECT *
+                            FROM ancestors
+                            WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
+                            LIMIT 1
+                            """,
+                            {"hash": hash, "generation": generation, "tree_id": tree_id},
+                        )
                         result = await cursor.fetchone()
 
                     if result is None:
@@ -586,18 +588,18 @@ class DataStore:
             cursor = await reader.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left, right, key, value, depth) AS (
+                    tree_from_root_hash(hash, node_type, left_hash, right_hash, key, value, depth) AS (
                         SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
                         UNION ALL
                         SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
-                        WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
+                        WHERE node.hash == tree_from_root_hash.left_hash OR node.hash == tree_from_root_hash.right_hash
                     ),
-                    ancestors(hash, node_type, left, right, key, value, depth) AS (
+                    ancestors(hash, node_type, left_hash, right_hash, key, value, depth) AS (
                         SELECT node.*, NULL AS depth FROM node
-                        WHERE node.left == :reference_hash OR node.right == :reference_hash
+                        WHERE node.left_hash == :reference_hash OR node.right_hash == :reference_hash
                         UNION ALL
                         SELECT node.*, NULL AS depth FROM node, ancestors
-                        WHERE node.left == ancestors.hash OR node.right == ancestors.hash
+                        WHERE node.left_hash == ancestors.hash OR node.right_hash == ancestors.hash
                     )
                 SELECT * FROM tree_from_root_hash INNER JOIN ancestors
                 WHERE tree_from_root_hash.hash == ancestors.hash
@@ -651,11 +653,11 @@ class DataStore:
             cursor = await reader.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left, right, key, value) AS (
+                    tree_from_root_hash(hash, node_type, left_hash, right_hash, key, value) AS (
                         SELECT node.* FROM node WHERE node.hash == :root_hash
                         UNION ALL
-                        SELECT node.* FROM node, tree_from_root_hash WHERE node.hash == tree_from_root_hash.left
-                        OR node.hash == tree_from_root_hash.right
+                        SELECT node.* FROM node, tree_from_root_hash WHERE node.hash == tree_from_root_hash.left_hash
+                        OR node.hash == tree_from_root_hash.right_hash
                     )
                 SELECT * FROM tree_from_root_hash
                 WHERE node_type == :node_type
@@ -746,39 +748,40 @@ class DataStore:
             if root_hash is None:
                 return None
 
-            async with reader.execute(
-                """
-                WITH RECURSIVE
-                    random_leaf(hash, node_type, left, right, depth, side) AS (
-                        SELECT
-                            node.hash AS hash,
-                            node.node_type AS node_type,
-                            node.left AS left,
-                            node.right AS right,
-                            1 AS depth,
-                            SUBSTR(:path, 1, 1) as side
-                        FROM node
-                        WHERE node.hash == :root_hash
-                        UNION ALL
-                        SELECT
-                            node.hash AS hash,
-                            node.node_type AS node_type,
-                            node.left AS left,
-                            node.right AS right,
-                            random_leaf.depth + 1 AS depth,
-                            SUBSTR(:path, random_leaf.depth + 1, 1) as side
-                        FROM node, random_leaf
-                        WHERE (
-                            (random_leaf.side == "0" AND node.hash == random_leaf.left)
-                            OR (random_leaf.side != "0" AND node.hash == random_leaf.right)
+            async with reader.cursor() as cursor:
+                await cursor.execute(
+                    """
+                    WITH RECURSIVE
+                        random_leaf(hash, node_type, left, right, depth, side) AS (
+                            SELECT
+                                node.hash AS hash,
+                                node.node_type AS node_type,
+                                node.left AS left,
+                                node.right AS right,
+                                1 AS depth,
+                                SUBSTR(:path, 1, 1) as side
+                            FROM node
+                            WHERE node.hash == :root_hash
+                            UNION ALL
+                            SELECT
+                                node.hash AS hash,
+                                node.node_type AS node_type,
+                                node.left AS left,
+                                node.right AS right,
+                                random_leaf.depth + 1 AS depth,
+                                SUBSTR(:path, random_leaf.depth + 1, 1) as side
+                            FROM node, random_leaf
+                            WHERE (
+                                (random_leaf.side == "0" AND node.hash == random_leaf.left)
+                                OR (random_leaf.side != "0" AND node.hash == random_leaf.right)
+                            )
                         )
-                    )
-                SELECT hash AS hash FROM random_leaf
-                WHERE node_type == :node_type
-                LIMIT 1
-                """,
-                {"root_hash": root_hash, "node_type": NodeType.TERMINAL, "path": path},
-            ) as cursor:
+                    SELECT hash AS hash FROM random_leaf
+                    WHERE node_type == :node_type
+                    LIMIT 1
+                    """,
+                    {"root_hash": root_hash, "node_type": NodeType.TERMINAL, "path": path},
+                )
                 row = await cursor.fetchone()
                 if row is None:
                     # No cover since this is an error state that should be unreachable given the code
@@ -1072,7 +1075,7 @@ class DataStore:
 
         return new_root
 
-    async def clean_node_table(self, writer: aiosqlite.Connection) -> None:
+    async def clean_node_table(self, writer: psycopg.AsyncConnection[Any]) -> None:
         await writer.execute(
             """
             WITH RECURSIVE pending_nodes AS (
