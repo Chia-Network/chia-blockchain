@@ -141,7 +141,7 @@ class DataStore:
                     """
                     CREATE TABLE IF NOT EXISTS subscriptions(
                         tree_id BYTEA NOT NULL CHECK(length(tree_id) = 32),
-                        url TEXT,
+                        url TEXT DEFAULT '',
                         ignore_till INTEGER,
                         num_consecutive_failures INTEGER,
                         from_wallet smallint CHECK(from_wallet = 0 OR from_wallet = 1),
@@ -406,7 +406,7 @@ class DataStore:
     async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> None:
         async with self.db_wrapper.writer() as writer:
             await writer.execute(
-                "UPDATE root SET status = ? WHERE tree_id=? and generation = ?",
+                "UPDATE root SET status = %s WHERE tree_id=%s and generation = %s",
                 (
                     status.value,
                     root.tree_id,
@@ -602,7 +602,7 @@ class DataStore:
                         WHERE node.left_hash = ancestors.hash OR node.right_hash = ancestors.hash
                     )
                 SELECT * FROM tree_from_root_hash INNER JOIN ancestors
-                WHERE tree_from_root_hash.hash = ancestors.hash
+                ON tree_from_root_hash.hash = ancestors.hash
                 ORDER BY tree_from_root_hash.depth DESC
                 """,
                 {"reference_hash": node_hash, "root_hash": root_hash},
@@ -1076,23 +1076,63 @@ class DataStore:
         return new_root
 
     async def clean_node_table(self, writer: psycopg.AsyncConnection[Any]) -> None:
+        # await writer.execute(
+        #     f"""
+        #     WITH RECURSIVE pending_nodes AS (
+        #         SELECT node_hash AS hash FROM root
+        #         WHERE status = {Status.PENDING.value}
+                
+        #         UNION ALL
+                
+        #         SELECT n.left_hash FROM node n
+        #         INNER JOIN pending_nodes pn ON n.hash = pn.hash
+        #         WHERE n.left_hash IS NOT NULL
+                
+        #         UNION ALL
+                
+        #         SELECT n.right_hash FROM node n
+        #         INNER JOIN pending_nodes pn ON n.hash = pn.hash
+        #         WHERE n.right_hash IS NOT NULL
+        #     )
+        #     DELETE FROM node
+        #     WHERE hash NOT IN (SELECT hash FROM ancestors)
+        #     AND hash NOT IN (SELECT hash FROM pending_nodes)
+        #     """,
+        # )
         await writer.execute(
             f"""
-            WITH RECURSIVE pending_nodes AS (
-                SELECT node_hash AS hash FROM root
-                WHERE status = {Status.PENDING.value}
-                UNION ALL
-                SELECT n.left_hash FROM node n
-                INNER JOIN pending_nodes pn ON n.hash = pn.hash
-                WHERE n.left_hash IS NOT NULL
-                UNION ALL
-                SELECT n.right_hash FROM node n
-                INNER JOIN pending_nodes pn ON n.hash = pn.hash
-                WHERE n.right_hash IS NOT NULL
-            )
-            DELETE FROM node
-            WHERE hash NOT IN (SELECT hash FROM ancestors)
-            AND hash NOT IN (SELECT hash FROM pending_nodes)
+                WITH RECURSIVE left_nodes AS (
+                    SELECT node_hash AS hash
+                    FROM root
+                    WHERE status = {Status.PENDING.value}
+
+                    UNION ALL
+
+                    SELECT n.left_hash
+                    FROM node n
+                    INNER JOIN left_nodes ln ON n.hash = ln.hash
+                    WHERE n.left_hash IS NOT NULL
+                ),
+                right_nodes AS (
+                    SELECT node_hash AS hash
+                    FROM root
+                    WHERE status = {Status.PENDING.value}
+
+                    UNION ALL
+
+                    SELECT n.right_hash
+                    FROM node n
+                    INNER JOIN right_nodes rn ON n.hash = rn.hash
+                    WHERE n.right_hash IS NOT NULL
+                ),
+                combined_nodes AS (
+                    SELECT hash FROM left_nodes
+                    UNION
+                    SELECT hash FROM right_nodes
+                )
+                DELETE FROM node
+                WHERE hash NOT IN (SELECT hash FROM ancestors)
+                AND hash NOT IN (SELECT hash FROM combined_nodes)
             """,
         )
 
@@ -1190,8 +1230,8 @@ class DataStore:
                     WHERE ancestors.hash = %(hash)s
                     AND ancestors.tree_id = %(tree_id)s
                     AND ancestors.generation <= %(generation)s
-                    GROUP BY ancestor
-                ) fred ON fred.hash = node.hash
+                    GROUP BY ancestors.ancestor
+                ) subquery ON subquery.hash = node.hash
                 """,
                 {"hash": node_hash, "tree_id": tree_id, "generation": generation},
             )
@@ -1427,7 +1467,8 @@ class DataStore:
             # Add a fake subscription, so we always have the tree_id, even with no URLs.
             await writer.execute(
                 "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
-                "VALUES (%(tree_id)s, NULL, NULL, NULL, 0)",
+                "VALUES (%(tree_id)s, '', NULL, NULL, 0)"
+                "ON CONFLICT DO NOTHING",
                 {
                     "tree_id": subscription.tree_id,
                 },
@@ -1448,7 +1489,7 @@ class DataStore:
             for server_info in new_servers:
                 await writer.execute(
                     "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
-                    "VALUES (%(tree_id)s, %(url)s, :ignore_till, :num_consecutive_failures, 0)",
+                    "VALUES (%(tree_id)s, %(url)s, %(ignore_till)s, %(num_consecutive_failures)s, 0)",
                     {
                         "tree_id": subscription.tree_id,
                         "url": server_info.url,
@@ -1557,8 +1598,8 @@ class DataStore:
     async def update_server_info(self, tree_id: bytes32, server_info: ServerInfo) -> None:
         async with self.db_wrapper.writer() as writer:
             await writer.execute(
-                "UPDATE subscriptions SET ignore_till = :ignore_till, "
-                "num_consecutive_failures = :num_consecutive_failures WHERE tree_id = %(tree_id)s AND url = %(url)s",
+                "UPDATE subscriptions SET ignore_till = %(ignore_till)s, "
+                "num_consecutive_failures = %(num_consecutive_failures)s WHERE tree_id = %(tree_id)s AND url = %(url)s",
                 {
                     "ignore_till": server_info.ignore_till,
                     "num_consecutive_failures": server_info.num_consecutive_failures,

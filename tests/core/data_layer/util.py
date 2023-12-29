@@ -68,8 +68,11 @@ async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
     insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
 
     c_hash = await insert(key=b"\x02", value=b"\x12\x02", reference_node_hash=None, side=None)
+
     b_hash = await insert(key=b"\x01", value=b"\x11\x01", reference_node_hash=c_hash, side=Side.LEFT)
+
     d_hash = await insert(key=b"\x03", value=b"\x13\x03", reference_node_hash=c_hash, side=Side.RIGHT)
+
     a_hash = await insert(key=b"\x00", value=b"\x10\x00", reference_node_hash=b_hash, side=Side.LEFT)
 
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash])
@@ -192,8 +195,8 @@ def create_valid_node_values(
         return {
             "hash": Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash),
             "node_type": node_type,
-            "left": left_hash,
-            "right": right_hash,
+            "left_hash": left_hash,
+            "right_hash": right_hash,
             "key": None,
             "value": None,
         }
@@ -203,8 +206,8 @@ def create_valid_node_values(
         return {
             "hash": Program.to((key, value)).get_tree_hash(),
             "node_type": node_type,
-            "left": None,
-            "right": None,
+            "left_hash": None,
+            "right_hash": None,
             "key": key,
             "value": value,
         }

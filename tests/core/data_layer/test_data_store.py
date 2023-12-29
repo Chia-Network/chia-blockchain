@@ -45,6 +45,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
 from tests.util.misc import BenchmarkRunner, Marks, datacases
+from chia.util.db_wrapper_pg import DBWrapperPG, generate_postgres_db_name
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ pytestmark = pytest.mark.data_layer
 
 
 table_columns: Dict[str, List[str]] = {
-    "node": ["hash", "node_type", "left", "right", "key", "value"],
+    "node": ["hash", "node_type", "left_hash", "right_hash", "key", "value"],
     "root": ["tree_id", "generation", "node_hash", "status"],
 }
 
@@ -67,8 +68,8 @@ async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_
     async with data_store.db_wrapper.writer() as writer:
         await writer.execute(
             """
-            INSERT INTO node(hash, node_type, left, right, key, value)
-            VALUES(:hash, :node_type, :left, :right, :key, :value)
+            INSERT INTO node(hash, node_type, left_hash, right_hash, key, value)
+            VALUES(%(hash)s, %(node_type)s, %(left_hash)s, %(right_hash)s, %(key)s, %(value)s)
             """,
             valid_node_values,
         )
@@ -77,23 +78,33 @@ async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_
 @pytest.mark.parametrize(argnames=["table_name", "expected_columns"], argvalues=table_columns.items())
 @pytest.mark.anyio
 async def test_create_creates_tables_and_columns(
-    database_uri: str, table_name: str, expected_columns: List[str]
+    database_pg: str, table_name: str, expected_columns: List[str]
 ) -> None:
     # Never string-interpolate sql queries...  Except maybe in tests when it does not
     # allow you to parametrize the query.
-    query = f"pragma table_info({table_name});"
+    # query = f"pragma table_info({table_name});"
 
-    async with DBWrapper2.managed(database=database_uri, uri=True, reader_count=1) as db_wrapper:
+    query = f"SELECT * FROM information_schema.columns WHERE table_name = '{table_name}'"
+
+    with psycopg.connect("postgresql://postgres:postgres@localhost:5432", autocommit=True) as connection:
+        connection.execute(f"CREATE DATABASE {database_pg};")
+
+    pg_uri = "postgresql://postgres:postgres@localhost:5432/" + database_pg
+
+    async with DBWrapperPG.managed(database=pg_uri, uri=True, reader_count=1) as db_wrapper:
         async with db_wrapper.reader() as reader:
             cursor = await reader.execute(query)
             columns = await cursor.fetchall()
             assert columns == []
 
-        async with DataStore.managed(database=database_uri, uri=True):
+        async with DataStore.managed(database=pg_uri, uri=True):
             async with db_wrapper.reader() as reader:
                 cursor = await reader.execute(query)
                 columns = await cursor.fetchall()
-                assert [column[1] for column in columns] == expected_columns
+                assert [column[3] for column in columns] == expected_columns
+
+    with psycopg.connect("postgresql://postgres:postgres@localhost:5432", autocommit=True) as connection:
+        connection.execute(f"DROP DATABASE {database_pg};")
 
 
 @pytest.mark.anyio
@@ -376,8 +387,13 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
     saved_roots: List[Root] = []
     saved_batches: List[List[Dict[str, Any]]] = []
 
-    db_uri = generate_in_memory_db_uri()
-    async with DataStore.managed(database=db_uri, uri=True) as single_op_data_store:
+
+    database_pg = generate_postgres_db_name()
+    with psycopg.connect("postgresql://postgres:postgres@localhost:5432", autocommit=True) as connection:
+        connection.execute(f"CREATE DATABASE {database_pg};")
+    pg_uri = "postgresql://postgres:postgres@localhost:5432/" + database_pg
+
+    async with DataStore.managed(database=pg_uri, uri=True) as single_op_data_store:
         await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
@@ -420,6 +436,9 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 batch = []
                 root = await single_op_data_store.get_tree_root(tree_id=tree_id)
                 saved_roots.append(root)
+
+    with psycopg.connect("postgresql://postgres:postgres@localhost:5432", autocommit=True) as connection:
+        connection.execute(f"DROP DATABASE {database_pg};")
 
     for batch_number, batch in enumerate(saved_batches):
         assert len(batch) == num_ops_per_batch
@@ -997,12 +1016,12 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
 async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.writer() as writer:
         await writer.execute(
-            "INSERT INTO node(hash, node_type, left, right) VALUES(%(hash)s, %(node_type)s, %(left)s, %(right)s)",
+            "INSERT INTO node(hash, node_type, left_hash, right_hash) VALUES(%(hash)s, %(node_type)s, %(left_hash)s, %(right_hash)s)",
             {
                 "hash": a_bytes_32,
                 "node_type": NodeType.INTERNAL,
-                "left": a_bytes_32,
-                "right": a_bytes_32,
+                "left_hash": a_bytes_32,
+                "right_hash": a_bytes_32,
             },
         )
 
@@ -1017,7 +1036,7 @@ async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
 async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.writer() as writer:
         await writer.execute(
-            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
+            "INSERT INTO node(hash, node_type, key, value) VALUES(%(hash)s, %(node_type)s, %(key)s, %(value)s)",
             {
                 "hash": a_bytes_32,
                 "node_type": NodeType.TERMINAL,
@@ -1259,8 +1278,12 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
     num_batches = 10
     num_ops_per_batch = 100
 
-    db_uri = generate_in_memory_db_uri()
-    async with DataStore.managed(database=db_uri, uri=True) as data_store_server:
+    database_pg = generate_postgres_db_name()
+    with psycopg.connect("postgresql://postgres:postgres@localhost:5432", autocommit=True) as connection:
+        connection.execute(f"CREATE DATABASE {database_pg};")
+    pg_uri = "postgresql://postgres:postgres@localhost:5432/" + database_pg
+
+    async with DataStore.managed(database=pg_uri, uri=True) as data_store_server:
         await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
@@ -1285,6 +1308,9 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
             root = await data_store_server.get_tree_root(tree_id)
             await write_files_for_root(data_store_server, tree_id, root, tmp_path, 0)
             roots.append(root)
+    
+    with psycopg.connect("postgresql://postgres:postgres@localhost:5432", autocommit=True) as connection:
+        connection.execute(f"DROP DATABASE {database_pg};")
 
     generation = 1
     assert len(roots) == num_batches

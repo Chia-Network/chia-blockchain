@@ -43,8 +43,8 @@ async def test_node_hash_must_be_32(
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await writer.execute(
                 """
-                INSERT INTO node(hash, node_type, left, right, key, value)
-                VALUES(:hash, :node_type, :left, :right, :key, :value)
+                INSERT INTO node(hash, node_type, left_hash, right_hash, key, value)
+                VALUES(%(hash)s, %(node_type)s, %(left_hash)s, %(right_hash)s, %(key)s, %(value)s)
                 """,
                 valid_node_values,
             )
