@@ -63,7 +63,7 @@ class DataStore:
             # If foreign key checking gets turned off, please add corresponding check
             # methods and enable foreign key checking in the tests.
             foreign_keys=True,
-            row_factory=None,  # aiosqlite.Row,
+            row_factory=psycopg.rows.dict_row,  # aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
             self = cls(db_wrapper=db_wrapper)
@@ -72,10 +72,10 @@ class DataStore:
                 await writer.execute(
                     f"""
                     CREATE TABLE IF NOT EXISTS node(
-                        hash BLOB PRIMARY KEY NOT NULL CHECK(length(hash) == 32),
+                        hash BYTEA PRIMARY KEY NOT NULL CHECK(length(hash) = 32),
                         node_type INTEGER NOT NULL CHECK(
                             (
-                                node_type == {int(NodeType.INTERNAL)}
+                                node_type = {int(NodeType.INTERNAL)}
                                 AND left_hash IS NOT NULL
                                 AND right_hash IS NOT NULL
                                 AND key IS NULL
@@ -83,37 +83,37 @@ class DataStore:
                             )
                             OR
                             (
-                                node_type == {int(NodeType.TERMINAL)}
+                                node_type = {int(NodeType.TERMINAL)}
                                 AND left_hash IS NULL
                                 AND right_hash IS NULL
                                 AND key IS NOT NULL
                                 AND value IS NOT NULL
                             )
                         ),
-                        left_hash BLOB REFERENCES node,
-                        right_hash BLOB REFERENCES node,
-                        key BLOB,
-                        value BLOB
+                        left_hash BYTEA REFERENCES node,
+                        right_hash BYTEA REFERENCES node,
+                        key BYTEA,
+                        value BYTEA
                     )
                     """
                 )
-                await writer.execute(
-                    """
-                    CREATE TRIGGER IF NOT EXISTS no_node_updates
-                    BEFORE UPDATE ON node
-                    BEGIN
-                        SELECT RAISE(FAIL, 'updates not allowed to the node table');
-                    END
-                    """
-                )
+                # await writer.execute(
+                #     """
+                #     CREATE OR REPLACE TRIGGER no_node_updates
+                #     BEFORE UPDATE ON node
+                #     BEGIN
+                #         SELECT RAISE(FAIL, 'updates not allowed to the node table');
+                #     END
+                #     """
+                # )
                 await writer.execute(
                     f"""
                     CREATE TABLE IF NOT EXISTS root(
-                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                        tree_id BYTEA NOT NULL CHECK(length(tree_id) = 32),
                         generation INTEGER NOT NULL CHECK(generation >= 0),
-                        node_hash BLOB,
+                        node_hash BYTEA,
                         status INTEGER NOT NULL CHECK(
-                            {" OR ".join(f"status == {status}" for status in Status)}
+                            {" OR ".join(f"status = {status}" for status in Status)}
                         ),
                         PRIMARY KEY(tree_id, generation),
                         FOREIGN KEY(node_hash) REFERENCES node(hash)
@@ -128,9 +128,9 @@ class DataStore:
                 await writer.execute(
                     """
                     CREATE TABLE IF NOT EXISTS ancestors(
-                        hash BLOB NOT NULL REFERENCES node,
-                        ancestor BLOB CHECK(length(ancestor) == 32),
-                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                        hash BYTEA NOT NULL REFERENCES node,
+                        ancestor BYTEA CHECK(length(ancestor) = 32),
+                        tree_id BYTEA NOT NULL CHECK(length(tree_id) = 32),
                         generation INTEGER NOT NULL,
                         PRIMARY KEY(hash, tree_id, generation),
                         FOREIGN KEY(ancestor) REFERENCES node(hash)
@@ -140,11 +140,11 @@ class DataStore:
                 await writer.execute(
                     """
                     CREATE TABLE IF NOT EXISTS subscriptions(
-                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                        tree_id BYTEA NOT NULL CHECK(length(tree_id) = 32),
                         url TEXT,
                         ignore_till INTEGER,
                         num_consecutive_failures INTEGER,
-                        from_wallet tinyint CHECK(from_wallet == 0 OR from_wallet == 1),
+                        from_wallet smallint CHECK(from_wallet = 0 OR from_wallet = 1),
                         PRIMARY KEY(tree_id, url)
                     )
                     """
@@ -194,7 +194,7 @@ class DataStore:
             await writer.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                VALUES(%(tree_id)s, %(generation)s, %(node_hash)s, %(status)s)
                 """,
                 new_root.to_row(),
             )
@@ -210,7 +210,7 @@ class DataStore:
                 await writer.execute(
                     """
                     INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                    VALUES (:hash, NULL, :tree_id, :generation)
+                    VALUES (%(hash)s, NULL, %(tree_id)s, %(generation)s)
                     """,
                     values,
                 )
@@ -241,7 +241,7 @@ class DataStore:
                 await writer.execute(
                     """
                     INSERT INTO node(hash, node_type, left_hash, right_hash, key, value)
-                    VALUES(:hash, :node_type, :left_hash, :right_hash, :key, :value)
+                    VALUES(%(hash)s, %(node_type)s, %(left_hash)s, %(right_hash)s, %(key)s, %(value)s)
                     """,
                     values,
                 )
@@ -252,7 +252,7 @@ class DataStore:
 
                 async with writer.cursor() as cursor:
                     await cursor.execute(
-                        "SELECT * FROM node WHERE hash == :hash LIMIT 1",
+                        "SELECT * FROM node WHERE hash = %(hash)s LIMIT 1",
                         {"hash": node_hash},
                     )
                     result = await cursor.fetchone()
@@ -315,7 +315,7 @@ class DataStore:
                     await writer.execute(
                         """
                         INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                        VALUES (:hash, :ancestor, :tree_id, :generation)
+                        VALUES (%(hash)s, %(ancestor)s, %(tree_id)s, %(generation)s)
                         """,
                         values,
                     )
@@ -329,7 +329,7 @@ class DataStore:
                             """
                             SELECT *
                             FROM ancestors
-                            WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
+                            WHERE hash = %(hash)s AND generation = %(generation)s AND tree_id = %(tree_id)s
                             LIMIT 1
                             """,
                             {"hash": hash, "generation": generation, "tree_id": tree_id},
@@ -370,7 +370,7 @@ class DataStore:
     async def get_pending_root(self, tree_id: bytes32) -> Optional[Root]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id AND status == :status LIMIT 2",
+                "SELECT * FROM root WHERE tree_id = %(tree_id)s AND status = %(status)s LIMIT 2",
                 {"tree_id": tree_id, "status": Status.PENDING.value},
             )
 
@@ -391,7 +391,7 @@ class DataStore:
 
             if pending_root is not None:
                 await writer.execute(
-                    "DELETE FROM root WHERE tree_id == :tree_id AND status == :status",
+                    "DELETE FROM root WHERE tree_id = %(tree_id)s AND status = %(status)s",
                     {"tree_id": tree_id, "status": Status.PENDING.value},
                 )
 
@@ -424,7 +424,7 @@ class DataStore:
                 await writer.execute(
                     """
                     INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                    VALUES (:hash, NULL, :tree_id, :generation)
+                    VALUES (%(hash)s, NULL, %(tree_id)s, %(generation)s)
                     """,
                     values,
                 )
@@ -498,13 +498,13 @@ class DataStore:
     async def get_tree_generation(self, tree_id: bytes32) -> int:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT MAX(generation) FROM root WHERE tree_id == :tree_id AND status == :status",
+                "SELECT MAX(generation) FROM root WHERE tree_id = %(tree_id)s AND status = %(status)s",
                 {"tree_id": tree_id, "status": Status.COMMITTED.value},
             )
             row = await cursor.fetchone()
 
         if row is not None:
-            generation: Optional[int] = row["MAX(generation)"]
+            generation: Optional[int] = row["max"]
 
             if generation is not None:
                 return generation
@@ -519,7 +519,7 @@ class DataStore:
                 """
                 SELECT *
                 FROM root
-                WHERE tree_id == :tree_id AND generation == :generation AND status == :status
+                WHERE tree_id = %(tree_id)s AND generation = %(generation)s AND status = %(status)s
                 LIMIT 1
                 """,
                 {"tree_id": tree_id, "generation": generation, "status": Status.COMMITTED.value},
@@ -534,7 +534,7 @@ class DataStore:
     async def tree_id_exists(self, tree_id: bytes32) -> bool:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT 1 FROM root WHERE tree_id == :tree_id AND status == :status LIMIT 1",
+                "SELECT 1 FROM root WHERE tree_id = %(tree_id)s AND status = %(status)s LIMIT 1",
                 {"tree_id": tree_id, "status": Status.COMMITTED.value},
             )
             row = await cursor.fetchone()
@@ -546,8 +546,8 @@ class DataStore:
     async def get_roots_between(self, tree_id: bytes32, generation_begin: int, generation_end: int) -> List[Root]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id "
-                "AND generation >= :generation_begin AND generation < :generation_end ORDER BY generation ASC",
+                "SELECT * FROM root WHERE tree_id = %(tree_id)s "
+                "AND generation >= %(generation_begin)s AND generation < %(generation_end)s ORDER BY generation ASC",
                 {"tree_id": tree_id, "generation_begin": generation_begin, "generation_end": generation_end},
             )
             roots = [Root.from_row(row=row) async for row in cursor]
@@ -559,9 +559,9 @@ class DataStore:
     ) -> Optional[Root]:
         async with self.db_wrapper.reader() as reader:
             max_generation_str = f"AND generation < {max_generation} " if max_generation is not None else ""
-            node_hash_str = "AND node_hash == :node_hash " if hash is not None else "AND node_hash is NULL "
+            node_hash_str = "AND node_hash = :node_hash " if hash is not None else "AND node_hash is NULL "
             cursor = await reader.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id "
+                "SELECT * FROM root WHERE tree_id = %(tree_id)s "
                 f"{max_generation_str}"
                 f"{node_hash_str}"
                 "ORDER BY generation DESC LIMIT 1",
@@ -589,20 +589,20 @@ class DataStore:
                 """
                 WITH RECURSIVE
                     tree_from_root_hash(hash, node_type, left_hash, right_hash, key, value, depth) AS (
-                        SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
+                        SELECT node.*, 0 AS depth FROM node WHERE node.hash = %(root_hash)s
                         UNION ALL
                         SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
-                        WHERE node.hash == tree_from_root_hash.left_hash OR node.hash == tree_from_root_hash.right_hash
+                        WHERE node.hash = tree_from_root_hash.left_hash OR node.hash = tree_from_root_hash.right_hash
                     ),
                     ancestors(hash, node_type, left_hash, right_hash, key, value, depth) AS (
                         SELECT node.*, NULL AS depth FROM node
-                        WHERE node.left_hash == :reference_hash OR node.right_hash == :reference_hash
+                        WHERE node.left_hash = %(reference_hash)s OR node.right_hash = %(reference_hash)s
                         UNION ALL
                         SELECT node.*, NULL AS depth FROM node, ancestors
-                        WHERE node.left_hash == ancestors.hash OR node.right_hash == ancestors.hash
+                        WHERE node.left_hash = ancestors.hash OR node.right_hash = ancestors.hash
                     )
                 SELECT * FROM tree_from_root_hash INNER JOIN ancestors
-                WHERE tree_from_root_hash.hash == ancestors.hash
+                WHERE tree_from_root_hash.hash = ancestors.hash
                 ORDER BY tree_from_root_hash.depth DESC
                 """,
                 {"reference_hash": node_hash, "root_hash": root_hash},
@@ -654,13 +654,13 @@ class DataStore:
                 """
                 WITH RECURSIVE
                     tree_from_root_hash(hash, node_type, left_hash, right_hash, key, value) AS (
-                        SELECT node.* FROM node WHERE node.hash == :root_hash
+                        SELECT node.* FROM node WHERE node.hash = %(root_hash)s
                         UNION ALL
-                        SELECT node.* FROM node, tree_from_root_hash WHERE node.hash == tree_from_root_hash.left_hash
-                        OR node.hash == tree_from_root_hash.right_hash
+                        SELECT node.* FROM node, tree_from_root_hash WHERE node.hash = tree_from_root_hash.left_hash
+                        OR node.hash = tree_from_root_hash.right_hash
                     )
                 SELECT * FROM tree_from_root_hash
-                WHERE node_type == :node_type
+                WHERE node_type = %(node_type)s
                 """,
                 {"root_hash": None if root_hash is None else root_hash, "node_type": NodeType.INTERNAL},
             )
@@ -682,22 +682,22 @@ class DataStore:
             cursor = await reader.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left, right, key, value, depth, rights) AS (
-                        SELECT node.*, 0 AS depth, 0 AS rights FROM node WHERE node.hash == :root_hash
+                    tree_from_root_hash(hash, node_type, left_hash, right_hash, key, value, depth, rights) AS (
+                        SELECT node.*, 0 AS depth, 0 AS rights FROM node WHERE node.hash = %(root_hash)s
                         UNION ALL
                         SELECT
                             node.*,
                             tree_from_root_hash.depth + 1 AS depth,
                             CASE
-                                WHEN node.hash == tree_from_root_hash.right
+                                WHEN node.hash = tree_from_root_hash.right_hash
                                 THEN tree_from_root_hash.rights + (1 << (62 - tree_from_root_hash.depth))
                                 ELSE tree_from_root_hash.rights
                                 END AS rights
                             FROM node, tree_from_root_hash
-                        WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
+                        WHERE node.hash = tree_from_root_hash.left_hash OR node.hash = tree_from_root_hash.right_hash
                     )
                 SELECT * FROM tree_from_root_hash
-                WHERE node_type == :node_type
+                WHERE node_type = %(node_type)s
                 ORDER BY depth ASC, rights ASC
                 """,
                 {"root_hash": None if root_hash is None else root_hash, "node_type": NodeType.TERMINAL},
@@ -727,7 +727,7 @@ class DataStore:
     async def get_node_type(self, node_hash: bytes32) -> NodeType:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT node_type FROM node WHERE hash == :hash LIMIT 1",
+                "SELECT node_type FROM node WHERE hash = %(hash)s LIMIT 1",
                 {"hash": node_hash},
             )
             raw_node_type = await cursor.fetchone()
@@ -752,32 +752,32 @@ class DataStore:
                 await cursor.execute(
                     """
                     WITH RECURSIVE
-                        random_leaf(hash, node_type, left, right, depth, side) AS (
+                        random_leaf(hash, node_type, left_hash, right_hash, depth, side) AS (
                             SELECT
                                 node.hash AS hash,
                                 node.node_type AS node_type,
-                                node.left AS left,
-                                node.right AS right,
+                                node.left_hash AS left_hash,
+                                node.right_hash AS right_hash,
                                 1 AS depth,
-                                SUBSTR(:path, 1, 1) as side
+                                SUBSTR(%(path)s, 1, 1) as side
                             FROM node
-                            WHERE node.hash == :root_hash
+                            WHERE node.hash = %(root_hash)s
                             UNION ALL
                             SELECT
                                 node.hash AS hash,
                                 node.node_type AS node_type,
-                                node.left AS left,
-                                node.right AS right,
+                                node.left_hash AS left_hash,
+                                node.right_hash AS right_hash,
                                 random_leaf.depth + 1 AS depth,
-                                SUBSTR(:path, random_leaf.depth + 1, 1) as side
+                                SUBSTR(%(path)s, random_leaf.depth + 1, 1) as side
                             FROM node, random_leaf
                             WHERE (
-                                (random_leaf.side == "0" AND node.hash == random_leaf.left)
-                                OR (random_leaf.side != "0" AND node.hash == random_leaf.right)
+                                (random_leaf.side = '0' AND node.hash = random_leaf.left_hash)
+                                OR (random_leaf.side != '0' AND node.hash = random_leaf.right_hash)
                             )
                         )
                     SELECT hash AS hash FROM random_leaf
-                    WHERE node_type == :node_type
+                    WHERE node_type = %(node_type)s
                     LIMIT 1
                     """,
                     {"root_hash": root_hash, "node_type": NodeType.TERMINAL, "path": path},
@@ -841,15 +841,15 @@ class DataStore:
             cursor = await reader.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left, right, key) AS (
-                        SELECT node.hash, node.node_type, node.left, node.right, node.key
-                        FROM node WHERE node.hash == :root_hash
+                    tree_from_root_hash(hash, node_type, left_hash, right_hash, key) AS (
+                        SELECT node.hash, node.node_type, node.left_hash, node.right_hash, node.key
+                        FROM node WHERE node.hash  %(root_hash)s
                         UNION ALL
                         SELECT
-                            node.hash, node.node_type, node.left, node.right, node.key FROM node, tree_from_root_hash
-                        WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
+                            node.hash, node.node_type, node.left_hash, node.right_hash, node.key FROM node, tree_from_root_hash
+                        WHERE node.hash = tree_from_root_hash.left_hash OR node.hash = tree_from_root_hash.right_hash
                     )
-                SELECT key FROM tree_from_root_hash WHERE node_type == :node_type
+                SELECT key FROM tree_from_root_hash WHERE node_type = %(node_type)s
                 """,
                 {"root_hash": None if root_hash is None else root_hash, "node_type": NodeType.TERMINAL},
             )
@@ -1077,24 +1077,23 @@ class DataStore:
 
     async def clean_node_table(self, writer: psycopg.AsyncConnection[Any]) -> None:
         await writer.execute(
-            """
+            f"""
             WITH RECURSIVE pending_nodes AS (
                 SELECT node_hash AS hash FROM root
-                WHERE status = ?
+                WHERE status = {Status.PENDING.value}
                 UNION ALL
-                SELECT n.left FROM node n
+                SELECT n.left_hash FROM node n
                 INNER JOIN pending_nodes pn ON n.hash = pn.hash
-                WHERE n.left IS NOT NULL
+                WHERE n.left_hash IS NOT NULL
                 UNION ALL
-                SELECT n.right FROM node n
+                SELECT n.right_hash FROM node n
                 INNER JOIN pending_nodes pn ON n.hash = pn.hash
-                WHERE n.right IS NOT NULL
+                WHERE n.right_hash IS NOT NULL
             )
             DELETE FROM node
             WHERE hash NOT IN (SELECT hash FROM ancestors)
             AND hash NOT IN (SELECT hash FROM pending_nodes)
             """,
-            (Status.PENDING.value,),
         )
 
     async def insert_batch(
@@ -1188,11 +1187,11 @@ class DataStore:
                 SELECT * from node INNER JOIN (
                     SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
                     FROM ancestors
-                    WHERE ancestors.hash == :hash
-                    AND ancestors.tree_id == :tree_id
-                    AND ancestors.generation <= :generation
-                    GROUP BY hash
-                ) asc on asc.hash == node.hash
+                    WHERE ancestors.hash = %(hash)s
+                    AND ancestors.tree_id = %(tree_id)s
+                    AND ancestors.generation <= %(generation)s
+                    GROUP BY ancestor
+                ) fred ON fred.hash = node.hash
                 """,
                 {"hash": node_hash, "tree_id": tree_id, "generation": generation},
             )
@@ -1254,7 +1253,7 @@ class DataStore:
 
     async def get_node(self, node_hash: bytes32) -> Node:
         async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute("SELECT * FROM node WHERE hash == :hash LIMIT 1", {"hash": node_hash})
+            cursor = await reader.execute("SELECT * FROM node WHERE hash = %(hash)s LIMIT 1", {"hash": node_hash})
             row = await cursor.fetchone()
 
         if row is None:
@@ -1273,11 +1272,11 @@ class DataStore:
             cursor = await reader.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left, right, key, value) AS (
-                        SELECT node.* FROM node WHERE node.hash == :root_hash
+                    tree_from_root_hash(hash, node_type, left_hash, right_hash, key, value) AS (
+                        SELECT node.* FROM node WHERE node.hash = %(root_hash)s
                         UNION ALL
                         SELECT node.* FROM node, tree_from_root_hash
-                        WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
+                        WHERE node.hash = tree_from_root_hash.left_hash OR node.hash = tree_from_root_hash.right_hash
                     )
                 SELECT * FROM tree_from_root_hash
                 """,
@@ -1346,7 +1345,7 @@ class DataStore:
     async def get_first_generation(self, node_hash: bytes32, tree_id: bytes32) -> int:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT MIN(generation) AS generation FROM ancestors WHERE hash == :hash AND tree_id == :tree_id",
+                "SELECT MIN(generation) AS generation FROM ancestors WHERE hash = %(hash)s AND tree_id = %(tree_id)s",
                 {"hash": node_hash, "tree_id": tree_id},
             )
             row = await cursor.fetchone()
@@ -1389,14 +1388,14 @@ class DataStore:
     async def update_subscriptions_from_wallet(self, tree_id: bytes32, new_urls: List[str]) -> None:
         async with self.db_wrapper.writer() as writer:
             cursor = await writer.execute(
-                "SELECT * FROM subscriptions WHERE from_wallet == 1 AND tree_id == :tree_id",
+                "SELECT * FROM subscriptions WHERE from_wallet = 1 AND tree_id = %(tree_id)s",
                 {
                     "tree_id": tree_id,
                 },
             )
             old_urls = [row["url"] async for row in cursor]
             cursor = await writer.execute(
-                "SELECT * FROM subscriptions WHERE from_wallet == 0 AND tree_id == :tree_id",
+                "SELECT * FROM subscriptions WHERE from_wallet = 0 AND tree_id = %(tree_id)s",
                 {
                     "tree_id": tree_id,
                 },
@@ -1406,7 +1405,7 @@ class DataStore:
             removals = [url for url in old_urls if url not in new_urls]
             for url in removals:
                 await writer.execute(
-                    "DELETE FROM subscriptions WHERE url == :url AND tree_id == :tree_id",
+                    "DELETE FROM subscriptions WHERE url = %(url)s AND tree_id = %(tree_id)s",
                     {
                         "url": url,
                         "tree_id": tree_id,
@@ -1416,7 +1415,7 @@ class DataStore:
                 if url not in from_subscriptions_urls:
                     await writer.execute(
                         "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
-                        "VALUES (:tree_id, :url, 0, 0, 1)",
+                        "VALUES (%(tree_id)s, %(url)s, 0, 0, 1)",
                         {
                             "tree_id": tree_id,
                             "url": url,
@@ -1428,7 +1427,7 @@ class DataStore:
             # Add a fake subscription, so we always have the tree_id, even with no URLs.
             await writer.execute(
                 "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
-                "VALUES (:tree_id, NULL, NULL, NULL, 0)",
+                "VALUES (%(tree_id)s, NULL, NULL, NULL, 0)",
                 {
                     "tree_id": subscription.tree_id,
                 },
@@ -1449,7 +1448,7 @@ class DataStore:
             for server_info in new_servers:
                 await writer.execute(
                     "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
-                    "VALUES (:tree_id, :url, :ignore_till, :num_consecutive_failures, 0)",
+                    "VALUES (%(tree_id)s, %(url)s, :ignore_till, :num_consecutive_failures, 0)",
                     {
                         "tree_id": subscription.tree_id,
                         "url": server_info.url,
@@ -1462,7 +1461,7 @@ class DataStore:
         async with self.db_wrapper.writer() as writer:
             for url in urls:
                 await writer.execute(
-                    "DELETE FROM subscriptions WHERE tree_id == :tree_id AND url == :url",
+                    "DELETE FROM subscriptions WHERE tree_id = %(tree_id)s AND url = %(url)s",
                     {
                         "tree_id": tree_id,
                         "url": url,
@@ -1475,27 +1474,27 @@ class DataStore:
             cursor = await writer.execute(
                 """
                 WITH RECURSIVE all_nodes AS (
-                    SELECT a.hash, n.left, n.right
+                    SELECT a.hash, n.left_hash, n.right_hash
                     FROM ancestors AS a
                     JOIN node AS n ON a.hash = n.hash
-                    WHERE a.tree_id = :tree_id
+                    WHERE a.tree_id = %(tree_id)s
                 ),
                 pending_nodes AS (
                     SELECT node_hash AS hash FROM root
                     WHERE status = :status
                     UNION ALL
-                    SELECT n.left FROM node n
+                    SELECT n.left_hash FROM node n
                     INNER JOIN pending_nodes pn ON n.hash = pn.hash
-                    WHERE n.left IS NOT NULL
+                    WHERE n.left_hash IS NOT NULL
                     UNION ALL
-                    SELECT n.right FROM node n
+                    SELECT n.right_hash FROM node n
                     INNER JOIN pending_nodes pn ON n.hash = pn.hash
-                    WHERE n.right IS NOT NULL
+                    WHERE n.right_hash IS NOT NULL
                 )
 
-                SELECT hash, left, right
+                SELECT hash, left_hash, right_hash
                 FROM all_nodes
-                WHERE hash NOT IN (SELECT hash FROM ancestors WHERE tree_id != :tree_id)
+                WHERE hash NOT IN (SELECT hash FROM ancestors WHERE tree_id != %(tree_id)s)
                 AND hash NOT IN (SELECT hash from pending_nodes)
                 """,
                 {"tree_id": tree_id, "status": Status.PENDING.value},
@@ -1504,8 +1503,8 @@ class DataStore:
             ref_counts: Dict[bytes, int] = {}
             async for row in cursor:
                 hash = row["hash"]
-                left = row["left"]
-                right = row["right"]
+                left = row["left_hash"]
+                right = row["right_hash"]
                 if hash in to_delete:
                     prev_left, prev_right = to_delete[hash]
                     assert prev_left == left
@@ -1517,14 +1516,14 @@ class DataStore:
                 if right is not None:
                     ref_counts[right] = ref_counts.get(right, 0) + 1
 
-            await writer.execute("DELETE FROM ancestors WHERE tree_id == ?", (tree_id,))
-            await writer.execute("DELETE FROM root WHERE tree_id == ?", (tree_id,))
+            await writer.execute("DELETE FROM ancestors WHERE tree_id = ?", (tree_id,))
+            await writer.execute("DELETE FROM root WHERE tree_id = ?", (tree_id,))
             queue = [hash for hash in to_delete if ref_counts.get(hash, 0) == 0]
             while queue:
                 hash = queue.pop(0)
                 if hash not in to_delete:
                     continue
-                await writer.execute("DELETE FROM node WHERE hash == ?", (hash,))
+                await writer.execute("DELETE FROM node WHERE hash = ?", (hash,))
 
                 left, right = to_delete[hash]
                 if left is not None:
@@ -1540,18 +1539,18 @@ class DataStore:
     async def unsubscribe(self, tree_id: bytes32) -> None:
         async with self.db_wrapper.writer() as writer:
             await writer.execute(
-                "DELETE FROM subscriptions WHERE tree_id == :tree_id",
+                "DELETE FROM subscriptions WHERE tree_id = %(tree_id)s",
                 {"tree_id": tree_id},
             )
 
     async def rollback_to_generation(self, tree_id: bytes32, target_generation: int) -> None:
         async with self.db_wrapper.writer() as writer:
             await writer.execute(
-                "DELETE FROM ancestors WHERE tree_id == :tree_id AND generation > :target_generation",
+                "DELETE FROM ancestors WHERE tree_id = %(tree_id)s AND generation > %(target_generation)s",
                 {"tree_id": tree_id, "target_generation": target_generation},
             )
             await writer.execute(
-                "DELETE FROM root WHERE tree_id == :tree_id AND generation > :target_generation",
+                "DELETE FROM root WHERE tree_id = %(tree_id)s AND generation > %(target_generation)s",
                 {"tree_id": tree_id, "target_generation": target_generation},
             )
 
@@ -1559,7 +1558,7 @@ class DataStore:
         async with self.db_wrapper.writer() as writer:
             await writer.execute(
                 "UPDATE subscriptions SET ignore_till = :ignore_till, "
-                "num_consecutive_failures = :num_consecutive_failures WHERE tree_id = :tree_id AND url = :url",
+                "num_consecutive_failures = :num_consecutive_failures WHERE tree_id = %(tree_id)s AND url = %(url)s",
                 {
                     "ignore_till": server_info.ignore_till,
                     "num_consecutive_failures": server_info.num_consecutive_failures,

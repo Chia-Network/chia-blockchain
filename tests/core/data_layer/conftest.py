@@ -6,8 +6,8 @@ import sys
 import time
 from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator
 
-import pytest
 import psycopg
+import pytest
 
 # https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest

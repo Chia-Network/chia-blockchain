@@ -254,8 +254,8 @@ class InternalNode:
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
-            left_hash=bytes32(row["left"]),
-            right_hash=bytes32(row["right"]),
+            left_hash=bytes32(row["left_hash"]),
+            right_hash=bytes32(row["right_hash"]),
         )
 
     def other_child_hash(self, hash: bytes32) -> bytes32:

@@ -11,6 +11,7 @@ from random import Random
 from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
 
 import aiosqlite
+import psycopg
 import pytest
 
 from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
@@ -567,7 +568,7 @@ async def test_inserting_duplicate_key_fails(
 async def test_inserting_invalid_length_hash_raises_original_exception(
     data_store: DataStore,
 ) -> None:
-    with pytest.raises(aiosqlite.IntegrityError):
+    with pytest.raises(psycopg.errors.CheckViolation):
         # casting since we are testing an invalid case
         await data_store._insert_node(
             node_hash=cast(bytes32, b"\x05"),
@@ -584,7 +585,7 @@ async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
     data_store: DataStore,
     tree_id: bytes32,
 ) -> None:
-    with pytest.raises(aiosqlite.IntegrityError):
+    with pytest.raises(psycopg.errors.ForeignKeyViolation):
         # casting since we are testing an invalid case
         await data_store._insert_ancestor_table(
             left_hash=bytes32(b"\x01" * 32),
@@ -949,7 +950,7 @@ async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataSto
             await writer.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                VALUES(%(tree_id)s, %(generation)s, %(node_hash)s, %(status)s)
                 """,
                 {
                     "tree_id": tree_id,
@@ -975,7 +976,7 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
             await writer.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                VALUES(%(tree_id)s, %(generation)s, %(node_hash)s, %(status)s)
                 """,
                 {
                     "tree_id": tree_id,
@@ -996,7 +997,7 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
 async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.writer() as writer:
         await writer.execute(
-            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
+            "INSERT INTO node(hash, node_type, left, right) VALUES(%(hash)s, %(node_type)s, %(left)s, %(right)s)",
             {
                 "hash": a_bytes_32,
                 "node_type": NodeType.INTERNAL,

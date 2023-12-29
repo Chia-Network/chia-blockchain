@@ -147,7 +147,7 @@ class DBWrapperPG:
                 )
                 # read_connection.row_factory = row_factory
                 await read_connection.set_read_only(True)
-                await read_connection.set_isolation_level(psycopg.IsolationLevel.REPEATABLE_READ)
+                await read_connection.set_isolation_level(psycopg.IsolationLevel.READ_COMMITTED)
                 await self.add_connection(c=read_connection)
 
             try:
@@ -298,14 +298,14 @@ class DBWrapperPG:
             # if connection.in_transaction:
             #     yield connection
             # else:
-            await connection.execute("START TRANSACTION READ ONLY")
+            # await connection.execute("START TRANSACTION READ ONLY")
             try:
                 yield connection
             finally:
                 pass
-                # close the transaction with a rollback instead of commit just in
-                # case any modifications were submitted through this reader
-                # await connection.rollback()
+            # close the transaction with a rollback instead of commit just in
+            # case any modifications were submitted through this reader
+            # await connection.rollback()
 
     @contextlib.asynccontextmanager
     async def reader_no_transaction(self) -> AsyncIterator[psycopg.AsyncConnection[Any]]:
