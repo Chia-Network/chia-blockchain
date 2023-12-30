@@ -42,7 +42,7 @@ from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfi
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
@@ -341,7 +341,7 @@ class TestFullNodeBlockCompression:
         )
         extra_spend = SpendBundle(
             [
-                CoinSpend(
+                make_spend(
                     next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
                     Program.to(1),
                     Program.to([[51, ph, 30000]]),
@@ -387,7 +387,7 @@ class TestFullNodeBlockCompression:
         )
         extra_spend = SpendBundle(
             [
-                CoinSpend(
+                make_spend(
                     next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
                     Program.to(1),
                     Program.to([[51, ph, 30000]]),

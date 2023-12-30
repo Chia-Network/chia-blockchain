@@ -11,7 +11,7 @@ from chia_rs import G2Element
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import ValidationError
@@ -59,7 +59,7 @@ class TestStructStream(unittest.TestCase):
 
     def test_dont_use_both_legacy_and_modern(self):
         json_1 = BLANK_SPEND_BUNDLE.to_json_dict(include_legacy_keys=True, exclude_modern_keys=False)
-        with self.assertRaises(ValueError):
+        with pytest.warns(UserWarning):
             SpendBundle.from_json_dict(json_1)
 
 
@@ -107,7 +107,7 @@ def create_spends(num: int) -> Tuple[List[CoinSpend], List[Coin]]:
         coin = Coin(rand_hash(rng), puzzle_hash, 1000)
         new_coin = Coin(coin.name(), target_ph, 1)
         create_coin.append(new_coin)
-        spends.append(CoinSpend(coin, puzzle, Program.to(conditions)))
+        spends.append(make_spend(coin, puzzle, Program.to(conditions)))
 
     return spends, create_coin
 

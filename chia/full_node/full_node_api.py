@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
+import anyio
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
 
@@ -1271,22 +1272,12 @@ class FullNodeAPI:
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS), None)
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
-        await self.full_node.transaction_queue.put(
-            TransactionQueueEntry(request.transaction, None, spend_name, None, test), peer_id=None, high_priority=True
-        )
-        # Waits for the transaction to go into the mempool, times out after 45 seconds.
-        status, error = None, None
-        sleep_time = 0.01
-        for i in range(int(45 / sleep_time)):
-            await asyncio.sleep(sleep_time)
-            for potential_name, potential_status, potential_error in self.full_node.transaction_responses:
-                if spend_name == potential_name:
-                    status = potential_status
-                    error = potential_error
-                    break
-            if status is not None:
-                break
-        if status is None:
+        queue_entry = TransactionQueueEntry(request.transaction, None, spend_name, None, test)
+        await self.full_node.transaction_queue.put(queue_entry, peer_id=None, high_priority=True)
+        try:
+            with anyio.fail_after(delay=45):
+                status, error = await queue_entry.done
+        except TimeoutError:
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.PENDING), None)
         else:
             error_name = error.name if error is not None else None

@@ -6,6 +6,69 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.1.3 Chia blockchain 2023-12-18
+
+### Fixed
+* Fixed a regression in 2.1.2 that could cause a farmer to fail to be able to create a block in some cases
+
+## 2.1.2 Chia blockchain 2023-12-13
+
+### Fixed
+* Fix deep reorgs and add tests
+* Reduce possible Signage Point bursts by forwarding 4 most recent cached SPs only
+* Fix condition serialization in RPC client
+* Fix DID resync to not create DID wallets that don't belong to the current key
+* Fix `get_block_spends` to work correctly post hard-fork
+* Shutdown on startup failure and log to the log if possible
+* fix issue with syncing testnet10 from 0
+* Chunk SQLite query for old TR/TX conversion (fixes #16589)
+* Allow set_status to overwrite trade in store (fixes #16461)
+* Add cache to wallet node preventing resend of processing TX
+* Correct `FullNodeDiscovery.pending_tasks` typo without `s`
+* Fix `chia wallet coins list` by adding NFT, DID, DAO_CAT to wallets denominated in mojos
+* generalize JSON serializer
+* Fix possible peak height race
+* Fix invalid sync request
+* request blocks in batches of 32 instead of 33 (saves 3% bandwidth)
+* Fix `get_block_generator` fork detection
+* Fix set_status accidental arg (fixes #16817)
+* Fix issues with upgrading Chia via RPM by claiming ownership of `/opt/chia` in the RPM
+* clean out `/opt/chia` before install and after removal of rpm
+
+### Added
+* Allow DApps to use WalletConnect to sign customized puzzles by extending sign APIs
+* Add support for lists of peers in the config (thanks @felixbrucker)
+* Update to support looking up mnemonic by just the first 4 letters of each word
+* Allow the daemon to use TLS v1.2 via config flag (thanks @dkackman)
+* Add systemd init files to CLI-only Linux packages
+* DL: remove data from the DB on unsubscribe
+
+### Changed
+* ban peers for 10 minutes when violating consensus rules
+* Remove `tx_endpoint` from `select_coins`
+* DID wallet coin_added by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/16256
+* Use network overrides for default port for WalletPeers
+* Improve clarity of legacy support policy language
+* Add config option to set rpc timeout and use it for simulator tests
+* rename `ClassgroupElement.from_bytes()`
+* Optimize CRCAT trades
+* harmonize `SerializedProgram` with `Program`
+* Swap some info logs in seeder to warning
+* Distinguish `insufficient_partials` from `invalid_partials`
+* transition away from `__bytes__` conversion for fixed-size integers
+* Use BLS from `chia_rs` and stop using `blspy` wheel in chia-blockchain
+* simplify the interface to `mempool_manager.new_peak()`
+* reduce redundant calls to compute the header hash
+* Change `-h` to `-k` for `--key` flag for datalayer `get_value` cli command
+* Update `chia_rs` to `0.2.13`
+* Update `clvm_tools` to `0.4.7`
+* Update `aiohttp` to `3.9.1` (fixes a WebSocket bug introduced in 3.9.0)
+* Change `chia show keys --show-mnemonic-seed` to also show farmer private key (thanks xchdata1)
+* Adjust ban times when unable to download properly DL DAT files
+* return `List[TransactionRecord]` from nft bulk mint functions
+* DL: delete full files when subscribed to a datastore per config
+
+
 ## 2.1.1 Chia blockchain 2023-10-11
 
 ### Fixed

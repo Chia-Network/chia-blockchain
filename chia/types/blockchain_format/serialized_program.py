@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import io
-from typing import Tuple, Type
+from typing import Tuple
 
 from chia_rs import MEMPOOL_MODE, run_chia_program, serialized_length, tree_hash
 from clvm import SExp
+from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -33,32 +34,36 @@ class SerializedProgram:
     An opaque representation of a clvm program. It has a more limited interface than a full SExp
     """
 
-    _buf: bytes = b""
+    _buf: bytes
 
-    @classmethod
-    def parse(cls: Type[SerializedProgram], f: io.BytesIO) -> SerializedProgram:
+    def __init__(self, buf: bytes) -> None:
+        assert isinstance(buf, bytes)
+        self._buf = buf
+
+    @staticmethod
+    def parse(f: io.BytesIO) -> SerializedProgram:
         length = serialized_length(f.getvalue()[f.tell() :])
         return SerializedProgram.from_bytes(f.read(length))
 
     def stream(self, f: io.BytesIO) -> None:
         f.write(self._buf)
 
-    @classmethod
-    def from_bytes(cls: Type[SerializedProgram], blob: bytes) -> SerializedProgram:
-        ret = SerializedProgram()
+    @staticmethod
+    def from_bytes(blob: bytes) -> SerializedProgram:
         assert serialized_length(blob) == len(blob)
-        ret._buf = bytes(blob)
-        return ret
+        return SerializedProgram(bytes(blob))
 
-    @classmethod
-    def fromhex(cls: Type[SerializedProgram], hexstr: str) -> SerializedProgram:
-        return cls.from_bytes(hexstr_to_bytes(hexstr))
+    @staticmethod
+    def fromhex(hexstr: str) -> SerializedProgram:
+        return SerializedProgram.from_bytes(hexstr_to_bytes(hexstr))
 
-    @classmethod
-    def from_program(cls: Type[SerializedProgram], p: Program) -> SerializedProgram:
-        ret = SerializedProgram()
-        ret._buf = bytes(p)
-        return ret
+    @staticmethod
+    def from_program(p: Program) -> SerializedProgram:
+        return SerializedProgram(bytes(p))
+
+    @staticmethod
+    def to(o: CastableType) -> SerializedProgram:
+        return SerializedProgram(Program.to(o).as_bin())
 
     def to_program(self) -> Program:
         return Program.from_bytes(self._buf)

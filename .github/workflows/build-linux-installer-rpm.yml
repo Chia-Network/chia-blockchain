@@ -183,6 +183,15 @@ jobs:
         cd ./build_scripts
         bash build_linux_rpm-2-installer.sh amd64
 
+    - name: Upload fpm-generated rpm spec files
+      uses: actions/upload-artifact@v3
+      with:
+        if-no-files-found: error
+        name: spec
+        path: |
+          build_scripts/dist/cli.spec
+          build_scripts/dist/gui.spec
+
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v3
       with:
@@ -333,7 +342,7 @@ jobs:
           curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-linux-rpm
 
   test:
-    name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }}
+    name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.state.name }}
     runs-on: ${{ matrix.os }}
     needs:
     - build
@@ -360,14 +369,26 @@ jobs:
         - name: rockylinux:9
           type: rocky
           url: "docker://rockylinux:9"
+          # bypass this error for now: Problem: The operation would result in removing the following protected packages: systemd-udev
+          noautoremove:
+            gui: --noautoremove
         - name: build image
           type: rocky
           url: "docker://chianetwork/rocky8-builder:latest"
         mode:
         - name: GUI
+          matrix: gui
           file: chia-blockchain-[0,1,2,3,4,5,6,7,8,9]*.rpm
+          package: chia-blockchain
         - name: CLI
+          matrix: cli
           file: chia-blockchain-cli-[0,1,2,3,4,5,6,7,8,9]*.rpm
+          package: chia-blockchain-cli
+        state:
+          - name: Dirty
+            matrix: dirty
+          - name: Clean
+            matrix: clean
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
@@ -379,6 +400,14 @@ jobs:
         name: chia-installers-linux-rpm-intel
         path: packages
 
+    - name: Dirty the environment for the sake of testing
+      if: matrix.state.matrix == 'dirty'
+      run: |
+        # this has been known to mess up the version detection, the empty directory should be removed
+        mkdir --parents /opt/chia/chia_blockchain-0.1.dist-info
+        # making sure that files are not removed
+        touch /opt/chia/touched
+
     - name: Install package
       run: |
         ls -l "${{ steps.download.outputs.download-path }}"
@@ -386,4 +415,49 @@ jobs:
 
     - name: Run chia version
       run: |
-        chia version
+        ACTUAL=$(chia version)
+        echo "  actual version: ${ACTUAL}"
+        if [ "${ACTUAL}" = "None" ]
+        then
+          echo "  !!! should not be None"
+          false
+        else
+          echo "  :] at least it isn't None"
+        fi
+
+    - name: Verify /opt/chia present
+      run: |
+        if [ ! -e /opt/chia ]
+        then
+          ls -l /opt
+          false
+        fi
+
+    - name: Remove package
+      run: |
+        yum remove -y ${{ matrix.distribution.noautoremove[matrix.mode.matrix] }} ${{ matrix.mode.package }}
+
+    - name: Verify /opt/chia not present
+      if: matrix.state.matrix == 'clean'
+      run: |
+        if [ -e /opt/chia ]
+        then
+          ls -lR /opt/chia
+          false
+        fi
+
+    - name: Verify /opt/chia contains only touched file
+      if: matrix.state.matrix == 'dirty'
+      run: |
+        ACTUAL=$(ls -a /opt/chia)
+        EXPECTED=$(echo -e '.\n..\ntouched')
+        echo "  actual: ${ACTUAL}"
+        echo "expected: ${EXPECTED}"
+        if [ "${ACTUAL}" != "${EXPECTED}" ]
+        then
+          echo "  !!! they do not match"
+          ls -lR /opt/chia
+          false
+        else
+          echo "  :] they match"
+        fi

@@ -29,7 +29,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import Balance, WalletNode
 from tests.conftest import ConsensusMode
 from tests.util.misc import CoinGenerator
-from tests.util.setup_nodes import SimulatorsAndWallets
+from tests.util.setup_nodes import OldSimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert
 
 
@@ -330,7 +330,7 @@ def test_timestamp_in_sync(root_path_populated_with_config: Path, testing: bool,
 
 @pytest.mark.anyio
 async def test_get_timestamp_for_height_from_peer(
-    simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
 
@@ -384,7 +384,7 @@ async def test_get_timestamp_for_height_from_peer(
 
 
 @pytest.mark.anyio
-async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: SimulatorsAndWallets) -> None:
+async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
     _, [(node, _)], bt = simulator_and_wallet
     puzzle_hashes = await node.get_puzzle_hashes_to_subscribe()
     assert len(puzzle_hashes) > 1
@@ -394,7 +394,7 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: Simulators
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
 async def test_get_balance(
-    simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
     full_node_server = full_node_api.full_node.server
@@ -472,7 +472,7 @@ async def test_get_balance(
 
 @pytest.mark.anyio
 async def test_add_states_from_peer_reorg_failure(
-    simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
@@ -490,7 +490,7 @@ async def test_add_states_from_peer_reorg_failure(
 
 @pytest.mark.anyio
 async def test_add_states_from_peer_untrusted_shutdown(
-    simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
@@ -509,7 +509,7 @@ async def test_add_states_from_peer_untrusted_shutdown(
 @pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")
 @pytest.mark.anyio
 async def test_transaction_send_cache(
-    self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, monkeypatch: pytest.MonkeyPatch
+    self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """
     The purpose of this test is to test that calling _resend_queue on the wallet node does not result in resending a

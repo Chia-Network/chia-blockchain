@@ -654,7 +654,7 @@ class FullNodeRpcApi:
 
     async def get_coin_record_by_name(self, request: Dict[str, Any]) -> EndpointResult:
         """
-        Retrieves a coin record by it's name.
+        Retrieves a coin record by its name.
         """
         if "name" not in request:
             raise ValueError("Name not in request")
