@@ -152,10 +152,14 @@ async def test_request_block_headers_rejected(
     [dict(disable_capabilities=[Capability.BLOCK_HEADERS]), dict(disable_capabilities=[Capability.BASE])],
     indirect=True,
 )
+@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_basic_sync_wallet(
-    two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
+    two_wallet_nodes: OldSimulatorsAndWallets,
+    default_400_blocks: List[FullBlock],
+    self_hostname: str,
+    use_delta_sync: bool,
 ) -> None:
     [full_node_api], wallets, bt = two_wallet_nodes
     full_node = full_node_api.full_node
@@ -163,9 +167,11 @@ async def test_basic_sync_wallet(
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+    wallets[0][0].config["use_delta_sync"] = use_delta_sync
 
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
+    wallets[1][0].config["use_delta_sync"] = use_delta_sync
 
     dummy_peer_info = PeerInfo("0.0.0.0", 0)
     for block_batch in to_batches(default_400_blocks, 64):
@@ -201,6 +207,7 @@ async def test_basic_sync_wallet(
     [dict(disable_capabilities=[Capability.BLOCK_HEADERS]), dict(disable_capabilities=[Capability.BASE])],
     indirect=True,
 )
+@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_almost_recent(
@@ -208,6 +215,7 @@ async def test_almost_recent(
     default_400_blocks: List[FullBlock],
     self_hostname: str,
     blockchain_constants: ConsensusConstants,
+    use_delta_sync: bool,
 ) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
     [full_node_api], wallets, bt = two_wallet_nodes
@@ -216,9 +224,11 @@ async def test_almost_recent(
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+    wallets[0][0].config["use_delta_sync"] = use_delta_sync
 
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
+    wallets[1][0].config["use_delta_sync"] = use_delta_sync
 
     base_num_blocks = 400
     dummy_peer_info = PeerInfo("0.0.0.0", 0)
@@ -248,9 +258,13 @@ async def test_almost_recent(
         await time_out_assert(30, wallet.get_confirmed_balance, 10 * calculate_pool_reward(uint32(1000)))
 
 
+@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.anyio
 async def test_backtrack_sync_wallet(
-    two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
+    two_wallet_nodes: OldSimulatorsAndWallets,
+    default_400_blocks: List[FullBlock],
+    self_hostname: str,
+    use_delta_sync: bool,
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
@@ -258,9 +272,11 @@ async def test_backtrack_sync_wallet(
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+    wallets[0][0].config["use_delta_sync"] = use_delta_sync
 
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
+    wallets[1][0].config["use_delta_sync"] = use_delta_sync
 
     for block in default_400_blocks[:20]:
         await full_node_api.full_node.add_block(block)
@@ -273,9 +289,13 @@ async def test_backtrack_sync_wallet(
 
 
 # Tests a reorg with the wallet
+@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.anyio
 async def test_short_batch_sync_wallet(
-    two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
+    two_wallet_nodes: OldSimulatorsAndWallets,
+    default_400_blocks: List[FullBlock],
+    self_hostname: str,
+    use_delta_sync: bool,
 ) -> None:
     [full_node_api], wallets, _ = two_wallet_nodes
     full_node = full_node_api.full_node
@@ -283,9 +303,11 @@ async def test_short_batch_sync_wallet(
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+    wallets[0][0].config["use_delta_sync"] = use_delta_sync
 
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
+    wallets[1][0].config["use_delta_sync"] = use_delta_sync
 
     for block_batch in to_batches(default_400_blocks[:200], 64):
         await full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
@@ -297,6 +319,7 @@ async def test_short_batch_sync_wallet(
         await time_out_assert(100, wallet_height_at_least, True, wallet_node, 199)
 
 
+@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_long_sync_wallet(
@@ -304,6 +327,7 @@ async def test_long_sync_wallet(
     default_1000_blocks: List[FullBlock],
     default_400_blocks: List[FullBlock],
     self_hostname: str,
+    use_delta_sync: bool,
 ) -> None:
     [full_node_api], wallets, bt = two_wallet_nodes
     full_node = full_node_api.full_node
@@ -311,9 +335,11 @@ async def test_long_sync_wallet(
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+    wallets[0][0].config["use_delta_sync"] = use_delta_sync
 
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
+    wallets[1][0].config["use_delta_sync"] = use_delta_sync
 
     dummy_peer_info = PeerInfo("0.0.0.0", 0)
     for block_batch in to_batches(default_400_blocks, 64):
@@ -350,10 +376,14 @@ async def test_long_sync_wallet(
         )
 
 
+@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_wallet_reorg_sync(
-    two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
+    two_wallet_nodes: OldSimulatorsAndWallets,
+    default_400_blocks: List[FullBlock],
+    self_hostname: str,
+    use_delta_sync: bool,
 ) -> None:
     num_blocks = 5
     [full_node_api], wallets, bt = two_wallet_nodes
@@ -362,9 +392,11 @@ async def test_wallet_reorg_sync(
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+    wallets[0][0].config["use_delta_sync"] = use_delta_sync
 
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
+    wallets[1][0].config["use_delta_sync"] = use_delta_sync
 
     phs = []
     for wallet_node, wallet_server in wallets:
@@ -690,17 +722,21 @@ It runs in seven phases:
         (105, 1_000_000, 1),  # default filter level (1m mojos), default dust size (1)
     ],
 )
+@pytest.mark.parametrize("use_delta_sync", [False, True])
 async def test_dusted_wallet(
     self_hostname: str,
     two_wallet_nodes_custom_spam_filtering: OldSimulatorsAndWallets,
     spam_filter_after_n_txs: int,
     xch_spam_amount: int,
     dust_value: int,
+    use_delta_sync: bool,
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes_custom_spam_filtering
 
     farm_wallet_node, farm_wallet_server = wallets[0]
+    farm_wallet_node.config["use_delta_sync"] = use_delta_sync
     dust_wallet_node, dust_wallet_server = wallets[1]
+    dust_wallet_node.config["use_delta_sync"] = use_delta_sync
 
     # Create two wallets, one for farming (not used for testing), and one for testing dust.
     farm_wallet = farm_wallet_node.wallet_state_manager.main_wallet
@@ -1387,6 +1423,7 @@ async def test_bad_peak_mismatch(
         log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
 
 
+@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_long_sync_untrusted_break(
@@ -1396,11 +1433,13 @@ async def test_long_sync_untrusted_break(
     self_hostname: str,
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
+    use_delta_sync: bool,
 ) -> None:
     [trusted_full_node_api, untrusted_full_node_api], [(wallet_node, wallet_server)], _ = setup_two_nodes_and_wallet
     trusted_full_node_server = trusted_full_node_api.full_node.server
     untrusted_full_node_server = untrusted_full_node_api.full_node.server
     wallet_node.config["trusted_peers"] = {trusted_full_node_server.node_id.hex(): None}
+    wallet_node.config["use_delta_sync"] = use_delta_sync
 
     sync_canceled = False
 
