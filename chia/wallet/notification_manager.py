@@ -11,7 +11,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
@@ -99,7 +99,7 @@ class NotificationManager:
         notification_puzzle: Program = construct_notification(target, amount)
         notification_hash: bytes32 = notification_puzzle.get_tree_hash()
         notification_coin: Coin = Coin(origin_coin, notification_hash, amount)
-        notification_spend = CoinSpend(
+        notification_spend = make_spend(
             notification_coin,
             notification_puzzle,
             Program.to(None),

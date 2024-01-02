@@ -178,7 +178,7 @@ def dao_create_cmd(
 ) -> None:
     from .dao_funcs import create_dao_wallet
 
-    if self_destruct == proposal_timelock:  # pragma: no cover
+    if self_destruct == proposal_timelock:
         raise ValueError("Self Destruct and Proposal Timelock cannot be the same value")
 
     print("Creating new DAO")

@@ -684,15 +684,15 @@ class ChiaServer:
             return True
         inbound_count = len(self.get_connections(node_type, outbound=False))
         if node_type == NodeType.FULL_NODE:
-            return inbound_count < cast(int, self.config["target_peer_count"]) - cast(
-                int, self.config["target_outbound_peer_count"]
+            return inbound_count < cast(int, self.config.get("target_peer_count", 40)) - cast(
+                int, self.config.get("target_outbound_peer_count", 8)
             )
         if node_type == NodeType.WALLET:
-            return inbound_count < cast(int, self.config["max_inbound_wallet"])
+            return inbound_count < cast(int, self.config.get("max_inbound_wallet", 20))
         if node_type == NodeType.FARMER:
-            return inbound_count < cast(int, self.config["max_inbound_farmer"])
+            return inbound_count < cast(int, self.config.get("max_inbound_farmer", 10))
         if node_type == NodeType.TIMELORD:
-            return inbound_count < cast(int, self.config["max_inbound_timelord"])
+            return inbound_count < cast(int, self.config.get("max_inbound_timelord", 5))
         return True
 
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict[str, Any]) -> bool:

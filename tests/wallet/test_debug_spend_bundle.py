@@ -8,7 +8,7 @@ from chia_rs import AugSchemeMPL, PrivateKey
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
@@ -49,17 +49,17 @@ def test_debug_spend_bundle() -> None:
     debug_spend_bundle(
         SpendBundle(
             [
-                CoinSpend(
+                make_spend(
                     coin_bad_reveal,
                     ACS,
                     Program.to(None),
                 ),
-                CoinSpend(
+                make_spend(
                     coin,
                     ACS,
                     solution,
                 ),
-                CoinSpend(
+                make_spend(
                     child_coin,
                     ACS,
                     Program.to(None),

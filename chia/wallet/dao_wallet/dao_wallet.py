@@ -19,7 +19,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
@@ -746,7 +746,7 @@ class DAOWallet:
 
         genesis_launcher_solution = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)])
 
-        launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+        launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
 
         launcher_proof = LineageProof(
@@ -830,7 +830,7 @@ class DAOWallet:
                 inner_sol,
             ]
         )
-        eve_coin_spend = CoinSpend(eve_coin, full_treasury_puzzle, fullsol)
+        eve_coin_spend = make_spend(eve_coin, full_treasury_puzzle, fullsol)
         eve_spend_bundle = SpendBundle([eve_coin_spend], G2Element())
 
         next_proof = LineageProof(
@@ -910,7 +910,7 @@ class DAOWallet:
             [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
         )
 
-        launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+        launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
         eve_coin = Coin(launcher_coin.name(), full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount)
 
@@ -1023,7 +1023,7 @@ class DAOWallet:
                 inner_sol,
             ]
         )
-        list_of_coinspends = [CoinSpend(eve_coin, full_proposal_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(eve_coin, full_proposal_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend])
 
@@ -1112,7 +1112,7 @@ class DAOWallet:
             ]
         )
         full_proposal_puzzle = curry_singleton(proposal_id, proposal_info.current_innerpuz)
-        list_of_coinspends = [CoinSpend(proposal_info.current_coin, full_proposal_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(proposal_info.current_coin, full_proposal_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         if fee > 0:
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
@@ -1213,14 +1213,14 @@ class DAOWallet:
                 solution,
             ]
         )
-        proposal_cs = CoinSpend(proposal_info.current_coin, full_proposal_puzzle, fullsol)
+        proposal_cs = make_spend(proposal_info.current_coin, full_proposal_puzzle, fullsol)
         if not self_destruct:
             timer_puzzle = get_proposal_timer_puzzle(
                 self.get_cat_tail_hash(),
                 proposal_info.proposal_id,
                 self.dao_info.treasury_id,
             )
-            c_a, curried_args = uncurry_proposal(proposal_info.current_innerpuz)
+            c_a, curried_args_prg = uncurry_proposal(proposal_info.current_innerpuz)
             (
                 SELF_HASH,
                 PROPOSAL_ID,
@@ -1241,7 +1241,7 @@ class DAOWallet:
                     proposal_info.current_coin.amount,
                 ]
             )
-            timer_cs = CoinSpend(proposal_info.timer_coin, timer_puzzle, timer_solution)
+            timer_cs = make_spend(proposal_info.timer_coin, timer_puzzle, timer_solution)
 
         full_treasury_puz = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
         assert isinstance(self.dao_info.current_treasury_coin, Coin)
@@ -1261,7 +1261,7 @@ class DAOWallet:
                 ]
             )
 
-            proposal_type, curried_args = get_proposal_args(puzzle_reveal)
+            proposal_type, curried_args_prg = get_proposal_args(puzzle_reveal)
             if proposal_type == ProposalType.SPEND:
                 (
                     TREASURY_SINGLETON_STRUCT,
@@ -1269,7 +1269,7 @@ class DAOWallet:
                     CONDITIONS,
                     LIST_OF_TAILHASH_CONDITIONS,
                     P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
-                ) = curried_args.as_iter()
+                ) = curried_args_prg.as_iter()
 
                 sum = 0
                 coin_spends = []
@@ -1286,7 +1286,7 @@ class DAOWallet:
                             cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
                             cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
                             mint_amount = cond.rest().rest().first().as_int()
-                            new_cat_puzhash = cond.rest().rest().rest().first().first().as_atom()
+                            new_cat_puzhash = bytes32(cond.rest().rest().rest().first().first().as_atom())
                             eve_puzzle = curry_cat_eve(new_cat_puzhash)
                             if genesis_id is None:
                                 tail_reconstruction = cat_wallet.cat_info.my_tail
@@ -1308,7 +1308,7 @@ class DAOWallet:
                                     mint_amount,
                                 ]
                             )
-                            coin_spends.append(CoinSpend(cat_launcher_coin, cat_launcher, solution))
+                            coin_spends.append(make_spend(cat_launcher_coin, cat_launcher, solution))
                             eve_coin = Coin(cat_launcher_coin.name(), full_puz.get_tree_hash(), mint_amount)
                             tail_solution = Program.to([cat_launcher_coin.parent_coin_info, cat_launcher_coin.amount])
                             solution = Program.to([mint_amount, tail_reconstruction, tail_solution])
@@ -1346,10 +1346,10 @@ class DAOWallet:
                                 xch_coin.name(),
                             ]
                         )
-                        coin_spends.append(CoinSpend(xch_coin, p2_singleton_puzzle, solution))
+                        coin_spends.append(make_spend(xch_coin, p2_singleton_puzzle, solution))
                     delegated_puzzle_sb = SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))
                 for tail_hash_conditions_pair in LIST_OF_TAILHASH_CONDITIONS.as_iter():
-                    tail_hash: bytes32 = tail_hash_conditions_pair.first().as_atom()
+                    tail_hash = bytes32(tail_hash_conditions_pair.first().as_atom())
                     conditions: Program = tail_hash_conditions_pair.rest().first()
                     sum_of_conditions = 0
                     sum_of_coins = 0
@@ -1436,7 +1436,7 @@ class DAOWallet:
                     PASS_MARGIN,
                     PROPOSAL_SELF_DESTRUCT_TIME,
                     ORACLE_SPEND_DELAY,
-                ) = curried_args.as_iter()
+                ) = curried_args_prg.as_iter()
                 coin_spends = []
                 treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
                 delegated_solution = Program.to([])
@@ -1467,7 +1467,7 @@ class DAOWallet:
             ]
         )
 
-        treasury_cs = CoinSpend(self.dao_info.current_treasury_coin, full_treasury_puz, full_treasury_solution)
+        treasury_cs = make_spend(self.dao_info.current_treasury_coin, full_treasury_puz, full_treasury_solution)
 
         if self_destruct:
             spend_bundle = SpendBundle([proposal_cs, treasury_cs], AugSchemeMPL.aggregate([]))
@@ -1614,7 +1614,7 @@ class DAOWallet:
                 lineage_proof: LineageProof = await self.fetch_singleton_lineage_proof(proposal_info.current_coin)
                 solution = Program.to([lineage_proof.to_program(), proposal_info.current_coin.amount, inner_solution])
                 finished_puz = get_finished_state_puzzle(proposal_info.proposal_id)
-                cs = CoinSpend(proposal_info.current_coin, finished_puz, solution)
+                cs = make_spend(proposal_info.current_coin, finished_puz, solution)
                 prop_sb = SpendBundle([cs], AugSchemeMPL.aggregate([]))
                 spends.append(prop_sb)
 
@@ -1893,8 +1893,8 @@ class DAOWallet:
                 new_proposal_info = ProposalInfo(
                     singleton_id,
                     puzzle,
-                    new_total_votes,
-                    new_yes_votes,
+                    uint64(new_total_votes),
+                    uint64(new_yes_votes),
                     current_coin,
                     current_innerpuz,
                     current_info.timer_coin,
@@ -1928,7 +1928,7 @@ class DAOWallet:
                 raise ValueError("self.dao_info.current_treasury_innerpuz is None")
 
             timer_coin_puzhash = get_proposal_timer_puzzle(
-                cat_tail_hash.as_atom(),
+                bytes32(cat_tail_hash.as_atom()),
                 singleton_id,
                 self.dao_info.treasury_id,
             ).get_tree_hash()
@@ -2097,7 +2097,8 @@ class DAOWallet:
         """
 
         self.log.info(
-            f"DAOWallet.apply_state_transition called with the height: {block_height} and CoinSpend of {new_state.coin.name()}."
+            f"DAOWallet.apply_state_transition called with the height: {block_height} "
+            f"and CoinSpend of {new_state.coin.name()}."
         )
         singleton_id = get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         if not singleton_id:  # pragma: no cover

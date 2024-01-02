@@ -155,9 +155,6 @@ class FullNode:
     _add_transaction_semaphore: Optional[asyncio.Semaphore] = None
     _db_wrapper: Optional[DBWrapper2] = None
     _hint_store: Optional[HintStore] = None
-    transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = dataclasses.field(
-        default_factory=list
-    )
     _block_store: Optional[BlockStore] = None
     _coin_store: Optional[CoinStore] = None
     _mempool_manager: Optional[MempoolManager] = None
@@ -276,7 +273,7 @@ class FullNode:
             )
 
             self._mempool_manager = MempoolManager(
-                get_coin_record=self.coin_store.get_coin_record,
+                get_coin_records=self.coin_store.get_coin_records,
                 consensus_constants=self.constants,
                 multiprocessing_context=self.multiprocessing_context,
                 single_threaded=single_threaded,
@@ -285,7 +282,6 @@ class FullNode:
             # Transactions go into this queue from the server, and get sent to respond_transaction
             self._transaction_queue = TransactionQueue(1000, self.log)
             self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
-            self.transaction_responses = []
 
             self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
@@ -470,9 +466,7 @@ class FullNode:
         peer = entry.peer
         try:
             inc_status, err = await self.add_transaction(entry.transaction, entry.spend_name, peer, entry.test)
-            self.transaction_responses.append((entry.spend_name, inc_status, err))
-            if len(self.transaction_responses) > 50:
-                self.transaction_responses = self.transaction_responses[1:]
+            entry.done.set_result((inc_status, err))
         except asyncio.CancelledError:
             error_stack = traceback.format_exc()
             self.log.debug(f"Cancelling _handle_one_transaction, closing: {error_stack}")

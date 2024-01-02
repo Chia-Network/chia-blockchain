@@ -71,11 +71,12 @@ class CostLogger:
             height=DEFAULT_CONSTANTS.HARD_FORK_HEIGHT,
             constants=DEFAULT_CONSTANTS,
         )
-        self.cost_dict[descriptor] = npc_result.cost
+        cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
+        self.cost_dict[descriptor] = cost
         cost_to_subtract: int = 0
         for cs in spend_bundle.coin_spends:
             cost_to_subtract += len(bytes(cs.puzzle_reveal)) * DEFAULT_CONSTANTS.COST_PER_BYTE
-        self.cost_dict_no_puzs[descriptor] = npc_result.cost - cost_to_subtract
+        self.cost_dict_no_puzs[descriptor] = cost - cost_to_subtract
         return spend_bundle
 
     def log_cost_statistics(self) -> str:
@@ -156,7 +157,7 @@ class SpendSim:
 
         async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
             self.coin_store = await CoinStore.create(self.db_wrapper)
-            self.mempool_manager = MempoolManager(self.coin_store.get_coin_record, defaults)
+            self.mempool_manager = MempoolManager(self.coin_store.get_coin_records, defaults)
             self.defaults = defaults
 
             # Load the next data if there is any
