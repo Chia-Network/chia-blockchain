@@ -1370,7 +1370,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trust
     [True, False],
 )
 @pytest.mark.anyio
-async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_bulk_transfer(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -1395,8 +1395,8 @@ async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("127.0.0.1", full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo("127.0.0.1", full_node_server.get_port()), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     for _ in range(1, num_blocks + 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
