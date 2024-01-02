@@ -157,7 +157,7 @@ async def test_cost_invalid_type(setup_node_and_rpc: Tuple[FullNodeRpcClient, Fu
 async def test_tx_invalid_type(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
     client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(InvalidTypeError):
-        await full_node_rpc_api.get_fee_estimate({"target_times": [], "spend_bundle": 1})
+        await full_node_rpc_api.get_fee_estimate({"target_times": [], "spend_bundle": {"coin_spends": 1}})
 
 
 #####################
