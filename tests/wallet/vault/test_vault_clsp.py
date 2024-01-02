@@ -4,8 +4,7 @@ from hashlib import sha256
 from typing import Tuple
 
 import pytest
-from blspy import PrivateKey
-from chia_rs import ENABLE_SECP_OPS
+from chia_rs import ENABLE_SECP_OPS, PrivateKey
 from ecdsa import NIST256p, SigningKey
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
