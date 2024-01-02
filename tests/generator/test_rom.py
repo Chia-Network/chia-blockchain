@@ -133,7 +133,10 @@ class TestROM:
         else:
             cost = EXPECTED_COST1
         assert npc_result.error is None
-        assert npc_result.cost == cost + ConditionCost.CREATE_COIN.value + (len(bytes(gen.program)) * COST_PER_BYTE)
+        assert npc_result.conds is not None
+        assert npc_result.conds.cost == cost + ConditionCost.CREATE_COIN.value + (
+            len(bytes(gen.program)) * COST_PER_BYTE
+        )
         assert npc_result.conds is not None
 
         spend = Spend(

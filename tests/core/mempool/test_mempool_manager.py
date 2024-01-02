@@ -698,7 +698,7 @@ def mk_item(
     # can_replace()
     spends = [make_spend(c, SerializedProgram.to(None), SerializedProgram.to(None)) for c in coins]
     spend_bundle = SpendBundle(spends, G2Element())
-    npc_result = NPCResult(None, make_test_conds(cost=cost, spend_ids=[c.name() for c in coins]), uint64(cost))
+    npc_result = NPCResult(None, make_test_conds(cost=cost, spend_ids=[c.name() for c in coins]))
     return MempoolItem(
         spend_bundle,
         uint64(fee),
@@ -1258,9 +1258,10 @@ def test_dedup_info_nothing_to_do() -> None:
     ]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
+    assert mempool_item.npc_result.conds is not None
     eligible_coin_spends = EligibleCoinSpends()
     unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.conds.cost
     )
     assert unique_coin_spends == sb.coin_spends
     assert cost_saving == 0
@@ -1276,10 +1277,11 @@ def test_dedup_info_eligible_1st_time() -> None:
     ]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
+    assert mempool_item.npc_result.conds is not None
     eligible_coin_spends = EligibleCoinSpends()
     solution = SerializedProgram.to(conditions)
     unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.conds.cost
     )
     assert unique_coin_spends == sb.coin_spends
     assert cost_saving == 0
@@ -1301,9 +1303,10 @@ def test_dedup_info_eligible_but_different_solution() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
+    assert mempool_item.npc_result.conds is not None
     with pytest.raises(ValueError, match="Solution is different from what we're deduplicating on"):
         eligible_coin_spends.get_deduplication_info(
-            bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+            bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.conds.cost
         )
 
 
@@ -1321,8 +1324,9 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
     sb = SpendBundle.aggregate([sb1, sb2])
     mempool_item = mempool_item_from_spendbundle(sb)
+    assert mempool_item.npc_result.conds is not None
     unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.conds.cost
     )
     # Only the eligible one that we encountered more than once gets deduplicated
     assert unique_coin_spends == sb2.coin_spends
@@ -1365,8 +1369,9 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     sb3 = spend_bundle_from_conditions(sb3_conditions, TEST_COIN3)
     sb = SpendBundle.aggregate([sb1, sb2, sb3])
     mempool_item = mempool_item_from_spendbundle(sb)
+    assert mempool_item.npc_result.conds is not None
     unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.conds.cost
     )
     assert unique_coin_spends == sb3.coin_spends
     saved_cost2 = uint64(1800044)

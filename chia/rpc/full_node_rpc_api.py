@@ -873,7 +873,7 @@ class FullNodeRpcApi:
             )
             if npc_result.error is not None:
                 raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")
-            cost = npc_result.cost
+            cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
         elif "cost" in request:
             cost = request["cost"]
         else:

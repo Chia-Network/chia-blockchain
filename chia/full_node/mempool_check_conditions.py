@@ -93,13 +93,13 @@ def get_name_puzzle_conditions(
         err, result = run_block(bytes(generator.program), block_args, max_cost, flags)
         assert (err is None) != (result is None)
         if err is not None:
-            return NPCResult(uint16(err), None, uint64(0))
+            return NPCResult(uint16(err), None)
         else:
             assert result is not None
-            return NPCResult(None, result, uint64(result.cost))
+            return NPCResult(None, result)
     except BaseException:
         log.exception("get_name_puzzle_condition failed")
-        return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None, uint64(0))
+        return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None)
 
 
 def get_puzzle_and_solution_for_coin(

@@ -403,7 +403,7 @@ class MempoolManager:
         if npc_result.error is not None:
             return Err(npc_result.error), None, []
 
-        cost = npc_result.cost
+        cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
         log.debug(f"Cost: {cost}")
 
         assert npc_result.conds is not None
