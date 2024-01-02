@@ -217,7 +217,7 @@ jobs:
           if [[ -n "$COMMENT_ID" ]]; then
             gh api -X DELETE /repos/"${ORG_REPO}"/issues/comments/"${COMMENT_ID}"
           fi
-          if [[ "$COV_STATUS" != '0' ]]; then
+          if [[ "$COV_STATUS" == '0' ]]; then
             if [[ "$COVERAGE_LABEL" == "coverage-diff" ]]; then
               gh pr edit "$PR_NUM" --remove-label "coverage-diff"
             fi
