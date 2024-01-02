@@ -37,6 +37,7 @@ dependencies = [
     "packaging==23.2",
     "psutil==5.9.4",
     "quex-hsms==0.1.dev157",
+    "ecdsa==0.18.0",  # For SECP
 ]
 
 upnp_dependencies = [
