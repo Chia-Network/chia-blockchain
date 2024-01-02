@@ -30,6 +30,7 @@ from chia.util.ints import uint32
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.util.observation_root import ObservationRoot
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.vault.vault_root import VaultRoot
 
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
@@ -222,11 +223,14 @@ class KeyDataSecrets(Streamable):
 
 class KeyTypes(str, Enum):
     G1_ELEMENT = "G1 Element"
+    VAULT_LAUNCHER = "Vault Launcher"
 
     @classmethod
     def parse_observation_root(cls: Type[KeyTypes], pk_bytes: bytes, key_type: KeyTypes) -> ObservationRoot:
         if key_type == cls.G1_ELEMENT:
             return G1Element.from_bytes(pk_bytes)
+        if key_type == cls.VAULT_LAUNCHER:
+            return VaultRoot(pk_bytes)
         else:
             raise RuntimeError("Not all key types have been handled in KeyTypes.parse_observation_root")
 
@@ -249,6 +253,8 @@ class KeyData(Streamable):
     def observation_root(self) -> ObservationRoot:
         if self.key_type == KeyTypes.G1_ELEMENT:
             return G1Element.from_bytes(self.public_key)
+        if self.key_type == KeyTypes.VAULT_LAUNCHER:
+            return VaultRoot.from_bytes(self.public_key)
         raise TypeError(f"Invalid key_type {self.key_type}")
 
     def __post_init__(self) -> None:
@@ -336,19 +342,26 @@ class Keychain:
         str_bytes = bytes.fromhex(read_str)
 
         pk_bytes: bytes = str_bytes[: G1Element.SIZE]
-        observation_root: ObservationRoot = G1Element.from_bytes(pk_bytes)
-        fingerprint = observation_root.get_fingerprint()
-        if len(str_bytes) == G1Element.SIZE + 32:
-            entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
-        else:
+        if len(pk_bytes) == 32:
+            observation_root: ObservationRoot = VaultRoot.from_bytes(pk_bytes)
+            fingerprint = observation_root.get_fingerprint()
             entropy = None
+            key_type = KeyTypes.VAULT_LAUNCHER.value
+        else:
+            observation_root = G1Element.from_bytes(pk_bytes)
+            fingerprint = observation_root.get_fingerprint()
+            if len(str_bytes) == G1Element.SIZE + 32:
+                entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+            else:
+                entropy = None
+            key_type = KeyTypes.G1_ELEMENT.value
 
         return KeyData(
             fingerprint=uint32(fingerprint),
             public_key=pk_bytes,
             label=self.keyring_wrapper.get_label(fingerprint),
             secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
-            key_type=KeyTypes.G1_ELEMENT.value,
+            key_type=key_type,
         )
 
     def _get_free_private_key_index(self) -> int:
@@ -405,6 +418,9 @@ class Keychain:
         if len(pk_bytes) == 48:
             key: ObservationRoot = G1Element.from_bytes(pk_bytes)
             key_type: KeyTypes = KeyTypes.G1_ELEMENT
+        elif len(pk_bytes) == 32:
+            key = VaultRoot.from_bytes(pk_bytes)
+            key_type = KeyTypes.VAULT_LAUNCHER
         else:
             raise ValueError(f"Cannot identify type of pubkey {pubkey}")
         index = self._get_free_private_key_index()
