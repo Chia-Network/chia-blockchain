@@ -17,6 +17,8 @@ class TestC:
         self.a = a
         self.b = b
 
+    # WARNING: this is just a simple stand in for rust classes and is not a good
+    # reference for how such a method should be implemented in python
     def replace(self, **kwargs: Union[int, str, Optional[TestA]]) -> TestC:
         ret = TestC(copy.deepcopy(self.a), copy.deepcopy(self.b))
         for key, value in kwargs.items():
@@ -47,6 +49,8 @@ class TestB:
         self.b = b
         self.c = c
 
+    # WARNING: this is just a simple stand in for rust classes and is not a good
+    # reference for how such a method should be implemented in python
     def replace(self, **kwargs: Union[int, str, Optional[TestA]]) -> TestB:
         ret = TestB(copy.deepcopy(self.a), copy.deepcopy(self.b), copy.deepcopy(self.c))
         for key, value in kwargs.items():
