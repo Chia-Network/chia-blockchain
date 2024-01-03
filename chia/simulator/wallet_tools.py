@@ -193,7 +193,9 @@ class WalletTool:
             secret_key = self.get_private_key_for_puzzle_hash(coin_spend.coin.puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
             conditions_dict = conditions_dict_for_solution(
-                coin_spend.puzzle_reveal, coin_spend.solution, self.constants.MAX_BLOCK_COST_CLVM
+                coin_spend.puzzle_reveal.to_program(),
+                coin_spend.solution.to_program(),
+                self.constants.MAX_BLOCK_COST_CLVM,
             )
 
             for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_UNSAFE, []):

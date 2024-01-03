@@ -105,7 +105,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
 
     # Create condition + agg_sig_condition + length + cpu_cost
     assert (
-        npc_result.cost
+        npc_result.conds.cost
         == ConditionCost.CREATE_COIN.value
         + ConditionCost.AGG_SIG.value
         + len(bytes(program.program)) * bt.constants.COST_PER_BYTE
@@ -248,7 +248,7 @@ async def test_clvm_max_cost(softfork_height: int) -> None:
     )
 
     assert npc_result.error is not None
-    assert npc_result.cost == 0
+    assert npc_result.conds is None
 
     # raise the max cost to make sure this passes
     # ensure we pass if the program does not exceeds the cost
@@ -257,7 +257,8 @@ async def test_clvm_max_cost(softfork_height: int) -> None:
     )
 
     assert npc_result.error is None
-    assert npc_result.cost > 10000000
+    assert npc_result.conds is not None
+    assert npc_result.conds.cost > 10000000
 
 
 @pytest.mark.anyio

@@ -492,7 +492,7 @@ class DataLayerWallet:
             second_coin_spend = CoinSpend(
                 second_coin,
                 SerializedProgram.from_program(second_full_puz),
-                Program.to(
+                SerializedProgram.to(
                     [
                         LineageProof(
                             current_coin.parent_coin_info,
@@ -781,7 +781,7 @@ class DataLayerWallet:
         mirror_spend = CoinSpend(
             mirror_coin,
             SerializedProgram.from_program(create_mirror_puzzle()),
-            Program.to(
+            SerializedProgram.to(
                 [
                     parent_coin.parent_coin_info,
                     parent_inner_puzzle,
@@ -846,6 +846,9 @@ class DataLayerWallet:
             launcher_id, urls = get_mirror_info(
                 parent_spend.puzzle_reveal.to_program(), parent_spend.solution.to_program()
             )
+            # Don't track mirrors with empty url list.
+            if not urls:
+                return
             if await self.wallet_state_manager.dl_store.is_launcher_tracked(launcher_id):
                 ours: bool = await self.wallet_state_manager.get_wallet_for_coin(coin.parent_coin_info) is not None
                 await self.wallet_state_manager.dl_store.add_mirror(
@@ -1242,9 +1245,9 @@ class DataLayerWallet:
         for spend in offer.coin_spends():
             matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
             if matched and spend.coin.name() not in all_parent_ids:
-                innerpuz, root, launcher_id = curried_args
+                innerpuz, root_prg, launcher_id = curried_args
                 singleton_struct = launcher_to_struct(bytes32(launcher_id.as_python())).get_tree_hash()
-                singleton_to_root[singleton_struct] = bytes32(root.as_python())
+                singleton_to_root[singleton_struct] = bytes32(root_prg.as_python())
                 singleton_to_innerpuzhash[singleton_struct] = innerpuz.get_tree_hash()
 
         # Create all of the new solutions
@@ -1257,9 +1260,9 @@ class DataLayerWallet:
                 except EvalError:
                     new_spends.append(spend)
                     continue
-                mod, curried_args = graftroot.uncurry()
+                mod, curried_args_prg = graftroot.uncurry()
                 if mod == GRAFTROOT_DL_OFFERS:
-                    _, singleton_structs, _, values_to_prove = curried_args.as_iter()
+                    _, singleton_structs, _, values_to_prove = curried_args_prg.as_iter()
                     all_proofs = []
                     roots = []
                     for singleton, values in zip(singleton_structs.as_iter(), values_to_prove.as_python()):
@@ -1267,7 +1270,7 @@ class DataLayerWallet:
                         proofs_of_inclusion = []
                         for value in values:
                             for proof_of_inclusion in solver["proofs_of_inclusion"]:
-                                root = proof_of_inclusion[0]
+                                root: str = proof_of_inclusion[0]
                                 proof: Tuple[int, List[bytes32]] = (proof_of_inclusion[1], proof_of_inclusion[2])
                                 calculated_root: bytes32 = _simplify_merkle_proof(value, proof)
                                 if (

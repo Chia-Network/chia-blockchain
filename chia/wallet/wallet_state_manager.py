@@ -795,7 +795,7 @@ class WalletStateManager:
         # Check if the coin is a DAO CAT
         dao_cat_args = match_dao_cat_puzzle(uncurried)
         if dao_cat_args:
-            return await self.handle_dao_cat(dao_cat_args, parent_coin_state, coin_state, coin_spend), None
+            return await self.handle_dao_cat(dao_cat_args, parent_coin_state, coin_state, coin_spend, fork_height), None
 
         # Check if the coin is a CAT
         cat_curried_args = match_cat_puzzle(uncurried)
@@ -1045,6 +1045,7 @@ class WalletStateManager:
         parent_coin_state: CoinState,
         coin_state: CoinState,
         coin_spend: CoinSpend,
+        fork_height: Optional[uint32],
     ) -> Optional[WalletIdentifier]:
         """
         Handle the new coin when it is a DAO CAT
@@ -1056,6 +1057,19 @@ class WalletStateManager:
                 assert isinstance(wallet, DAOCATWallet)
                 if wallet.dao_cat_info.limitations_program_hash == asset_id:
                     return WalletIdentifier.create(wallet)
+        # Found a DAO_CAT, but we don't have a wallet for it. Add to unacknowledged
+        await self.interested_store.add_unacknowledged_token(
+            asset_id,
+            CATWallet.default_wallet_name_for_unknown_cat(asset_id.hex()),
+            None if parent_coin_state.spent_height is None else uint32(parent_coin_state.spent_height),
+            parent_coin_state.coin.puzzle_hash,
+        )
+        await self.interested_store.add_unacknowledged_coin_state(
+            asset_id,
+            coin_state,
+            fork_height,
+        )
+        self.state_changed("added_stray_cat")
         return None  # pragma: no cover
 
     async def handle_cat(

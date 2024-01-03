@@ -23,6 +23,7 @@ from chia_rs import Coin
 from typing_extensions import Protocol, final
 
 import chia
+from chia.full_node.mempool import Mempool
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
@@ -407,3 +408,19 @@ def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
     logger.addHandler(hdlr=stream_handler)
 
     return logger
+
+
+def invariant_check_mempool(mempool: Mempool) -> None:
+    with mempool._db_conn:
+        cursor = mempool._db_conn.execute("SELECT SUM(cost) FROM tx")
+        val = cursor.fetchone()[0]
+        if val is None:
+            val = 0
+    assert mempool._total_cost == val
+
+    with mempool._db_conn:
+        cursor = mempool._db_conn.execute("SELECT SUM(fee) FROM tx")
+        val = cursor.fetchone()[0]
+        if val is None:
+            val = 0
+    assert mempool._total_fee == val

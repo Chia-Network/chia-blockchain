@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from hashlib import sha256
-from typing import Tuple
 
 import pytest
-from chia_rs import ENABLE_SECP_OPS, PrivateKey
+from chia_rs import PrivateKey
 from ecdsa import NIST256p, SigningKey
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -28,10 +27,6 @@ ACS: Program = Program.to(1)
 ACS_PH: bytes32 = ACS.get_tree_hash()
 
 
-def run_with_secp(puzzle: Program, solution: Program) -> Tuple[int, Program]:
-    return puzzle._run(INFINITE_COST, ENABLE_SECP_OPS, solution)
-
-
 def test_secp_hidden() -> None:
     HIDDEN_PUZZLE: Program = Program.to(1)
     HIDDEN_PUZZLE_HASH: bytes32 = HIDDEN_PUZZLE.get_tree_hash()
@@ -42,7 +37,7 @@ def test_secp_hidden() -> None:
     coin_id = Program.to("coin_id").get_tree_hash()
     conditions = Program.to([[51, ACS_PH, 100]])
     hidden_escape_solution = Program.to([HIDDEN_PUZZLE, conditions, 0, coin_id])
-    _, hidden_result = run_with_secp(escape_puzzle, hidden_escape_solution)
+    hidden_result = escape_puzzle.run(hidden_escape_solution)
     assert hidden_result == Program.to(conditions)
 
 
@@ -120,7 +115,7 @@ def test_p2_delegated_secp() -> None:
     )
 
     secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id])
-    _, conds = run_with_secp(secp_puzzle, secp_solution)
+    conds = secp_puzzle.run(secp_solution)
 
     assert conds.at("rfrf").as_atom() == ACS_PH
 
@@ -133,7 +128,7 @@ def test_p2_delegated_secp() -> None:
         [delegated_puzzle, delegated_solution, bad_signature, coin_id, DEFAULT_CONSTANTS.GENESIS_CHALLENGE]
     )
     with pytest.raises(ValueError, match="secp256r1_verify failed"):
-        run_with_secp(secp_puzzle, bad_solution)
+        secp_puzzle.run(bad_solution)
 
 
 def test_vault_root_puzzle() -> None:
