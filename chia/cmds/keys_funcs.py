@@ -167,7 +167,8 @@ def show_keys(
         key["fingerprint"] = key_data.fingerprint
         if isinstance(key_data.observation_root, G1Element):
             key["master_pk"] = key_data.public_key.hex()
-        else:
+        else:  # pragma: no cover
+            # TODO: Add test coverage once vault wallet exists
             key["observation_root"] = key_data.public_key.hex()
         if sk is not None:
             key["farmer_pk"] = bytes(master_sk_to_farmer_sk(sk).get_g1()).hex()
@@ -514,7 +515,8 @@ def search_derive(
         if isinstance(master_key_data.observation_root, G1Element):
             public_keys = [master_key_data.observation_root]
             private_keys = [master_key_data.private_key if master_key_data.secrets is not None else None]
-        else:
+        else:  # pragma: no cover
+            # TODO: Add test coverage once vault wallet exists
             print("Cannot currently derive paths from non-BLS keys")
             return True
 
@@ -649,7 +651,8 @@ def derive_wallet_address(
     """
     if fingerprint is not None:
         key_data: KeyData = Keychain().get_key(fingerprint, include_secrets=non_observer_derivation)
-        if not isinstance(key_data.observation_root, G1Element):
+        if not isinstance(key_data.observation_root, G1Element):  # pragma: no cover
+            # TODO: Add test coverage once vault wallet exists
             print("Cannot currently derive from non-BLS keys")
             return
         if non_observer_derivation and key_data.secrets is None:
@@ -716,7 +719,8 @@ def derive_child_key(
 
     if fingerprint is not None:
         key_data: KeyData = Keychain().get_key(fingerprint, include_secrets=True)
-        if not isinstance(key_data.observation_root, G1Element):
+        if not isinstance(key_data.observation_root, G1Element):  # pragma: no cover
+            # TODO: Add coverage when vault wallet exists
             print("Cannot currently derive from non-BLS keys")
             return
         current_pk: G1Element = key_data.observation_root
