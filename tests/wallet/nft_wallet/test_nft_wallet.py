@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 import time
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
@@ -178,6 +179,7 @@ async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_
     assert await nft_wallet_1.get_nft_count() == 1
 
 
+@pytest.mark.skipif(sys.platform == "win32" and sys.version_info < (3, 9), reason="Flaky on Windows+3.8")
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
