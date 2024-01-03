@@ -1591,7 +1591,6 @@ class FullNode:
 
         if record.height % 1000 == 0:
             # Occasionally clear data in full node store to keep memory usage small
-            self.full_node_store.clear_seen_unfinished_blocks()
             self.full_node_store.clear_old_cache_entries()
 
         if self.sync_store.get_sync_mode() is False:
