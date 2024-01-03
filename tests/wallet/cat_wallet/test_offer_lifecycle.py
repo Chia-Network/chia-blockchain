@@ -169,174 +169,169 @@ def generate_secure_bundle(
     return bundle
 
 
-class TestOfferLifecycle:
-    @pytest.mark.anyio()
-    async def test_complex_offer(self, cost_logger):
-        async with sim_and_client() as (sim, sim_client):
-            coins_needed: Dict[Optional[str], List[int]] = {
-                None: [500, 400, 300],
-                "red": [250, 100],
-                "blue": [3000],
-            }
-            all_coins: Dict[Optional[str], List[Coin]] = await generate_coins(sim, sim_client, coins_needed)
-            chia_coins: List[Coin] = all_coins[None]
-            red_coins: List[Coin] = all_coins["red"]
-            blue_coins: List[Coin] = all_coins["blue"]
+@pytest.mark.anyio()
+async def test_complex_offer(cost_logger):
+    async with sim_and_client() as (sim, sim_client):
+        coins_needed: Dict[Optional[str], List[int]] = {
+            None: [500, 400, 300],
+            "red": [250, 100],
+            "blue": [3000],
+        }
+        all_coins: Dict[Optional[str], List[Coin]] = await generate_coins(sim, sim_client, coins_needed)
+        chia_coins: List[Coin] = all_coins[None]
+        red_coins: List[Coin] = all_coins["red"]
+        blue_coins: List[Coin] = all_coins["blue"]
 
-            driver_dict: Dict[bytes32, PuzzleInfo] = {
-                str_to_tail_hash("red"): PuzzleInfo(
-                    {"type": AssetType.CAT.value, "tail": "0x" + str_to_tail_hash("red").hex()}
-                ),
-                str_to_tail_hash("blue"): PuzzleInfo(
-                    {"type": AssetType.CAT.value, "tail": "0x" + str_to_tail_hash("blue").hex()}
-                ),
-            }
+        driver_dict: Dict[bytes32, PuzzleInfo] = {
+            str_to_tail_hash("red"): PuzzleInfo(
+                {"type": AssetType.CAT.value, "tail": "0x" + str_to_tail_hash("red").hex()}
+            ),
+            str_to_tail_hash("blue"): PuzzleInfo(
+                {"type": AssetType.CAT.value, "tail": "0x" + str_to_tail_hash("blue").hex()}
+            ),
+        }
 
-            driver_dict_as_infos: Dict[str, Any] = {}
-            for key, value in driver_dict.items():
-                driver_dict_as_infos[key.hex()] = value.info
+        driver_dict_as_infos: Dict[str, Any] = {}
+        for key, value in driver_dict.items():
+            driver_dict_as_infos[key.hex()] = value.info
 
-            # Create an XCH Offer for RED
-            chia_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
-                str_to_tail_hash("red"): [
-                    Payment(acs_ph, 100, [b"memo"]),
-                    Payment(acs_ph, 200, [b"memo"]),
-                ]
-            }
+        # Create an XCH Offer for RED
+        chia_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
+            str_to_tail_hash("red"): [
+                Payment(acs_ph, 100, [b"memo"]),
+                Payment(acs_ph, 200, [b"memo"]),
+            ]
+        }
 
-            chia_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
-                chia_requested_payments, chia_coins
-            )
-            chia_announcements: List[Announcement] = Offer.calculate_announcements(chia_requested_payments, driver_dict)
-            chia_secured_bundle: SpendBundle = generate_secure_bundle(chia_coins, chia_announcements, 1000)
-            chia_offer = Offer(chia_requested_payments, chia_secured_bundle, driver_dict)
-            assert not chia_offer.is_valid()
+        chia_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
+            chia_requested_payments, chia_coins
+        )
+        chia_announcements: List[Announcement] = Offer.calculate_announcements(chia_requested_payments, driver_dict)
+        chia_secured_bundle: SpendBundle = generate_secure_bundle(chia_coins, chia_announcements, 1000)
+        chia_offer = Offer(chia_requested_payments, chia_secured_bundle, driver_dict)
+        assert not chia_offer.is_valid()
 
-            # Create a RED Offer for XCH
-            red_coins_1 = red_coins[0:1]
-            red_coins_2 = red_coins[1:]
-            red_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
-                None: [
-                    Payment(acs_ph, 300, [b"red memo"]),
-                    Payment(acs_ph, 350, [b"red memo"]),
-                ]
-            }
+        # Create a RED Offer for XCH
+        red_coins_1 = red_coins[0:1]
+        red_coins_2 = red_coins[1:]
+        red_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
+            None: [
+                Payment(acs_ph, 300, [b"red memo"]),
+                Payment(acs_ph, 350, [b"red memo"]),
+            ]
+        }
 
-            red_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
-                red_requested_payments, red_coins_1
-            )
-            red_announcements: List[Announcement] = Offer.calculate_announcements(red_requested_payments, driver_dict)
-            red_secured_bundle: SpendBundle = generate_secure_bundle(
-                red_coins_1, red_announcements, sum([c.amount for c in red_coins_1]), tail_str="red"
-            )
-            red_offer = Offer(red_requested_payments, red_secured_bundle, driver_dict)
-            assert not red_offer.is_valid()
+        red_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
+            red_requested_payments, red_coins_1
+        )
+        red_announcements: List[Announcement] = Offer.calculate_announcements(red_requested_payments, driver_dict)
+        red_secured_bundle: SpendBundle = generate_secure_bundle(
+            red_coins_1, red_announcements, sum([c.amount for c in red_coins_1]), tail_str="red"
+        )
+        red_offer = Offer(red_requested_payments, red_secured_bundle, driver_dict)
+        assert not red_offer.is_valid()
 
-            red_requested_payments_2: Dict[Optional[bytes32], List[Payment]] = {
-                None: [
-                    Payment(acs_ph, 50, [b"red memo"]),
-                ]
-            }
+        red_requested_payments_2: Dict[Optional[bytes32], List[Payment]] = {
+            None: [
+                Payment(acs_ph, 50, [b"red memo"]),
+            ]
+        }
 
-            red_requested_payments_2: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
-                red_requested_payments_2, red_coins_2
-            )
-            red_announcements_2: List[Announcement] = Offer.calculate_announcements(
-                red_requested_payments_2, driver_dict
-            )
-            red_secured_bundle_2: SpendBundle = generate_secure_bundle(
-                red_coins_2, red_announcements_2, sum([c.amount for c in red_coins_2]), tail_str="red"
-            )
-            red_offer_2 = Offer(red_requested_payments_2, red_secured_bundle_2, driver_dict)
-            assert not red_offer_2.is_valid()
+        red_requested_payments_2: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
+            red_requested_payments_2, red_coins_2
+        )
+        red_announcements_2: List[Announcement] = Offer.calculate_announcements(red_requested_payments_2, driver_dict)
+        red_secured_bundle_2: SpendBundle = generate_secure_bundle(
+            red_coins_2, red_announcements_2, sum([c.amount for c in red_coins_2]), tail_str="red"
+        )
+        red_offer_2 = Offer(red_requested_payments_2, red_secured_bundle_2, driver_dict)
+        assert not red_offer_2.is_valid()
 
-            # Test aggregation of offers
-            new_offer = Offer.aggregate([chia_offer, red_offer, red_offer_2])
-            assert new_offer.get_offered_amounts() == {None: 1000, str_to_tail_hash("red"): 350}
-            assert new_offer.get_requested_amounts() == {None: 700, str_to_tail_hash("red"): 300}
-            assert new_offer.is_valid()
+        # Test aggregation of offers
+        new_offer = Offer.aggregate([chia_offer, red_offer, red_offer_2])
+        assert new_offer.get_offered_amounts() == {None: 1000, str_to_tail_hash("red"): 350}
+        assert new_offer.get_requested_amounts() == {None: 700, str_to_tail_hash("red"): 300}
+        assert new_offer.is_valid()
 
-            # Create yet another offer of BLUE for XCH and RED
-            blue_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
-                None: [
-                    Payment(acs_ph, 200, [b"blue memo"]),
-                ],
-                str_to_tail_hash("red"): [
-                    Payment(acs_ph, 50, [b"blue memo"]),
-                ],
-            }
+        # Create yet another offer of BLUE for XCH and RED
+        blue_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
+            None: [
+                Payment(acs_ph, 200, [b"blue memo"]),
+            ],
+            str_to_tail_hash("red"): [
+                Payment(acs_ph, 50, [b"blue memo"]),
+            ],
+        }
 
-            blue_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
-                blue_requested_payments, blue_coins
-            )
-            blue_announcements: List[Announcement] = Offer.calculate_announcements(blue_requested_payments, driver_dict)
-            blue_secured_bundle: SpendBundle = generate_secure_bundle(
-                blue_coins, blue_announcements, 2000, tail_str="blue"
-            )
-            blue_offer = Offer(blue_requested_payments, blue_secured_bundle, driver_dict)
-            assert not blue_offer.is_valid()
+        blue_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
+            blue_requested_payments, blue_coins
+        )
+        blue_announcements: List[Announcement] = Offer.calculate_announcements(blue_requested_payments, driver_dict)
+        blue_secured_bundle: SpendBundle = generate_secure_bundle(blue_coins, blue_announcements, 2000, tail_str="blue")
+        blue_offer = Offer(blue_requested_payments, blue_secured_bundle, driver_dict)
+        assert not blue_offer.is_valid()
 
-            # Test a re-aggregation
-            new_offer: Offer = Offer.aggregate([new_offer, blue_offer])
-            assert new_offer.get_offered_amounts() == {
-                None: 1000,
-                str_to_tail_hash("red"): 350,
-                str_to_tail_hash("blue"): 2000,
-            }
-            assert new_offer.get_requested_amounts() == {None: 900, str_to_tail_hash("red"): 350}
-            assert new_offer.summary() == (
-                {
-                    "xch": 1000,
-                    str_to_tail_hash("red").hex(): 350,
-                    str_to_tail_hash("blue").hex(): 2000,
-                },
-                {"xch": 900, str_to_tail_hash("red").hex(): 350},
-                driver_dict_as_infos,
-                ConditionValidTimes(),
-            )
-            assert new_offer.get_pending_amounts() == {
-                "xch": 1200,
+        # Test a re-aggregation
+        new_offer: Offer = Offer.aggregate([new_offer, blue_offer])
+        assert new_offer.get_offered_amounts() == {
+            None: 1000,
+            str_to_tail_hash("red"): 350,
+            str_to_tail_hash("blue"): 2000,
+        }
+        assert new_offer.get_requested_amounts() == {None: 900, str_to_tail_hash("red"): 350}
+        assert new_offer.summary() == (
+            {
+                "xch": 1000,
                 str_to_tail_hash("red").hex(): 350,
-                str_to_tail_hash("blue").hex(): 3000,
-            }
-            assert new_offer.is_valid()
+                str_to_tail_hash("blue").hex(): 2000,
+            },
+            {"xch": 900, str_to_tail_hash("red").hex(): 350},
+            driver_dict_as_infos,
+            ConditionValidTimes(),
+        )
+        assert new_offer.get_pending_amounts() == {
+            "xch": 1200,
+            str_to_tail_hash("red").hex(): 350,
+            str_to_tail_hash("blue").hex(): 3000,
+        }
+        assert new_offer.is_valid()
 
-            # Test preventing TAIL from running during exchange
-            blue_cat_puz: Program = construct_cat_puzzle(CAT_MOD, str_to_tail_hash("blue"), OFFER_MOD)
-            blue_spend: CoinSpend = make_spend(
-                Coin(bytes32(32), blue_cat_puz.get_tree_hash(), uint64(0)),
-                blue_cat_puz,
-                Program.to([[bytes32(32), [bytes32(32), 200, ["hey there"]]]]),
-            )
-            new_spends_list: List[CoinSpend] = [blue_spend, *new_offer.to_spend_bundle().coin_spends]
-            tail_offer: Offer = Offer.from_spend_bundle(SpendBundle(new_spends_list, G2Element()))
-            valid_spend = tail_offer.to_valid_spend(bytes32(32))
-            real_blue_spend = [spend for spend in valid_spend.coin_spends if b"hey there" in bytes(spend)][0]
-            real_blue_spend_replaced = replace(
-                real_blue_spend,
-                solution=SerializedProgram.from_program(
-                    real_blue_spend.solution.to_program().replace(
-                        ffrfrf=Program.to(-113), ffrfrr=Program.to([str_to_tail("blue"), []])
-                    )
-                ),
-            )
-            valid_spend = SpendBundle(
-                [real_blue_spend_replaced, *[spend for spend in valid_spend.coin_spends if spend != real_blue_spend]],
-                G2Element(),
-            )
-            with pytest.raises(ValueError, match="clvm raise"):
-                valid_spend.additions()
+        # Test preventing TAIL from running during exchange
+        blue_cat_puz: Program = construct_cat_puzzle(CAT_MOD, str_to_tail_hash("blue"), OFFER_MOD)
+        blue_spend: CoinSpend = make_spend(
+            Coin(bytes32(32), blue_cat_puz.get_tree_hash(), uint64(0)),
+            blue_cat_puz,
+            Program.to([[bytes32(32), [bytes32(32), 200, ["hey there"]]]]),
+        )
+        new_spends_list: List[CoinSpend] = [blue_spend, *new_offer.to_spend_bundle().coin_spends]
+        tail_offer: Offer = Offer.from_spend_bundle(SpendBundle(new_spends_list, G2Element()))
+        valid_spend = tail_offer.to_valid_spend(bytes32(32))
+        real_blue_spend = [spend for spend in valid_spend.coin_spends if b"hey there" in bytes(spend)][0]
+        real_blue_spend_replaced = replace(
+            real_blue_spend,
+            solution=SerializedProgram.from_program(
+                real_blue_spend.solution.to_program().replace(
+                    ffrfrf=Program.to(-113), ffrfrr=Program.to([str_to_tail("blue"), []])
+                )
+            ),
+        )
+        valid_spend = SpendBundle(
+            [real_blue_spend_replaced, *[spend for spend in valid_spend.coin_spends if spend != real_blue_spend]],
+            G2Element(),
+        )
+        with pytest.raises(ValueError, match="clvm raise"):
+            valid_spend.additions()
 
-            # Test (de)serialization
-            assert Offer.from_bytes(bytes(new_offer)) == new_offer
+        # Test (de)serialization
+        assert Offer.from_bytes(bytes(new_offer)) == new_offer
 
-            # Test compression
-            assert Offer.from_compressed(new_offer.compress()) == new_offer
+        # Test compression
+        assert Offer.from_compressed(new_offer.compress()) == new_offer
 
-            # Make sure we can actually spend the offer once it's valid
-            arbitrage_ph: bytes32 = Program.to([3, [], [], 1]).get_tree_hash()
-            offer_bundle: SpendBundle = new_offer.to_valid_spend(arbitrage_ph)
+        # Make sure we can actually spend the offer once it's valid
+        arbitrage_ph: bytes32 = Program.to([3, [], [], 1]).get_tree_hash()
+        offer_bundle: SpendBundle = new_offer.to_valid_spend(arbitrage_ph)
 
-            result = await sim_client.push_tx(cost_logger.add_cost("Complex Offer", offer_bundle))
-            assert result == (MempoolInclusionStatus.SUCCESS, None)
-            await sim.farm_block()
+        result = await sim_client.push_tx(cost_logger.add_cost("Complex Offer", offer_bundle))
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
