@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 
+
+@dataclass(frozen=True)
 class VaultRoot:
-    def __init__(self, launcher_id: bytes):
-        self.launcher_id = launcher_id
+    launcher_id: bytes
 
     def get_fingerprint(self) -> int:
         # Convert the first four bytes of PK into an integer

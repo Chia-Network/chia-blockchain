@@ -235,7 +235,10 @@ class KeyTypes(str, Enum):
             raise RuntimeError("Not all key types have been handled in KeyTypes.parse_observation_root")
 
 
-TYPES_TO_KEY_TYPES: Dict[Type[ObservationRoot], KeyTypes] = {G1Element: KeyTypes.G1_ELEMENT}
+TYPES_TO_KEY_TYPES: Dict[Type[ObservationRoot], KeyTypes] = {
+    G1Element: KeyTypes.G1_ELEMENT,
+    VaultRoot: KeyTypes.VAULT_LAUNCHER,
+}
 KEY_TYPES_TO_TYPES: Dict[KeyTypes, Type[ObservationRoot]] = {v: k for k, v in TYPES_TO_KEY_TYPES.items()}
 
 
@@ -254,7 +257,7 @@ class KeyData(Streamable):
         if self.key_type == KeyTypes.G1_ELEMENT:
             return G1Element.from_bytes(self.public_key)
         if self.key_type == KeyTypes.VAULT_LAUNCHER:
-            return VaultRoot.from_bytes(self.public_key)
+            return VaultRoot(self.public_key)
         raise TypeError(f"Invalid key_type {self.key_type}")
 
     def __post_init__(self) -> None:
@@ -347,7 +350,7 @@ class Keychain:
             fingerprint = observation_root.get_fingerprint()
             entropy = None
             key_type = KeyTypes.VAULT_LAUNCHER.value
-        else:
+        elif len(pk_bytes) == 48:
             observation_root = G1Element.from_bytes(pk_bytes)
             fingerprint = observation_root.get_fingerprint()
             if len(str_bytes) == G1Element.SIZE + 32:
@@ -355,6 +358,8 @@ class Keychain:
             else:
                 entropy = None
             key_type = KeyTypes.G1_ELEMENT.value
+        else:
+            raise ValueError(f"Public key must be either 32 or 48 bytes, got {len(pk_bytes)} bytes")
 
         return KeyData(
             fingerprint=uint32(fingerprint),
