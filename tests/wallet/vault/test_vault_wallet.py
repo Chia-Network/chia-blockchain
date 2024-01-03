@@ -29,10 +29,7 @@ SECP_PK = SECP_SK.verifying_key.to_string("compressed")
 @pytest.mark.anyio
 async def test_vault_creation(wallet_environments: WalletTestFramework) -> None:
     # Setup
-    # full_node_api: FullNodeSimulator = wallet_environments.full_node
     env = wallet_environments.environments[0]
-    # wallet_node = env.wallet_node
-    # wallet = env.xch_wallet
     client = env.rpc_client
 
     fingerprint = (await client.get_public_keys())[0]
