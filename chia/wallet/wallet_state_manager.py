@@ -365,7 +365,8 @@ class WalletStateManager:
         return self
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
-        if not isinstance(self.observation_root, G1Element):
+        if not isinstance(self.observation_root, G1Element):  # pragma: no cover
+            # TODO: Add test coverage when vault wallet exists
             raise ValueError("Public key derivation is not supported for non-G1Element keys")
         return master_pk_to_wallet_pk_unhardened(self.observation_root, index)
 
