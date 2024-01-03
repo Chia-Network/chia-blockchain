@@ -57,10 +57,10 @@ class AnyoneCanSpend(Wallet):
         self.log = logging.getLogger(name)
         return self
 
-    async def get_new_puzzle(self) -> Program:
+    async def get_new_puzzle(self) -> Program:  # pragma: no cover
         return ACS
 
-    async def get_new_puzzlehash(self) -> bytes32:
+    async def get_new_puzzlehash(self) -> bytes32:  # pragma: no cover
         return ACS_PH
 
     async def generate_signed_transaction(
@@ -124,17 +124,17 @@ class AnyoneCanSpend(Wallet):
             )
         ]
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+    def puzzle_for_pk(self, pubkey: G1Element) -> Program:  # pragma: no cover
         raise ValueError("This won't work")
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         if puzzle_hash == ACS_PH:
             return ACS
         else:
-            raise ValueError("puzzle hash was not ACS_PH")
+            raise ValueError("puzzle hash was not ACS_PH")  # pragma: no cover
 
     async def sign_message(self, message: str, puzzle_hash: bytes32, mode: SigningMode) -> Tuple[G1Element, G2Element]:
-        raise ValueError("This won't work")
+        raise ValueError("This won't work")  # pragma: no cover
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
         return ACS_PH
@@ -151,14 +151,14 @@ class AnyoneCanSpend(Wallet):
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
     ) -> List[SigningResponse]:
         if len(signing_instructions.targets) > 0:
-            raise ValueError("This won't work")
+            raise ValueError("This won't work")  # pragma: no cover
         else:
             return []
 
-    async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:
+    async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:  # pragma: no cover
         return None
 
-    async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
+    async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:  # pragma: no cover
         return None
 
     def make_solution(
@@ -173,16 +173,16 @@ class AnyoneCanSpend(Wallet):
         prog: Program = Program.to([c.to_program() for c in condition_list])
         return prog
 
-    async def get_puzzle(self, new: bool) -> Program:
+    async def get_puzzle(self, new: bool) -> Program:  # pragma: no cover
         return ACS
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:  # pragma: no cover
         raise ValueError("This won't work")
 
     def require_derivation_paths(self) -> bool:
         return True
 
-    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:  # pragma: no cover
         if coin.puzzle_hash == ACS_PH or hint == ACS_PH:
             return True
         else:
@@ -299,3 +299,10 @@ async def test_main_wallet(
             )
         ]
     )
+
+    # Miscellaneous checks
+    assert [coin.puzzle_hash for tx in txs for coin in tx.removals] == [
+        (await main_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)).get_tree_hash()
+        for tx in txs
+        for coin in tx.removals
+    ]

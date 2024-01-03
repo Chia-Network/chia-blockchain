@@ -369,7 +369,9 @@ class WalletStateManager:
         if len(root_bytes) == 48:
             return Wallet
 
-        raise ValueError(f"Could not find a valid wallet type for observation_root: {root_bytes.hex()}")
+        raise ValueError(  # pragma: no cover
+            f"Could not find a valid wallet type for observation_root: {root_bytes.hex()}"
+        )
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         if not isinstance(self.observation_root, G1Element):
@@ -466,9 +468,6 @@ class WalletStateManager:
                     if target_wallet.handle_own_derivation():
                         derivation_paths.extend(target_wallet.derivation_for_index(index))
                     else:
-                        if target_wallet.type() == WalletType.POOLING_WALLET:
-                            continue
-
                         if self.private_key is not None:
                             # Hardened
                             pubkey: G1Element = _derive_path(intermediate_sk, [index]).get_g1()

@@ -1690,8 +1690,8 @@ class NFTWallet:
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return False
 
-    def handle_own_derivation(self) -> bool:
+    def handle_own_derivation(self) -> bool:  # pragma: no cover
         return False
 
-    def derivation_for_index(self, index: int) -> List[DerivationRecord]:
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
         raise NotImplementedError()

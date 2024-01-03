@@ -1672,6 +1672,8 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     sk_dict = await client.get_private_key(pks[1])
     assert sk_dict["fingerprint"] == pks[1]
 
+    assert not (await client.log_in(1234567890))["success"]
+
     # Add in reward addresses into farmer and pool for testing delete key checks
     # set farmer to first private key
     sk = await wallet_node.get_key_for_fingerprint(pks[0], private=True)

@@ -623,3 +623,29 @@ async def test_transaction_send_cache(
     # Disconnect from the peer to make sure their entry in the cache is also deleted
     await simulator_and_wallet[1][0][0]._server.get_connections()[0].close(120)
     await time_out_assert(5, check_wallet_cache_empty, True)
+
+
+@pytest.mark.anyio
+async def test_get_last_used_fingerprint_if_exists(
+    self_hostname: str, simulator_and_wallet: SimulatorsAndWallets
+) -> None:
+    [full_node_api], [(node, wallet_server)], _ = simulator_and_wallet
+
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+
+    node.update_last_used_fingerprint()
+    assert node.wallet_state_manager.private_key is not None
+    assert (
+        await node.get_last_used_fingerprint_if_exists()
+        == node.wallet_state_manager.private_key.get_g1().get_fingerprint()
+    )
+    await node.keychain_proxy.delete_all_keys()
+    assert await node.get_last_used_fingerprint_if_exists() is None
+
+    sk_2: PrivateKey = await node.keychain_proxy.add_private_key(generate_mnemonic())
+    fingerprint_2: int = sk_2.get_g1().get_fingerprint()
+
+    node._close()
+    await node._await_closed(shutting_down=False)
+    await node._start_with_fingerprint()
+    assert node.logged_in_fingerprint == fingerprint_2

@@ -885,5 +885,5 @@ class CATWallet:
     def handle_own_derivation(self) -> bool:
         return False
 
-    def derivation_for_index(self, index: int) -> List[DerivationRecord]:
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
         raise NotImplementedError()
