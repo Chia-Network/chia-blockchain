@@ -224,7 +224,8 @@ class KeyTypes(str, Enum):
     def parse_observation_root(cls: Type[KeyTypes], pk_bytes: bytes, key_type: KeyTypes) -> ObservationRoot:
         if key_type == cls.G1_ELEMENT:
             return G1Element.from_bytes(pk_bytes)
-        else:
+        else:  # pragma: no cover
+            # mypy should prevent this from ever running
             raise RuntimeError("Not all key types have been handled in KeyTypes.parse_observation_root")
 
 
