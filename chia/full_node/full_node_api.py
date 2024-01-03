@@ -1730,33 +1730,49 @@ class FullNodeAPI:
 
     @api_request(peer_required=True)
     async def request_ph_state(self, request: wallet_protocol.RequestPhState, peer: WSChiaConnection) -> None:
-        stream = self.full_node.coin_store.stream_coin_states_by_puzzle_hashes(
-            set(request.puzzle_hashes),
-            request.min_height,
-            request.filters.include_spent,
-            request.filters.include_unspent,
-            request.filters.include_hinted,
-        )
+        peak = self.full_node.blockchain.get_peak()
+        assert peak is not None
 
-        batch_number = 0
+        try:
+            async with self.full_node.stream_coin_state_sem.acquire():
+                stream = self.full_node.coin_store.stream_coin_states_by_puzzle_hashes(
+                    set(request.puzzle_hashes),
+                    request.min_height,
+                    request.filters.include_spent,
+                    request.filters.include_unspent,
+                    request.filters.include_hinted,
+                )
 
-        async for (batch, finished) in stream:
-            height = uint32(0)
+                batch_number = 0
 
-            for coin_state in batch:
-                if coin_state.created_height is not None and coin_state.created_height > height:
-                    height = uint32(coin_state.created_height)
+                async for (batch, finished) in stream:
+                    height: uint32
+                    header_hash: Optional[bytes32]
 
-                if coin_state.spent_height is not None and coin_state.spent_height > height:
-                    height = uint32(coin_state.spent_height)
+                    if finished:
+                        height = peak.height
+                        header_hash = peak.header_hash
+                    else:
+                        height = uint32(0)
 
-            header_hash = self.full_node.blockchain.height_to_hash(height)
+                        for coin_state in batch:
+                            if coin_state.created_height is not None and coin_state.created_height > height:
+                                height = uint32(coin_state.created_height)
 
-            response = wallet_protocol.CoinStateBatch(height, header_hash, uint32(batch_number), finished, batch)
-            msg = make_msg(ProtocolMessageTypes.coin_state_batch, response)
-            await peer.send_message(msg)
+                            if coin_state.spent_height is not None and coin_state.spent_height > height:
+                                height = uint32(coin_state.spent_height)
 
-            batch_number += 1
+                        header_hash = self.full_node.blockchain.height_to_hash(height)
+
+                    response = wallet_protocol.CoinStateBatch(
+                        height, header_hash, uint32(batch_number), finished, batch
+                    )
+                    msg = make_msg(ProtocolMessageTypes.coin_state_batch, response)
+                    await peer.send_message(msg)
+
+                    batch_number += 1
+        except LimitedSemaphoreFullError:
+            self.log.debug("Ignoring RequestPhState, limited semaphore full: %s %s", peer.get_peer_logging(), request)
 
     def is_trusted(self, peer: WSChiaConnection) -> bool:
         return self.server.is_trusted_peer(peer, self.full_node.config.get("trusted_peers", {}))

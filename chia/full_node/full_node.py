@@ -152,6 +152,7 @@ class FullNode:
     _transaction_queue: Optional[TransactionQueue] = None
     _compact_vdf_sem: Optional[LimitedSemaphore] = None
     _new_peak_sem: Optional[LimitedSemaphore] = None
+    _stream_coin_state_sem: Optional[LimitedSemaphore] = None
     _add_transaction_semaphore: Optional[asyncio.Semaphore] = None
     _db_wrapper: Optional[DBWrapper2] = None
     _hint_store: Optional[HintStore] = None
@@ -210,6 +211,9 @@ class FullNode:
         # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
         # multiple peers and re-validate.
         self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20)
+
+        # Streaming coin states from the data can be an expensive process, so this should be limited
+        self._stream_coin_state_sem = LimitedSemaphore.create(active_limit=1, waiting_limit=20)
 
         # These many respond_transaction tasks can be active at any point in time
         self._add_transaction_semaphore = asyncio.Semaphore(200)
@@ -426,6 +430,11 @@ class FullNode:
     def compact_vdf_sem(self) -> LimitedSemaphore:
         assert self._compact_vdf_sem is not None
         return self._compact_vdf_sem
+
+    @property
+    def stream_coin_state_sem(self) -> LimitedSemaphore:
+        assert self._stream_coin_state_sem is not None
+        return self._stream_coin_state_sem
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         connections = self.server.get_connections(request_node_type)
