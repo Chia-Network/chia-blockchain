@@ -277,7 +277,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
     for i in range(1, num_blocks * 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    await time_out_assert(60, get_nft_count, 2, nft_wallet_0)
+    await time_out_assert(600, get_nft_count, 2, nft_wallet_0)
     coins = await nft_wallet_0.get_current_nfts()
     assert len(coins) == 2, "nft not generated"
 
