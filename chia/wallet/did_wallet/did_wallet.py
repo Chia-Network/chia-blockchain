@@ -1123,27 +1123,20 @@ class DIDWallet:
     async def get_new_p2_inner_puzzle(self) -> Program:
         return await self.standard_wallet.get_new_puzzle()
 
-    async def get_new_did_innerpuz(self, origin_id=None) -> Program:
+    async def get_new_did_innerpuz(self, origin_id: Optional[bytes32] = None) -> Program:
         if self.did_info.origin_coin is not None:
-            innerpuz = did_wallet_puzzles.create_innerpuz(
-                p2_puzzle_or_hash=await self.get_new_p2_inner_puzzle(),
-                recovery_list=self.did_info.backup_ids,
-                num_of_backup_ids_needed=uint64(self.did_info.num_of_backup_ids_needed),
-                launcher_id=self.did_info.origin_coin.name(),
-                metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
-            )
+            launcher_id = self.did_info.origin_coin.name()
         elif origin_id is not None:
-            innerpuz = did_wallet_puzzles.create_innerpuz(
-                p2_puzzle_or_hash=await self.get_new_p2_inner_puzzle(),
-                recovery_list=self.did_info.backup_ids,
-                num_of_backup_ids_needed=uint64(self.did_info.num_of_backup_ids_needed),
-                launcher_id=origin_id,
-                metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
-            )
+            launcher_id = origin_id
         else:
             raise ValueError("must have origin coin")
-
-        return innerpuz
+        return did_wallet_puzzles.create_innerpuz(
+            p2_puzzle_or_hash=await self.get_new_p2_inner_puzzle(),
+            recovery_list=self.did_info.backup_ids,
+            num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+            launcher_id=launcher_id,
+            metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+        )
 
     async def get_new_did_inner_hash(self) -> bytes32:
         innerpuz = await self.get_new_did_innerpuz()
