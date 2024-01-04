@@ -227,7 +227,8 @@ class KeyTypes(str, Enum):
     def parse_observation_root(cls: Type[KeyTypes], pk_bytes: bytes, key_type: KeyTypes) -> ObservationRoot:
         if key_type == cls.G1_ELEMENT:
             return G1Element.from_bytes(pk_bytes)
-        else:
+        else:  # pragma: no cover
+            # mypy should prevent this from ever running
             raise RuntimeError("Not all key types have been handled in KeyTypes.parse_observation_root")
 
 
@@ -247,9 +248,7 @@ class KeyData(Streamable):
 
     @cached_property
     def observation_root(self) -> ObservationRoot:
-        if self.key_type == KeyTypes.G1_ELEMENT:
-            return G1Element.from_bytes(self.public_key)
-        raise TypeError(f"Invalid key_type {self.key_type}")
+        return KeyTypes.parse_observation_root(self.public_key, KeyTypes(self.key_type))
 
     def __post_init__(self) -> None:
         # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyData` instance with
@@ -406,7 +405,7 @@ class Keychain:
             key: ObservationRoot = G1Element.from_bytes(pk_bytes)
             key_type: KeyTypes = KeyTypes.G1_ELEMENT
         else:
-            raise ValueError(f"Cannot identify type of pubkey {pubkey}")
+            raise ValueError(f"Cannot identify type of pubkey {pubkey}")  # pragma: no cover
         index = self._get_free_private_key_index()
         fingerprint = key.get_fingerprint()
 

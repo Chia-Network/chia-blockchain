@@ -654,7 +654,7 @@ class FullNodeRpcApi:
 
     async def get_coin_record_by_name(self, request: Dict[str, Any]) -> EndpointResult:
         """
-        Retrieves a coin record by it's name.
+        Retrieves a coin record by its name.
         """
         if "name" not in request:
             raise ValueError("Name not in request")
@@ -873,7 +873,7 @@ class FullNodeRpcApi:
             )
             if npc_result.error is not None:
                 raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")
-            cost = npc_result.cost
+            cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
         elif "cost" in request:
             cost = request["cost"]
         else:
