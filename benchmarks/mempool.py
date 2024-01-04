@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from subprocess import check_call
 from time import monotonic
-from typing import Dict, Iterator, List, Optional, Tuple
+from typing import Collection, Dict, Iterator, List, Optional, Tuple
 
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -78,8 +78,13 @@ def fake_block_record(block_height: uint32, timestamp: uint64) -> BenchBlockReco
 async def run_mempool_benchmark() -> None:
     all_coins: Dict[bytes32, CoinRecord] = {}
 
-    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-        return all_coins.get(coin_id)
+    async def get_coin_records(coin_ids: Collection[bytes32]) -> List[CoinRecord]:
+        ret: List[CoinRecord] = []
+        for name in coin_ids:
+            r = all_coins.get(name)
+            if r is not None:
+                ret.append(r)
+        return ret
 
     wt = WalletTool(DEFAULT_CONSTANTS)
 
@@ -156,7 +161,7 @@ async def run_mempool_benchmark() -> None:
         else:
             print("\n== Multi-threaded")
 
-        mempool = MempoolManager(get_coin_record, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+        mempool = MempoolManager(get_coin_records, DEFAULT_CONSTANTS, single_threaded=single_threaded)
 
         height = start_height
         rec = fake_block_record(height, timestamp)
@@ -186,7 +191,7 @@ async def run_mempool_benchmark() -> None:
         print(f"  time: {stop - start:0.4f}s")
         print(f"  per call: {(stop - start) / total_bundles * 1000:0.2f}ms")
 
-        mempool = MempoolManager(get_coin_record, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+        mempool = MempoolManager(get_coin_records, DEFAULT_CONSTANTS, single_threaded=single_threaded)
 
         height = start_height
         rec = fake_block_record(height, timestamp)

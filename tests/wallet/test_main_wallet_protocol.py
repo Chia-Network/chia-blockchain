@@ -37,7 +37,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.wallet.conftest import WalletStateTransition, WalletTestFramework
+from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 
 ACS: Program = Program.to(1)
 ACS_PH: bytes32 = ACS.get_tree_hash()
@@ -218,7 +218,7 @@ async def acs_setup(wallet_environments: WalletTestFramework, monkeypatch: pytes
         pk = PrivateKey.from_bytes(
             bytes.fromhex("548dd25590a19f0a6a294560fc36f2900575fb9d1b2650e6fe80ad9abc1c4a60")
         ).get_g1()
-        await env.wallet_node.keychain_proxy.add_public_key(bytes(pk).hex())
+        await env.node.keychain_proxy.add_public_key(bytes(pk).hex())
         await env.restart(pk.get_fingerprint())
 
 

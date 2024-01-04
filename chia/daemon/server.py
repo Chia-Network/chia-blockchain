@@ -632,7 +632,7 @@ class WebSocketServer:
         wallet_addresses_by_fingerprint = {}
         for key in keys:
             if not isinstance(key.observation_root, G1Element):
-                continue
+                continue  # pragma: no cover
             address_entries = []
 
             # we require access to the private key to generate wallet addresses for non observer

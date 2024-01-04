@@ -486,3 +486,4 @@ def test_key_type_support(key_type: str) -> None:
     }
     obr_fingerprint, obr_bytes, obr = generate_test_key_for_key_type[key_type]
     assert KeyData(uint32(obr_fingerprint), obr_bytes, None, None, key_type).observation_root == obr
+    assert KeyTypes.parse_observation_root(obr_bytes, KeyTypes(key_type)) == obr
