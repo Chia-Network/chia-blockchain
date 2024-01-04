@@ -49,7 +49,7 @@ async def create_full_node_service(
     if service_config["enable_upnp"]:
         upnp_list = [service_config["port"]]
     network_id = service_config["selected_network"]
-    rpc_info: Optional[RpcInfo] = None
+    rpc_info: Optional[RpcInfo[FullNodeRpcApi]] = None
     if service_config["start_rpc_server"]:
         rpc_info = (FullNodeRpcApi, service_config["rpc_port"])
     return Service(
@@ -91,7 +91,7 @@ def main() -> int:
 
     with maybe_manage_task_instrumentation(enable=os.environ.get("CHIA_INSTRUMENT_NODE") is not None):
         service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-        target_peer_count = service_config.get("target_peer_count", 80) - service_config.get(
+        target_peer_count = service_config.get("target_peer_count", 40) - service_config.get(
             "target_outbound_peer_count", 8
         )
         if target_peer_count < 0:
