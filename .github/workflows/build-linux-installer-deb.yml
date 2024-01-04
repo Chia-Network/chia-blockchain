@@ -377,8 +377,10 @@ jobs:
         mode:
         - name: GUI
           file: chia-blockchain_*.deb
+          package: chia-blockchain
         - name: CLI
           file: chia-blockchain-cli_*.deb
+          package: chia-blockchain-cli
         arch:
         - name: ARM64
           matrix: arm
@@ -411,4 +413,32 @@ jobs:
 
     - name: Run chia version
       run: |
-        chia version
+        ACTUAL=$(chia version)
+        echo "  actual version: ${ACTUAL}"
+        if [ "${ACTUAL}" = "None" ]
+        then
+          echo "  !!! should not be None"
+          false
+        else
+          echo "  :] at least it isn't None"
+        fi
+
+    - name: Verify /opt/chia present
+      run: |
+        if [ ! -e /opt/chia ]
+        then
+          ls -l /opt
+          false
+        fi
+
+    - name: Remove package
+      run: |
+        apt-get remove --yes ${{ matrix.mode.package }}
+
+    - name: Verify /opt/chia not present
+      run: |
+        if [ -e /opt/chia ]
+        then
+          ls -lR /opt/chia
+          false
+        fi

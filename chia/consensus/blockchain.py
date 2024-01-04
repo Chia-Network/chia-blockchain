@@ -149,7 +149,7 @@ class Blockchain(BlockchainInterface):
                 max_workers=num_workers,
                 mp_context=multiprocessing_context,
                 initializer=setproctitle,
-                initargs=(f"{getproctitle()}_worker",),
+                initargs=(f"{getproctitle()}_block_validation_worker",),
             )
             log.info(f"Started {num_workers} processes for block validation")
 
