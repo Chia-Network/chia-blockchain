@@ -609,7 +609,7 @@ class WeightProofHandler:
             max_workers=self._num_processes,
             mp_context=self.multiprocessing_context,
             initializer=setproctitle,
-            initargs=(f"{getproctitle()}_worker",),
+            initargs=(f"{getproctitle()}_weight_proof_worker",),
         ) as executor:
             # The shutdown file manager must be inside of the executor manager so that
             # we request the workers close prior to waiting for them to close.
@@ -1559,7 +1559,7 @@ def get_sp_total_iters(
     assert sub_slot_data.total_iters is not None
     assert sub_slot_data.signage_point_index is not None
     sp_iters: uint64 = calculate_sp_iters(constants, ssi, sub_slot_data.signage_point_index)
-    ip_iters: uint64 = sub_slot_data.cc_ip_vdf_info.number_of_iterations
+    ip_iters: uint64 = uint64(sub_slot_data.cc_ip_vdf_info.number_of_iterations)
     sp_sub_slot_total_iters = uint128(sub_slot_data.total_iters - ip_iters)
     if is_overflow:
         sp_sub_slot_total_iters = uint128(sp_sub_slot_total_iters - ssi)

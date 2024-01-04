@@ -1801,7 +1801,7 @@ class TestCATTrades:
             return wallet_node_taker._tx_messages_in_progress == {}
 
         for _ in range(10):
-            print(await wallet_node_taker._resend_queue())
+            await wallet_node_taker._resend_queue()
             await time_out_assert(5, check_wallet_cache_empty, True)
         offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
         await full_node.process_transaction_records(records=offer_tx_records)

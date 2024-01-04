@@ -8,7 +8,7 @@ from setuptools import find_packages, setup
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.1.0",
-    "boto3==1.34.0",  # AWS S3 for DL s3 plugin
+    "boto3==1.34.11",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.1",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
     "chiapos==2.0.3",  # proof of space
@@ -32,7 +32,7 @@ dependencies = [
     "dnspython==2.4.2",  # Query DNS seeds
     "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.23",  # dns lib
-    "typing-extensions==4.8.0",  # typing backports like Protocol and TypedDict
+    "typing-extensions==4.9.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
     "packaging==23.2",
     "psutil==5.9.4",
@@ -49,7 +49,7 @@ dev_dependencies = [
     "pre-commit==3.5.0; python_version < '3.9'",
     "pre-commit==3.6.0; python_version >= '3.9'",
     "py3createtorrent==1.1.0",
-    "pylint==3.0.2",
+    "pylint==3.0.3",
     "pytest==7.4.3",
     "pytest-cov==4.1.0",
     "pytest-mock==3.12.0",
@@ -59,10 +59,10 @@ dev_dependencies = [
     "isort==5.12.0",
     "flake8==6.1.0",
     "mypy==1.7.1",
-    "black==23.11.0",
+    "black==23.12.1",
     "lxml==4.9.3",
     "aiohttp_cors==0.7.0",  # For blackd
-    "pyinstaller==5.13.0",
+    "pyinstaller==6.3.0",
     "types-aiofiles==23.2.0.0",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.12",

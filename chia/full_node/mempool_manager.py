@@ -52,13 +52,14 @@ MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
 # the constants through here
 def validate_clvm_and_signature(
     spend_bundle_bytes: bytes, max_cost: int, constants: ConsensusConstants, height: uint32
-) -> Tuple[Optional[Err], bytes, Dict[bytes32, bytes]]:
+) -> Tuple[Optional[Err], bytes, Dict[bytes32, bytes], float]:
     """
     Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
     in order to validate the heavy parts of a transaction in a different thread. Returns an optional error,
     the NPCResult and a cache of the new pairings validated (if not error)
     """
 
+    start_time = time.monotonic()
     additional_data = constants.AGG_SIG_ME_ADDITIONAL_DATA
 
     try:
@@ -70,7 +71,7 @@ def validate_clvm_and_signature(
         )
 
         if result.error is not None:
-            return Err(result.error), b"", {}
+            return Err(result.error), b"", {}, time.monotonic() - start_time
 
         pks: List[bytes48] = []
         msgs: List[bytes] = []
@@ -80,16 +81,16 @@ def validate_clvm_and_signature(
         # Verify aggregated signature
         cache: LRUCache[bytes32, GTElement] = LRUCache(10000)
         if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
-            return Err.BAD_AGGREGATE_SIGNATURE, b"", {}
+            return Err.BAD_AGGREGATE_SIGNATURE, b"", {}, time.monotonic() - start_time
         new_cache_entries: Dict[bytes32, bytes] = {}
         for k, v in cache.cache.items():
             new_cache_entries[k] = bytes(v)
     except ValidationError as e:
-        return e.code, b"", {}
+        return e.code, b"", {}, time.monotonic() - start_time
     except Exception:
-        return Err.UNKNOWN, b"", {}
+        return Err.UNKNOWN, b"", {}, time.monotonic() - start_time
 
-    return None, bytes(result), new_cache_entries
+    return None, bytes(result), new_cache_entries, time.monotonic() - start_time
 
 
 @dataclass
@@ -162,6 +163,7 @@ class MempoolManager:
     seen_cache_size: int
     peak: Optional[BlockRecordProtocol]
     mempool: Mempool
+    _worker_queue_size: int
 
     def __init__(
         self,
@@ -191,6 +193,7 @@ class MempoolManager:
         self._conflict_cache = ConflictTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
         self._pending_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
         self.seen_cache_size = 10000
+        self._worker_queue_size = 0
         if single_threaded:
             self.pool = InlineExecutor()
         else:
@@ -198,7 +201,7 @@ class MempoolManager:
                 max_workers=2,
                 mp_context=multiprocessing_context,
                 initializer=setproctitle,
-                initargs=(f"{getproctitle()}_worker",),
+                initargs=(f"{getproctitle()}_mempool_worker",),
             )
 
         # The mempool will correspond to a certain peak
@@ -278,7 +281,6 @@ class MempoolManager:
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
         """
-        start_time = time.time()
         if new_spend_bytes is None:
             new_spend_bytes = bytes(new_spend)
 
@@ -287,25 +289,28 @@ class MempoolManager:
 
         assert self.peak is not None
 
-        err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
-            self.pool,
-            validate_clvm_and_signature,
-            new_spend_bytes,
-            self.max_block_clvm_cost,
-            self.constants,
-            self.peak.height,
-        )
+        self._worker_queue_size += 1
+        try:
+            err, cached_result_bytes, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
+                self.pool,
+                validate_clvm_and_signature,
+                new_spend_bytes,
+                self.max_block_clvm_cost,
+                self.constants,
+                self.peak.height,
+            )
+        finally:
+            self._worker_queue_size -= 1
 
         if err is not None:
             raise ValidationError(err)
         for cache_entry_key, cached_entry_value in new_cache_entries.items():
             LOCAL_CACHE.put(cache_entry_key, GTElement.from_bytes_unchecked(cached_entry_value))
         ret: NPCResult = NPCResult.from_bytes(cached_result_bytes)
-        end_time = time.time()
-        duration = end_time - start_time
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
-            f"pre_validate_spendbundle took {end_time - start_time:0.4f} seconds for {spend_name}",
+            f"pre_validate_spendbundle took {duration:0.4f} seconds "
+            f"for {spend_name} (queue-size: {self._worker_queue_size})",
         )
         return ret
 

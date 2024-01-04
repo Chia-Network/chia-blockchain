@@ -22,7 +22,6 @@ chia.types.blockchain_format.program
 chia.wallet.block_record
 chia.wallet.chialisp
 chia.wallet.did_wallet.did_wallet
-chia.wallet.did_wallet.did_wallet_puzzles
 chia.wallet.key_val_store
 chia.wallet.lineage_proof
 chia.wallet.nft_wallet.nft_puzzles
@@ -106,10 +105,8 @@ tests.util.test_misc
 tests.util.test_network
 tests.util.time_out_assert
 tests.wallet.cat_wallet.test_cat_wallet
-tests.wallet.cat_wallet.test_offer_lifecycle
 tests.wallet.cat_wallet.test_trades
 tests.wallet.did_wallet.test_did
-tests.wallet.nft_wallet.test_nft_wallet
 tests.wallet.rpc.test_wallet_rpc
 tests.wallet.simple_sync.test_simple_sync_protocol
 tests.wallet.sync.test_wallet_sync
