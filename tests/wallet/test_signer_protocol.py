@@ -11,7 +11,7 @@ from chia_rs import G1Element
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.ints import uint64
 from chia.util.streamable import ConversionError, Streamable, streamable
 from chia.wallet.conditions import AggSigMe
@@ -34,7 +34,7 @@ def test_signing_lifecycle() -> None:
     puzzle: Program = Program.to(1)
     solution: Program = Program.to([AggSigMe(pubkey, message).to_program()])
 
-    coin_spend: CoinSpend = CoinSpend(coin, puzzle, solution)
+    coin_spend: CoinSpend = make_spend(coin, puzzle, solution)
     assert Spend.from_coin_spend(coin_spend).as_coin_spend() == coin_spend
 
     tx: UnsignedTransaction = UnsignedTransaction(

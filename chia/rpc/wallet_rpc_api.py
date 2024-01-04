@@ -85,6 +85,7 @@ from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles import p2_delegated_conditions
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.singleton import (
@@ -1515,7 +1516,7 @@ class WalletRpcApi:
             except ValueError:
                 raise ValueError(f"Invalid signing mode: {signing_mode_str!r}")
 
-        if signing_mode == SigningMode.CHIP_0002:
+        if signing_mode == SigningMode.CHIP_0002 or signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
             # CHIP-0002 message signatures are made over the tree hash of:
             #   ("Chia Signed Message", message)
             message_to_verify: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, input_message)).get_tree_hash()
@@ -1539,9 +1540,15 @@ class WalletRpcApi:
             # endpoints, the "address" field should contain the p2_address of the NFT/DID
             # that was used to sign the message.
             puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
-            if puzzle_hash != puzzle_hash_for_synthetic_public_key(
-                G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
-            ):
+            expected_puzzle_hash: Optional[bytes32] = None
+            if signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
+                puzzle = p2_delegated_conditions.puzzle_for_pk(Program.to(hexstr_to_bytes(request["pubkey"])))
+                expected_puzzle_hash = bytes32(puzzle.get_tree_hash())
+            else:
+                expected_puzzle_hash = puzzle_hash_for_synthetic_public_key(
+                    G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
+                )
+            if puzzle_hash != expected_puzzle_hash:
                 return {"isValid": False, "error": "Public key doesn't match the address"}
         if is_valid:
             return {"isValid": is_valid}
@@ -2799,6 +2806,8 @@ class WalletRpcApi:
                 if lci.active_votes == []:
                     coins.append(lci)
         fee = uint64(request.get("fee", 0))
+        if not coins:  # pragma: no cover
+            raise ValueError("There are not coins available to exit lockup")
         exit_tx = await dao_cat_wallet.exit_vote_state(
             coins,
             tx_config,

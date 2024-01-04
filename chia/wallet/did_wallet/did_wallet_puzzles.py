@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Dict, Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 from chia_rs import G1Element
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
@@ -29,28 +29,32 @@ INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile(
 
 
 def create_innerpuz(
-    p2_puzzle: Program,
+    p2_puzzle_or_hash: Union[Program, bytes32],
     recovery_list: List[bytes32],
     num_of_backup_ids_needed: uint64,
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
-    recovery_list_hash: bytes32 = None,
+    recovery_list_hash: Optional[bytes32] = None,
 ) -> Program:
     """
     Create DID inner puzzle
-    :param p2_puzzle: Standard P2 puzzle
+    :param p2_puzzle_or_hash: Standard P2 puzzle or hash
     :param recovery_list: A list of DIDs used for the recovery
     :param num_of_backup_ids_needed: Need how many DIDs for the recovery
     :param launcher_id: ID of the launch coin
     :param metadata: DID customized metadata
     :param recovery_list_hash: Recovery list hash
     :return: DID inner puzzle
+    Note: Receiving a standard P2 puzzle hash wouldn't calculate a valid puzzle, but
+    that can be useful if calling `.get_tree_hash_precalc()` on it.
     """
     backup_ids_hash = Program(Program.to(recovery_list)).get_tree_hash()
     if recovery_list_hash is not None:
         backup_ids_hash = recovery_list_hash
     singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
-    return DID_INNERPUZ_MOD.curry(p2_puzzle, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata)
+    return DID_INNERPUZ_MOD.curry(
+        p2_puzzle_or_hash, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata
+    )
 
 
 def get_inner_puzhash_by_p2(
@@ -144,8 +148,7 @@ def create_spend_for_message(
     puzzle = create_recovery_message_puzzle(recovering_coin, newpuz, pubkey)
     coin = Coin(parent_of_message, puzzle.get_tree_hash(), uint64(0))
     solution = Program.to([])
-    coinsol = CoinSpend(coin, puzzle, solution)
-    return coinsol
+    return make_spend(coin, puzzle, solution)
 
 
 def match_did_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:

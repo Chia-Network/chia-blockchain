@@ -17,7 +17,7 @@ from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
@@ -103,7 +103,7 @@ async def check_conditions(
     blocks = await initial_blocks(bt)
     coin = blocks[spend_reward_index].get_included_reward_coins()[0]
 
-    coin_spend = CoinSpend(coin, EASY_PUZZLE, SerializedProgram.from_program(condition_solution))
+    coin_spend = make_spend(coin, EASY_PUZZLE, SerializedProgram.from_program(condition_solution))
     spend_bundle = SpendBundle([coin_spend], G2Element())
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate

@@ -155,9 +155,6 @@ class FullNode:
     _add_transaction_semaphore: Optional[asyncio.Semaphore] = None
     _db_wrapper: Optional[DBWrapper2] = None
     _hint_store: Optional[HintStore] = None
-    transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = dataclasses.field(
-        default_factory=list
-    )
     _block_store: Optional[BlockStore] = None
     _coin_store: Optional[CoinStore] = None
     _mempool_manager: Optional[MempoolManager] = None
@@ -260,7 +257,7 @@ class FullNode:
             self._hint_store = await HintStore.create(self.db_wrapper)
             self._coin_store = await CoinStore.create(self.db_wrapper)
             self.log.info("Initializing blockchain from disk")
-            start_time = time.time()
+            start_time = time.monotonic()
             reserved_cores = self.config.get("reserved_cores", 0)
             single_threaded = self.config.get("single_threaded", False)
             multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
@@ -276,7 +273,7 @@ class FullNode:
             )
 
             self._mempool_manager = MempoolManager(
-                get_coin_record=self.coin_store.get_coin_record,
+                get_coin_records=self.coin_store.get_coin_records,
                 consensus_constants=self.constants,
                 multiprocessing_context=self.multiprocessing_context,
                 single_threaded=single_threaded,
@@ -285,7 +282,6 @@ class FullNode:
             # Transactions go into this queue from the server, and get sent to respond_transaction
             self._transaction_queue = TransactionQueue(1000, self.log)
             self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
-            self.transaction_responses = []
 
             self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
@@ -295,7 +291,7 @@ class FullNode:
             if self.config.get("enable_memory_profiler", False):
                 asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
 
-            time_taken = time.time() - start_time
+            time_taken = time.monotonic() - start_time
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
             if peak is None:
                 self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
@@ -470,9 +466,7 @@ class FullNode:
         peer = entry.peer
         try:
             inc_status, err = await self.add_transaction(entry.transaction, entry.spend_name, peer, entry.test)
-            self.transaction_responses.append((entry.spend_name, inc_status, err))
-            if len(self.transaction_responses) > 50:
-                self.transaction_responses = self.transaction_responses[1:]
+            entry.done.set_result((inc_status, err))
         except asyncio.CancelledError:
             error_stack = traceback.format_exc()
             self.log.debug(f"Cancelling _handle_one_transaction, closing: {error_stack}")
@@ -895,7 +889,7 @@ class FullNode:
             elif connection.connection_type is NodeType.TIMELORD:
                 await self.send_peak_to_timelords()
 
-    def on_disconnect(self, connection: WSChiaConnection) -> None:
+    async def on_disconnect(self, connection: WSChiaConnection) -> None:
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self._state_changed("close_connection")
         self._state_changed("sync_mode")
@@ -1336,7 +1330,7 @@ class FullNode:
         if agg_state_change_summary is not None:
             self._state_changed("new_peak")
             self.log.debug(
-                f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
+                f"Total time for {len(blocks_to_validate)} blocks: {time.monotonic() - pre_validate_start}, "
                 f"advanced: True"
             )
         return True, agg_state_change_summary, None
@@ -1716,7 +1710,7 @@ class FullNode:
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
                 return None
-            validation_start = time.time()
+            validation_start = time.monotonic()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
             npc_results = {}
             if pre_validation_result is not None and pre_validation_result.npc_result is not None:
@@ -1728,7 +1722,7 @@ class FullNode:
                 [block], npc_results, validate_signatures=False
             )
             added: Optional[AddBlockResult] = None
-            pre_validation_time = time.time() - validation_start
+            pre_validation_time = time.monotonic() - validation_start
             try:
                 if len(pre_validation_results) < 1:
                     raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
@@ -1765,12 +1759,15 @@ class FullNode:
                 elif added == AddBlockResult.NEW_PEAK:
                     # Only propagate blocks which extend the blockchain (becomes one of the heads)
                     assert state_change_summary is not None
+                    post_process_time = time.monotonic()
                     ppp_result = await self.peak_post_processing(block, state_change_summary, peer)
+                    post_process_time = time.monotonic() - post_process_time
 
                 elif added == AddBlockResult.ADDED_AS_ORPHAN:
                     self.log.info(
                         f"Received orphan block of height {block.height} rh {block.reward_chain_block.get_hash()}"
                     )
+                    post_process_time = 0
                 else:
                     # Should never reach here, all the cases are covered
                     raise RuntimeError(f"Invalid result from add_block {added}")
@@ -1782,7 +1779,7 @@ class FullNode:
                     await self.peak_post_processing(block, state_change_summary, peer)
                 raise
 
-            validation_time = time.time() - validation_start
+            validation_time = time.monotonic() - validation_start
 
         if ppp_result is not None:
             assert state_change_summary is not None
@@ -1801,6 +1798,7 @@ class FullNode:
             logging.WARNING if validation_time > 2 else logging.DEBUG,
             f"Block validation time: {validation_time:0.2f} seconds, "
             f"pre_validation time: {pre_validation_time:0.2f} seconds, "
+            f"post-process time: {post_process_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
             f"{percent_full_str} header_hash: {header_hash} height: {block.height}",
         )
@@ -1913,21 +1911,21 @@ class FullNode:
         pre_validation_time = None
 
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-            start_header_time = time.time()
+            start_header_time = time.monotonic()
             _, header_error = await self.blockchain.validate_unfinished_block_header(block)
             if header_error is not None:
                 if header_error == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
                     raise TimestampError()
                 else:
                     raise ConsensusError(header_error)
-            validate_time = time.time() - start_header_time
+            validate_time = time.monotonic() - start_header_time
             self.log.log(
                 logging.WARNING if validate_time > 2 else logging.DEBUG,
                 f"Time for header validate: {validate_time:0.3f}s",
             )
 
         if block.transactions_generator is not None:
-            pre_validation_start = time.time()
+            pre_validation_start = time.monotonic()
             assert block.transactions_info is not None
             try:
                 block_generator: Optional[BlockGenerator] = await self.blockchain.get_block_generator(block)
@@ -1940,7 +1938,7 @@ class FullNode:
 
             height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
             npc_result = await self.blockchain.run_generator(block_bytes, block_generator, height)
-            pre_validation_time = time.time() - pre_validation_start
+            pre_validation_time = time.monotonic() - pre_validation_start
 
             # blockchain.run_generator throws on errors, so npc_result is
             # guaranteed to represent a successful run
@@ -1953,7 +1951,7 @@ class FullNode:
 
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             # TODO: pre-validate VDFs outside of lock
-            validation_start = time.time()
+            validation_start = time.monotonic()
             validate_result = await self.blockchain.validate_unfinished_block(block, npc_result)
             if validate_result.error is not None:
                 if validate_result.error == Err.COIN_AMOUNT_NEGATIVE.value:
@@ -1961,7 +1959,7 @@ class FullNode:
                     self.log.info(f"Consensus error {validate_result.error}, not disconnecting")
                     return
                 raise ConsensusError(Err(validate_result.error))
-            validation_time = time.time() - validation_start
+            validation_time = time.monotonic() - validation_start
 
         # respond_block will later use the cache (validated_signature=True)
         validate_result = dataclasses.replace(validate_result, validated_signature=True)
