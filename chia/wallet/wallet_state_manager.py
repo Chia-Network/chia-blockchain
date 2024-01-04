@@ -2565,7 +2565,7 @@ class WalletStateManager:
         origin = next(iter(coins))
         launcher_coin = Coin(origin.name(), SINGLETON_LAUNCHER_HASH, amount)
 
-        genesis_launcher_solution = Program.to([vault_inner_puzzle_hash, amount, None])
+        genesis_launcher_solution = Program.to([vault_inner_puzzle_hash, amount, [secp_pk, hidden_puzzle_hash]])
         announcement_message = genesis_launcher_solution.get_tree_hash()
 
         [tx_record] = await wallet.generate_signed_transaction(
@@ -2576,7 +2576,6 @@ class WalletStateManager:
             coins,
             None,
             origin_id=origin.name(),
-            memos=[secp_pk, hidden_puzzle_hash],
             extra_conditions=(
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
             ),
