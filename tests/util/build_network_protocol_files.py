@@ -59,6 +59,8 @@ def visit_full_node(visitor: Callable[[Any, str], None]) -> None:
     visitor(respond_compact_vdf, "respond_compact_vdf")
     visitor(request_peers, "request_peers")
     visitor(respond_peers, "respond_peers")
+    visitor(new_unfinished_block2, "new_unfinished_block2")
+    visitor(request_unfinished_block2, "request_unfinished_block2")
 
 
 def visit_wallet_protocol(visitor: Callable[[Any, str], None]) -> None:

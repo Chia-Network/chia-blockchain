@@ -379,6 +379,14 @@ full_node:
 
   multiprocessing_start_method: default
 
+  # The maximum number of UnfinishedBlocks we accept (and forward) with the
+  # same reward hash (but different foliage hashes). Traditionally this was
+  # effectively 1, meaning whichever UnfinishedBlock we saw first was the only
+  # one we forwarded. In 2.2.0 we relaxed the protocol to allow some
+  # duplicates be forwarded, in order to allow the timelords to,
+  # deterministically, pick which one to infuse
+  max_duplicate_unfinished_blocks: 3
+
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8555

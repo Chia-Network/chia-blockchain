@@ -101,6 +101,8 @@ rate_limits = {
             ProtocolMessageTypes.respond_block: RLSettings(200, 2 * 1024 * 1024, 10 * 2 * 1024 * 1024),
             ProtocolMessageTypes.new_unfinished_block: RLSettings(200, 100),
             ProtocolMessageTypes.request_unfinished_block: RLSettings(200, 100),
+            ProtocolMessageTypes.new_unfinished_block2: RLSettings(200, 100),
+            ProtocolMessageTypes.request_unfinished_block2: RLSettings(200, 100),
             ProtocolMessageTypes.respond_unfinished_block: RLSettings(200, 2 * 1024 * 1024, 10 * 2 * 1024 * 1024),
             ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot: RLSettings(200, 200),
             ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot: RLSettings(200, 200),

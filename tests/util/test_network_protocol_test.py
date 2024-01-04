@@ -41,10 +41,10 @@ def test_missing_messages_state_machine() -> None:
     # to the visitor in build_network_protocol_files.py and rerun it. Then
     # update this test
     assert (
-        len(VALID_REPLY_MESSAGE_MAP) == 20
+        len(VALID_REPLY_MESSAGE_MAP) == 21
     ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
     assert (
-        len(NO_REPLY_EXPECTED) == 7
+        len(NO_REPLY_EXPECTED) == 8
     ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
 
 
@@ -124,6 +124,7 @@ def test_missing_messages() -> None:
         "NewSignagePointOrEndOfSubSlot",
         "NewTransaction",
         "NewUnfinishedBlock",
+        "NewUnfinishedBlock2",
         "RejectBlock",
         "RejectBlocks",
         "RequestBlock",
@@ -135,6 +136,7 @@ def test_missing_messages() -> None:
         "RequestSignagePointOrEndOfSubSlot",
         "RequestTransaction",
         "RequestUnfinishedBlock",
+        "RequestUnfinishedBlock2",
         "RespondBlock",
         "RespondBlocks",
         "RespondCompactVDF",
