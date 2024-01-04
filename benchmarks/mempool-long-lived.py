@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from time import monotonic
-from typing import Dict, Optional
+from typing import Collection, Dict, List, Optional
 
 from chia_rs import G2Element
 from clvm.casts import int_to_bytes
@@ -81,8 +81,13 @@ def fake_block_record(block_height: uint32, timestamp: uint64) -> BenchBlockReco
 async def run_mempool_benchmark() -> None:
     coin_records: Dict[bytes32, CoinRecord] = {}
 
-    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-        return coin_records.get(coin_id)
+    async def get_coin_record(coin_ids: Collection[bytes32]) -> List[CoinRecord]:
+        ret: List[CoinRecord] = []
+        for name in coin_ids:
+            r = coin_records.get(name)
+            if r is not None:
+                ret.append(r)
+        return ret
 
     timestamp = uint64(1631794488)
 

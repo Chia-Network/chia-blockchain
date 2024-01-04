@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import traceback
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Type, get_type_hints
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, get_type_hints
 
 import aiohttp
 from chia_rs import AugSchemeMPL
@@ -32,7 +32,9 @@ MarshallableRpcEndpoint = Callable[..., Awaitable[Streamable]]
 
 def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     hints = get_type_hints(func)
-    request_class: Type[Streamable] = hints["request"]
+    request_hint = hints["request"]
+    assert issubclass(request_hint, Streamable)
+    request_class = request_hint
 
     async def rpc_endpoint(self, request: Dict[str, Any], *args: object, **kwargs: object) -> Dict[str, Any]:
         response_obj: Streamable = await func(

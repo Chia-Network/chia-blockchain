@@ -17,6 +17,8 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.trade_manager import TradeManager
+from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -26,9 +28,16 @@ from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from tests.conftest import SOFTFORK_HEIGHTS, ConsensusMode
+from tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from tests.util.time_out_assert import time_out_assert
-from tests.wallet.conftest import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
+
+
+async def get_trade_and_status(trade_manager: TradeManager, trade: TradeRecord) -> TradeStatus:
+    trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
+    if trade_rec is not None:
+        return TradeStatus(trade_rec.status)
+    raise ValueError("Couldn't find the trade record")
 
 
 # This deliberate parameterization may at first look like we're neglecting quite a few cases.
@@ -91,8 +100,8 @@ async def test_cat_trades(
     # Setup
     env_maker: WalletEnvironment = wallet_environments.environments[0]
     env_taker: WalletEnvironment = wallet_environments.environments[1]
-    wallet_node_maker = env_maker.wallet_node
-    wallet_node_taker = env_taker.wallet_node
+    wallet_node_maker = env_maker.node
+    wallet_node_taker = env_taker.node
     client_maker = env_maker.rpc_client
     client_taker = env_taker.rpc_client
     wallet_maker = env_maker.xch_wallet
@@ -632,10 +641,6 @@ async def test_cat_trades(
         assert taker_unused_dr is not None
         assert taker_unused_index < taker_unused_dr.index
 
-    async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
-        trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
-        return TradeStatus(trade_rec.status)
-
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
@@ -661,10 +666,16 @@ async def test_cat_trades(
         Offer.from_bytes(trade_make.offer),
         peer,
         wallet_environments.tx_config,
+        fee=uint64(1),
     )
     await wallet_taker.wallet_state_manager.add_pending_transactions(tx_records)
     assert trade_take is not None
     assert tx_records is not None
+
+    # Testing a precious display bug real quick
+    xch_tx: TransactionRecord = next(tx for tx in tx_records if tx.wallet_id == 1)
+    assert xch_tx.amount == 3
+    assert xch_tx.fee_amount == 1
 
     await wallet_environments.process_pending_states(
         [
@@ -698,9 +709,9 @@ async def test_cat_trades(
             WalletStateTransition(
                 pre_block_balance_updates={
                     "xch": {
-                        "unconfirmed_wallet_balance": -3,
-                        "<=#spendable_balance": -3,
-                        "<=#max_send_amount": -3,
+                        "unconfirmed_wallet_balance": -4,  # -3 for offer, -1 for fee
+                        "<=#spendable_balance": -4,
+                        "<=#max_send_amount": -4,
                         "pending_coin_removal_count": 1,
                     },
                     "cat": {
@@ -725,7 +736,7 @@ async def test_cat_trades(
                 },
                 post_block_balance_updates={
                     "xch": {
-                        "confirmed_wallet_balance": -3,
+                        "confirmed_wallet_balance": -4,
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
                         "pending_coin_removal_count": -1,
@@ -1559,10 +1570,6 @@ class TestCATTrades:
         trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
         trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
 
-        async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
-            trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
-            return TradeStatus(trade_rec.status)
-
         success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, DEFAULT_TX_CONFIG)
         assert error is None
         assert success is True
@@ -1680,10 +1687,6 @@ class TestCATTrades:
 
         trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
 
-        async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
-            trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
-            return TradeStatus(trade_rec.status)
-
         success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
@@ -1736,12 +1739,6 @@ class TestCATTrades:
         trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
         trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
         trade_manager_trader = wallet_node_trader.wallet_state_manager.trade_manager
-
-        async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
-            trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
-            if trade_rec:
-                return TradeStatus(trade_rec.status)
-            raise ValueError("Couldn't find the trade record")
 
         success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
@@ -1799,12 +1796,6 @@ class TestCATTrades:
 
         trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
         trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
-
-        async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
-            trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
-            if trade_rec:
-                return TradeStatus(trade_rec.status)
-            raise ValueError("Couldn't find the trade record")
 
         success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(30, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
@@ -1865,12 +1856,6 @@ class TestCATTrades:
         trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
         trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
 
-        async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
-            trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
-            if trade_rec:
-                return TradeStatus(trade_rec.status)
-            raise ValueError("Couldn't find the trade record")
-
         success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
@@ -1924,12 +1909,6 @@ class TestCATTrades:
 
         trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
         trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
-
-        async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
-            trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
-            if trade_rec:
-                return TradeStatus(trade_rec.status)
-            raise ValueError("Couldn't find the trade record")  # pragma: no cover
 
         success, trade_make_1, _, error = await trade_manager_maker.create_offer_for_ids(
             chia_for_cat, DEFAULT_TX_CONFIG

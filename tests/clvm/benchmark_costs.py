@@ -7,6 +7,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
+from chia.util.ints import uint64
 
 
 def cost_of_spend_bundle(spend_bundle: SpendBundle) -> int:
@@ -19,4 +20,4 @@ def cost_of_spend_bundle(spend_bundle: SpendBundle) -> int:
         height=DEFAULT_CONSTANTS.HARD_FORK_HEIGHT,
         constants=DEFAULT_CONSTANTS,
     )
-    return npc_result.cost
+    return uint64(0 if npc_result.conds is None else npc_result.conds.cost)

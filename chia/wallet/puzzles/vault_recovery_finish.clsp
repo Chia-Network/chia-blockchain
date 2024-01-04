@@ -1,0 +1,13 @@
+; p2_conditions for vault
+; TIMELOCK is curried into the vault_recovery puzzle
+; CONDITIONS are curried in when a recovery is initiated
+
+(mod (TIMELOCK CONDITIONS)
+  (include *standard-cl-21*)
+  (include condition_codes.clib)
+
+  (c
+    (list ASSERT_SECONDS_RELATIVE TIMELOCK)
+    CONDITIONS
+  )
+)

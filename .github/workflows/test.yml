@@ -16,6 +16,8 @@ on:
     branches:
     - '**'
   workflow_dispatch: null
+  schedule:
+    - cron: '0 13 * * *'
 
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}--${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
@@ -41,7 +43,7 @@ jobs:
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> "$GITHUB_OUTPUT"
-          echo matrix_mode=${{ ( github.event_name == 'workflow_dispatch' ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') ) && 'all' || 'main' }} >> "$GITHUB_OUTPUT"
+          echo matrix_mode=${{ ( github.event_name == 'schedule' ) && 'all' || ( github.event_name == 'workflow_dispatch' ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') ) && 'all' || 'main' }} >> "$GITHUB_OUTPUT"
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
@@ -189,7 +191,7 @@ jobs:
           coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='tests/**/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
       - name: Coverage report (diff)
-        if: always()
+        if: (github.base_ref != '' || github.event.before != '') && always()
         env:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
@@ -215,7 +217,7 @@ jobs:
           if [[ -n "$COMMENT_ID" ]]; then
             gh api -X DELETE /repos/"${ORG_REPO}"/issues/comments/"${COMMENT_ID}"
           fi
-          if [[ "$COV_STATUS" != '0' ]]; then
+          if [[ "$COV_STATUS" == '0' ]]; then
             if [[ "$COVERAGE_LABEL" == "coverage-diff" ]]; then
               gh pr edit "$PR_NUM" --remove-label "coverage-diff"
             fi
@@ -272,7 +274,7 @@ jobs:
           fi
 
       - name: Add diff coverage report to workflow summary
-        if: always()
+        if: (github.base_ref != '' || github.event.before != '') && always()
         run: |
           cat coverage-reports/diff-cover.md >> "$GITHUB_STEP_SUMMARY"
 

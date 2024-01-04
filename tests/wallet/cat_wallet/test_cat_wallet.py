@@ -16,7 +16,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtoco
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2
@@ -34,9 +34,14 @@ from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
+from chia.wallet.wallet_node import WalletNode
 from tests.conftest import ConsensusMode
 from tests.util.setup_nodes import SimulatorsAndWalletsServices
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
+
+
+def check_wallets(node: WalletNode) -> int:
+    return len(node.wallet_state_manager.wallets.keys())
 
 
 class TestCATWallet:
@@ -644,7 +649,6 @@ class TestCATWallet:
         await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 0)
 
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
-        print(len(txs))
         # Test with Memo
         tx_records_3: TransactionRecord = await cat_wallet_1.generate_signed_transaction(
             [uint64(30)], [cat_hash], DEFAULT_TX_CONFIG, memos=[[b"Markus Walburg"]]
@@ -841,9 +845,6 @@ class TestCATWallet:
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 40)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 40)
 
-        async def check_wallets(node):
-            return len(node.wallet_state_manager.wallets.keys())
-
         if autodiscovery:
             # Autodiscovery enabled: test that wallet was created at this point
             await time_out_assert(20, check_wallets, 2, wallet_node_2)
@@ -934,9 +935,7 @@ class TestCATWallet:
         pubkey_unhardened = _derive_path_unhardened(intermediate_sk_un, [100000000]).get_g1()
         inner_puzhash = puzzle_hash_for_pk(pubkey_unhardened)
         puzzlehash_unhardened = construct_cat_puzzle(
-            CAT_MOD,
-            Program.to(None).get_tree_hash(),
-            inner_puzhash,  # type: ignore[arg-type]
+            CAT_MOD, Program.to(None).get_tree_hash(), inner_puzhash
         ).get_tree_hash_precalc(inner_puzhash)
         change_derivation = DerivationRecord(
             uint32(0),
@@ -979,7 +978,7 @@ class TestCATWallet:
         )
         eve_spend = await wallet_node_0.wallet_state_manager.sign_transaction(
             [
-                CoinSpend(
+                make_spend(
                     cat_coin,
                     cat_puzzle,
                     Program.to(
@@ -1004,7 +1003,7 @@ class TestCATWallet:
                         ]
                     ),
                 ),
-                CoinSpend(
+                make_spend(
                     next_coin,
                     construct_cat_puzzle(
                         CAT_MOD,
@@ -1041,9 +1040,6 @@ class TestCATWallet:
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, eve_spend.name())
         await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-
-        async def check_wallets(node):
-            return len(node.wallet_state_manager.wallets.keys())
 
         await time_out_assert(20, check_wallets, 2, wallet_node_0)
         cat_wallet = wallet_node_0.wallet_state_manager.wallets[uint32(2)]

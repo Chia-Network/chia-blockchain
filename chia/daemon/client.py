@@ -43,7 +43,7 @@ class DaemonProxy:
                 autoclose=True,
                 autoping=True,
                 heartbeat=self.heartbeat,
-                ssl_context=self.ssl_context,
+                ssl=self.ssl_context,
                 max_msg_size=self.max_message_size,
             )
         except Exception:

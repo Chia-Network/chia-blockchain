@@ -196,7 +196,11 @@ async def insert_from_delta_file(
         except Exception:
             target_filename = client_foldername.joinpath(filename)
             os.remove(target_filename)
-            await data_store.received_incorrect_file(tree_id, server_info, timestamp)
+            # await data_store.received_incorrect_file(tree_id, server_info, timestamp)
+            # incorrect file bans for 7 days which in practical usage
+            # is too long given this file might be incorrect for various reasons
+            # therefore, use the misses file logic instead
+            await data_store.server_misses_file(tree_id, server_info, timestamp)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
             raise
 
