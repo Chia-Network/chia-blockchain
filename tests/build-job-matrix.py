@@ -114,10 +114,10 @@ for path in test_paths:
     if path.is_dir():
         test_files = sorted(path.glob("test_*.py"))
         test_file_paths = [file.relative_to(project_root_path) for file in test_files]
-        paths_for_cli = " ".join(path.as_posix() for path in test_file_paths)
+        paths_for_cli = " ".join(f"../{path.as_posix()}" for path in test_file_paths)
         config_path = path
     else:
-        paths_for_cli = path.relative_to(project_root_path).as_posix()
+        paths_for_cli = f"../{path.relative_to(project_root_path).as_posix()}"
         config_path = path.parent
 
     try:
