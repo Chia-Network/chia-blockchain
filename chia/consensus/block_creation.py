@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import random
 from dataclasses import replace
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import chia_rs
 from chia_rs import G1Element, G2Element, compute_merkle_set_root
@@ -35,6 +35,23 @@ from chia.util.prev_transaction_block import get_prev_transaction_block
 log = logging.getLogger(__name__)
 
 
+def compute_block_cost(generator: BlockGenerator, constants: ConsensusConstants, height: uint32) -> uint64:
+    result: NPCResult = get_name_puzzle_conditions(
+        generator, constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=height, constants=constants
+    )
+    return uint64(0 if result.conds is None else result.conds.cost)
+
+
+def compute_block_fee(additions: Sequence[Coin], removals: Sequence[Coin]) -> uint64:
+    removal_amount = 0
+    addition_amount = 0
+    for coin in removals:
+        removal_amount += coin.amount
+    for coin in additions:
+        addition_amount += coin.amount
+    return uint64(removal_amount - addition_amount)
+
+
 def create_foliage(
     constants: ConsensusConstants,
     reward_block_unfinished: RewardChainBlockUnfinished,
@@ -50,7 +67,9 @@ def create_foliage(
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
-    seed: bytes = b"",
+    seed: bytes,
+    compute_cost: Callable[[BlockGenerator, ConsensusConstants, uint32], uint64],
+    compute_fees: Callable[[Sequence[Coin], Sequence[Coin]], uint64],
 ) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo]]:
     """
     Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
@@ -83,9 +102,10 @@ def create_foliage(
         prev_transaction_block = None
         is_transaction_block = True
 
-    random.seed(seed)
+    rng = random.Random()
+    rng.seed(seed)
     # Use the extension data to create different blocks based on header hash
-    extension_data: bytes32 = bytes32(random.randint(0, 100000000).to_bytes(32, "big"))
+    extension_data: bytes32 = bytes32(rng.randint(0, 100000000).to_bytes(32, "big"))
     if prev_block is None:
         height: uint32 = uint32(0)
     else:
@@ -128,20 +148,11 @@ def create_foliage(
         # Calculate the cost of transactions
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list
-            result: NPCResult = get_name_puzzle_conditions(
-                block_generator, constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=height, constants=constants
-            )
-            cost = result.cost
+            cost = compute_cost(block_generator, constants, height)
 
-            removal_amount = 0
-            addition_amount = 0
-            for coin in removals:
-                removal_amount += coin.amount
-            for coin in additions:
-                addition_amount += coin.amount
-            spend_bundle_fees = removal_amount - addition_amount
+            spend_bundle_fees = compute_fees(additions, removals)
         else:
-            spend_bundle_fees = 0
+            spend_bundle_fees = uint64(0)
 
         reward_claims_incorporated = []
         if height > 0:
@@ -220,7 +231,7 @@ def create_foliage(
 
         generator_refs_hash = bytes32([1] * 32)
         if generator_block_heights_list not in (None, []):
-            generator_ref_list_bytes = b"".join([bytes(i) for i in generator_block_heights_list])
+            generator_ref_list_bytes = b"".join([i.stream_to_bytes() for i in generator_block_heights_list])
             generator_refs_hash = std_hash(generator_ref_list_bytes)
 
         filter_hash: bytes32 = std_hash(encoded)
@@ -229,7 +240,7 @@ def create_foliage(
             generator_hash,
             generator_refs_hash,
             aggregate_sig,
-            uint64(spend_bundle_fees),
+            spend_bundle_fees,
             cost,
             reward_claims_incorporated,
         )
@@ -296,6 +307,8 @@ def create_unfinished_block(
     removals: Optional[List[Coin]] = None,
     prev_block: Optional[BlockRecord] = None,
     finished_sub_slots_input: Optional[List[EndOfSubSlotBundle]] = None,
+    compute_cost: Callable[[BlockGenerator, ConsensusConstants, uint32], uint64] = compute_block_cost,
+    compute_fees: Callable[[Sequence[Coin], Sequence[Coin]], uint64] = compute_block_fee,
 ) -> UnfinishedBlock:
     """
     Creates a new unfinished block using all the information available at the signage point. This will have to be
@@ -399,6 +412,8 @@ def create_unfinished_block(
         get_plot_signature,
         get_pool_signature,
         seed,
+        compute_cost,
+        compute_fees,
     )
     return UnfinishedBlock(
         finished_sub_slots,

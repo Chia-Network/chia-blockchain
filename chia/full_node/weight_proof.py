@@ -609,7 +609,7 @@ class WeightProofHandler:
             max_workers=self._num_processes,
             mp_context=self.multiprocessing_context,
             initializer=setproctitle,
-            initargs=(f"{getproctitle()}_worker",),
+            initargs=(f"{getproctitle()}_weight_proof_worker",),
         ) as executor:
             # The shutdown file manager must be inside of the executor manager so that
             # we request the workers close prior to waiting for them to close.

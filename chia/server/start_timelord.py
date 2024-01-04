@@ -41,7 +41,7 @@ def create_timelord_service(
     peer_api = TimelordAPI(node)
     network_id = service_config["selected_network"]
 
-    rpc_info: Optional[RpcInfo] = None
+    rpc_info: Optional[RpcInfo[TimelordRpcApi]] = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (TimelordRpcApi, service_config.get("rpc_port", 8557))
 

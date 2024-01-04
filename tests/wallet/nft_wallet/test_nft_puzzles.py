@@ -3,8 +3,6 @@ from __future__ import annotations
 import random
 from typing import Tuple
 
-from clvm.casts import int_from_bytes
-
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.nft_wallet import uncurry_nft
@@ -40,38 +38,26 @@ NFT_METADATA_UPDATER_DEFAULT = load_clvm(
 )
 
 
-def test_nft_transfer_puzzle_hashes(seeded_random: random.Random):
+def test_nft_transfer_puzzle_hashes(seeded_random: random.Random) -> None:
     maker_pk = int_to_public_key(111)
     maker_p2_puz = puzzle_for_pk(maker_pk)
     maker_p2_ph = maker_p2_puz.get_tree_hash()
     maker_did = Program.to("maker did").get_tree_hash()
     # maker_did_inner_hash = Program.to("maker did inner hash").get_tree_hash()
-    metadata = [
-        ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-        ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
-    ]
+    metadata = [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", 0xD4584AD463139FA8C0D9F68F4B59F185)]
     metadata_updater_hash = NFT_METADATA_UPDATER_DEFAULT.get_tree_hash()
     # royalty_addr = maker_p2_ph
     royalty_pc = 2000  # basis pts
     nft_id = Program.to("nft id").get_tree_hash()
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
-
-    transfer_puz = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
-        SINGLETON_STRUCT,
-        maker_p2_ph,
-        royalty_pc,
-    )
-
+    transfer_puz = NFT_TRANSFER_PROGRAM_DEFAULT.curry(SINGLETON_STRUCT, maker_p2_ph, royalty_pc)
     ownership_puz = NFT_OWNERSHIP_LAYER.curry(
         NFT_OWNERSHIP_LAYER.get_tree_hash(), maker_did, transfer_puz, maker_p2_puz
     )
-
     metadata_puz = NFT_STATE_LAYER_MOD.curry(
         NFT_STATE_LAYER_MOD.get_tree_hash(), metadata, metadata_updater_hash, ownership_puz
     )
-
     nft_puz = SINGLETON_MOD.curry(SINGLETON_STRUCT, metadata_puz)
-
     nft_info = match_puzzle(uncurry_puzzle(nft_puz))
     assert nft_info is not None
     also = nft_info.also()
@@ -102,7 +88,7 @@ def test_nft_transfer_puzzle_hashes(seeded_random: random.Random):
     # get the new NFT puzhash
     for cond in conds.as_iter():
         if cond.first().as_int() == 51:
-            expected_ph = bytes32(cond.at("rf").atom)
+            expected_ph = bytes32(cond.at("rf").as_atom())
 
     # recreate the puzzle for new_puzhash
     new_ownership_puz = NFT_OWNERSHIP_LAYER.curry(NFT_OWNERSHIP_LAYER.get_tree_hash(), None, transfer_puz, taker_p2_puz)
@@ -122,25 +108,8 @@ def make_a_new_solution() -> Tuple[Program, Program]:
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
     trade_prices_list = [[200, OFFER_MOD.get_tree_hash()]]
-
-    condition_list = [
-        [
-            51,
-            puzhash,
-            1,
-            [puzhash],
-        ],
-        [-10, new_did, trade_prices_list, new_did_inner_hash],
-    ]
-    solution = Program.to(
-        [
-            [],
-            [],
-            [
-                [solution_for_conditions(condition_list)],
-            ],
-        ],
-    )
+    condition_list = [[51, puzhash, 1, [puzhash]], [-10, new_did, trade_prices_list, new_did_inner_hash]]
+    solution = Program.to([[], [], [[solution_for_conditions(condition_list)]]])
     return p2_puzzle, solution
 
 
@@ -150,11 +119,7 @@ def make_a_new_ownership_layer_puzzle() -> Tuple[Program, Program]:
     old_did = Program.to("test_2").get_tree_hash()
     nft_id = Program.to("nft_id")
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
-    curried_tp = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
-        SINGLETON_STRUCT,
-        innerpuz.get_tree_hash(),
-        2000,
-    )
+    curried_tp = NFT_TRANSFER_PROGRAM_DEFAULT.curry(SINGLETON_STRUCT, innerpuz.get_tree_hash(), 2000)
     curried_inner = innerpuz
     curried_ownership_layer = construct_ownership_layer(old_did, curried_tp, curried_inner)
     return innerpuz, curried_ownership_layer
@@ -170,19 +135,16 @@ def make_a_new_nft_puzzle(curried_ownership_layer: Program, metadata: Program) -
 def get_updated_nft_puzzle(puzzle: Program, solution: Program) -> bytes32:
     result = puzzle.run(solution)
     for condition in result.as_iter():
-        code = int_from_bytes(condition.first().atom)
+        code = condition.first().as_int()
         if code == 51:
-            if int_from_bytes(condition.rest().rest().first().atom) == 1:
+            if condition.at("rrf").as_int() == 1:
                 # this is our new puzzle hash
-                return bytes32(condition.rest().first().atom)
+                return bytes32(condition.at("rf").as_atom())
     raise ValueError("No create coin condition found")
 
 
 def test_transfer_puzzle_builder() -> None:
-    metadata = [
-        ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-        ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
-    ]
+    metadata = [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", 0xD4584AD463139FA8C0D9F68F4B59F185)]
     sp2_puzzle, solution = make_a_new_solution()
     p2_puzzle, ownership_puzzle = make_a_new_ownership_layer_puzzle()
     clvm_nft_puzzle = create_nft_layer_puzzle_with_curry_params(

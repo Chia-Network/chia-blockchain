@@ -14,7 +14,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.util.streamable import ConversionError, Streamable, streamable
@@ -40,7 +40,7 @@ from chia.wallet.util.clvm_streamable import ClvmSerializationConfig, _ClvmSeria
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG
 from chia.wallet.wallet_protocol import MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.wallet.conftest import WalletStateTransition, WalletTestFramework
+from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 
 
 def test_signing_serialization() -> None:
@@ -51,7 +51,7 @@ def test_signing_serialization() -> None:
     puzzle: Program = Program.to(1)
     solution: Program = Program.to([AggSigMe(pubkey, message).to_program()])
 
-    coin_spend: CoinSpend = CoinSpend(coin, puzzle, solution)
+    coin_spend: CoinSpend = make_spend(coin, puzzle, solution)
     assert Spend.from_coin_spend(coin_spend).as_coin_spend() == coin_spend
 
     tx: UnsignedTransaction = UnsignedTransaction(
@@ -209,7 +209,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     delegated_puzzle_hash: bytes32 = delegated_puzzle.get_tree_hash()
     solution: Program = Program.to([None, None, None])
 
-    coin_spend: CoinSpend = CoinSpend(
+    coin_spend: CoinSpend = make_spend(
         coin,
         puzzle,
         solution,
@@ -263,7 +263,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         ACS_PH,
         uint64(0),
     )
-    not_our_coin_spend: CoinSpend = CoinSpend(not_our_coin, ACS, Program.to([[49, not_our_pubkey, not_our_message]]))
+    not_our_coin_spend: CoinSpend = make_spend(not_our_coin, ACS, Program.to([[49, not_our_pubkey, not_our_message]]))
 
     not_our_utx: UnsignedTransaction = UnsignedTransaction(
         TransactionInfo([Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]),
