@@ -576,10 +576,9 @@ class TestBlockHeaderValidation:
                         block.finished_sub_slots[-1],
                         "infused_challenge_chain",
                         InfusedChallengeChainSubSlot(
-                            replace(
-                                block.finished_sub_slots[
-                                    -1
-                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                            block.finished_sub_slots[
+                                -1
+                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.replace(
                                 number_of_iterations=uint64(10000000),
                             )
                         ),
@@ -594,10 +593,9 @@ class TestBlockHeaderValidation:
                         block.finished_sub_slots[-1],
                         "infused_challenge_chain",
                         InfusedChallengeChainSubSlot(
-                            replace(
-                                block.finished_sub_slots[
-                                    -1
-                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                            block.finished_sub_slots[
+                                -1
+                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.replace(
                                 output=ClassgroupElement.get_default_element(),
                             )
                         ),
@@ -613,11 +611,10 @@ class TestBlockHeaderValidation:
                         block.finished_sub_slots[-1],
                         "infused_challenge_chain",
                         InfusedChallengeChainSubSlot(
-                            replace(
-                                block.finished_sub_slots[
-                                    -1
-                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                                challenge=bytes32([0] * 32),
+                            block.finished_sub_slots[
+                                -1
+                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.replace(
+                                challenge=bytes32([0] * 32)
                             )
                         ),
                     )

@@ -219,7 +219,7 @@ class FullNodeStore:
 
         self.future_cache_key_times[signage_point.rc_vdf.challenge] = int(time.time())
         self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
-        log.info(f"Don't have rc hash {signage_point.rc_vdf.challenge}. caching signage point {index}.")
+        log.info(f"Don't have rc hash {signage_point.rc_vdf.challenge.hex()}. caching signage point {index}.")
 
     def get_future_ip(self, rc_challenge_hash: bytes32) -> List[timelord_protocol.NewInfusionPointVDF]:
         return self.future_ip_cache.get(rc_challenge_hash, [])
@@ -287,7 +287,7 @@ class FullNodeStore:
             # This prevent other peers from appending fake VDFs to our cache
             log.error(
                 f"bad cc_challenge in new_finished_sub_slot, "
-                f"got {eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}"
+                f"got {eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge.hex()}"
                 f"expected {cc_challenge}"
             )
             return None
@@ -310,7 +310,7 @@ class FullNodeStore:
                 log.debug("dont add slot, total_iters < peak.total_iters")
                 return None
 
-            rc_challenge = eos.reward_chain.end_of_slot_vdf.challenge
+            rc_challenge = bytes32(eos.reward_chain.end_of_slot_vdf.challenge)
             cc_start_element = peak.challenge_vdf_output
             iters = uint64(total_iters - peak.total_iters)
             if peak.reward_infusion_new_challenge != rc_challenge:
@@ -436,9 +436,8 @@ class FullNodeStore:
             eos.challenge_chain.challenge_chain_end_of_slot_vdf.output,
         )
         # The EOS will have the whole sub-slot iters, but the proof is only the delta, from the last peak
-        if eos.challenge_chain.challenge_chain_end_of_slot_vdf != dataclasses.replace(
-            partial_cc_vdf_info,
-            number_of_iterations=sub_slot_iters,
+        if eos.challenge_chain.challenge_chain_end_of_slot_vdf != partial_cc_vdf_info.replace(
+            number_of_iterations=sub_slot_iters
         ):
             return None
         if not eos.proofs.challenge_chain_slot_proof.normalized_to_identity and not validate_vdf(
@@ -487,9 +486,8 @@ class FullNodeStore:
                 eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
             )
             # The EOS will have the whole sub-slot iters, but the proof is only the delta, from the last peak
-            if eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf != dataclasses.replace(
-                partial_icc_vdf_info,
-                number_of_iterations=icc_iters,
+            if eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf != partial_icc_vdf_info.replace(
+                number_of_iterations=icc_iters
             ):
                 return None
             if not eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity and not validate_vdf(
@@ -615,9 +613,7 @@ class FullNodeStore:
                         uint64(sp_total_iters - curr.total_iters),
                         signage_point.rc_vdf.output,
                     )
-                if not signage_point.cc_vdf == dataclasses.replace(
-                    cc_vdf_info_expected, number_of_iterations=delta_iters
-                ):
+                if not signage_point.cc_vdf == cc_vdf_info_expected.replace(number_of_iterations=delta_iters):
                     self.add_to_future_sp(signage_point, index)
                     return False
                 if check_from_start_of_ss:

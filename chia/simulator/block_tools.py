@@ -1350,7 +1350,7 @@ class BlockTools:
                             cc_challenge,
                             ip_iters,
                         )
-                        cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters)
+                        cc_ip_vdf = cc_ip_vdf.replace(number_of_iterations=ip_iters)
                         rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
                             constants,
                             ClassgroupElement.get_default_element(),
@@ -1552,7 +1552,7 @@ def get_signage_point(
         rc_vdf_challenge,
         rc_vdf_iters,
     )
-    cc_sp_vdf = replace(cc_sp_vdf, number_of_iterations=sp_iters)
+    cc_sp_vdf = cc_sp_vdf.replace(number_of_iterations=sp_iters)
     if normalized_to_identity_cc_sp:
         _, cc_sp_proof = get_vdf_info_and_proof(
             constants,
@@ -1597,7 +1597,7 @@ def finish_block(
         cc_vdf_challenge,
         new_ip_iters,
     )
-    cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters)
+    cc_ip_vdf = cc_ip_vdf.replace(number_of_iterations=ip_iters)
     if normalized_to_identity_cc_ip:
         _, cc_ip_proof = get_vdf_info_and_proof(
             constants,
