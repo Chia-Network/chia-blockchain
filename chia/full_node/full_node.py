@@ -94,7 +94,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
-from chia.util.profiler import mem_profile_task, profile_task
+from chia.util.profiler import enable_profiler, mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
 
 
@@ -287,6 +287,13 @@ class FullNode:
 
             if self.config.get("enable_profiler", False):
                 asyncio.create_task(profile_task(self.root_path, "node", self.log))
+
+            self.profile_block_validation = self.config.get("profile_block_validation", False)
+            if self.profile_block_validation:  # pragma: no cover
+                # this is not covered by any unit tests as it's essentially test code
+                # itself. It's exercised manually when investigating performance issues
+                profile_dir = path_from_root(self.root_path, "block-validation-profile")
+                profile_dir.mkdir(parents=True, exist_ok=True)
 
             if self.config.get("enable_memory_profiler", False):
                 asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
@@ -1706,7 +1713,9 @@ class FullNode:
                 return await self.add_block(new_block, peer)
         state_change_summary: Optional[StateChangeSummary] = None
         ppp_result: Optional[PeakPostProcessingResult] = None
-        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high), enable_profiler(
+            self.profile_block_validation
+        ) as pr:
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
                 return None
@@ -1802,6 +1811,13 @@ class FullNode:
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
             f"{percent_full_str} header_hash: {header_hash} height: {block.height}",
         )
+
+        # this is not covered by any unit tests as it's essentially test code
+        # itself. It's exercised manually when investigating performance issues
+        if validation_time > 2 and pr is not None:  # pragma: no cover
+            pr.create_stats()
+            profile_dir = path_from_root(self.root_path, "block-validation-profile")
+            pr.dump_stats(profile_dir / f"{block.height}-{validation_time:0.1f}.profile")
 
         # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
         peak = self.blockchain.get_peak()
