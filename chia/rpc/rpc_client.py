@@ -80,7 +80,7 @@ class RpcClient:
             await self.await_closed()
 
     async def fetch(self, path, request_json) -> Dict[str, Any]:
-        async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context) as response:
+        async with self.session.post(self.url + path, json=request_json, ssl=self.ssl_context) as response:
             response.raise_for_status()
             res_json = await response.json()
             if not res_json["success"]:

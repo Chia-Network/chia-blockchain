@@ -21,7 +21,7 @@ async def test_multiple_register_same(get_daemon: WebSocketServer, bt: BlockTool
             f"wss://127.0.0.1:{daemon_port}",
             autoclose=True,
             autoping=True,
-            ssl_context=bt.get_daemon_ssl_context(),
+            ssl=bt.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
         ) as ws:
             service_name = "test_service"
@@ -48,7 +48,7 @@ async def test_multiple_register_different(get_daemon: WebSocketServer, bt: Bloc
             f"wss://127.0.0.1:{daemon_port}",
             autoclose=True,
             autoping=True,
-            ssl_context=bt.get_daemon_ssl_context(),
+            ssl=bt.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
         ) as ws:
             test_service_names = ["service1", "service2", "service3"]
@@ -84,7 +84,7 @@ async def test_remove_connection(get_daemon: WebSocketServer, bt: BlockTools) ->
             f"wss://127.0.0.1:{daemon_port}",
             autoclose=True,
             autoping=True,
-            ssl_context=bt.get_daemon_ssl_context(),
+            ssl=bt.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
         ) as ws:
             test_service_names = ["service1", "service2", "service3", "service4", "service5"]
