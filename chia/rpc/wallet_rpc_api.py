@@ -187,7 +187,6 @@ class WalletRpcApi:
             "/cat_get_name": self.cat_get_name,
             "/cat_set_tail": self.cat_set_tail,
             "/get_stray_cats": self.get_stray_cats,
-            "/melt_cats": self.melt_cats,
             "/cat_spend": self.cat_spend,
             "/cat_get_asset_id": self.cat_get_asset_id,
             "/create_offer_for_ids": self.create_offer_for_ids,
@@ -1641,33 +1640,6 @@ class WalletRpcApi:
         wallet: CATWallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
         await wallet.set_tail_program(request["tail_program"])
         return {"success": True}
-    
-    async def melt_cats(self, request: Dict[str, any]) -> EndpointResult:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
-        wallet_id = uint32(request["wallet_id"])
-        melt_amount = uint64(request["amount"])
-        eth_address = None
-        if "hint" in request:
-            eth_string: str = request["hint"]
-            if eth_string[:2] == "0x":
-                eth_string = eth_string[2:]
-            eth_address: bytes = bytes.fromhex(eth_string)
-        wallet: CATWallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
-        tail_reveal = wallet.cat_info.my_tail
-        assert tail_reveal is not None
-        send_dict = {
-            "wallet_id": wallet_id,
-            "extra_delta": melt_amount * -1,
-            "tail_reveal": tail_reveal,
-            
-        }
-        if eth_address is not None:
-            send_dict["tail_solution"] = Program.to([1, eth_address])
-        result = await self.cat_spend(
-            send_dict
-        )
-        return result
 
     @tx_endpoint
     async def cat_spend(
