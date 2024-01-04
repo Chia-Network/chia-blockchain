@@ -2,16 +2,41 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional, Tuple, get_type_hints
 
 import aiohttp
 
 from chia.types.blockchain_format.coin import Coin
 from chia.util.json_util import obj_to_response
+from chia.util.streamable import Streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_from_json_dicts, parse_timelock_info
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
 log = logging.getLogger(__name__)
+
+# TODO: consolidate this with chia.rpc.rpc_server.Endpoint
+# Not all endpoints only take a dictionary so that definition is imperfect
+# This definition is weaker than that one however because the arguments can be anything
+RpcEndpoint = Callable[..., Awaitable[Dict[str, Any]]]
+MarshallableRpcEndpoint = Callable[..., Awaitable[Streamable]]
+
+
+def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
+    hints = get_type_hints(func)
+    request_hint = hints["request"]
+    assert issubclass(request_hint, Streamable)
+    request_class = request_hint
+
+    async def rpc_endpoint(self, request: Dict[str, Any], *args: object, **kwargs: object) -> Dict[str, Any]:
+        response_obj: Streamable = await func(
+            self,
+            request_class.from_json_dict(request),
+            *args,
+            **kwargs,
+        )
+        return response_obj.to_json_dict()
+
+    return rpc_endpoint
 
 
 def wrap_http_handler(f) -> Callable:
