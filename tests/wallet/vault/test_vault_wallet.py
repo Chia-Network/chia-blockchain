@@ -3,13 +3,12 @@ from __future__ import annotations
 from hashlib import sha256
 
 import pytest
-from clvm.casts import int_to_bytes
 from ecdsa import NIST256p, SigningKey
 
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from tests.conftest import ConsensusMode
-from tests.wallet.conftest import WalletTestFramework
+from tests.wallet.conftest import WalletStateTransition, WalletTestFramework
 
 SECP_SK = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
 SECP_PK = SECP_SK.verifying_key.to_string("compressed")
@@ -37,11 +36,35 @@ async def test_vault_creation(wallet_environments: WalletTestFramework) -> None:
     bls_pk = bytes.fromhex(bls_pk_hex)
 
     timelock = uint64(1000)
-    entropy = int_to_bytes(101)
+    hp_index = uint32(1)
 
-    res = await client.vault_create(SECP_PK, entropy, bls_pk, timelock, tx_config=DEFAULT_TX_CONFIG, fee=uint64(10))
+    res = await client.vault_create(SECP_PK, hp_index, bls_pk, timelock, tx_config=DEFAULT_TX_CONFIG, fee=uint64(10))
     vault_tx = res[0]
     assert vault_tx
 
     eve_coin = [item for item in vault_tx.additions if item not in vault_tx.removals and item.amount == 1][0]
     assert eve_coin
+
+    await env.wallet_state_manager.add_pending_transactions(res)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "unconfirmed_wallet_balance": -11,  # 1 for vault singleton, 10 for fee
+                        "pending_coin_removal_count": 2,
+                        "<=#spendable_balance": -11,
+                        "<=#max_send_amount": -11,
+                        "set_remainder": True,
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        "confirmed_wallet_balance": -11,
+                        "set_remainder": True,
+                    }
+                },
+            )
+        ]
+    )

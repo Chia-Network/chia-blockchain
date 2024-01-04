@@ -25,7 +25,7 @@ from typing import (
 )
 
 import aiosqlite
-from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
@@ -110,7 +110,12 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_hash_for_synthetic_public_key,
 )
 from chia.wallet.sign_coin_spends import sign_coin_spends
-from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE,
+    create_singleton_puzzle,
+    get_inner_puzzle_from_singleton,
+    get_singleton_id_from_puzzle,
+)
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -128,6 +133,7 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
+from chia.wallet.vault.vault_drivers import get_vault_inner_puzzle_hash
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
@@ -2533,3 +2539,71 @@ class WalletStateManager:
             self.constants.MAX_BLOCK_COST_CLVM,
             [puzzle_hash_for_synthetic_public_key],
         )
+
+    async def create_vault_wallet(
+        self,
+        secp_pk: bytes,
+        hidden_puzzle_hash: bytes32,
+        bls_pk: G1Element,
+        timelock: uint64,
+        genesis_challenge: bytes32,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+    ) -> TransactionRecord:
+        """
+        Returns a tx record for creating a new vault
+        """
+        wallet = self.main_wallet
+        vault_inner_puzzle_hash = get_vault_inner_puzzle_hash(
+            secp_pk, genesis_challenge, hidden_puzzle_hash, bls_pk, timelock
+        )
+        # Get xch coin
+        amount = uint64(1)
+        coins = await wallet.select_coins(uint64(amount + fee), tx_config.coin_selection_config)
+
+        # Create singleton launcher
+        origin = next(iter(coins))
+        launcher_coin = Coin(origin.name(), SINGLETON_LAUNCHER_HASH, amount)
+
+        genesis_launcher_solution = Program.to([vault_inner_puzzle_hash, amount, None])
+        announcement_message = genesis_launcher_solution.get_tree_hash()
+
+        [tx_record] = await wallet.generate_signed_transaction(
+            amount,
+            SINGLETON_LAUNCHER_HASH,
+            tx_config,
+            fee,
+            coins,
+            None,
+            origin_id=origin.name(),
+            memos=[secp_pk, hidden_puzzle_hash],
+            extra_conditions=(
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
+        )
+
+        launcher_cs = CoinSpend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
+        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+        assert tx_record.spend_bundle is not None
+        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb])
+
+        vault_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            amount=uint64(amount),
+            to_puzzle_hash=vault_inner_puzzle_hash,
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=full_spend,
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
+            wallet_id=wallet.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=full_spend.name(),
+            memos=[],
+            valid_times=ConditionValidTimes(),
+        )
+        return vault_record

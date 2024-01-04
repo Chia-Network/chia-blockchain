@@ -4,8 +4,9 @@ from chia_rs import G1Element
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import DEFAULT_HIDDEN_PUZZLE
 from chia.wallet.util.merkle_tree import MerkleTree
 
 # MODS
@@ -36,7 +37,12 @@ def construct_vault_puzzle(secp_puzzle_hash: bytes32, recovery_puzzle_hash: byte
     return P2_1_OF_N_MOD.curry(MerkleTree([secp_puzzle_hash, recovery_puzzle_hash]).calculate_root())
 
 
-def get_vault_puzzle(
+def get_vault_hidden_puzzle_with_index(index: uint32, hidden_puzzle: Program = DEFAULT_HIDDEN_PUZZLE) -> Program:
+    hidden_puzzle_with_index: Program = Program.to([6, (index, hidden_puzzle)])
+    return hidden_puzzle_with_index
+
+
+def get_vault_inner_puzzle(
     secp_pk: bytes, genesis_challenge: bytes32, entropy: bytes, bls_pk: G1Element, timelock: uint64
 ) -> Program:
     secp_puzzle_hash = construct_p2_delegated_secp(secp_pk, genesis_challenge, entropy).get_tree_hash()
@@ -44,10 +50,10 @@ def get_vault_puzzle(
     return construct_vault_puzzle(secp_puzzle_hash, recovery_puzzle_hash)
 
 
-def get_vault_puzzle_hash(
+def get_vault_inner_puzzle_hash(
     secp_pk: bytes, genesis_challenge: bytes32, entropy: bytes, bls_pk: G1Element, timelock: uint64
 ) -> bytes32:
-    vault_puzzle = get_vault_puzzle(secp_pk, genesis_challenge, entropy, bls_pk, timelock)
+    vault_puzzle = get_vault_inner_puzzle(secp_pk, genesis_challenge, entropy, bls_pk, timelock)
     vault_puzzle_hash: bytes32 = vault_puzzle.get_tree_hash()
     return vault_puzzle_hash
 
