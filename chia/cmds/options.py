@@ -4,8 +4,7 @@ from typing import Any, Callable, TypeVar, Union
 
 import click
 
-from chia.cmds.param_types import TRANSACTION_FEE
-from chia.util.ints import uint64
+from chia.cmds.param_types import TransactionFeeParamType
 
 FC = TypeVar("FC", bound=Union[Callable[..., Any], click.Command])
 
@@ -26,8 +25,8 @@ def create_fee(message: str = "Set the fees for the transaction, in XCH", requir
         "-m",
         "--fee",
         help=message,
-        type=TRANSACTION_FEE,
-        default=uint64(0),
+        type=TransactionFeeParamType(),
+        default="0",
         show_default=True,
         required=required,
     )

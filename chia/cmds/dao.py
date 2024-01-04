@@ -7,7 +7,7 @@ import click
 
 from chia.cmds import options
 from chia.cmds.cmds_util import CMDTXConfigLoader, tx_config_args
-from chia.cmds.param_types import AMOUNT_TYPE, BYTES32_TYPE, TRANSACTION_FEE, UINT64_TYPE, CliAmount
+from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, TransactionFeeParamType, Uint64ParamType
 from chia.cmds.units import units
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -37,14 +37,14 @@ def dao_cmd(ctx: click.Context) -> None:
     "-t",
     "--treasury-id",
     help="The Treasury ID of the DAO you want to track",
-    type=BYTES32_TYPE,
+    type=Bytes32ParamType(),
     required=True,
 )
 @click.option(
     "-a",
     "--filter-amount",
     help="The minimum number of votes a proposal needs before the wallet will recognise it",
-    type=UINT64_TYPE,
+    type=Uint64ParamType(),
     default=uint64(1),
     show_default=True,
 )
@@ -77,70 +77,70 @@ def dao_add_cmd(
 @click.option(
     "--proposal-timelock",
     help="The minimum number of blocks before a proposal can close",
-    type=UINT64_TYPE,
-    default=uint64(1000),
+    type=Uint64ParamType(),
+    default="1000",
     show_default=True,
 )
 @click.option(
     "--soft-close",
     help="The number of blocks a proposal must remain unspent before closing",
-    type=UINT64_TYPE,
-    default=uint64(20),
+    type=Uint64ParamType(),
+    default="20",
     show_default=True,
 )
 @click.option(
     "--attendance-required",
     help="The minimum number of votes a proposal must receive to be accepted",
-    type=UINT64_TYPE,
+    type=Uint64ParamType(),
     required=True,
 )
 @click.option(
     "--pass-percentage",
     help="The percentage of 'yes' votes in basis points a proposal must receive to be accepted. 100% = 10000",
-    type=UINT64_TYPE,
-    default=uint64(5000),
+    type=Uint64ParamType(),
+    default="5000",
     show_default=True,
 )
 @click.option(
     "--self-destruct",
     help="The number of blocks required before a proposal can be automatically removed",
-    type=UINT64_TYPE,
-    default=uint64(10000),
+    type=Uint64ParamType(),
+    default="10000",
     show_default=True,
 )
 @click.option(
     "--oracle-delay",
     help="The number of blocks required between oracle spends of the treasury",
-    type=UINT64_TYPE,
-    default=uint64(50),
+    type=Uint64ParamType(),
+    default="50",
     show_default=True,
 )
 @click.option(
     "--proposal-minimum",
     help="The minimum amount (in xch) that a proposal must use to be created",
-    type=AMOUNT_TYPE,
-    default=uint64(1),
+    type=AmountParamType(),
+    default="1",
     show_default=True,
 )
 @click.option(
     "--filter-amount",
     help="The minimum number of votes a proposal needs before the wallet will recognise it",
-    type=UINT64_TYPE,
-    default=uint64(1),
+    type=Uint64ParamType(),
+    default="1",
     show_default=True,
 )
 @click.option(
     "--cat-amount",
     help="The number of DAO CATs (in mojos) to create when initializing the DAO",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     required=True,
 )
 @options.create_fee()
 @click.option(
     "--fee-for-cat",
     help="Set the fees for the CAT creation transaction, in XCH.",
-    type=TRANSACTION_FEE,
-    default=uint64(0),
+    type=TransactionFeeParamType(),
+    default="0",
     show_default=True,
 )
 @tx_config_args
@@ -241,7 +241,7 @@ def dao_get_id_cmd(
     "-a",
     "--amount",
     help="The amount of funds to send",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     required=True,
 )
 @options.create_fee()
@@ -407,7 +407,7 @@ def dao_show_proposal_cmd(
     "-a",
     "--vote-amount",
     help="The number of votes you want to cast",
-    type=UINT64_TYPE,
+    type=Uint64ParamType(),
     required=True,
 )
 @click.option(
@@ -538,7 +538,7 @@ def dao_close_proposal_cmd(
     "-a",
     "--amount",
     help="The amount of CATs (not mojos) to lock in voting mode",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     required=True,
 )
 @options.create_fee()
@@ -774,49 +774,49 @@ def dao_create_spend_proposal_cmd(
     "-v",
     "--vote-amount",
     help="The number of votes to add",
-    type=UINT64_TYPE,
+    type=Uint64ParamType(),
     required=False,
     default=None,
 )
 @click.option(
     "--proposal-timelock",
     help="The new minimum number of blocks before a proposal can close",
-    type=UINT64_TYPE,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
 @click.option(
     "--soft-close",
     help="The number of blocks a proposal must remain unspent before closing",
-    type=UINT64_TYPE,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
 @click.option(
     "--attendance-required",
     help="The minimum number of votes a proposal must receive to be accepted",
-    type=UINT64_TYPE,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
 @click.option(
     "--pass-percentage",
     help="The percentage of 'yes' votes in basis points a proposal must receive to be accepted. 100% = 10000",
-    type=UINT64_TYPE,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
 @click.option(
     "--self-destruct",
     help="The number of blocks required before a proposal can be automatically removed",
-    type=UINT64_TYPE,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
 @click.option(
     "--oracle-delay",
     help="The number of blocks required between oracle spends of the treasury",
-    type=UINT64_TYPE,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
@@ -880,7 +880,7 @@ def dao_create_update_proposal_cmd(
     "-a",
     "--amount",
     help="The amount of new cats the proposal will mint (in mojos)",
-    type=UINT64_TYPE,
+    type=Uint64ParamType(),
     required=True,
 )
 @click.option(

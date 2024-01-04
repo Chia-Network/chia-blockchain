@@ -5,7 +5,7 @@ from typing import Optional
 import click
 
 from chia.cmds import options
-from chia.cmds.param_types import ADDRESS_TYPE, CliAddress
+from chia.cmds.param_types import AddressParamType, CliAddress
 from chia.util.ints import uint64
 
 
@@ -188,7 +188,7 @@ def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: uint64
     help="Change the payout instructions for a pool. To get the launcher id, use plotnft show.",
 )
 @click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=str, required=True)
-@click.option("-a", "--address", help="New address for payout instructions", type=ADDRESS_TYPE, required=True)
+@click.option("-a", "--address", help="New address for payout instructions", type=AddressParamType(), required=True)
 def change_payout_instructions_cmd(launcher_id: str, address: CliAddress) -> None:
     import asyncio
 

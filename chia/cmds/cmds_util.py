@@ -10,7 +10,7 @@ from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Ty
 import click
 from aiohttp import ClientConnectorCertificateError, ClientConnectorError
 
-from chia.cmds.param_types import AMOUNT_TYPE, BYTES32_TYPE, CliAmount, cli_amount_none
+from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
@@ -250,7 +250,7 @@ def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:
         "--min-coin-amount",
         "--min-amount",
         help="Ignore coins worth less then this much XCH or CAT units",
-        type=AMOUNT_TYPE,
+        type=AmountParamType(),
         required=False,
         default=cli_amount_none,
     )(
@@ -259,7 +259,7 @@ def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:
             "--max-coin-amount",
             "--max-amount",
             help="Ignore coins worth more then this much XCH or CAT units",
-            type=AMOUNT_TYPE,
+            type=AmountParamType(),
             required=False,
             default=cli_amount_none,
         )(
@@ -267,14 +267,14 @@ def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:
                 "--exclude-coin",
                 "coins_to_exclude",
                 multiple=True,
-                type=BYTES32_TYPE,
+                type=Bytes32ParamType(),
                 help="Exclude this coin from being spent.",
             )(
                 click.option(
                     "--exclude-amount",
                     "amounts_to_exclude",
                     multiple=True,
-                    type=AMOUNT_TYPE,
+                    type=AmountParamType(),
                     help="Exclude any coins with this XCH or CAT amount from being included.",
                 )(func)
             )

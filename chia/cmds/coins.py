@@ -6,7 +6,7 @@ from typing import Optional, Sequence
 import click
 
 from chia.cmds import options
-from chia.cmds.param_types import AMOUNT_TYPE, BYTES32_TYPE, CliAmount, cli_amount_none
+from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 
@@ -31,13 +31,13 @@ def coins_cmd(ctx: click.Context) -> None:
 @click.option(
     "--min-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     default=cli_amount_none,
 )
 @click.option(
     "--max-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     default=cli_amount_none,
 )
 @click.option(
@@ -45,13 +45,13 @@ def coins_cmd(ctx: click.Context) -> None:
     "coins_to_exclude",
     multiple=True,
     help="prevent this coin from being included.",
-    type=BYTES32_TYPE,
+    type=Bytes32ParamType(),
 )
 @click.option(
     "--exclude-amount",
     "amounts_to_exclude",
     multiple=True,
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
@@ -104,20 +104,20 @@ def list_cmd(
     "--target-amount",
     help="Select coins until this amount (in XCH or CAT) is reached. \
     Combine all selected coins into one coin, which will have a value of at least target-amount",
-    type=AMOUNT_TYPE,
-    default=uint64(0),
+    type=AmountParamType(),
+    default=CliAmount(mojos=True, amount=uint64(0)),
 )
 @click.option(
     "--min-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     default=cli_amount_none,
 )
 @click.option(
     "--exclude-amount",
     "amounts_to_exclude",
     multiple=True,
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
@@ -131,7 +131,7 @@ def list_cmd(
 @click.option(
     "--max-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     default=cli_amount_none,
 )
 @options.create_fee()
@@ -140,7 +140,7 @@ def list_cmd(
     "input_coins",
     multiple=True,
     help="Only combine coins with these ids.",
-    type=BYTES32_TYPE,
+    type=Bytes32ParamType(),
 )
 @click.option(
     "--largest-first/--smallest-first",
@@ -202,7 +202,7 @@ def combine_cmd(
     "-a",
     "--amount-per-coin",
     help="The amount of each newly created coin, in XCH",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     required=True,
 )
 @click.option("-t", "--target-coin-id", type=str, required=True, help="The coin id of the coin we are splitting.")

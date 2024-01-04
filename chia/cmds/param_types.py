@@ -65,10 +65,11 @@ class TransactionFeeParamType(click.ParamType):
     value_limit: Decimal = Decimal("0.5")
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
-        if isinstance(value, uint64):  # required by click
-            return value
+        # suggested by click, but we are not using it to avoid possible misinterpretation of units.
+        # if isinstance(value, uint64):
+        #     return value
         if not isinstance(value, str):
-            self.fail("Invalid Type, fee must be string or uint64.", param, ctx)
+            self.fail("Invalid Type, fee must be string.", param, ctx)
         mojos = False  # TODO: Add unit logic
         if mojos:
             return validate_uint64(value, self.fail, param, ctx)
@@ -115,12 +116,11 @@ class AmountParamType(click.ParamType):
     name: str = CliAmount.__name__  # output type
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAmount:
-        if isinstance(value, CliAmount):  # required by click
+        # suggested by click, but being left in as mojos flag makes default misrepresentation less likely.
+        if isinstance(value, CliAmount):
             return value
-        if isinstance(value, uint64):
-            return CliAmount(mojos=True, amount=value)
         if not isinstance(value, str):
-            self.fail("Invalid Type, amount must be string, uint64 or CliAmount.", param, ctx)
+            self.fail("Invalid Type, amount must be string or CliAmount.", param, ctx)
         mojos = False  # TODO: Add unit logic
         if mojos:
             m_value = validate_uint64(value, self.fail, param, ctx)
@@ -158,10 +158,11 @@ class AddressParamType(click.ParamType):
     name: str = CliAddress.__name__  # output type
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAddress:
-        if isinstance(value, CliAddress):  # required by click
-            return value
+        # suggested by click, but not really used so removed to make unexpected types more obvious.
+        # if isinstance(value, CliAddress):
+        #    return value
         if not isinstance(value, str):
-            self.fail("Invalid Type, address must be string or CliAddress.", param, ctx)
+            self.fail("Invalid Type, address must be string.", param, ctx)
         try:
             hrp, b32data = bech32_decode(value)
             if hrp in ["xch", "txch"]:  # I hate having to load the config here
@@ -195,10 +196,11 @@ class Bytes32ParamType(click.ParamType):
     name: str = bytes32.__name__  # output type
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> bytes32:
-        if isinstance(value, bytes32):  # required by click
-            return value
+        # suggested by click but deemed not necessary due to unnecessary complexity.
+        # if isinstance(value, bytes32):
+        #     return value
         if not isinstance(value, str):
-            self.fail("Invalid Type, value must be string or bytes32.", param, ctx)
+            self.fail("Invalid Type, value must be string.", param, ctx)
         try:
             return bytes32.from_hexstr(value)
         except ValueError:
@@ -207,7 +209,7 @@ class Bytes32ParamType(click.ParamType):
 
 class Uint64ParamType(click.ParamType):
     """
-    A Click parameter type for bytes32 hex strings, with or without the 0x prefix.
+    A Click parameter type for Uint64 integers.
     """
 
     name: str = uint64.__name__  # output type
@@ -219,12 +221,5 @@ class Uint64ParamType(click.ParamType):
             self.fail("Invalid Type, value must be string or uint64.", param, ctx)
         return validate_uint64(value, self.fail, param, ctx)
 
-
-# These are what we use in click decorators
-TRANSACTION_FEE = TransactionFeeParamType()
-AMOUNT_TYPE = AmountParamType()
-ADDRESS_TYPE = AddressParamType()
-BYTES32_TYPE = Bytes32ParamType()
-UINT64_TYPE = Uint64ParamType()
 
 cli_amount_none = CliAmount(mojos=False, amount=None)

@@ -8,7 +8,7 @@ from typing import Any, Callable, Coroutine, Dict, List, Optional, TypeVar, Unio
 import click
 
 from chia.cmds import options
-from chia.cmds.param_types import BYTES32_TYPE
+from chia.cmds.param_types import Bytes32ParamType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 
@@ -68,7 +68,7 @@ def create_data_store_id_option() -> Callable[[FC], FC]:
         "-store",
         "--id",
         help="The hexadecimal store id.",
-        type=BYTES32_TYPE,
+        type=Bytes32ParamType(),
         required=True,
     )
 
@@ -100,7 +100,7 @@ def create_root_hash_option() -> Callable[[FC], FC]:
         "-r",
         "--root_hash",
         help="The hexadecimal root hash",
-        type=BYTES32_TYPE,
+        type=Bytes32ParamType(),
         required=False,
     )
 
@@ -270,8 +270,8 @@ def unsubscribe(
     "get_kv_diff", help="Get the inserted and deleted keys and values between an initial and a final hash"
 )
 @create_data_store_id_option()
-@click.option("-hash_1", "--hash_1", help="Initial hash", type=BYTES32_TYPE, required=True)
-@click.option("-hash_2", "--hash_2", help="Final hash", type=BYTES32_TYPE, required=True)
+@click.option("-hash_1", "--hash_1", help="Initial hash", type=Bytes32ParamType(), required=True)
+@click.option("-hash_2", "--hash_2", help="Final hash", type=Bytes32ParamType(), required=True)
 @create_rpc_port_option()
 @options.create_fingerprint()
 def get_kv_diff(
@@ -377,7 +377,7 @@ def add_mirror(
 
 
 @data_cmd.command("delete_mirror", help="Delete an owned mirror by its coin id")
-@click.option("-c", "--coin_id", help="Coin id", type=BYTES32_TYPE, required=True)
+@click.option("-c", "--coin_id", help="Coin id", type=Bytes32ParamType(), required=True)
 @options.create_fee()
 @create_rpc_port_option()
 @options.create_fingerprint()

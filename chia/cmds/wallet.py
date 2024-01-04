@@ -8,7 +8,14 @@ import click
 from chia.cmds import options
 from chia.cmds.check_wallet_db import help_text as check_help_text
 from chia.cmds.coins import coins_cmd
-from chia.cmds.param_types import ADDRESS_TYPE, AMOUNT_TYPE, BYTES32_TYPE, CliAddress, CliAmount, cli_amount_none
+from chia.cmds.param_types import (
+    AddressParamType,
+    AmountParamType,
+    Bytes32ParamType,
+    CliAddress,
+    CliAmount,
+    cli_amount_none,
+)
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_sorting import SortKey
@@ -142,11 +149,11 @@ def get_transactions_cmd(
 )
 @options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-a", "--amount", help="How much chia to send, in XCH", type=AMOUNT_TYPE, required=True)
+@click.option("-a", "--amount", help="How much chia to send, in XCH", type=AmountParamType(), required=True)
 @click.option("-e", "--memo", help="Additional memo for the transaction", type=str, default=None)
 @options.create_fee()
 # TODO: Fix RPC as this should take a puzzle_hash not an address.
-@click.option("-t", "--address", help="Address to send the XCH", type=ADDRESS_TYPE, required=True)
+@click.option("-t", "--address", help="Address to send the XCH", type=AddressParamType(), required=True)
 @click.option(
     "-o", "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
 )
@@ -154,7 +161,7 @@ def get_transactions_cmd(
     "-ma",
     "--min-coin-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     required=False,
     default=cli_amount_none,
 )
@@ -162,7 +169,7 @@ def get_transactions_cmd(
     "-l",
     "--max-coin-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     required=False,
     default=cli_amount_none,
 )
@@ -170,7 +177,7 @@ def get_transactions_cmd(
     "--exclude-coin",
     "coins_to_exclude",
     multiple=True,
-    type=BYTES32_TYPE,
+    type=Bytes32ParamType(),
     help="Exclude this coin from being spent.",
 )
 @click.option(
@@ -351,7 +358,7 @@ def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -
 )
 @options.create_fingerprint()
 # TODO: Change RPC's to use the puzzle hash instead of address
-@click.option("-a", "--address", help="The address you want to use for signing", type=ADDRESS_TYPE, required=True)
+@click.option("-a", "--address", help="The address you want to use for signing", type=AddressParamType(), required=True)
 @click.option("-m", "--hex_message", help="The hex message you want sign", type=str, required=True)
 def address_sign_message(
     wallet_rpc_port: Optional[int], fingerprint: int, address: CliAddress, hex_message: str
@@ -401,7 +408,7 @@ def update_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int
     "-id",
     "--asset-id",
     help="The Asset ID of the coin you wish to add/rename (the treehash of the TAIL program)",
-    type=BYTES32_TYPE,
+    type=Bytes32ParamType(),
     required=True,
 )
 @click.option(
@@ -482,7 +489,7 @@ def make_offer_cmd(
     default=None,
 )
 @options.create_fingerprint()
-@click.option("-id", "--id", help="The ID of the offer that you wish to examine", type=BYTES32_TYPE)
+@click.option("-id", "--id", help="The ID of the offer that you wish to examine", type=Bytes32ParamType())
 @click.option("-p", "--filepath", help="The path to rewrite the offer file to (must be used in conjunction with --id)")
 @click.option("-em", "--exclude-my-offers", help="Exclude your own offers from the output", is_flag=True)
 @click.option("-et", "--exclude-taken-offers", help="Exclude offers that you've accepted from the output", is_flag=True)
@@ -560,7 +567,7 @@ def take_offer_cmd(
     default=None,
 )
 @options.create_fingerprint()
-@click.option("-id", "--id", help="The offer ID that you wish to cancel", required=True, type=BYTES32_TYPE)
+@click.option("-id", "--id", help="The offer ID that you wish to cancel", required=True, type=Bytes32ParamType())
 @click.option("--insecure", help="Don't make an on-chain transaction, simply mark the offer as cancelled", is_flag=True)
 @options.create_fee("The fee to use when cancelling the offer securely, in XCH")
 def cancel_offer_cmd(
@@ -626,7 +633,7 @@ def did_create_wallet_cmd(
     default=None,
 )
 @options.create_fingerprint()
-@click.option("-i", "--did_id", help="DID ID you want to use for signing", type=ADDRESS_TYPE, required=True)
+@click.option("-i", "--did_id", help="DID ID you want to use for signing", type=AddressParamType(), required=True)
 @click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
 def did_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, did_id: CliAddress, hex_message: str) -> None:
     from .wallet_funcs import sign_message
@@ -833,7 +840,7 @@ def did_message_spend_cmd(
 @options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
 # TODO: Change RPC to use puzzlehash instead of address
-@click.option("-ta", "--target-address", help="Target recipient wallet address", type=ADDRESS_TYPE, required=True)
+@click.option("-ta", "--target-address", help="Target recipient wallet address", type=AddressParamType(), required=True)
 @click.option(
     "-rr", "--reset_recovery", help="If you want to reset the recovery DID settings.", is_flag=True, default=False
 )
@@ -877,7 +884,7 @@ def nft_cmd() -> None:
 )
 @options.create_fingerprint()
 # TODO: Change RPC to use puzzlehash instead of address
-@click.option("-di", "--did-id", help="DID Id to use", type=ADDRESS_TYPE)
+@click.option("-di", "--did-id", help="DID Id to use", type=AddressParamType())
 @click.option("-n", "--name", help="Set the NFT wallet name", type=str)
 def nft_wallet_create_cmd(
     wallet_rpc_port: Optional[int], fingerprint: int, did_id: Optional[CliAddress], name: Optional[str]
@@ -896,7 +903,7 @@ def nft_wallet_create_cmd(
     default=None,
 )
 @options.create_fingerprint()
-@click.option("-i", "--nft_id", help="NFT ID you want to use for signing", type=ADDRESS_TYPE, required=True)
+@click.option("-i", "--nft_id", help="NFT ID you want to use for signing", type=AddressParamType(), required=True)
 @click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
 def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: CliAddress, hex_message: str) -> None:
     from .wallet_funcs import sign_message
@@ -922,8 +929,8 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: C
 )
 @options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
-@click.option("-ra", "--royalty-address", help="Royalty address", type=ADDRESS_TYPE)
-@click.option("-ta", "--target-address", help="Target address", type=ADDRESS_TYPE)
+@click.option("-ra", "--royalty-address", help="Royalty address", type=AddressParamType())
+@click.option("-ta", "--target-address", help="Target address", type=AddressParamType())
 @click.option("--no-did-ownership", help="Disable DID ownership support", is_flag=True, default=False)
 @click.option("-nh", "--hash", help="NFT content hash", type=str, required=True)
 @click.option("-u", "--uris", help="Comma separated list of URIs", type=str, required=True)
@@ -1064,7 +1071,7 @@ def nft_add_uri_cmd(
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to transfer", type=str, required=True)
 # TODO: Change RPC to use puzzlehash instead of address
-@click.option("-ta", "--target-address", help="Target recipient wallet address", type=ADDRESS_TYPE, required=True)
+@click.option("-ta", "--target-address", help="Target recipient wallet address", type=AddressParamType(), required=True)
 @options.create_fee()
 @click.option(
     "--reuse",
@@ -1197,12 +1204,14 @@ def notification_cmd() -> None:
     default=None,
 )
 @options.create_fingerprint()
-@click.option("-t", "--to-address", help="The address to send the notification to", type=ADDRESS_TYPE, required=True)
+@click.option(
+    "-t", "--to-address", help="The address to send the notification to", type=AddressParamType(), required=True
+)
 @click.option(
     "-a",
     "--amount",
     help="The amount to send to get the notification past the recipient's spam filter",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     default=uint64(10000000),
     required=True,
     show_default=True,
@@ -1232,7 +1241,7 @@ def send_notification_cmd(
     default=None,
 )
 @options.create_fingerprint()
-@click.option("-i", "--id", help="The specific notification ID to show", type=BYTES32_TYPE, multiple=True)
+@click.option("-i", "--id", help="The specific notification ID to show", type=Bytes32ParamType(), multiple=True)
 @click.option("-s", "--start", help="The number of notifications to skip", type=int, default=None)
 @click.option("-e", "--end", help="The number of notifications to stop at", type=int, default=None)
 def get_notifications_cmd(
@@ -1256,7 +1265,7 @@ def get_notifications_cmd(
     default=None,
 )
 @options.create_fingerprint()
-@click.option("-i", "--id", help="A specific notification ID to delete", type=BYTES32_TYPE, multiple=True)
+@click.option("-i", "--id", help="A specific notification ID to delete", type=Bytes32ParamType(), multiple=True)
 @click.option("--all", help="All notifications can be deleted (they will be recovered during resync)", is_flag=True)
 def delete_notifications_cmd(
     wallet_rpc_port: Optional[int],
@@ -1283,9 +1292,13 @@ def vcs_cmd() -> None:  # pragma: no cover
     default=None,
 )
 @options.create_fingerprint()
-@click.option("-d", "--did", help="The DID of the VC's proof provider", type=ADDRESS_TYPE, required=True)
+@click.option("-d", "--did", help="The DID of the VC's proof provider", type=AddressParamType(), required=True)
 @click.option(
-    "-t", "--target-address", help="The address to send the VC to once it's minted", type=ADDRESS_TYPE, required=False
+    "-t",
+    "--target-address",
+    help="The address to send the VC to once it's minted",
+    type=AddressParamType(),
+    required=False,
 )
 @options.create_fee("Blockchain fee for mint transaction, in XCH")
 def mint_vc_cmd(
@@ -1336,13 +1349,17 @@ def get_vcs_cmd(
 )
 @options.create_fingerprint()
 @click.option(
-    "-l", "--vc-id", help="The launcher ID of the VC whose proofs should be updated", type=BYTES32_TYPE, required=True
+    "-l",
+    "--vc-id",
+    help="The launcher ID of the VC whose proofs should be updated",
+    type=Bytes32ParamType(),
+    required=True,
 )
 @click.option(
     "-t",
     "--new-puzhash",
     help="The address to send the VC after the proofs have been updated",
-    type=BYTES32_TYPE,
+    type=Bytes32ParamType(),
     required=False,
 )
 @click.option("-p", "--new-proof-hash", help="The new proof hash to update the VC to", type=str, required=True)
@@ -1432,14 +1449,14 @@ def get_proofs_for_root_cmd(
     "-p",
     "--parent-coin-id",
     help="The ID of the parent coin of the VC (optional if VC ID is used)",
-    type=BYTES32_TYPE,
+    type=Bytes32ParamType(),
     required=False,
 )
 @click.option(
     "-l",
     "--vc-id",
     help="The launcher ID of the VC to revoke (must be tracked by wallet) (optional if Parent ID is used)",
-    type=BYTES32_TYPE,
+    type=Bytes32ParamType(),
     required=False,
 )
 @options.create_fee("Blockchain fee for revocation transaction, in XCH")
@@ -1476,15 +1493,19 @@ def revoke_vc_cmd(
     "-a",
     "--min-amount-to-claim",
     help="The minimum amount to approve to move into the wallet",
-    type=AMOUNT_TYPE,
+    type=AmountParamType(),
     required=True,
 )
 @options.create_fee("Blockchain fee for approval transaction, in XCH")
 @click.option(
-    "-ma", "--min-coin-amount", type=AMOUNT_TYPE, default=cli_amount_none, help="The minimum coin amount to select"
+    "-ma",
+    "--min-coin-amount",
+    type=AmountParamType(),
+    default=cli_amount_none,
+    help="The minimum coin amount to select",
 )
 @click.option(
-    "-l", "--max-coin-amount", type=AMOUNT_TYPE, default=cli_amount_none, help="The maximum coin amount to select"
+    "-l", "--max-coin-amount", type=AmountParamType(), default=cli_amount_none, help="The maximum coin amount to select"
 )
 @click.option(
     "--reuse",
