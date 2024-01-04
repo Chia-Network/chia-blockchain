@@ -406,6 +406,6 @@ def _run_generator(
         )
         return bytes(npc_result)
     except ValidationError as e:
-        return bytes(NPCResult(uint16(e.code.value), None, uint64(0)))
+        return bytes(NPCResult(uint16(e.code.value), None))
     except Exception:
-        return bytes(NPCResult(uint16(Err.UNKNOWN.value), None, uint64(0)))
+        return bytes(NPCResult(uint16(Err.UNKNOWN.value), None))

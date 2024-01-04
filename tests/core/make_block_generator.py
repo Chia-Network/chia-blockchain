@@ -9,7 +9,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
@@ -60,7 +60,7 @@ def make_spend_bundle(count: int) -> SpendBundle:
         puzzle_reveal = puzzle_hash_db[coin.puzzle_hash]
         conditions = conditions_for_payment(coin)
         solution = SerializedProgram.from_program(solution_for_conditions(conditions))
-        coin_spend = CoinSpend(coin, puzzle_reveal, solution)
+        coin_spend = make_spend(coin, puzzle_reveal, solution)
         coin_spends.append(coin_spend)
 
     spend_bundle = SpendBundle(coin_spends, G2Element())

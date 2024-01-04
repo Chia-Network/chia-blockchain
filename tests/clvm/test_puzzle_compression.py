@@ -10,7 +10,7 @@ from chia_rs import G1Element, G2Element
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
@@ -49,7 +49,7 @@ def report_compression_fixture(record_property):
 
 
 def test_standard_puzzle(report_compression):
-    coin_spend = CoinSpend(
+    coin_spend = make_spend(
         COIN,
         puzzle_for_pk(G1Element()),
         SOLUTION,
@@ -71,7 +71,7 @@ def test_decompress_limit():
 
 
 def test_cat_puzzle(report_compression):
-    coin_spend = CoinSpend(
+    coin_spend = make_spend(
         COIN,
         construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), Program.to(1)),
         SOLUTION,
@@ -84,7 +84,7 @@ def test_cat_puzzle(report_compression):
 
 
 def test_offer_puzzle(report_compression):
-    coin_spend = CoinSpend(
+    coin_spend = make_spend(
         COIN,
         OFFER_MOD,
         SOLUTION,
@@ -97,7 +97,7 @@ def test_offer_puzzle(report_compression):
 
 
 def test_nesting_puzzles(report_compression):
-    coin_spend = CoinSpend(
+    coin_spend = make_spend(
         COIN,
         construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), puzzle_for_pk(G1Element())),
         SOLUTION,
@@ -111,7 +111,7 @@ def test_nesting_puzzles(report_compression):
 
 def test_unknown_wrapper(report_compression):
     unknown = Program.to([2, 2, []])  # (a 2 ())
-    coin_spend = CoinSpend(
+    coin_spend = make_spend(
         COIN,
         unknown.curry(puzzle_for_pk(G1Element())),
         SOLUTION,
@@ -130,7 +130,7 @@ def test_lowest_best_version():
 
 
 def test_version_override():
-    coin_spend = CoinSpend(
+    coin_spend = make_spend(
         COIN,
         OFFER_MOD,
         SOLUTION,
