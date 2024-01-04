@@ -84,8 +84,8 @@ async def test_get_key_for_fingerprint(keychain_proxy: KeychainProxy) -> None:
     with pytest.raises(KeychainIsEmpty):
         await keychain.get_public_key_for_fingerprint(None)
     await keychain_proxy.add_private_key(TEST_KEY_1.mnemonic_str(), TEST_KEY_1.label)
-    assert await keychain.get_public_key_for_fingerprint(TEST_KEY_1.fingerprint) == TEST_KEY_1.public_key
-    assert await keychain.get_public_key_for_fingerprint(None) == TEST_KEY_1.public_key
+    assert await keychain.get_public_key_for_fingerprint(TEST_KEY_1.fingerprint) == TEST_KEY_1.observation_root
+    assert await keychain.get_public_key_for_fingerprint(None) == TEST_KEY_1.observation_root
     with pytest.raises(KeychainKeyNotFound):
         await keychain.get_public_key_for_fingerprint(1234567890)
 
