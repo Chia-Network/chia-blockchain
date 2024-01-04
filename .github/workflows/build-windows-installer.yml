@@ -394,7 +394,7 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        gh release upload --repo ${{ github.repository }} $env:RELEASE_TAG "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
+        gh release upload --repo ${{ github.repository }} $RELEASE_TAG "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
 
     - uses: Chia-Network/actions/github/jwt@main
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET

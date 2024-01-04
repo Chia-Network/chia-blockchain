@@ -146,7 +146,7 @@ class CoinStore:
                     return CoinRecord(coin, row[0], row[1], row[2], row[6])
         return None
 
-    async def get_coin_records(self, names: List[bytes32]) -> List[CoinRecord]:
+    async def get_coin_records(self, names: Collection[bytes32]) -> List[CoinRecord]:
         if len(names) == 0:
             return []
 

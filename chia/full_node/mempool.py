@@ -48,11 +48,16 @@ class Mempool:
     _block_height: uint32
     _timestamp: uint64
 
+    _total_fee: int
+    _total_cost: int
+
     def __init__(self, mempool_info: MempoolInfo, fee_estimator: FeeEstimatorInterface):
         self._db_conn = sqlite3.connect(":memory:")
         self._items = {}
         self._block_height = uint32(0)
         self._timestamp = uint64(0)
+        self._total_fee = 0
+        self._total_cost = 0
 
         with self._db_conn:
             # name means SpendBundle hash
@@ -75,8 +80,6 @@ class Mempool:
                 """
             )
             self._db_conn.execute("CREATE INDEX name_idx ON tx(name)")
-            self._db_conn.execute("CREATE INDEX fee_sum ON tx(fee)")
-            self._db_conn.execute("CREATE INDEX cost_sum ON tx(cost)")
             self._db_conn.execute("CREATE INDEX feerate ON tx(fee_per_cost)")
             self._db_conn.execute(
                 "CREATE INDEX assert_before ON tx(assert_before_height, assert_before_seconds) "
@@ -121,16 +124,10 @@ class Mempool:
         )
 
     def total_mempool_fees(self) -> int:
-        with self._db_conn:
-            cursor = self._db_conn.execute("SELECT SUM(fee) FROM tx")
-            val = cursor.fetchone()[0]
-            return uint64(0) if val is None else uint64(val)
+        return self._total_fee
 
     def total_mempool_cost(self) -> CLVMCost:
-        with self._db_conn:
-            cursor = self._db_conn.execute("SELECT SUM(cost) FROM tx")
-            val = cursor.fetchone()[0]
-            return CLVMCost(uint64(0) if val is None else uint64(val))
+        return CLVMCost(uint64(self._total_cost))
 
     def all_items(self) -> Iterator[MempoolItem]:
         with self._db_conn:
@@ -184,32 +181,33 @@ class Mempool:
                 items.extend(self._row_to_item(row) for row in cursor)
         return items
 
-    def get_min_fee_rate(self, cost: int) -> float:
+    def get_min_fee_rate(self, cost: int) -> Optional[float]:
         """
         Gets the minimum fpc rate that a transaction with specified cost will need in order to get included.
         """
 
-        if self.at_full_capacity(cost):
-            # TODO: make MempoolItem.cost be CLVMCost
-            current_cost = int(self.total_mempool_cost())
+        if not self.at_full_capacity(cost):
+            return 0
 
-            # Iterates through all spends in increasing fee per cost
-            with self._db_conn:
-                cursor = self._db_conn.execute("SELECT cost,fee_per_cost FROM tx ORDER BY fee_per_cost ASC, seq DESC")
+        # TODO: make MempoolItem.cost be CLVMCost
+        current_cost = self._total_cost
 
-                item_cost: int
-                fee_per_cost: float
-                for item_cost, fee_per_cost in cursor:
-                    current_cost -= item_cost
-                    # Removing one at a time, until our transaction of size cost fits
-                    if current_cost + cost <= self.mempool_info.max_size_in_cost:
-                        return fee_per_cost
+        # Iterates through all spends in increasing fee per cost
+        with self._db_conn:
+            cursor = self._db_conn.execute("SELECT cost,fee_per_cost FROM tx ORDER BY fee_per_cost ASC, seq DESC")
 
-            raise ValueError(
+            item_cost: int
+            fee_per_cost: float
+            for item_cost, fee_per_cost in cursor:
+                current_cost -= item_cost
+                # Removing one at a time, until our transaction of size cost fits
+                if current_cost + cost <= self.mempool_info.max_size_in_cost:
+                    return fee_per_cost
+
+            log.info(
                 f"Transaction with cost {cost} does not fit in mempool of max cost {self.mempool_info.max_size_in_cost}"
             )
-        else:
-            return 0
+            return None
 
     def new_tx_block(self, block_height: uint32, timestamp: uint64) -> None:
         """
@@ -255,8 +253,18 @@ class Mempool:
         for batch in to_batches(items, SQLITE_MAX_VARIABLE_NUMBER):
             args = ",".join(["?"] * len(batch.entries))
             with self._db_conn:
+                cursor = self._db_conn.execute(
+                    f"SELECT SUM(cost), SUM(fee) FROM tx WHERE name in ({args})", batch.entries
+                )
+                cost_to_remove, fee_to_remove = cursor.fetchone()
+
                 self._db_conn.execute(f"DELETE FROM tx WHERE name in ({args})", batch.entries)
                 self._db_conn.execute(f"DELETE FROM spends WHERE tx in ({args})", batch.entries)
+
+            self._total_cost -= cost_to_remove
+            self._total_fee -= fee_to_remove
+            assert self._total_cost >= 0
+            assert self._total_fee >= 0
 
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
             info = FeeMempoolInfo(
@@ -310,11 +318,12 @@ class Mempool:
                     if fee_per_cost > item.fee_per_cost:
                         return Err.INVALID_FEE_LOW_FEE
                     to_remove.append(name)
+
                 self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
+
                 # if we don't find any entries, it's OK to add this entry
 
-            total_cost = int(self.total_mempool_cost())
-            if total_cost + item.cost > self.mempool_info.max_size_in_cost:
+            if self._total_cost + item.cost > self.mempool_info.max_size_in_cost:
                 # pick the items with the lowest fee per cost to remove
                 cursor = self._db_conn.execute(
                     """SELECT name FROM tx
@@ -328,6 +337,7 @@ class Mempool:
                     (self.mempool_info.max_size_in_cost - item.cost,),
                 )
                 to_remove = [bytes32(row[0]) for row in cursor]
+
                 self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL)
 
             # TODO: In the future, for the "fee_per_cost" field, opt for
@@ -354,6 +364,9 @@ class Mempool:
                 item.spend_bundle, item.npc_result, item.height_added_to_mempool, item.bundle_coin_spends
             )
 
+            self._total_cost += item.cost
+            self._total_fee += item.fee
+
         info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost(), self.total_mempool_fees(), datetime.now())
         self.fee_estimator.add_mempool_item(info, MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
         return None
@@ -363,7 +376,7 @@ class Mempool:
         Checks whether the mempool is at full capacity and cannot accept a transaction with size cost.
         """
 
-        return self.total_mempool_cost() + cost > self.mempool_info.max_size_in_cost
+        return self._total_cost + cost > self.mempool_info.max_size_in_cost
 
     def create_bundle_from_mempool_items(
         self, item_inclusion_filter: Callable[[bytes32], bool]
@@ -389,10 +402,11 @@ class Mempool:
             if not item_inclusion_filter(name):
                 continue
             try:
+                cost = uint64(0 if item.npc_result.conds is None else item.npc_result.conds.cost)
                 unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-                    bundle_coin_spends=item.bundle_coin_spends, max_cost=item.npc_result.cost
+                    bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
                 )
-                item_cost = item.npc_result.cost - cost_saving
+                item_cost = cost - cost_saving
                 log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, fee / item_cost)
                 if (
                     item_cost + cost_sum > self.mempool_info.max_block_clvm_cost

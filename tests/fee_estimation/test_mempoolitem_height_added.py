@@ -13,7 +13,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.spend_bundle import SpendBundle
 
 log = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ async def farm(
 
 
 def make_tx_sb(from_coin: Coin) -> SpendBundle:
-    coin_spend = CoinSpend(
+    coin_spend = make_spend(
         from_coin,
         Program.to(1),
         Program.to([[51, from_coin.puzzle_hash, from_coin.amount]]),

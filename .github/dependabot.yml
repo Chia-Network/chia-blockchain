@@ -12,6 +12,8 @@ updates:
       interval: "weekly"
       day: "tuesday"
     labels:
+      - dependencies
+      - python
       - "Changed"
     target-branch: "main"
     pull-request-branch-name:
@@ -30,6 +32,8 @@ updates:
       interval: "weekly"
       day: "tuesday"
     labels:
+      - dependencies
+      - github_actions
       - "Changed"
     target-branch: "main"
     pull-request-branch-name:
@@ -47,6 +51,8 @@ updates:
       interval: "weekly"
       day: "tuesday"
     labels:
+      - dependencies
+      - javascript
       - "Changed"
     target-branch: "main"
     pull-request-branch-name:
