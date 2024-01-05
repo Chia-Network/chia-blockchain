@@ -10,6 +10,7 @@ from chia.types.coin_spend import make_spend
 from chia.util.errors import ValidationError
 from chia.util.ints import uint64
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
+from chia.wallet.util.merkle_utils import list_to_binary_tree
 from chia.wallet.util.tx_config import (
     DEFAULT_COIN_SELECTION_CONFIG,
     DEFAULT_TX_CONFIG,
@@ -92,3 +93,13 @@ def test_tx_config() -> None:
     assert TXConfigLoader.from_json_dict({}).autofill(
         constants=DEFAULT_CONSTANTS, config={"reuse_public_key_for_change": {"1": True}}, logged_in_fingerprint=1
     ).to_json_dict() == {**default_tx_config, "reuse_puzhash": True}
+
+
+def test_list_to_binary_tree() -> None:
+    assert list_to_binary_tree([1]) == 1
+    assert list_to_binary_tree([1, 2]) == (1, 2)
+    assert list_to_binary_tree([1, 2, 3]) == ((1, 2), 3)
+    assert list_to_binary_tree([1, 2, 3, 4]) == ((1, 2), (3, 4))
+    assert list_to_binary_tree([1, 2, 3, 4, 5]) == (((1, 2), 3), (4, 5))
+    with pytest.raises(ValueError):
+        list_to_binary_tree([])
