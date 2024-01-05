@@ -8,7 +8,7 @@ from ecdsa import NIST256p, SigningKey
 from chia.util.ints import uint32, uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from tests.conftest import ConsensusMode
-from tests.wallet.conftest import WalletStateTransition, WalletTestFramework
+from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 
 SECP_SK = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
 SECP_PK = SECP_SK.verifying_key.to_string("compressed")

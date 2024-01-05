@@ -47,7 +47,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
@@ -2595,7 +2595,7 @@ class WalletStateManager:
             ),
         )
 
-        launcher_cs = CoinSpend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
+        launcher_cs = make_spend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
         assert tx_record.spend_bundle is not None
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb])
