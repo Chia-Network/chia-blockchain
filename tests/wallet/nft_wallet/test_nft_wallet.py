@@ -179,7 +179,7 @@ async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_
     assert await nft_wallet_1.get_nft_count() == 1
 
 
-@pytest.mark.skipif(sys.platform == "win32" and sys.version_info < (3, 9), reason="Flaky on Windows+3.8")
+# @pytest.mark.skipif(sys.platform == "win32" and sys.version_info < (3, 9), reason="Flaky on Windows+3.8")
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
@@ -279,6 +279,12 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
     for i in range(1, num_blocks * 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+    sync_to_height = full_node_api.full_node.blockchain.get_peak_height()
+    wallet_node_0.wallet_state_manager.set_sync_mode(sync_to_height)
+    while not wallet_node_0.wallet_state_manager.synced():
+        time.sleep(1)
+
     await time_out_assert(30, get_nft_count, 2, nft_wallet_0)
     coins = await nft_wallet_0.get_current_nfts()
     assert len(coins) == 2, "nft not generated"
