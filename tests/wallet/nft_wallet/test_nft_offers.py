@@ -1014,7 +1014,11 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     maker_xch_offered = 1000
     taker_cat_offered = 2500
     wallet_maker_id = wallet_maker.id()
-    offer_nft_for_cat = {wallet_maker_id: -maker_xch_offered, nft_asset_id: -1, wallet_maker_for_taker_cat.id(): taker_cat_offered}
+    offer_nft_for_cat = {
+        wallet_maker_id: -maker_xch_offered,
+        nft_asset_id: -1,
+        wallet_maker_for_taker_cat.id(): taker_cat_offered,
+    }
     maker_unused_index = (
         await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
     ).index
