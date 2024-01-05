@@ -6,7 +6,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.util.errors import ValidationError
 from chia.util.ints import uint64
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
@@ -24,7 +24,7 @@ def test_compute_spend_hints_and_additions() -> None:
     parent_coin = coin_generator.get()
     hinted_coins = [coin_generator.get(parent_coin.coin.name(), include_hint=i % 2 == 0) for i in range(10)]
     create_coin_args = [coin_creation_args(create_coin) for create_coin in hinted_coins]
-    coin_spend = CoinSpend(
+    coin_spend = make_spend(
         parent_coin.coin,
         Program.to(1),
         Program.to(create_coin_args),
@@ -34,18 +34,18 @@ def test_compute_spend_hints_and_additions() -> None:
 
     not_hinted_coin = HintedCoin(Coin(parent_coin.coin.name(), bytes32([0] * 32), uint64(0)), None)
     assert compute_spend_hints_and_additions(
-        CoinSpend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32([0] * 32), 0, [["not", "a"], "hint"]]]))
+        make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32([0] * 32), 0, [["not", "a"], "hint"]]]))
     )[0] == {not_hinted_coin.coin.name(): not_hinted_coin}
 
     with pytest.raises(ValidationError):
         compute_spend_hints_and_additions(
-            CoinSpend(
+            make_spend(
                 parent_coin.coin, Program.to(1), Program.to([[51, bytes32([0] * 32), 0] for _ in range(0, 10000)])
             )
         )
     with pytest.raises(ValidationError):
         compute_spend_hints_and_additions(
-            CoinSpend(
+            make_spend(
                 parent_coin.coin, Program.to(1), Program.to([[50, bytes48([0] * 48), b""] for _ in range(0, 10000)])
             )
         )

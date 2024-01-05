@@ -26,7 +26,7 @@ from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
@@ -2149,6 +2149,23 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             },
             {"isValid": True},
         ),
+        (
+            {
+                "message": "4f7a6f6e65",  # Ozone
+                "pubkey": (
+                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
+                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
+                ),
+                "signature": (
+                    "92a5124d53b74e4197d075277d0b31eda1571353415c4a87952035aa392d4e9206b35e4af959e7135e45db1"
+                    "c884b8b970f9cbffd42291edc1acdb124554f04608b8d842c19e1404d306f881fa79c0e287bdfcf36a6e5da"
+                    "334981b974a6cebfd0"
+                ),
+                "signing_mode": SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS.value,
+                "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
+            },
+            {"isValid": True},
+        ),
         # Negative tests
         (
             # Message was modified
@@ -2181,6 +2198,22 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 ),
                 "signing_mode": SigningMode.CHIP_0002.value,
                 "address": "xch1d0rekc2javy5gpruzmcnk4e4qq834jzlvxt5tcgl2ylt49t26gdsjen7t0",
+            },
+            {"isValid": False, "error": "Public key doesn't match the address"},
+        ),
+        (
+            {
+                "message": "4f7a6f6e65",  # Ozone
+                "pubkey": (
+                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
+                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
+                ),
+                "signature": (
+                    "92a5124d53b74e4197d075277d0b31eda1571353415c4a87952035aa392d4e9206b35e4af959e7135e45db1"
+                    "c884b8b970f9cbffd42291edc1acdb124554f04608b8d842c19e1404d306f881fa79c0e287bdfcf36a6e5da"
+                    "334981b974a6cebfd0"
+                ),
+                "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
             },
             {"isValid": False, "error": "Public key doesn't match the address"},
         ),
@@ -2438,7 +2471,7 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
     cat_coin = next(c for c in spend_bundle.additions() if c.amount == tx_amount)
     eve_spend = SpendBundle(
         [
-            CoinSpend(
+            make_spend(
                 cat_coin,
                 cat_puzzle,
                 Program.to(

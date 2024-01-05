@@ -14,8 +14,6 @@ class SupportsTrunc(Protocol):
 
 
 def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream]:
-    # TODO: turn this around to calculate the PACK from the size and signedness
-
     name_signedness, _, name_bit_size = cls.__name__.partition("int")
     cls.SIGNED = False if name_signedness == "u" else True
     try:
@@ -89,6 +87,5 @@ class StructStream(int):
     def stream_to_bytes(self) -> bytes:
         return super().to_bytes(length=self.SIZE, byteorder="big", signed=self.SIGNED)
 
-    # this is meant to avoid mixing up construcing a bytes object of a specific
-    # size (i.e. bytes(int)) vs. serializing the integer to bytes (i.e. bytes(uint32))
-    __bytes__ = None
+    def __bytes__(self) -> bytes:
+        return self.stream_to_bytes()

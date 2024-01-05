@@ -146,7 +146,7 @@ async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_
     for tx in txs:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+                30, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
             )
 
     for i in range(1, num_blocks):
@@ -244,9 +244,9 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await nft_wallet_0.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
         if tx.spend_bundle is not None:
-            assert compute_memos(tx.spend_bundle)
+            assert len(compute_memos(tx.spend_bundle)) > 0
             await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+                30, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
             )
 
     for i in range(1, num_blocks):
@@ -280,9 +280,9 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await nft_wallet_0.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
         if tx.spend_bundle is not None:
-            assert compute_memos(tx.spend_bundle)
+            assert len(compute_memos(tx.spend_bundle)) > 0
             await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+                30, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
             )
 
     await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
@@ -305,7 +305,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await time_out_assert_not_none(
         30, full_node_api.full_node.mempool_manager.get_spendbundle, txs[0].spend_bundle.name()
     )
-    assert compute_memos(txs[0].spend_bundle)
+    assert len(compute_memos(txs[0].spend_bundle)) > 0
 
     for i in range(1, num_blocks * 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
@@ -327,7 +327,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await time_out_assert_not_none(
         30, full_node_api.full_node.mempool_manager.get_spendbundle, txs[0].spend_bundle.name()
     )
-    assert compute_memos(txs[0].spend_bundle)
+    assert len(compute_memos(txs[0].spend_bundle)) > 0
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
@@ -475,8 +475,6 @@ async def test_nft_wallet_rpc_creation_and_list(self_hostname: str, two_wallet_n
 )
 @pytest.mark.anyio
 async def test_nft_wallet_rpc_update_metadata(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
-    from chia.types.blockchain_format.sized_bytes import bytes32
-
     num_blocks = 3
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
@@ -730,7 +728,7 @@ async def test_nft_with_did_wallet_creation(self_hostname: str, two_wallet_nodes
     sb = resp["spend_bundle"]
     # ensure hints are generated correctly
     memos = compute_memos(sb)
-    assert memos
+    assert len(memos) > 0
     puzhashes = []
     for x in memos.values():
         puzhashes.extend(list(x))
@@ -760,7 +758,7 @@ async def test_nft_with_did_wallet_creation(self_hostname: str, two_wallet_nodes
     sb = resp["spend_bundle"]
 
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -890,7 +888,7 @@ async def test_nft_rpc_mint(self_hostname: str, two_wallet_nodes: Any, trusted: 
     sb = resp["spend_bundle"]
 
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
@@ -1034,7 +1032,7 @@ async def test_nft_transfer_nft_with_did(self_hostname: str, two_wallet_nodes: A
     )
     assert resp.get("success")
     sb = resp["spend_bundle"]
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await make_new_block_with(resp, full_node_api, ph1)
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, 5999999999798)
@@ -1164,7 +1162,7 @@ async def test_update_metadata_for_nft_did(self_hostname: str, two_wallet_nodes:
     sb = resp["spend_bundle"]
 
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
@@ -1297,7 +1295,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trust
     )
     sb = await make_new_block_with(resp, full_node_api, ph, wallet_node_0)
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
     await wait_rpc_state_condition(
         30, api_0.nft_get_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: len(x["nft_list"]) > 0
     )
@@ -1316,7 +1314,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trust
         30, api_0.nft_get_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: len(x["nft_list"]) > 0
     )
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
     resp = await api_0.nft_mint_nft(
         {
             "wallet_id": nft_wallet_1_id,
@@ -1328,7 +1326,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trust
     )
     sb = await make_new_block_with(resp, full_node_api, ph, wallet_node_0)
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
 
     # Check DID NFT
     coins_response = await wait_rpc_state_condition(
@@ -1463,7 +1461,7 @@ async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
     )
     sb = await make_new_block_with(resp, full_node_api, ph)
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
     await wait_rpc_state_condition(
         30, api_0.nft_get_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: len(x["nft_list"]) > 0
     )
@@ -1492,7 +1490,7 @@ async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
     )
     sb = await make_new_block_with(resp, full_node_api, ph)
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
 
     # Check DID NFT
     coins_response = await wait_rpc_state_condition(
@@ -1523,7 +1521,7 @@ async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
     assert resp["tx_num"] == 4
     sb = await make_new_block_with(resp, full_node_api, ph)
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
     await time_out_assert(30, get_wallet_number, 2, wallet_node_1.wallet_state_manager)
     coins_response = await wait_rpc_state_condition(
         30, api_1.nft_get_nfts, [{"wallet_id": 2}], lambda x: len(x["nft_list"]) == 3
@@ -1609,7 +1607,7 @@ async def test_nft_set_did(self_hostname: str, two_wallet_nodes: Any, trusted: A
     )
     sb = await make_new_block_with(resp, full_node_api, ph)
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
 
     # Check DID NFT
     coins_response = await wait_rpc_state_condition(
@@ -1768,7 +1766,7 @@ async def test_set_nft_status(self_hostname: str, two_wallet_nodes: Any, trusted
     sb = resp["spend_bundle"]
 
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await make_new_block_with(resp, full_node_api, ph)
 
@@ -1854,7 +1852,7 @@ async def test_nft_sign_message(self_hostname: str, two_wallet_nodes: Any, trust
     sb = resp["spend_bundle"]
 
     # ensure hints are generated
-    assert compute_memos(sb)
+    assert len(compute_memos(sb)) > 0
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await make_new_block_with(resp, full_node_api, ph)
 

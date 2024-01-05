@@ -193,32 +193,21 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> TransactionRecord:
-        if memos is None:
-            send_dict: Dict = {
-                "wallet_id": wallet_id,
-                "amount": amount,
-                "address": address,
-                "fee": fee,
-                "puzzle_decorator": puzzle_decorator_override,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **timelock_info.to_json_dict(),
-            }
-        else:
-            send_dict = {
-                "wallet_id": wallet_id,
-                "amount": amount,
-                "address": address,
-                "fee": fee,
-                "memos": memos,
-                "puzzle_decorator": puzzle_decorator_override,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **timelock_info.to_json_dict(),
-            }
-        send_dict.update(tx_config.to_json_dict())
-        res = await self.fetch("send_transaction", send_dict)
-        return TransactionRecord.from_json_dict_convenience(res["transaction"])
+        request = {
+            "wallet_id": wallet_id,
+            "amount": amount,
+            "address": address,
+            "fee": fee,
+            "puzzle_decorator": puzzle_decorator_override,
+            "extra_conditions": conditions_to_json_dicts(extra_conditions),
+            "push": push,
+            **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
+        }
+        if memos is not None:
+            request["memos"] = memos
+        response = await self.fetch("send_transaction", request)
+        return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
     async def send_transaction_multi(
         self,
@@ -235,25 +224,17 @@ class WalletRpcClient(RpcClient):
             additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
             if "memos" in ad:
                 additions_hex[-1]["memos"] = ad["memos"]
+        request = {
+            "wallet_id": wallet_id,
+            "additions": additions_hex,
+            "fee": fee,
+            "push": push,
+            **tx_config.to_json_dict(),
+        }
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
-            response: Dict = await self.fetch(
-                "send_transaction_multi",
-                {
-                    "wallet_id": wallet_id,
-                    "additions": additions_hex,
-                    "coins": coins_json,
-                    "fee": fee,
-                    "push": push,
-                    **tx_config.to_json_dict(),
-                },
-            )
-        else:
-            response = await self.fetch(
-                "send_transaction_multi",
-                {"wallet_id": wallet_id, "additions": additions_hex, "fee": fee, **tx_config.to_json_dict()},
-            )
-
+            request["coins"] = coins_json
+        response = await self.fetch("send_transaction_multi", request)
         return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
     async def spend_clawback_coins(

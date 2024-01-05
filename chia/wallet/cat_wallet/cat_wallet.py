@@ -908,10 +908,6 @@ class CATWallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return (
-            construct_cat_puzzle(
-                CAT_MOD,
-                self.cat_info.limitations_program_hash,
-                hint,  # type: ignore[arg-type]
-            ).get_tree_hash_precalc(hint)
+            construct_cat_puzzle(CAT_MOD, self.cat_info.limitations_program_hash, hint).get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )

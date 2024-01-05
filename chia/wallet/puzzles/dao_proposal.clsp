@@ -284,8 +284,8 @@
                   ; We are trying to close the proposal, so check whether it passed or failed
                   (if
                     (all
-                      (> TOTAL_VOTES lockup_innerpuzhashes_or_attendance_required)
-                      (> YES_VOTES (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin))
+                      (gte TOTAL_VOTES lockup_innerpuzhashes_or_attendance_required)
+                      (gte YES_VOTES (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin))
                     )
                     ; Passed
                     (list

@@ -159,8 +159,8 @@ class DAOCATWallet:
         else:
             inner_puzzle = get_innerpuz_from_lockup_puzzle(cat_inner)
             assert isinstance(inner_puzzle, Program)
-            active_votes_list = get_active_votes_from_lockup_puzzle(cat_inner)
-            active_votes_list = [x.as_atom() for x in active_votes_list.as_iter()]
+            active_votes_list_prg = get_active_votes_from_lockup_puzzle(cat_inner)
+            active_votes_list = [bytes32(x.as_atom()) for x in active_votes_list_prg.as_iter()]
 
         if parent_spend.coin.puzzle_hash == coin.puzzle_hash:
             # shortcut, works for change
