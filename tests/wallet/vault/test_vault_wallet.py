@@ -7,6 +7,7 @@ from typing import Awaitable, Callable, Type
 import pytest
 from ecdsa import NIST256p, SigningKey
 
+from chia.types.blockchain_format.program import Program
 from chia.util.ints import uint64
 from chia.util.observation_root import ObservationRoot
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -39,8 +40,8 @@ async def vault_setup(wallet_environments: WalletTestFramework, monkeypatch: pyt
         bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
         bls_pk = bytes.fromhex(bls_pk_hex)
         timelock = uint64(1000)
-        entropy = b"101"
-        res = await client.vault_create(SECP_PK, entropy, bls_pk, timelock, tx_config=DEFAULT_TX_CONFIG)
+        hidden_puzzle_hash = Program.to("hph").get_tree_hash().hex()
+        res = await client.vault_create(SECP_PK, hidden_puzzle_hash, bls_pk, timelock, tx_config=DEFAULT_TX_CONFIG)
         vault_tx = res[0]
         assert vault_tx
 

@@ -1726,7 +1726,7 @@ class WalletRpcClient(RpcClient):
     async def vault_create(
         self,
         secp_pk: bytes,
-        entropy: bytes,
+        hp_index: uint32,
         bls_pk: bytes,
         timelock: uint64,
         tx_config: TXConfig,
@@ -1737,7 +1737,7 @@ class WalletRpcClient(RpcClient):
             "vault_create",
             {
                 "secp_pk": secp_pk.hex(),
-                "entropy": entropy.hex(),
+                "hp_index": hp_index,
                 "bls_pk": bls_pk.hex(),
                 "timelock": timelock,
                 "fee": fee,
