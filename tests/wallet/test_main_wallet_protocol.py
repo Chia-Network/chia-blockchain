@@ -12,7 +12,7 @@ from typing_extensions import Unpack
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
@@ -91,7 +91,7 @@ class AnyoneCanSpend(Wallet):
 
         spend_bundle = SpendBundle(
             [
-                CoinSpend(
+                make_spend(
                     coin,
                     ACS,
                     self.make_solution(condition_list, extra_conditions, fee) if i == 0 else Program.to([]),
