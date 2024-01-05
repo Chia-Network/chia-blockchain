@@ -88,7 +88,7 @@ kwargs = dict(
         upnp=upnp_dependencies,
         legacy_keyring=legacy_keyring_dependencies,
     ),
-    packages=find_packages(include=["build_scripts", "chia", "chia.*", "mozilla-ca"]),
+    packages=find_packages(include=["build_scripts", "chia", "chia.*", "mozilla-ca"], exclude=["chia.clvm.singleton"]),
     entry_points={
         "console_scripts": [
             "chia = chia.cmds.chia:main",
