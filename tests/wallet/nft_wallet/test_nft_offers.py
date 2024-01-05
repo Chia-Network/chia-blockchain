@@ -878,6 +878,7 @@ async def test_nft_offer_nft_for_nft(
     assert await nft_wallet_maker.get_nft_count() == 1
     assert await nft_wallet_taker.get_nft_count() == 1
 
+
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
 @pytest.mark.parametrize("trusted", [False])
 @pytest.mark.parametrize("reuse_puzhash", [False])
