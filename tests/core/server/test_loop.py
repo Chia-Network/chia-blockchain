@@ -14,6 +14,7 @@ from typing import AsyncIterator, List, Optional
 import anyio
 import pytest
 
+import tests
 from chia.server import chia_policy
 from chia.util.timing import adjusted_timeout
 from tests.core.server import serve
@@ -160,9 +161,12 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     flood_file = tmp_path.joinpath("flood")
     flood_file.touch()
 
+    env = {**os.environ, "PYTHONPATH": pathlib.Path(tests.__file__).parent.parent.as_posix()}
+
     logger.info(" ==== launching serve.py")
     with subprocess.Popen(
         [sys.executable, "-m", "tests.core.server.serve", os.fspath(serve_file)],
+        env=env,
     ):
         logger.info(" ====           serve.py running")
 
@@ -171,6 +175,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
         logger.info(" ==== launching flood.py")
         with subprocess.Popen(
             [sys.executable, "-m", "tests.core.server.flood", os.fspath(flood_file)],
+            env=env,
         ):
             logger.info(" ====           flood.py running")
 
