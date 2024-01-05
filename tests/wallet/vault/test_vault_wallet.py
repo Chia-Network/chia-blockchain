@@ -16,7 +16,7 @@ from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.wallet_protocol import MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.conftest import ConsensusMode
-from tests.wallet.conftest import WalletTestFramework
+from tests.wallet.conftest import WalletStateTransition, WalletTestFramework
 
 SECP_SK = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
 SECP_PK = SECP_SK.verifying_key.to_string("compressed")
@@ -48,8 +48,27 @@ async def vault_setup(wallet_environments: WalletTestFramework, monkeypatch: pyt
         eve_coin = [item for item in vault_tx.additions if item not in vault_tx.removals and item.amount == 1][0]
         launcher_id = eve_coin.name()
         vault_root = VaultRoot.from_bytes(launcher_id)
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "init": True,
+                            "set_remainder": True,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -1,
+                            "set_remainder": True,
+                        }
+                    },
+                )
+            ]
+        )
         await env.wallet_node.keychain_proxy.add_public_key(launcher_id.hex())
         await env.restart(vault_root.get_fingerprint())
+        await wallet_environments.full_node.wait_for_wallet_synced(env.wallet_node, 20)
 
 
 @pytest.mark.parametrize(
@@ -73,3 +92,7 @@ async def test_vault_creation(
     await setup_function(wallet_environments, monkeypatch)
     env = wallet_environments.environments[0]
     assert isinstance(env.xch_wallet, Vault)
+
+    wallet: Vault = env.xch_wallet
+    await wallet.sync_singleton()
+    assert wallet.vault_info
