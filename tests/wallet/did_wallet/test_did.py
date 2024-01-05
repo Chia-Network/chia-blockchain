@@ -8,9 +8,7 @@ import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
@@ -25,6 +23,8 @@ from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
+from tests.util.setup_nodes import OldSimulatorsAndWallets
+from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
 async def get_wallet_num(wallet_manager):
@@ -42,7 +42,7 @@ class TestDIDWallet:
     )
     @pytest.mark.anyio
     async def test_creation_from_coin_spend(
-        self, self_hostname, two_nodes_two_wallets_with_same_keys: SimulatorsAndWallets, trusted
+        self, self_hostname, two_nodes_two_wallets_with_same_keys: OldSimulatorsAndWallets, trusted
     ):
         """
         Verify that DIDWallet.create_new_did_wallet_from_coin_spend() is called after Singleton creation on
@@ -109,9 +109,7 @@ class TestDIDWallet:
 
         #######################
         all_node_0_wallets = await wallet_node_0.wallet_state_manager.user_store.get_all_wallet_info_entries()
-        print(f"Node 0: {all_node_0_wallets}")
         all_node_1_wallets = await wallet_node_1.wallet_state_manager.user_store.get_all_wallet_info_entries()
-        print(f"Node 1: {all_node_1_wallets}")
         assert (
             json.loads(all_node_0_wallets[1].data)["current_inner"]
             == json.loads(all_node_1_wallets[1].data)["current_inner"]
@@ -255,11 +253,9 @@ class TestDIDWallet:
 
         await full_node_api.farm_blocks_to_wallet(1, wallet_0)
 
-        async def get_coins_with_ph():
+        async def get_coins_with_ph() -> bool:
             coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, some_ph)
-            if len(coins) == 1:
-                return True
-            return False
+            return len(coins) == 1
 
         await time_out_assert(15, get_coins_with_ph, True)
         await time_out_assert(45, did_wallet_2.get_confirmed_balance, 0)
@@ -459,15 +455,10 @@ class TestDIDWallet:
         coin = await did_wallet.get_coin()
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
-        try:
+        with pytest.raises(Exception):
             spend_bundle = await did_wallet.recovery_spend(
                 coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([]))
             )
-        except Exception:
-            # We expect a CLVM 80 error for this test
-            pass
-        else:
-            assert False
 
     @pytest.mark.parametrize(
         "trusted",
@@ -907,36 +898,26 @@ class TestDIDWallet:
         # Test non-singleton coin
         coin = (await wallet.select_coins(uint64(1), DEFAULT_COIN_SELECTION_CONFIG)).pop()
         assert coin.amount % 2 == 1
-        response = await api_0.did_get_info({"coin_id": coin.name().hex()})
+        coin_id = coin.name()
+        response = await api_0.did_get_info({"coin_id": coin_id.hex()})
         assert not response["success"]
 
         # Test multiple odd coins
         odd_amount = uint64(1)
         coin_1 = (
-            await wallet.select_coins(
-                odd_amount, DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[coin.name()])
-            )
+            await wallet.select_coins(odd_amount, DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[coin_id]))
         ).pop()
         assert coin_1.amount % 2 == 0
         [tx] = await wallet.generate_signed_transaction(
-            odd_amount,
-            ph1,
-            DEFAULT_TX_CONFIG.override(
-                excluded_coin_ids=[coin.name()],
-            ),
-            fee,
+            odd_amount, ph1, DEFAULT_TX_CONFIG.override(excluded_coin_ids=[coin_id]), fee
         )
         await wallet.push_transaction(tx)
         await full_node_api.process_transaction_records(records=[tx])
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=15)
 
         assert await wallet1.get_confirmed_balance() == odd_amount
-        try:
+        with pytest.raises(ValueError):
             await api_0.did_get_info({"coin_id": coin_1.name().hex()})
-            # We expect a ValueError here
-            assert False
-        except ValueError:
-            pass
 
     @pytest.mark.parametrize(
         "trusted",
@@ -1259,9 +1240,7 @@ class TestDIDWallet:
 
         #######################
         all_node_0_wallets = await wallet_node_0.wallet_state_manager.user_store.get_all_wallet_info_entries()
-        print(f"Node 0: {all_node_0_wallets}")
         all_node_1_wallets = await wallet_node_1.wallet_state_manager.user_store.get_all_wallet_info_entries()
-        print(f"Node 1: {all_node_1_wallets}")
         assert len(all_node_0_wallets) == len(all_node_1_wallets)
 
         # Note that the inner program we expect is different than the on-chain inner.

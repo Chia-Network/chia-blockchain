@@ -61,13 +61,13 @@ for consensus.
 ## Installing
 
 Install instructions are available in the
-[INSTALL](https://github.com/Chia-Network/chia-blockchain/wiki/INSTALL)
+[Installation Details](https://docs.chia.net/installation/)
 section of the
-[chia-blockchain repository wiki](https://github.com/Chia-Network/chia-blockchain/wiki).
+[Chia Docs](https://docs.chia.net/introduction/).
 
 ## Running
 
-Once installed, a
-[Quick Start Guide](https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide)
-is available from the repository
-[wiki](https://github.com/Chia-Network/chia-blockchain/wiki).
+Once installed, an
+[Introduction to Chia](https://docs.chia.net/introduction/)
+guide is available in the
+[Chia Docs](https://docs.chia.net/introduction/).

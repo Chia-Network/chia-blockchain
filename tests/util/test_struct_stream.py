@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 import io
 import struct
 from dataclasses import dataclass
@@ -25,6 +26,13 @@ def dataclass_parameter(instance: object) -> ParameterSet:
 
 def dataclass_parameters(instances: Iterable[object]) -> List[ParameterSet]:
     return [dataclass_parameter(instance) for instance in instances]
+
+
+class StreamAndBytesMatchMode(enum.Enum):
+    minimum = "minimum"
+    middle_low = "middle low"
+    middle_high = "middle high"
+    maximum = "maximum"
 
 
 @dataclass(frozen=True)
@@ -288,3 +296,19 @@ class TestStructStream:
 
     def test_parse_metadata_from_name_correct_minimum(self, good: Good) -> None:
         assert good.cls.MINIMUM == good.minimum
+
+    @pytest.mark.parametrize("mode", list(StreamAndBytesMatchMode), ids=lambda mode: mode.value)
+    def test_stream_to_bytes_and_bytes_match_minimum(self, good: Good, mode: StreamAndBytesMatchMode) -> None:
+        if mode == StreamAndBytesMatchMode.minimum:
+            value = good.minimum
+        elif mode == StreamAndBytesMatchMode.middle_low:
+            value = int(good.minimum + ((good.maximum - good.minimum) * 0.3))
+        elif mode == StreamAndBytesMatchMode.middle_high:
+            value = int(good.minimum + ((good.maximum - good.minimum) * 0.7))
+        elif mode == StreamAndBytesMatchMode.maximum:
+            value = good.maximum
+        else:
+            raise Exception(f"unhandled parametrization: {mode!r}")
+
+        instance = good.cls(value)
+        assert bytes(instance) == instance.stream_to_bytes()

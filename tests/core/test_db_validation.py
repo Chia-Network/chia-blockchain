@@ -129,8 +129,7 @@ def test_db_validate_in_main_chain(invalid_in_chain: bool) -> None:
 
 
 async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
-    db_wrapper = await DBWrapper2.create(database=db_file, reader_count=1, db_version=2)
-    try:
+    async with DBWrapper2.managed(database=db_file, reader_count=1, db_version=2) as db_wrapper:
         async with db_wrapper.writer_maybe_transaction() as conn:
             # this is done by chia init normally
             await conn.execute("CREATE TABLE database_version(version int)")
@@ -145,8 +144,6 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
             results = PreValidationResult(None, uint64(1), None, False)
             result, err, _ = await bc.add_block(block, results)
             assert err is None
-    finally:
-        await db_wrapper.close()
 
 
 @pytest.mark.anyio

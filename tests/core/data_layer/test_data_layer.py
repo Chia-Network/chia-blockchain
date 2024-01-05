@@ -43,12 +43,9 @@ async def test_sql_logs(enable: bool, config: Dict[str, Any], tmp_chia_root: Pat
         downloaders=[],
         uploaders=[],
     )
-    try:
-        assert not log_path.exists()
-        await data_layer._start()
-    finally:
-        data_layer._close()
-        await data_layer._await_closed()
+    assert not log_path.exists()
+    async with data_layer.manage():
+        pass
 
     if enable:
         assert log_path.is_file()
@@ -124,11 +121,14 @@ async def test_plugin_requests_use_custom_headers(
         headers={header_key: header_value},
     )
 
+    async def wallet_rpc_init() -> WalletRpcClient:
+        # this return is not presently used for this test
+        return None  # type: ignore[return-value]
+
     data_layer = DataLayer.create(
         config=config["data_layer"],
         root_path=tmp_chia_root,
-        # not presently used for this test
-        wallet_rpc_init=None,  # type: ignore[arg-type]
+        wallet_rpc_init=wallet_rpc_init(),
         downloaders=[plugin_remote],
         uploaders=[plugin_remote],
     )

@@ -230,7 +230,7 @@ jobs:
           sh build_macos-2-installer.sh
 
       - name: Upload MacOS artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: chia-installers-macos-dmg-${{ matrix.os.name }}
           path: ${{ github.workspace }}/build_scripts/final_installer/
@@ -284,7 +284,7 @@ jobs:
           directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
 
       - name: Download constraints file
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: constraints-file-${{ matrix.os.name }}
           path: venv
@@ -294,7 +294,7 @@ jobs:
           pip install --constraint venv/constraints.txt py3createtorrent
 
       - name: Download packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: chia-installers-macos-dmg-${{ matrix.os.name }}
           path: build_scripts/final_installer/
@@ -356,7 +356,7 @@ jobs:
         run: |
           py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent --webseed https://download.chia.net/install/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
           ls ${{ github.workspace }}/build_scripts/final_installer/
-          gh release upload $RELEASE_TAG ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
+          gh release upload --repo ${{ github.repository }} $RELEASE_TAG ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
 
       - name: Upload Dev Installer
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
@@ -377,6 +377,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload \
+            --repo ${{ github.repository }} \
             $RELEASE_TAG \
             build_scripts/final_installer/*.dmg
 
@@ -436,7 +437,7 @@ jobs:
     - uses: Chia-Network/actions/clean-workspace@main
 
     - name: Download packages
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       id: download
       with:
         name: chia-installers-macos-dmg-${{ matrix.arch.artifact-name }}

@@ -1,15 +1,14 @@
 from __future__ import annotations
 
+import contextlib
 import enum
 import os
 import random
 import subprocess
 import sys
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Generic, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, AsyncIterator, Generic, Optional, Tuple, Type, TypeVar, Union
 
-import aiosqlite
 import click
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
@@ -179,30 +178,29 @@ def rand_full_block() -> FullBlock:
     return full_block
 
 
-async def setup_db(name: Union[str, os.PathLike[str]], db_version: int) -> DBWrapper2:
+@contextlib.asynccontextmanager
+async def setup_db(name: Union[str, os.PathLike[str]], db_version: int) -> AsyncIterator[DBWrapper2]:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)
     except FileNotFoundError:
         pass
-    connection = await aiosqlite.connect(db_filename)
 
-    def sql_trace_callback(req: str) -> None:
-        sql_log_path = "sql.log"
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")
-        log = open(sql_log_path, "a")
-        log.write(timestamp + " " + req + "\n")
-        log.close()
-
+    log_path: Optional[Path]
     if "--sql-logging" in sys.argv:
-        await connection.set_trace_callback(sql_trace_callback)
+        log_path = Path("sql.log")
+    else:
+        log_path = None
 
-    await connection.execute("pragma journal_mode=wal")
-    await connection.execute("pragma synchronous=full")
-
-    ret = DBWrapper2(connection, db_version)
-    await ret.add_connection(await aiosqlite.connect(db_filename))
-    return ret
+    async with DBWrapper2.managed(
+        database=db_filename,
+        log_path=log_path,
+        db_version=db_version,
+        reader_count=1,
+        journal_mode="wal",
+        synchronous="full",
+    ) as db_wrapper:
+        yield db_wrapper
 
 
 def get_commit_hash() -> str:

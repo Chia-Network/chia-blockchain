@@ -53,15 +53,13 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
         hints.append((coin_id, hint))
 
     with TempFile() as in_file, TempFile() as out_file:
-        db_wrapper1 = await DBWrapper2.create(
+        async with DBWrapper2.managed(
             database=in_file,
             reader_count=1,
             db_version=1,
             journal_mode="OFF",
             synchronous="OFF",
-        )
-
-        try:
+        ) as db_wrapper1:
             block_store1 = await BlockStore.create(db_wrapper1)
             coin_store1 = await CoinStore.create(db_wrapper1)
             if with_hints:
@@ -79,61 +77,54 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                 results = PreValidationResult(None, uint64(1), None, False)
                 result, err, _ = await bc.add_block(block, results)
                 assert err is None
-        finally:
-            await db_wrapper1.close()
 
         # now, convert v1 in_file to v2 out_file
         convert_v1_to_v2(in_file, out_file)
 
-        db_wrapper1 = await DBWrapper2.create(database=in_file, reader_count=1, db_version=1)
-        db_wrapper2 = await DBWrapper2.create(database=out_file, reader_count=1, db_version=2)
+        async with DBWrapper2.managed(database=in_file, reader_count=1, db_version=1) as db_wrapper1:
+            async with DBWrapper2.managed(database=out_file, reader_count=1, db_version=2) as db_wrapper2:
+                block_store1 = await BlockStore.create(db_wrapper1)
+                coin_store1 = await CoinStore.create(db_wrapper1)
+                hint_store1 = None
+                if with_hints:
+                    hint_store1 = await HintStore.create(db_wrapper1)
 
-        try:
-            block_store1 = await BlockStore.create(db_wrapper1)
-            coin_store1 = await CoinStore.create(db_wrapper1)
-            hint_store1 = None
-            if with_hints:
-                hint_store1 = await HintStore.create(db_wrapper1)
+                block_store2 = await BlockStore.create(db_wrapper2)
+                coin_store2 = await CoinStore.create(db_wrapper2)
+                hint_store2 = await HintStore.create(db_wrapper2)
 
-            block_store2 = await BlockStore.create(db_wrapper2)
-            coin_store2 = await CoinStore.create(db_wrapper2)
-            hint_store2 = await HintStore.create(db_wrapper2)
+                if with_hints:
+                    # check hints
+                    for h in hints:
+                        assert hint_store1 is not None
+                        assert h[0] in await hint_store1.get_coin_ids(h[1])
+                        assert h[0] in await hint_store2.get_coin_ids(h[1])
 
-            if with_hints:
-                # check hints
-                for h in hints:
-                    assert hint_store1 is not None
-                    assert h[0] in await hint_store1.get_coin_ids(h[1])
-                    assert h[0] in await hint_store2.get_coin_ids(h[1])
+                # check peak
+                assert await block_store1.get_peak() == await block_store2.get_peak()
 
-            # check peak
-            assert await block_store1.get_peak() == await block_store2.get_peak()
+                # check blocks
+                for block in blocks:
+                    hh = block.header_hash
+                    height = block.height
+                    assert await block_store1.get_full_block(hh) == await block_store2.get_full_block(hh)
+                    assert await block_store1.get_full_block_bytes(hh) == await block_store2.get_full_block_bytes(hh)
+                    assert await block_store1.get_full_blocks_at([height]) == await block_store2.get_full_blocks_at(
+                        [height]
+                    )
+                    assert await block_store1.get_block_records_by_hash(
+                        [hh]
+                    ) == await block_store2.get_block_records_by_hash([hh])
+                    assert await block_store1.get_block_record(hh) == await block_store2.get_block_record(hh)
+                    assert await block_store1.is_fully_compactified(hh) == await block_store2.is_fully_compactified(hh)
 
-            # check blocks
-            for block in blocks:
-                hh = block.header_hash
-                height = block.height
-                assert await block_store1.get_full_block(hh) == await block_store2.get_full_block(hh)
-                assert await block_store1.get_full_block_bytes(hh) == await block_store2.get_full_block_bytes(hh)
-                assert await block_store1.get_full_blocks_at([height]) == await block_store2.get_full_blocks_at(
-                    [height]
-                )
-                assert await block_store1.get_block_records_by_hash(
-                    [hh]
-                ) == await block_store2.get_block_records_by_hash([hh])
-                assert await block_store1.get_block_record(hh) == await block_store2.get_block_record(hh)
-                assert await block_store1.is_fully_compactified(hh) == await block_store2.is_fully_compactified(hh)
-
-            # check coins
-            for block in blocks:
-                coins = await coin_store1.get_coins_added_at_height(block.height)
-                assert await coin_store2.get_coins_added_at_height(block.height) == coins
-                assert await coin_store1.get_coins_removed_at_height(
-                    block.height
-                ) == await coin_store2.get_coins_removed_at_height(block.height)
-                for c in coins:
-                    n = c.coin.name()
-                    assert await coin_store1.get_coin_record(n) == await coin_store2.get_coin_record(n)
-        finally:
-            await db_wrapper1.close()
-            await db_wrapper2.close()
+                # check coins
+                for block in blocks:
+                    coins = await coin_store1.get_coins_added_at_height(block.height)
+                    assert await coin_store2.get_coins_added_at_height(block.height) == coins
+                    assert await coin_store1.get_coins_removed_at_height(
+                        block.height
+                    ) == await coin_store2.get_coins_removed_at_height(block.height)
+                    for c in coins:
+                        n = c.coin.name()
+                        assert await coin_store1.get_coin_record(n) == await coin_store2.get_coin_record(n)

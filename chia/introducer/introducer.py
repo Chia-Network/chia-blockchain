@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, cast
 
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.introducer_peers import VettedPeer
@@ -35,16 +36,15 @@ class Introducer:
         self._server: Optional[ChiaServer] = None
         self.log = logging.getLogger(__name__)
 
-    async def _start(self):
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
         self._vetting_task = asyncio.create_task(self._vetting_loop())
-
-    def _close(self):
-        self._shut_down = True
-        self._vetting_task.cancel()
-
-    async def _await_closed(self):
-        pass
-        # await self._vetting_task
+        try:
+            yield
+        finally:
+            self._shut_down = True
+            self._vetting_task.cancel()
+            # await self._vetting_task
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
         pass

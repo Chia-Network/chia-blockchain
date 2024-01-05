@@ -49,20 +49,16 @@ async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConst
         DISCRIMINANT_SIZE_BITS=32,
         SUB_SLOT_ITERS_STARTING=uint64(2**12),
     )
-    bc1, db_wrapper = await create_blockchain(patched_constants, db_version)
-    yield bc1
-    await db_wrapper.close()
-    bc1.shut_down()
+    async with create_blockchain(patched_constants, db_version) as (bc1, db_wrapper):
+        yield bc1
 
 
 @pytest.fixture(scope="function")
 async def empty_blockchain_with_original_constants(
     db_version: int, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[Blockchain]:
-    bc1, db_wrapper = await create_blockchain(blockchain_constants, db_version)
-    yield bc1
-    await db_wrapper.close()
-    bc1.shut_down()
+    async with create_blockchain(blockchain_constants, db_version) as (bc1, db_wrapper):
+        yield bc1
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
@@ -118,7 +114,9 @@ async def test_basic_store(
     h_hash_1 = bytes32.random(seeded_random)
     assert not store.seen_unfinished_block(h_hash_1)
     assert store.seen_unfinished_block(h_hash_1)
-    store.clear_seen_unfinished_blocks()
+    # this will crowd out h_hash_1
+    for _ in range(store.max_seen_unfinished_blocks):
+        store.seen_unfinished_block(bytes32.random(seeded_random))
     assert not store.seen_unfinished_block(h_hash_1)
 
     # Add/get unfinished block
@@ -289,7 +287,7 @@ async def test_basic_store(
         assert peak_here is not None
         if peak_here.header_hash == block.header_hash:
             sb = blockchain.block_record(block.header_hash)
-            fork = find_fork_point_in_chain(blockchain, peak, blockchain.block_record(sb.header_hash))
+            fork = await find_fork_point_in_chain(blockchain, peak, blockchain.block_record(sb.header_hash))
             if fork > 0:
                 fork_block = blockchain.height_to_block_record(uint32(fork))
             else:
@@ -366,7 +364,7 @@ async def test_basic_store(
         assert peak_here is not None
         if peak_here.header_hash == blocks[-1].header_hash:
             sb = blockchain.block_record(blocks[-1].header_hash)
-            fork = find_fork_point_in_chain(blockchain, peak, blockchain.block_record(sb.header_hash))
+            fork = await find_fork_point_in_chain(blockchain, peak, blockchain.block_record(sb.header_hash))
             if fork > 0:
                 fork_block = blockchain.height_to_block_record(uint32(fork))
             else:

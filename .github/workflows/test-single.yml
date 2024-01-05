@@ -113,7 +113,7 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
-      BLOCKS_AND_PLOTS_VERSION: 0.33.0
+      BLOCKS_AND_PLOTS_VERSION: 0.38.0
 
     steps:
       - name: Configure git
@@ -228,9 +228,9 @@ jobs:
           mv notchia/ chia/
 
       - name: Publish JUnit results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: junit-data
+          name: junit-data-${{ env.JOB_FILE_NAME }}
           path: junit-data/*
           if-no-files-found: error
 
@@ -243,9 +243,9 @@ jobs:
           coverage report --rcfile=.coveragerc --show-missing
 
       - name: Publish coverage data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage-data
+          name: coverage-data-${{ env.JOB_FILE_NAME }}
           path: coverage-data/*
           if-no-files-found: error
 

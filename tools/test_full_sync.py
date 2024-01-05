@@ -144,10 +144,8 @@ async def run_sync_test(
             consensus_constants=constants,
         )
 
-        try:
-            full_node.set_server(cast(ChiaServer, FakeServer()))
-            await full_node._start()
-
+        full_node.set_server(cast(ChiaServer, FakeServer()))
+        async with full_node.manage():
             peak = full_node.blockchain.get_peak()
             if peak is not None:
                 height = int(peak.height)
@@ -229,10 +227,6 @@ async def run_sync_test(
                 logger.warning(f"end-height: {height}")
             if node_profiler:
                 (root_path / "profile-node").rename("./profile-node")
-        finally:
-            print("closing full node")
-            full_node._close()
-            await full_node._await_closed()
 
 
 @click.group()
@@ -346,10 +340,8 @@ async def run_sync_checkpoint(
         consensus_constants=constants,
     )
 
-    try:
-        full_node.set_server(FakeServer())  # type: ignore[arg-type]
-        await full_node._start()
-
+    full_node.set_server(FakeServer())  # type: ignore[arg-type]
+    async with full_node.manage():
         peer: WSChiaConnection = FakePeer()  # type: ignore[assignment]
 
         print()
@@ -384,11 +376,6 @@ async def run_sync_checkpoint(
                 success, _, _ = await full_node.add_block_batch(block_batch, peer_info, None)
                 if not success:
                     raise RuntimeError("failed to ingest block batch")
-
-    finally:
-        print("closing full node")
-        full_node._close()
-        await full_node._await_closed()
 
 
 main.add_command(run)

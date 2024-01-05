@@ -13,16 +13,13 @@ from pytest_mock import MockerFixture
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.farmer.farmer import Farmer, increment_pool_stats, strip_old_entries
-from chia.farmer.farmer_api import FarmerAPI
-from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
 from chia.pools.pool_config import PoolWalletConfig
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.protocols.pool_protocol import PoolErrorCode
-from chia.server.start_service import Service
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
+from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
     generate_plot_public_key,
@@ -853,7 +850,7 @@ class PoolStateCase:
 @pytest.mark.anyio
 async def test_farmer_pool_response(
     mocker: MockerFixture,
-    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools],
+    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools],
     case: PoolStateCase,
 ) -> None:
     _, farmer_service, _ = farmer_one_harvester

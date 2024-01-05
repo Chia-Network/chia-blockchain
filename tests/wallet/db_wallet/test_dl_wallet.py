@@ -8,18 +8,19 @@ import pytest
 
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
-from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64
+from chia.util.timing import adjusted_timeout
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from tests.conftest import ConsensusMode
+from tests.util.setup_nodes import OldSimulatorsAndWallets
+from tests.util.time_out_assert import time_out_assert
 
 pytestmark = pytest.mark.data_layer
 
@@ -45,7 +46,7 @@ class TestDLWallet:
     )
     @pytest.mark.anyio
     async def test_initial_creation(
-        self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool, reuse_puzhash: bool
+        self, self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, trusted: bool, reuse_puzhash: bool
     ) -> None:
         full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
@@ -95,7 +96,7 @@ class TestDLWallet:
     )
     @pytest.mark.anyio
     async def test_get_owned_singletons(
-        self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool
+        self, self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, trusted: bool
     ) -> None:
         full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
@@ -147,7 +148,7 @@ class TestDLWallet:
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
     async def test_tracking_non_owned(
-        self, self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool
+        self, self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool
     ) -> None:
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -232,7 +233,7 @@ class TestDLWallet:
     )
     @pytest.mark.anyio
     async def test_lifecycle(
-        self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool
+        self, self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, trusted: bool
     ) -> None:
         full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
@@ -337,7 +338,7 @@ class TestDLWallet:
     async def test_rebase(
         self,
         self_hostname: str,
-        two_wallet_nodes: SimulatorsAndWallets,
+        two_wallet_nodes: OldSimulatorsAndWallets,
         trusted: bool,
     ) -> None:  # pragma: no cover
         full_nodes, wallets, _ = two_wallet_nodes

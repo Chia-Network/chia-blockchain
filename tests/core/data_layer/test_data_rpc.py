@@ -19,7 +19,6 @@ import pytest
 from chia.cmds.data_funcs import clear_pending_roots, wallet_log_in_cmd
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, Status, StoreProofs
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
@@ -28,23 +27,23 @@ from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.start_data_layer import create_data_layer_service
-from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
-from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
-from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert
+from chia.types.aliases import DataLayerService, WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic
+from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_node_api import WalletNodeAPI
+from tests.util.setup_nodes import SimulatorsAndWalletsServices
+from tests.util.time_out_assert import time_out_assert
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
@@ -65,10 +64,10 @@ async def init_data_layer_service(
     wallet_rpc_port: uint16,
     bt: BlockTools,
     db_path: Optional[Path] = None,
-    wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
+    wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
-) -> AsyncIterator[Service[DataLayer, DataLayerAPI]]:
+) -> AsyncIterator[DataLayerService]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
     # TODO: running the data server causes the RPC tests to hang at the end
@@ -85,12 +84,8 @@ async def init_data_layer_service(
     service = create_data_layer_service(
         root_path=bt.root_path, config=config, wallet_service=wallet_service, downloaders=[], uploaders=[]
     )
-    await service.start()
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @contextlib.asynccontextmanager
@@ -98,7 +93,7 @@ async def init_data_layer(
     wallet_rpc_port: uint16,
     bt: BlockTools,
     db_path: Path,
-    wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
+    wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
 ) -> AsyncIterator[DataLayer]:
@@ -246,11 +241,40 @@ async def test_create_insert_get(
         with pytest.raises(ValueError, match="Changelist resulted in no change to tree data"):
             await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
 
-        # test delete
-        changelist = [{"action": "delete", "key": key.hex()}]
+        # test upsert
+        new_value = b"\x00\x02"
+        changelist = [{"action": "upsert", "key": key.hex(), "value": new_value.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec1 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
+        res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
+        assert hexstr_to_bytes(res["value"]) == new_value
+        wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
+        upsert_wallet_root = wallet_root["hash"]
+
+        # test upsert unknown key acts as insert
+        new_value = b"\x00\x02"
+        changelist = [{"action": "upsert", "key": unknown_key.hex(), "value": new_value.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec2 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec2, wallet_rpc_api)
+        res = await data_rpc_api.get_value({"id": store_id.hex(), "key": unknown_key.hex()})
+        assert hexstr_to_bytes(res["value"]) == new_value
+
+        # test delete
+        changelist = [{"action": "delete", "key": unknown_key.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec3 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec3, wallet_rpc_api)
+        with pytest.raises(Exception):
+            await data_rpc_api.get_value({"id": store_id.hex(), "key": unknown_key.hex()})
+        wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
+        assert wallet_root["hash"] == upsert_wallet_root
+
+        changelist = [{"action": "delete", "key": key.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec4 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec4, wallet_rpc_api)
         with pytest.raises(Exception):
             await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
         wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
@@ -695,6 +719,12 @@ async def test_subscriptions(
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
+
+    interval = 1
+    config = bt.config
+    config["data_layer"]["manage_data_interval"] = interval
+    bt.change_config(new_config=config)
+
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
 
@@ -715,6 +745,9 @@ async def test_subscriptions(
         # test unsubscribe
         response = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
         assert response is not None
+
+        # wait for unsubscribe to be processed
+        await asyncio.sleep(interval * 5)
 
         response = await data_rpc_api.subscriptions(request={})
         assert store_id.hex() not in response.get("store_ids", [])
@@ -2187,6 +2220,10 @@ async def test_unsubscribe_removes_files(
             assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
 
         res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})
+
+        # wait for unsubscribe to be processed
+        await asyncio.sleep(manage_data_interval * 3)
+
         filenames = {path.name for path in data_layer.server_files_location.iterdir()}
         assert len(filenames) == (2 * update_count if retain else 0)
 

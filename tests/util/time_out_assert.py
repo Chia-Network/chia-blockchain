@@ -2,53 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
-import sys
 import time
-from typing import Callable, Optional, overload
+from typing import Callable
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)
-
-system_delays = {
-    # based on data from https://github.com/Chia-Network/chia-blockchain/pull/13724
-    "github": {
-        "darwin": 20,
-        "linux": 1,
-        "win32": 10,
-    },
-    # arbitrarily selected
-    "local": {
-        "darwin": 2,
-        "linux": 1,
-        "win32": 1,
-    },
-}
-
-
-if os.environ.get("GITHUB_ACTIONS") == "true":
-    # https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
-    _system_delay = system_delays["github"][sys.platform]
-else:
-    _system_delay = system_delays["local"][sys.platform]
-
-
-@overload
-def adjusted_timeout(timeout: float) -> float:
-    ...
-
-
-@overload
-def adjusted_timeout(timeout: None) -> None:
-    ...
-
-
-def adjusted_timeout(timeout: Optional[float]) -> Optional[float]:
-    if timeout is None:
-        return None
-
-    return timeout + _system_delay
 
 
 async def time_out_assert_custom_interval(timeout: float, interval, function, value=True, *args, **kwargs):

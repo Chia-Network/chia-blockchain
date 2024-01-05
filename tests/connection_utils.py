@@ -15,12 +15,13 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.ws_connection import WSChiaConnection
-from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
 from chia.util.ints import uint16
+from chia.util.timing import adjusted_timeout
+from tests.util.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 

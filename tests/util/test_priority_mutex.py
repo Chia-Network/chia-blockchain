@@ -13,9 +13,10 @@ from typing import Callable, List, Optional
 import anyio
 import pytest
 
-from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert_custom_interval
 from chia.util.priority_mutex import NestedLockUnsupportedError, PriorityMutex
+from chia.util.timing import adjusted_timeout
 from tests.util.misc import Marks, datacases
+from tests.util.time_out_assert import time_out_assert_custom_interval
 
 log = logging.getLogger(__name__)
 

@@ -443,3 +443,35 @@ async def test_get_peak(tmp_dir: Path, db_version: int, use_cache: bool) -> None
         block_hash, height = res
         assert block_hash == b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         assert height == 1337
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_get_prev_hash(tmp_dir: Path, bt: BlockTools, db_version: int, use_cache: bool) -> None:
+    assert sqlite3.threadsafety >= 1
+    blocks = bt.get_consecutive_blocks(10)
+
+    async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
+        # Use a different file for the blockchain
+        coin_store_2 = await CoinStore.create(db_wrapper_2)
+        store_2 = await BlockStore.create(db_wrapper_2, use_cache=use_cache)
+        bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
+
+        store = await BlockStore.create(db_wrapper, use_cache=use_cache)
+        await BlockStore.create(db_wrapper_2)
+
+        # Save/get block
+        for block in blocks:
+            await _validate_and_add_block(bc, block)
+            block_record = bc.block_record(block.header_hash)
+            await store.add_full_block(block.header_hash, block, block_record)
+
+        for i, block in enumerate(blocks):
+            prev_hash = await store.get_prev_hash(block.header_hash)
+            if i == 0:
+                assert prev_hash == bt.constants.GENESIS_CHALLENGE
+            else:
+                assert prev_hash == blocks[i - 1].header_hash
+
+        with pytest.raises(KeyError, match="missing block in chain"):
+            await store.get_prev_hash(bytes32.from_bytes(b"yolo" * 8))

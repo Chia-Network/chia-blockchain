@@ -28,7 +28,6 @@ from chia.rpc.farmer_rpc_api import (
 )
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.simulator.block_tools import get_plot_dir
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -40,6 +39,7 @@ from tests.conftest import HarvesterFarmerEnvironment
 from tests.plot_sync.test_delta import dummy_plot
 from tests.util.misc import assert_rpc_error
 from tests.util.rpc import validate_get_routes
+from tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 log = logging.getLogger(__name__)
 
@@ -440,18 +440,10 @@ async def test_farmer_get_harvester_plots_endpoints(
     await wait_for_plot_sync(receiver, last_sync_id)
 
     for page_size in [1, int(total_count / 2), total_count - 1, total_count, total_count + 1, 100]:
-        # TODO: figure out hinting of PaginatedRequestData that satisfies this with frozen attributes
-        request = dataclasses.replace(
-            request,
-            page_size=uint32(page_size),  # type: ignore[call-arg]
-        )
+        request = dataclasses.replace(request, page_size=uint32(page_size))
         expected_page_count = ceil(total_count / page_size)
         for page in range(expected_page_count):
-            # TODO: figure out hinting of PaginatedRequestData that satisfies this with frozen attributes
-            request = dataclasses.replace(
-                request,
-                page=uint32(page),  # type: ignore[call-arg]
-            )
+            request = dataclasses.replace(request, page=uint32(page))
             await wait_for_synced_receiver(farmer_service._api.farmer, harvester_id)
             page_result = await endpoint(farmer_rpc_client, request)
             offset = page * page_size

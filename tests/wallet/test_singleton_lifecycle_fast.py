@@ -12,11 +12,12 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
@@ -222,7 +223,7 @@ class SingletonWallet:
         solution = solve_puzzle(
             puzzle_db, puzzle_reveal, lineage_proof=self.lineage_proof, coin_amount=coin.amount, **kwargs
         )
-        return CoinSpend(coin, puzzle_reveal, solution)
+        return make_spend(coin, puzzle_reveal, solution)
 
     def update_state(self, puzzle_db: PuzzleDB, removals: List[CoinSpend]) -> int:
         state_change_count = 0
@@ -294,7 +295,7 @@ def launcher_conditions_and_spend_bundle(
         launcher_amount=launcher_amount,
         metadata=metadata,
     )
-    coin_spend = CoinSpend(launcher_coin, SerializedProgram.from_program(launcher_puzzle), solution)
+    coin_spend = make_spend(launcher_coin, SerializedProgram.from_program(launcher_puzzle), solution)
     spend_bundle = SpendBundle([coin_spend], G2Element())
     return launcher_coin.name(), expected_conditions, spend_bundle
 
@@ -353,7 +354,7 @@ def claim_p2_singleton(
         singleton_inner_puzzle_hash=inner_puzzle_hash,
         p2_singleton_coin_name=p2_singleton_coin_name,
     )
-    p2_singleton_coin_spend = CoinSpend(
+    p2_singleton_coin_spend = make_spend(
         p2_singleton_coin,
         SerializedProgram.from_program(p2_singleton_puzzle),
         p2_singleton_solution,
@@ -415,7 +416,7 @@ def spend_coin_to_singleton(
     )
 
     conditions = Program.to(condition_list)
-    coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
+    coin_spend = make_spend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
 
     additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
@@ -633,7 +634,7 @@ def test_lifecycle_with_coinstore_as_wallet():
             pool_reward_height=now.height - 1,
         )
         spend_bundle = SpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
-        spend_bundle.debug()
+        debug_spend_bundle(spend_bundle)
 
         _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
         now.seconds += 500
@@ -737,7 +738,7 @@ def test_lifecycle_with_coinstore_as_wallet():
         PUZZLE_DB, conditions=[[ConditionOpcode.CREATE_COIN, 0, -113]]
     )
     spend_bundle = SpendBundle([coin_spend], G2Element())
-    spend_bundle.debug()
+    debug_spend_bundle(spend_bundle)
 
     _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
     update_count = SINGLETON_WALLET.update_state(PUZZLE_DB, removals)

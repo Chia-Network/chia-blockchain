@@ -11,7 +11,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError
@@ -555,7 +555,7 @@ class Offer:
                     solution = Program.to(coin_to_solution_dict[coin])
 
                 completion_spends.append(
-                    CoinSpend(
+                    make_spend(
                         coin,
                         construct_puzzle(self.driver_dict[asset_id], OFFER_MOD) if asset_id else OFFER_MOD,
                         solution,
@@ -581,7 +581,7 @@ class Offer:
                 inner_solutions.append((nonce, [np.as_condition_args() for np in nonce_payments]))
 
             additional_coin_spends.append(
-                CoinSpend(
+                make_spend(
                     Coin(
                         ZERO_32,
                         puzzle_reveal.get_tree_hash(),

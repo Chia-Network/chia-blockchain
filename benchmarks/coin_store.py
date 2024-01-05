@@ -12,7 +12,6 @@ from benchmarks.utils import rand_hash, rewards, setup_db
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
 
 # to run this benchmark:
@@ -41,12 +40,11 @@ def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
 
 async def run_new_block_benchmark(version: int) -> None:
     verbose: bool = "--verbose" in sys.argv
-    db_wrapper: DBWrapper2 = await setup_db("coin-store-benchmark.db", version)
 
     # keep track of benchmark total time
     all_test_time = 0.0
 
-    try:
+    async with setup_db("coin-store-benchmark.db", version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
 
         all_unspent: List[bytes32] = []
@@ -74,7 +72,7 @@ async def run_new_block_benchmark(version: int) -> None:
             await coin_store.new_block(
                 uint32(height),
                 uint64(timestamp),
-                {pool_coin, farmer_coin},
+                [pool_coin, farmer_coin],
                 additions,
                 removals,
             )
@@ -114,7 +112,7 @@ async def run_new_block_benchmark(version: int) -> None:
             await coin_store.new_block(
                 uint32(height),
                 uint64(timestamp),
-                {pool_coin, farmer_coin},
+                [pool_coin, farmer_coin],
                 additions,
                 removals,
             )
@@ -164,7 +162,7 @@ async def run_new_block_benchmark(version: int) -> None:
             await coin_store.new_block(
                 uint32(height),
                 uint64(timestamp),
-                {pool_coin, farmer_coin},
+                [pool_coin, farmer_coin],
                 additions,
                 removals,
             )
@@ -212,7 +210,7 @@ async def run_new_block_benchmark(version: int) -> None:
             await coin_store.new_block(
                 uint32(height),
                 uint64(timestamp),
-                {pool_coin, farmer_coin},
+                [pool_coin, farmer_coin],
                 additions,
                 removals,
             )
@@ -300,9 +298,6 @@ async def run_new_block_benchmark(version: int) -> None:
         )
         all_test_time += total_time
         print(f"all tests completed in {all_test_time:0.4f}s")
-
-    finally:
-        await db_wrapper.close()
 
     db_size = os.path.getsize(Path("coin-store-benchmark.db"))
     print(f"database size: {db_size/1000000:.3f} MB")

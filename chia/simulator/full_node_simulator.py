@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 import time
-from typing import Any, Collection, Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Union
 
 import anyio
 
@@ -17,7 +17,6 @@ from chia.rpc.rpc_server import default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
-from chia.simulator.time_out_assert import adjusted_timeout
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -25,6 +24,7 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -40,24 +40,6 @@ class _Default:
 default = _Default()
 
 timeout_per_block = 5
-
-
-def backoff_times(
-    initial: float = 0.001,
-    final: float = 0.100,
-    time_to_final: float = 0.5,
-    clock=time.monotonic,
-) -> Iterator[float]:
-    # initially implemented as a simple linear backoff
-
-    start = clock()
-    delta = 0
-
-    result_range = final - initial
-
-    while True:
-        yield min(final, initial + ((delta / time_to_final) * result_range))
-        delta = clock() - start
 
 
 async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet, timeout: Optional[float] = 5):

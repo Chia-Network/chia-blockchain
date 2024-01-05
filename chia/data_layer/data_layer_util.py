@@ -794,6 +794,12 @@ class VerifyProofResponse:
         }
 
 
+@dataclasses.dataclass(frozen=True)
+class UnsubscribeData:
+    tree_id: bytes32
+    retain_data: bool
+
+
 async def get_dl_root_from_parent_spend(
     parent_spend: CoinSpend, max_cost: int
 ) -> Tuple[Optional[bytes32], Optional[bytes32]]:

@@ -9,11 +9,11 @@ import pytest
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.simulator.simulator_test_tools import get_full_chia_simulator, get_puzzle_hash_from_key
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint16
 from chia.util.keychain import Keychain
+from tests.util.time_out_assert import time_out_assert
 
 
 async def get_num_coins_for_ph(simulator_client: SimulatorFullNodeRpcClient, ph: bytes32) -> int:
