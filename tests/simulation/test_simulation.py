@@ -28,7 +28,7 @@ from chia.util.ws_message import create_payload
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
-from tests.util.setup_nodes import FullSystem, SimulatorsAndWallets
+from tests.util.setup_nodes import FullSystem, OldSimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert
 
 chiapos_version = pkg_resources.get_distribution("chiapos").version
@@ -162,7 +162,7 @@ class TestSimulation:
                 f"wss://127.0.0.1:{full_system.daemon.daemon_port}",
                 autoclose=True,
                 autoping=True,
-                ssl_context=bt.get_daemon_ssl_context(),
+                ssl=bt.get_daemon_ssl_context(),
                 max_msg_size=100 * 1024 * 1024,
             )
             service_name = "test_service_name"
@@ -254,7 +254,7 @@ class TestSimulation:
     async def test_simulation_farm_blocks_to_puzzlehash(
         self,
         count,
-        simulator_and_wallet: SimulatorsAndWallets,
+        simulator_and_wallet: OldSimulatorsAndWallets,
     ):
         [[full_node_api], _, _] = simulator_and_wallet
 
@@ -273,7 +273,7 @@ class TestSimulation:
         self,
         self_hostname: str,
         count,
-        simulator_and_wallet: SimulatorsAndWallets,
+        simulator_and_wallet: OldSimulatorsAndWallets,
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
@@ -339,7 +339,7 @@ class TestSimulation:
         self_hostname: str,
         amount: int,
         coin_count: int,
-        simulator_and_wallet: SimulatorsAndWallets,
+        simulator_and_wallet: OldSimulatorsAndWallets,
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
@@ -368,7 +368,7 @@ class TestSimulation:
     async def test_wait_transaction_records_entered_mempool(
         self,
         self_hostname: str,
-        simulator_and_wallet: SimulatorsAndWallets,
+        simulator_and_wallet: OldSimulatorsAndWallets,
     ) -> None:
         repeats = 50
         tx_amount = uint64(1)
@@ -407,7 +407,7 @@ class TestSimulation:
     async def test_process_transactions(
         self,
         self_hostname: str,
-        simulator_and_wallet: SimulatorsAndWallets,
+        simulator_and_wallet: OldSimulatorsAndWallets,
         records_or_bundles_or_coins: str,
     ) -> None:
         repeats = 20
@@ -484,7 +484,7 @@ class TestSimulation:
         self,
         self_hostname: str,
         amounts: List[uint64],
-        simulator_and_wallet: SimulatorsAndWallets,
+        simulator_and_wallet: OldSimulatorsAndWallets,
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 

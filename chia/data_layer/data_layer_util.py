@@ -725,3 +725,9 @@ class PluginStatus:
 class InsertResult:
     node_hash: bytes32
     root: Root
+
+
+@dataclasses.dataclass(frozen=True)
+class UnsubscribeData:
+    tree_id: bytes32
+    retain_data: bool

@@ -14,7 +14,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -117,11 +117,20 @@ class DIDWallet:
         if num_of_backup_ids_needed > len(backups_ids):
             raise ValueError("Cannot require more IDs than are known.")
         self.did_info = DIDInfo(
-            None, backups_ids, num_of_backup_ids_needed, [], None, None, None, None, False, json.dumps(metadata)
+            origin_coin=None,
+            backup_ids=backups_ids,
+            num_of_backup_ids_needed=num_of_backup_ids_needed,
+            parent_info=[],
+            current_inner=None,
+            temp_coin=None,
+            temp_puzhash=None,
+            temp_pubkey=None,
+            sent_recovery_transaction=False,
+            metadata=json.dumps(metadata),
         )
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.DECENTRALIZED_ID.value, info_as_string
+            name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
         )
         self.wallet_id = self.wallet_info.id
         std_wallet_id = self.standard_wallet.wallet_id
@@ -170,7 +179,7 @@ class DIDWallet:
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.DECENTRALIZED_ID.value, info_as_string
+            name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
         )
         await self.wallet_state_manager.add_new_wallet(self)
         await self.save_info(self.did_info)
@@ -230,22 +239,22 @@ class DIDWallet:
                     " you may need to reset the recovery info."
                 )
         self.did_info = DIDInfo(
-            launch_coin,
-            recovery_list,
-            uint64(backup_required),
-            [],
-            inner_puzzle,
-            None,
-            None,
-            None,
-            False,
-            json.dumps(did_wallet_puzzles.did_program_to_metadata(metadata)),
+            origin_coin=launch_coin,
+            backup_ids=recovery_list,
+            num_of_backup_ids_needed=uint64(backup_required),
+            parent_info=[],
+            current_inner=inner_puzzle,
+            temp_coin=None,
+            temp_puzhash=None,
+            temp_pubkey=None,
+            sent_recovery_transaction=False,
+            metadata=json.dumps(did_wallet_puzzles.did_program_to_metadata(metadata)),
         )
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.DECENTRALIZED_ID.value, info_as_string
+            name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
         )
         await self.wallet_state_manager.add_new_wallet(self)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
@@ -356,7 +365,9 @@ class DIDWallet:
             did_data: DIDCoinData = parent_coin_data
         else:
             parent_state: CoinState = (
-                await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
+                await self.wallet_state_manager.wallet_node.get_coin_state(
+                    coin_names=[coin.parent_coin_info], peer=peer
+                )
             )[0]
             coin_spend = await fetch_coin_spend_for_coin_state(parent_state, peer)
             uncurried = uncurry_puzzle(coin_spend.puzzle_reveal.to_program())
@@ -364,25 +375,23 @@ class DIDWallet:
             assert did_curried_args is not None
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data = DIDCoinData(
-                p2_puzzle,
-                recovery_list_hash.atom,
-                uint16(num_verification.as_int()),
-                singleton_struct,
-                metadata,
-                get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal.to_program()),
-                parent_state,
+                p2_puzzle=p2_puzzle,
+                recovery_list_hash=recovery_list_hash.atom,
+                num_verification=uint16(num_verification.as_int()),
+                singleton_struct=singleton_struct,
+                metadata=metadata,
+                inner_puzzle=get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal.to_program()),
+                coin_state=parent_state,
             )
         if parent is None:
             # this is the first time we received it, check it's a DID coin
-
             parent_innerpuz = did_data.inner_puzzle
             if parent_innerpuz:
                 parent_info = LineageProof(
-                    did_data.coin_state.coin.parent_coin_info,
-                    parent_innerpuz.get_tree_hash(),
-                    uint64(did_data.coin_state.coin.amount),
+                    parent_name=did_data.coin_state.coin.parent_coin_info,
+                    inner_puzzle_hash=parent_innerpuz.get_tree_hash(),
+                    amount=uint64(did_data.coin_state.coin.amount),
                 )
-
                 await self.add_parent(coin.parent_coin_info, parent_info)
             else:
                 self.log.warning("Parent coin is not a DID, skipping: %s -> %s", coin.name(), coin)
@@ -399,23 +408,23 @@ class DIDWallet:
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
         new_info = DIDInfo(
-            self.did_info.origin_coin,
-            self.did_info.backup_ids,
-            self.did_info.num_of_backup_ids_needed,
-            self.did_info.parent_info,
-            inner_puzzle,
-            None,
-            None,
-            None,
-            False,
-            json.dumps(did_wallet_puzzles.did_program_to_metadata(did_data.metadata)),
+            origin_coin=self.did_info.origin_coin,
+            backup_ids=self.did_info.backup_ids,
+            num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+            parent_info=self.did_info.parent_info,
+            current_inner=inner_puzzle,
+            temp_coin=None,
+            temp_puzhash=None,
+            temp_pubkey=None,
+            sent_recovery_transaction=False,
+            metadata=json.dumps(did_wallet_puzzles.did_program_to_metadata(did_data.metadata)),
         )
         await self.save_info(new_info)
 
         future_parent = LineageProof(
-            coin.parent_coin_info,
-            inner_puzzle.get_tree_hash(),
-            uint64(coin.amount),
+            parent_name=coin.parent_coin_info,
+            inner_puzzle_hash=inner_puzzle.get_tree_hash(),
+            amount=uint64(coin.amount),
         )
 
         await self.add_parent(coin.name(), future_parent)
@@ -453,11 +462,11 @@ class DIDWallet:
         assert did_info.origin_coin is not None
         assert did_info.current_inner is not None
         new_did_inner_puzhash = did_wallet_puzzles.get_inner_puzhash_by_p2(
-            new_puzhash,
-            did_info.backup_ids,
-            did_info.num_of_backup_ids_needed,
-            did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            p2_puzhash=new_puzhash,
+            recovery_list=did_info.backup_ids,
+            num_of_backup_ids_needed=did_info.num_of_backup_ids_needed,
+            launcher_id=did_info.origin_coin.name(),
+            metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         wallet_node = self.wallet_state_manager.wallet_node
         parent_coin: Coin = did_info.origin_coin
@@ -470,23 +479,23 @@ class DIDWallet:
             children_state: CoinState = children[0]
             child_coin = children_state.coin
             future_parent = LineageProof(
-                child_coin.parent_coin_info,
-                did_info.current_inner.get_tree_hash(),
-                uint64(child_coin.amount),
+                parent_name=child_coin.parent_coin_info,
+                inner_puzzle_hash=did_info.current_inner.get_tree_hash(),
+                amount=uint64(child_coin.amount),
             )
             await self.add_parent(child_coin.name(), future_parent)
             if children_state.spent_height != children_state.created_height:
                 did_info = DIDInfo(
-                    did_info.origin_coin,
-                    did_info.backup_ids,
-                    did_info.num_of_backup_ids_needed,
-                    self.did_info.parent_info,
-                    did_info.current_inner,
-                    child_coin,
-                    new_did_inner_puzhash,
-                    bytes(new_pubkey),
-                    did_info.sent_recovery_transaction,
-                    did_info.metadata,
+                    origin_coin=did_info.origin_coin,
+                    backup_ids=did_info.backup_ids,
+                    num_of_backup_ids_needed=did_info.num_of_backup_ids_needed,
+                    parent_info=self.did_info.parent_info,
+                    current_inner=did_info.current_inner,
+                    temp_coin=child_coin,
+                    temp_puzhash=new_did_inner_puzhash,
+                    temp_pubkey=bytes(new_pubkey),
+                    sent_recovery_transaction=did_info.sent_recovery_transaction,
+                    metadata=did_info.metadata,
                 )
 
                 await self.save_info(did_info)
@@ -496,9 +505,9 @@ class DIDWallet:
                 parent_innerpuz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
                 assert parent_innerpuz is not None
                 parent_info = LineageProof(
-                    parent_coin.parent_coin_info,
-                    parent_innerpuz.get_tree_hash(),
-                    uint64(parent_coin.amount),
+                    parent_name=parent_coin.parent_coin_info,
+                    inner_puzzle_hash=parent_innerpuz.get_tree_hash(),
+                    amount=uint64(parent_coin.amount),
                 )
                 await self.add_parent(child_coin.parent_coin_info, parent_info)
             parent_coin = child_coin
@@ -507,11 +516,11 @@ class DIDWallet:
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         if self.did_info.origin_coin is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
-                puzzle_for_pk(pubkey),
-                self.did_info.backup_ids,
-                self.did_info.num_of_backup_ids_needed,
-                self.did_info.origin_coin.name(),
-                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                p2_puzzle_or_hash=puzzle_for_pk(pubkey),
+                recovery_list=self.did_info.backup_ids,
+                num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+                launcher_id=self.did_info.origin_coin.name(),
+                metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             )
             return create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
         else:
@@ -524,11 +533,11 @@ class DIDWallet:
             return puzzle_for_pk(pubkey).get_tree_hash()
         origin_coin_name = self.did_info.origin_coin.name()
         innerpuz_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
-            puzzle_hash_for_pk(pubkey),
-            self.did_info.backup_ids,
-            self.did_info.num_of_backup_ids_needed,
-            origin_coin_name,
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            p2_puzhash=puzzle_hash_for_pk(pubkey),
+            recovery_list=self.did_info.backup_ids,
+            num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+            launcher_id=origin_coin_name,
+            metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         return create_singleton_puzzle_hash(innerpuz_hash, origin_coin_name)
 
@@ -565,7 +574,13 @@ class DIDWallet:
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[Payment(new_inner_puzzle.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
+            primaries=[
+                Payment(
+                    puzzle_hash=new_inner_puzzle.get_tree_hash(),
+                    amount=uint64(coin.amount),
+                    memos=[p2_puzzle.get_tree_hash()],
+                )
+            ],
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
         )
         innersol: Program = Program.to([1, p2_solution])
@@ -606,7 +621,10 @@ class DIDWallet:
             ]
         )
         new_coin = Coin(coin.name(), new_full_puzzle.get_tree_hash(), coin.amount)
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol), CoinSpend(new_coin, new_full_puzzle, new_full_sol)]
+        list_of_coinspends = [
+            make_spend(coin, full_puzzle, fullsol),
+            make_spend(new_coin, new_full_puzzle, new_full_sol),
+        ]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
@@ -671,11 +689,11 @@ class DIDWallet:
             backup_ids = self.did_info.backup_ids
             backup_required = self.did_info.num_of_backup_ids_needed
         new_did_puzhash = did_wallet_puzzles.get_inner_puzhash_by_p2(
-            new_puzhash,
-            backup_ids,
-            backup_required,
-            self.did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            p2_puzhash=new_puzhash,
+            recovery_list=backup_ids,
+            num_of_backup_ids_needed=backup_required,
+            launcher_id=self.did_info.origin_coin.name(),
+            metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         p2_solution = self.standard_wallet.make_solution(
             primaries=[Payment(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
@@ -706,7 +724,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
@@ -764,14 +782,14 @@ class DIDWallet:
         else:
             p2_ph = await self.standard_wallet.get_puzzle_hash(new=True)
             new_innerpuzzle_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
-                p2_ph,
-                self.did_info.backup_ids,
-                self.did_info.num_of_backup_ids_needed,
-                self.did_info.origin_coin.name(),
-                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                p2_puzhash=p2_ph,
+                recovery_list=self.did_info.backup_ids,
+                num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+                launcher_id=self.did_info.origin_coin.name(),
+                metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             )
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[Payment(new_innerpuzzle_hash, uint64(coin.amount), [p2_ph])],
+            primaries=[Payment(puzzle_hash=new_innerpuzzle_hash, amount=uint64(coin.amount), memos=[p2_ph])],
             conditions=extra_conditions,
         )
         # innerpuz solution is (mode p2_solution)
@@ -795,7 +813,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         signed_spend_bundle: SpendBundle = await self.sign(unsigned_spend_bundle)
         return TransactionRecord(
@@ -847,7 +865,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         spend_bundle = await self.sign(unsigned_spend_bundle)
 
@@ -927,7 +945,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
@@ -1040,7 +1058,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
 
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         if index is None:
@@ -1077,16 +1095,16 @@ class DIDWallet:
             valid_times=ConditionValidTimes(),
         )
         new_did_info = DIDInfo(
-            self.did_info.origin_coin,
-            self.did_info.backup_ids,
-            self.did_info.num_of_backup_ids_needed,
-            self.did_info.parent_info,
-            self.did_info.current_inner,
-            self.did_info.temp_coin,
-            self.did_info.temp_puzhash,
-            self.did_info.temp_pubkey,
-            True,
-            self.did_info.metadata,
+            origin_coin=self.did_info.origin_coin,
+            backup_ids=self.did_info.backup_ids,
+            num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+            parent_info=self.did_info.parent_info,
+            current_inner=self.did_info.current_inner,
+            temp_coin=self.did_info.temp_coin,
+            temp_puzhash=self.did_info.temp_puzhash,
+            temp_pubkey=self.did_info.temp_pubkey,
+            sent_recovery_transaction=True,
+            metadata=self.did_info.metadata,
         )
         await self.save_info(new_did_info)
         return [did_record]
@@ -1101,19 +1119,19 @@ class DIDWallet:
     async def get_new_did_innerpuz(self, origin_id=None) -> Program:
         if self.did_info.origin_coin is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
-                await self.get_new_p2_inner_puzzle(),
-                self.did_info.backup_ids,
-                uint64(self.did_info.num_of_backup_ids_needed),
-                self.did_info.origin_coin.name(),
-                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                p2_puzzle_or_hash=await self.get_new_p2_inner_puzzle(),
+                recovery_list=self.did_info.backup_ids,
+                num_of_backup_ids_needed=uint64(self.did_info.num_of_backup_ids_needed),
+                launcher_id=self.did_info.origin_coin.name(),
+                metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             )
         elif origin_id is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
-                await self.get_new_p2_inner_puzzle(),
-                self.did_info.backup_ids,
-                uint64(self.did_info.num_of_backup_ids_needed),
-                origin_id,
-                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                p2_puzzle_or_hash=await self.get_new_p2_inner_puzzle(),
+                recovery_list=self.did_info.backup_ids,
+                num_of_backup_ids_needed=uint64(self.did_info.num_of_backup_ids_needed),
+                launcher_id=origin_id,
+                metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             )
         else:
             raise ValueError("must have origin coin")
@@ -1134,11 +1152,11 @@ class DIDWallet:
         # In a selling case, the seller should clean the recovery list then transfer to the new owner.
         assert self.did_info.origin_coin is not None
         return did_wallet_puzzles.create_innerpuz(
-            puzzle_for_pk(pubkey),
-            self.did_info.backup_ids,
-            uint64(self.did_info.num_of_backup_ids_needed),
-            self.did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            p2_puzzle_or_hash=puzzle_for_pk(pubkey),
+            recovery_list=self.did_info.backup_ids,
+            num_of_backup_ids_needed=uint64(self.did_info.num_of_backup_ids_needed),
+            launcher_id=self.did_info.origin_coin.name(),
+            metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
@@ -1160,12 +1178,12 @@ class DIDWallet:
             old_recovery_list_hash = None
 
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
-            puzzle_for_pk(record.pubkey),
-            self.did_info.backup_ids,
-            self.did_info.num_of_backup_ids_needed,
-            self.did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
-            old_recovery_list_hash,
+            p2_puzzle_or_hash=puzzle_for_pk(record.pubkey),
+            recovery_list=self.did_info.backup_ids,
+            num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+            launcher_id=self.did_info.origin_coin.name(),
+            metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            recovery_list_hash=old_recovery_list_hash,
         )
         return inner_puzzle
 
@@ -1247,12 +1265,12 @@ class DIDWallet:
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
 
         [tx_record] = await self.standard_wallet.generate_signed_transaction(
-            amount,
-            genesis_launcher_puz.get_tree_hash(),
-            tx_config,
-            fee,
-            coins,
-            None,
+            amount=amount,
+            puzzle_hash=genesis_launcher_puz.get_tree_hash(),
+            tx_config=tx_config,
+            fee=fee,
+            coins=coins,
+            primaries=None,
             origin_id=origin.name(),
             extra_conditions=(
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
@@ -1261,34 +1279,34 @@ class DIDWallet:
 
         genesis_launcher_solution = Program.to([did_puzzle_hash, amount, bytes(0x80)])
 
-        launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+        launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
         eve_coin = Coin(launcher_coin.name(), did_puzzle_hash, amount)
         future_parent = LineageProof(
-            eve_coin.parent_coin_info,
-            did_inner_hash,
-            uint64(eve_coin.amount),
+            parent_name=eve_coin.parent_coin_info,
+            inner_puzzle_hash=did_inner_hash,
+            amount=uint64(eve_coin.amount),
         )
         eve_parent = LineageProof(
-            launcher_coin.parent_coin_info,
-            launcher_coin.puzzle_hash,
-            uint64(launcher_coin.amount),
+            parent_name=launcher_coin.parent_coin_info,
+            inner_puzzle_hash=launcher_coin.puzzle_hash,
+            amount=uint64(launcher_coin.amount),
         )
         await self.add_parent(eve_coin.parent_coin_info, eve_parent)
         await self.add_parent(eve_coin.name(), future_parent)
 
         # Only want to save this information if the transaction is valid
-        did_info: DIDInfo = DIDInfo(
-            launcher_coin,
-            self.did_info.backup_ids,
-            self.did_info.num_of_backup_ids_needed,
-            self.did_info.parent_info,
-            did_inner,
-            None,
-            None,
-            None,
-            False,
-            self.did_info.metadata,
+        did_info = DIDInfo(
+            origin_coin=launcher_coin,
+            backup_ids=self.did_info.backup_ids,
+            num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+            parent_info=self.did_info.parent_info,
+            current_inner=did_inner,
+            temp_coin=None,
+            temp_puzhash=None,
+            temp_pubkey=None,
+            sent_recovery_transaction=False,
+            metadata=self.did_info.metadata,
         )
         await self.save_info(did_info)
         eve_spend = await self.generate_eve_spend(eve_coin, did_full_puz, did_inner)
@@ -1344,7 +1362,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return await self.sign(unsigned_spend_bundle)
 
@@ -1366,51 +1384,51 @@ class DIDWallet:
         self.log.info(f"Adding parent {name}: {parent}")
         current_list = self.did_info.parent_info.copy()
         current_list.append((name, parent))
-        did_info: DIDInfo = DIDInfo(
-            self.did_info.origin_coin,
-            self.did_info.backup_ids,
-            self.did_info.num_of_backup_ids_needed,
-            current_list,
-            self.did_info.current_inner,
-            self.did_info.temp_coin,
-            self.did_info.temp_puzhash,
-            self.did_info.temp_pubkey,
-            self.did_info.sent_recovery_transaction,
-            self.did_info.metadata,
+        did_info = DIDInfo(
+            origin_coin=self.did_info.origin_coin,
+            backup_ids=self.did_info.backup_ids,
+            num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+            parent_info=current_list,
+            current_inner=self.did_info.current_inner,
+            temp_coin=self.did_info.temp_coin,
+            temp_puzhash=self.did_info.temp_puzhash,
+            temp_pubkey=self.did_info.temp_pubkey,
+            sent_recovery_transaction=self.did_info.sent_recovery_transaction,
+            metadata=self.did_info.metadata,
         )
         await self.save_info(did_info)
 
     async def update_recovery_list(self, recover_list: List[bytes32], num_of_backup_ids_needed: uint64) -> bool:
         if num_of_backup_ids_needed > len(recover_list):
             return False
-        did_info: DIDInfo = DIDInfo(
-            self.did_info.origin_coin,
-            recover_list,
-            num_of_backup_ids_needed,
-            self.did_info.parent_info,
-            self.did_info.current_inner,
-            self.did_info.temp_coin,
-            self.did_info.temp_puzhash,
-            self.did_info.temp_pubkey,
-            self.did_info.sent_recovery_transaction,
-            self.did_info.metadata,
+        did_info = DIDInfo(
+            origin_coin=self.did_info.origin_coin,
+            backup_ids=recover_list,
+            num_of_backup_ids_needed=num_of_backup_ids_needed,
+            parent_info=self.did_info.parent_info,
+            current_inner=self.did_info.current_inner,
+            temp_coin=self.did_info.temp_coin,
+            temp_puzhash=self.did_info.temp_puzhash,
+            temp_pubkey=self.did_info.temp_pubkey,
+            sent_recovery_transaction=self.did_info.sent_recovery_transaction,
+            metadata=self.did_info.metadata,
         )
         await self.save_info(did_info)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         return True
 
     async def update_metadata(self, metadata: Dict[str, str]) -> bool:
-        did_info: DIDInfo = DIDInfo(
-            self.did_info.origin_coin,
-            self.did_info.backup_ids,
-            self.did_info.num_of_backup_ids_needed,
-            self.did_info.parent_info,
-            self.did_info.current_inner,
-            self.did_info.temp_coin,
-            self.did_info.temp_puzhash,
-            self.did_info.temp_pubkey,
-            self.did_info.sent_recovery_transaction,
-            json.dumps(metadata),
+        did_info = DIDInfo(
+            origin_coin=self.did_info.origin_coin,
+            backup_ids=self.did_info.backup_ids,
+            num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+            parent_info=self.did_info.parent_info,
+            current_inner=self.did_info.current_inner,
+            temp_coin=self.did_info.temp_coin,
+            temp_puzhash=self.did_info.temp_puzhash,
+            temp_pubkey=self.did_info.temp_pubkey,
+            sent_recovery_transaction=self.did_info.sent_recovery_transaction,
+            metadata=json.dumps(metadata),
         )
         await self.save_info(did_info)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
@@ -1468,17 +1486,17 @@ class DIDWallet:
             raise Exception
         innerpuz: Program = Program.from_bytes(bytes.fromhex(details[4]))
         metadata: str = details[6]
-        did_info: DIDInfo = DIDInfo(
-            origin,
-            backup_ids,
-            num_of_backup_ids_needed,
-            [],
-            innerpuz,
-            None,
-            None,
-            None,
-            True,
-            metadata,
+        did_info = DIDInfo(
+            origin_coin=origin,
+            backup_ids=backup_ids,
+            num_of_backup_ids_needed=num_of_backup_ids_needed,
+            parent_info=[],
+            current_inner=innerpuz,
+            temp_coin=None,
+            temp_puzhash=None,
+            temp_pubkey=None,
+            sent_recovery_transaction=True,
+            metadata=metadata,
         )
         return did_info
 
@@ -1499,11 +1517,11 @@ class DIDWallet:
         return (
             create_singleton_puzzle(
                 did_wallet_puzzles.create_innerpuz(
-                    hint,  # type: ignore[arg-type]
-                    self.did_info.backup_ids,
-                    uint64(self.did_info.num_of_backup_ids_needed),
-                    self.did_info.origin_coin.name(),
-                    did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                    p2_puzzle_or_hash=hint,
+                    recovery_list=self.did_info.backup_ids,
+                    num_of_backup_ids_needed=uint64(self.did_info.num_of_backup_ids_needed),
+                    launcher_id=self.did_info.origin_coin.name(),
+                    metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
                 ),
                 self.did_info.origin_coin.name(),
             ).get_tree_hash_precalc(hint)

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import random
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Type, TypeVar
+
+import anyio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
@@ -47,14 +50,11 @@ and is designed so that you could test with it and then swap in a real rpc clien
 async def sim_and_client(
     db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS, pass_prefarm: bool = True
 ) -> AsyncIterator[Tuple[SpendSim, SimClient]]:
-    sim: SpendSim = await SpendSim.create(db_path, defaults)
-    try:
+    async with SpendSim.managed(db_path, defaults) as sim:
         client: SimClient = SimClient(sim)
         if pass_prefarm:
             await sim.farm_block()
         yield sim, client
-    finally:
-        await sim.close()
 
 
 class CostLogger:
@@ -71,11 +71,12 @@ class CostLogger:
             height=DEFAULT_CONSTANTS.HARD_FORK_HEIGHT,
             constants=DEFAULT_CONSTANTS,
         )
-        self.cost_dict[descriptor] = npc_result.cost
+        cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
+        self.cost_dict[descriptor] = cost
         cost_to_subtract: int = 0
         for cs in spend_bundle.coin_spends:
             cost_to_subtract += len(bytes(cs.puzzle_reveal)) * DEFAULT_CONSTANTS.COST_PER_BYTE
-        self.cost_dict_no_puzs[descriptor] = npc_result.cost - cost_to_subtract
+        self.cost_dict_no_puzs[descriptor] = cost - cost_to_subtract
         return spend_bundle
 
     def log_cost_statistics(self) -> str:
@@ -144,51 +145,52 @@ class SpendSim:
     defaults: ConsensusConstants
 
     @classmethod
-    async def create(
+    @contextlib.asynccontextmanager
+    async def managed(
         cls: Type[_T_SpendSim], db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
-    ) -> _T_SpendSim:
+    ) -> AsyncIterator[_T_SpendSim]:
         self = cls()
         if db_path is None:
             uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
         else:
             uri = f"file:{db_path}"
 
-        self.db_wrapper = await DBWrapper2.create(database=uri, uri=True, reader_count=1, db_version=2)
+        async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
+            self.coin_store = await CoinStore.create(self.db_wrapper)
+            self.mempool_manager = MempoolManager(self.coin_store.get_coin_records, defaults)
+            self.defaults = defaults
 
-        self.coin_store = await CoinStore.create(self.db_wrapper)
-        self.mempool_manager = MempoolManager(self.coin_store.get_coin_record, defaults)
-        self.defaults = defaults
+            # Load the next data if there is any
+            async with self.db_wrapper.writer_maybe_transaction() as conn:
+                await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY_KEY)")
+                cursor = await conn.execute("SELECT * from block_data")
+                row = await cursor.fetchone()
+                await cursor.close()
+                if row is not None:
+                    store_data = SimStore.from_bytes(row[0])
+                    self.timestamp = store_data.timestamp
+                    self.block_height = store_data.block_height
+                    self.block_records = store_data.block_records
+                    self.blocks = store_data.blocks
+                    self.mempool_manager.peak = self.block_records[-1]
+                else:
+                    self.timestamp = uint64(1)
+                    self.block_height = uint32(0)
+                    self.block_records = []
+                    self.blocks = []
 
-        # Load the next data if there is any
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY_KEY)")
-            cursor = await conn.execute("SELECT * from block_data")
-            row = await cursor.fetchone()
-            await cursor.close()
-            if row is not None:
-                store_data = SimStore.from_bytes(row[0])
-                self.timestamp = store_data.timestamp
-                self.block_height = store_data.block_height
-                self.block_records = store_data.block_records
-                self.blocks = store_data.blocks
-                self.mempool_manager.peak = self.block_records[-1]
-            else:
-                self.timestamp = uint64(1)
-                self.block_height = uint32(0)
-                self.block_records = []
-                self.blocks = []
-            return self
-
-    async def close(self) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            c = await conn.execute("DELETE FROM block_data")
-            await c.close()
-            c = await conn.execute(
-                "INSERT INTO block_data VALUES(?)",
-                (bytes(SimStore(self.timestamp, self.block_height, self.block_records, self.blocks)),),
-            )
-            await c.close()
-        await self.db_wrapper.close()
+            try:
+                yield self
+            finally:
+                with anyio.CancelScope(shield=True):
+                    async with self.db_wrapper.writer_maybe_transaction() as conn:
+                        c = await conn.execute("DELETE FROM block_data")
+                        await c.close()
+                        c = await conn.execute(
+                            "INSERT INTO block_data VALUES(?)",
+                            (bytes(SimStore(self.timestamp, self.block_height, self.block_records, self.blocks)),),
+                        )
+                        await c.close()
 
     async def new_peak(self, spent_coins_ids: Optional[List[bytes32]]) -> None:
         await self.mempool_manager.new_peak(self.block_records[-1], spent_coins_ids)
