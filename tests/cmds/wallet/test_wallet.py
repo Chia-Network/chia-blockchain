@@ -696,6 +696,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         "Including Fees: 1 XCH, 1000000000000 mojos",
         "Created offer with ID 0202020202020202020202020202020202020202020202020202020202020202",
     ]
+    run_cli_command_and_assert(capsys, root_dir, command_args[:-4], ["without --override"])
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "cat_asset_id_to_name": [(request_cat_id,)],
