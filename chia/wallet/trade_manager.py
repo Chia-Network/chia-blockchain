@@ -485,7 +485,7 @@ class TradeManager:
                     amount_to_select = abs(amount)
                     if wallet.type() == WalletType.STANDARD_WALLET:
                         amount_to_select += fee
-                    coins_to_offer[id] = await wallet.get_coins_to_offer(
+                    coins_to_offer[wallet.id()] = await wallet.get_coins_to_offer(
                         asset_id, uint64(amount_to_select), tx_config.coin_selection_config
                     )
                     # Note: if we use check_for_special_offer_making, this is not used.
