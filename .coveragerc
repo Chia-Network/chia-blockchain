@@ -2,7 +2,6 @@
 branch=True
 disable_warnings=
   module-not-measured
-relative_files=True
 source_pkgs=
   chia
   tests
