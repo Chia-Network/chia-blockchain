@@ -7,14 +7,14 @@ source_pkgs=
   chia
   tests
 omit=
-  tests/**/config.py
+  **/tests/**/config.py
 concurrency=multiprocessing, thread
 parallel=True
 
 [paths]
 source =
-  chia/
-  venv/**/site-packages/chia/
+  **/chia/
+  **/venv/**/site-packages/chia/
 
 [report]
 precision = 1
