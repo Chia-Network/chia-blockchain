@@ -629,7 +629,9 @@ class MempoolManager:
                     spendbundle_ids_to_remove.add(item.name)
             self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
         else:
+            start_time = time.time()
             log.warning(
+                f"start: {start_time}"
                 "updating the mempool using the slow-path. "
                 f"peak: {self.peak.header_hash} "
                 f"new-peak-prev: {new_peak.prev_transaction_block_hash} "
@@ -677,6 +679,7 @@ class MempoolManager:
                     # Item was in mempool, but after the new block it's a double spend.
                     # Item is most likely included in the block.
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
+            log.warning(f"mempool slow path update took {time.time() - start_time}")
 
         potential_txs = self._pending_cache.drain(new_peak.height)
         potential_txs.update(self._conflict_cache.drain())
