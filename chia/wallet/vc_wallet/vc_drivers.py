@@ -63,7 +63,7 @@ VIRAL_BACKDOOR: Program = load_clvm_maybe_recompile(
 )
 # (mod (METADATA conditions . solution) (if solution solution (list METADATA () ())))
 # (a (i 7 (q . 7) (q 4 2 (q () ()))) 1)
-ACS_TRANSFER_PROGRAM: Program = Program.to([2, [3, 7, (1, 7), [1, 4, 2, [1, None, None]]], 1])
+ACS_TRANSFER_PROGRAM: Program = Program.to([2, [3, 7, (1, 7), [1, 4, 2, [1, 0, 0]]], 1])
 
 
 # Hashes
@@ -243,7 +243,7 @@ def construct_exigent_metadata_layer(
 ) -> Program:
     return EXTIGENT_METADATA_LAYER.curry(
         EXTIGENT_METADATA_LAYER_HASH,
-        metadata,
+        metadata if metadata is not None else 0,
         transfer_program,
         transfer_program.get_tree_hash(),
         inner_puzzle,

@@ -23,8 +23,7 @@ def test_at():
     with pytest.raises(ValueError):
         p.at("q")
 
-    with pytest.raises(EvalError):
-        p.at("ff")
+    assert p.at("ff") is None
 
 
 def test_replace():

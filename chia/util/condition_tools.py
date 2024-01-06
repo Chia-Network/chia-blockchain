@@ -33,7 +33,7 @@ def parse_sexp_to_condition(sexp: Program) -> ConditionWithArgs:
     # hints and memos with this function. We just exit the loop if we encounter
     # a pair instead of an atom
     vars: List[bytes] = []
-    for arg in Program(first[1]).as_iter():
+    for arg in Program.to(first[1]).as_iter():
         a = arg.atom
         if a is None:
             break

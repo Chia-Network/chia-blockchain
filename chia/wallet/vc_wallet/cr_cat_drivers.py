@@ -66,7 +66,7 @@ CREDENTIAL_STRUCT: Program = Program.to(
             curry_and_treehash(
                 Program.to((1, EXTIGENT_METADATA_LAYER_HASH)).get_tree_hash_precalc(EXTIGENT_METADATA_LAYER_HASH),
                 Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash(),
-                Program.to(None).get_tree_hash(),
+                Program.to(0).get_tree_hash(),
                 GUARANTEED_NIL_TP_HASH,
                 Program.to(GUARANTEED_NIL_TP_HASH).get_tree_hash(),
                 P2_ANNOUNCED_DELEGATED_PUZZLE_HASH,
@@ -82,7 +82,7 @@ CREDENTIAL_STRUCT: Program = Program.to(
                             (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
                             [4, (1, create_did_tp()), 1],
                         ],
-                        None,
+                        0,
                     )
                 ).get_tree_hash(),
             ),

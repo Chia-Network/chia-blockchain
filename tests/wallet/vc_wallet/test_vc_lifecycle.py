@@ -41,8 +41,8 @@ from chia.wallet.vc_wallet.vc_drivers import (
     solve_viral_backdoor,
 )
 
-ACS: Program = Program.to([3, (1, "entropy"), 1, None])
-ACS_2: Program = Program.to([3, (1, "entropy2"), 1, None])
+ACS: Program = Program.to([3, (1, "entropy"), 1, 0])
+ACS_2: Program = Program.to([3, (1, "entropy2"), 1, 0])
 ACS_PH: bytes32 = ACS.get_tree_hash()
 ACS_2_PH: bytes32 = ACS_2.get_tree_hash()
 MOCK_SINGLETON_MOD: Program = Program.to([2, 5, 11])
@@ -59,7 +59,7 @@ MOCK_SINGLETON: Program = MOCK_SINGLETON_MOD.curry(
 async def test_covenant_layer(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         # Create a puzzle that will not pass the initial covenant check
-        FAKE_ACS: Program = Program.to([3, (1, "fake"), 1, None])
+        FAKE_ACS: Program = Program.to([3, (1, "fake"), 1, 0])
         # The output puzzle will be the same for both
         covenant_puzzle: Program = create_covenant_layer(ACS_PH, create_std_parent_morpher(ACS_PH), ACS)
         assert match_covenant_layer(uncurry_puzzle(covenant_puzzle)) == (ACS_PH, create_std_parent_morpher(ACS_PH), ACS)
@@ -117,7 +117,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                                 inner_puzzle_hash=ACS_PH,
                                 amount=uint64(acs_coin.amount),
                             ),
-                            Program.to(None),
+                            Program.to(0),
                             Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
                         ),
                     ),
@@ -138,9 +138,14 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                                 cov,
                                 covenant_puzzle,
                                 solve_covenant_layer(
-                                    LineageProof(parent_name=parent.parent_coin_info, amount=uint64(parent.amount)),
-                                    Program.to(None),
-                                    Program.to([[51, covenant_puzzle_hash, cov.amount]]),
+                                    LineageProof(
+                                        parent_name=parent.parent_coin_info,
+                                        amount=uint64(parent.amount),
+                                    ),
+                                    Program.to(0),
+                                    Program.to(
+                                        [[51, covenant_puzzle_hash, cov.amount]]
+                                    ),
                                 ),
                             ),
                         ],
@@ -173,8 +178,10 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                                     inner_puzzle_hash=ACS_PH,
                                     amount=uint64(acs_cov.amount),
                                 ),
-                                Program.to(None),
-                                Program.to([[51, covenant_puzzle_hash, new_acs_cov.amount]]),
+                                Program.to(0),
+                                Program.to(
+                                    [[51, covenant_puzzle_hash, new_acs_cov.amount]]
+                                ),
                             ),
                         ),
                     ],
