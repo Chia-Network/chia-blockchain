@@ -88,7 +88,11 @@ class NFTWallet:
         self.standard_wallet = wallet
         if name is None:
             name = "NFT Wallet"
+
         self.log = logging.getLogger(name if name else __name__)
+        self.log.setLevel(logging.INFO)
+        self.log.addHandler(logging.FileHandler('nft.log'))
+
         self.wallet_state_manager = wallet_state_manager
         self.nft_wallet_info = NFTWalletInfo(did_id)
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
@@ -161,7 +165,7 @@ class NFTWallet:
         self, coin: Coin, height: uint32, peer: WSChiaConnection, parent_coin_data: Optional[NFTCoinData]
     ) -> None:
         """Notification from wallet state manager that wallet has been received."""
-        self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.get_name())
+        self.log.error(f"NFT wallet %s has been notified that {coin} was added", self.get_name())
         if await self.nft_store.exists(coin.name()):
             # already added
             return
@@ -265,6 +269,7 @@ class NFTWallet:
         confirmed_height: uint32,
     ) -> None:
         new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, minter_did, confirmed_height)
+        self.log.error(f"got nft coin: {coin}")
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
         self.wallet_state_manager.state_changed("nft_coin_added", self.wallet_info.id)
