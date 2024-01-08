@@ -136,6 +136,7 @@ class Blockchain(BlockchainInterface):
         self = Blockchain()
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
+        log.setLevel(logging.INFO)
         self.priority_mutex = PriorityMutex.create(priority_type=BlockchainMutexPriority)
         self.compact_proof_lock = asyncio.Lock()
         if single_threaded:
@@ -222,6 +223,11 @@ class Blockchain(BlockchainInterface):
 
         assert fork_info.peak_height <= block.height - 1
         assert fork_info.peak_hash != block.header_hash
+
+        log.warning(f"advance_fork_info: block.height {block.height}")
+        log.warning(f"advance_fork_info: block.prev_header_hash {block.prev_header_hash}")
+        log.warning(f"advance_fork_info: fork_info.peak_height {fork_info.peak_height}")
+        log.warning(f"advance_fork_info: fork_info.peak_hash {fork_info.peak_hash}")
 
         if fork_info.peak_hash == block.prev_header_hash:
             assert fork_info.peak_height == block.height - 1

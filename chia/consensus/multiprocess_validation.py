@@ -378,7 +378,7 @@ async def pre_validate_blocks_multiprocessing(
     return [
         PreValidationResult.from_bytes(result)
         for batch_result in (await asyncio.gather(*futures))
-        for result in sorted(batch_result)
+        for result in batch_result
     ]
 
 
