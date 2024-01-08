@@ -178,8 +178,9 @@ class FullNodeStore:
             return None
         return result[2]
 
-    def get_unfinished_blocks(self) -> Dict[bytes32, Tuple[uint32, UnfinishedBlock, PreValidationResult]]:
-        return self.unfinished_blocks
+    # returns all unfinished blocks for the specified height
+    def get_unfinished_blocks(self, height: uint32) -> List[UnfinishedBlock]:
+        return [block for ub_height, block, _ in self.unfinished_blocks.values() if ub_height == height]
 
     def clear_unfinished_blocks_below(self, height: uint32) -> None:
         del_keys: List[bytes32] = []
