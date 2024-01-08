@@ -7,22 +7,18 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
-from chia_rs import Coin
 from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.db_wallet.db_wallet_puzzles import match_dl_singleton
-from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
+from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 
 if TYPE_CHECKING:
     from chia.data_layer.data_store import DataStore
@@ -788,7 +784,7 @@ class GetProofRequest:
 class GetProofResponse:
     proof: StoreProofs
     coin_id: bytes32
-    parent_coin: Coin
+    inner_puzzle_hash: bytes32
     success: bool
 
     @classmethod
@@ -796,7 +792,7 @@ class GetProofResponse:
         return cls(
             proof=StoreProofs.unmarshal_hash_only(marshalled["proof"]),
             coin_id=bytes32.from_hexstr(marshalled["coin_id"]),
-            parent_coin=Coin.from_json_dict(marshalled["parent_coin"]),
+            inner_puzzle_hash=bytes32.from_hexstr(marshalled["inner_puzzle_hash"]),
             success=marshalled["success"],
         )
 
@@ -804,7 +800,7 @@ class GetProofResponse:
         return {
             "proof": self.proof.marshal(),
             "coin_id": self.coin_id.hex(),
-            "parent_coin": self.parent_coin.to_json_dict(),
+            "inner_puzzle_hash": self.inner_puzzle_hash.hex(),
             "success": self.success,
         }
 
@@ -838,40 +834,6 @@ class UnsubscribeData:
     retain_data: bool
 
 
-async def get_dl_root_from_parent_spend(
-    parent_spend: CoinSpend, max_cost: int
-) -> Tuple[Optional[bytes32], Optional[bytes32]]:
-    matched, curried_args = match_dl_singleton(parent_spend.puzzle_reveal.to_program())
-    if not matched:
-        return None, None
-
-    _, _, launcher_id_program = curried_args
-    launcher_id = bytes32(launcher_id_program.as_atom())
-
-    _, result = parent_spend.puzzle_reveal.run_with_cost(max_cost, parent_spend.solution)
-
-    #
-    # expected condition structure
-    # condition[0] is the OpCode
-    # condition[1] is puzzle hash
-    # condition[2] is amount
-    # condition[3] is a list (memos)
-    # condition[3][0] is the hint
-    # condition[3][1] is root_hash
-    #
-    for condition in Program.to(result).as_iter():
-        atom_list = list(condition.as_iter())
-        op = atom_list[0].atom
-        if op == ConditionOpcode.CREATE_COIN:
-            amount = int.from_bytes(atom_list[2].atom, "big")
-            if amount % 2 == 1:
-                memos = list(atom_list[3].as_iter())
-                root_hash = memos[1].atom
-                return root_hash, launcher_id
-
-    return None, None
-
-
 async def dl_verify_proof(
     request: Dict[str, Any],
     wallet_node: WalletNode,
@@ -883,37 +845,26 @@ async def dl_verify_proof(
     get_proof_response = GetProofResponse.unmarshal(request)
 
     verified_keys: List[KeyValue] = []
-
     coin_id = get_proof_response.coin_id
     coin_states = await wallet_node.get_coin_state([coin_id], peer=peer)
     if len(coin_states) == 0:
         raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
 
     child_coin = coin_states[0].coin
-    created_height = coin_states[0].created_height if coin_states[0].created_height is not None else 0
     current_root = coin_states[0].spent_height is None
-    if child_coin.parent_coin_info != get_proof_response.parent_coin.name():
-        raise ProofIntegrityError(
-            f"Invalid Proof: incorrect parent coin information: {get_proof_response.parent_coin.name().hex()}"
-        )
-
-    # parent_coin_states = await wallet_node.get_coin_state([coin_states[0].coin.parent_coin_info], peer=peer)
-    # if len(parent_coin_states) == 0:
-    #     raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
-
-    coin_spend = await fetch_coin_spend(height=uint32(created_height), coin=get_proof_response.parent_coin, peer=peer)
-    root_hash, launcher_id = await get_dl_root_from_parent_spend(coin_spend, max_cost=max_cost)
-
-    if root_hash is None or launcher_id is None:
-        raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
-
-    if get_proof_response.proof.store_id != launcher_id:
-        raise ProofIntegrityError(
-            f"Invalid Proof: store id {get_proof_response.proof.store_id.hex()} "
-            "does not match launcher id {launcher_id.hex()}"
-        )
 
     for reference_proof in get_proof_response.proof.proofs:
+        inner_puz_hash = get_proof_response.inner_puzzle_hash
+        host_fullpuz_program = create_host_fullpuz(
+            inner_puz_hash, reference_proof.root(), get_proof_response.proof.store_id
+        )
+        expected_puzzle_hash = host_fullpuz_program.get_tree_hash_precalc(inner_puz_hash)
+
+        if child_coin.puzzle_hash != expected_puzzle_hash:
+            raise ProofIntegrityError(
+                f"Invalid Proof: incorrect puzzle hash: {child_coin.puzzle_hash.hex()} != {expected_puzzle_hash.hex()}"
+            )
+
         proof = ProofOfInclusion(
             node_hash=reference_proof.node_hash,
             layers=[
@@ -932,11 +883,6 @@ async def dl_verify_proof(
 
         if not proof.valid():
             raise ProofIntegrityError("Invalid Proof: invalid proof of inclusion found")
-
-        if proof.root_hash != root_hash:
-            raise ProofIntegrityError(
-                f"Invalid Proof: invalid root hash found. got {root_hash.hex()}, expected {proof.root_hash.hex()}"
-            )
 
         verified_keys.append(KeyValue(key=reference_proof.key, value=reference_proof.value))
 

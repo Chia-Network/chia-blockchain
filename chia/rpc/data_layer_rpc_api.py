@@ -474,15 +474,6 @@ class DataLayerRpcApi:
         if root is None:
             raise ValueError("no root")
 
-        #
-        # create proofs
-        #
-
-        coin_records = await self.service.wallet_rpc.get_coin_records_by_names([root.coin_id])
-        child_coin = coin_records[0].coin
-        coin_records = await self.service.wallet_rpc.get_coin_records_by_names([child_coin.parent_coin_info])
-        parent_coin = coin_records[0].coin
-
         all_proofs: List[HashOnlyProof] = []
         for key in request.keys:
             key_value = await self.service.get_value(store_id=request.store_id, key=key)
@@ -507,7 +498,12 @@ class DataLayerRpcApi:
             all_proofs.append(proof)
 
         store_proof = StoreProofs(store_id=request.store_id, proofs=tuple(all_proofs))
-        return GetProofResponse(proof=store_proof, success=True, coin_id=root.coin_id, parent_coin=parent_coin)
+        return GetProofResponse(
+            proof=store_proof,
+            success=True,
+            coin_id=root.coin_id,
+            inner_puzzle_hash=root.inner_puzzle_hash,
+        )
 
     @marshal()  # type: ignore[arg-type]
     async def verify_proof(self, request: GetProofResponse) -> VerifyProofResponse:
