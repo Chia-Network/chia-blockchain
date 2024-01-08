@@ -1062,6 +1062,7 @@ class DataStore:
                     log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
                     return root
                 node_hash = hint_keys_values[key_hash(key)]
+                node: Union[TerminalNode, InternalNode]
                 node = await self.get_node(node_hash)
                 assert isinstance(node, TerminalNode)
                 del hint_keys_values[key_hash(key)]
