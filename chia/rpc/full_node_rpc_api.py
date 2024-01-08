@@ -806,7 +806,7 @@ class FullNodeRpcApi:
             "additions": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in additions],
             "removals": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in removals],
         }
-    
+
     async def get_aggsig_additional_data(self, _: Dict[str, Any]) -> EndpointResult:
         return {"additional_data": self.service.constants.AGG_SIG_ME_ADDITIONAL_DATA.hex()}
 
