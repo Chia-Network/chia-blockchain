@@ -749,13 +749,6 @@ class WalletRpcClient(RpcClient):
         }
         await self.fetch("cat_set_name", request)
 
-    async def cat_set_tail(self, wallet_id: int, tail_program: Program):
-        request = {
-            "wallet_id": wallet_id,
-            "tail_program": tail_program.hex(),
-        }
-        return (await self.fetch("cat_set_tail", request))
-
     async def cat_spend(
         self,
         wallet_id: int,

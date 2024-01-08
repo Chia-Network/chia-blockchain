@@ -185,7 +185,6 @@ class WalletRpcApi:
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
             "/cat_get_name": self.cat_get_name,
-            "/cat_set_tail": self.cat_set_tail,
             "/get_stray_cats": self.get_stray_cats,
             "/cat_spend": self.cat_spend,
             "/cat_get_asset_id": self.cat_get_asset_id,
@@ -1634,12 +1633,6 @@ class WalletRpcApi:
         """
         cats = await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
         return {"stray_cats": cats}
-    
-    async def cat_set_tail(self, request: Dict[str, any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet: CATWallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
-        await wallet.set_tail_program(request["tail_program"])
-        return {"success": True}
 
     @tx_endpoint
     async def cat_spend(
