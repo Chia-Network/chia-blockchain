@@ -18,6 +18,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import match_dl_singleton
@@ -489,16 +490,16 @@ class HashOnlyProof(Proof):
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> HashOnlyProof:
         return cls(
-            key=hexstr_to_bytes(marshalled["key_hash"]),
-            value=hexstr_to_bytes(marshalled["value_hash"]),
+            key=hexstr_to_bytes(marshalled["key_clvm_hash"]),
+            value=hexstr_to_bytes(marshalled["value_clvm_hash"]),
             node_hash=bytes32.from_hexstr(marshalled["node_hash"]),
             layers=tuple(Layer.unmarshal(layer) for layer in marshalled["layers"]),
         )
 
     def marshal(self) -> Dict[str, Any]:
         return {
-            "key_hash": self.key.hex(),
-            "value_hash": self.value.hex(),
+            "key_clvm_hash": self.key.hex(),
+            "value_clvm_hash": self.value.hex(),
             "node_hash": self.node_hash.hex(),
             "layers": [layer.marshal() for layer in self.layers],
         }
@@ -811,21 +812,21 @@ class GetProofResponse:
 @final
 @dataclasses.dataclass(frozen=True)
 class VerifyProofResponse:
-    verified_hashes: OfferStore
+    verified_clvm_hashes: OfferStore
     current_root: bool
     success: bool
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> VerifyProofResponse:
         return cls(
-            verified_hashes=OfferStore.unmarshal(marshalled["verified_hashes"]),
+            verified_clvm_hashes=OfferStore.unmarshal(marshalled["verified_clvm_hashes"]),
             current_root=marshalled["current_root"],
             success=marshalled["success"],
         )
 
     def marshal(self) -> Dict[str, Any]:
         return {
-            "verified_hashes": self.verified_hashes.marshal(),
+            "verified_clvm_hashes": self.verified_clvm_hashes.marshal(),
             "current_root": self.current_root,
             "success": self.success,
         }
@@ -925,8 +926,9 @@ async def dl_verify_proof(
             ],
         )
 
-        # if leaf_hash(key=reference_proof.key, value=reference_proof.value) != proof.node_hash:
-        #     raise ProofIntegrityError("Invalid Proof: node hash does not match key and value")
+        leaf_hash = std_hash(b"\2" + reference_proof.key + reference_proof.value)
+        if leaf_hash != proof.node_hash:
+            raise ProofIntegrityError("Invalid Proof: node hash does not match key and value")
 
         if not proof.valid():
             raise ProofIntegrityError("Invalid Proof: invalid proof of inclusion found")
@@ -939,7 +941,7 @@ async def dl_verify_proof(
         verified_keys.append(KeyValue(key=reference_proof.key, value=reference_proof.value))
 
     response = VerifyProofResponse(
-        verified_hashes=OfferStore(get_proof_response.proof.store_id, tuple(verified_keys)),
+        verified_clvm_hashes=OfferStore(get_proof_response.proof.store_id, tuple(verified_keys)),
         success=True,
         current_root=current_root,
     )
