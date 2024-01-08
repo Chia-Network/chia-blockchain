@@ -673,7 +673,9 @@ class DataStore:
 
         return internal_nodes
 
-    async def get_keys_values_cursor(self, reader, root_hash: bytes32) -> aiosqlite.Cursor:
+    async def get_keys_values_cursor(
+        self, reader: aiosqlite.Connection, root_hash: Optional[bytes32]
+    ) -> aiosqlite.Cursor:
         return await reader.execute(
             """
             WITH RECURSIVE

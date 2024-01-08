@@ -383,7 +383,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
 
         batch: List[Dict[str, Any]] = []
         keys_values: Dict[bytes, bytes] = {}
-        hint_keys_values: Optional[Dict[bytes, bytes]] = {} if use_optimized else None
+        hint_keys_values: Optional[Dict[bytes32, bytes32]] = {} if use_optimized else None
         for operation in range(num_batches * num_ops_per_batch):
             [op_type] = random.choices(
                 ["insert", "upsert-insert", "upsert-update", "delete"],
@@ -490,7 +490,7 @@ async def test_upsert_ignores_existing_arguments(
 ) -> None:
     key = b"key"
     value = b"value1"
-    hint_keys_values: Optional[Dict[bytes, bytes]] = {} if use_optimized else None
+    hint_keys_values: Optional[Dict[bytes32, bytes32]] = {} if use_optimized else None
 
     await data_store.autoinsert(
         key=key,
@@ -691,7 +691,7 @@ async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
 async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: bytes32) -> None:
     random = Random()
     random.seed(100, version=2)
-    hint_keys_values: Dict[bytes, bytes] = {}
+    hint_keys_values: Dict[bytes32, bytes32] = {}
     hashes = []
 
     for i in range(2000):
@@ -710,7 +710,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
 async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32) -> None:
     random = Random()
     random.seed(101, version=2)
-    hint_keys_values: Dict[bytes, bytes] = {}
+    hint_keys_values: Dict[bytes32, bytes32] = {}
     hashes = []
 
     for i in range(2000):
