@@ -44,14 +44,14 @@ repos:
     hooks:
     -   id: clvm_hex
         name: .clsp.hex files
-        entry: ./activated.py python tools/manage_clvm.py check
+        entry: ./activated.py python chia/dev/manage_clvm.py check
         language: system
         pass_filenames: false
 -   repo: local
     hooks:
     -   id: chialispp
         name: Pretty print chialisp files
-        entry: ./activated.py python tools/chialispp.py .
+        entry: ./activated.py python chia/dev/chialispp.py .
         language: system
         pass_filenames: false
 -   repo: local

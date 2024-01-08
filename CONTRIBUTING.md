@@ -57,7 +57,7 @@ to configure how the tests are run. For example, for more logging: change the lo
 ```bash
 sh install.sh -d
 . ./activate
-black . && isort benchmarks build_scripts chia tests tools *.py && mypy && flake8 benchmarks build_scripts chia tests tools *.py && pylint benchmarks build_scripts chia tests tools *.py
+black . && isort benchmarks build_scripts chia tests *.py && mypy && flake8 benchmarks build_scripts chia tests *.py && pylint benchmarks build_scripts chia tests *.py
 py.test tests -v --durations 0
 ```
 
