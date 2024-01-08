@@ -1055,14 +1055,16 @@ class DataStore:
     ) -> Optional[Root]:
         root_hash = None if root is None else root.node_hash
         async with self.db_wrapper.writer():
+            node: Union[TerminalNode, InternalNode]
+
             if hint_keys_values is None:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id)
+                assert isinstance(node, TerminalNode)
             else:
                 if key_hash(key) not in hint_keys_values:
                     log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
                     return root
                 node_hash = hint_keys_values[key_hash(key)]
-                node: Union[TerminalNode, InternalNode]
                 node = await self.get_node(node_hash)
                 assert isinstance(node, TerminalNode)
                 del hint_keys_values[key_hash(key)]
