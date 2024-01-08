@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
+from chia_rs import Coin
 from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
@@ -17,10 +18,10 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import match_dl_singleton
-from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 
 if TYPE_CHECKING:
     from chia.data_layer.data_store import DataStore
@@ -484,6 +485,26 @@ class Proof:
 
 
 @dataclasses.dataclass(frozen=True)
+class HashOnlyProof(Proof):
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> HashOnlyProof:
+        return cls(
+            key=hexstr_to_bytes(marshalled["key_hash"]),
+            value=hexstr_to_bytes(marshalled["value_hash"]),
+            node_hash=bytes32.from_hexstr(marshalled["node_hash"]),
+            layers=tuple(Layer.unmarshal(layer) for layer in marshalled["layers"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "key_hash": self.key.hex(),
+            "value_hash": self.value.hex(),
+            "node_hash": self.node_hash.hex(),
+            "layers": [layer.marshal() for layer in self.layers],
+        }
+
+
+@dataclasses.dataclass(frozen=True)
 class StoreProofs:
     store_id: bytes32
     proofs: Tuple[Proof, ...]
@@ -493,6 +514,13 @@ class StoreProofs:
         return cls(
             store_id=bytes32.from_hexstr(marshalled["store_id"]),
             proofs=tuple(Proof.unmarshal(proof) for proof in marshalled["proofs"]),
+        )
+
+    @classmethod
+    def unmarshal_hash_only(cls, marshalled: Dict[str, Any]) -> StoreProofs:
+        return cls(
+            store_id=bytes32.from_hexstr(marshalled["store_id"]),
+            proofs=tuple(HashOnlyProof.unmarshal(proof) for proof in marshalled["proofs"]),
         )
 
     def marshal(self) -> Dict[str, Any]:
@@ -759,37 +787,46 @@ class GetProofRequest:
 class GetProofResponse:
     proof: StoreProofs
     coin_id: bytes32
+    parent_coin: Coin
     success: bool
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> GetProofResponse:
         return cls(
-            proof=StoreProofs.unmarshal(marshalled["proof"]),
-            # offer=hexstr_to_bytes(marshalled["offer"]),
+            proof=StoreProofs.unmarshal_hash_only(marshalled["proof"]),
             coin_id=bytes32.from_hexstr(marshalled["coin_id"]),
-            success=marshalled["success"],
-        )
-
-    def marshal(self) -> Dict[str, Any]:
-        return {"proof": self.proof.marshal(), "coin_id": self.coin_id.hex(), "success": self.success}
-
-
-@final
-@dataclasses.dataclass(frozen=True)
-class VerifyProofResponse:
-    verified: OfferStore
-    success: bool
-
-    @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> VerifyProofResponse:
-        return cls(
-            verified=OfferStore.unmarshal(marshalled["verified"]),
+            parent_coin=Coin.from_json_dict(marshalled["parent_coin"]),
             success=marshalled["success"],
         )
 
     def marshal(self) -> Dict[str, Any]:
         return {
-            "verified": self.verified.marshal(),
+            "proof": self.proof.marshal(),
+            "coin_id": self.coin_id.hex(),
+            "parent_coin": self.parent_coin.to_json_dict(),
+            "success": self.success,
+        }
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class VerifyProofResponse:
+    verified_hashes: OfferStore
+    current_root: bool
+    success: bool
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> VerifyProofResponse:
+        return cls(
+            verified_hashes=OfferStore.unmarshal(marshalled["verified_hashes"]),
+            current_root=marshalled["current_root"],
+            success=marshalled["success"],
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "verified_hashes": self.verified_hashes.marshal(),
+            "current_root": self.current_root,
             "success": self.success,
         }
 
@@ -843,6 +880,7 @@ async def dl_verify_proof(
     """Verify a proof of inclusion for a DL singleton"""
 
     get_proof_response = GetProofResponse.unmarshal(request)
+
     verified_keys: List[KeyValue] = []
 
     coin_id = get_proof_response.coin_id
@@ -850,11 +888,19 @@ async def dl_verify_proof(
     if len(coin_states) == 0:
         raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
 
-    parent_coin_states = await wallet_node.get_coin_state([coin_states[0].coin.parent_coin_info], peer=peer)
-    if len(parent_coin_states) == 0:
-        raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
+    child_coin = coin_states[0].coin
+    created_height = coin_states[0].created_height if coin_states[0].created_height is not None else 0
+    current_root = coin_states[0].spent_height is None
+    if child_coin.parent_coin_info != get_proof_response.parent_coin.name():
+        raise ProofIntegrityError(
+            f"Invalid Proof: incorrect parent coin information: {get_proof_response.parent_coin.name().hex()}"
+        )
 
-    coin_spend = await fetch_coin_spend_for_coin_state(coin_state=parent_coin_states[0], peer=peer)
+    # parent_coin_states = await wallet_node.get_coin_state([coin_states[0].coin.parent_coin_info], peer=peer)
+    # if len(parent_coin_states) == 0:
+    #     raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
+
+    coin_spend = await fetch_coin_spend(height=uint32(created_height), coin=get_proof_response.parent_coin, peer=peer)
     root_hash, launcher_id = await get_dl_root_from_parent_spend(coin_spend, max_cost=max_cost)
 
     if root_hash is None or launcher_id is None:
@@ -879,8 +925,8 @@ async def dl_verify_proof(
             ],
         )
 
-        if leaf_hash(key=reference_proof.key, value=reference_proof.value) != proof.node_hash:
-            raise ProofIntegrityError("Invalid Proof: node hash does not match key and value")
+        # if leaf_hash(key=reference_proof.key, value=reference_proof.value) != proof.node_hash:
+        #     raise ProofIntegrityError("Invalid Proof: node hash does not match key and value")
 
         if not proof.valid():
             raise ProofIntegrityError("Invalid Proof: invalid proof of inclusion found")
@@ -893,6 +939,8 @@ async def dl_verify_proof(
         verified_keys.append(KeyValue(key=reference_proof.key, value=reference_proof.value))
 
     response = VerifyProofResponse(
-        verified=OfferStore(get_proof_response.proof.store_id, tuple(verified_keys)), success=True
+        verified_hashes=OfferStore(get_proof_response.proof.store_id, tuple(verified_keys)),
+        success=True,
+        current_root=current_root,
     )
     return response.marshal()

@@ -12,10 +12,10 @@ from chia.data_layer.data_layer_util import (
     ClearPendingRootsResponse,
     GetProofRequest,
     GetProofResponse,
+    HashOnlyProof,
     Layer,
     MakeOfferRequest,
     MakeOfferResponse,
-    Proof,
     Side,
     StoreProofs,
     Subscription,
@@ -29,6 +29,7 @@ from chia.rpc.data_layer_rpc_util import marshal
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.hash import std_hash
 
 # todo input assertions for all rpc's
 from chia.util.ints import uint64
@@ -469,43 +470,20 @@ class DataLayerRpcApi:
 
     @marshal()  # type: ignore[arg-type]
     async def get_proof(self, request: GetProofRequest) -> GetProofResponse:
-        #
-        # Make offer coins for the singleton
-        #
         root = await self.service.get_root(store_id=request.store_id)
         if root is None:
             raise ValueError("no root")
 
-        # offer_dict: Dict[Union[uint32, str], int] = {request.store_id.hex(): -1}
-        # solver: Dict[str, Any] = {
-        #     "0x"
-        #     + request.store_id.hex(): {
-        #         "new_root": "0x" + root.root.hex(),
-        #         "dependencies": [],
-        #     }
-        # }
-
-        # wallet_offer, trade_record = await self.service.wallet_rpc.create_offer_for_ids(
-        #     offer_dict=offer_dict,
-        #     solver=solver,
-        #     driver_dict={},
-        #     fee=0,
-        #     validate_only=False,
-        #     # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
-        #     # This is not a change in behavior, the default was already implicit.
-        #     tx_config=DEFAULT_TX_CONFIG,
-        # )
-        # if wallet_offer is None:
-        #     raise Exception("offer is None despite validate_only=False")
-
-        # is_valid = await self.service.wallet_rpc.check_offer_validity(wallet_offer)
-        # if not is_valid:
-        #     raise Exception("Wonky Wonky")
-
         #
         # create proofs
         #
-        all_proofs: List[Proof] = []
+
+        coin_records = await self.service.wallet_rpc.get_coin_records_by_names([root.coin_id])
+        child_coin = coin_records[0].coin
+        coin_records = await self.service.wallet_rpc.get_coin_records_by_names([child_coin.parent_coin_info])
+        parent_coin = coin_records[0].coin
+
+        all_proofs: List[HashOnlyProof] = []
         for key in request.keys:
             key_value = await self.service.get_value(store_id=request.store_id, key=key)
             if key_value is None:
@@ -513,9 +491,9 @@ class DataLayerRpcApi:
 
             pi = await self.service.data_store.get_proof_of_inclusion_by_key(tree_id=request.store_id, key=key)
 
-            proof = Proof(
-                key=key,
-                value=key_value,
+            proof = HashOnlyProof(
+                key=std_hash(key),
+                value=std_hash(key_value),
                 node_hash=pi.node_hash,
                 layers=tuple(
                     Layer(
@@ -529,8 +507,7 @@ class DataLayerRpcApi:
             all_proofs.append(proof)
 
         store_proof = StoreProofs(store_id=request.store_id, proofs=tuple(all_proofs))
-        # return GetProofResponse(proof=store_proof, offer=bytes(wallet_offer), success=True, coin_id=root.coin_id)
-        return GetProofResponse(proof=store_proof, success=True, coin_id=root.coin_id)
+        return GetProofResponse(proof=store_proof, success=True, coin_id=root.coin_id, parent_coin=parent_coin)
 
     @marshal()  # type: ignore[arg-type]
     async def verify_proof(self, request: GetProofResponse) -> VerifyProofResponse:
