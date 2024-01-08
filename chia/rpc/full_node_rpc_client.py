@@ -161,7 +161,9 @@ class FullNodeRpcClient(RpcClient):
 
     async def get_aggsig_additional_data(self) -> str:
         result = await self.fetch("get_aggsig_additional_data", {})
-        return result["additional_data"]
+        add_data: str = result["additional_data"]
+        assert add_data is not None
+        return add_data
 
     async def get_coin_records_by_hint(
         self,
