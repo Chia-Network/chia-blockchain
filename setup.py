@@ -57,7 +57,7 @@ dev_dependencies = [
     "pyupgrade==3.15.0",
     "twine==4.0.2",
     "isort==5.12.0",
-    "flake8==6.1.0",
+    "flake8==7.0.0",
     "mypy==1.7.1",
     "black==23.12.1",
     "lxml==4.9.3",
