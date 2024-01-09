@@ -1182,9 +1182,7 @@ class WalletRpcClient(RpcClient):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> List[TransactionRecord]:
-        updates_as_strings: Dict[str, str] = {}
-        for lid, root in update_dictionary.items():
-            updates_as_strings[str(lid)] = str(root)
+        updates_as_strings = {str(lid): str(root) for lid, root in update_dictionary.items()}
         request = {
             "updates": updates_as_strings,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
