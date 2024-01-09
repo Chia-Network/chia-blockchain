@@ -283,6 +283,9 @@ class FullNodeSimulator(FullNodeAPI):
 
         self.log.error(f"REORG: {json.dumps(list(map(lambda x: repr(x), more_blocks)), indent=4)}")
 
+        if more_blocks[-1].height != 5 and more_blocks[-1].height != 14:
+            raise Exception(repr(more_blocks[-1]))
+
         for block in more_blocks:
             await self.full_node.add_block(block)
 
