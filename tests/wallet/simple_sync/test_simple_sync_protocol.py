@@ -685,7 +685,7 @@ class TestSimpleSyncProtocol:
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         s = full_node_api.full_node.subscriptions
-        assert len(s._ph_subscriptions) == 2
+        assert s.puzzle_subscription_count() == 2
         assert s.has_ph_subscription(phs[0])
         assert s.has_ph_subscription(phs[1])
         assert not s.has_ph_subscription(phs[2])
@@ -695,7 +695,7 @@ class TestSimpleSyncProtocol:
         assert full_node_api.is_trusted(con) is True
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
-        assert len(s._ph_subscriptions) == 4
+        assert s.puzzle_subscription_count() == 4
         assert s.has_ph_subscription(phs[0])
         assert s.has_ph_subscription(phs[1])
         assert s.has_ph_subscription(phs[2])
@@ -725,7 +725,7 @@ class TestSimpleSyncProtocol:
         msg_response = await full_node_api.register_interest_in_coin(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
         s = full_node_api.full_node.subscriptions
-        assert len(s._coin_subscriptions) == 2
+        assert s.coin_subscription_count() == 2
         assert s.has_coin_subscription(coins[0])
         assert s.has_coin_subscription(coins[1])
         assert not s.has_coin_subscription(coins[2])
@@ -735,7 +735,7 @@ class TestSimpleSyncProtocol:
         assert full_node_api.is_trusted(con) is True
         msg_response = await full_node_api.register_interest_in_coin(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
-        assert len(s._coin_subscriptions) == 4
+        assert s.coin_subscription_count() == 4
         assert s.has_coin_subscription(coins[0])
         assert s.has_coin_subscription(coins[1])
         assert s.has_coin_subscription(coins[2])
