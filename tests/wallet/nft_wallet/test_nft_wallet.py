@@ -343,7 +343,6 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
-
     await ensure_wallet_sync()
 
     # The wallets are locked so we still observe the conditions above.

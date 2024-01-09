@@ -91,7 +91,7 @@ class NFTWallet:
 
         self.log = logging.getLogger(name if name else __name__)
         self.log.setLevel(logging.INFO)
-        self.log.addHandler(logging.FileHandler('nft.log'))
+        self.log.addHandler(logging.FileHandler("nft.log"))
 
         self.wallet_state_manager = wallet_state_manager
         self.nft_wallet_info = NFTWalletInfo(did_id)

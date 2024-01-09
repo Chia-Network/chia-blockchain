@@ -35,7 +35,8 @@ from chia.util.recursive_replace import recursive_replace
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
-log.addHandler(logging.FileHandler('nft.log'))
+log.addHandler(logging.FileHandler("nft.log"))
+
 
 def compute_block_cost(generator: BlockGenerator, constants: ConsensusConstants, height: uint32) -> uint64:
     result: NPCResult = get_name_puzzle_conditions(

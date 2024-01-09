@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import itertools
-import time
 import json
-from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Union
 import logging
+import time
+from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Union
 
 import anyio
 
@@ -76,7 +76,7 @@ class FullNodeSimulator(FullNodeAPI):
         self.use_current_time: bool = self.config.get("simulator", {}).get("use_current_time", False)
         self.auto_farm: bool = self.config.get("simulator", {}).get("auto_farm", False)
         self.log.setLevel(logging.INFO)
-        self.log.addHandler(logging.FileHandler('nft.log'))
+        self.log.addHandler(logging.FileHandler("nft.log"))
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
