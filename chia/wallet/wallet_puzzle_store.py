@@ -173,10 +173,11 @@ class WalletPuzzleStore:
         return row is not None
 
     def row_to_record(self, row) -> DerivationRecord:
+        pk_bytes = bytes.fromhex(row[1])
         return DerivationRecord(
             uint32(row[0]),
             bytes32.fromhex(row[2]),
-            G1Element.from_bytes(bytes.fromhex(row[1])),
+            G1Element.from_bytes(pk_bytes) if len(pk_bytes) == 48 else pk_bytes,
             WalletType(row[3]),
             uint32(row[4]),
             bool(row[5]),

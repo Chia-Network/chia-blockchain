@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from chia_rs import G1Element, G2Element
 from typing_extensions import Unpack
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -28,6 +29,7 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
+from chia.wallet.vault.vault_drivers import construct_p2_delegated_secp, get_vault_hidden_puzzle_with_index
 from chia.wallet.vault.vault_info import VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.wallet import Wallet
@@ -50,10 +52,13 @@ class Vault(Wallet):
         return self
 
     async def get_new_puzzle(self) -> Program:
-        raise NotImplementedError("vault wallet")
+        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
+        puzzle = construct_p2_delegated_secp(dr.pubkey, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, dr.puzzle_hash)
+        return puzzle
 
     async def get_new_puzzlehash(self) -> bytes32:
-        raise NotImplementedError("vault wallet")
+        puzzle = await self.get_new_puzzle()
+        return puzzle.get_tree_hash()
 
     async def generate_signed_transaction(
         self,
@@ -80,7 +85,15 @@ class Vault(Wallet):
         raise NotImplementedError("vault wallet")
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
-        raise NotImplementedError("vault wallet")
+        if new:
+            return await self.get_new_puzzlehash()
+        else:
+            record: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            if record is None:
+                return await self.get_new_puzzlehash()
+            return record.puzzle_hash
 
     async def apply_signatures(
         self, spends: List[Spend], signing_responses: List[SigningResponse]
@@ -107,22 +120,38 @@ class Vault(Wallet):
         raise NotImplementedError("vault wallet")
 
     async def get_puzzle(self, new: bool) -> Program:
-        raise NotImplementedError("vault wallet")
+        if new:
+            return await self.get_new_puzzle()
+        else:
+            record: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            if record is None:
+                return await self.get_new_puzzle()
+            puzzle = construct_p2_delegated_secp(record.pubkey, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, record.puzzle_hash)
+            return puzzle
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         raise ValueError("This won't work")
 
     def require_derivation_paths(self) -> bool:
+        if getattr(self, "vault_info", None):
+            return True
         return False
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         raise NotImplementedError("vault wallet")
 
     def handle_own_derivation(self) -> bool:
-        raise NotImplementedError("vault wallet")
+        return True
 
     def derivation_for_index(self, index: int) -> List[DerivationRecord]:
-        raise NotImplementedError("vault wallet")
+        hidden_puzzle = get_vault_hidden_puzzle_with_index(uint32(index))
+        hidden_puzzle_hash = hidden_puzzle.get_tree_hash()
+        record = DerivationRecord(
+            uint32(index), hidden_puzzle_hash, self.vault_info.pubkey, self.type(), self.id(), False
+        )
+        return [record]
 
     async def sync_singleton(self) -> None:
         wallet_node: Any = self.wallet_state_manager.wallet_node
@@ -161,6 +190,7 @@ class Vault(Wallet):
 
         vault_info = dataclasses.replace(vault_info, coin=coin_state.coin)
         await self.save_info(vault_info)
+        await self.wallet_state_manager.create_more_puzzle_hashes()
 
     async def save_info(self, vault_info: VaultInfo) -> None:
         self.vault_info = vault_info
