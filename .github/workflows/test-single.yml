@@ -222,6 +222,7 @@ jobs:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
         run: |
           # XXX Hack to get the failing log regardless.
+          export PYTHONIOENCODING=utf8
           pytest --cov=chia --cov=tests --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml=junit-data/junit.${{ env.JOB_FILE_NAME }}.xml --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }} ; OUTCOME="$?" || true
           # Temporary measure to dump just wallet specific log info.
           echo '=== NFT Wallet Log ==='
