@@ -143,16 +143,16 @@ def compute_assert_height(
 
 
 class Timer:
-    def __init__(self, title, log):
+    def __init__(self, title: str, log: logging.Logger) -> None:
         self.title = title
         self.log = log
         pass
 
-    def __enter__(self, *args):
+    def __enter__(self, *args: List[Any]) -> Timer:
         self.start_time = time.time()
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: List[Any]) -> None:
         self.log.warning(f"{self.title} elapsed time: {time.time() - self.start_time}")
 
 
