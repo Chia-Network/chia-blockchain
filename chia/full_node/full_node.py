@@ -1831,6 +1831,7 @@ class FullNode:
             "transaction_block": False,
             "k_size": block.reward_chain_block.proof_of_space.size,
             "header_hash": block.header_hash,
+            "fork_height": state_change_summary.fork_height if state_change_summary is not None else 0,
             "height": block.height,
             "validation_time": validation_time,
             "pre_validation_time": pre_validation_time,
