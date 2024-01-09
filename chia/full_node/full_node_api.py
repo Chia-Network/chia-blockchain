@@ -1497,7 +1497,7 @@ class FullNodeAPI:
         # the returned puzzle hashes are the ones we ended up subscribing to.
         # It will have filtered duplicates and ones exceeding the subscription
         # limit.
-        puzzle_hashes = self.full_node.subscriptions.add_ph_subscriptions(
+        puzzle_hashes = self.full_node.subscriptions.add_puzzle_subscriptions(
             peer.peer_node_id, request.puzzle_hashes, max_subscriptions
         )
 

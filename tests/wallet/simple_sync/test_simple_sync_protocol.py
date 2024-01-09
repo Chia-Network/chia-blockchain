@@ -686,22 +686,22 @@ class TestSimpleSyncProtocol:
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         s = full_node_api.full_node.subscriptions
         assert s.puzzle_subscription_count() == 2
-        assert s.has_ph_subscription(phs[0])
-        assert s.has_ph_subscription(phs[1])
-        assert not s.has_ph_subscription(phs[2])
-        assert not s.has_ph_subscription(phs[3])
+        assert s.has_puzzle_subscription(phs[0])
+        assert s.has_puzzle_subscription(phs[1])
+        assert not s.has_puzzle_subscription(phs[2])
+        assert not s.has_puzzle_subscription(phs[3])
         full_node_api.full_node.config["trusted_max_subscribe_items"] = 4
         full_node_api.full_node.config["trusted_peers"] = {server_2.node_id.hex(): server_2.node_id.hex()}
         assert full_node_api.is_trusted(con) is True
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         assert s.puzzle_subscription_count() == 4
-        assert s.has_ph_subscription(phs[0])
-        assert s.has_ph_subscription(phs[1])
-        assert s.has_ph_subscription(phs[2])
-        assert s.has_ph_subscription(phs[3])
-        assert not s.has_ph_subscription(phs[4])
-        assert not s.has_ph_subscription(phs[5])
+        assert s.has_puzzle_subscription(phs[0])
+        assert s.has_puzzle_subscription(phs[1])
+        assert s.has_puzzle_subscription(phs[2])
+        assert s.has_puzzle_subscription(phs[3])
+        assert not s.has_puzzle_subscription(phs[4])
+        assert not s.has_puzzle_subscription(phs[5])
 
     @pytest.mark.anyio
     async def test_coin_subscribe_limits(self, simulator_and_wallet, self_hostname):

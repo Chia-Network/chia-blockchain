@@ -77,21 +77,21 @@ class SubscriptionSet:
 
 @dataclass(frozen=True)
 class PeerSubscriptions:
-    _ph_subscriptions: SubscriptionSet = field(default_factory=SubscriptionSet)
+    _puzzle_subscriptions: SubscriptionSet = field(default_factory=SubscriptionSet)
     _coin_subscriptions: SubscriptionSet = field(default_factory=SubscriptionSet)
 
-    def has_ph_subscription(self, ph: bytes32) -> bool:
-        return self._ph_subscriptions.has_subscription(ph)
+    def has_puzzle_subscription(self, puzzle_hash: bytes32) -> bool:
+        return self._puzzle_subscriptions.has_subscription(puzzle_hash)
 
     def has_coin_subscription(self, coin_id: bytes32) -> bool:
         return self._coin_subscriptions.has_subscription(coin_id)
 
     def peer_subscription_count(self, peer_id: bytes32) -> int:
-        ph_subscriptions = self._ph_subscriptions.count_subscriptions(peer_id)
+        puzzle_subscriptions = self._puzzle_subscriptions.count_subscriptions(peer_id)
         coin_subscriptions = self._coin_subscriptions.count_subscriptions(peer_id)
-        return ph_subscriptions + coin_subscriptions
+        return puzzle_subscriptions + coin_subscriptions
 
-    def add_ph_subscriptions(self, peer_id: bytes32, phs: List[bytes32], max_items: int) -> Set[bytes32]:
+    def add_puzzle_subscriptions(self, peer_id: bytes32, puzzle_hashes: List[bytes32], max_items: int) -> Set[bytes32]:
         """
         Adds subscriptions until max_items is reached. Filters out duplicates and returns all additions.
         """
@@ -113,12 +113,12 @@ class PeerSubscriptions:
         # Decrement this counter to know if we've hit the subscription limit.
         subscriptions_left = max_items - subscription_count
 
-        for ph in phs:
-            if not self._ph_subscriptions.add_subscription(peer_id, ph):
+        for puzzle_hash in puzzle_hashes:
+            if not self._puzzle_subscriptions.add_subscription(peer_id, puzzle_hash):
                 continue
 
             subscriptions_left -= 1
-            added.add(ph)
+            added.add(puzzle_hash)
 
             if subscriptions_left == 0:
                 return limit_reached()
@@ -159,18 +159,18 @@ class PeerSubscriptions:
 
         return added
 
-    def remove_ph_subscriptions(self, peer_id: bytes32, phs: List[bytes32]) -> Set[bytes32]:
+    def remove_puzzle_subscriptions(self, peer_id: bytes32, puzzle_hashes: List[bytes32]) -> Set[bytes32]:
         """
         Removes subscriptions. Filters out duplicates and returns all removals.
         """
 
         removed: Set[bytes32] = set()
 
-        for ph in phs:
-            if not self._ph_subscriptions.remove_subscription(peer_id, ph):
+        for puzzle_hash in puzzle_hashes:
+            if not self._puzzle_subscriptions.remove_subscription(peer_id, puzzle_hash):
                 continue
 
-            removed.add(ph)
+            removed.add(puzzle_hash)
 
         return removed
 
@@ -190,23 +190,23 @@ class PeerSubscriptions:
         return removed
 
     def remove_peer(self, peer_id: bytes32) -> None:
-        self._ph_subscriptions.remove_peer(peer_id)
+        self._puzzle_subscriptions.remove_peer(peer_id)
         self._coin_subscriptions.remove_peer(peer_id)
 
     def coin_subscriptions(self, peer_id: bytes32) -> Set[bytes32]:
         return self._coin_subscriptions.subscriptions(peer_id)
 
     def puzzle_subscriptions(self, peer_id: bytes32) -> Set[bytes32]:
-        return self._ph_subscriptions.subscriptions(peer_id)
+        return self._puzzle_subscriptions.subscriptions(peer_id)
 
     def peers_for_coin_id(self, coin_id: bytes32) -> Set[bytes32]:
         return self._coin_subscriptions.peers(coin_id)
 
     def peers_for_puzzle_hash(self, puzzle_hash: bytes32) -> Set[bytes32]:
-        return self._ph_subscriptions.peers(puzzle_hash)
+        return self._puzzle_subscriptions.peers(puzzle_hash)
 
     def coin_subscription_count(self) -> int:
         return self._coin_subscriptions.total_count()
 
     def puzzle_subscription_count(self) -> int:
-        return self._ph_subscriptions.total_count()
+        return self._puzzle_subscriptions.total_count()
