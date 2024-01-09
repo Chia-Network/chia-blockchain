@@ -367,7 +367,7 @@ def test_remove_ph_subscriptions() -> None:
     assert removed == added
 
     # These have already been removed.
-    assert len(sub.remove_coin_subscriptions(peer1, [ph1, ph2])) == 0
+    assert len(sub.remove_puzzle_subscriptions(peer1, [ph1, ph2])) == 0
 
     assert sub.peer_subscription_count(peer1) == 0
 
