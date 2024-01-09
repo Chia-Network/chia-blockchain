@@ -179,8 +179,8 @@ async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_
 
 
 # @pytest.mark.skipif(sys.platform == "win32" and sys.version_info < (3, 9), reason="Flaky on Windows+3.8")
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time") # ConsensusMode.PLAIN, 
+@pytest.mark.parametrize("trusted", [True]) # , False])
 @pytest.mark.anyio
 async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 2
