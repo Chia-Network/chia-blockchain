@@ -178,17 +178,11 @@ async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_
     assert await nft_wallet_1.get_nft_count() == 1
 
 
-test_lock = asyncio.Lock()
-
 # @pytest.mark.skipif(sys.platform == "win32" and sys.version_info < (3, 9), reason="Flaky on Windows+3.8")
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
-    with test_lock as _:
-        await do_test_nft_wallet_creation_and_transfer(self_hostnae, two_wallet_nodes, trusted)
-
-async def do_test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
