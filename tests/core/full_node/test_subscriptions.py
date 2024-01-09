@@ -391,3 +391,13 @@ def test_remove_coin_subscriptions() -> None:
 
     for coin_id in removed:
         assert not sub.has_coin_subscription(coin_id)
+
+
+def test_subscription_list() -> None:
+    sub = PeerSubscriptions()
+
+    sub.add_coin_subscriptions(peer1, [coin1, coin2], 4)
+    sub.add_puzzle_subscriptions(peer1, [ph1, ph2], 4)
+
+    assert sub.coin_subscriptions(peer1) == {coin1, coin2}
+    assert sub.puzzle_subscriptions(peer1) == {ph1, ph2}
