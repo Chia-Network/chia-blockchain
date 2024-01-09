@@ -34,7 +34,8 @@ from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.recursive_replace import recursive_replace
 
 log = logging.getLogger(__name__)
-
+log.setLevel(logging.INFO)
+log.addHandler(logging.FileHandler('nft.log'))
 
 def compute_block_cost(generator: BlockGenerator, constants: ConsensusConstants, height: uint32) -> uint64:
     result: NPCResult = get_name_puzzle_conditions(
@@ -397,6 +398,10 @@ def create_unfinished_block(
         additions = []
     if removals is None:
         removals = []
+
+    if prev_block is not None:
+        log.error(f"create block: {prev_block.height} {prev_block.header_hash}")
+
     (foliage, foliage_transaction_block, transactions_info) = create_foliage(
         constants,
         rc_block,
