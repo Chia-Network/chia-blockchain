@@ -632,7 +632,9 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         assert await get_average_block_time(full_node_api_1.full_node.blockchain, block_records[0], 4608) is None
         assert await get_average_block_time(full_node_api_1.full_node.blockchain, block_records[-1], 4608) is not None
         # Test that get_aggsig_additional_data() returns correctly
-        assert full_node_api_1.full_node.constants.AGG_SIG_ME_ADDITIONAL_DATA == await client.get_aggsig_additional_data()
+        assert (
+            full_node_api_1.full_node.constants.AGG_SIG_ME_ADDITIONAL_DATA == await client.get_aggsig_additional_data()
+        )
 
     finally:
         # Checks that the RPC manages to stop the node
