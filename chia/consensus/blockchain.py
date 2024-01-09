@@ -220,7 +220,8 @@ class Blockchain(BlockchainInterface):
         If the block is part of a fork, we need to compute the additions and
         removals, to update the fork_info object. This is an expensive operation.
         """
-        raise Exception(f"advance_fork_info {fork_info} {block}")
+        assert fork_info.peak_height <= block.height - 1
+        assert fork_info.peak_hash != block.header_hash
 
         if fork_info.peak_hash == block.prev_header_hash:
             assert fork_info.peak_height == block.height - 1
