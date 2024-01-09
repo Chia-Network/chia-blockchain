@@ -8,6 +8,8 @@ import sys
 import time
 from types import FrameType
 from typing import Any, Dict, Iterator, List
+import logging
+
 
 # This is a development utility that instruments tasks (coroutines) and records
 # wall-clock time they spend in various functions. Since it relies on
@@ -372,6 +374,27 @@ def main(args: List[str]) -> int:
         oldest.wait()
 
     return 0
+
+
+have_set_log_output = False
+def log_wrap_task(log, title, task):
+    """Given a task, make an enwrapping task that announces when it starts and
+    ends via a logger."""
+    global have_set_log_output
+    if not have_set_log_output:
+        log.setLevel(logging.INFO)
+        log.addHandler(logging.FileHandler('nft.log'))
+        have_set_log_output = True
+
+    async def enwrapped():
+        start_time = time.time()
+        log.error(f"{start_time} {id(task)}: STARTING TASK {title}")
+        try:
+            return await task
+        finally:
+            log.error(f"{time.time() - start_time} {id(task)}: TASK FINISHED {title}")
+
+    return asyncio.create_task(enwrapped())
 
 
 if __name__ == "__main__":
