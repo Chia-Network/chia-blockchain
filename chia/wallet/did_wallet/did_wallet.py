@@ -907,6 +907,9 @@ class DIDWallet:
     ) -> Tuple[SpendBundle, str]:
         """
         Create an attestment
+        TODO:
+            1. We should use/respect `tx_config` (reuse_puzhash and co)
+            2. We should take a fee as it's a requirement for every transaction function to do so
         :param recovering_coin_name: Coin ID of the DID
         :param newpuz: New puzzle hash
         :param pubkey: New wallet pubkey
