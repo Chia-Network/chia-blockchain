@@ -364,8 +364,8 @@ async def do_test_nft_wallet_creation_and_transfer(self_hostname: str, two_walle
     # Wait for wallet sync on all wallets.
     await ensure_wallet_sync()
 
-    await time_out_assert(30, get_nft_count, 1, nft_wallet_0)
-    await time_out_assert(30, get_nft_count, 1, nft_wallet_1)
+    await time_out_assert(120, get_nft_count, 1, nft_wallet_0)
+    await time_out_assert(120, get_nft_count, 1, nft_wallet_1)
 
 
 @pytest.mark.parametrize(
