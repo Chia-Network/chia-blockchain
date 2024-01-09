@@ -142,6 +142,20 @@ def compute_assert_height(
     return ret
 
 
+class Timer:
+    def __init__(self, title, log):
+        self.title = title
+        self.log = log
+        pass
+
+    def __enter__(self, *args):
+        self.start_time = time.time()
+        return self
+
+    def __exit__(self, *args):
+        self.log.warning(f"{self.title} elapsed time: {time.time() - self.start_time}")
+
+
 class MempoolManager:
     pool: Executor
     constants: ConsensusConstants
@@ -629,14 +643,17 @@ class MempoolManager:
                     spendbundle_ids_to_remove.add(item.name)
             self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
         else:
-            start_time = time.time()
-            log.warning(
-                f"start: {start_time}"
-                "updating the mempool using the slow-path. "
-                f"peak: {self.peak.header_hash} "
-                f"new-peak-prev: {new_peak.prev_transaction_block_hash} "
-                f"coins: {'not set' if spent_coins is None else 'set'}"
-            )
+            with Timer("mempool_manager slow-path", log) as timer:
+                log.warning(
+                    f"start: {timer.start_time}"
+                    "updating the mempool using the slow-path. "
+                    f"peak: {self.peak.header_hash} "
+                    f"new-peak-prev: {new_peak.prev_transaction_block_hash} "
+                    f"coins: {'not set' if spent_coins is None else 'set'}"
+                )
+
+            raise Exception("traceback from new_peak slow-path")
+
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
             self.seen_bundle_hashes = {}
@@ -679,7 +696,6 @@ class MempoolManager:
                     # Item was in mempool, but after the new block it's a double spend.
                     # Item is most likely included in the block.
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
-            log.warning(f"mempool slow path update took {time.time() - start_time}")
 
         potential_txs = self._pending_cache.drain(new_peak.height)
         potential_txs.update(self._conflict_cache.drain())
