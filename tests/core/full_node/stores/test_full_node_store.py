@@ -123,12 +123,77 @@ async def test_basic_store(
     # Add/get unfinished block
     for height, unf_block in enumerate(unfinished_blocks):
         assert store.get_unfinished_block(unf_block.partial_hash) is None
+        assert store.get_unfinished_block2(unf_block.partial_hash, None) == (None, 0)
         store.add_unfinished_block(
             uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, False, uint32(0))
         )
         assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
+        assert store.get_unfinished_block2(
+            unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+        ) == (unf_block, 1)
+        assert store.get_unfinished_block2(
+            unf_block.partial_hash, bytes32.fromhex("abababababababababababababababababababababababababababababababab")
+        ) == (None, 1)
+
+        ublock = store.get_unfinished_block_result(unf_block.partial_hash)
+        assert ublock is not None and ublock.required_iters == uint64(123532)
+        ublock = store.get_unfinished_block_result2(
+            unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+        )
+
+        assert ublock is not None and ublock.required_iters == uint64(123532)
+
         store.remove_unfinished_block(unf_block.partial_hash)
         assert store.get_unfinished_block(unf_block.partial_hash) is None
+        assert store.get_unfinished_block2(
+            unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+        ) == (None, 0)
+
+    # Multiple unfinished blocks with colliding partial hashes
+    unf1 = unfinished_blocks[0]
+    unf2 = dataclasses.replace(unf1, foliage=unfinished_blocks[1].foliage)
+    unf3 = dataclasses.replace(unf1, foliage=unfinished_blocks[2].foliage)
+    unf4 = dataclasses.replace(unf1, foliage=unfinished_blocks[3].foliage)
+
+    # we have none of these blocks in the store
+    for unf_block in [unf1, unf2, unf3, unf4]:
+        assert store.get_unfinished_block(unf_block.partial_hash) is None
+        assert store.get_unfinished_block2(unf_block.partial_hash, None) == (None, 0)
+
+    height = uint32(1)
+    # all blocks without a foliage all collapse down into being the same
+    assert unf1.foliage.foliage_transaction_block_hash is not None
+    assert unf2.foliage.foliage_transaction_block_hash is None
+    assert unf3.foliage.foliage_transaction_block_hash is None
+    assert unf4.foliage.foliage_transaction_block_hash is None
+    for val, unf_block in enumerate([unf1, unf2, unf3, unf4]):
+        store.add_unfinished_block(
+            uint32(height), unf_block, PreValidationResult(None, uint64(val), None, False, uint32(0))
+        )
+
+    # when not specifying a foliage hash, you get the first one
+    assert store.get_unfinished_block(unf1.partial_hash) == unf1
+    assert store.get_unfinished_block2(unf1.partial_hash, unf1.foliage.foliage_transaction_block_hash) == (unf1, 2)
+    # unf4 overwrote unf2 and unf3 (that's why there are only 2 blocks stored).
+    # however, there's no way to explicitly request the block with None foliage
+    # since when specifying None, you always get the first one. unf1 in this
+    # case
+    assert store.get_unfinished_block2(unf2.partial_hash, unf2.foliage.foliage_transaction_block_hash) == (unf1, 2)
+    assert store.get_unfinished_block2(unf3.partial_hash, unf3.foliage.foliage_transaction_block_hash) == (unf1, 2)
+    assert store.get_unfinished_block2(unf4.partial_hash, unf4.foliage.foliage_transaction_block_hash) == (unf1, 2)
+    assert store.get_unfinished_block2(unf4.partial_hash, None) == (unf1, 2)
+
+    ublock = store.get_unfinished_block_result(unf1.partial_hash)
+    assert ublock is not None and ublock.required_iters == uint64(0)
+    ublock = store.get_unfinished_block_result2(unf1.partial_hash, unf1.foliage.foliage_transaction_block_hash)
+    assert ublock is not None and ublock.required_iters == uint64(0)
+    # still, when not specifying a foliage hash, you just get the first ublock
+    ublock = store.get_unfinished_block_result2(unf1.partial_hash, None)
+    assert ublock is not None and ublock.required_iters == uint64(0)
+
+    # negative test cases
+    assert store.get_unfinished_block_result(bytes32([1] * 32)) is None
+    assert store.get_unfinished_block_result2(bytes32([1] * 32), None) is None
 
     blocks = custom_block_tools.get_consecutive_blocks(
         1,
