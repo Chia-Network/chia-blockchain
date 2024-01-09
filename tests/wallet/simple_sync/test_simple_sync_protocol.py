@@ -30,14 +30,6 @@ from tests.connection_utils import add_dummy_connection
 from tests.util.setup_nodes import OldSimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert
 
-
-def wallet_height_at_least(wallet_node, h):
-    height = wallet_node.wallet_state_manager.blockchain._peak_height
-    if height == h:
-        return True
-    return False
-
-
 log = getLogger(__name__)
 
 
