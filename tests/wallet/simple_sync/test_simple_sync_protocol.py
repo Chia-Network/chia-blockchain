@@ -288,8 +288,6 @@ class TestSimpleSyncProtocol:
             uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0)
         )
 
-        tx_record.spend_bundle.additions()
-
         added_target: Optional[Coin] = None
         for coin in tx_record.spend_bundle.additions():
             if coin.puzzle_hash == puzzle_hash:
