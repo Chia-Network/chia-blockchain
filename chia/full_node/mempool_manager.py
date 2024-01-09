@@ -7,7 +7,7 @@ from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from multiprocessing.context import BaseContext
-from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, TypeVar
+from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, TypeVar
 
 from chia_rs import ELIGIBLE_FOR_DEDUP, GTElement
 from chiabip158 import PyBIP158
