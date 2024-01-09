@@ -7,8 +7,7 @@ from typing import Awaitable, Callable, Type
 import pytest
 from ecdsa import NIST256p, SigningKey
 
-from chia.types.blockchain_format.program import Program
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.util.observation_root import ObservationRoot
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vault.vault_root import VaultRoot
@@ -22,7 +21,9 @@ SECP_SK = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
 SECP_PK = SECP_SK.verifying_key.to_string("compressed")
 
 
-async def vault_setup(wallet_environments: WalletTestFramework, monkeypatch: pytest.MonkeyPatch) -> None:
+async def vault_setup(
+    wallet_environments: WalletTestFramework, monkeypatch: pytest.MonkeyPatch, with_recovery: bool
+) -> None:
     def get_main_wallet_driver(self: WalletStateManager, observation_root: ObservationRoot) -> Type[MainWalletProtocol]:
         return Vault
 
@@ -37,11 +38,15 @@ async def vault_setup(wallet_environments: WalletTestFramework, monkeypatch: pyt
         SECP_PK = SECP_SK.verifying_key.to_string("compressed")
         client = env.rpc_client
         fingerprint = (await client.get_public_keys())[0]
-        bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
-        bls_pk = bytes.fromhex(bls_pk_hex)
+        bls_pk = None
+        if with_recovery:
+            bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
+            bls_pk = bytes.fromhex(bls_pk_hex)
         timelock = uint64(1000)
-        hidden_puzzle_hash = Program.to("hph").get_tree_hash().hex()
-        res = await client.vault_create(SECP_PK, hidden_puzzle_hash, bls_pk, timelock, tx_config=DEFAULT_TX_CONFIG)
+        hidden_puzzle_index = uint32(1)
+        res = await client.vault_create(
+            SECP_PK, hidden_puzzle_index, timelock, bls_pk=bls_pk, tx_config=DEFAULT_TX_CONFIG
+        )
         vault_tx = res[0]
         assert vault_tx
 
@@ -82,14 +87,16 @@ async def vault_setup(wallet_environments: WalletTestFramework, monkeypatch: pyt
     indirect=True,
 )
 @pytest.mark.parametrize("setup_function", [vault_setup])
+@pytest.mark.parametrize("with_recovery", [True, False])
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="requires secp")
 @pytest.mark.anyio
 async def test_vault_creation(
     setup_function: Callable[[WalletTestFramework, pytest.MonkeyPatch], Awaitable[None]],
     wallet_environments: WalletTestFramework,
     monkeypatch: pytest.MonkeyPatch,
+    with_recovery: bool,
 ) -> None:
-    await setup_function(wallet_environments, monkeypatch)
+    await setup_function(wallet_environments, monkeypatch, with_recovery)
     env = wallet_environments.environments[0]
     assert isinstance(env.xch_wallet, Vault)
 

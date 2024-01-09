@@ -1727,9 +1727,9 @@ class WalletRpcClient(RpcClient):
         self,
         secp_pk: bytes,
         hp_index: uint32,
-        bls_pk: bytes,
         timelock: uint64,
         tx_config: TXConfig,
+        bls_pk: Optional[bytes] = None,
         fee: uint64 = uint64(0),
         push: bool = True,
     ) -> List[TransactionRecord]:
@@ -1738,7 +1738,7 @@ class WalletRpcClient(RpcClient):
             {
                 "secp_pk": secp_pk.hex(),
                 "hp_index": hp_index,
-                "bls_pk": bls_pk.hex(),
+                "bls_pk": bls_pk.hex() if bls_pk else None,
                 "timelock": timelock,
                 "fee": fee,
                 "push": push,

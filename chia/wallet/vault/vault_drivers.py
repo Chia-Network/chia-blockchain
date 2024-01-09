@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from chia_rs import G1Element
 
 from chia.types.blockchain_format.program import Program
@@ -21,8 +23,8 @@ RECOVERY_FINISH_MOD_HASH = RECOVERY_FINISH_MOD.get_tree_hash()
 
 
 # PUZZLES
-def construct_p2_delegated_secp(secp_pk: bytes, genesis_challenge: bytes32, entropy: bytes) -> Program:
-    return P2_DELEGATED_SECP_MOD.curry(genesis_challenge, secp_pk, entropy)
+def construct_p2_delegated_secp(secp_pk: bytes, genesis_challenge: bytes32, hidden_puzzle_hash: bytes) -> Program:
+    return P2_DELEGATED_SECP_MOD.curry(genesis_challenge, secp_pk, hidden_puzzle_hash)
 
 
 def construct_recovery_finish(timelock: uint64, recovery_conditions: Program) -> Program:
@@ -43,17 +45,21 @@ def get_vault_hidden_puzzle_with_index(index: uint32, hidden_puzzle: Program = D
 
 
 def get_vault_inner_puzzle(
-    secp_pk: bytes, genesis_challenge: bytes32, entropy: bytes, bls_pk: G1Element, timelock: uint64
+    secp_pk: bytes, genesis_challenge: bytes32, hidden_puzzle_hash: bytes, bls_pk: Optional[G1Element], timelock: uint64
 ) -> Program:
-    secp_puzzle_hash = construct_p2_delegated_secp(secp_pk, genesis_challenge, entropy).get_tree_hash()
+    secp_puzzle_hash = construct_p2_delegated_secp(secp_pk, genesis_challenge, hidden_puzzle_hash).get_tree_hash()
     recovery_puzzle_hash = construct_p2_recovery_puzzle(secp_puzzle_hash, bls_pk, timelock).get_tree_hash()
     return construct_vault_puzzle(secp_puzzle_hash, recovery_puzzle_hash)
 
 
 def get_vault_inner_puzzle_hash(
-    secp_pk: bytes, genesis_challenge: bytes32, entropy: bytes, bls_pk: G1Element, timelock: uint64
+    secp_pk: bytes,
+    genesis_challenge: bytes32,
+    hidden_puzzle_hash: bytes32,
+    bls_pk: Optional[G1Element],
+    timelock: uint64,
 ) -> bytes32:
-    vault_puzzle = get_vault_inner_puzzle(secp_pk, genesis_challenge, entropy, bls_pk, timelock)
+    vault_puzzle = get_vault_inner_puzzle(secp_pk, genesis_challenge, hidden_puzzle_hash, bls_pk, timelock)
     vault_puzzle_hash: bytes32 = vault_puzzle.get_tree_hash()
     return vault_puzzle_hash
 
@@ -71,6 +77,6 @@ def get_vault_proof(merkle_tree: MerkleTree, puzzle_hash: bytes32) -> Program:
 
 # SECP SIGNATURE
 def construct_secp_message(
-    delegated_puzzle_hash: bytes32, coin_id: bytes32, genesis_challenge: bytes32, entropy: bytes
+    delegated_puzzle_hash: bytes32, coin_id: bytes32, genesis_challenge: bytes32, hidden_puzzle_hash: bytes
 ) -> bytes:
-    return delegated_puzzle_hash + coin_id + genesis_challenge + entropy
+    return delegated_puzzle_hash + coin_id + genesis_challenge + hidden_puzzle_hash

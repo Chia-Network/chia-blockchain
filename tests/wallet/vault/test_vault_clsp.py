@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from hashlib import sha256
-from typing import Tuple
+from typing import Optional, Tuple
 
 import pytest
-from chia_rs import ENABLE_SECP_OPS, PrivateKey
+from chia_rs import ENABLE_SECP_OPS, G1Element, PrivateKey
 from ecdsa import NIST256p, SigningKey
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -48,7 +48,7 @@ def test_secp_hidden() -> None:
 
 def test_recovery_puzzles() -> None:
     bls_sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
-    bls_pk = bls_sk.get_g1()
+    bls_pk: Optional[G1Element] = bls_sk.get_g1()
     secp_sk = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
     secp_pk = secp_sk.verifying_key.to_string("compressed")
 
@@ -105,6 +105,16 @@ def test_recovery_puzzles() -> None:
     escape_solution = Program.to([escape_proof, escape_puzzle, secp_solution])
     escape_conds = conditions_dict_for_solution(recovery_puzzle, escape_solution, INFINITE_COST)
     assert escape_conds[ConditionOpcode.CREATE_COIN][0].vars[0] == ACS_PH
+
+    # Test recovery fails when no recovery key set
+    bls_pk = None
+    curried_recovery_puzzle = P2_RECOVERY_MOD.curry(
+        P2_1_OF_N_MOD_HASH, RECOVERY_FINISH_MOD_HASH, escape_puzzlehash, bls_pk, timelock
+    )
+    recovery_solution = Program.to([amount, recovery_conditions])
+
+    with pytest.raises(ValueError, match="clvm raise"):
+        run_with_secp(curried_recovery_puzzle, recovery_solution)
 
 
 def test_p2_delegated_secp() -> None:

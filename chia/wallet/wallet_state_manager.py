@@ -2718,10 +2718,10 @@ class WalletStateManager:
         self,
         secp_pk: bytes,
         hidden_puzzle_hash: bytes32,
-        bls_pk: G1Element,
         timelock: uint64,
         genesis_challenge: bytes32,
         tx_config: TXConfig,
+        bls_pk: Optional[G1Element] = None,
         fee: uint64 = uint64(0),
     ) -> TransactionRecord:
         """
