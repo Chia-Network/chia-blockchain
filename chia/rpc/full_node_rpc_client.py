@@ -159,11 +159,9 @@ class FullNodeRpcClient(RpcClient):
         response = await self.fetch("get_coin_records_by_parent_ids", d)
         return [CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin)) for coin in response["coin_records"]]
 
-    async def get_aggsig_additional_data(self) -> str:
+    async def get_aggsig_additional_data(self) -> bytes32:
         result = await self.fetch("get_aggsig_additional_data", {})
-        add_data: str = result["additional_data"]
-        assert add_data is not None
-        return add_data
+        return bytes32.from_hexstr(result["additional_data"])
 
     async def get_coin_records_by_hint(
         self,
