@@ -117,6 +117,5 @@ tests.wallet.test_taproot
 tests.wallet.test_wallet_blockchain
 tests.wallet.test_wallet_interested_store
 tests.wallet.test_wallet_key_val_store
-tests.wallet.test_wallet_user_store
 tools.analyze-chain
 tools.run_block
