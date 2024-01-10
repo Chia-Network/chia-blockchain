@@ -82,7 +82,7 @@ def make_aggsig_final_message(
     elif isinstance(spend, Spend):
         coin = Coin(spend.parent_id, spend.puzzle_hash, spend.coin_amount)
     else:
-        raise ValueError(f"Expected Coin or Spend, got {type(spend)}")  # pragma: no cover
+        raise ValueError(f"Expected Coin or Spend, got {type(spend)}")
 
     COIN_TO_ADDENDUM_F_LOOKUP: Dict[ConditionOpcode, Callable[[Coin], bytes]] = {
         ConditionOpcode.AGG_SIG_PARENT: lambda coin: coin.parent_coin_info,

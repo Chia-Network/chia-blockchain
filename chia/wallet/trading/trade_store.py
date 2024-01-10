@@ -46,7 +46,7 @@ async def migrate_coin_of_interest(log: logging.Logger, db: aiosqlite.Connection
     )
 
 
-async def migrate_is_my_offer(log: logging.Logger, db_connection: aiosqlite.Connection) -> None:  # pragma: no cover
+async def migrate_is_my_offer(log: logging.Logger, db_connection: aiosqlite.Connection) -> None:
     """
     Migrate the is_my_offer property contained in the serialized TradeRecord (trade_record column)
     to the is_my_offer column in the trade_records table.

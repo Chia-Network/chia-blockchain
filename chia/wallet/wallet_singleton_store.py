@@ -53,7 +53,7 @@ class WalletSingletonStore:
 
     async def save_singleton(self, record: SingletonRecord) -> None:
         singleton_id = singleton.get_singleton_id_from_puzzle(record.parent_coinspend.puzzle_reveal)
-        if singleton_id is None:  # pragma: no cover
+        if singleton_id is None:
             raise RuntimeError(
                 "Failed to derive Singleton ID from puzzle reveal in parent spend %s", record.parent_coinspend
             )
@@ -108,7 +108,7 @@ class WalletSingletonStore:
 
         coin = Coin(coin_state.coin.name(), cc_cond.vars[0], int_from_bytes(cc_cond.vars[1]))
         inner_puz = get_inner_puzzle_from_singleton(coin_state.puzzle_reveal)
-        if inner_puz is None:  # pragma: no cover
+        if inner_puz is None:
             raise RuntimeError("Could not get inner puzzle from puzzle reveal in coin spend %s", coin_state)
 
         lineage_bytes = [x.as_atom() for x in coin_state.solution.to_program().first().as_iter()]
@@ -244,7 +244,7 @@ class WalletSingletonStore:
             count_row = await execute_fetchone(conn, sql, params)
             if count_row:
                 return int(count_row[0])
-        return -1  # pragma: no cover
+        return -1
 
     async def is_empty(self, wallet_id: Optional[uint32] = None) -> bool:
         sql = "SELECT 1 FROM singletons WHERE removed_height=0"

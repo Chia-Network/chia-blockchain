@@ -1242,7 +1242,7 @@ def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
         else:
             # Something about python 3.9 makes this be not covered but on 3.10+ it is covered
             # https://github.com/nedbat/coveragepy/issues/1530
-            continue  # pragma: no cover
+            continue
 
         properties_left = properties.copy()
         min_not_max: bool = True

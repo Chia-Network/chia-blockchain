@@ -143,7 +143,7 @@ async def farm_block_check_singleton(
 async def is_transaction_confirmed(user_wallet_id: uint32, api: WalletRpcApi, tx_id: bytes32) -> bool:
     try:
         val = await api.get_transaction({"wallet_id": user_wallet_id, "transaction_id": tx_id.hex()})
-    except ValueError:  # pragma: no cover
+    except ValueError:
         return False
 
     return True if TransactionRecord.from_json_dict_convenience(val["transaction"]).confirmed else False  # mypy
@@ -167,7 +167,7 @@ async def check_coin_state(wallet_node: WalletNode, coin_id: bytes32) -> bool:
     if len(coin_states) == 1 and coin_states[0].coin.name() == coin_id:
         return True
 
-    return False  # pragma: no cover
+    return False
 
 
 async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:

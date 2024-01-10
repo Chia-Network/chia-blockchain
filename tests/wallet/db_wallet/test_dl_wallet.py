@@ -340,7 +340,7 @@ class TestDLWallet:
         self_hostname: str,
         two_wallet_nodes: OldSimulatorsAndWallets,
         trusted: bool,
-    ) -> None:  # pragma: no cover
+    ) -> None:
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server

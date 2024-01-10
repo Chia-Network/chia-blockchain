@@ -66,7 +66,7 @@ def print_transaction(
     address_prefix: str,
     mojo_per_unit: int,
     coin_record: Optional[Dict[str, Any]] = None,
-) -> None:  # pragma: no cover
+) -> None:
     if verbose:
         print(tx)
     else:
@@ -88,7 +88,7 @@ def print_transaction(
         print("")
 
 
-def get_mojo_per_unit(wallet_type: WalletType) -> int:  # pragma: no cover
+def get_mojo_per_unit(wallet_type: WalletType) -> int:
     mojo_per_unit: int
     if wallet_type in {
         WalletType.STANDARD_WALLET,
@@ -124,13 +124,13 @@ async def get_unit_name_for_wallet_id(
     wallet_type: WalletType,
     wallet_id: int,
     wallet_client: WalletRpcClient,
-) -> str:  # pragma: no cover
+) -> str:
     if wallet_type in {
         WalletType.STANDARD_WALLET,
         WalletType.POOLING_WALLET,
         WalletType.DATA_LAYER,
         WalletType.VC,
-    }:  # pragma: no cover
+    }:
         name: str = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type in {WalletType.CAT, WalletType.CRCAT}:
         name = await wallet_client.get_cat_name(wallet_id=wallet_id)
@@ -184,7 +184,7 @@ async def get_transactions(
     sort_key: SortKey,
     reverse: bool,
     clawback: bool,
-) -> None:  # pragma: no cover
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if paginate is None:
             paginate = sys.stdout.isatty()
@@ -271,7 +271,7 @@ async def send(
     excluded_coin_ids: Sequence[str],
     reuse_puzhash: Optional[bool],
     clawback_time_lock: int,
-) -> None:  # pragma: no cover
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if memo is None:
             memos = None
@@ -799,7 +799,7 @@ async def cancel_offer(
             print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")
 
 
-def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:  # pragma: no cover
+def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     if typ in {WalletType.CAT, WalletType.CRCAT}:
         return "", units["cat"]
     if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG]:
@@ -820,7 +820,7 @@ def print_balance(amount: int, scale: int, address_prefix: str, *, decimal_only:
 
 async def print_balances(
     wallet_rpc_port: Optional[int], fp: Optional[int], wallet_type: Optional[WalletType] = None
-) -> None:  # pragma: no cover
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         summaries_response = await wallet_client.get_wallets(wallet_type)
         address_prefix = selected_network_address_prefix(config)
@@ -1440,7 +1440,7 @@ async def sign_message(
 
 async def spend_clawback(
     *, wallet_rpc_port: Optional[int], fp: Optional[int], fee: Decimal, tx_ids_str: str, force: bool = False
-) -> None:  # pragma: no cover
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         tx_ids = []
         for tid in tx_ids_str.split(","):
@@ -1457,7 +1457,7 @@ async def spend_clawback(
 
 async def mint_vc(
     wallet_rpc_port: Optional[int], fp: Optional[int], did: str, d_fee: Decimal, target_address: Optional[str]
-) -> None:  # pragma: no cover
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         vc_record, txs = await wallet_client.vc_mint(
             decode_puzzle_hash(ensure_valid_address(did, allowed_types={AddressType.DID}, config=config)),
@@ -1483,9 +1483,7 @@ async def mint_vc(
             )
 
 
-async def get_vcs(
-    wallet_rpc_port: Optional[int], fp: Optional[int], start: int, count: int
-) -> None:  # pragma: no cover
+async def get_vcs(wallet_rpc_port: Optional[int], fp: Optional[int], start: int, count: int) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         vc_records, proofs = await wallet_client.vc_get_list(start, count)
         print("Proofs:")
@@ -1517,7 +1515,7 @@ async def spend_vc(
     new_puzhash: Optional[str],
     new_proof_hash: str,
     reuse_puzhash: bool,
-) -> None:  # pragma: no cover
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         txs = await wallet_client.vc_spend(
             bytes32.from_hexstr(vc_id),
@@ -1544,7 +1542,7 @@ async def spend_vc(
 
 async def add_proof_reveal(
     wallet_rpc_port: Optional[int], fp: Optional[int], proofs: Sequence[str], root_only: bool
-) -> None:  # pragma: no cover
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if len(proofs) == 0:
             print("Must specify at least one proof")
@@ -1560,9 +1558,7 @@ async def add_proof_reveal(
             return
 
 
-async def get_proofs_for_root(
-    wallet_rpc_port: Optional[int], fp: Optional[int], proof_hash: str
-) -> None:  # pragma: no cover
+async def get_proofs_for_root(wallet_rpc_port: Optional[int], fp: Optional[int], proof_hash: str) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         proof_dict: Dict[str, str] = await wallet_client.vc_get_proofs_for_root(bytes32.from_hexstr(proof_hash))
         print("Proofs:")
@@ -1577,7 +1573,7 @@ async def revoke_vc(
     vc_id: Optional[str],
     fee: Decimal,
     reuse_puzhash: bool,
-) -> None:  # pragma: no cover
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if parent_coin_id is None:
             if vc_id is None:
@@ -1620,7 +1616,7 @@ async def approve_r_cats(
     min_coin_amount: Optional[Decimal],
     max_coin_amount: Optional[Decimal],
     reuse: bool,
-) -> None:  # pragma: no cover
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         if wallet_client is None:
             return

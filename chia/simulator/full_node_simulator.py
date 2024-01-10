@@ -596,7 +596,7 @@ class FullNodeSimulator(FullNodeAPI):
                     break
 
                 # at least one wallet has unconfirmed transactions
-                await asyncio.sleep(backoff)  # pragma: no cover
+                await asyncio.sleep(backoff)
 
     async def create_coins_with_amounts(
         self,

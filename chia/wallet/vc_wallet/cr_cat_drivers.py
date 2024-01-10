@@ -294,23 +294,23 @@ class CRCAT:
         message for if the puzzle is a mismatch.
         """
         if puzzle_reveal.mod != CAT_MOD:
-            return False, "top most layer is not a CAT"  # pragma: no cover
+            return False, "top most layer is not a CAT"
         layer_below_cat: UncurriedPuzzle = uncurry_puzzle(uncurry_puzzle(puzzle_reveal.args.at("rrf")).mod)
         if layer_below_cat.mod != CREDENTIAL_RESTRICTION:
-            return False, "CAT is not credential restricted"  # pragma: no cover
+            return False, "CAT is not credential restricted"
 
         return True, ""
 
     @staticmethod
-    def get_inner_puzzle(puzzle_reveal: UncurriedPuzzle) -> Program:  # pragma: no cover
+    def get_inner_puzzle(puzzle_reveal: UncurriedPuzzle) -> Program:
         return uncurry_puzzle(puzzle_reveal.args.at("rrf")).args.at("rf")
 
     @staticmethod
-    def get_inner_solution(solution: Program) -> Program:  # pragma: no cover
+    def get_inner_solution(solution: Program) -> Program:
         return solution.at("f").at("rrrrrrf")
 
     @classmethod
-    def get_current_from_coin_spend(cls: Type[_T_CRCAT], spend: CoinSpend) -> CRCAT:  # pragma: no cover
+    def get_current_from_coin_spend(cls: Type[_T_CRCAT], spend: CoinSpend) -> CRCAT:
         uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal.to_program())
         first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
         second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
@@ -356,9 +356,7 @@ class CRCAT:
                     proofs_checker: Program = condition.at("rrrf")
                     break
             else:
-                raise ValueError(
-                    "Previous spend was not a CR-CAT, nor did it properly remark the CR params"
-                )  # pragma: no cover
+                raise ValueError("Previous spend was not a CR-CAT, nor did it properly remark the CR params")
             lineage_inner_puzhash: bytes32 = potential_cr_layer.get_tree_hash()
         else:
             # Otherwise the info we need will be in the puzzle reveal
@@ -385,7 +383,7 @@ class CRCAT:
 
         all_conditions: List[Program] = list(conditions.as_iter())
         if len(all_conditions) > 1000:
-            raise RuntimeError("More than 1000 conditions not currently supported by CRCAT drivers")  # pragma: no cover
+            raise RuntimeError("More than 1000 conditions not currently supported by CRCAT drivers")
 
         # Almost complete except the coin's full puzzle hash which we want to use the class method to calculate
         partially_completed_crcats: List[CRCAT] = [
@@ -447,7 +445,7 @@ class CRCAT:
         announcements: List[Announcement] = []
         new_inner_puzzle_hashes_and_amounts: List[Tuple[bytes32, uint64]] = []
         if conditions is None:
-            conditions = inner_puzzle.run(inner_solution).as_iter()  # pragma: no cover
+            conditions = inner_puzzle.run(inner_solution).as_iter()
         assert conditions is not None
         for condition in conditions:
             if condition.at("f").as_int() == 51 and condition.at("rrf").as_int() != -113:
@@ -602,7 +600,7 @@ class CRCATSpend:
     proof_of_inclusions: Program
 
     @classmethod
-    def from_coin_spend(cls, spend: CoinSpend) -> CRCATSpend:  # pragma: no cover
+    def from_coin_spend(cls, spend: CoinSpend) -> CRCATSpend:
         inner_puzzle: Program = CRCAT.get_inner_puzzle(uncurry_puzzle(spend.puzzle_reveal.to_program()))
         inner_solution: Program = CRCAT.get_inner_solution(spend.solution.to_program())
         inner_conditions: Program = inner_puzzle.run(inner_solution)
@@ -639,7 +637,7 @@ class ProofsChecker(Streamable):
     @classmethod
     def from_program(cls, uncurried_puzzle: UncurriedPuzzle) -> ProofsChecker:
         if uncurried_puzzle.mod != PROOF_FLAGS_CHECKER:
-            raise ValueError("Puzzle was not a proof checker")  # pragma: no cover
+            raise ValueError("Puzzle was not a proof checker")
 
         return cls([flag.at("f").as_atom().decode("utf8") for flag in uncurried_puzzle.args.at("f").as_iter()])
 

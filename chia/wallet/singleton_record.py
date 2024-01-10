@@ -26,5 +26,5 @@ class SingletonRecord:
     lineage_proof: LineageProof
     custom_data: Optional[Any]
 
-    def name(self) -> bytes32:  # pragma: no cover
+    def name(self) -> bytes32:
         return self.coin.name()

@@ -112,7 +112,7 @@ def get_transactions_cmd(
     sort_key: SortKey,
     reverse: bool,
     clawback: bool,
-) -> None:  # pragma: no cover
+) -> None:
     from .wallet_funcs import get_transactions
 
     asyncio.run(
@@ -205,7 +205,7 @@ def send_cmd(
     coins_to_exclude: Sequence[str],
     reuse: bool,
     clawback_time: int,
-) -> None:  # pragma: no cover
+) -> None:
     from .wallet_funcs import send
 
     asyncio.run(
@@ -307,9 +307,7 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int, n
     is_flag=True,
     default=False,
 )
-def clawback(
-    wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: str, force: bool
-) -> None:  # pragma: no cover
+def clawback(wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: str, force: bool) -> None:
     from .wallet_funcs import spend_clawback
 
     asyncio.run(
@@ -1324,7 +1322,7 @@ def delete_notifications_cmd(
 
 
 @wallet_cmd.group("vcs", short_help="Verifiable Credential related actions")
-def vcs_cmd() -> None:  # pragma: no cover
+def vcs_cmd() -> None:
     pass
 
 
@@ -1346,7 +1344,7 @@ def mint_vc_cmd(
     did: str,
     target_address: Optional[str],
     fee: str,
-) -> None:  # pragma: no cover
+) -> None:
     from .wallet_funcs import mint_vc
 
     asyncio.run(mint_vc(wallet_rpc_port, fingerprint, did, Decimal(fee), target_address))
@@ -1372,7 +1370,7 @@ def get_vcs_cmd(
     fingerprint: int,
     start: int,
     count: int,
-) -> None:  # pragma: no cover
+) -> None:
     from .wallet_funcs import get_vcs
 
     asyncio.run(get_vcs(wallet_rpc_port, fingerprint, start, count))
@@ -1413,7 +1411,7 @@ def spend_vc_cmd(
     new_proof_hash: str,
     fee: str,
     reuse_puzhash: bool,
-) -> None:  # pragma: no cover
+) -> None:
     from .wallet_funcs import spend_vc
 
     asyncio.run(
@@ -1445,7 +1443,7 @@ def add_proof_reveal_cmd(
     fingerprint: int,
     proof: Sequence[str],
     root_only: bool,
-) -> None:  # pragma: no cover
+) -> None:
     from .wallet_funcs import add_proof_reveal
 
     asyncio.run(add_proof_reveal(wallet_rpc_port, fingerprint, proof, root_only))
@@ -1465,7 +1463,7 @@ def get_proofs_for_root_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     proof_hash: str,
-) -> None:  # pragma: no cover
+) -> None:
     from .wallet_funcs import get_proofs_for_root
 
     asyncio.run(get_proofs_for_root(wallet_rpc_port, fingerprint, proof_hash))
@@ -1510,7 +1508,7 @@ def revoke_vc_cmd(
     vc_id: Optional[str],
     fee: str,
     reuse_puzhash: bool,
-) -> None:  # pragma: no cover
+) -> None:
     from .wallet_funcs import revoke_vc
 
     asyncio.run(revoke_vc(wallet_rpc_port, fingerprint, parent_coin_id, vc_id, Decimal(fee), reuse_puzhash))
@@ -1549,7 +1547,7 @@ def approve_r_cats_cmd(
     min_coin_amount: Optional[Decimal],
     max_coin_amount: Optional[Decimal],
     reuse: bool,
-) -> None:  # pragma: no cover
+) -> None:
     from .wallet_funcs import approve_r_cats
 
     asyncio.run(

@@ -157,10 +157,8 @@ def match_clawback_puzzle(
     )
     if puzzle.get_tree_hash() not in new_puzhash:
         # The metadata doesn't match the inner puzzle, ignore it
-        log.error(
-            f"Clawback metadata {metadata} doesn't match inner puzzle {inner_puzzle.get_tree_hash().hex()}"
-        )  # pragma: no cover
-        return None  # pragma: no cover
+        log.error(f"Clawback metadata {metadata} doesn't match inner puzzle {inner_puzzle.get_tree_hash().hex()}")
+        return None
     return metadata
 
 

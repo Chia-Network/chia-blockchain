@@ -72,6 +72,7 @@ class RpcServiceProtocol(Protocol):
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
+        # no cover since this is a protocol
         yield  # pragma: no cover
 
 

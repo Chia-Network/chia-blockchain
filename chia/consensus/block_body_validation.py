@@ -490,7 +490,7 @@ async def validate_block_body(
         block_timestamp: uint64
         if height < constants.SOFT_FORK2_HEIGHT:
             # this does not happen on mainnet. testnet10 only
-            block_timestamp = block.foliage_transaction_block.timestamp  # pragma: no cover
+            block_timestamp = block.foliage_transaction_block.timestamp
         else:
             block_timestamp = prev_transaction_block_timestamp
 

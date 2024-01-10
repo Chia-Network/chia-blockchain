@@ -44,7 +44,7 @@ async def rpc_state(
     params: List[Union[int, Dict[str, Any]]],
     condition_func: Callable[[Dict[str, Any]], Any],
     result: Optional[Any] = None,
-) -> Union[bool, Dict[str, Any]]:  # pragma: no cover
+) -> Union[bool, Dict[str, Any]]:
     __tracebackhide__ = True
 
     timeout = adjusted_timeout(timeout=timeout)
