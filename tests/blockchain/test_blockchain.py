@@ -2543,7 +2543,7 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
-        err = (await b.add_block(blocks[-1], PreValidationResult(None, uint64(1), npc_result, True)))[1]
+        err = (await b.add_block(blocks[-1], PreValidationResult(None, uint64(1), npc_result, True, uint32(0))))[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
 
         results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
@@ -2604,7 +2604,7 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
-        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)))
         assert err == Err.INVALID_BLOCK_COST
 
         # too low
@@ -2629,7 +2629,7 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
-        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)))
         assert err == Err.INVALID_BLOCK_COST
 
         # too high
@@ -2655,7 +2655,7 @@ class TestBodyValidation:
             constants=bt.constants,
         )
 
-        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)))
         assert err == Err.INVALID_BLOCK_COST
 
         # when the CLVM program exceeds cost during execution, it will fail with
