@@ -1831,10 +1831,16 @@ class FullNode:
             "transaction_block": False,
             "k_size": block.reward_chain_block.proof_of_space.size,
             "header_hash": block.header_hash,
+            "fork_height": None,
+            "rolled_back_records": None,
             "height": block.height,
             "validation_time": validation_time,
             "pre_validation_time": pre_validation_time,
         }
+
+        if state_change_summary is not None:
+            state_changed_data["fork_height"] = state_change_summary.fork_height
+            state_changed_data["rolled_back_records"] = len(state_change_summary.rolled_back_records)
 
         if block.transactions_info is not None:
             state_changed_data["transaction_block"] = True
