@@ -33,15 +33,9 @@ from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
+from tests.util.misc import wallet_height_at_least
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
-
-
-async def wallet_height_at_least(wallet_node, h):
-    height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
-    if height == h:
-        return True
-    return False
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
