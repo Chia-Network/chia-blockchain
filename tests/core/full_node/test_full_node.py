@@ -11,6 +11,7 @@ from typing import Coroutine, Dict, List, Optional, Tuple
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
+from packaging.version import Version
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.pot_iterations import is_overflow_block
@@ -1203,7 +1204,65 @@ class TestFullNodeProtocol:
         assert std_hash(fetched_blocks[-1]) == std_hash(blocks_t[-1])
 
     @pytest.mark.anyio
-    async def test_new_unfinished_block(self, wallet_nodes, self_hostname):
+    @pytest.mark.parametrize("peer_version", ["0.0.35", "0.0.36"])
+    @pytest.mark.parametrize("requesting", [0, 1, 2])
+    async def test_new_unfinished_block(self, wallet_nodes, peer_version: str, requesting: int, self_hostname: str):
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+
+        peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+        assert peer in server_1.all_connections.values()
+
+        blocks = bt.get_consecutive_blocks(2, block_list_input=blocks)
+        block: FullBlock = blocks[-1]
+        unf = make_unfinished_block(block, bt.constants)
+
+        # Don't have
+        if requesting == 1:
+            full_node_1.full_node.full_node_store.requesting_unfinished_blocks.add(unf.partial_hash)
+            res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
+            assert res is None
+        elif requesting == 2:
+            full_node_1.full_node.full_node_store.requesting_unfinished_blocks2.setdefault(unf.partial_hash, set()).add(
+                unf.foliage.foliage_transaction_block_hash
+            )
+            res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
+            assert res is None
+        else:
+            res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
+            assert res is not None
+            assert res is not None and res.data == bytes(fnp.RequestUnfinishedBlock(unf.partial_hash))
+
+        # when we receive a new unfinished block, we advertize it to our peers.
+        # We send new_unfinished_blocks to old peers (0.0.35 and earlier) and we
+        # send new_unfinishe_blocks2 to new peers (0.0.6 and later). Test both
+        peer.protocol_version = Version(peer_version)
+
+        await full_node_1.full_node.add_block(blocks[-2])
+        await full_node_1.full_node.add_unfinished_block(unf, None)
+
+        msg = peer.outgoing_queue.get_nowait()
+        assert msg.type == ProtocolMessageTypes.new_peak.value
+        msg = peer.outgoing_queue.get_nowait()
+        if peer_version == "0.0.35":
+            assert msg.type == ProtocolMessageTypes.new_unfinished_block.value
+            assert msg.data == bytes(fnp.NewUnfinishedBlock(unf.partial_hash))
+        elif peer_version == "0.0.36":
+            assert msg.type == ProtocolMessageTypes.new_unfinished_block2.value
+            assert msg.data == bytes(
+                fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            )
+        else:  # pragma: no cover
+            # the test parameters must have been updated, update the test too!
+            assert False
+
+        # Have
+        res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
+        assert res is None
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("requesting", [0, 1, 2])
+    async def test_new_unfinished_block2(self, wallet_nodes, requesting: int, self_hostname: str):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
@@ -1214,13 +1273,78 @@ class TestFullNodeProtocol:
         unf = make_unfinished_block(block, bt.constants)
 
         # Don't have
-        res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
-        assert res is not None
+        if requesting == 1:
+            full_node_1.full_node.full_node_store.requesting_unfinished_blocks.add(unf.partial_hash)
+
+        if requesting == 2:
+            full_node_1.full_node.full_node_store.requesting_unfinished_blocks2.setdefault(unf.partial_hash, set()).add(
+                unf.foliage.foliage_transaction_block_hash
+            )
+            res = await full_node_1.new_unfinished_block2(
+                fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            )
+            assert res is None
+        else:
+            res = await full_node_1.new_unfinished_block2(
+                fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            )
+            assert res is not None and res.data == bytes(
+                fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            )
+
         await full_node_1.full_node.add_unfinished_block(unf, peer)
 
         # Have
-        res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
+        res = await full_node_1.new_unfinished_block2(
+            fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+        )
         assert res is None
+
+    @pytest.mark.anyio
+    async def test_new_unfinished_block2_forward_limit(self, wallet_nodes, self_hostname: str):
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        blocks = bt.get_consecutive_blocks(3, guarantee_transaction_block=True)
+        for block in blocks:
+            await full_node_1.full_node.add_block(block)
+        coin = blocks[-1].get_included_reward_coins()[0]
+        puzzle_hash = wallet_receiver.get_new_puzzlehash()
+
+        peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+
+        # notify the node of unfinished blocks for this reward block hash
+        # we forward 3 different blocks with the same reward block hash, but no
+        # more (it's configurable)
+
+        last_reward_hash: Optional[bytes32] = None
+        for idx in range(0, 6):
+            # we include a different transaction in each block. This makes the
+            # foliage different in each of them, but the reward block (plot) the same
+            tx: SpendBundle = wallet_a.generate_signed_transaction(100 * (idx + 1), puzzle_hash, coin)
+
+            # note that we use the same chain to build the new block on top of every time
+            block = bt.get_consecutive_blocks(
+                1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            )[-1]
+            unf = make_unfinished_block(block, bt.constants)
+
+            if last_reward_hash is None:
+                last_reward_hash = unf.partial_hash
+            else:
+                assert last_reward_hash == unf.partial_hash
+
+            res = await full_node_1.new_unfinished_block2(
+                fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            )
+            # 3 is the default number of different unfinished blocks we forward
+            if idx <= 3:
+                # Don't have
+                assert res is not None and res.data == bytes(
+                    fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+                )
+            else:
+                # too many UnfinishedBlocks with the same reward hash
+                assert res is None
+            await full_node_1.full_node.add_unfinished_block(unf, peer)
 
     @pytest.mark.anyio
     @pytest.mark.parametrize(
@@ -1431,6 +1555,43 @@ class TestFullNodeProtocol:
         # Have
         res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
         assert res is not None
+
+    @pytest.mark.anyio
+    async def test_request_unfinished_block2(self, wallet_nodes, self_hostname):
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+        blocks = bt.get_consecutive_blocks(3, guarantee_transaction_block=True)
+        for block in blocks:
+            await full_node_1.full_node.add_block(block)
+        coin = blocks[-1].get_included_reward_coins()[0]
+        puzzle_hash = wallet_receiver.get_new_puzzlehash()
+
+        peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+
+        for idx in range(0, 6):
+            # we include a different transaction in each block. This makes the
+            # foliage different in each of them, but the reward block (plot) the same
+            tx: SpendBundle = wallet_a.generate_signed_transaction(100 * (idx + 1), puzzle_hash, coin)
+
+            # note that we use the same chain to build the new block on top of every time
+            block = bt.get_consecutive_blocks(
+                1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            )[-1]
+            unf = make_unfinished_block(block, bt.constants)
+            assert unf.foliage.foliage_transaction_block_hash is not None
+
+            # Don't have
+            res = await full_node_1.request_unfinished_block2(
+                fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            )
+            assert res is None
+
+            await full_node_1.full_node.add_unfinished_block(unf, peer)
+            # Have
+            res = await full_node_1.request_unfinished_block2(
+                fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            )
+            assert res.data == bytes(fnp.RespondUnfinishedBlock(unf))
 
     @pytest.mark.anyio
     async def test_new_signage_point_or_end_of_sub_slot(self, wallet_nodes, self_hostname):
