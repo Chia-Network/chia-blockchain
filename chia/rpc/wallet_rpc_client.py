@@ -1727,9 +1727,9 @@ class WalletRpcClient(RpcClient):
         self,
         secp_pk: bytes,
         hp_index: uint32,
-        timelock: uint64,
         tx_config: TXConfig,
         bls_pk: Optional[bytes] = None,
+        timelock: Optional[uint64] = None,
         fee: uint64 = uint64(0),
         push: bool = True,
     ) -> List[TransactionRecord]:

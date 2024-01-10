@@ -39,13 +39,14 @@ async def vault_setup(
         client = env.rpc_client
         fingerprint = (await client.get_public_keys())[0]
         bls_pk = None
+        timelock = None
         if with_recovery:
             bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
             bls_pk = bytes.fromhex(bls_pk_hex)
-        timelock = uint64(1000)
+            timelock = uint64(1000)
         hidden_puzzle_index = uint32(1)
         res = await client.vault_create(
-            SECP_PK, hidden_puzzle_index, timelock, bls_pk=bls_pk, tx_config=DEFAULT_TX_CONFIG
+            SECP_PK, hidden_puzzle_index, bls_pk=bls_pk, timelock=timelock, tx_config=DEFAULT_TX_CONFIG
         )
         vault_tx = res[0]
         assert vault_tx

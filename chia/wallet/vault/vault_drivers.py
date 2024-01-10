@@ -31,7 +31,9 @@ def construct_recovery_finish(timelock: uint64, recovery_conditions: Program) ->
     return RECOVERY_FINISH_MOD.curry(timelock, recovery_conditions)
 
 
-def construct_p2_recovery_puzzle(secp_puzzle_hash: bytes32, bls_pk: G1Element, timelock: uint64) -> Program:
+def construct_p2_recovery_puzzle(
+    secp_puzzle_hash: bytes32, bls_pk: Optional[G1Element], timelock: Optional[uint64]
+) -> Program:
     return P2_RECOVERY_MOD.curry(P2_1_OF_N_MOD_HASH, RECOVERY_FINISH_MOD_HASH, secp_puzzle_hash, bls_pk, timelock)
 
 
@@ -45,7 +47,11 @@ def get_vault_hidden_puzzle_with_index(index: uint32, hidden_puzzle: Program = D
 
 
 def get_vault_inner_puzzle(
-    secp_pk: bytes, genesis_challenge: bytes32, hidden_puzzle_hash: bytes, bls_pk: Optional[G1Element], timelock: uint64
+    secp_pk: bytes,
+    genesis_challenge: bytes32,
+    hidden_puzzle_hash: bytes,
+    bls_pk: Optional[G1Element] = None,
+    timelock: Optional[uint64] = None,
 ) -> Program:
     secp_puzzle_hash = construct_p2_delegated_secp(secp_pk, genesis_challenge, hidden_puzzle_hash).get_tree_hash()
     recovery_puzzle_hash = construct_p2_recovery_puzzle(secp_puzzle_hash, bls_pk, timelock).get_tree_hash()
@@ -56,8 +62,8 @@ def get_vault_inner_puzzle_hash(
     secp_pk: bytes,
     genesis_challenge: bytes32,
     hidden_puzzle_hash: bytes32,
-    bls_pk: Optional[G1Element],
-    timelock: uint64,
+    bls_pk: Optional[G1Element] = None,
+    timelock: Optional[uint64] = None,
 ) -> bytes32:
     vault_puzzle = get_vault_inner_puzzle(secp_pk, genesis_challenge, hidden_puzzle_hash, bls_pk, timelock)
     vault_puzzle_hash: bytes32 = vault_puzzle.get_tree_hash()

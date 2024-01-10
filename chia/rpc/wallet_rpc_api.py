@@ -4563,12 +4563,13 @@ class WalletRpcApi:
         hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(hp_index).get_tree_hash()
         bls_str = request.get("bls_pk")
         bls_pk = G1Element.from_bytes(bytes.fromhex(str(bls_str))) if bls_str else None
-        timelock = uint64(request["timelock"])
+        timelock_int = request.get("timelock")
+        timelock = uint64(timelock_int) if timelock_int else None
         fee = uint64(request.get("fee", 0))
         genesis_challenge = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
 
         vault_record = await self.service.wallet_state_manager.create_vault_wallet(
-            secp_pk, hidden_puzzle_hash, timelock, genesis_challenge, tx_config, bls_pk=bls_pk, fee=fee
+            secp_pk, hidden_puzzle_hash, genesis_challenge, tx_config, bls_pk=bls_pk, timelock=timelock, fee=fee
         )
 
         return {
