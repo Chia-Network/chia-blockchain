@@ -913,13 +913,12 @@ async def test_get_transaction_count(wallet_rpc_environment: WalletRpcTestEnviro
     assert len(all_transactions) > 0
     transaction_count = await client.get_transaction_count(1)
     assert transaction_count == len(all_transactions)
-    assert await client.get_transaction_count(1, confirmed=False) == 0
-    assert (
-        await client.get_transaction_count(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
-        )
-        == 0
+    transaction_count = await client.get_transaction_count(1, confirmed=False)
+    assert transaction_count == 0
+    transaction_count = await client.get_transaction_count(
+        1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
     )
+    assert transaction_count == 0
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
