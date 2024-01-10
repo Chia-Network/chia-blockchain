@@ -195,6 +195,10 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     ph = await wallet_0.get_new_puzzlehash()
     ph1 = await wallet_1.get_new_puzzlehash()
 
+    async def ensure_wallet_sync():
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
+
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
             full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
@@ -252,7 +256,11 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     # Test Reorg mint
     height = full_node_api.full_node.blockchain.get_peak_height()
     assert height is not None
+
     await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 1), ph1, None))
+
+    await time_out_assert(60, full_node_api.full_node.blockchain.get_peak_height, height + 1)
+
     await time_out_assert(30, get_nft_count, 0, nft_wallet_0)
     await time_out_assert(30, get_wallet_number, 2, wallet_node_0.wallet_state_manager)
 
@@ -279,6 +287,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
     for i in range(1, num_blocks * 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
     await time_out_assert(30, get_nft_count, 2, nft_wallet_0)
     coins = await nft_wallet_0.get_current_nfts()
     assert len(coins) == 2, "nft not generated"
@@ -300,6 +309,9 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
 
     for i in range(1, num_blocks * 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+    await ensure_wallet_sync()
+
     await time_out_assert(30, get_nft_count, 1, nft_wallet_0)
     await time_out_assert(30, get_nft_count, 1, nft_wallet_1)
 
@@ -320,17 +332,28 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     )
     assert compute_memos(txs[0].spend_bundle)
 
+    await ensure_wallet_sync()
+
+    # We wish for the wallet to be in a specific state at this point after having
+    # become synced above.
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
-    await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
+    await ensure_wallet_sync()
+
+    # The wallets are locked so we still observe the conditions above.
     await time_out_assert(30, get_nft_count, 2, nft_wallet_0)
     await time_out_assert(30, get_nft_count, 0, nft_wallet_1)
 
     # Test Reorg
     height = full_node_api.full_node.blockchain.get_peak_height()
+
     assert height is not None
     await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 2), ph1, None))
+
+    # Wait for wallet sync on all wallets.
+    await ensure_wallet_sync()
+
     await time_out_assert(30, get_nft_count, 1, nft_wallet_0)
     await time_out_assert(30, get_nft_count, 1, nft_wallet_1)
 
