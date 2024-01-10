@@ -1421,7 +1421,7 @@ class BlockTools:
                         + calculate_sp_iters(
                             self.constants,
                             self.constants.SUB_SLOT_ITERS_STARTING,
-                            unfinished_block.reward_chain_block.signage_point_index,
+                            uint8(unfinished_block.reward_chain_block.signage_point_index),
                         )
                     )
                     return unfinished_block_to_full_block(
@@ -2051,7 +2051,7 @@ def create_block_tools(
 
 
 def make_unfinished_block(block: FullBlock, constants: ConsensusConstants) -> UnfinishedBlock:
-    if is_overflow_block(constants, block.reward_chain_block.signage_point_index):
+    if is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index)):
         finished_ss = block.finished_sub_slots[:-1]
     else:
         finished_ss = block.finished_sub_slots

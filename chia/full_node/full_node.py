@@ -1887,7 +1887,7 @@ class FullNode:
         if self.full_node_store.seen_unfinished_block(block.get_hash()):
             return None
 
-        block_hash = block.reward_chain_block.get_hash()
+        block_hash = bytes32(block.reward_chain_block.get_hash())
 
         # This searched for the trunk hash (unfinished reward hash). If we have already added a block with the same
         # hash, return
@@ -2145,7 +2145,7 @@ class FullNode:
             + calculate_sp_iters(
                 self.constants,
                 sub_slot_iters,
-                unfinished_block.reward_chain_block.signage_point_index,
+                uint8(unfinished_block.reward_chain_block.signage_point_index),
             )
         )
 
