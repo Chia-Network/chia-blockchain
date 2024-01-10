@@ -118,18 +118,25 @@ class NotificationStore:
         """
         if pagination is not None:
             if pagination[1] is not None and pagination[0] is not None:
-                pagination_str = f" LIMIT {pagination[0]}, {pagination[1] - pagination[0]}"
+                pagination_str = " LIMIT ?, ?"
+                pagination_params: Tuple[int, ...] = (pagination[0], pagination[1] - pagination[0])
             elif pagination[1] is None and pagination[0] is not None:
-                pagination_str = f" LIMIT {pagination[0]}, (SELECT COUNT(*) from notifications)"
+                pagination_str = " LIMIT ?, (SELECT COUNT(*) from notifications)"
+                pagination_params = (pagination[0],)
             elif pagination[1] is not None and pagination[0] is None:
-                pagination_str = f" LIMIT {pagination[1]}"
+                pagination_str = " LIMIT ?"
+                pagination_params = (pagination[1],)
             else:
                 pagination_str = ""
+                pagination_params = tuple()
         else:
             pagination_str = ""
+            pagination_params = tuple()
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(f"SELECT * from notifications ORDER BY amount DESC{pagination_str}")
+            rows = await conn.execute_fetchall(
+                f"SELECT * from notifications ORDER BY amount DESC{pagination_str}", pagination_params
+            )
 
         return [
             Notification(
