@@ -1055,22 +1055,19 @@ class DataStore:
     ) -> Optional[Root]:
         root_hash = None if root is None else root.node_hash
         async with self.db_wrapper.writer():
-            node: Union[TerminalNode, InternalNode]
-
             if hint_keys_values is None:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id)
+                node_hash = node.hash
                 assert isinstance(node, TerminalNode)
             else:
                 if key_hash(key) not in hint_keys_values:
                     log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
                     return root
                 node_hash = hint_keys_values[key_hash(key)]
-                node = await self.get_node(node_hash)
-                assert isinstance(node, TerminalNode)
                 del hint_keys_values[key_hash(key)]
 
             ancestors: List[InternalNode] = await self.get_ancestors_common(
-                node_hash=node.hash,
+                node_hash=node_hash,
                 tree_id=tree_id,
                 root_hash=root_hash,
                 use_optimized=use_optimized,
@@ -1085,7 +1082,7 @@ class DataStore:
                 )
 
             parent = ancestors[0]
-            other_hash = parent.other_child_hash(hash=node.hash)
+            other_hash = parent.other_child_hash(hash=node_hash)
 
             if len(ancestors) == 1:
                 # the parent is the root so the other side will become the new root
