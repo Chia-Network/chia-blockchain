@@ -9,6 +9,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import DEFAULT_HIDDEN_PUZZLE
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import puzzle_for_singleton, puzzle_hash_for_singleton
 from chia.wallet.util.merkle_tree import MerkleTree
 
 # MODS
@@ -68,6 +69,16 @@ def get_vault_inner_puzzle_hash(
     vault_puzzle = get_vault_inner_puzzle(secp_pk, genesis_challenge, hidden_puzzle_hash, bls_pk, timelock)
     vault_puzzle_hash: bytes32 = vault_puzzle.get_tree_hash()
     return vault_puzzle_hash
+
+
+def get_vault_full_puzzle(launcher_id: bytes32, inner_puzzle: Program) -> Program:
+    full_puzzle = puzzle_for_singleton(launcher_id, inner_puzzle)
+    return full_puzzle
+
+
+def get_vault_full_puzzle_hash(launcher_id: bytes32, inner_puzzle_hash: bytes32) -> bytes32:
+    puzzle_hash = puzzle_hash_for_singleton(launcher_id, inner_puzzle_hash)
+    return puzzle_hash
 
 
 # MERKLE

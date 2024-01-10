@@ -143,7 +143,7 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
-from chia.wallet.vault.vault_drivers import get_vault_inner_puzzle_hash
+from chia.wallet.vault.vault_drivers import get_vault_full_puzzle_hash, get_vault_inner_puzzle_hash
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
@@ -2728,9 +2728,7 @@ class WalletStateManager:
         Returns a tx record for creating a new vault
         """
         wallet = self.main_wallet
-        vault_inner_puzzle_hash = get_vault_inner_puzzle_hash(
-            secp_pk, genesis_challenge, hidden_puzzle_hash, bls_pk, timelock
-        )
+
         # Get xch coin
         amount = uint64(1)
         coins = await wallet.select_coins(uint64(amount + fee), tx_config.coin_selection_config)
@@ -2739,7 +2737,11 @@ class WalletStateManager:
         origin = next(iter(coins))
         launcher_coin = Coin(origin.name(), SINGLETON_LAUNCHER_HASH, amount)
 
-        genesis_launcher_solution = Program.to([vault_inner_puzzle_hash, amount, [secp_pk, hidden_puzzle_hash]])
+        vault_inner_puzzle_hash = get_vault_inner_puzzle_hash(
+            secp_pk, genesis_challenge, hidden_puzzle_hash, bls_pk, timelock
+        )
+        vault_full_puzzle_hash = get_vault_full_puzzle_hash(launcher_coin.name(), vault_inner_puzzle_hash)
+        genesis_launcher_solution = Program.to([vault_full_puzzle_hash, amount, [secp_pk, hidden_puzzle_hash]])
         announcement_message = genesis_launcher_solution.get_tree_hash()
 
         [tx_record] = await wallet.generate_signed_transaction(
