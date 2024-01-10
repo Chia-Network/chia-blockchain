@@ -880,8 +880,8 @@ async def test_nft_offer_nft_for_nft(
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
-@pytest.mark.parametrize("trusted", [False])
-@pytest.mark.parametrize("reuse_puzhash", [False])
+@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.parametrize("reuse_puzhash", [True, False])
 @pytest.mark.anyio
 async def test_nft_offer_nft0_and_xch_for_cat(
     self_hostname: str,
