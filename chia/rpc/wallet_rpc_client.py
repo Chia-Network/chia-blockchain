@@ -741,7 +741,7 @@ class WalletRpcClient(RpcClient):
         send_dict: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "fee": fee,
-            "memos": memos if memos else [],
+            "memos": memos if memos is not None else [],
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
