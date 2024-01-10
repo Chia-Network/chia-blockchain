@@ -104,3 +104,9 @@ async def test_vault_creation(
     wallet: Vault = env.xch_wallet
     await wallet.sync_singleton()
     assert wallet.vault_info
+
+    if with_recovery:
+        assert wallet.vault_info.is_recoverable
+        assert wallet.recovery_info is not None
+    else:
+        assert not wallet.vault_info.is_recoverable

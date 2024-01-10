@@ -26,6 +26,7 @@ from typing import (
 
 import aiosqlite
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from clvm.casts import int_to_bytes
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
@@ -2741,7 +2742,11 @@ class WalletStateManager:
             secp_pk, genesis_challenge, hidden_puzzle_hash, bls_pk, timelock
         )
         vault_full_puzzle_hash = get_vault_full_puzzle_hash(launcher_coin.name(), vault_inner_puzzle_hash)
-        genesis_launcher_solution = Program.to([vault_full_puzzle_hash, amount, [secp_pk, hidden_puzzle_hash]])
+        memos = [secp_pk, hidden_puzzle_hash]
+        if bls_pk:
+            memos.extend([bls_pk.to_bytes(), int_to_bytes(timelock)])
+
+        genesis_launcher_solution = Program.to([vault_full_puzzle_hash, amount, memos])
         announcement_message = genesis_launcher_solution.get_tree_hash()
 
         [tx_record] = await wallet.generate_signed_transaction(

@@ -29,8 +29,12 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
-from chia.wallet.vault.vault_drivers import construct_p2_delegated_secp, get_vault_hidden_puzzle_with_index
-from chia.wallet.vault.vault_info import VaultInfo
+from chia.wallet.vault.vault_drivers import (
+    construct_p2_delegated_secp,
+    get_vault_hidden_puzzle_with_index,
+    get_vault_inner_puzzle_hash,
+)
+from chia.wallet.vault.vault_info import RecoveryInfo, VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
@@ -145,11 +149,24 @@ class Vault(Wallet):
     def handle_own_derivation(self) -> bool:
         return True
 
+    def get_recovery_info(self) -> Tuple[Optional[G1Element], Optional[uint64]]:
+        if self.vault_info.is_recoverable:
+            return self.recovery_info.bls_pk, self.recovery_info.timelock
+        return None, None
+
     def derivation_for_index(self, index: int) -> List[DerivationRecord]:
         hidden_puzzle = get_vault_hidden_puzzle_with_index(uint32(index))
         hidden_puzzle_hash = hidden_puzzle.get_tree_hash()
+        bls_pk, timelock = self.get_recovery_info()
+        inner_puzzle_hash = get_vault_inner_puzzle_hash(
+            self.vault_info.pubkey,
+            DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+            hidden_puzzle_hash,
+            bls_pk,
+            timelock,
+        )
         record = DerivationRecord(
-            uint32(index), hidden_puzzle_hash, self.vault_info.pubkey, self.type(), self.id(), False
+            uint32(index), inner_puzzle_hash, self.vault_info.pubkey, self.type(), self.id(), False
         )
         return [record]
 
@@ -170,9 +187,23 @@ class Vault(Wallet):
         launcher_spend = await fetch_coin_spend(uint32(parent_state.spent_height), parent_state.coin, peer)
         launcher_solution = launcher_spend.solution.to_program()
 
-        secp_pk = launcher_solution.at("rrff").as_atom()
-        hidden_puzzle_hash = bytes32(launcher_solution.at("rrfrf").as_atom())
-        vault_info = VaultInfo(coin_state.coin, launcher_id, secp_pk, hidden_puzzle_hash)
+        is_recoverable = False
+        bls_pk = None
+        timelock = None
+        memos = launcher_solution.at("rrf")
+        secp_pk = memos.at("f").as_atom()
+        hidden_puzzle_hash = bytes32(memos.at("rf").as_atom())
+        if memos.list_len() == 4:
+            is_recoverable = True
+            bls_pk = G1Element.from_bytes(memos.at("rrf").as_atom())
+            timelock = uint64(memos.at("rrrf").as_int())
+            self.recovery_info = RecoveryInfo(bls_pk, timelock)
+        inner_puzzle_hash = get_vault_inner_puzzle_hash(
+            secp_pk, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, hidden_puzzle_hash, bls_pk, timelock
+        )
+        vault_info = VaultInfo(
+            coin_state.coin, launcher_id, secp_pk, hidden_puzzle_hash, inner_puzzle_hash, is_recoverable
+        )
 
         if coin_state.spent_height:
             while coin_state.spent_height is not None:
