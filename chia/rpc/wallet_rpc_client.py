@@ -1261,8 +1261,8 @@ class WalletRpcClient(RpcClient):
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
     async def dl_verify_proof(self, request: GetProofResponse) -> VerifyProofResponse:
-        response = await self.fetch(path="dl_verify_proof", request_json=request.marshal())
-        return VerifyProofResponse.unmarshal(response)
+        response = await self.fetch(path="dl_verify_proof", request_json=request.to_json_dict())
+        return VerifyProofResponse.from_json_dict(response)
 
     async def get_notifications(
         self, ids: Optional[List[bytes32]] = None, pagination: Optional[Tuple[Optional[int], Optional[int]]] = None

@@ -16,7 +16,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
+from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 
@@ -482,26 +482,6 @@ class Proof:
 
 
 @dataclasses.dataclass(frozen=True)
-class HashOnlyProof(Proof):
-    @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> HashOnlyProof:
-        return cls(
-            key=hexstr_to_bytes(marshalled["key_clvm_hash"]),
-            value=hexstr_to_bytes(marshalled["value_clvm_hash"]),
-            node_hash=bytes32.from_hexstr(marshalled["node_hash"]),
-            layers=tuple(Layer.unmarshal(layer) for layer in marshalled["layers"]),
-        )
-
-    def marshal(self) -> Dict[str, Any]:
-        return {
-            "key_clvm_hash": self.key.hex(),
-            "value_clvm_hash": self.value.hex(),
-            "node_hash": self.node_hash.hex(),
-            "layers": [layer.marshal() for layer in self.layers],
-        }
-
-
-@dataclasses.dataclass(frozen=True)
 class StoreProofs:
     store_id: bytes32
     proofs: Tuple[Proof, ...]
@@ -511,13 +491,6 @@ class StoreProofs:
         return cls(
             store_id=bytes32.from_hexstr(marshalled["store_id"]),
             proofs=tuple(Proof.unmarshal(proof) for proof in marshalled["proofs"]),
-        )
-
-    @classmethod
-    def unmarshal_hash_only(cls, marshalled: Dict[str, Any]) -> StoreProofs:
-        return cls(
-            store_id=bytes32.from_hexstr(marshalled["store_id"]),
-            proofs=tuple(HashOnlyProof.unmarshal(proof) for proof in marshalled["proofs"]),
         )
 
     def marshal(self) -> Dict[str, Any]:
@@ -759,85 +732,87 @@ class InsertResult:
     root: Root
 
 
-@final
-@dataclasses.dataclass(frozen=True)
-class GetProofRequest:
-    store_id: bytes32
-    keys: Tuple[bytes, ...]
-
-    @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> GetProofRequest:
-        return cls(
-            store_id=bytes32.from_hexstr(marshalled["store_id"]),
-            keys=tuple(hexstr_to_bytes(key) for key in marshalled["keys"]),
-        )
-
-    def marshal(self) -> Dict[str, Any]:
-        return {
-            "store_id": self.store_id.hex(),
-            "keys": [key.hex() for key in self.keys],
-        }
-
-
-@final
-@dataclasses.dataclass(frozen=True)
-class GetProofResponse:
-    proof: StoreProofs
-    coin_id: bytes32
-    inner_puzzle_hash: bytes32
-    success: bool
-
-    @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> GetProofResponse:
-        return cls(
-            proof=StoreProofs.unmarshal_hash_only(marshalled["proof"]),
-            coin_id=bytes32.from_hexstr(marshalled["coin_id"]),
-            inner_puzzle_hash=bytes32.from_hexstr(marshalled["inner_puzzle_hash"]),
-            success=marshalled["success"],
-        )
-
-    def marshal(self) -> Dict[str, Any]:
-        return {
-            "proof": self.proof.marshal(),
-            "coin_id": self.coin_id.hex(),
-            "inner_puzzle_hash": self.inner_puzzle_hash.hex(),
-            "success": self.success,
-        }
-
-
-@final
-@dataclasses.dataclass(frozen=True)
-class VerifyProofResponse:
-    verified_clvm_hashes: OfferStore
-    current_root: bool
-    success: bool
-
-    @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> VerifyProofResponse:
-        return cls(
-            verified_clvm_hashes=OfferStore.unmarshal(marshalled["verified_clvm_hashes"]),
-            current_root=marshalled["current_root"],
-            success=marshalled["success"],
-        )
-
-    def marshal(self) -> Dict[str, Any]:
-        return {
-            "verified_clvm_hashes": self.verified_clvm_hashes.marshal(),
-            "current_root": self.current_root,
-            "success": self.success,
-        }
-
-
 @dataclasses.dataclass(frozen=True)
 class UnsubscribeData:
     tree_id: bytes32
     retain_data: bool
 
 
-def dl_verify_proof_internal(get_proof_response: GetProofResponse, puzzle_hash: bytes32) -> List[KeyValue]:
+#
+# GetProof and VerifyProof support classes
+#
+@streamable
+@dataclasses.dataclass(frozen=True)
+class ProofLayer(Streamable):
+    # This class is basically Layer but streamable
+    other_hash_side: uint8
+    other_hash: bytes32
+    combined_hash: bytes32
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class HashOnlyProof(Streamable):
+    key_clvm_hash: bytes32
+    value_clvm_hash: bytes32
+    node_hash: bytes32
+    layers: List[ProofLayer]
+
+    def root(self) -> bytes32:
+        if len(self.layers) == 0:
+            return self.node_hash
+        return self.layers[-1].combined_hash
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class KeyValueHashes(Streamable):
+    key_clvm_hash: bytes32
+    value_clvm_hash: bytes32
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class ProofResultInclusions(Streamable):
+    store_id: bytes32
+    inclusions: List[KeyValueHashes]
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class GetProofRequest(Streamable):
+    store_id: bytes32
+    keys: List[bytes]
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class StoreProofsHashes(Streamable):
+    store_id: bytes32
+    proofs: List[HashOnlyProof]
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class GetProofResponse(Streamable):
+    proof: StoreProofsHashes
+    coin_id: bytes32
+    inner_puzzle_hash: bytes32
+    success: bool
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class VerifyProofResponse(Streamable):
+    verified_clvm_hashes: ProofResultInclusions
+    current_root: bool
+    success: bool
+
+
+def dl_verify_proof_internal(get_proof_response: GetProofResponse, puzzle_hash: bytes32) -> List[KeyValueHashes]:
     """Verify a proof of inclusion for a DL singleton"""
 
-    verified_keys: List[KeyValue] = []
+    verified_keys: List[KeyValueHashes] = []
 
     for reference_proof in get_proof_response.proof.proofs:
         inner_puz_hash = get_proof_response.inner_puzzle_hash
@@ -855,7 +830,7 @@ def dl_verify_proof_internal(get_proof_response: GetProofResponse, puzzle_hash: 
             node_hash=reference_proof.node_hash,
             layers=[
                 ProofOfInclusionLayer(
-                    other_hash_side=layer.other_hash_side,
+                    other_hash_side=Side(layer.other_hash_side),
                     other_hash=layer.other_hash,
                     combined_hash=layer.combined_hash,
                 )
@@ -863,14 +838,16 @@ def dl_verify_proof_internal(get_proof_response: GetProofResponse, puzzle_hash: 
             ],
         )
 
-        leaf_hash = std_hash(b"\2" + reference_proof.key + reference_proof.value)
+        leaf_hash = std_hash(b"\2" + reference_proof.key_clvm_hash + reference_proof.value_clvm_hash)
         if leaf_hash != proof.node_hash:
             raise ProofIntegrityError("Invalid Proof: node hash does not match key and value")
 
         if not proof.valid():
             raise ProofIntegrityError("Invalid Proof: invalid proof of inclusion found")
 
-        verified_keys.append(KeyValue(key=reference_proof.key, value=reference_proof.value))
+        verified_keys.append(
+            KeyValueHashes(key_clvm_hash=reference_proof.key_clvm_hash, value_clvm_hash=reference_proof.value_clvm_hash)
+        )
 
     return verified_keys
 
@@ -882,7 +859,7 @@ async def dl_verify_proof(
 ) -> Dict[str, Any]:
     """Verify a proof of inclusion for a DL singleton"""
 
-    get_proof_response = GetProofResponse.unmarshal(request)
+    get_proof_response = GetProofResponse.from_json_dict(request)
 
     coin_id = get_proof_response.coin_id
     coin_states = await wallet_node.get_coin_state([coin_id], peer=peer)
@@ -892,8 +869,8 @@ async def dl_verify_proof(
     verified_keys = dl_verify_proof_internal(get_proof_response, coin_states[0].coin.puzzle_hash)
 
     response = VerifyProofResponse(
-        verified_clvm_hashes=OfferStore(get_proof_response.proof.store_id, tuple(verified_keys)),
+        verified_clvm_hashes=ProofResultInclusions(get_proof_response.proof.store_id, verified_keys),
         success=True,
         current_root=coin_states[0].spent_height is None,
     )
-    return response.marshal()
+    return response.to_json_dict()

@@ -6,14 +6,14 @@ import logging
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.data_layer.data_layer_util import GetProofResponse, HashOnlyProof, Layer, Side, StoreProofs
+from chia.data_layer.data_layer_util import GetProofResponse, HashOnlyProof, ProofLayer, StoreProofsHashes
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from tests.conftest import ConsensusMode
 from tests.util.rpc import validate_get_routes
@@ -255,20 +255,20 @@ class TestWalletRpc:
 
         # Create fake proof
         fakeproof = HashOnlyProof(
-            key=std_hash(b"\1" + b"key"),
-            value=std_hash(b"\1" + b"value"),
+            key_clvm_hash=std_hash(b"\1" + b"key"),
+            value_clvm_hash=std_hash(b"\1" + b"value"),
             node_hash=bytes32([1] * 32),
-            layers=(
-                Layer(
-                    other_hash_side=Side.LEFT,
+            layers=[
+                ProofLayer(
+                    other_hash_side=uint8(0),
                     other_hash=bytes32([1] * 32),
                     combined_hash=bytes32([1] * 32),
                 ),
-            ),
+            ],
         )
         fake_coin_id = bytes32([5] * 32)
         fake_gpr = GetProofResponse(
-            proof=StoreProofs(store_id=bytes32([1] * 32), proofs=(fakeproof,)),
+            proof=StoreProofsHashes(store_id=bytes32([1] * 32), proofs=[fakeproof]),
             success=True,
             coin_id=fake_coin_id,
             inner_puzzle_hash=bytes32([1] * 32),
