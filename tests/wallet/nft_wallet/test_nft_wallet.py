@@ -201,13 +201,8 @@ async def do_test_nft_wallet_creation_and_transfer(self_hostname: str, two_walle
     ph1 = await wallet_1.get_new_puzzlehash()
 
     async def ensure_wallet_sync():
-        sync_to_height = full_node_api.full_node.blockchain.get_peak_height()
-        wallet_node_0.wallet_state_manager.set_sync_mode(sync_to_height)
-        wallet_node_1.wallet_state_manager.set_sync_mode(sync_to_height)
-        while not wallet_node_0.wallet_state_manager.synced():
-            await asyncio.sleep(1)
-        while not wallet_node_1.wallet_state_manager.synced():
-            await asyncio.sleep(1)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -364,8 +359,8 @@ async def do_test_nft_wallet_creation_and_transfer(self_hostname: str, two_walle
     # Wait for wallet sync on all wallets.
     await ensure_wallet_sync()
 
-    await time_out_assert(120, get_nft_count, 1, nft_wallet_0)
-    await time_out_assert(120, get_nft_count, 1, nft_wallet_1)
+    await time_out_assert(30, get_nft_count, 1, nft_wallet_0)
+    await time_out_assert(30, get_nft_count, 1, nft_wallet_1)
 
 
 @pytest.mark.parametrize(
