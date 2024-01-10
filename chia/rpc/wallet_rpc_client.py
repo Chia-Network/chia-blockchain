@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
+from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -14,7 +15,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
-from chia.wallet.notification_store import Notification
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -1224,27 +1224,8 @@ class WalletRpcClient(RpcClient):
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
-    async def get_notifications(
-        self, ids: Optional[List[bytes32]] = None, pagination: Optional[Tuple[Optional[int], Optional[int]]] = None
-    ) -> List[Notification]:
-        request: Dict[str, Any] = {}
-        if ids is not None:
-            request["ids"] = [id.hex() for id in ids]
-        if pagination is not None:
-            if pagination[0] is not None:
-                request["start"] = pagination[0]
-            if pagination[1] is not None:
-                request["end"] = pagination[1]
-        response = await self.fetch("get_notifications", request)
-        return [
-            Notification(
-                bytes32.from_hexstr(notification["id"]),
-                bytes.fromhex(notification["message"]),
-                uint64(notification["amount"]),
-                uint32(notification["height"]),
-            )
-            for notification in response["notifications"]
-        ]
+    async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
+        return GetNotificationsResponse.from_json_dict(await self.fetch("get_notifications", request.to_json_dict()))
 
     async def delete_notifications(self, ids: Optional[List[bytes32]] = None) -> bool:
         request = {}

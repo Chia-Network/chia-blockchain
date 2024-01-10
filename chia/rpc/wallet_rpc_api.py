@@ -18,7 +18,8 @@ from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletIn
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
-from chia.rpc.util import tx_endpoint
+from chia.rpc.util import marshal, tx_endpoint
+from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -1407,34 +1408,22 @@ class WalletRpcApi:
 
         return {"success": True, "index": updated_index}
 
-    async def get_notifications(self, request: Dict[str, Any]) -> EndpointResult:
-        ids: Optional[List[str]] = request.get("ids", None)
-        start: Optional[int] = request.get("start", None)
-        end: Optional[int] = request.get("end", None)
-        if ids is None:
+    @marshal
+    async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
+        if request.ids is None:
             notifications: List[
                 Notification
             ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
-                pagination=(start, end)
+                pagination=(request.start, request.end)
             )
         else:
             notifications = (
                 await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
-                    [bytes32.from_hexstr(id) for id in ids]
+                    request.ids
                 )
             )
 
-        return {
-            "notifications": [
-                {
-                    "id": notification.coin_id.hex(),
-                    "message": notification.message.hex(),
-                    "amount": notification.amount,
-                    "height": notification.height,
-                }
-                for notification in notifications
-            ]
-        }
+        return GetNotificationsResponse(notifications)
 
     async def delete_notifications(self, request: Dict[str, Any]) -> EndpointResult:
         ids: Optional[List[str]] = request.get("ids", None)
