@@ -195,7 +195,7 @@ async def test_nft_wallet_creation_and_transfer(
     ph = await wallet_0.get_new_puzzlehash()
     ph1 = await wallet_1.get_new_puzzlehash()
 
-    async def ensure_wallet_sync():
+    async def ensure_wallet_sync() -> None:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
 
