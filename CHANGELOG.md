@@ -10,7 +10,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 * Update chia_rs to 0.2.15 for AMD K10 architecture (fixes #16386)
-  
+
 ### Changed
 * improved CPU usage due to tight loop in `send_transaction()`
 * improve performance of `total_mempool_fees()` and `total_mempool_cost()`
