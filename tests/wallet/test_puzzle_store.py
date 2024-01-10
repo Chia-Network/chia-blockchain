@@ -43,7 +43,7 @@ class DummyDerivationRecords:
 
 
 @pytest.mark.anyio
-async def test_puzzle_store(seeded_random: random.Random):
+async def test_puzzle_store(seeded_random: random.Random) -> None:
     async with DBConnection(1) as wrapper:
         db = await WalletPuzzleStore.create(wrapper)
         derivation_recs = []
