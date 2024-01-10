@@ -16,7 +16,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
-from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
@@ -314,10 +314,14 @@ class CRCAT:
         uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal.to_program())
         first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
         second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
+        lineage_proof = LineageProof.from_program(
+            spend.solution.to_program().at("rf"),
+            [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
+        )
         return CRCAT(
             spend.coin,
             bytes32(uncurried_puzzle.args.at("rf").as_atom()),
-            spend.solution.to_program().at("rf"),
+            lineage_proof,
             [bytes32(ap.as_atom()) for ap in second_uncurried_cr_layer.args.at("rf").as_iter()],
             second_uncurried_cr_layer.args.at("rrf"),
             first_uncurried_cr_layer.args.at("rf").get_tree_hash(),
