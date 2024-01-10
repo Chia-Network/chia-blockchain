@@ -57,8 +57,6 @@ class SubscriptionSet:
             if len(self._peers_for_subscription[item]) == 0:
                 self._peers_for_subscription.pop(item)
 
-        self._subscriptions_for_peer.pop(peer_id, None)
-
     def subscriptions(self, peer_id: bytes32) -> Set[bytes32]:
         return self._subscriptions_for_peer.get(peer_id, set())
 
