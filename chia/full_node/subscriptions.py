@@ -48,22 +48,16 @@ class SubscriptionSet:
         return item in self._peers_for_subscription
 
     def count_subscriptions(self, peer_id: bytes32) -> int:
-        if peer_id not in self._subscriptions_for_peer:
-            return 0
-
-        return len(self._subscriptions_for_peer[peer_id])
+        return len(self._subscriptions_for_peer.get(peer_id, {}))
 
     def remove_peer(self, peer_id: bytes32) -> None:
-        if peer_id not in self._subscriptions_for_peer:
-            return
-
-        for item in self._subscriptions_for_peer[peer_id]:
+        for item in self._subscriptions_for_peer.pop(peer_id, {}):
             self._peers_for_subscription[item].remove(peer_id)
 
             if len(self._peers_for_subscription[item]) == 0:
                 self._peers_for_subscription.pop(item)
 
-        self._subscriptions_for_peer.pop(peer_id)
+        self._subscriptions_for_peer.pop(peer_id, None)
 
     def subscriptions(self, peer_id: bytes32) -> Set[bytes32]:
         return self._subscriptions_for_peer.get(peer_id, set())
@@ -101,7 +95,7 @@ class PeerSubscriptions:
 
         def limit_reached() -> Set[bytes32]:
             log.info(
-                "Peer %s reached the subscription limit.",
+                "Peer %s attempted to exceed the subscription limit while adding puzzle subscriptions.",
                 peer_id,
             )
             return added
@@ -135,7 +129,7 @@ class PeerSubscriptions:
 
         def limit_reached() -> Set[bytes32]:
             log.info(
-                "Peer %s reached the subscription limit.",
+                "Peer %s attempted to exceed the subscription limit while adding coin subscriptions.",
                 peer_id,
             )
             return added
