@@ -9,6 +9,7 @@ import os
 import random
 import sys
 import time
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
@@ -19,7 +20,7 @@ import pytest
 from chia.cmds.data_funcs import clear_pending_roots, wallet_log_in_cmd
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_errors import OfferIntegrityError
+from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, Status, StoreProofs
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
@@ -35,6 +36,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
+from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.timing import adjusted_timeout, backoff_times
@@ -2292,3 +2294,205 @@ async def test_wallet_log_in_changes_active_fingerprint(
 
         active_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
         assert active_fingerprint == secondary_fingerprint
+
+
+@dataclass(frozen=True)
+class ProofReference:
+    entries_to_insert: int
+    keys_to_prove: List[str]
+    verify_proof_response: Dict[str, Any]
+
+
+def populate_reference(count: int, keys_to_prove: int) -> ProofReference:
+    ret = ProofReference(
+        entries_to_insert=count,
+        keys_to_prove=[value.to_bytes(length=1, byteorder="big").hex() for value in range(keys_to_prove)],
+        verify_proof_response={
+            "current_root": True,
+            "success": True,
+            "verified_clvm_hashes": {
+                "store_id": "",
+                "inclusions": [
+                    {
+                        "key": std_hash(b"\1" + value.to_bytes(length=1, byteorder="big")).hex(),
+                        "value": std_hash(b"\1" + b"\x01" + value.to_bytes(length=1, byteorder="big")).hex(),
+                    }
+                    for value in range(keys_to_prove)
+                ],
+            },
+        },
+    )
+    return ret
+
+
+async def populate_proof_setup(offer_setup: OfferSetup, count: int) -> OfferSetup:
+    if count > 0:
+        # Only need data in the maker for proofs
+        value_prefix = b"\x01"
+        store_setup = offer_setup.maker
+        await store_setup.api.batch_update(
+            {
+                "id": store_setup.id.hex(),
+                "changelist": [
+                    {
+                        "action": "insert",
+                        "key": value.to_bytes(length=1, byteorder="big").hex(),
+                        "value": (value_prefix + value.to_bytes(length=1, byteorder="big")).hex(),
+                    }
+                    for value in range(count)
+                ],
+            }
+        )
+
+        await process_for_data_layer_keys(
+            expected_key=b"\x00",
+            full_node_api=offer_setup.full_node_api,
+            data_layer=offer_setup.maker.data_layer,
+            store_id=offer_setup.maker.id,
+        )
+
+    maker_original_singleton = await offer_setup.maker.data_layer.get_root(store_id=offer_setup.maker.id)
+    assert maker_original_singleton is not None
+    maker_original_root_hash = maker_original_singleton.root
+
+    return OfferSetup(
+        maker=StoreSetup(
+            api=offer_setup.maker.api,
+            id=offer_setup.maker.id,
+            original_hash=maker_original_root_hash,
+            data_layer=offer_setup.maker.data_layer,
+        ),
+        taker=StoreSetup(
+            api=offer_setup.taker.api,
+            id=offer_setup.taker.id,
+            original_hash=bytes32([0] * 32),
+            data_layer=offer_setup.taker.data_layer,
+        ),
+        full_node_api=offer_setup.full_node_api,
+    )
+
+
+@pytest.mark.parametrize(
+    argnames="reference",
+    argvalues=[
+        pytest.param(populate_reference(count=5, keys_to_prove=1), id="one key"),
+        pytest.param(populate_reference(count=5, keys_to_prove=2), id="two keys"),
+        pytest.param(populate_reference(count=5, keys_to_prove=5), id="five keys"),
+    ],
+)
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> None:
+    offer_setup = await populate_proof_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
+    reference.verify_proof_response["verified_clvm_hashes"]["store_id"] = offer_setup.maker.id.hex()
+
+    proof = await offer_setup.maker.api.get_proof(
+        request={"store_id": offer_setup.maker.id.hex(), "keys": reference.keys_to_prove}
+    )
+    assert proof["success"] is True
+    verify = await offer_setup.taker.api.verify_proof(request=proof)
+
+    assert verify == reference.verify_proof_response
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_dl_proof_errors(
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        fakeroot = bytes32([4] * 32)
+        res = await data_rpc_api.create_data_store({})
+        assert res is not None
+        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+
+        with pytest.raises(ValueError, match="no root"):
+            await data_rpc_api.get_proof(request={"store_id": fakeroot.hex(), "keys": []})
+
+        with pytest.raises(KeyNotFoundError, match="Key not found"):
+            await data_rpc_api.get_proof(request={"store_id": store_id.hex(), "keys": [b"4".hex()]})
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_dl_proof_verify_errors(offer_setup: OfferSetup, seeded_random: random.Random) -> None:
+    two_key_proof = populate_reference(count=5, keys_to_prove=2)
+    offer_setup = await populate_proof_setup(offer_setup=offer_setup, count=two_key_proof.entries_to_insert)
+    two_key_proof.verify_proof_response["verified_clvm_hashes"]["store_id"] = offer_setup.maker.id.hex()
+
+    proof = await offer_setup.maker.api.get_proof(
+        request={"store_id": offer_setup.maker.id.hex(), "keys": two_key_proof.keys_to_prove}
+    )
+    assert proof["success"] is True
+
+    verify = await offer_setup.taker.api.verify_proof(request=proof)
+    assert verify == two_key_proof.verify_proof_response
+
+    # test bad coin id
+    badproof = deepcopy(proof)
+    badproof["coin_id"] = bytes32.random(seeded_random).hex()
+    with pytest.raises(ValueError, match="Invalid Proof: No DL singleton found at coin id"):
+        await offer_setup.taker.api.verify_proof(request=badproof)
+
+    # test bad innerpuz
+    badproof = deepcopy(proof)
+    badproof["inner_puzzle_hash"] = bytes32.random(seeded_random).hex()
+    with pytest.raises(ValueError, match="Invalid Proof: incorrect puzzle hash"):
+        await offer_setup.taker.api.verify_proof(request=badproof)
+
+    # test bad key
+    badproof = deepcopy(proof)
+    badproof["proof"]["proofs"][0]["key_clvm_hash"] = bytes32.random(seeded_random).hex()
+    with pytest.raises(ValueError, match="Invalid Proof: node hash does not match key and value"):
+        await offer_setup.taker.api.verify_proof(request=badproof)
+
+    # test bad value
+    badproof = deepcopy(proof)
+    badproof["proof"]["proofs"][0]["value_clvm_hash"] = bytes32.random(seeded_random).hex()
+    with pytest.raises(ValueError, match="Invalid Proof: node hash does not match key and value"):
+        await offer_setup.taker.api.verify_proof(request=badproof)
+
+    # test bad layer hash
+    badproof = deepcopy(proof)
+    badproof["proof"]["proofs"][0]["layers"][1]["other_hash"] = bytes32.random(seeded_random).hex()
+    with pytest.raises(ValueError, match="Invalid Proof: invalid proof of inclusion found"):
+        await offer_setup.taker.api.verify_proof(request=badproof)
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: random.Random) -> None:
+    two_key_proof = populate_reference(count=5, keys_to_prove=2)
+    offer_setup = await populate_proof_setup(offer_setup=offer_setup, count=two_key_proof.entries_to_insert)
+    two_key_proof.verify_proof_response["verified_clvm_hashes"]["store_id"] = offer_setup.maker.id.hex()
+
+    proof = await offer_setup.maker.api.get_proof(
+        request={"store_id": offer_setup.maker.id.hex(), "keys": two_key_proof.keys_to_prove}
+    )
+    assert proof["success"] is True
+
+    verify = await offer_setup.taker.api.verify_proof(request=proof)
+    assert verify == two_key_proof.verify_proof_response
+
+    key = b"a"
+    value = b"\x00\x01"
+    changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+    await offer_setup.maker.api.batch_update({"id": offer_setup.maker.id.hex(), "changelist": changelist})
+
+    await process_for_data_layer_keys(
+        expected_key=key,
+        expected_value=value,
+        full_node_api=offer_setup.full_node_api,
+        data_layer=offer_setup.maker.data_layer,
+        store_id=offer_setup.maker.id,
+    )
+
+    root_changed = await offer_setup.taker.api.verify_proof(request=proof)
+    assert root_changed["current_root"] is False
+    root_changed["current_root"] = True  # set to True here to compare the rest of the response
+    assert root_changed == verify

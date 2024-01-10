@@ -834,24 +834,10 @@ class UnsubscribeData:
     retain_data: bool
 
 
-async def dl_verify_proof(
-    request: Dict[str, Any],
-    wallet_node: WalletNode,
-    max_cost: int,
-    peer: WSChiaConnection,
-) -> Dict[str, Any]:
+def dl_verify_proof_internal(get_proof_response: GetProofResponse, puzzle_hash: bytes32) -> List[KeyValue]:
     """Verify a proof of inclusion for a DL singleton"""
 
-    get_proof_response = GetProofResponse.unmarshal(request)
-
     verified_keys: List[KeyValue] = []
-    coin_id = get_proof_response.coin_id
-    coin_states = await wallet_node.get_coin_state([coin_id], peer=peer)
-    if len(coin_states) == 0:
-        raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
-
-    child_coin = coin_states[0].coin
-    current_root = coin_states[0].spent_height is None
 
     for reference_proof in get_proof_response.proof.proofs:
         inner_puz_hash = get_proof_response.inner_puzzle_hash
@@ -860,9 +846,9 @@ async def dl_verify_proof(
         )
         expected_puzzle_hash = host_fullpuz_program.get_tree_hash_precalc(inner_puz_hash)
 
-        if child_coin.puzzle_hash != expected_puzzle_hash:
+        if puzzle_hash != expected_puzzle_hash:
             raise ProofIntegrityError(
-                f"Invalid Proof: incorrect puzzle hash: {child_coin.puzzle_hash.hex()} != {expected_puzzle_hash.hex()}"
+                f"Invalid Proof: incorrect puzzle hash: {puzzle_hash.hex()} != {expected_puzzle_hash.hex()}"
             )
 
         proof = ProofOfInclusion(
@@ -886,9 +872,28 @@ async def dl_verify_proof(
 
         verified_keys.append(KeyValue(key=reference_proof.key, value=reference_proof.value))
 
+    return verified_keys
+
+
+async def dl_verify_proof(
+    request: Dict[str, Any],
+    wallet_node: WalletNode,
+    peer: WSChiaConnection,
+) -> Dict[str, Any]:
+    """Verify a proof of inclusion for a DL singleton"""
+
+    get_proof_response = GetProofResponse.unmarshal(request)
+
+    coin_id = get_proof_response.coin_id
+    coin_states = await wallet_node.get_coin_state([coin_id], peer=peer)
+    if len(coin_states) == 0:
+        raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
+
+    verified_keys = dl_verify_proof_internal(get_proof_response, coin_states[0].coin.puzzle_hash)
+
     response = VerifyProofResponse(
         verified_clvm_hashes=OfferStore(get_proof_response.proof.store_id, tuple(verified_keys)),
         success=True,
-        current_root=current_root,
+        current_root=coin_states[0].spent_height is None,
     )
     return response.marshal()

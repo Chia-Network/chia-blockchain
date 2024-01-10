@@ -4177,7 +4177,6 @@ class WalletRpcApi:
             request,
             peer=self.service.get_full_node_peer(),
             wallet_node=self.service.wallet_state_manager.wallet_node,
-            max_cost=self.service.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
         return res
