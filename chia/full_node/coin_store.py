@@ -483,6 +483,15 @@ class CoinStore:
                 elif len(coin_states) > max_items:
                     next_coin_state = coin_states.pop()
                     start_height = uint32(max(next_coin_state.created_height or 0, next_coin_state.spent_height or 0))
+
+                    while len(coin_states) > 0:
+                        last_coin_state = coin_states[-1]
+                        height = uint32(max(last_coin_state.created_height or 0, last_coin_state.spent_height or 0))
+                        if height == start_height:
+                            coin_states.pop()
+                        else:
+                            break
+
                     break
                 else:
                     start_height = min_height
