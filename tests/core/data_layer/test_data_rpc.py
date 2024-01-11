@@ -2314,8 +2314,9 @@ def populate_reference(count: int, keys_to_prove: int) -> ProofReference:
                 "store_id": "",
                 "inclusions": [
                     {
-                        "key": std_hash(b"\1" + value.to_bytes(length=1, byteorder="big")).hex(),
-                        "value": std_hash(b"\1" + b"\x01" + value.to_bytes(length=1, byteorder="big")).hex(),
+                        "key_clvm_hash": "0x" + std_hash(b"\1" + value.to_bytes(length=1, byteorder="big")).hex(),
+                        "value_clvm_hash": "0x"
+                        + std_hash(b"\1" + b"\x01" + value.to_bytes(length=1, byteorder="big")).hex(),
                     }
                     for value in range(keys_to_prove)
                 ],
@@ -2384,7 +2385,7 @@ async def populate_proof_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
 @pytest.mark.anyio
 async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> None:
     offer_setup = await populate_proof_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
-    reference.verify_proof_response["verified_clvm_hashes"]["store_id"] = offer_setup.maker.id.hex()
+    reference.verify_proof_response["verified_clvm_hashes"]["store_id"] = f"0x{offer_setup.maker.id.hex()}"
 
     proof = await offer_setup.maker.api.get_proof(
         request={"store_id": offer_setup.maker.id.hex(), "keys": reference.keys_to_prove}
@@ -2423,7 +2424,7 @@ async def test_dl_proof_errors(
 async def test_dl_proof_verify_errors(offer_setup: OfferSetup, seeded_random: random.Random) -> None:
     two_key_proof = populate_reference(count=5, keys_to_prove=2)
     offer_setup = await populate_proof_setup(offer_setup=offer_setup, count=two_key_proof.entries_to_insert)
-    two_key_proof.verify_proof_response["verified_clvm_hashes"]["store_id"] = offer_setup.maker.id.hex()
+    two_key_proof.verify_proof_response["verified_clvm_hashes"]["store_id"] = f"0x{offer_setup.maker.id.hex()}"
 
     proof = await offer_setup.maker.api.get_proof(
         request={"store_id": offer_setup.maker.id.hex(), "keys": two_key_proof.keys_to_prove}
@@ -2469,7 +2470,7 @@ async def test_dl_proof_verify_errors(offer_setup: OfferSetup, seeded_random: ra
 async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: random.Random) -> None:
     two_key_proof = populate_reference(count=5, keys_to_prove=2)
     offer_setup = await populate_proof_setup(offer_setup=offer_setup, count=two_key_proof.entries_to_insert)
-    two_key_proof.verify_proof_response["verified_clvm_hashes"]["store_id"] = offer_setup.maker.id.hex()
+    two_key_proof.verify_proof_response["verified_clvm_hashes"]["store_id"] = f"0x{offer_setup.maker.id.hex()}"
 
     proof = await offer_setup.maker.api.get_proof(
         request={"store_id": offer_setup.maker.id.hex(), "keys": two_key_proof.keys_to_prove}

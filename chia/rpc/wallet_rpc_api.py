@@ -4170,9 +4170,6 @@ class WalletRpcApi:
         request: Dict[str, Any],
     ) -> EndpointResult:
         """Verify a proof of inclusion for a DL singleton"""
-        if self.service.wallet_state_manager is None:
-            raise ValueError("The wallet service is not currently initialized")
-
         res = await dl_verify_proof(
             request,
             peer=self.service.get_full_node_peer(),

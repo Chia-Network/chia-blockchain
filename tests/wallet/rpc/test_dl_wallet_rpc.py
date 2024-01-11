@@ -236,23 +236,6 @@ class TestWalletRpc:
         full_node_server = full_node_api.full_node.server
         wallet_node = wallet_service._node
 
-        if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-
-        await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-        assert wallet_service.rpc_server is not None
-
-        client = await WalletRpcClient.create(
-            self_hostname,
-            wallet_service.rpc_server.listen_port,
-            wallet_service.root_path,
-            wallet_service.config,
-        )
-        await validate_get_routes(client, wallet_service.rpc_server.rpc_api)
-
         # Create fake proof
         fakeproof = HashOnlyProof(
             key_clvm_hash=std_hash(b"\1" + b"key"),
@@ -273,5 +256,25 @@ class TestWalletRpc:
             coin_id=fake_coin_id,
             inner_puzzle_hash=bytes32([1] * 32),
         )
+
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+
+        assert wallet_service.rpc_server is not None
+        client = await WalletRpcClient.create(
+            self_hostname,
+            wallet_service.rpc_server.listen_port,
+            wallet_service.root_path,
+            wallet_service.config,
+        )
+
+        with pytest.raises(ValueError, match="No peer connected"):
+            await wallet_service.rpc_server.rpc_api.dl_verify_proof(fake_gpr.to_json_dict())
+
+        await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await validate_get_routes(client, wallet_service.rpc_server.rpc_api)
+
         with pytest.raises(ValueError, match=f"Invalid Proof: No DL singleton found at coin id: {fake_coin_id}"):
             await client.dl_verify_proof(fake_gpr)
