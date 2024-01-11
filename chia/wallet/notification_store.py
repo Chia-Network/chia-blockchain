@@ -14,7 +14,7 @@ from chia.util.streamable import Streamable, streamable
 @streamable
 @dataclasses.dataclass(frozen=True)
 class Notification(Streamable):
-    coin_id: bytes32
+    id: bytes32
     message: bytes
     amount: uint64
     height: uint32
@@ -72,7 +72,7 @@ class NotificationStore:
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO notifications (coin_id, msg, amount, height) VALUES(?, ?, ?, ?)",
                 (
-                    notification.coin_id,
+                    notification.id,
                     notification.message,
                     notification.amount.stream_to_bytes(),
                     notification.height,
@@ -80,7 +80,7 @@ class NotificationStore:
             )
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO all_notification_ids (coin_id) VALUES(?)",
-                (notification.coin_id,),
+                (notification.id,),
             )
             await cursor.close()
 

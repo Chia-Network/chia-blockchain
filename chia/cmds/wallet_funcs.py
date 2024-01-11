@@ -1390,7 +1390,7 @@ async def get_notifications(
         )
         for notification in response.notifications:
             print("")
-            print(f"ID: {notification.coin_id.hex()}")
+            print(f"ID: {notification.id.hex()}")
             print(f"message: {notification.message.decode('utf-8')}")
             print(f"amount: {notification.amount}")
 

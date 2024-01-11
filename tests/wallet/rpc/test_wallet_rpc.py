@@ -2066,13 +2066,13 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(100000000000))
 
     notification = (await client_2.get_notifications(GetNotifications())).notifications[0]
-    assert [notification] == (await client_2.get_notifications(GetNotifications([notification.coin_id]))).notifications
+    assert [notification] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
     assert [] == (await client_2.get_notifications(GetNotifications(None, uint32(0), uint32(0)))).notifications
     assert [notification] == (await client_2.get_notifications(GetNotifications(None, None, uint32(1)))).notifications
     assert [] == (await client_2.get_notifications(GetNotifications(None, uint32(1), None))).notifications
     assert [notification] == (await client_2.get_notifications(GetNotifications(None, None, None))).notifications
     assert await client_2.delete_notifications()
-    assert [] == (await client_2.get_notifications(GetNotifications([notification.coin_id]))).notifications
+    assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
     tx = await client.send_notification(
         await wallet_2.get_new_puzzlehash(),
@@ -2092,8 +2092,8 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(200000000000))
 
     notification = (await client_2.get_notifications(GetNotifications())).notifications[0]
-    assert await client_2.delete_notifications([notification.coin_id])
-    assert [] == (await client_2.get_notifications(GetNotifications([notification.coin_id]))).notifications
+    assert await client_2.delete_notifications([notification.id])
+    assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
 
 # The signatures below were made from an ephemeral key pair that isn't included in the test code.
