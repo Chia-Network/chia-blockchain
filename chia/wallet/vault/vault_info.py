@@ -19,6 +19,7 @@ class VaultInfo(Streamable):
     hidden_puzzle_hash: bytes32
     inner_puzzle_hash: bytes32
     is_recoverable: bool
+    launcher_coin_id: bytes32
 
 
 @dataclass(frozen=True)

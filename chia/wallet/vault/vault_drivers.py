@@ -7,9 +7,14 @@ from chia_rs import G1Element
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import DEFAULT_HIDDEN_PUZZLE
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import puzzle_for_singleton, puzzle_hash_for_singleton
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import DEFAULT_HIDDEN_PUZZLE, puzzle_hash_for_pk
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
+    puzzle_for_singleton,
+    puzzle_hash_for_singleton,
+    solution_for_singleton,
+)
 from chia.wallet.util.merkle_tree import MerkleTree
 
 # MODS
@@ -79,6 +84,45 @@ def get_vault_full_puzzle(launcher_id: bytes32, inner_puzzle: Program) -> Progra
 def get_vault_full_puzzle_hash(launcher_id: bytes32, inner_puzzle_hash: bytes32) -> bytes32:
     puzzle_hash = puzzle_hash_for_singleton(launcher_id, inner_puzzle_hash)
     return puzzle_hash
+
+
+def get_recovery_puzzle(
+    secp_puzzle_hash: bytes32,
+    bls_pk: G1Element,
+    timelock: uint64,
+    amount: uint64,
+) -> Program:
+    recovery_finish = get_recovery_finish_puzzle(bls_pk, timelock, amount).get_tree_hash()
+    recovery_puzzle = P2_1_OF_N_MOD.curry(MerkleTree([secp_puzzle_hash, recovery_finish]).calculate_root())
+    return recovery_puzzle
+
+
+def get_recovery_conditions(bls_pk: G1Element, amount: uint64) -> Program:
+    puzzle_hash = puzzle_hash_for_pk(bls_pk)
+    recovery_conditions: Program = Program.to([[51, puzzle_hash, amount]])
+    return recovery_conditions
+
+
+def get_recovery_finish_puzzle(bls_pk: G1Element, timelock: uint64, amount: uint64) -> Program:
+    recovery_condition = get_recovery_conditions(bls_pk, amount)
+    return RECOVERY_FINISH_MOD.curry(timelock, recovery_condition)
+
+
+# SOLUTIONS
+def get_recovery_solution(amount: uint64, bls_pk: G1Element) -> Program:
+    recovery_conditions = get_recovery_conditions(bls_pk, amount)
+    recovery_solution: Program = Program.to([amount, recovery_conditions])
+    return recovery_solution
+
+
+def get_vault_inner_solution(puzzle_to_run: Program, solution: Program, proof: Program) -> Program:
+    inner_solution: Program = Program.to([proof, puzzle_to_run, solution])
+    return inner_solution
+
+
+def get_vault_full_solution(lineage_proof: LineageProof, amount: uint64, inner_solution: Program) -> Program:
+    full_solution: Program = solution_for_singleton(lineage_proof, amount, inner_solution)
+    return full_solution
 
 
 # MERKLE

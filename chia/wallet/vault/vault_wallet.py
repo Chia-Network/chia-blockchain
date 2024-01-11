@@ -13,10 +13,12 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.signing_mode import SigningMode
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import Condition
 from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.signer_protocol import (
     PathHint,
@@ -31,8 +33,17 @@ from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.vault.vault_drivers import (
     construct_p2_delegated_secp,
+    construct_vault_merkle_tree,
+    get_recovery_finish_puzzle,
+    get_recovery_puzzle,
+    get_recovery_solution,
+    get_vault_full_puzzle,
+    get_vault_full_solution,
     get_vault_hidden_puzzle_with_index,
+    get_vault_inner_puzzle,
     get_vault_inner_puzzle_hash,
+    get_vault_inner_solution,
+    get_vault_proof,
 )
 from chia.wallet.vault.vault_info import RecoveryInfo, VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
@@ -170,6 +181,73 @@ class Vault(Wallet):
         )
         return [record]
 
+    async def create_recovery_spends(self) -> Tuple[CoinSpend, CoinSpend]:
+        """
+        Returns two spendbundles
+        1. The spend recovering the vault which can be taken to the appropriate BLS wallet for signing
+        2. The spend that completes the recovery after the timelock has elapsed
+        """
+        assert self.vault_info.is_recoverable
+        wallet_node: Any = self.wallet_state_manager.wallet_node
+        peer = wallet_node.get_full_node_peer()
+        assert peer is not None
+        # 1. Generate the recovery spend
+        # Get the current vault coin, ensure it's unspent
+        vault_coin = self.vault_info.coin
+        amount = uint64(self.vault_info.coin.amount)
+        vault_coin_state = (await wallet_node.get_coin_state([vault_coin.name()], peer))[0]
+        assert vault_coin_state.spent_height is None
+        # Generate the current inner puzzle
+        inner_puzzle = get_vault_inner_puzzle(
+            self.vault_info.pubkey,
+            DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+            self.vault_info.hidden_puzzle_hash,
+            self.recovery_info.bls_pk,
+            self.recovery_info.timelock,
+        )
+        assert inner_puzzle.get_tree_hash() == self.vault_info.inner_puzzle_hash
+
+        secp_puzzle_hash = construct_p2_delegated_secp(
+            self.vault_info.pubkey,
+            DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+            self.vault_info.hidden_puzzle_hash,
+        ).get_tree_hash()
+
+        recovery_puzzle = get_recovery_puzzle(
+            secp_puzzle_hash, self.recovery_info.bls_pk, self.recovery_info.timelock, amount
+        )
+        recovery_puzzle_hash = recovery_puzzle.get_tree_hash()
+        # TODO: Once we have get_wallet_balance we can use it for the amount field in the solution
+        recovery_solution = get_recovery_solution(amount, self.recovery_info.bls_pk)
+
+        merkle_tree = construct_vault_merkle_tree(secp_puzzle_hash, recovery_puzzle_hash)
+        proof = get_vault_proof(merkle_tree, recovery_puzzle_hash)
+        inner_solution = get_vault_inner_solution(recovery_puzzle, recovery_solution, proof)
+
+        full_puzzle = get_vault_full_puzzle(self.vault_info.launcher_coin_id, inner_puzzle)
+        assert full_puzzle.get_tree_hash() == vault_coin.puzzle_hash
+
+        # TODO: handle lineage proofs
+        lineage = LineageProof(self.vault_info.coin.parent_coin_info, inner_puzzle.get_tree_hash(), amount)
+        full_solution = get_vault_full_solution(lineage, amount, inner_solution)
+        recovery_spend = CoinSpend(vault_coin, full_puzzle, full_solution)
+
+        # 2. Generate the Finish Recovery Spend
+        # get the recovery puzzle and coin
+        full_recovery_puzzle = get_vault_full_puzzle(self.vault_info.launcher_coin_id, recovery_puzzle)
+        recovery_coin = Coin(self.vault_info.coin.name(), full_recovery_puzzle.get_tree_hash(), amount)
+        # create the finish solution
+        recovery_finish_puzzle = get_recovery_finish_puzzle(
+            self.recovery_info.bls_pk, self.recovery_info.timelock, amount
+        )
+        recovery_finish_solution = Program.to([])
+        recovery_solution = get_vault_inner_solution(recovery_finish_puzzle, recovery_finish_solution, proof)
+        lineage = LineageProof(self.vault_info.coin.name(), inner_puzzle.get_tree_hash(), amount)
+        full_recovery_solution = get_vault_full_solution(lineage, uint64(1), recovery_solution)
+        finish_spend = CoinSpend(recovery_coin, full_recovery_puzzle, full_recovery_solution)
+
+        return recovery_spend, finish_spend
+
     async def sync_singleton(self) -> None:
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer = wallet_node.get_full_node_peer()
@@ -202,7 +280,13 @@ class Vault(Wallet):
             secp_pk, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, hidden_puzzle_hash, bls_pk, timelock
         )
         vault_info = VaultInfo(
-            coin_state.coin, launcher_id, secp_pk, hidden_puzzle_hash, inner_puzzle_hash, is_recoverable
+            coin_state.coin,
+            launcher_id,
+            secp_pk,
+            hidden_puzzle_hash,
+            inner_puzzle_hash,
+            is_recoverable,
+            parent_state.coin.name(),
         )
 
         if coin_state.spent_height:

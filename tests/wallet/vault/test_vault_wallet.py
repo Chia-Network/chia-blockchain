@@ -44,7 +44,7 @@ async def vault_setup(
             bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
             bls_pk = bytes.fromhex(bls_pk_hex)
             timelock = uint64(1000)
-        hidden_puzzle_index = uint32(1)
+        hidden_puzzle_index = uint32(0)
         res = await client.vault_create(
             SECP_PK, hidden_puzzle_index, bls_pk=bls_pk, timelock=timelock, tx_config=DEFAULT_TX_CONFIG
         )
@@ -108,5 +108,8 @@ async def test_vault_creation(
     if with_recovery:
         assert wallet.vault_info.is_recoverable
         assert wallet.recovery_info is not None
+        recovery_spend, finish_spend = await wallet.create_recovery_spends()
+        assert recovery_spend
+        assert finish_spend
     else:
         assert not wallet.vault_info.is_recoverable
