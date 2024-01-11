@@ -13,6 +13,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.protocols.wallet_protocol import CoinState
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
@@ -20,6 +21,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -497,64 +499,94 @@ async def test_get_coin_states(db_version: int) -> None:
 @pytest.mark.anyio
 async def test_coin_state_batches(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
-        crs = [
-            CoinRecord(
-                Coin(std_hash(i.to_bytes(4, byteorder="big")), std_hash(b"2"), uint64(100)),
-                uint32(i),
-                uint32(2 * i),
-                False,
-                uint64(12321312),
+        # Generate coin records, puzzle hashes, and hints.
+        coin_records: List[CoinRecord] = []
+        puzzle_hashes: List[bytes32] = []
+        hints: List[Tuple[bytes32, bytes]] = []
+
+        # Make sure the count is even so we can filter by spent and unspent evenly.
+        count = SQLITE_MAX_VARIABLE_NUMBER * 2
+
+        for i in range(count):
+            is_spent = i % 2 == 0
+            is_hinted = i % 7 == 0
+            created_height = uint32(i % 10)
+            spent_height = uint32(created_height + 100)
+
+            puzzle_hash = std_hash(i.to_bytes(4, byteorder="big"))
+
+            coin = Coin(
+                std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
+                puzzle_hash,
+                uint64(i),
             )
-            for i in range(1, 301)
-        ]
-        crs += [
-            CoinRecord(
-                Coin(std_hash(b"X" + i.to_bytes(4, byteorder="big")), std_hash(b"3"), uint64(100)),
-                uint32(i),
-                uint32(2 * i),
-                False,
-                uint64(12321312),
+
+            if is_hinted:
+                hint = std_hash(b"Hinted " + puzzle_hash)
+                hints.append((coin.name(), hint))
+                puzzle_hashes.append(hint)
+            else:
+                puzzle_hashes.append(puzzle_hash)
+
+            coin_records.append(
+                CoinRecord(
+                    coin=coin,
+                    confirmed_block_index=created_height,
+                    spent_block_index=spent_height if is_spent else uint32(0),
+                    coinbase=False,
+                    timestamp=uint64(0),
+                )
             )
-            for i in range(1, 301)
-        ]
-        crs2 = [
-            CoinRecord(
-                Coin(std_hash(i.to_bytes(4, byteorder="big")), std_hash(b"2"), uint64(101)),
-                uint32(i),
-                uint32(2 * i),
-                False,
-                uint64(12321312),
-            )
-            for i in range(1, 301)
-        ]
-        crs2 += [
-            CoinRecord(
-                Coin(std_hash(b"X" + i.to_bytes(4, byteorder="big")), std_hash(b"3"), uint64(101)),
-                uint32(i),
-                uint32(2 * i),
-                False,
-                uint64(12321312),
-            )
-            for i in range(1, 301)
-        ]
+
+        # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
         hint_store = await HintStore.create(db_wrapper)
-        await coin_store._add_coin_records(
-            crs
-            + crs2
-            + [CoinRecord(Coin(std_hash(b"X"), std_hash(b"4"), uint64(25)), uint32(0), uint32(0), False, uint64(14786))]
-        )
-        await hint_store.add_hints([(crs2[i].coin.name(), crs[i].coin.puzzle_hash) for i in range(len(crs))])
 
-        phs = [cr.coin.puzzle_hash for cr in crs]
-        height = uint32(0)
-        all_coin_states = []
+        await coin_store._add_coin_records(coin_records)
+        await hint_store.add_hints(hints)
 
-        while len(phs) > 0:
-            (coin_states, phs, height) = await coin_store.batch_coin_states_by_puzzle_hashes(phs, height, max_items=100)
-            all_coin_states += coin_states
+        # Helper for syncing all of the coin states.
+        async def sync_states(*, include_spent: bool, include_unspent: bool, include_hinted: bool) -> List[CoinState]:
+            height = uint32(0)
+            all_coin_states: List[CoinState] = []
+            remaining_phs = puzzle_hashes.copy()
 
-        assert len(all_coin_states) == len(crs) + len(crs2)
+            while len(remaining_phs) > 0:
+                (coin_states, remaining_phs, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
+                    remaining_phs,
+                    start_height=height,
+                    include_spent=include_spent,
+                    include_unspent=include_unspent,
+                    include_hinted=include_hinted,
+                )
+                all_coin_states += coin_states
+
+            return all_coin_states
+
+        # Make sure all of the coin states are found when batching.
+        all_coin_states = await sync_states(include_spent=True, include_unspent=True, include_hinted=True)
+        all_coin_states.sort(key=lambda cs: cs.coin.amount)
+
+        assert len(all_coin_states) == len(coin_records)
+
+        for i in range(min(len(coin_records), len(all_coin_states))):
+            assert coin_records[i].coin.name().hex() == all_coin_states[i].coin.name().hex(), i
+
+        # Make sure you can filter out hints.
+        all_coin_states = await sync_states(include_spent=True, include_unspent=True, include_hinted=False)
+        assert len(all_coin_states) == len(coin_records) - len(hints)
+
+        # Make sure you can filter out spent coins.
+        all_coin_states = await sync_states(include_spent=False, include_unspent=True, include_hinted=True)
+        assert len(all_coin_states) == len(coin_records) // 2
+
+        # Make sure you can filter out unspent coins.
+        all_coin_states = await sync_states(include_spent=True, include_unspent=False, include_hinted=True)
+        assert len(all_coin_states) == len(coin_records) // 2
+
+        # Make sure you can filter out spent and unspent coins.
+        all_coin_states = await sync_states(include_spent=False, include_unspent=False, include_hinted=True)
+        assert len(all_coin_states) == 0
 
 
 @pytest.mark.anyio

@@ -414,8 +414,9 @@ class CoinStore:
     async def batch_coin_states_by_puzzle_hashes(
         self,
         puzzle_hashes: List[bytes32],
-        min_height: uint32 = uint32(0),
         *,
+        start_height: uint32,
+        min_height: uint32 = uint32(0),
         include_spent: bool = True,
         include_unspent: bool = True,
         include_hinted: bool = True,
@@ -435,7 +436,6 @@ class CoinStore:
         else:
             group_size = SQLITE_MAX_VARIABLE_NUMBER - other_variable_count
 
-        start_height = min_height
         synced_puzzle_hashes = 0
 
         coin_states: List[CoinState] = []
@@ -468,7 +468,7 @@ class CoinStore:
                         f"AND (confirmed_index>=? OR spent_index>=?) "
                         f"{'' if include_spent else 'AND spent_index=0'} "
                         f"{'' if include_unspent else 'AND spent_index>0'} "
-                        f"ORDER BY MAX(confirmed_index, spent_index) ASC"
+                        f"ORDER BY MAX(confirmed_index, spent_index) ASC "
                         f"LIMIT ?",
                         select_batch_db + (start_height, start_height, max_items - len(coin_states) + 1),
                     )
