@@ -21,7 +21,7 @@ from chia.cmds.data_funcs import clear_pending_roots, get_proof_cmd, verify_proo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
-from chia.data_layer.data_layer_util import OfferStore, Status, StoreProofs
+from chia.data_layer.data_layer_util import HashOnlyProof, OfferStore, ProofLayer, Status, StoreProofs
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
@@ -37,7 +37,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer
@@ -2415,6 +2415,23 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
     # but it requires all the supporting fixtures (wallet/nodes/etc) to have the same scope
     #
 
+    # random tests for HashOnlyProof root()
+    fakeproof = HashOnlyProof(
+        key_clvm_hash=bytes32([1] * 32), value_clvm_hash=bytes32([1] * 32), node_hash=bytes32([3] * 32), layers=[]
+    )
+    assert fakeproof.root() == fakeproof.node_hash
+
+    fakeproof = HashOnlyProof(
+        key_clvm_hash=bytes32([1] * 32),
+        value_clvm_hash=bytes32([1] * 32),
+        node_hash=bytes32([3] * 32),
+        layers=[
+            ProofLayer(other_hash_side=uint8(0), other_hash=bytes32([1] * 32), combined_hash=bytes32([5] * 32)),
+            ProofLayer(other_hash_side=uint8(0), other_hash=bytes32([1] * 32), combined_hash=bytes32([7] * 32)),
+        ],
+    )
+    assert fakeproof.root() == bytes32([7] * 32)
+
     # Test InterfaceLayer.direct
     proof = await offer_setup.maker.api.get_proof(
         request={"store_id": offer_setup.maker.id.hex(), "keys": reference.keys_to_prove}
@@ -2564,5 +2581,5 @@ async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: ran
 
     root_changed = await offer_setup.taker.api.verify_proof(request=proof)
     assert root_changed["current_root"] is False
-    root_changed["current_root"] = True  # set to True here to compare the rest of the response
-    assert root_changed == verify
+    # comparing everything except "current_root"
+    assert root_changed == {**verify, "current_root": root_changed["current_root"]}
