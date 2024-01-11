@@ -49,9 +49,10 @@ from chia.full_node.mempool import Mempool
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.util.misc import caller_file_and_line
 from chia.wallet.util.compute_hints import HintedCoin
+from chia.wallet.wallet_node import WalletNode
 from tests import ether
 from tests.core.data_layer.util import ChiaRoot
 
@@ -491,6 +492,11 @@ def invariant_check_mempool(mempool: Mempool) -> None:
         if val is None:
             val = 0
     assert mempool._total_fee == val
+
+
+async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
+    height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
+    return height == h
 
 
 @final

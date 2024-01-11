@@ -1013,14 +1013,9 @@ class FullNodeAPI:
             self.log.warning("Signature not valid. There might be a collision in plots. Ignore this during tests.")
             return None
 
-        fsb2 = dataclasses.replace(
-            candidate.foliage,
-            foliage_block_data_signature=farmer_request.foliage_block_data_signature,
-        )
+        fsb2 = candidate.foliage.replace(foliage_block_data_signature=farmer_request.foliage_block_data_signature)
         if candidate.is_transaction_block():
-            fsb2 = dataclasses.replace(
-                fsb2, foliage_transaction_block_signature=farmer_request.foliage_transaction_block_signature
-            )
+            fsb2 = fsb2.replace(foliage_transaction_block_signature=farmer_request.foliage_transaction_block_signature)
 
         new_candidate = dataclasses.replace(candidate, foliage=fsb2)
         if not self.full_node.has_valid_pool_sig(new_candidate):
@@ -1497,7 +1492,7 @@ class FullNodeAPI:
         # the returned puzzle hashes are the ones we ended up subscribing to.
         # It will have filtered duplicates and ones exceeding the subscription
         # limit.
-        puzzle_hashes = self.full_node.subscriptions.add_ph_subscriptions(
+        puzzle_hashes = self.full_node.subscriptions.add_puzzle_subscriptions(
             peer.peer_node_id, request.puzzle_hashes, max_subscriptions
         )
 

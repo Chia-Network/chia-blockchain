@@ -59,13 +59,13 @@ class LastState:
                 state.reward_chain_block,
                 state.sub_slot_iters,
                 state.difficulty,
-                state.reward_chain_block.height,
+                uint32(state.reward_chain_block.height),
             )
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary
-            self.last_weight = state.reward_chain_block.weight
-            self.last_height = state.reward_chain_block.height
-            self.total_iters = state.reward_chain_block.total_iters
+            self.last_weight = uint128(state.reward_chain_block.weight)
+            self.last_height = uint32(state.reward_chain_block.height)
+            self.total_iters = uint128(state.reward_chain_block.total_iters)
             self.last_peak_challenge = state.reward_chain_block.get_hash()
             self.difficulty = state.difficulty
             self.sub_slot_iters = state.sub_slot_iters

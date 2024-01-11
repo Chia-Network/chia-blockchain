@@ -1154,7 +1154,7 @@ class FullNode:
                     hints_to_add, _ = get_hints_and_subscription_coin_ids(
                         state_change_summary,
                         self.subscriptions.has_coin_subscription,
-                        self.subscriptions.has_ph_subscription,
+                        self.subscriptions.has_puzzle_subscription,
                     )
                     await self.hint_store.add_hints(hints_to_add)
                 # Note that end_height is not necessarily the peak at this
@@ -1484,7 +1484,7 @@ class FullNode:
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
             state_change_summary,
             self.subscriptions.has_coin_subscription,
-            self.subscriptions.has_ph_subscription,
+            self.subscriptions.has_puzzle_subscription,
         )
         await self.hint_store.add_hints(hints_to_add)
 
@@ -1598,7 +1598,6 @@ class FullNode:
 
         if record.height % 1000 == 0:
             # Occasionally clear data in full node store to keep memory usage small
-            self.full_node_store.clear_seen_unfinished_blocks()
             self.full_node_store.clear_old_cache_entries()
 
         if self.sync_store.get_sync_mode() is False:
@@ -1832,10 +1831,16 @@ class FullNode:
             "transaction_block": False,
             "k_size": block.reward_chain_block.proof_of_space.size,
             "header_hash": block.header_hash,
+            "fork_height": None,
+            "rolled_back_records": None,
             "height": block.height,
             "validation_time": validation_time,
             "pre_validation_time": pre_validation_time,
         }
+
+        if state_change_summary is not None:
+            state_changed_data["fork_height"] = state_change_summary.fork_height
+            state_changed_data["rolled_back_records"] = len(state_change_summary.rolled_back_records)
 
         if block.transactions_info is not None:
             state_changed_data["transaction_block"] = True
@@ -1888,7 +1893,7 @@ class FullNode:
         if self.full_node_store.seen_unfinished_block(block.get_hash()):
             return None
 
-        block_hash = block.reward_chain_block.get_hash()
+        block_hash = bytes32(block.reward_chain_block.get_hash())
 
         # This searched for the trunk hash (unfinished reward hash). If we have already added a block with the same
         # hash, return
@@ -2146,7 +2151,7 @@ class FullNode:
             + calculate_sp_iters(
                 self.constants,
                 sub_slot_iters,
-                unfinished_block.reward_chain_block.signage_point_index,
+                uint8(unfinished_block.reward_chain_block.signage_point_index),
             )
         )
 
