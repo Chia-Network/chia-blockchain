@@ -295,6 +295,7 @@ async def get_proof_cmd(
     root_path: Optional[Path] = None,
     fingerprint: Optional[int] = None,
 ) -> Dict[str, Any]:
+    result = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
         result = await client.get_proof(store_id=store_id, keys=[hexstr_to_bytes(key) for key in key_strings])
         print(json.dumps(result, indent=4, sort_keys=True))
@@ -308,6 +309,7 @@ async def verify_proof_cmd(
     root_path: Optional[Path] = None,
     fingerprint: Optional[int] = None,
 ) -> Dict[str, Any]:
+    result = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
         result = await client.verify_proof(proof=proof)
         print(json.dumps(result, indent=4, sort_keys=True))

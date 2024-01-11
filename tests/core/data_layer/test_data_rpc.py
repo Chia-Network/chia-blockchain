@@ -2466,20 +2466,39 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
     assert verify == reference.verify_proof_response
 
     # test InterfaceLayer.cli
-    # TBD
-    # process = await run_cli_cmd(
-    #     "data",
-    #     "get_proof",
-    #     "--id",
-    #     offer_setup.maker.id.hex(),
-    #     "--key",
-    #     reference.keys_to_prove[0],
-    #     "--data-rpc-port",
-    #     str(offer_setup.taker.data_rpc_client.port),
-    #     root_path=offer_setup.taker.data_layer.root_path,
-    # )
-    # assert process.stdout is not None
-    # assert await process.stdout.read() == b""
+    key_args: List[str] = []
+    for key in reference.keys_to_prove:
+        key_args.append("--key")
+        key_args.append(key)
+
+    process = await run_cli_cmd(
+        "data",
+        "get_proof",
+        "--id",
+        offer_setup.maker.id.hex(),
+        *key_args,
+        "--data-rpc-port",
+        str(offer_setup.maker.data_rpc_client.port),
+        root_path=offer_setup.maker.data_layer.root_path,
+    )
+    assert process.stdout is not None
+    raw_output = await process.stdout.read()
+    proof = json.loads(raw_output)
+    assert proof["success"] is True
+
+    process = await run_cli_cmd(
+        "data",
+        "verify_proof",
+        "-p",
+        json.dumps(proof),
+        "--data-rpc-port",
+        str(offer_setup.taker.data_rpc_client.port),
+        root_path=offer_setup.taker.data_layer.root_path,
+    )
+    assert process.stdout is not None
+    raw_output = await process.stdout.read()
+    verify = json.loads(raw_output)
+    assert verify == reference.verify_proof_response
 
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
