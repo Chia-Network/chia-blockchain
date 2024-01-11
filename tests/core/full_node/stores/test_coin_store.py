@@ -11,6 +11,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
@@ -491,6 +492,69 @@ async def test_get_coin_states(db_version: int) -> None:
 
         # if the limit is very high, we should get all of them
         assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(0), max_items=10000)) == 600
+
+
+@pytest.mark.anyio
+async def test_coin_state_batches(db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        crs = [
+            CoinRecord(
+                Coin(std_hash(i.to_bytes(4, byteorder="big")), std_hash(b"2"), uint64(100)),
+                uint32(i),
+                uint32(2 * i),
+                False,
+                uint64(12321312),
+            )
+            for i in range(1, 301)
+        ]
+        crs += [
+            CoinRecord(
+                Coin(std_hash(b"X" + i.to_bytes(4, byteorder="big")), std_hash(b"3"), uint64(100)),
+                uint32(i),
+                uint32(2 * i),
+                False,
+                uint64(12321312),
+            )
+            for i in range(1, 301)
+        ]
+        crs2 = [
+            CoinRecord(
+                Coin(std_hash(i.to_bytes(4, byteorder="big")), std_hash(b"2"), uint64(101)),
+                uint32(i),
+                uint32(2 * i),
+                False,
+                uint64(12321312),
+            )
+            for i in range(1, 301)
+        ]
+        crs2 += [
+            CoinRecord(
+                Coin(std_hash(b"X" + i.to_bytes(4, byteorder="big")), std_hash(b"3"), uint64(101)),
+                uint32(i),
+                uint32(2 * i),
+                False,
+                uint64(12321312),
+            )
+            for i in range(1, 301)
+        ]
+        coin_store = await CoinStore.create(db_wrapper)
+        hint_store = await HintStore.create(db_wrapper)
+        await coin_store._add_coin_records(
+            crs
+            + crs2
+            + [CoinRecord(Coin(std_hash(b"X"), std_hash(b"4"), uint64(25)), uint32(0), uint32(0), False, uint64(14786))]
+        )
+        await hint_store.add_hints([(crs2[i].coin.name(), crs[i].coin.puzzle_hash) for i in range(len(crs))])
+
+        phs = [cr.coin.puzzle_hash for cr in crs]
+        height = uint32(0)
+        all_coin_states = []
+
+        while len(phs) > 0:
+            (coin_states, phs, height) = await coin_store.batch_coin_states_by_puzzle_hashes(phs, height, max_items=100)
+            all_coin_states += coin_states
+
+        assert len(all_coin_states) == len(crs) + len(crs2)
 
 
 @pytest.mark.anyio

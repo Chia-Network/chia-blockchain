@@ -411,6 +411,85 @@ class CoinStore:
 
         return coins
 
+    async def batch_coin_states_by_puzzle_hashes(
+        self,
+        puzzle_hashes: List[bytes32],
+        min_height: uint32 = uint32(0),
+        *,
+        include_spent: bool = True,
+        include_unspent: bool = True,
+        include_hinted: bool = True,
+        max_items: int = 50000,
+    ) -> Tuple[List[CoinState], List[bytes32], uint32]:
+        """
+        Returns the coin states in the current batch, as well as the remaining puzzle hashes
+        to be searched by in the next batch and the next block height to start from.
+        """
+
+        # Calculate the total number of groups of puzzle hashes to search through.
+        # Each query is be for both puzzle hash and hint, in addition to some additional filters.
+        other_variable_count = 3
+
+        if include_hinted:
+            group_size = SQLITE_MAX_VARIABLE_NUMBER // 2 - other_variable_count
+        else:
+            group_size = SQLITE_MAX_VARIABLE_NUMBER - other_variable_count
+
+        start_height = min_height
+        synced_puzzle_hashes = 0
+
+        coin_states: List[CoinState] = []
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            for select_batch in to_batches(puzzle_hashes, group_size):
+                select_batch_db = tuple(select_batch.entries)
+
+                if include_hinted:
+                    cursor = await conn.execute(
+                        f"SELECT cr.confirmed_index, cr.spent_index, cr.coinbase, cr.puzzle_hash, "
+                        f"cr.coin_parent, cr.amount, cr.timestamp FROM coin_record cr "
+                        f"LEFT JOIN hints h ON cr.coin_name = h.coin_id "
+                        f'WHERE (cr.puzzle_hash in ({"?," * (len(select_batch.entries) - 1)}?) '
+                        f'OR h.hint in ({"?," * (len(select_batch.entries) - 1)}?)) '
+                        f"AND (cr.confirmed_index>=? OR cr.spent_index>=?) "
+                        f"{'' if include_spent else 'AND cr.spent_index=0'} "
+                        f"{'' if include_unspent else 'AND cr.spent_index>0'} "
+                        f"ORDER BY MAX(cr.confirmed_index, cr.spent_index) ASC "
+                        f"LIMIT ?",
+                        select_batch_db
+                        + select_batch_db
+                        + (start_height, start_height, max_items - len(coin_states) + 1),
+                    )
+                else:
+                    cursor = await conn.execute(
+                        f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                        f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
+                        f'WHERE puzzle_hash in ({"?," * (len(select_batch.entries) - 1)}?) '
+                        f"AND (confirmed_index>=? OR spent_index>=?) "
+                        f"{'' if include_spent else 'AND spent_index=0'} "
+                        f"{'' if include_unspent else 'AND spent_index>0'} "
+                        f"ORDER BY MAX(confirmed_index, spent_index) ASC"
+                        f"LIMIT ?",
+                        select_batch_db + (start_height, start_height, max_items - len(coin_states) + 1),
+                    )
+
+                for row in await cursor.fetchall():
+                    coin_states.append(self.row_to_coin_state(row))
+
+                if len(coin_states) == max_items:
+                    start_height = min_height
+                    synced_puzzle_hashes += len(select_batch.entries)
+                    break
+                elif len(coin_states) > max_items:
+                    next_coin_state = coin_states.pop()
+                    start_height = uint32(max(next_coin_state.created_height or 0, next_coin_state.spent_height or 0))
+                    break
+                else:
+                    start_height = min_height
+                    synced_puzzle_hashes += len(select_batch.entries)
+
+        return (coin_states, puzzle_hashes[synced_puzzle_hashes:], start_height)
+
     async def rollback_to_block(self, block_index: int) -> List[CoinRecord]:
         """
         Note that block_index can be negative, in which case everything is rolled back
