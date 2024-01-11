@@ -25,17 +25,23 @@ class LineageProof(Streamable):
 
     @classmethod
     def from_program(cls, program: Program, fields: List[LineageProofField]) -> LineageProof:
-        program_values = list(program.as_iter())
-        if len(program_values) != len(fields):
-            raise ValueError("Mismatch between program data and fields information")
         lineage_proof_info: Dict[str, Any] = {}
-        for field, program_value in zip(fields, program_values):
+        field_iter = iter(fields)
+        program_iter = program.as_iter()
+        for program_value in program_iter:
+            field = next(field_iter)
             if field == LineageProofField.PARENT_NAME:
                 lineage_proof_info["parent_name"] = bytes32(program_value.as_atom())
             elif field == LineageProofField.INNER_PUZZLE_HASH:
                 lineage_proof_info["inner_puzzle_hash"] = bytes32(program_value.as_atom())
             elif field == LineageProofField.AMOUNT:
                 lineage_proof_info["amount"] = uint64(program_value.as_int())
+        try:
+            next(field_iter)
+            raise ValueError("Mismatch between program data and fields information")
+        except StopIteration:
+            pass
+
         return LineageProof(**lineage_proof_info)
 
     def to_program(self) -> Program:
