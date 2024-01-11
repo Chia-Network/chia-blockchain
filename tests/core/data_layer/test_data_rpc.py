@@ -17,7 +17,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
 import anyio
 import pytest
 
-from chia.cmds.data_funcs import clear_pending_roots, wallet_log_in_cmd
+from chia.cmds.data_funcs import clear_pending_roots, get_proof_cmd, verify_proof_cmd, wallet_log_in_cmd
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
@@ -761,6 +761,7 @@ class StoreSetup:
     id: bytes32
     original_hash: bytes32
     data_layer: DataLayer
+    data_rpc_client: DataLayerRpcClient
 
 
 @dataclass(frozen=True)
@@ -794,12 +795,20 @@ async def offer_setup_fixture(
         for wallet_service in wallet_services:
             assert wallet_service.rpc_server is not None
             port = wallet_service.rpc_server.listen_port
-            data_layer = await exit_stack.enter_async_context(
-                init_data_layer(
+            data_layer_service = await exit_stack.enter_async_context(
+                init_data_layer_service(
                     wallet_rpc_port=port, wallet_service=wallet_service, bt=bt, db_path=tmp_path.joinpath(str(port))
                 )
             )
+            data_layer = data_layer_service._api.data_layer
             data_rpc_api = DataLayerRpcApi(data_layer)
+            assert data_layer_service.rpc_server is not None
+            data_rpc_client = await DataLayerRpcClient.create(
+                self_hostname,
+                port=data_layer_service.rpc_server.listen_port,
+                root_path=bt.root_path,
+                net_config=bt.config,
+            )
 
             create_response = await data_rpc_api.create_data_store({"verbose": True})
             await full_node_api.process_transaction_records(records=create_response["txs"], timeout=60)
@@ -810,6 +819,7 @@ async def offer_setup_fixture(
                     id=bytes32.from_hexstr(create_response["id"]),
                     original_hash=bytes32([0] * 32),
                     data_layer=data_layer,
+                    data_rpc_client=data_rpc_client,
                 )
             )
 
@@ -849,15 +859,22 @@ async def offer_setup_fixture(
                 id=maker.id,
                 original_hash=maker_original_root_hash,
                 data_layer=maker.data_layer,
+                data_rpc_client=maker.data_rpc_client,
             ),
             taker=StoreSetup(
                 api=taker.api,
                 id=taker.id,
                 original_hash=taker_original_root_hash,
                 data_layer=taker.data_layer,
+                data_rpc_client=taker.data_rpc_client,
             ),
             full_node_api=full_node_api,
         )
+
+        maker.data_rpc_client.close()
+        await maker.data_rpc_client.await_closed()
+        taker.data_rpc_client.close()
+        await taker.data_rpc_client.await_closed()
 
 
 async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetup:
@@ -908,12 +925,14 @@ async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
             id=offer_setup.maker.id,
             original_hash=maker_original_root_hash,
             data_layer=offer_setup.maker.data_layer,
+            data_rpc_client=offer_setup.maker.data_rpc_client,
         ),
         taker=StoreSetup(
             api=offer_setup.taker.api,
             id=offer_setup.taker.id,
             original_hash=taker_original_root_hash,
             data_layer=offer_setup.taker.data_layer,
+            data_rpc_client=offer_setup.taker.data_rpc_client,
         ),
         full_node_api=offer_setup.full_node_api,
     )
@@ -2362,12 +2381,14 @@ async def populate_proof_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
             id=offer_setup.maker.id,
             original_hash=maker_original_root_hash,
             data_layer=offer_setup.maker.data_layer,
+            data_rpc_client=offer_setup.maker.data_rpc_client,
         ),
         taker=StoreSetup(
             api=offer_setup.taker.api,
             id=offer_setup.taker.id,
             original_hash=bytes32([0] * 32),
             data_layer=offer_setup.taker.data_layer,
+            data_rpc_client=offer_setup.taker.data_rpc_client,
         ),
         full_node_api=offer_setup.full_node_api,
     )
@@ -2387,13 +2408,61 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
     offer_setup = await populate_proof_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
     reference.verify_proof_response["verified_clvm_hashes"]["store_id"] = f"0x{offer_setup.maker.id.hex()}"
 
+    #
+    # Ideally this would use the InterfaceLayer as a parameterized list, however, all the fixtures
+    # are function scoped, which makes it very long to run this but this doesn't change any of the
+    # data, so rerunning all the setup for each test is not needed - module scope would be perfect
+    # but it requires all the supporting fixtures (wallet/nodes/etc) to have the same scope
+    #
+
+    # Test InterfaceLayer.direct
     proof = await offer_setup.maker.api.get_proof(
         request={"store_id": offer_setup.maker.id.hex(), "keys": reference.keys_to_prove}
     )
     assert proof["success"] is True
     verify = await offer_setup.taker.api.verify_proof(request=proof)
-
     assert verify == reference.verify_proof_response
+
+    # test InterfaceLayer.client
+    proof = dict()
+    verify = dict()
+    proof = await offer_setup.maker.data_rpc_client.get_proof(
+        store_id=offer_setup.maker.id, keys=[hexstr_to_bytes(key) for key in reference.keys_to_prove]
+    )
+    assert proof["success"] is True
+    verify = await offer_setup.taker.data_rpc_client.verify_proof(proof=proof)
+    assert verify == reference.verify_proof_response
+
+    # test InterfaceLayer.func
+    proof = dict()
+    verify = dict()
+    proof = await get_proof_cmd(
+        store_id=offer_setup.maker.id,
+        key_strings=reference.keys_to_prove,
+        rpc_port=offer_setup.maker.data_rpc_client.port,
+        root_path=offer_setup.maker.data_layer.root_path,
+    )
+    assert proof["success"] is True
+    verify = await verify_proof_cmd(
+        proof=proof, rpc_port=offer_setup.taker.data_rpc_client.port, root_path=offer_setup.taker.data_layer.root_path
+    )
+    assert verify == reference.verify_proof_response
+
+    # test InterfaceLayer.cli
+    # TBD
+    # process = await run_cli_cmd(
+    #     "data",
+    #     "get_proof",
+    #     "--id",
+    #     offer_setup.maker.id.hex(),
+    #     "--key",
+    #     reference.keys_to_prove[0],
+    #     "--data-rpc-port",
+    #     str(offer_setup.taker.data_rpc_client.port),
+    #     root_path=offer_setup.taker.data_layer.root_path,
+    # )
+    # assert process.stdout is not None
+    # assert await process.stdout.read() == b""
 
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
