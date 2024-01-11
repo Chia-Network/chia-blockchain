@@ -31,6 +31,7 @@ from typing import (
 
 from chia_rs import AugSchemeMPL
 
+import chia.util.task_wrapper as task_wrapper
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
@@ -281,12 +282,16 @@ class FullNode:
 
             # Transactions go into this queue from the server, and get sent to respond_transaction
             self._transaction_queue = TransactionQueue(1000, self.log)
-            self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
+            self._transaction_queue_task: asyncio.Task[None] = task_wrapper.create_task(
+                self.log, "_transaction_queue", self._handle_transactions()
+            )
 
-            self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
+            self._init_weight_proof = task_wrapper.create_task(
+                self.log, "_init_weight_proof", self.initialize_weight_proof()
+            )
 
             if self.config.get("enable_profiler", False):
-                asyncio.create_task(profile_task(self.root_path, "node", self.log))
+                task_wrapper.create_task(self.log, "profile_task", profile_task(self.root_path, "node", self.log))
 
             self.profile_block_validation = self.config.get("profile_block_validation", False)
             if self.profile_block_validation:  # pragma: no cover
@@ -296,7 +301,7 @@ class FullNode:
                 profile_dir.mkdir(parents=True, exist_ok=True)
 
             if self.config.get("enable_memory_profiler", False):
-                asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
+                task_wrapper.create_task(mem_profile_task(self.root_path, "node", self.log))
 
             time_taken = time.monotonic() - start_time
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -331,19 +336,23 @@ class FullNode:
                 if "sanitize_weight_proof_only" in self.config:
                     sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
                 assert self.config["target_uncompact_proofs"] != 0
-                self.uncompact_task = asyncio.create_task(
+                self.uncompact_task = task_wrapper.create_task(
+                    self.log,
+                    "uncompact_task",
                     self.broadcast_uncompact_blocks(
                         self.config["send_uncompact_interval"],
                         self.config["target_uncompact_proofs"],
                         sanitize_weight_proof_only,
-                    )
+                    ),
                 )
             if self.wallet_sync_task is None or self.wallet_sync_task.done():
-                self.wallet_sync_task = asyncio.create_task(self._wallets_sync_task_handler())
+                self.wallet_sync_task = task_wrapper.create_task(
+                    self.log, "wallet_sync_task", self._wallets_sync_task_handler()
+                )
 
             self.initialized = True
             if self.full_node_peers is not None:
-                asyncio.create_task(self.full_node_peers.start())
+                task_wrapper.create_task(self.log, "full_node_peers", self.full_node_peers.start())
             try:
                 yield
             finally:
@@ -359,7 +368,7 @@ class FullNode:
                     self.mempool_manager.shut_down()
 
                 if self.full_node_peers is not None:
-                    asyncio.create_task(self.full_node_peers.close())
+                    task_wrapper.create_task(self.log, "full_node_peers", self.full_node_peers.close())
                 if self.uncompact_task is not None:
                     self.uncompact_task.cancel()
                 if self._transaction_queue_task is not None:
@@ -491,7 +500,7 @@ class FullNode:
             # However, doing them one at a time would be slow, because they get sent to other processes.
             await self.add_transaction_semaphore.acquire()
             item: TransactionQueueEntry = await self.transaction_queue.pop()
-            asyncio.create_task(self._handle_one_transaction(item))
+            task_wrapper.create_task(self.log, "_handle_transactions", self._handle_one_transaction(item))
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
@@ -767,7 +776,7 @@ class FullNode:
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
-            self._sync_task = asyncio.create_task(self._sync())
+            self._sync_task = task_wrapper.create_task(self._sync())
 
     async def send_peak_to_timelords(
         self, peak_block: Optional[FullBlock] = None, peer: Optional[WSChiaConnection] = None
@@ -854,7 +863,7 @@ class FullNode:
         self._state_changed("add_connection")
         self._state_changed("sync_mode")
         if self.full_node_peers is not None:
-            asyncio.create_task(self.full_node_peers.on_connect(connection))
+            task_wrapper.create_task(self.log, "full_node_peers", self.full_node_peers.on_connect(connection))
 
         if self.initialized is False:
             return None
@@ -1862,7 +1871,9 @@ class FullNode:
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
             if self._segment_task is None or self._segment_task.done():
-                self._segment_task = asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
+                self._segment_task = task_wrapper.create_task(
+                    self.log, "_segment_task", self.weight_proof_handler.create_prev_sub_epoch_segments()
+                )
         return None
 
     async def add_unfinished_block(
