@@ -51,7 +51,7 @@ def create_changelist_option() -> Callable[[FC], FC]:
     )
 
 
-def create_key_option() -> Callable[[FC], FC]:
+def create_key_option(**kwargs: bool) -> Callable[[FC], FC]:
     return click.option(
         "-k",
         "--key",
@@ -59,6 +59,7 @@ def create_key_option() -> Callable[[FC], FC]:
         help="str representing the key",
         type=str,
         required=True,
+        **kwargs,
     )
 
 
@@ -538,19 +539,11 @@ def wallet_log_in(
 )
 @create_data_store_id_option()
 @create_rpc_port_option()
-@click.option(
-    "-h",
-    "--key",
-    "key_strings",
-    help="str representing the key",
-    type=str,
-    required=True,
-    multiple=True,
-)
+@create_key_option(multiple=True)
 @options.create_fingerprint()
 def get_proof(
     id: str,
-    key_strings: List[str],
+    key_string: List[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -558,7 +551,7 @@ def get_proof(
 
     store_id = bytes32.from_hexstr(id)
 
-    run(get_proof_cmd(rpc_port=data_rpc_port, store_id=store_id, fingerprint=fingerprint, key_strings=key_strings))
+    run(get_proof_cmd(rpc_port=data_rpc_port, store_id=store_id, fingerprint=fingerprint, key_strings=key_string))
 
 
 @data_cmd.command(

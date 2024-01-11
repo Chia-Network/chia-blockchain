@@ -15,7 +15,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
@@ -823,7 +822,8 @@ def dl_verify_proof_internal(get_proof_response: GetProofResponse, puzzle_hash: 
 
         if puzzle_hash != expected_puzzle_hash:
             raise ProofIntegrityError(
-                f"Invalid Proof: incorrect puzzle hash: {puzzle_hash.hex()} != {expected_puzzle_hash.hex()}"
+                "Invalid Proof: incorrect puzzle hash: expected:"
+                f"{expected_puzzle_hash.hex()} received: {puzzle_hash.hex()}"
             )
 
         proof = ProofOfInclusion(
@@ -838,7 +838,7 @@ def dl_verify_proof_internal(get_proof_response: GetProofResponse, puzzle_hash: 
             ],
         )
 
-        leaf_hash = std_hash(b"\2" + reference_proof.key_clvm_hash + reference_proof.value_clvm_hash)
+        leaf_hash = internal_hash(left_hash=reference_proof.key_clvm_hash, right_hash=reference_proof.value_clvm_hash)
         if leaf_hash != proof.node_hash:
             raise ProofIntegrityError("Invalid Proof: node hash does not match key and value")
 

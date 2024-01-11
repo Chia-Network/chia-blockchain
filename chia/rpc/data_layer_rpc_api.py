@@ -4,7 +4,7 @@ import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
-from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
+from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
     CancelOfferRequest,
     CancelOfferResponse,
@@ -28,9 +28,9 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_of
 from chia.rpc.data_layer_rpc_util import marshal
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.rpc.util import marshal as streamable_marshal
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.hash import std_hash
 
 # todo input assertions for all rpc's
 from chia.util.ints import uint8, uint64
@@ -478,14 +478,11 @@ class DataLayerRpcApi:
         all_proofs: List[HashOnlyProof] = []
         for key in request.keys:
             key_value = await self.service.get_value(store_id=request.store_id, key=key)
-            if key_value is None:
-                raise KeyNotFoundError(key=key)
-
             pi = await self.service.data_store.get_proof_of_inclusion_by_key(tree_id=request.store_id, key=key)
 
             proof = HashOnlyProof(
-                key_clvm_hash=std_hash(b"\1" + key),
-                value_clvm_hash=std_hash(b"\1" + key_value),
+                key_clvm_hash=Program.to(key).get_tree_hash(),
+                value_clvm_hash=Program.to(key_value).get_tree_hash(),
                 node_hash=pi.node_hash,
                 layers=[
                     ProofLayer(
