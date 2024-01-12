@@ -232,7 +232,7 @@ class FullNode:
         async with DBWrapper2.managed(
             self.db_path,
             db_version=db_version,
-            reader_count=4,
+            reader_count=self.config.get("db_readers", 4),
             log_path=sql_log_path,
             synchronous=db_sync,
         ) as self._db_wrapper:
