@@ -71,6 +71,11 @@ class RateLimiter:
         ret: bool = False
         rate_limits = get_rate_limits_to_use(our_capabilities, peer_capabilities)
 
+        if message_type == ProtocolMessageTypes.new_signage_point_harvester:
+            log.warning(
+                f"WJB new_message_counts {new_message_counts} new_cumulative_size {new_cumulative_size} new_non_tx_count {new_non_tx_count} new_non_tx_size {new_non_tx_size} proportion_of_limit {proportion_of_limit}"
+            )
+
         try:
             limits: RLSettings = rate_limits["default_settings"]
             if message_type in rate_limits["rate_limits_tx"]:
@@ -92,11 +97,22 @@ class RateLimiter:
                 limits = dataclasses.replace(limits, max_total_size=limits.frequency * limits.max_size)
             assert limits.max_total_size is not None
 
+            if message_type == ProtocolMessageTypes.new_signage_point_harvester:
+                log.warning(
+                    f"WJB new_message_counts {new_message_counts} limits.frequency * proportion_of_limit {limits.frequency * proportion_of_limit} %%%% len(message.data) {len(message.data)} limits.max_size {limits.max_size} %%%%% new_cumulative_size {new_cumulative_size} limits.max_total_size * proportion_of_limit {limits.max_total_size * proportion_of_limit}"
+                )
+
             if new_message_counts > limits.frequency * proportion_of_limit:
+                if message_type == ProtocolMessageTypes.new_signage_point_harvester:
+                    log.warning(f"WJB message_type==new_signage_point_harvester")
                 return False
             if len(message.data) > limits.max_size:
+                if message_type == ProtocolMessageTypes.new_signage_point_harvester:
+                    log.warning(f"WJB len(message.data) > limits.max_size")
                 return False
             if new_cumulative_size > limits.max_total_size * proportion_of_limit:
+                if message_type == ProtocolMessageTypes.new_signage_point_harvester:
+                    log.warning(f"WJB message_type==new_signage_point_harvester")
                 return False
 
             ret = True
