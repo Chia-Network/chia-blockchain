@@ -152,7 +152,6 @@ class FullNode:
     _ui_tasks: Set[asyncio.Task[None]] = dataclasses.field(default_factory=set)
     subscriptions: PeerSubscriptions = dataclasses.field(default_factory=PeerSubscriptions)
     _transaction_queue_task: Optional[asyncio.Task[None]] = None
-    _handle_transaction_tasks: List[asyncio.Task[None]] = None
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
     _sync_task: Optional[asyncio.Task[None]] = None
     _transaction_queue: Optional[TransactionQueue] = None
@@ -205,8 +204,8 @@ class FullNode:
             wallet_sync_queue=asyncio.Queue(),
         )
 
-    async def local_peers_task(self, task: asyncio.Task[T]) -> None:
-        tasks_to_delete = []
+    def local_peers_task(self, task: asyncio.Task[T]) -> None:
+        tasks_to_delete: List[asyncio.Task[None]] = []
 
         async def enwrap() -> None:
             await task
