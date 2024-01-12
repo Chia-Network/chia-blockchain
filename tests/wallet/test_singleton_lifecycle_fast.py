@@ -435,7 +435,7 @@ def spend_coin_to_singleton(
     return additions, removals
 
 
-def find_interesting_singletons(puzzle_db: PuzzleDB, removals: List[CoinSpend]) -> List[SingletonWallet]:
+def find_interesting_singletons(removals: List[CoinSpend]) -> List[SingletonWallet]:
     singletons = []
     for coin_spend in removals:
         if coin_spend.coin.puzzle_hash == LAUNCHER_PUZZLE_HASH:
@@ -490,7 +490,7 @@ def test_lifecycle_with_coinstore_as_wallet():
 
     assert len(list(coin_store.all_unspent_coins())) == 1
 
-    new_singletons = find_interesting_singletons(PUZZLE_DB, removals)
+    new_singletons = find_interesting_singletons(removals)
     interested_singletons.extend(new_singletons)
 
     assert len(interested_singletons) == 1
