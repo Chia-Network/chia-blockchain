@@ -282,13 +282,9 @@ class FullNode:
 
             # Transactions go into this queue from the server, and get sent to respond_transaction
             self._transaction_queue = TransactionQueue(1000, self.log)
-            self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(
-                self._handle_transactions()
-            )
+            self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
 
-            self._init_weight_proof = asyncio.create_task(
-                self.initialize_weight_proof()
-            )
+            self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
             if self.config.get("enable_profiler", False):
                 await task_wrapper.create_task(self.log, "profile_task", profile_task(self.root_path, "node", self.log))
@@ -301,7 +297,9 @@ class FullNode:
                 profile_dir.mkdir(parents=True, exist_ok=True)
 
             if self.config.get("enable_memory_profiler", False):
-                await task_wrapper.create_task(mem_profile_task(self.root_path, "node", self.log))
+                await task_wrapper.create_task(
+                    self.log, "enable_memory_profiler", mem_profile_task(self.root_path, "node", self.log)
+                )
 
             time_taken = time.monotonic() - start_time
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1867,9 +1865,7 @@ class FullNode:
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
             if self._segment_task is None or self._segment_task.done():
-                self._segment_task = asyncio.create_task(
-                    self.weight_proof_handler.create_prev_sub_epoch_segments()
-                )
+                self._segment_task = asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
         return None
 
     async def add_unfinished_block(
