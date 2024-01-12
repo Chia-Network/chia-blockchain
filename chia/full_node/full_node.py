@@ -766,11 +766,11 @@ class FullNode:
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
-            self._sync_bool=True
+            self._sync_bool = True
             try:
                 await self._sync()
             finally:
-                self._sync_bool=False 
+                self._sync_bool = False
 
     async def send_peak_to_timelords(
         self, peak_block: Optional[FullBlock] = None, peer: Optional[WSChiaConnection] = None
