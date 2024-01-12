@@ -555,7 +555,7 @@ def test_recursive_types() -> None:
 
 
 def test_ambiguous_deserialization_optionals() -> None:
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="unexpected end of buffer"):
         SubEpochChallengeSegment.from_bytes(b"\x00\x00\x00\x03\xff\xff\xff\xff")
 
     @streamable
