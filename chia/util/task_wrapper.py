@@ -4,6 +4,7 @@ import asyncio
 import logging
 import random
 import time
+import traceback
 from typing import Any, Awaitable, Coroutine, List, TypeVar
 
 T = TypeVar("T")
@@ -32,7 +33,7 @@ class TaskWrapper:
         # This is carried off by reference for use in the finally below.
         task_holder: List[asyncio.Task[Any]] = []
 
-        async def enwrapped():
+        async def enwrapped() -> T:
             start_time = time.time()
             self.log.debug(f"{id(task)}: starting task {title}")
             try:
@@ -41,6 +42,7 @@ class TaskWrapper:
                 self.log.error(
                     f"{id(task)} task {title} ended via exception {traceback.format_exception(e)} after {time.time() - start_time}s"
                 )
+                raise e
             finally:
                 await self.reap_tasks(task_holder)
                 self.log.debug(f"{id(task)}: task finished {title} in {time.time() - start_time}s")
