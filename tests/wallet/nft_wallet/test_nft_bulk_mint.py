@@ -668,6 +668,8 @@ async def test_nft_mint_from_xch(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
 
