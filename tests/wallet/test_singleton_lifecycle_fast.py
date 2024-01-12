@@ -272,11 +272,12 @@ def launcher_conditions_and_spend_bundle(
     puzzle_db.add_puzzle(launcher_puzzle)
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
-    singleton_full_puzzle = singleton_puzzle(launcher_coin.name(), launcher_puzzle_hash, initial_singleton_inner_puzzle)
+    launcher_id = launcher_coin.name()
+    singleton_full_puzzle = singleton_puzzle(launcher_id, launcher_puzzle_hash, initial_singleton_inner_puzzle)
     puzzle_db.add_puzzle(singleton_full_puzzle)
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
-    expected_announcement = Announcement(launcher_coin.name(), message_program.get_tree_hash())
+    expected_announcement = Announcement(launcher_id, message_program.get_tree_hash())
     expected_conditions = []
     expected_conditions.append(
         Program.to(
@@ -297,7 +298,7 @@ def launcher_conditions_and_spend_bundle(
     )
     coin_spend = make_spend(launcher_coin, SerializedProgram.from_program(launcher_puzzle), solution)
     spend_bundle = SpendBundle([coin_spend], G2Element())
-    return launcher_coin.name(), expected_conditions, spend_bundle
+    return launcher_id, expected_conditions, spend_bundle
 
 
 def singleton_puzzle(launcher_id: bytes32, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
