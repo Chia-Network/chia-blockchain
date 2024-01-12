@@ -1808,7 +1808,7 @@ class FullNode:
             f"pre_validation time: {pre_validation_time:0.2f} seconds, "
             f"post-process time: {post_process_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
-            f"{percent_full_str} header_hash: {header_hash} height: {block.height}",
+            f"{percent_full_str} header_hash: {header_hash.hex()} height: {block.height}",
         )
 
         # this is not covered by any unit tests as it's essentially test code
