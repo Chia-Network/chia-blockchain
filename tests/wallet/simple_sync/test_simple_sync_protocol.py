@@ -17,6 +17,7 @@ from chia.server.outbound_message import NodeType
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -31,6 +32,8 @@ from tests.util.setup_nodes import OldSimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert
 
 log = getLogger(__name__)
+
+zero_ph = bytes32(32 * b"\0")
 
 
 async def get_all_messages_in_queue(queue):
@@ -55,7 +58,6 @@ class TestSimpleSyncProtocol:
         await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
-        zero_ph = 32 * b"\0"
         junk_ph = 32 * b"\a"
         fake_wallet_peer = fn_server.all_connections[peer_id]
         msg = wallet_protocol.RegisterForPhUpdates([zero_ph], 0)
@@ -337,7 +339,6 @@ class TestSimpleSyncProtocol:
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
-        zero_ph = 32 * b"\0"
 
         # Farm to create a coin that we'll track
         for i in range(0, num_blocks):
@@ -412,7 +413,6 @@ class TestSimpleSyncProtocol:
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
-        zero_ph = 32 * b"\0"
 
         # Farm to create a coin that we'll track
         for i in range(0, num_blocks):
