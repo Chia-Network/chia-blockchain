@@ -206,7 +206,7 @@ class FullNode:
 
     def local_peers_task(self, task: asyncio.Task[T]) -> None:
         # Carried into the sub task via reference.
-        tasks_to_delete: List[asyncio.Task[None]] = []
+        tasks_to_delete: List[str] = []
 
         async def enwrap() -> None:
             await task
