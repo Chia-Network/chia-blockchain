@@ -138,7 +138,16 @@ class Cache:
                 cache_data: CacheDataV1 = CacheDataV1.from_bytes(stored_cache.blob)
                 self._data = {}
                 estimated_c2_sizes: Dict[int, int] = {}
-                measured_sizes: Dict[int, int] = {32: 738, 33: 1083, 34: 1771, 35: 3147, 36: 5899, 37: 11395, 38: 22395}
+                measured_sizes: Dict[int, int] = {
+                    32: 738,
+                    33: 1083,
+                    34: 1771,
+                    35: 3147,
+                    36: 5899,
+                    37: 11395,
+                    38: 22395,
+                    39: 44367,
+                }
                 for path, cache_entry in cache_data.entries:
                     new_entry = CacheEntry(
                         DiskProver.from_bytes(cache_entry.prover_data),
