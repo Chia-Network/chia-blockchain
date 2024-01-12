@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from typing import List
 
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
+from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
 
@@ -21,17 +23,17 @@ class HeaderBlockRecord(Streamable):
     removals: List[Coin]  # A block record without removals is not finished
 
     @property
-    def header_hash(self):
+    def header_hash(self) -> bytes32:
         return self.header.header_hash
 
     @property
-    def prev_header_hash(self):
+    def prev_header_hash(self) -> bytes32:
         return self.header.prev_header_hash
 
     @property
-    def height(self):
+    def height(self) -> uint32:
         return self.header.height
 
     @property
-    def transactions_filter(self):
+    def transactions_filter(self) -> bytes:
         return self.header.transactions_filter
