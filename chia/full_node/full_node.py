@@ -138,6 +138,7 @@ class FullNode:
     pow_creation: Dict[bytes32, asyncio.Event] = dataclasses.field(default_factory=dict)
     state_changed_callback: Optional[StateChangedProtocol] = None
     full_node_peers: Optional[FullNodePeers] = None
+    full_node_peers_tasks: Dict[str, asyncio.Task[None]] = dataclasses.field(default_factory=dict)
     sync_store: SyncStore = dataclasses.field(default_factory=SyncStore)
     uncompact_task: Optional[asyncio.Task[None]] = None
     compact_vdf_requests: Set[bytes32] = dataclasses.field(default_factory=set)
@@ -147,6 +148,7 @@ class FullNode:
     _ui_tasks: Set[asyncio.Task[None]] = dataclasses.field(default_factory=set)
     subscriptions: PeerSubscriptions = dataclasses.field(default_factory=PeerSubscriptions)
     _transaction_queue_task: Optional[asyncio.Task[None]] = None
+    _handle_transaction_tasks: List[asyncio.Task[None]] = None
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
     _sync_task: Optional[asyncio.Task[None]] = None
     _transaction_queue: Optional[TransactionQueue] = None
@@ -198,6 +200,17 @@ class FullNode:
             db_path=db_path,
             wallet_sync_queue=asyncio.Queue(),
         )
+
+    async def local_peers_task(self, task: asyncio.Task[T]) -> None:
+        tasks_to_delete = []
+
+        async def enwrap() -> None:
+            await task
+            for t in tasks_to_delete:
+                del self.full_node_peers_tasks[str(id(t))]
+
+        wrapper_task = asyncio.create_task(enwrap())
+        self.full_node_peers_tasks[str(id(wrapper_task))] = wrapper_task
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
@@ -343,7 +356,7 @@ class FullNode:
 
             self.initialized = True
             if self.full_node_peers is not None:
-                asyncio.create_task(self.full_node_peers.start())
+                self.local_peers_task(asyncio.create_task(self.full_node_peers.start()))
             try:
                 yield
             finally:
@@ -359,7 +372,9 @@ class FullNode:
                     self.mempool_manager.shut_down()
 
                 if self.full_node_peers is not None:
-                    asyncio.create_task(self.full_node_peers.close())
+                    for t in self.full_node_peers_tasks.items():
+                        t.cancel()
+                    self.local_peers_task(asyncio.create_task(self.full_node_peers.close()))
                 if self.uncompact_task is not None:
                     self.uncompact_task.cancel()
                 if self._transaction_queue_task is not None:
@@ -491,7 +506,7 @@ class FullNode:
             # However, doing them one at a time would be slow, because they get sent to other processes.
             await self.add_transaction_semaphore.acquire()
             item: TransactionQueueEntry = await self.transaction_queue.pop()
-            asyncio.create_task(self._handle_one_transaction(item))
+            self.local_peers_task(asyncio.create_task(self._handle_one_transaction(item)))
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
@@ -854,7 +869,7 @@ class FullNode:
         self._state_changed("add_connection")
         self._state_changed("sync_mode")
         if self.full_node_peers is not None:
-            asyncio.create_task(self.full_node_peers.on_connect(connection))
+            self.local_peers_task(asyncio.create_task(self.full_node_peers.on_connect(connection)))
 
         if self.initialized is False:
             return None
