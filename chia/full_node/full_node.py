@@ -291,7 +291,7 @@ class FullNode:
             )
 
             if self.config.get("enable_profiler", False):
-                task_wrapper.create_task(self.log, "profile_task", profile_task(self.root_path, "node", self.log))
+                await task_wrapper.create_task(self.log, "profile_task", profile_task(self.root_path, "node", self.log))
 
             self.profile_block_validation = self.config.get("profile_block_validation", False)
             if self.profile_block_validation:  # pragma: no cover
@@ -301,7 +301,7 @@ class FullNode:
                 profile_dir.mkdir(parents=True, exist_ok=True)
 
             if self.config.get("enable_memory_profiler", False):
-                task_wrapper.create_task(mem_profile_task(self.root_path, "node", self.log))
+                await task_wrapper.create_task(mem_profile_task(self.root_path, "node", self.log))
 
             time_taken = time.monotonic() - start_time
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -348,7 +348,7 @@ class FullNode:
 
             self.initialized = True
             if self.full_node_peers is not None:
-                task_wrapper.create_task(self.log, "full_node_peers", self.full_node_peers.start())
+                await task_wrapper.create_task(self.log, "full_node_peers", self.full_node_peers.start())
             try:
                 yield
             finally:
@@ -364,7 +364,7 @@ class FullNode:
                     self.mempool_manager.shut_down()
 
                 if self.full_node_peers is not None:
-                    task_wrapper.create_task(self.log, "full_node_peers", self.full_node_peers.close())
+                    await task_wrapper.create_task(self.log, "full_node_peers", self.full_node_peers.close())
                 if self.uncompact_task is not None:
                     self.uncompact_task.cancel()
                 if self._transaction_queue_task is not None:
@@ -496,7 +496,7 @@ class FullNode:
             # However, doing them one at a time would be slow, because they get sent to other processes.
             await self.add_transaction_semaphore.acquire()
             item: TransactionQueueEntry = await self.transaction_queue.pop()
-            task_wrapper.create_task(self.log, "_handle_transactions", self._handle_one_transaction(item))
+            await task_wrapper.create_task(self.log, "_handle_transactions", self._handle_one_transaction(item))
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
@@ -859,7 +859,7 @@ class FullNode:
         self._state_changed("add_connection")
         self._state_changed("sync_mode")
         if self.full_node_peers is not None:
-            task_wrapper.create_task(self.log, "full_node_peers", self.full_node_peers.on_connect(connection))
+            await task_wrapper.create_task(self.log, "full_node_peers", self.full_node_peers.on_connect(connection))
 
         if self.initialized is False:
             return None
