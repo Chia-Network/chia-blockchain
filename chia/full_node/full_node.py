@@ -206,16 +206,24 @@ class FullNode:
 
     def local_peers_task(self, task: asyncio.Task[T]) -> None:
         # Carried into the sub task via reference.
-        tasks_to_delete: List[str] = []
+        tasks_to_delete: List[int] = []
 
         async def enwrap() -> None:
-            await task
-            for t in tasks_to_delete:
-                del self.full_node_peers_tasks[str(id(t))]
+            try:
+                await task
+            finally:
+                for t in tasks_to_delete:
+                    # The task could have run inside create_task.  If so, then
+                    # we won't have put it in the collection.
+                    if id(t) in self.full_node_peers_tasks:
+                        del self.full_node_peers_tasks[id(t)]
 
         wrapper_task = asyncio.create_task(enwrap())
-        tasks_to_delete.append(str(id(wrapper_task)))
-        self.full_node_peers_tasks[str(id(wrapper_task))] = wrapper_task
+        tasks_to_delete.append(id(wrapper_task))
+        # It's possible that the task already finished at this point.
+        # If so, it shouldn't be recorded.
+        if not wrapper_task.done():
+            self.full_node_peers_tasks[id(wrapper_task)] = wrapper_task
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
