@@ -24,6 +24,7 @@ from typing import (
     Set,
     TextIO,
     Tuple,
+    TypeVar,
     Union,
     cast,
     final,
@@ -96,6 +97,9 @@ from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
 from chia.util.profiler import enable_profiler, mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
+
+# Add a type variable for use below.
+T = TypeVar("T")
 
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
