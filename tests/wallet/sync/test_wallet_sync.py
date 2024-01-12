@@ -31,11 +31,17 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from tests.util.misc import wallet_height_at_least
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
+
+
+async def get_tx_count(wsm: WalletStateManager, wallet_id: int) -> int:
+    txs = await wsm.get_all_transactions(wallet_id)
+    return len(txs)
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
@@ -353,10 +359,6 @@ async def test_wallet_reorg_sync(two_wallet_nodes, default_400_blocks, self_host
         [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
 
-    async def get_tx_count(wsm, wallet_id):
-        txs = await wsm.get_all_transactions(wallet_id)
-        return len(txs)
-
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
         await time_out_assert(60, wallet.get_confirmed_balance, funds)
@@ -401,10 +403,6 @@ async def test_wallet_reorg_get_coinbase(two_wallet_nodes, default_400_blocks, s
 
     for block in blocks_reorg[:-5]:
         await full_node_api.full_node.add_block(block)
-
-    async def get_tx_count(wsm, wallet_id):
-        txs = await wsm.get_all_transactions(wallet_id)
-        return len(txs)
 
     for wallet_node, wallet_server in wallets:
         await time_out_assert(30, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
