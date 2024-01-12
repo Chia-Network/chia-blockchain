@@ -142,7 +142,7 @@ class FullNode:
     pow_creation: Dict[bytes32, asyncio.Event] = dataclasses.field(default_factory=dict)
     state_changed_callback: Optional[StateChangedProtocol] = None
     full_node_peers: Optional[FullNodePeers] = None
-    full_node_peers_tasks: Dict[str, asyncio.Task[None]] = dataclasses.field(default_factory=dict)
+    full_node_peers_tasks: Dict[int, asyncio.Task[None]] = dataclasses.field(default_factory=dict)
     sync_store: SyncStore = dataclasses.field(default_factory=SyncStore)
     uncompact_task: Optional[asyncio.Task[None]] = None
     compact_vdf_requests: Set[bytes32] = dataclasses.field(default_factory=set)
