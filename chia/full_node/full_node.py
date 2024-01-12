@@ -205,6 +205,7 @@ class FullNode:
         )
 
     def local_peers_task(self, task: asyncio.Task[T]) -> None:
+        # Carried into the sub task via reference.
         tasks_to_delete: List[asyncio.Task[None]] = []
 
         async def enwrap() -> None:
@@ -213,6 +214,7 @@ class FullNode:
                 del self.full_node_peers_tasks[str(id(t))]
 
         wrapper_task = asyncio.create_task(enwrap())
+        tasks_to_delete.append(str(id(wrapper_task)))
         self.full_node_peers_tasks[str(id(wrapper_task))] = wrapper_task
 
     @contextlib.asynccontextmanager
@@ -375,7 +377,7 @@ class FullNode:
                     self.mempool_manager.shut_down()
 
                 if self.full_node_peers is not None:
-                    for t in self.full_node_peers_tasks.items():
+                    for t in self.full_node_peers_tasks.values():
                         t.cancel()
                     self.local_peers_task(asyncio.create_task(self.full_node_peers.close()))
                 if self.uncompact_task is not None:
