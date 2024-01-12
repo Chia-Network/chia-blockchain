@@ -256,7 +256,7 @@ class Timelord:
             log.warning(f"Received invalid unfinished block: {e}.")
             return None
         block_sp_total_iters = self.last_state.total_iters - ip_iters + block_sp_iters
-        if is_overflow_block(self.constants, block.reward_chain_block.signage_point_index):
+        if is_overflow_block(self.constants, uint8(block.reward_chain_block.signage_point_index)):
             block_sp_total_iters -= self.last_state.get_sub_slot_iters()
         found_index = -1
         for index, (rc, total_iters) in enumerate(self.last_state.reward_challenge_cache):
@@ -279,7 +279,7 @@ class Timelord:
                 )
                 return None
             if self.last_state.reward_challenge_cache[found_index][1] > block_sp_total_iters:
-                if not is_overflow_block(self.constants, block.reward_chain_block.signage_point_index):
+                if not is_overflow_block(self.constants, uint8(block.reward_chain_block.signage_point_index)):
                     log.error(
                         f"Will not infuse unfinished block {block.rc_prev}, sp total iters: {block_sp_total_iters}, "
                         f"because its iters are too low"
@@ -593,7 +593,7 @@ class Timelord:
                     self.last_active_time = time.time()
                     log.debug(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
 
-                    overflow = is_overflow_block(self.constants, block.reward_chain_block.signage_point_index)
+                    overflow = is_overflow_block(self.constants, uint8(block.reward_chain_block.signage_point_index))
 
                     if not self.last_state.can_infuse_block(overflow):
                         log.warning("Too many blocks, or overflow in new epoch, cannot infuse, discarding")
@@ -628,7 +628,7 @@ class Timelord:
                         + calculate_sp_iters(
                             self.constants,
                             block.sub_slot_iters,
-                            block.reward_chain_block.signage_point_index,
+                            uint8(block.reward_chain_block.signage_point_index),
                         )
                         - (block.sub_slot_iters if overflow else 0)
                     )

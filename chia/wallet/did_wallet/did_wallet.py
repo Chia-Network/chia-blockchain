@@ -424,6 +424,7 @@ class DIDWallet:
         )
 
         await self.add_parent(coin.name(), future_parent)
+        await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
 
     def create_backup(self) -> str:
         """
@@ -907,6 +908,9 @@ class DIDWallet:
     ) -> Tuple[SpendBundle, str]:
         """
         Create an attestment
+        TODO:
+            1. We should use/respect `tx_config` (reuse_puzhash and co)
+            2. We should take a fee as it's a requirement for every transaction function to do so
         :param recovering_coin_name: Coin ID of the DID
         :param newpuz: New puzzle hash
         :param pubkey: New wallet pubkey
@@ -1513,7 +1517,7 @@ class DIDWallet:
         )
         if len(spendable_coins) == 0:
             raise RuntimeError("DID is not currently spendable")
-        return list(spendable_coins)[0].coin
+        return sorted(list(spendable_coins), key=lambda c: c.confirmed_block_height, reverse=True)[0].coin
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         if self.did_info.origin_coin is None:

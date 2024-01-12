@@ -534,20 +534,36 @@ async def test_create_signed_transaction(
     await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
     await time_out_assert(20, get_confirmed_balance, generated_funds - amount_total, wallet_1_rpc, wallet_id)
 
-    # Validate the memos
+    # Assert every coin comes from the same parent
+    additions: List[Coin] = spend_bundle.additions()
+    assert len({c.parent_coin_info for c in additions}) == 2 if is_cat else 1
+
+    # Assert you can get the spend for each addition
+    for addition in additions:
+        cr: Optional[CoinRecord] = await full_node_rpc.get_coin_record_by_name(addition.name())
+        assert cr is not None
+        spend: Optional[CoinSpend] = await full_node_rpc.get_puzzle_and_solution(
+            addition.parent_coin_info, cr.confirmed_block_index
+        )
+        assert spend is not None
+
+    # Assert the memos are all correct
+    addition_dict: Dict[bytes32, Coin] = {addition.name(): addition for addition in additions}
+    memo_dictionary: Dict[bytes32, List[bytes]] = compute_memos(spend_bundle)
     for output in outputs:
-        if "memos" in outputs:
+        if "memos" in output:
             found: bool = False
-            for addition in spend_bundle.additions():
-                if addition.amount == output["amount"] and addition.puzzle_hash.hex() == output["puzzle_hash"]:
-                    cr: Optional[CoinRecord] = await full_node_rpc.get_coin_record_by_name(addition.name())
-                    assert cr is not None
-                    spend: Optional[CoinSpend] = await full_node_rpc.get_puzzle_and_solution(
-                        addition.parent_coin_info, cr.confirmed_block_index
-                    )
-                    assert spend is not None
-                    sb: SpendBundle = SpendBundle([spend], G2Element())
-                    assert compute_memos(sb) == {addition.name(): [memo.encode() for memo in output["memos"]]}
+            for addition_id, addition in addition_dict.items():
+                if (
+                    is_cat
+                    and addition.amount == output["amount"]
+                    and memo_dictionary[addition_id][0] == output["puzzle_hash"]
+                    and memo_dictionary[addition_id][1:] == [memo.encode() for memo in output["memos"]]
+                ) or (
+                    addition.amount == output["amount"]
+                    and addition.puzzle_hash == output["puzzle_hash"]
+                    and memo_dictionary[addition_id] == [memo.encode() for memo in output["memos"]]
+                ):
                     found = True
             assert found
 
@@ -913,13 +929,12 @@ async def test_get_transaction_count(wallet_rpc_environment: WalletRpcTestEnviro
     assert len(all_transactions) > 0
     transaction_count = await client.get_transaction_count(1)
     assert transaction_count == len(all_transactions)
-    assert await client.get_transaction_count(1, confirmed=False) == 0
-    assert (
-        await client.get_transaction_count(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
-        )
-        == 0
+    transaction_count = await client.get_transaction_count(1, confirmed=False)
+    assert transaction_count == 0
+    transaction_count = await client.get_transaction_count(
+        1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
     )
+    assert transaction_count == 0
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")

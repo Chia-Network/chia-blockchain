@@ -30,14 +30,6 @@ from tests.connection_utils import add_dummy_connection
 from tests.util.setup_nodes import OldSimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert
 
-
-def wallet_height_at_least(wallet_node, h):
-    height = wallet_node.wallet_state_manager.blockchain._peak_height
-    if height == h:
-        return True
-    return False
-
-
 log = getLogger(__name__)
 
 
@@ -295,8 +287,6 @@ class TestSimpleSyncProtocol:
         [tx_record] = await standard_wallet.generate_signed_transaction(
             uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0)
         )
-
-        tx_record.spend_bundle.additions()
 
         added_target: Optional[Coin] = None
         for coin in tx_record.spend_bundle.additions():
@@ -685,23 +675,23 @@ class TestSimpleSyncProtocol:
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         s = full_node_api.full_node.subscriptions
-        assert len(s._ph_subscriptions) == 2
-        assert s.has_ph_subscription(phs[0])
-        assert s.has_ph_subscription(phs[1])
-        assert not s.has_ph_subscription(phs[2])
-        assert not s.has_ph_subscription(phs[3])
+        assert s.puzzle_subscription_count() == 2
+        assert s.has_puzzle_subscription(phs[0])
+        assert s.has_puzzle_subscription(phs[1])
+        assert not s.has_puzzle_subscription(phs[2])
+        assert not s.has_puzzle_subscription(phs[3])
         full_node_api.full_node.config["trusted_max_subscribe_items"] = 4
         full_node_api.full_node.config["trusted_peers"] = {server_2.node_id.hex(): server_2.node_id.hex()}
         assert full_node_api.is_trusted(con) is True
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
-        assert len(s._ph_subscriptions) == 4
-        assert s.has_ph_subscription(phs[0])
-        assert s.has_ph_subscription(phs[1])
-        assert s.has_ph_subscription(phs[2])
-        assert s.has_ph_subscription(phs[3])
-        assert not s.has_ph_subscription(phs[4])
-        assert not s.has_ph_subscription(phs[5])
+        assert s.puzzle_subscription_count() == 4
+        assert s.has_puzzle_subscription(phs[0])
+        assert s.has_puzzle_subscription(phs[1])
+        assert s.has_puzzle_subscription(phs[2])
+        assert s.has_puzzle_subscription(phs[3])
+        assert not s.has_puzzle_subscription(phs[4])
+        assert not s.has_puzzle_subscription(phs[5])
 
     @pytest.mark.anyio
     async def test_coin_subscribe_limits(self, simulator_and_wallet, self_hostname):
@@ -725,7 +715,7 @@ class TestSimpleSyncProtocol:
         msg_response = await full_node_api.register_interest_in_coin(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
         s = full_node_api.full_node.subscriptions
-        assert len(s._coin_subscriptions) == 2
+        assert s.coin_subscription_count() == 2
         assert s.has_coin_subscription(coins[0])
         assert s.has_coin_subscription(coins[1])
         assert not s.has_coin_subscription(coins[2])
@@ -735,7 +725,7 @@ class TestSimpleSyncProtocol:
         assert full_node_api.is_trusted(con) is True
         msg_response = await full_node_api.register_interest_in_coin(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
-        assert len(s._coin_subscriptions) == 4
+        assert s.coin_subscription_count() == 4
         assert s.has_coin_subscription(coins[0])
         assert s.has_coin_subscription(coins[1])
         assert s.has_coin_subscription(coins[2])

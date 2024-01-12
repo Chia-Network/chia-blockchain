@@ -11,6 +11,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
@@ -93,7 +94,7 @@ class WalletRpcClient(RpcClient):
     async def get_height_info(self) -> uint32:
         return (await self.fetch("get_height_info", {}))["height"]
 
-    async def push_tx(self, spend_bundle):
+    async def push_tx(self, spend_bundle: SpendBundle) -> Dict[str, Any]:
         return await self.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})
 
     async def push_transactions(self, txs: List[TransactionRecord]):
@@ -165,11 +166,8 @@ class WalletRpcClient(RpcClient):
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in res["transactions"]]
 
     async def get_transaction_count(
-        self,
-        wallet_id: int,
-        confirmed: Optional[bool] = None,
-        type_filter: Optional[TransactionTypeFilter] = None,
-    ) -> List[TransactionRecord]:
+        self, wallet_id: int, confirmed: Optional[bool] = None, type_filter: Optional[TransactionTypeFilter] = None
+    ) -> int:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
         if type_filter is not None:
             request["type_filter"] = type_filter.to_json_dict()
@@ -744,7 +742,7 @@ class WalletRpcClient(RpcClient):
         send_dict: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "fee": fee,
-            "memos": memos if memos else [],
+            "memos": memos if memos is not None else [],
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
@@ -1182,9 +1180,7 @@ class WalletRpcClient(RpcClient):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> List[TransactionRecord]:
-        updates_as_strings: Dict[str, str] = {}
-        for lid, root in update_dictionary.items():
-            updates_as_strings[str(lid)] = str(root)
+        updates_as_strings = {str(lid): str(root) for lid, root in update_dictionary.items()}
         request = {
             "updates": updates_as_strings,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),

@@ -232,7 +232,7 @@ class FullNode:
         async with DBWrapper2.managed(
             self.db_path,
             db_version=db_version,
-            reader_count=4,
+            reader_count=self.config.get("db_readers", 4),
             log_path=sql_log_path,
             synchronous=db_sync,
         ) as self._db_wrapper:
@@ -1154,7 +1154,7 @@ class FullNode:
                     hints_to_add, _ = get_hints_and_subscription_coin_ids(
                         state_change_summary,
                         self.subscriptions.has_coin_subscription,
-                        self.subscriptions.has_ph_subscription,
+                        self.subscriptions.has_puzzle_subscription,
                     )
                     await self.hint_store.add_hints(hints_to_add)
                 # Note that end_height is not necessarily the peak at this
@@ -1484,7 +1484,7 @@ class FullNode:
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
             state_change_summary,
             self.subscriptions.has_coin_subscription,
-            self.subscriptions.has_ph_subscription,
+            self.subscriptions.has_puzzle_subscription,
         )
         await self.hint_store.add_hints(hints_to_add)
 
@@ -1808,7 +1808,7 @@ class FullNode:
             f"pre_validation time: {pre_validation_time:0.2f} seconds, "
             f"post-process time: {post_process_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
-            f"{percent_full_str} header_hash: {header_hash} height: {block.height}",
+            f"{percent_full_str} header_hash: {header_hash.hex()} height: {block.height}",
         )
 
         # this is not covered by any unit tests as it's essentially test code
@@ -1831,10 +1831,16 @@ class FullNode:
             "transaction_block": False,
             "k_size": block.reward_chain_block.proof_of_space.size,
             "header_hash": block.header_hash,
+            "fork_height": None,
+            "rolled_back_records": None,
             "height": block.height,
             "validation_time": validation_time,
             "pre_validation_time": pre_validation_time,
         }
+
+        if state_change_summary is not None:
+            state_changed_data["fork_height"] = state_change_summary.fork_height
+            state_changed_data["rolled_back_records"] = len(state_change_summary.rolled_back_records)
 
         if block.transactions_info is not None:
             state_changed_data["transaction_block"] = True
@@ -1887,7 +1893,7 @@ class FullNode:
         if self.full_node_store.seen_unfinished_block(block.get_hash()):
             return None
 
-        block_hash = block.reward_chain_block.get_hash()
+        block_hash = bytes32(block.reward_chain_block.get_hash())
 
         # This searched for the trunk hash (unfinished reward hash). If we have already added a block with the same
         # hash, return
@@ -2145,7 +2151,7 @@ class FullNode:
             + calculate_sp_iters(
                 self.constants,
                 sub_slot_iters,
-                unfinished_block.reward_chain_block.signage_point_index,
+                uint8(unfinished_block.reward_chain_block.signage_point_index),
             )
         )
 

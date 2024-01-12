@@ -442,7 +442,7 @@ class WeightProofHandler:
                 None,
                 None,
                 None,
-                curr.reward_chain_block.signage_point_index,
+                uint8(curr.reward_chain_block.signage_point_index),
                 None,
                 None,
                 None,
@@ -549,7 +549,7 @@ class WeightProofHandler:
             curr.challenge_chain_ip_proof,
             icc_ip_proof,
             cc_sp_info,
-            curr.reward_chain_block.signage_point_index,
+            uint8(curr.reward_chain_block.signage_point_index),
             None,
             None,
             None,
@@ -565,7 +565,7 @@ class WeightProofHandler:
         if len(weight_proof.sub_epochs) == 0:
             return False, uint32(0)
 
-        peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
+        peak_height = uint32(weight_proof.recent_chain_data[-1].reward_chain_block.height)
         log.info(f"validate weight proof peak height {peak_height}")
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
         if summaries is None:
@@ -746,7 +746,7 @@ async def _challenge_block_vdfs(
         header_block.challenge_chain_ip_proof,
         None,
         cc_sp_info,
-        header_block.reward_chain_block.signage_point_index,
+        uint8(header_block.reward_chain_block.signage_point_index),
         None,
         None,
         None,
@@ -1237,7 +1237,7 @@ def validate_recent_blocks(
                 diff = sub_slot.challenge_chain.new_difficulty
 
         if (challenge is not None) and (prev_challenge is not None):
-            overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+            overflow = is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index))
             if not adjusted:
                 assert prev_block_record is not None
                 prev_block_record = dataclasses.replace(
@@ -1521,7 +1521,7 @@ def _get_last_ses_hash(
                         if slot.challenge_chain.subepoch_summary_hash is not None:
                             return (
                                 slot.challenge_chain.subepoch_summary_hash,
-                                curr.reward_chain_block.height,
+                                uint32(curr.reward_chain_block.height),
                             )
                 idx += 1
     return None, uint32(0)
@@ -1645,7 +1645,7 @@ async def validate_weight_proof_inner(
     if len(weight_proof.sub_epochs) == 0:
         return False, []
 
-    peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
+    peak_height = uint32(weight_proof.recent_chain_data[-1].reward_chain_block.height)
     log.info(f"validate weight proof peak height {peak_height}")
     seed = summaries[-2].get_hash()
     rng = random.Random(seed)
