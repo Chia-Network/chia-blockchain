@@ -145,6 +145,7 @@ from chia.wallet.util.wallet_sync_utils import (
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
 from chia.wallet.vault.vault_drivers import get_vault_full_puzzle_hash, get_vault_inner_puzzle_hash
+from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
@@ -375,6 +376,8 @@ class WalletStateManager:
         root_bytes: bytes = bytes(observation_root)
         if len(root_bytes) == 48:
             return Wallet
+        if len(root_bytes) == 32:
+            return Vault
 
         raise ValueError(f"Could not find a valid wallet type for observation_root: {root_bytes.hex()}")
 
