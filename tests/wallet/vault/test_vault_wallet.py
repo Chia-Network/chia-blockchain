@@ -108,7 +108,7 @@ async def test_vault_creation(
     if with_recovery:
         assert wallet.vault_info.is_recoverable
         assert wallet.recovery_info is not None
-        recovery_spend, finish_spend = await wallet.create_recovery_spends()
+        [recovery_spend, finish_spend] = await wallet.create_recovery_spends()
         assert recovery_spend
         assert finish_spend
     else:

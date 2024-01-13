@@ -3,20 +3,21 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from chia_rs import G1Element, G2Element
 from typing_extensions import Unpack
 
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.signing_mode import SigningMode
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import Condition, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
@@ -29,12 +30,14 @@ from chia.wallet.signer_protocol import (
     SumHint,
 )
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.vault.vault_drivers import (
     construct_p2_delegated_secp,
     construct_vault_merkle_tree,
     get_recovery_finish_puzzle,
+    get_recovery_inner_puzzle,
     get_recovery_puzzle,
     get_recovery_solution,
     get_vault_full_puzzle,
@@ -68,7 +71,9 @@ class Vault(Wallet):
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        puzzle = construct_p2_delegated_secp(dr.pubkey, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, dr.puzzle_hash)
+        puzzle = construct_p2_delegated_secp(
+            dr.pubkey, self.wallet_state_manager.constants.GENESIS_CHALLENGE, dr.puzzle_hash
+        )
         return puzzle
 
     async def get_new_puzzlehash(self) -> bytes32:
@@ -143,7 +148,9 @@ class Vault(Wallet):
             ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
             if record is None:
                 return await self.get_new_puzzle()
-            puzzle = construct_p2_delegated_secp(record.pubkey, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, record.puzzle_hash)
+            puzzle = construct_p2_delegated_secp(
+                record.pubkey, self.wallet_state_manager.constants.GENESIS_CHALLENGE, record.puzzle_hash
+            )
             return puzzle
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
@@ -171,7 +178,7 @@ class Vault(Wallet):
         bls_pk, timelock = self.get_recovery_info()
         inner_puzzle_hash = get_vault_inner_puzzle_hash(
             self.vault_info.pubkey,
-            DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
             hidden_puzzle_hash,
             bls_pk,
             timelock,
@@ -181,7 +188,7 @@ class Vault(Wallet):
         )
         return [record]
 
-    async def create_recovery_spends(self) -> Tuple[CoinSpend, CoinSpend]:
+    async def create_recovery_spends(self) -> List[TransactionRecord]:
         """
         Returns two spendbundles
         1. The spend recovering the vault which can be taken to the appropriate BLS wallet for signing
@@ -200,7 +207,7 @@ class Vault(Wallet):
         # Generate the current inner puzzle
         inner_puzzle = get_vault_inner_puzzle(
             self.vault_info.pubkey,
-            DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
             self.vault_info.hidden_puzzle_hash,
             self.recovery_info.bls_pk,
             self.recovery_info.timelock,
@@ -209,15 +216,13 @@ class Vault(Wallet):
 
         secp_puzzle_hash = construct_p2_delegated_secp(
             self.vault_info.pubkey,
-            DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
             self.vault_info.hidden_puzzle_hash,
         ).get_tree_hash()
 
-        recovery_puzzle = get_recovery_puzzle(
-            secp_puzzle_hash, self.recovery_info.bls_pk, self.recovery_info.timelock, amount
-        )
+        recovery_puzzle = get_recovery_puzzle(secp_puzzle_hash, self.recovery_info.bls_pk, self.recovery_info.timelock)
         recovery_puzzle_hash = recovery_puzzle.get_tree_hash()
-        # TODO: Once we have get_wallet_balance we can use it for the amount field in the solution
+
         recovery_solution = get_recovery_solution(amount, self.recovery_info.bls_pk)
 
         merkle_tree = construct_vault_merkle_tree(secp_puzzle_hash, recovery_puzzle_hash)
@@ -230,23 +235,65 @@ class Vault(Wallet):
         # TODO: handle lineage proofs
         lineage = LineageProof(self.vault_info.coin.parent_coin_info, inner_puzzle.get_tree_hash(), amount)
         full_solution = get_vault_full_solution(lineage, amount, inner_solution)
-        recovery_spend = CoinSpend(vault_coin, full_puzzle, full_solution)
+        recovery_spend = SpendBundle([CoinSpend(vault_coin, full_puzzle, full_solution)], G2Element())
 
         # 2. Generate the Finish Recovery Spend
-        # get the recovery puzzle and coin
-        full_recovery_puzzle = get_vault_full_puzzle(self.vault_info.launcher_coin_id, recovery_puzzle)
-        recovery_coin = Coin(self.vault_info.coin.name(), full_recovery_puzzle.get_tree_hash(), amount)
-        # create the finish solution
         recovery_finish_puzzle = get_recovery_finish_puzzle(
             self.recovery_info.bls_pk, self.recovery_info.timelock, amount
         )
         recovery_finish_solution = Program.to([])
+        recovery_inner_puzzle = get_recovery_inner_puzzle(secp_puzzle_hash, recovery_finish_puzzle.get_tree_hash())
+        full_recovery_puzzle = get_vault_full_puzzle(self.vault_info.launcher_coin_id, recovery_inner_puzzle)
+        recovery_coin = Coin(self.vault_info.coin.name(), full_recovery_puzzle.get_tree_hash(), amount)
         recovery_solution = get_vault_inner_solution(recovery_finish_puzzle, recovery_finish_solution, proof)
         lineage = LineageProof(self.vault_info.coin.name(), inner_puzzle.get_tree_hash(), amount)
-        full_recovery_solution = get_vault_full_solution(lineage, uint64(1), recovery_solution)
-        finish_spend = CoinSpend(recovery_coin, full_recovery_puzzle, full_recovery_solution)
+        full_recovery_solution = get_vault_full_solution(lineage, amount, recovery_solution)
+        finish_spend = SpendBundle(
+            [CoinSpend(recovery_coin, full_recovery_puzzle, full_recovery_solution)], G2Element()
+        )
 
-        return recovery_spend, finish_spend
+        # make the tx records
+        recovery_tx = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=full_puzzle.get_tree_hash(),
+            amount=amount,
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=recovery_spend,
+            additions=recovery_spend.additions(),
+            removals=recovery_spend.removals(),
+            wallet_id=self.id(),
+            sent_to=[],
+            memos=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=recovery_spend.name(),
+            valid_times=parse_timelock_info(tuple()),
+        )
+
+        finish_tx = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=full_puzzle.get_tree_hash(),
+            amount=amount,
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=finish_spend,
+            additions=finish_spend.additions(),
+            removals=finish_spend.removals(),
+            wallet_id=self.id(),
+            sent_to=[],
+            memos=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=finish_spend.name(),
+            valid_times=parse_timelock_info(tuple()),
+        )
+
+        return [recovery_tx, finish_tx]
 
     async def sync_singleton(self) -> None:
         wallet_node: Any = self.wallet_state_manager.wallet_node
@@ -277,7 +324,7 @@ class Vault(Wallet):
             timelock = uint64(memos.at("rrrf").as_int())
             self.recovery_info = RecoveryInfo(bls_pk, timelock)
         inner_puzzle_hash = get_vault_inner_puzzle_hash(
-            secp_pk, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, hidden_puzzle_hash, bls_pk, timelock
+            secp_pk, self.wallet_state_manager.constants.GENESIS_CHALLENGE, hidden_puzzle_hash, bls_pk, timelock
         )
         vault_info = VaultInfo(
             coin_state.coin,

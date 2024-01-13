@@ -37,14 +37,12 @@ def construct_recovery_finish(timelock: uint64, recovery_conditions: Program) ->
     return RECOVERY_FINISH_MOD.curry(timelock, recovery_conditions)
 
 
-def construct_p2_recovery_puzzle(
-    secp_puzzle_hash: bytes32, bls_pk: Optional[G1Element], timelock: Optional[uint64]
-) -> Program:
-    return P2_RECOVERY_MOD.curry(P2_1_OF_N_MOD_HASH, RECOVERY_FINISH_MOD_HASH, secp_puzzle_hash, bls_pk, timelock)
-
-
 def construct_vault_puzzle(secp_puzzle_hash: bytes32, recovery_puzzle_hash: bytes32) -> Program:
     return P2_1_OF_N_MOD.curry(MerkleTree([secp_puzzle_hash, recovery_puzzle_hash]).calculate_root())
+
+
+def get_recovery_puzzle(secp_puzzle_hash: bytes32, bls_pk: Optional[G1Element], timelock: Optional[uint64]) -> Program:
+    return P2_RECOVERY_MOD.curry(P2_1_OF_N_MOD_HASH, RECOVERY_FINISH_MOD_HASH, secp_puzzle_hash, bls_pk, timelock)
 
 
 def get_vault_hidden_puzzle_with_index(index: uint32, hidden_puzzle: Program = DEFAULT_HIDDEN_PUZZLE) -> Program:
@@ -60,8 +58,9 @@ def get_vault_inner_puzzle(
     timelock: Optional[uint64] = None,
 ) -> Program:
     secp_puzzle_hash = construct_p2_delegated_secp(secp_pk, genesis_challenge, hidden_puzzle_hash).get_tree_hash()
-    recovery_puzzle_hash = construct_p2_recovery_puzzle(secp_puzzle_hash, bls_pk, timelock).get_tree_hash()
-    return construct_vault_puzzle(secp_puzzle_hash, recovery_puzzle_hash)
+    recovery_puzzle_hash = get_recovery_puzzle(secp_puzzle_hash, bls_pk, timelock).get_tree_hash()
+    vault_inner = construct_vault_puzzle(secp_puzzle_hash, recovery_puzzle_hash)
+    return vault_inner
 
 
 def get_vault_inner_puzzle_hash(
@@ -76,6 +75,11 @@ def get_vault_inner_puzzle_hash(
     return vault_puzzle_hash
 
 
+def get_recovery_inner_puzzle(secp_puzzle_hash: bytes32, recovery_finish_hash: bytes32) -> Program:
+    puzzle = construct_vault_puzzle(secp_puzzle_hash, recovery_finish_hash)
+    return puzzle
+
+
 def get_vault_full_puzzle(launcher_id: bytes32, inner_puzzle: Program) -> Program:
     full_puzzle = puzzle_for_singleton(launcher_id, inner_puzzle)
     return full_puzzle
@@ -84,17 +88,6 @@ def get_vault_full_puzzle(launcher_id: bytes32, inner_puzzle: Program) -> Progra
 def get_vault_full_puzzle_hash(launcher_id: bytes32, inner_puzzle_hash: bytes32) -> bytes32:
     puzzle_hash = puzzle_hash_for_singleton(launcher_id, inner_puzzle_hash)
     return puzzle_hash
-
-
-def get_recovery_puzzle(
-    secp_puzzle_hash: bytes32,
-    bls_pk: G1Element,
-    timelock: uint64,
-    amount: uint64,
-) -> Program:
-    recovery_finish = get_recovery_finish_puzzle(bls_pk, timelock, amount).get_tree_hash()
-    recovery_puzzle = P2_1_OF_N_MOD.curry(MerkleTree([secp_puzzle_hash, recovery_finish]).calculate_root())
-    return recovery_puzzle
 
 
 def get_recovery_conditions(bls_pk: G1Element, amount: uint64) -> Program:

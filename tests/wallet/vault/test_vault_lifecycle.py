@@ -20,11 +20,11 @@ from chia.util.ints import uint64
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions, solution_for_conditions
 from chia.wallet.vault.vault_drivers import (
     construct_p2_delegated_secp,
-    construct_p2_recovery_puzzle,
     construct_recovery_finish,
     construct_secp_message,
     construct_vault_merkle_tree,
     construct_vault_puzzle,
+    get_recovery_puzzle,
     get_vault_proof,
 )
 from tests.clvm.test_puzzles import secret_exponent_for_index
@@ -49,7 +49,7 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         # Setup puzzles
         secp_puzzle = construct_p2_delegated_secp(SECP_PK, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, ENTROPY)
         secp_puzzlehash = secp_puzzle.get_tree_hash()
-        p2_recovery_puzzle = construct_p2_recovery_puzzle(secp_puzzlehash, BLS_PK, TIMELOCK)
+        p2_recovery_puzzle = get_recovery_puzzle(secp_puzzlehash, BLS_PK, TIMELOCK)
         p2_recovery_puzzlehash = p2_recovery_puzzle.get_tree_hash()
         vault_puzzle = construct_vault_puzzle(secp_puzzlehash, p2_recovery_puzzlehash)
         vault_puzzlehash = vault_puzzle.get_tree_hash()
