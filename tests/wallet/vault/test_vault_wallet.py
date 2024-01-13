@@ -5,6 +5,7 @@ from typing import Awaitable, Callable
 
 import pytest
 from ecdsa import NIST256p, SigningKey
+from ecdsa.util import PRNG
 
 from chia.util.ints import uint32, uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -13,13 +14,11 @@ from chia.wallet.vault.vault_wallet import Vault
 from tests.conftest import ConsensusMode
 from tests.wallet.conftest import WalletStateTransition, WalletTestFramework
 
-SECP_SK = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
-SECP_PK = SECP_SK.verifying_key.to_string("compressed")
-
 
 async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: bool) -> None:
     for env in wallet_environments.environments:
-        SECP_SK = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
+        seed = b"chia_secp"
+        SECP_SK = SigningKey.generate(curve=NIST256p, entropy=PRNG(seed), hashfunc=sha256)
         SECP_PK = SECP_SK.verifying_key.to_string("compressed")
         client = env.rpc_client
         fingerprint = (await client.get_public_keys())[0]

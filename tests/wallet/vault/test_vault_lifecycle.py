@@ -7,6 +7,7 @@ import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 from ecdsa import NIST256p, SigningKey
+from ecdsa.util import PRNG
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -29,7 +30,8 @@ from chia.wallet.vault.vault_drivers import (
 )
 from tests.clvm.test_puzzles import secret_exponent_for_index
 
-SECP_SK = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
+seed = b"chia_secp"
+SECP_SK = SigningKey.generate(curve=NIST256p, entropy=PRNG(seed), hashfunc=sha256)
 SECP_PK = SECP_SK.verifying_key.to_string("compressed")
 
 BLS_SK = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
