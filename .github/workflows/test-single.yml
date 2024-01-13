@@ -65,9 +65,9 @@ jobs:
             apt: '3.8'
             install_sh: '3.8'
             matrix: '3.8'
-            exclude_from:
-              limited: True
-              main: True
+            # exclude_from:
+              # limited: True
+              # main: True
           - name: '3.9'
             file_name: '3.9'
             action: '3.9'
