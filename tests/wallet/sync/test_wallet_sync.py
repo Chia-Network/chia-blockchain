@@ -1252,7 +1252,9 @@ async def test_retry_store(two_wallet_nodes, self_hostname):
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def test_bad_peak_mismatch(two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants):
+async def test_bad_peak_mismatch(
+    two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants, monkeypatch
+):
     full_nodes, wallets, bt = two_wallet_nodes
     wallet_node, wallet_server = wallets[0]
     full_node_api = full_nodes[0]
@@ -1275,31 +1277,32 @@ async def test_bad_peak_mismatch(two_wallet_nodes, default_1000_blocks, self_hos
         ProtocolMessageTypes.respond_proof_of_weight,
         full_node_protocol.RespondProofOfWeight(wp, wp.recent_chain_data[-1].header_hash),
     )
-    f = asyncio.Future()
-    f.set_result(wp_msg)
-    full_node_api.request_proof_of_weight = MagicMock(return_value=f)
+    with monkeypatch.context() as m:
+        f = asyncio.Future()
+        f.set_result(wp_msg)
+        m.setattr(full_node_api, "request_proof_of_weight", MagicMock(return_value=f))
 
-    # create the node respond with the lighter header block
-    header_block_msg = make_msg(
-        ProtocolMessageTypes.respond_block_header,
-        wallet_protocol.RespondBlockHeader(wp.recent_chain_data[-1]),
-    )
-    f2 = asyncio.Future()
-    f2.set_result(header_block_msg)
-    full_node_api.request_block_header = MagicMock(return_value=f2)
+        # create the node respond with the lighter header block
+        header_block_msg = make_msg(
+            ProtocolMessageTypes.respond_block_header,
+            wallet_protocol.RespondBlockHeader(wp.recent_chain_data[-1]),
+        )
+        f2 = asyncio.Future()
+        f2.set_result(header_block_msg)
+        m.setattr(full_node_api, "request_block_header", MagicMock(return_value=f2))
 
-    # create new fake peak msg
-    fake_peak_height = uint32(11000)
-    fake_peak_weight = uint32(1000000000)
-    msg = wallet_protocol.NewPeakWallet(
-        blocks[-1].header_hash, fake_peak_height, fake_peak_weight, uint32(max(blocks[-1].height - 1, uint32(0)))
-    )
-    await asyncio.sleep(3)
-    await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await wallet_node.new_peak_wallet(msg, wallet_server.all_connections.popitem()[1])
-    await asyncio.sleep(3)
-    assert wallet_node.wallet_state_manager.blockchain.get_peak_height() != fake_peak_height
-    log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
+        # create new fake peak msg
+        fake_peak_height = uint32(11000)
+        fake_peak_weight = uint32(1000000000)
+        msg = wallet_protocol.NewPeakWallet(
+            blocks[-1].header_hash, fake_peak_height, fake_peak_weight, uint32(max(blocks[-1].height - 1, uint32(0)))
+        )
+        await asyncio.sleep(3)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await wallet_node.new_peak_wallet(msg, wallet_server.all_connections.popitem()[1])
+        await asyncio.sleep(3)
+        assert wallet_node.wallet_state_manager.blockchain.get_peak_height() != fake_peak_height
+        log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
