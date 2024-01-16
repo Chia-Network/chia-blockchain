@@ -486,7 +486,7 @@ class CoinStore:
                 next_height = min_height
                 is_finished = True
 
-        return (coin_states, next_height, is_finished)
+        return coin_states, next_height, is_finished
 
     async def rollback_to_block(self, block_index: int) -> List[CoinRecord]:
         """
