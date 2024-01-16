@@ -29,7 +29,7 @@ from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
-from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point
+from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point, make_unfinished_block
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_full_node
@@ -678,22 +678,8 @@ class TestFullNodeProtocol:
         # Create empty slots
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=6)
         block = blocks[-1]
-        if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
-            finished_ss = block.finished_sub_slots[:-1]
-        else:
-            finished_ss = block.finished_sub_slots
+        unf = make_unfinished_block(block, bt.constants)
 
-        unf = UnfinishedBlock(
-            finished_ss,
-            block.reward_chain_block.get_unfinished(),
-            block.challenge_chain_sp_proof,
-            block.reward_chain_sp_proof,
-            block.foliage,
-            block.foliage_transaction_block,
-            block.transactions_info,
-            block.transactions_generator,
-            [],
-        )
         # Can't add because no sub slots
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
 
@@ -709,22 +695,7 @@ class TestFullNodeProtocol:
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=3)
 
         block = blocks[-1]
-
-        if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
-            finished_ss = block.finished_sub_slots[:-1]
-        else:
-            finished_ss = block.finished_sub_slots
-        unf = UnfinishedBlock(
-            finished_ss,
-            block.reward_chain_block.get_unfinished(),
-            block.challenge_chain_sp_proof,
-            block.reward_chain_sp_proof,
-            block.foliage,
-            block.foliage_transaction_block,
-            block.transactions_info,
-            block.transactions_generator,
-            [],
-        )
+        unf = make_unfinished_block(block, bt.constants)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
 
         for slot in blocks[-1].finished_sub_slots:
@@ -738,18 +709,7 @@ class TestFullNodeProtocol:
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=3, force_overflow=True)
 
         block = blocks[-1]
-
-        unf = UnfinishedBlock(
-            block.finished_sub_slots[:-1],
-            block.reward_chain_block.get_unfinished(),
-            block.challenge_chain_sp_proof,
-            block.reward_chain_sp_proof,
-            block.foliage,
-            block.foliage_transaction_block,
-            block.transactions_info,
-            block.transactions_generator,
-            [],
-        )
+        unf = make_unfinished_block(block, bt.constants, force_overflow=True)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
 
         for slot in blocks[-1].finished_sub_slots:
@@ -784,17 +744,7 @@ class TestFullNodeProtocol:
             seed=b"random seed",
         )
         block = blocks[-1]
-        unf = UnfinishedBlock(
-            block.finished_sub_slots[:-1],  # Since it's overflow
-            block.reward_chain_block.get_unfinished(),
-            block.challenge_chain_sp_proof,
-            block.reward_chain_sp_proof,
-            block.foliage,
-            block.foliage_transaction_block,
-            block.transactions_info,
-            block.transactions_generator,
-            [],
-        )
+        unf = make_unfinished_block(block, bt.constants, force_overflow=True)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
         await full_node_1.full_node.add_unfinished_block(unf, None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
@@ -1261,18 +1211,7 @@ class TestFullNodeProtocol:
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         block: FullBlock = blocks[-1]
-        overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
-        unf = UnfinishedBlock(
-            block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
-            block.reward_chain_block.get_unfinished(),
-            block.challenge_chain_sp_proof,
-            block.reward_chain_sp_proof,
-            block.foliage,
-            block.foliage_transaction_block,
-            block.transactions_info,
-            block.transactions_generator,
-            [],
-        )
+        unf = make_unfinished_block(block, bt.constants)
 
         # Don't have
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
@@ -1457,18 +1396,7 @@ class TestFullNodeProtocol:
         )
 
         block: FullBlock = blocks[-1]
-        overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
-        unf: UnfinishedBlock = UnfinishedBlock(
-            block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
-            block.reward_chain_block.get_unfinished(),
-            block.challenge_chain_sp_proof,
-            block.reward_chain_sp_proof,
-            block.foliage,
-            block.foliage_transaction_block,
-            block.transactions_info,
-            block.transactions_generator,
-            [],
-        )
+        unf = make_unfinished_block(block, bt.constants)
         await full_node_1.full_node.add_unfinished_block(unf, dummy_peer)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash)
 
@@ -1494,18 +1422,7 @@ class TestFullNodeProtocol:
         for block in blocks[:-1]:
             await full_node_1.full_node.add_block(block)
         block: FullBlock = blocks[-1]
-        overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
-        unf = UnfinishedBlock(
-            block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
-            block.reward_chain_block.get_unfinished(),
-            block.challenge_chain_sp_proof,
-            block.reward_chain_sp_proof,
-            block.foliage,
-            block.foliage_transaction_block,
-            block.transactions_info,
-            block.transactions_generator,
-            [],
-        )
+        unf = make_unfinished_block(block, bt.constants)
 
         # Don't have
         res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
