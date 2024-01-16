@@ -457,7 +457,7 @@ def find_interesting_singletons(removals: List[CoinSpend]) -> List[SingletonWall
     return singletons
 
 
-def filter_p2_singleton(puzzle_db: PuzzleDB, singleton_wallet: SingletonWallet, additions: List[Coin]) -> List[Coin]:
+def filter_p2_singleton(puzzle_db: PuzzleDB, additions: List[Coin]) -> List[Coin]:
     r = []
     for coin in additions:
         puzzle = puzzle_db.puzzle_for_hash(coin.puzzle_hash)
@@ -507,7 +507,7 @@ def test_lifecycle_with_coinstore_as_wallet():
     now.seconds += 500
     now.height += 1
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 2
@@ -539,7 +539,7 @@ def test_lifecycle_with_coinstore_as_wallet():
     now.seconds += 500
     now.height += 1
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 2
@@ -617,7 +617,7 @@ def test_lifecycle_with_coinstore_as_wallet():
     now.seconds += 500
     now.height += 1
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 2
@@ -671,7 +671,7 @@ def test_lifecycle_with_coinstore_as_wallet():
     now.seconds += 500
     now.height += 1
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 3
