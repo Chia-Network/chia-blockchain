@@ -1074,7 +1074,7 @@ async def test_dusted_wallet(
     assert farm_sb
 
     # ensure hints are generated
-    assert compute_memos(farm_sb)
+    assert len(compute_memos(farm_sb)) > 0
 
     # Farm a new block
     await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, farm_sb.name())
@@ -1103,7 +1103,7 @@ async def test_dusted_wallet(
     assert len(txs) == 1
     assert txs[0].spend_bundle is not None
     await farm_wallet_node.wallet_state_manager.add_pending_transaction(txs[0])
-    assert compute_memos(txs[0].spend_bundle)
+    assert len(compute_memos(txs[0].spend_bundle)) > 0
 
     # Farm a new block.
     await full_node_api.wait_transaction_records_entered_mempool(txs)
