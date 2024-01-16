@@ -435,6 +435,23 @@ class CoinStore:
             puzzle_hash_count = len(puzzle_hashes_db)
 
             if include_hinted:
+                require_spent = "cr.spent_index>0"
+                require_unspent = "cr.spent_index=0"
+            else:
+                require_spent = "spent_index>0"
+                require_unspent = "spent_index=0"
+
+            if include_spent and include_unspent:
+                height_filter = ""
+            elif include_spent:
+                height_filter = f"AND {require_spent}"
+            elif include_unspent:
+                height_filter = f"AND {require_unspent}"
+            else:
+                # There are no coins which are both spent and unspent, so return an empty list.
+                return [], min_height, True
+
+            if include_hinted:
                 cursor = await conn.execute(
                     f"SELECT cr.confirmed_index, cr.spent_index, cr.coinbase, cr.puzzle_hash, "
                     f"cr.coin_parent, cr.amount, cr.timestamp FROM coin_record cr "
@@ -442,8 +459,7 @@ class CoinStore:
                     f'WHERE (cr.puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
                     f'OR h.hint in ({"?," * (puzzle_hash_count - 1)}?)) '
                     f"AND (cr.confirmed_index>=? OR cr.spent_index>=?) "
-                    f"{'' if include_spent else 'AND cr.spent_index=0'} "
-                    f"{'' if include_unspent else 'AND cr.spent_index>0'} "
+                    f"{height_filter} "
                     f"ORDER BY MAX(cr.confirmed_index, cr.spent_index) ASC "
                     f"LIMIT ?",
                     puzzle_hashes_db + puzzle_hashes_db + (min_height, min_height, max_items + 1),
@@ -454,8 +470,7 @@ class CoinStore:
                     f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
                     f'WHERE puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
                     f"AND (confirmed_index>=? OR spent_index>=?) "
-                    f"{'' if include_spent else 'AND spent_index=0'} "
-                    f"{'' if include_unspent else 'AND spent_index>0'} "
+                    f"{height_filter} "
                     f"ORDER BY MAX(confirmed_index, spent_index) ASC "
                     f"LIMIT ?",
                     puzzle_hashes_db + (min_height, min_height, max_items + 1),
