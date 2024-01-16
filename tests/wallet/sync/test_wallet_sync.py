@@ -791,9 +791,8 @@ async def test_dusted_wallet(
     # Selecting coins by using the wallet's coin selection algorithm won't work for large
     # numbers of coins, so we'll use the state manager for the rest of the test
     # num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance))
-    num_coins: Optional[Message] = len(
-        list(await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1))
-    )
+    spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
+    num_coins = len(spendable_coins)
 
     log.info(f"Small coin count is {small_unspent_count}")
     log.info(f"Wallet balance is {balance}")
@@ -833,9 +832,8 @@ async def test_dusted_wallet(
     all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
     balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
-    num_coins: Optional[Message] = len(
-        list(await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1))
-    )
+    spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
+    num_coins = len(spendable_coins)
 
     log.info(f"Small coin count is {small_unspent_count}")
     log.info(f"Wallet balance is {balance}")
@@ -870,9 +868,8 @@ async def test_dusted_wallet(
     all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
     balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
-    num_coins: Optional[Message] = len(
-        list(await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1))
-    )
+    spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
+    num_coins = len(spendable_coins)
 
     log.info(f"Small coin count is {small_unspent_count}")
     log.info(f"Wallet balance is {balance}")
@@ -927,9 +924,8 @@ async def test_dusted_wallet(
     all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
     balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
-    num_coins: Optional[Message] = len(
-        list(await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1))
-    )
+    spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
+    num_coins = len(spendable_coins)
 
     log.info(f"Small coin count is {small_unspent_count}")
     log.info(f"Wallet balance is {balance}")
