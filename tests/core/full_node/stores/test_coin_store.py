@@ -21,7 +21,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -505,7 +504,7 @@ async def test_coin_state_batches(db_version: int) -> None:
         hints: List[Tuple[bytes32, bytes]] = []
 
         # Make sure the count is even so we can filter by spent and unspent evenly.
-        count = SQLITE_MAX_VARIABLE_NUMBER * 2
+        count = 50000
 
         for i in range(count):
             is_spent = i % 2 == 0
@@ -549,17 +548,25 @@ async def test_coin_state_batches(db_version: int) -> None:
         async def sync_states(*, include_spent: bool, include_unspent: bool, include_hinted: bool) -> List[CoinState]:
             height = uint32(0)
             all_coin_states: List[CoinState] = []
+            is_finished = False
             remaining_phs = puzzle_hashes.copy()
 
-            while len(remaining_phs) > 0:
-                (coin_states, remaining_phs, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
-                    remaining_phs,
-                    start_height=height,
+            while not is_finished:
+                (coin_states, height, is_finished) = await coin_store.batch_coin_states_by_puzzle_hashes(
+                    remaining_phs[:15000],
+                    min_height=height,
                     include_spent=include_spent,
                     include_unspent=include_unspent,
                     include_hinted=include_hinted,
                 )
                 all_coin_states += coin_states
+
+                if is_finished:
+                    remaining_phs = remaining_phs[15000:]
+
+                    if len(remaining_phs) > 0:
+                        height = uint32(0)
+                        is_finished = False
 
             return all_coin_states
 
@@ -587,6 +594,68 @@ async def test_coin_state_batches(db_version: int) -> None:
         # Make sure you can filter out spent and unspent coins.
         all_coin_states = await sync_states(include_spent=False, include_unspent=False, include_hinted=True)
         assert len(all_coin_states) == 0
+
+
+@pytest.mark.anyio
+async def test_batch_many_coin_states(db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        ph = bytes32(b"0" * 32)
+
+        # Generate coin records.
+        coin_records: List[CoinRecord] = []
+        count = 50000
+
+        for i in range(count):
+            created_height = uint32(i % 2 + 100)
+            coin = Coin(
+                std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
+                ph,
+                uint64(i),
+            )
+            coin_records.append(
+                CoinRecord(
+                    coin=coin,
+                    confirmed_block_index=created_height,
+                    spent_block_index=uint32(0),
+                    coinbase=False,
+                    timestamp=uint64(0),
+                )
+            )
+
+        # Initialize coin and hint stores.
+        coin_store = await CoinStore.create(db_wrapper)
+        await HintStore.create(db_wrapper)
+
+        await coin_store._add_coin_records(coin_records)
+
+        # Make sure all of the coin states are found.
+        (all_coin_states, next_height, is_finished) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
+        all_coin_states.sort(key=lambda cs: cs.coin.amount)
+
+        assert is_finished
+        assert next_height == 0
+        assert len(all_coin_states) == len(coin_records)
+
+        for i in range(min(len(coin_records), len(all_coin_states))):
+            assert coin_records[i].coin.name().hex() == all_coin_states[i].coin.name().hex(), i
+
+        await coin_store._add_coin_records(
+            [
+                CoinRecord(
+                    coin=Coin(std_hash(b"extra coin"), ph, 0),
+                    confirmed_block_index=uint32(50),
+                    spent_block_index=uint32(0),
+                    coinbase=False,
+                    timestamp=uint64(0),
+                )
+            ]
+        )
+
+        (all_coin_states, next_height, is_finished) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
+
+        assert not is_finished
+        assert next_height == 101
+        assert len(all_coin_states) == 50000
 
 
 @pytest.mark.anyio
