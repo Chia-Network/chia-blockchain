@@ -10,8 +10,7 @@ from pathlib import Path
 from random import Random
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, cast
 
-import aiosqlite
-import psycopg
+import aiomysql
 import pytest
 
 from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
@@ -386,7 +385,6 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
     num_ops_per_batch = 100 if use_optimized else 10
     saved_roots: List[Root] = []
     saved_batches: List[List[Dict[str, Any]]] = []
-
 
     database_pg = generate_postgres_db_name()
     with psycopg.connect("postgresql://postgres:postgres@localhost:5432", autocommit=True) as connection:
@@ -1389,7 +1387,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
             root = await data_store_server.get_tree_root(tree_id)
             await write_files_for_root(data_store_server, tree_id, root, tmp_path, 0)
             roots.append(root)
-    
+
     with psycopg.connect("postgresql://postgres:postgres@localhost:5432", autocommit=True) as connection:
         connection.execute(f"DROP DATABASE {database_pg};")
 

@@ -12,8 +12,7 @@ from typing import Any, AsyncIterator, Dict, Optional, Sequence, TextIO
 
 # import aiosqlite
 import anyio
-import psycopg
-from psycopg.rows import AsyncRowFactory
+import aiomysql
 from typing_extensions import final
 
 SQLITE_MAX_VARIABLE_NUMBER = 32700
@@ -30,7 +29,7 @@ def generate_postgres_db_name() -> str:
 
 
 async def execute_fetchone(
-    c: psycopg.AsyncConnection[Any], sql: str, parameters: Optional[Sequence[Any]] = None
+    c: aiomysql.Connection, sql: str, parameters: Optional[Sequence[Any]] = None
 ) -> Optional[Any]:
     async with c.cursor() as acur:
         await acur.execute(sql, parameters)
@@ -38,13 +37,17 @@ async def execute_fetchone(
 
 
 async def _create_connection(
+    host: str,
+    port: int,
     database: str,
     uri: bool = False,
     log_file: Optional[TextIO] = None,
     name: Optional[str] = None,
-    row_factory: Optional[AsyncRowFactory[Any]] = None,
-) -> psycopg.AsyncConnection[Any]:
-    connection = await psycopg.AsyncConnection.connect(conninfo=database, row_factory=row_factory)
+    row_factory: Optional[Any] = None,
+) -> aiomysql.Connection:
+    connection = await aiomysql.connect(
+        host=host, port=port, user="root", password="mysql", db=database, loop=asyncio.get_event_loop()
+    )
 
     # if log_file is not None:
     #     await connection.set_trace_callback(functools.partial(sql_trace_callback, file=log_file, name=name))
@@ -53,22 +56,23 @@ async def _create_connection(
 
 @contextlib.asynccontextmanager
 async def manage_connection(
+    host: str,
+    port: int,
     database: str,
     uri: bool = False,
     log_file: Optional[TextIO] = None,
     name: Optional[str] = None,
-    row_factory: Optional[AsyncRowFactory[Any]] = None,
-) -> AsyncIterator[psycopg.AsyncConnection[Any]]:
-    # connection: psycopg.AsyncConnection
+    row_factory: Optional[Any] = None,
+) -> AsyncIterator[aiomysql.Connection]:
     connection = await _create_connection(
-        database=database, uri=uri, log_file=log_file, name=name, row_factory=row_factory
+        host=host, port=port, database=database, uri=uri, log_file=log_file, name=name
     )
 
     try:
         yield connection
     finally:
         with anyio.CancelScope(shield=True):
-            await connection.close()
+            connection.close()
 
 
 def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> None:
@@ -87,18 +91,18 @@ def get_host_parameter_limit() -> int:
 @final
 @dataclass
 class DBWrapperPG:
-    _write_connection: psycopg.AsyncConnection[Any]
+    _write_connection: aiomysql.Connection
     db_version: int = 1
     _log_file: Optional[TextIO] = None
     host_parameter_limit: int = get_host_parameter_limit()
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    _read_connections: asyncio.Queue[psycopg.AsyncConnection[Any]] = field(default_factory=asyncio.Queue)
+    _read_connections: asyncio.Queue[aiomysql.Connection] = field(default_factory=asyncio.Queue)
     _num_read_connections: int = 0
-    _in_use: Dict[asyncio.Task[object], psycopg.AsyncConnection[Any]] = field(default_factory=dict)
+    _in_use: Dict[asyncio.Task[object], aiomysql.Connection] = field(default_factory=dict)
     _current_writer: Optional[asyncio.Task[object]] = None
     _savepoint_name: int = 0
 
-    async def add_connection(self, c: psycopg.AsyncConnection[Any]) -> None:
+    async def add_connection(self, c: aiomysql.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
         assert c != self._write_connection
         # await c.execute("pragma query_only")
@@ -109,6 +113,8 @@ class DBWrapperPG:
     @contextlib.asynccontextmanager
     async def managed(
         cls,
+        host: str,
+        port: int,
         database: str,
         *,
         db_version: int = 1,
@@ -118,7 +124,7 @@ class DBWrapperPG:
         journal_mode: str = "WAL",
         synchronous: Optional[str] = None,
         foreign_keys: bool = False,
-        row_factory: Optional[psycopg.rows.AsyncRowFactory[psycopg.rows.TupleRow]] = None,
+        row_factory: Optional[Any] = None,
     ) -> AsyncIterator[DBWrapperPG]:
         async with contextlib.AsyncExitStack() as async_exit_stack:
             if log_path is None:
@@ -128,9 +134,7 @@ class DBWrapperPG:
                 log_file = async_exit_stack.enter_context(log_path.open("a", encoding="utf-8"))
 
             write_connection = await async_exit_stack.enter_async_context(
-                manage_connection(
-                    database=database, uri=uri, log_file=log_file, name="writer", row_factory=row_factory
-                ),
+                manage_connection(host=host, port=port, database=database, uri=uri, log_file=log_file, name="writer"),
             )
 
             self = cls(_write_connection=write_connection, db_version=db_version, _log_file=log_file)
@@ -138,16 +142,17 @@ class DBWrapperPG:
             for index in range(reader_count):
                 read_connection = await async_exit_stack.enter_async_context(
                     manage_connection(
+                        host=host,
+                        port=port,
                         database=database,
                         uri=uri,
                         log_file=log_file,
                         name=f"reader-{index}",
-                        row_factory=row_factory,
                     ),
                 )
                 # read_connection.row_factory = row_factory
-                await read_connection.set_read_only(True)
-                await read_connection.set_isolation_level(psycopg.IsolationLevel.READ_COMMITTED)
+                # await read_connection.set_read_only(True)
+                # await read_connection.set_isolation_level(psycopg.IsolationLevel.READ_COMMITTED)
                 await self.add_connection(c=read_connection)
 
             try:
@@ -161,6 +166,8 @@ class DBWrapperPG:
     @classmethod
     async def create(
         cls,
+        host: str,
+        port: int,
         database: str,
         *,
         db_version: int = 1,
@@ -170,7 +177,7 @@ class DBWrapperPG:
         journal_mode: str = "WAL",
         synchronous: Optional[str] = None,
         foreign_keys: bool = False,
-        row_factory: Optional[AsyncRowFactory[Any]] = None,
+        row_factory: Optional[Any] = None,
     ) -> DBWrapperPG:
         # WARNING: please use .managed() instead
         if log_path is None:
@@ -179,7 +186,7 @@ class DBWrapperPG:
             log_path.parent.mkdir(parents=True, exist_ok=True)
             log_file = log_path.open("a", encoding="utf-8")
         write_connection = await _create_connection(
-            database=database, uri=uri, log_file=log_file, name="writer", row_factory=row_factory
+            host=host, port=port, database=database, uri=uri, log_file=log_file, name="writer"
         )
         await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
         if synchronous is not None:
@@ -193,13 +200,13 @@ class DBWrapperPG:
 
         for index in range(reader_count):
             read_connection = await _create_connection(
+                host=host,
+                port=port,
                 database=database,
                 uri=uri,
                 log_file=log_file,
                 name=f"reader-{index}",
-                row_factory=row_factory,
             )
-            # read_connection.row_factory = row_factory
             await self.add_connection(c=read_connection)
 
         return self
@@ -223,19 +230,20 @@ class DBWrapperPG:
     @contextlib.asynccontextmanager
     async def _savepoint_ctx(self) -> AsyncIterator[None]:
         name = self._next_savepoint()
-        await self._write_connection.execute(f"SAVEPOINT {name}")
+        cursor = await self._write_connection.cursor()
+        await cursor.execute(f"SAVEPOINT {name}")
         try:
             yield
         except:  # noqa E722
-            await self._write_connection.execute(f"ROLLBACK TO SAVEPOINT {name}")
+            await cursor.execute(f"ROLLBACK TO SAVEPOINT {name}")
             raise
-        finally:
-            # rollback to a savepoint doesn't cancel the transaction, it
-            # just rolls back the state. We need to cancel it regardless
-            await self._write_connection.execute(f"RELEASE SAVEPOINT {name}")
+        # finally:
+        # rollback to a savepoint doesn't cancel the transaction, it
+        # just rolls back the state. We need to cancel it regardless
+        # await cursor.execute(f"RELEASE SAVEPOINT {name}")
 
     @contextlib.asynccontextmanager
-    async def writer(self) -> AsyncIterator[psycopg.AsyncConnection[Any]]:
+    async def writer(self) -> AsyncIterator[aiomysql.Connection]:
         """
         Initiates a new, possibly nested, transaction. If this task is already
         in a transaction, none of the changes made as part of this transaction
@@ -256,7 +264,6 @@ class DBWrapperPG:
             return
 
         async with self._lock:
-            await self._write_connection.execute("START TRANSACTION READ WRITE")
             async with self._savepoint_ctx():
                 self._current_writer = task
                 try:
@@ -266,7 +273,7 @@ class DBWrapperPG:
             await self._write_connection.commit()
 
     @contextlib.asynccontextmanager
-    async def writer_maybe_transaction(self) -> AsyncIterator[psycopg.AsyncConnection[Any]]:
+    async def writer_maybe_transaction(self) -> AsyncIterator[aiomysql.Connection]:
         """
         Initiates a write to the database. If this task is already in a write
         transaction with the DB, this is a no-op. Any changes made to the
@@ -282,7 +289,7 @@ class DBWrapperPG:
             return
 
         async with self._lock:
-            await self._write_connection.execute("START TRANSACTION READ WRITE")
+            # await self._write_connection.execute("START TRANSACTION READ WRITE")
             async with self._savepoint_ctx():
                 self._current_writer = task
                 try:
@@ -292,7 +299,7 @@ class DBWrapperPG:
             await self._write_connection.commit()
 
     @contextlib.asynccontextmanager
-    async def reader(self) -> AsyncIterator[psycopg.AsyncConnection[Any]]:
+    async def reader(self) -> AsyncIterator[aiomysql.Connection]:
         async with self.reader_no_transaction() as connection:
             # yield connection
             # if connection.in_transaction:
@@ -308,7 +315,7 @@ class DBWrapperPG:
             # await connection.rollback()
 
     @contextlib.asynccontextmanager
-    async def reader_no_transaction(self) -> AsyncIterator[psycopg.AsyncConnection[Any]]:
+    async def reader_no_transaction(self) -> AsyncIterator[aiomysql.Connection]:
         # there should have been read connections added
         assert self._num_read_connections > 0
 

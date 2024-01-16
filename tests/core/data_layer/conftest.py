@@ -6,7 +6,7 @@ import sys
 import time
 from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator
 
-import psycopg
+import aiomysql
 import pytest
 
 # https://github.com/pytest-dev/pytest/issues/7469

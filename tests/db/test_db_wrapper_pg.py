@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import TYPE_CHECKING, Any, Callable, List
+from typing import TYPE_CHECKING, Callable, List
 
-import psycopg
+import aiomysql
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
@@ -14,7 +14,7 @@ from chia.util.db_wrapper_pg import DBWrapperPG
 from tests.util.db_connection import DBConnectionPG
 
 if TYPE_CHECKING:
-    ConnectionContextManager = contextlib.AbstractAsyncContextManager[psycopg.AsyncConnection[Any]]
+    ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiomysql.Connection]
     GetReaderMethod = Callable[[DBWrapperPG], Callable[[], ConnectionContextManager]]
 
 
@@ -36,7 +36,8 @@ async def increment_counter(db_wrapper: DBWrapperPG) -> None:
         await asyncio.sleep(0)
 
         new_value = old_value + 1
-        await connection.execute("UPDATE counter SET value = %s", (new_value,))
+        async with connection.cursor() as cursor:
+            await cursor.execute("UPDATE counter SET value = %s", (new_value,))
 
 
 async def decrement_counter(db_wrapper: DBWrapperPG) -> None:
@@ -51,7 +52,8 @@ async def decrement_counter(db_wrapper: DBWrapperPG) -> None:
         await asyncio.sleep(0)
 
         new_value = old_value - 1
-        await connection.execute("UPDATE counter SET value = %s", (new_value,))
+        async with connection.cursor() as cursor:
+            await cursor.execute("UPDATE counter SET value = %s", (new_value,))
 
 
 async def sum_counter(db_wrapper: DBWrapperPG, output: List[int]) -> None:
@@ -68,17 +70,18 @@ async def sum_counter(db_wrapper: DBWrapperPG, output: List[int]) -> None:
 
 async def setup_table(db: DBWrapperPG) -> None:
     async with db.writer_maybe_transaction() as conn:
-        await conn.execute("CREATE TABLE counter(value INTEGER NOT NULL)")
-        await conn.execute("INSERT INTO counter(value) VALUES(0)")
+        cursor = await conn.cursor()
+        await cursor.execute("CREATE TABLE counter(value INTEGER NOT NULL)")
+        await cursor.execute("INSERT INTO counter(value) VALUES(0)")
 
 
-async def get_value(cursor: psycopg.AsyncCursor[Any]) -> int:
+async def get_value(cursor: aiomysql.Cursor) -> int:
     row = await cursor.fetchone()
     assert row
     return int(row[0])
 
 
-async def query_value(connection: psycopg.AsyncConnection[Any]) -> int:
+async def query_value(connection: aiomysql.Connection) -> int:
     async with connection.cursor() as cursor:
         await cursor.execute("SELECT value FROM counter")
         return await get_value(cursor=cursor)
@@ -148,7 +151,8 @@ async def test_writers_nests() -> None:
             async with db_wrapper.writer_maybe_transaction() as conn2:
                 assert conn1 == conn2
                 value += 1
-                await conn2.execute("UPDATE counter SET value = %s", (value,))
+                cursor = await conn2.cursor()
+                await cursor.execute("UPDATE counter SET value = %s", (value,))
                 async with db_wrapper.writer_maybe_transaction() as conn3:
                     assert conn1 == conn3
                     async with conn3.cursor() as cursor:
@@ -164,13 +168,15 @@ async def test_partial_failure() -> None:
     async with DBConnectionPG(2) as db_wrapper:
         await setup_table(db_wrapper)
         async with db_wrapper.writer() as conn1:
-            await conn1.execute("UPDATE counter SET value = 42")
+            cursor = await conn1.cursor()
+            await cursor.execute("UPDATE counter SET value = 42")
             async with conn1.cursor() as cursor:
                 await cursor.execute("SELECT value FROM counter")
                 values.append(await get_value(cursor))
             try:
                 async with db_wrapper.writer() as conn2:
-                    await conn2.execute("UPDATE counter SET value = 1337")
+                    cursor = await conn2.cursor()
+                    await cursor.execute("UPDATE counter SET value = 1337")
                     async with conn2.cursor() as cursor:
                         await cursor.execute("SELECT value FROM counter")
                         values.append(await get_value(cursor))
@@ -238,8 +244,8 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
         try:
             async with db_wrapper.writer() as writer:
                 assert reader is not writer
-
-                await writer.execute("UPDATE counter SET value = 1")
+                cursor = await writer.cursor()
+                await cursor.execute("UPDATE counter SET value = 1")
         finally:
             writer_committed.set()
 
@@ -275,7 +281,8 @@ async def test_writer_in_reader_works() -> None:
         async with db_wrapper.reader() as reader:
             async with db_wrapper.writer() as writer:
                 assert writer is not reader
-                await writer.execute("UPDATE counter SET value = 1")
+                cursor = await writer.cursor()
+                await cursor.execute("UPDATE counter SET value = 1")
                 assert await query_value(connection=writer) == 1
                 assert await query_value(connection=reader) == 0
 
@@ -290,7 +297,8 @@ async def test_reader_transaction_is_deferred() -> None:
         async with db_wrapper.reader() as reader:
             async with db_wrapper.writer() as writer:
                 assert writer is not reader
-                await writer.execute("UPDATE counter SET value = 1")
+                cursor = await writer.cursor()
+                await cursor.execute("UPDATE counter SET value = 1")
                 assert await query_value(connection=writer) == 1
 
             # The deferred transaction initiation results in the transaction starting
@@ -308,7 +316,8 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer_maybe_transaction() as connection:
-            await connection.execute("UPDATE counter SET value = 1")
+            cursor = await connection.cursor()
+            await cursor.execute("UPDATE counter SET value = 1")
 
         concurrent_task_count = 200
 
@@ -337,7 +346,8 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer_maybe_transaction() as connection:
-            await connection.execute("UPDATE counter SET value = 1")
+            cursor = await connection.cursor()
+            await cursor.execute("UPDATE counter SET value = 1")
 
         concurrent_task_count = 200
 
@@ -379,7 +389,8 @@ async def test_cancelled_reader_does_not_cancel_writer() -> None:
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer() as writer:
-            await writer.execute("UPDATE counter SET value = 1")
+            cursor = await writer.cursor()
+            await cursor.execute("UPDATE counter SET value = 1")
 
             assert await query_value(connection=writer) == 1
 
