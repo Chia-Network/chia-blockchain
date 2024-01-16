@@ -14,6 +14,7 @@ from typing import (
     Any,
     AsyncContextManager,
     AsyncIterator,
+    ClassVar,
     Collection,
     ContextManager,
     Dict,
@@ -377,6 +378,30 @@ async def split_async_manager(manager: AsyncContextManager[object], object: T) -
         yield split
     finally:
         await split.exit(if_needed=True)
+
+
+class ValuedEventSentinel:
+    pass
+
+
+@dataclasses.dataclass
+class ValuedEvent(Generic[T]):
+    _value_sentinel: ClassVar[ValuedEventSentinel] = ValuedEventSentinel()
+
+    _event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
+    _value: Union[ValuedEventSentinel, T] = _value_sentinel
+
+    def set(self, value: T) -> None:
+        if not isinstance(self._value, ValuedEventSentinel):
+            raise Exception("Value already set")
+        self._value = value
+        self._event.set()
+
+    async def wait(self) -> T:
+        await self._event.wait()
+        if isinstance(self._value, ValuedEventSentinel):
+            raise Exception("Value not set despite event being set")
+        return self._value
 
 
 def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:

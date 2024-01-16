@@ -1842,12 +1842,12 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
             excluded_coin_ids=[c.name() for c in excluded_amt_coins]
         ),
     )
-    assert excluded_amt_coins not in all_coins
+    assert set(excluded_amt_coins).intersection({rec.coin for rec in all_coins}) == set()
     all_coins, _, _ = await client_2.get_spendable_coins(
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
     )
-    assert excluded_amt_coins not in all_coins
+    assert len([rec for rec in all_coins if rec.coin.amount == 1000]) == 0
     all_coins_2, _, _ = await client_2.get_spendable_coins(
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(max_coin_amount=uint64(999)),

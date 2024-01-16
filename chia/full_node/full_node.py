@@ -232,7 +232,7 @@ class FullNode:
         async with DBWrapper2.managed(
             self.db_path,
             db_version=db_version,
-            reader_count=4,
+            reader_count=self.config.get("db_readers", 4),
             log_path=sql_log_path,
             synchronous=db_sync,
         ) as self._db_wrapper:
@@ -473,7 +473,7 @@ class FullNode:
         peer = entry.peer
         try:
             inc_status, err = await self.add_transaction(entry.transaction, entry.spend_name, peer, entry.test)
-            entry.done.set_result((inc_status, err))
+            entry.done.set((inc_status, err))
         except asyncio.CancelledError:
             error_stack = traceback.format_exc()
             self.log.debug(f"Cancelling _handle_one_transaction, closing: {error_stack}")
@@ -1808,7 +1808,7 @@ class FullNode:
             f"pre_validation time: {pre_validation_time:0.2f} seconds, "
             f"post-process time: {post_process_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
-            f"{percent_full_str} header_hash: {header_hash} height: {block.height}",
+            f"{percent_full_str} header_hash: {header_hash.hex()} height: {block.height}",
         )
 
         # this is not covered by any unit tests as it's essentially test code

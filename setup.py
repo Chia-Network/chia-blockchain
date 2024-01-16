@@ -50,23 +50,23 @@ dev_dependencies = [
     "pre-commit==3.6.0; python_version >= '3.9'",
     "py3createtorrent==1.1.0",
     "pylint==3.0.3",
-    "pytest==7.4.3",
+    "pytest==7.4.4",
     "pytest-cov==4.1.0",
     "pytest-mock==3.12.0",
     "pytest-xdist==3.5.0",
     "pyupgrade==3.15.0",
     "twine==4.0.2",
     "isort==5.12.0",
-    "flake8==6.1.0",
-    "mypy==1.7.1",
+    "flake8==7.0.0",
+    "mypy==1.8.0",
     "black==23.12.1",
     "lxml==4.9.3",
     "aiohttp_cors==0.7.0",  # For blackd
     "pyinstaller==6.3.0",
-    "types-aiofiles==23.2.0.0",
+    "types-aiofiles==23.2.0.20240106",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.12",
-    "types-setuptools==69.0.0.0",
+    "types-setuptools==69.0.0.20240106",
 ]
 
 legacy_keyring_dependencies = [

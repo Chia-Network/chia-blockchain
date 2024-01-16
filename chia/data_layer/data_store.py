@@ -28,6 +28,7 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     TerminalNode,
     internal_hash,
+    key_hash,
     leaf_hash,
     row_to_node,
 )
@@ -672,35 +673,40 @@ class DataStore:
 
         return internal_nodes
 
+    async def get_keys_values_cursor(
+        self, reader: aiosqlite.Connection, root_hash: Optional[bytes32]
+    ) -> aiosqlite.Cursor:
+        return await reader.execute(
+            """
+            WITH RECURSIVE
+                tree_from_root_hash(hash, node_type, left, right, key, value, depth, rights) AS (
+                    SELECT node.*, 0 AS depth, 0 AS rights FROM node WHERE node.hash == :root_hash
+                    UNION ALL
+                    SELECT
+                        node.*,
+                        tree_from_root_hash.depth + 1 AS depth,
+                        CASE
+                            WHEN node.hash == tree_from_root_hash.right
+                            THEN tree_from_root_hash.rights + (1 << (62 - tree_from_root_hash.depth))
+                            ELSE tree_from_root_hash.rights
+                            END AS rights
+                        FROM node, tree_from_root_hash
+                    WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
+                )
+            SELECT * FROM tree_from_root_hash
+            WHERE node_type == :node_type
+            ORDER BY depth ASC, rights ASC
+            """,
+            {"root_hash": root_hash, "node_type": NodeType.TERMINAL},
+        )
+
     async def get_keys_values(self, tree_id: bytes32, root_hash: Optional[bytes32] = None) -> List[TerminalNode]:
         async with self.db_wrapper.reader() as reader:
             if root_hash is None:
                 root = await self.get_tree_root(tree_id=tree_id)
                 root_hash = root.node_hash
-            cursor = await reader.execute(
-                """
-                WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left, right, key, value, depth, rights) AS (
-                        SELECT node.*, 0 AS depth, 0 AS rights FROM node WHERE node.hash == :root_hash
-                        UNION ALL
-                        SELECT
-                            node.*,
-                            tree_from_root_hash.depth + 1 AS depth,
-                            CASE
-                                WHEN node.hash == tree_from_root_hash.right
-                                THEN tree_from_root_hash.rights + (1 << (62 - tree_from_root_hash.depth))
-                                ELSE tree_from_root_hash.rights
-                                END AS rights
-                            FROM node, tree_from_root_hash
-                        WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
-                    )
-                SELECT * FROM tree_from_root_hash
-                WHERE node_type == :node_type
-                ORDER BY depth ASC, rights ASC
-                """,
-                {"root_hash": None if root_hash is None else root_hash, "node_type": NodeType.TERMINAL},
-            )
 
+            cursor = await self.get_keys_values_cursor(reader, root_hash)
             terminal_nodes: List[TerminalNode] = []
             async for row in cursor:
                 if row["depth"] > 62:
@@ -721,6 +727,26 @@ class DataStore:
                 terminal_nodes.append(node)
 
         return terminal_nodes
+
+    async def get_keys_values_compressed(
+        self, tree_id: bytes32, root_hash: Optional[bytes32] = None
+    ) -> Dict[bytes32, bytes32]:
+        async with self.db_wrapper.reader() as reader:
+            if root_hash is None:
+                root = await self.get_tree_root(tree_id=tree_id)
+                root_hash = root.node_hash
+
+            cursor = await self.get_keys_values_cursor(reader, root_hash)
+            kv_compressed: Dict[bytes32, bytes32] = {}
+            async for row in cursor:
+                if row["depth"] > 62:
+                    raise Exception("Tree depth exceeded 62, unable to guarantee left-to-right node order.")
+                node = row_to_node(row=row)
+                if not isinstance(node, TerminalNode):
+                    raise Exception(f"Unexpected internal node found: {node.hash.hex()}")
+                kv_compressed[key_hash(node.key)] = leaf_hash(node.key, node.value)
+
+            return kv_compressed
 
     async def get_node_type(self, node_hash: bytes32) -> NodeType:
         async with self.db_wrapper.reader() as reader:
@@ -795,7 +821,7 @@ class DataStore:
         key: bytes,
         value: bytes,
         tree_id: bytes32,
-        hint_keys_values: Optional[Dict[bytes, bytes]] = None,
+        hint_keys_values: Optional[Dict[bytes32, bytes32]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
@@ -941,7 +967,7 @@ class DataStore:
         tree_id: bytes32,
         reference_node_hash: Optional[bytes32],
         side: Optional[Side],
-        hint_keys_values: Optional[Dict[bytes, bytes]] = None,
+        hint_keys_values: Optional[Dict[bytes32, bytes32]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
@@ -959,7 +985,7 @@ class DataStore:
                     if any(key == node.key for node in pairs):
                         raise Exception(f"Key already present: {key.hex()}")
                 else:
-                    if key in hint_keys_values:
+                    if key_hash(key) in hint_keys_values:
                         raise Exception(f"Key already present: {key.hex()}")
 
             if reference_node_hash is None:
@@ -1015,14 +1041,14 @@ class DataStore:
                 )
 
             if hint_keys_values is not None:
-                hint_keys_values[key] = value
+                hint_keys_values[key_hash(key)] = leaf_hash(key, value)
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def delete(
         self,
         key: bytes,
         tree_id: bytes32,
-        hint_keys_values: Optional[Dict[bytes, bytes]] = None,
+        hint_keys_values: Optional[Dict[bytes32, bytes32]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
@@ -1031,17 +1057,17 @@ class DataStore:
         async with self.db_wrapper.writer():
             if hint_keys_values is None:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id)
+                node_hash = node.hash
+                assert isinstance(node, TerminalNode)
             else:
-                if key not in hint_keys_values:
+                if key_hash(key) not in hint_keys_values:
                     log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
                     return root
-                value = hint_keys_values[key]
-                node_hash = leaf_hash(key=key, value=value)
-                node = TerminalNode(node_hash, key, value)
-                del hint_keys_values[key]
+                node_hash = hint_keys_values[key_hash(key)]
+                del hint_keys_values[key_hash(key)]
 
             ancestors: List[InternalNode] = await self.get_ancestors_common(
-                node_hash=node.hash,
+                node_hash=node_hash,
                 tree_id=tree_id,
                 root_hash=root_hash,
                 use_optimized=use_optimized,
@@ -1056,7 +1082,7 @@ class DataStore:
                 )
 
             parent = ancestors[0]
-            other_hash = parent.other_child_hash(hash=node.hash)
+            other_hash = parent.other_child_hash(hash=node_hash)
 
             if len(ancestors) == 1:
                 # the parent is the root so the other side will become the new root
@@ -1106,7 +1132,7 @@ class DataStore:
         key: bytes,
         new_value: bytes,
         tree_id: bytes32,
-        hint_keys_values: Optional[Dict[bytes, bytes]] = None,
+        hint_keys_values: Optional[Dict[bytes32, bytes32]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
@@ -1134,7 +1160,7 @@ class DataStore:
                     return InsertResult(leaf_hash(key, new_value), root)
                 old_node_hash = old_node.hash
             else:
-                if key not in hint_keys_values:
+                if key_hash(key) not in hint_keys_values:
                     log.debug(f"Key not found: {key.hex()}. Doing an autoinsert instead")
                     return await self.autoinsert(
                         key=key,
@@ -1145,12 +1171,15 @@ class DataStore:
                         status=status,
                         root=root,
                     )
-                value = hint_keys_values[key]
+                node_hash = hint_keys_values[key_hash(key)]
+                node = await self.get_node(node_hash)
+                assert isinstance(node, TerminalNode)
+                value = node.value
                 if value == new_value:
                     log.debug(f"New value matches old value in upsert operation: {key.hex()}")
                     return InsertResult(leaf_hash(key, new_value), root)
                 old_node_hash = leaf_hash(key=key, value=value)
-                del hint_keys_values[key]
+                del hint_keys_values[key_hash(key)]
 
             # create new terminal node
             new_terminal_node_hash = await self._insert_terminal_node(key=key, value=new_value)
@@ -1192,7 +1221,7 @@ class DataStore:
                 )
 
             if hint_keys_values is not None:
-                hint_keys_values[key] = new_value
+                hint_keys_values[key_hash(key)] = leaf_hash(key, new_value)
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def clean_node_table(self, writer: aiosqlite.Connection) -> None:
@@ -1229,7 +1258,7 @@ class DataStore:
             if old_root.node_hash is None:
                 hint_keys_values = {}
             else:
-                hint_keys_values = await self.get_keys_values_dict(tree_id, root_hash=root_hash)
+                hint_keys_values = await self.get_keys_values_compressed(tree_id, root_hash=root_hash)
 
             intermediate_root: Optional[Root] = old_root
             for change in changelist:

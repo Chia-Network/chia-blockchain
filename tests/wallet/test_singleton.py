@@ -38,14 +38,14 @@ def p2_singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32
     return p2_singleton_puzzle(launcher_id, launcher_puzzle_hash).get_tree_hash()
 
 
-def test_only_odd_coins():
+def test_only_odd_coins() -> None:
     singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
     # (SINGLETON_STRUCT INNER_PUZZLE lineage_proof my_amount inner_solution)
     # SINGLETON_STRUCT = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
     solution = Program.to(
         [
             (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
-            Program.to(binutils.assemble("(q (51 0xcafef00d 200))")),
+            Program.to(binutils.assemble("(q (51 0xcafef00d 200))")),  # type: ignore[no-untyped-call]
             [0xDEADBEEF, 0xCAFEF00D, 200],
             200,
             [],
@@ -53,27 +53,28 @@ def test_only_odd_coins():
     )
 
     with pytest.raises(Exception) as exception_info:
-        cost, result = SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
+        SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
     assert exception_info.value.args == ("clvm raise", "80")
 
     solution = Program.to(
         [
             (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
-            Program.to(binutils.assemble("(q (51 0xcafef00d 201))")),
+            Program.to(binutils.assemble("(q (51 0xcafef00d 201))")),  # type: ignore[no-untyped-call]
             [0xDEADBEEF, 0xCAFED00D, 210],
             205,
             0,
         ]
     )
-    cost, result = SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
+    SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
 
 
-def test_only_one_odd_coin_created():
+def test_only_one_odd_coin_created() -> None:
     singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
+    clsp = "(q (51 0xcafef00d 203) (51 0xfadeddab 205))"
     solution = Program.to(
         [
             (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
-            Program.to(binutils.assemble("(q (51 0xcafef00d 203) (51 0xfadeddab 205))")),
+            Program.to(binutils.assemble(clsp)),  # type: ignore[no-untyped-call]
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
             [],
@@ -81,22 +82,22 @@ def test_only_one_odd_coin_created():
     )
 
     with pytest.raises(Exception) as exception_info:
-        cost, result = SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
+        SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
     assert exception_info.value.args == ("clvm raise", "80")
-
+    clsp = "(q (51 0xcafef00d 203) (51 0xfadeddab 204) (51 0xdeadbeef 202))"
     solution = Program.to(
         [
             (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
-            Program.to(binutils.assemble("(q (51 0xcafef00d 203) (51 0xfadeddab 204) (51 0xdeadbeef 202))")),
+            Program.to(binutils.assemble(clsp)),  # type: ignore[no-untyped-call]
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
             [],
         ]
     )
-    cost, result = SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
+    SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
 
 
-def test_p2_singleton():
+def test_p2_singleton() -> None:
     # create a singleton. This should call driver code.
     launcher_id = LAUNCHER_ID
     innerpuz = Program.to(1)
@@ -109,11 +110,11 @@ def test_p2_singleton():
     # create a `p2_singleton` puzzle. This should call driver code.
     p2_singleton_full = p2_singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH)
     solution = Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
-    cost, result = p2_singleton_full.run_with_cost(INFINITE_COST, solution)
+    _, result = p2_singleton_full.run_with_cost(INFINITE_COST, solution)
     conditions = parse_sexp_to_conditions(result)
 
     p2_singleton_full = p2_singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH)
     solution = Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
-    cost, result = p2_singleton_full.run_with_cost(INFINITE_COST, solution)
+    _, result = p2_singleton_full.run_with_cost(INFINITE_COST, solution)
     assert result.first().rest().first().as_atom() == expected_announcement
     assert conditions[0].vars[0] == expected_announcement

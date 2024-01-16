@@ -11,7 +11,6 @@ chia.plotting.manager
 chia.plotting.util
 chia.rpc.rpc_client
 chia.rpc.util
-chia.rpc.wallet_rpc_client
 chia.simulator.full_node_simulator
 chia.simulator.keyring
 chia.simulator.wallet_tools
@@ -19,7 +18,6 @@ chia.ssl.create_ssl
 chia.timelord.timelord_api
 chia.timelord.timelord_launcher
 chia.types.blockchain_format.program
-chia.wallet.block_record
 chia.wallet.chialisp
 chia.wallet.did_wallet.did_wallet
 chia.wallet.key_val_store
@@ -110,7 +108,6 @@ tests.wallet.rpc.test_wallet_rpc
 tests.wallet.simple_sync.test_simple_sync_protocol
 tests.wallet.sync.test_wallet_sync
 tests.wallet.test_chialisp
-tests.wallet.test_singleton
 tests.wallet.test_singleton_lifecycle
 tests.wallet.test_singleton_lifecycle_fast
 tests.wallet.test_taproot
