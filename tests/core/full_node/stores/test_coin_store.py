@@ -502,8 +502,6 @@ async def test_coin_state_batches(db_version: int) -> None:
         coin_records: List[CoinRecord] = []
         puzzle_hashes: List[bytes32] = []
         hints: List[Tuple[bytes32, bytes]] = []
-
-        # Make sure the count is even so we can filter by spent and unspent evenly.
         count = 50000
 
         for i in range(count):
@@ -545,7 +543,9 @@ async def test_coin_state_batches(db_version: int) -> None:
         await hint_store.add_hints(hints)
 
         # Helper for syncing all of the coin states.
-        async def sync_states(*, include_spent: bool, include_unspent: bool, include_hinted: bool) -> List[CoinState]:
+        async def test_states(
+            expected_records: List[CoinRecord], *, include_spent: bool, include_unspent: bool, include_hinted: bool
+        ) -> None:
             height = uint32(0)
             all_coin_states: List[CoinState] = []
             is_finished = False
@@ -568,32 +568,49 @@ async def test_coin_state_batches(db_version: int) -> None:
                         height = uint32(0)
                         is_finished = False
 
-            return all_coin_states
+            all_coin_states.sort(key=lambda cs: cs.coin.amount)
+
+            assert len(all_coin_states) == len(expected_records)
+
+            for i in range(len(expected_records)):
+                assert expected_records[i].coin.name().hex() == all_coin_states[i].coin.name().hex(), i
 
         # Make sure all of the coin states are found when batching.
-        all_coin_states = await sync_states(include_spent=True, include_unspent=True, include_hinted=True)
-        all_coin_states.sort(key=lambda cs: cs.coin.amount)
-
-        assert len(all_coin_states) == len(coin_records)
-
-        for i in range(min(len(coin_records), len(all_coin_states))):
-            assert coin_records[i].coin.name().hex() == all_coin_states[i].coin.name().hex(), i
+        await test_states(coin_records, include_spent=True, include_unspent=True, include_hinted=True)
 
         # Make sure you can filter out hints.
-        all_coin_states = await sync_states(include_spent=True, include_unspent=True, include_hinted=False)
-        assert len(all_coin_states) == len(coin_records) - len(hints)
+        ph_set = set(puzzle_hashes)
+
+        await test_states(
+            [cr for cr in coin_records if cr.coin.puzzle_hash in ph_set],
+            include_spent=True,
+            include_unspent=True,
+            include_hinted=False,
+        )
 
         # Make sure you can filter out spent coins.
-        all_coin_states = await sync_states(include_spent=False, include_unspent=True, include_hinted=True)
-        assert len(all_coin_states) == len(coin_records) // 2
+        await test_states(
+            [cr for cr in coin_records if cr.spent_block_index == 0],
+            include_spent=False,
+            include_unspent=True,
+            include_hinted=True,
+        )
 
         # Make sure you can filter out unspent coins.
-        all_coin_states = await sync_states(include_spent=True, include_unspent=False, include_hinted=True)
-        assert len(all_coin_states) == len(coin_records) // 2
+        await test_states(
+            [cr for cr in coin_records if cr.spent_block_index > 0],
+            include_spent=True,
+            include_unspent=False,
+            include_hinted=True,
+        )
 
         # Make sure you can filter out spent and unspent coins.
-        all_coin_states = await sync_states(include_spent=False, include_unspent=False, include_hinted=True)
-        assert len(all_coin_states) == 0
+        await test_states(
+            [],
+            include_spent=False,
+            include_unspent=False,
+            include_hinted=True,
+        )
 
 
 @pytest.mark.anyio
