@@ -19,7 +19,6 @@ chia.ssl.create_ssl
 chia.timelord.timelord_api
 chia.timelord.timelord_launcher
 chia.types.blockchain_format.program
-chia.wallet.block_record
 chia.wallet.chialisp
 chia.wallet.did_wallet.did_wallet
 chia.wallet.key_val_store
