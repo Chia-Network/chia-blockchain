@@ -99,8 +99,8 @@ class WalletBlockchain(BlockchainInterface):
             and block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None
         ):
             assert block.finished_sub_slots[0].challenge_chain.new_difficulty is not None  # They both change together
-            sub_slot_iters: uint64 = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
-            difficulty: uint64 = block.finished_sub_slots[0].challenge_chain.new_difficulty
+            sub_slot_iters = uint64(block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters)
+            difficulty = uint64(block.finished_sub_slots[0].challenge_chain.new_difficulty)
         else:
             sub_slot_iters = self._sub_slot_iters
             difficulty = self._difficulty

@@ -62,8 +62,8 @@ def block_to_block_record(
             blocks,
             block.height,
             blocks.block_record(prev_b.prev_hash),
-            block.finished_sub_slots[0].challenge_chain.new_difficulty,
-            block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+            uint64.construct_optional(block.finished_sub_slots[0].challenge_chain.new_difficulty),
+            uint64.construct_optional(block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters),
         )
         if ses.get_hash() != found_ses_hash:
             raise ValueError(Err.INVALID_SUB_EPOCH_SUMMARY)
