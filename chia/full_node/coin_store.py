@@ -466,10 +466,10 @@ class CoinStore:
 
             is_finished: bool
 
-            if len(coin_states) == max_items:
+            if len(coin_states) <= max_items:
                 next_height = min_height
                 is_finished = True
-            elif len(coin_states) > max_items:
+            else:
                 next_coin_state = coin_states.pop()
                 next_height = uint32(max(next_coin_state.created_height or 0, next_coin_state.spent_height or 0))
 
@@ -482,9 +482,6 @@ class CoinStore:
                         break
 
                 is_finished = False
-            else:
-                next_height = min_height
-                is_finished = True
 
         return coin_states, next_height, is_finished
 
