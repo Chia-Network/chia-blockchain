@@ -1272,7 +1272,7 @@ class FullNodeAPI:
         await self.full_node.transaction_queue.put(queue_entry, peer_id=None, high_priority=True)
         try:
             with anyio.fail_after(delay=45):
-                status, error = await queue_entry.done
+                status, error = await queue_entry.done.wait()
         except TimeoutError:
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.PENDING), None)
         else:
