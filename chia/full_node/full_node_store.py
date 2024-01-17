@@ -45,6 +45,28 @@ class UnfinishedBlockEntry:
     height: uint32
 
 
+def find_best_block(
+    result: Dict[Optional[bytes32], UnfinishedBlockEntry]
+) -> Tuple[Optional[bytes32], Optional[UnfinishedBlock]]:
+    """
+    Given a collection of UnfinishedBlocks (all with the same reward block
+    hash), return the "best" one. i.e. the one with the smallest foliage hash.
+    """
+    if len(result) == 0:
+        return None, None
+
+    all_blocks = list(result.items())
+    if len(all_blocks) == 1:
+        return all_blocks[0][0], all_blocks[0][1].unfinished_block
+
+    # if there are unfinished blocks with foliage (i.e. not None) we prefer
+    # those, so drop the first element
+    all_blocks = [e for e in all_blocks if e[0] is not None]
+    all_blocks = sorted(all_blocks)
+
+    return all_blocks[0][0], all_blocks[0][1].unfinished_block
+
+
 class FullNodeStore:
     constants: ConsensusConstants
 
@@ -206,20 +228,45 @@ class FullNodeStore:
         if result is None:
             return None
         # The old API doesn't distinguish between duplicate UnfinishedBlocks,
-        # just return the first one
-        return next(iter(result.values())).unfinished_block
+        # return the *best* UnfinishedBlock. This is the path taken when the
+        # timelord sends us an infusion point with this specific reward block
+        # hash. We pick one of the unfinished blocks based on an arbitrary but
+        # deterministic property.
+        # this sorts the UnfinishedBlocks by the foliage hash, and picks the
+        # smallest hash
+        foliage_hash, block = find_best_block(result)
+        return block
 
     def get_unfinished_block2(
         self, unfinished_reward_hash: bytes32, unfinished_foliage_hash: Optional[bytes32]
-    ) -> Tuple[Optional[UnfinishedBlock], int]:
+    ) -> Tuple[Optional[UnfinishedBlock], int, bool]:
+        """
+        Looks up an UnfinishedBlock by its reward block hash and foliage hash.
+        If the foliage hash is None (e.g. it's not a transaction block), we fall
+        back to the original function that looks up unfinished blocks just by
+        their reward block hash.
+        Returns:
+            1. the (optional) UnfinishedBlock
+            2. the number of other candidate blocks we know of with the same
+               reward block hash
+            3. whether we already have a "better" UnfinishedBlock candidate than
+               this
+        """
         result = self.unfinished_blocks.get(unfinished_reward_hash, None)
         if result is None:
-            return None, 0
+            return None, 0, False
         if unfinished_foliage_hash is None:
-            return next(iter(result.values())).unfinished_block, len(result)
+            return self.get_unfinished_block(unfinished_reward_hash), len(result), False
+
+        foliage_hash, block = find_best_block(result)
+        has_better: bool = foliage_hash is not None and foliage_hash < unfinished_foliage_hash
+
+        entry = result.get(unfinished_foliage_hash)
+
+        if entry is None:
+            return None, len(result), has_better
         else:
-            entry = result.get(unfinished_foliage_hash)
-            return (None if entry is None else entry.unfinished_block), len(result)
+            return entry.unfinished_block, len(result), has_better
 
     def get_unfinished_block_result(self, unfinished_reward_hash: bytes32) -> Optional[PreValidationResult]:
         result = self.unfinished_blocks.get(unfinished_reward_hash, None)

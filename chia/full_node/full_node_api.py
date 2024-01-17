@@ -477,9 +477,15 @@ class FullNodeAPI:
             return None
         block_hash = new_unfinished_block.unfinished_reward_hash
         foliage_hash = new_unfinished_block.foliage_hash
-        entry, count = self.full_node.full_node_store.get_unfinished_block2(block_hash, foliage_hash)
+        entry, count, have_better = self.full_node.full_node_store.get_unfinished_block2(block_hash, foliage_hash)
 
         if entry is not None:
+            return None
+
+        if have_better:
+            self.log.info(
+                f"Already have a better Unfinished Block with partial hash {block_hash.hex()} ignoring this one"
+            )
             return None
 
         max_duplicate_unfinished_blocks = self.full_node.config.get("max_duplicate_unfinished_blocks", 3)
@@ -514,7 +520,7 @@ class FullNodeAPI:
         self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock2
     ) -> Optional[Message]:
         unfinished_block: Optional[UnfinishedBlock]
-        unfinished_block, _ = self.full_node.full_node_store.get_unfinished_block2(
+        unfinished_block, _, _ = self.full_node.full_node_store.get_unfinished_block2(
             request_unfinished_block.unfinished_reward_hash,
             request_unfinished_block.foliage_hash,
         )

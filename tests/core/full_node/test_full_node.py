@@ -1314,6 +1314,11 @@ class TestFullNodeProtocol:
         # notify the node of unfinished blocks for this reward block hash
         # we forward 3 different blocks with the same reward block hash, but no
         # more (it's configurable)
+        # also, we don't forward unfinished blocks that are "worse" than the
+        # best block we've already seen, so we may need to send more than 3
+        # blocks to the node for it to forward 3
+
+        unf_blocks: List[UnfinishedBlock] = []
 
         last_reward_hash: Optional[bytes32] = None
         for idx in range(0, 6):
@@ -1326,12 +1331,21 @@ class TestFullNodeProtocol:
                 1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
             )[-1]
             unf = make_unfinished_block(block, bt.constants)
+            unf_blocks.append(unf)
 
             if last_reward_hash is None:
                 last_reward_hash = unf.partial_hash
             else:
                 assert last_reward_hash == unf.partial_hash
 
+        # sort the blocks from worst -> best
+        def sort_key(b: UnfinishedBlock) -> bytes32:
+            assert b.foliage.foliage_transaction_block_hash is not None
+            return b.foliage.foliage_transaction_block_hash
+
+        unf_blocks.sort(reverse=True, key=sort_key)
+
+        for idx, unf in enumerate(unf_blocks):
             res = await full_node_1.new_unfinished_block2(
                 fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
             )
@@ -1568,6 +1582,10 @@ class TestFullNodeProtocol:
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
+        # the "best" unfinished block according to the metric we use to pick one
+        # deterministically
+        best_unf: Optional[UnfinishedBlock] = None
+
         for idx in range(0, 6):
             # we include a different transaction in each block. This makes the
             # foliage different in each of them, but the reward block (plot) the same
@@ -1579,6 +1597,14 @@ class TestFullNodeProtocol:
             )[-1]
             unf = make_unfinished_block(block, bt.constants)
             assert unf.foliage.foliage_transaction_block_hash is not None
+
+            if best_unf is None:
+                best_unf = unf
+            elif (
+                unf.foliage.foliage_transaction_block_hash is not None
+                and unf.foliage.foliage_transaction_block_hash < best_unf.foliage.foliage_transaction_block_hash
+            ):
+                best_unf = unf
 
             # Don't have
             res = await full_node_1.request_unfinished_block2(
@@ -1592,6 +1618,12 @@ class TestFullNodeProtocol:
                 fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
             )
             assert res.data == bytes(fnp.RespondUnfinishedBlock(unf))
+
+            res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
+            assert res.data == bytes(fnp.RespondUnfinishedBlock(best_unf))
+
+            res = await full_node_1.request_unfinished_block2(fnp.RequestUnfinishedBlock2(unf.partial_hash, None))
+            assert res.data == bytes(fnp.RespondUnfinishedBlock(best_unf))
 
     @pytest.mark.anyio
     async def test_new_signage_point_or_end_of_sub_slot(self, wallet_nodes, self_hostname):
