@@ -1975,10 +1975,6 @@ class FullNode:
             validation_start = time.monotonic()
             validate_result = await self.blockchain.validate_unfinished_block(block, npc_result)
             if validate_result.error is not None:
-                if validate_result.error == Err.COIN_AMOUNT_NEGATIVE.value:
-                    # TODO: remove in the future, hotfix for 1.1.5 peers to not disconnect older peers
-                    self.log.info(f"Consensus error {validate_result.error}, not disconnecting")
-                    return
                 raise ConsensusError(Err(validate_result.error))
             validation_time = time.monotonic() - validation_start
 
