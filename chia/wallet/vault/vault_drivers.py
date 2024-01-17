@@ -37,8 +37,12 @@ def construct_recovery_finish(timelock: uint64, recovery_conditions: Program) ->
     return RECOVERY_FINISH_MOD.curry(timelock, recovery_conditions)
 
 
-def construct_vault_puzzle(secp_puzzle_hash: bytes32, recovery_puzzle_hash: bytes32) -> Program:
-    return P2_1_OF_N_MOD.curry(MerkleTree([secp_puzzle_hash, recovery_puzzle_hash]).calculate_root())
+def construct_vault_puzzle(secp_puzzle_hash: bytes32, recovery_puzzle_hash: Optional[bytes32]) -> Program:
+    if recovery_puzzle_hash:
+        merkle_root = MerkleTree([secp_puzzle_hash, recovery_puzzle_hash]).calculate_root()
+    else:
+        merkle_root = MerkleTree([secp_puzzle_hash]).calculate_root()
+    return P2_1_OF_N_MOD.curry(merkle_root)
 
 
 def get_recovery_puzzle(secp_puzzle_hash: bytes32, bls_pk: Optional[G1Element], timelock: Optional[uint64]) -> Program:
@@ -58,7 +62,7 @@ def get_vault_inner_puzzle(
     timelock: Optional[uint64] = None,
 ) -> Program:
     secp_puzzle_hash = construct_p2_delegated_secp(secp_pk, genesis_challenge, hidden_puzzle_hash).get_tree_hash()
-    recovery_puzzle_hash = get_recovery_puzzle(secp_puzzle_hash, bls_pk, timelock).get_tree_hash()
+    recovery_puzzle_hash = get_recovery_puzzle(secp_puzzle_hash, bls_pk, timelock).get_tree_hash() if bls_pk else None
     vault_inner = construct_vault_puzzle(secp_puzzle_hash, recovery_puzzle_hash)
     return vault_inner
 

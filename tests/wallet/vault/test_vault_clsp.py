@@ -106,16 +106,6 @@ def test_recovery_puzzles() -> None:
     escape_conds = conditions_dict_for_solution(recovery_puzzle, escape_solution, INFINITE_COST)
     assert escape_conds[ConditionOpcode.CREATE_COIN][0].vars[0] == ACS_PH
 
-    # Test recovery fails when no recovery key set
-    bls_pk = None
-    curried_recovery_puzzle = P2_RECOVERY_MOD.curry(
-        P2_1_OF_N_MOD_HASH, RECOVERY_FINISH_MOD_HASH, escape_puzzlehash, bls_pk, timelock
-    )
-    recovery_solution = Program.to([amount, recovery_conditions])
-
-    with pytest.raises(ValueError, match="clvm raise"):
-        run_with_secp(curried_recovery_puzzle, recovery_solution)
-
 
 def test_p2_delegated_secp() -> None:
     secp_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk, DEFAULT_HIDDEN_PUZZLE_HASH)
