@@ -820,9 +820,9 @@ class DataStore:
         old_pairs = await self.get_keys_values_compressed(tree_id, hash1)
         new_pairs = await self.get_keys_values_compressed(tree_id, hash2)
         if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
-            return set()
+            return KVDiffPaginationData(1, 0, [])
         if len(new_pairs.keys_values_hashed) == 0 and hash2 != bytes32([0] * 32):
-            return set()
+            return KVDiffPaginationData(1, 0, [])
 
         insertions = {k for k in new_pairs.keys_values_hashed.keys() if k not in old_pairs.keys_values_hashed}
         deletions = {k for k in old_pairs.keys_values_hashed.keys() if k not in new_pairs.keys_values_hashed}
