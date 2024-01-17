@@ -663,6 +663,24 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
+
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+            peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
+
+            if peak is not None:
+                # Finds the last transaction block before this one
+                curr_l_tb: BlockRecord = peak
+                while not curr_l_tb.is_transaction_block:
+                    curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
+                try:
+                    mempool_bundle = self.full_node.mempool_manager.create_bundle_from_mempool(
+                       curr_l_tb.header_hash
+                    )
+                except Exception as e:
+                    self.log.error(f"WJB Traceback: {traceback.format_exc()}")
+                    self.full_node.log.error(f"WJB Error making spend bundle {e} peak: {peak}")
+                    mempool_bundle = None
+
         msg, _ = await self.full_node.add_end_of_sub_slot(request.end_of_slot_bundle, peer)
         return msg
 

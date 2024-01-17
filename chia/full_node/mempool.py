@@ -412,6 +412,10 @@ class Mempool:
                     item_cost + cost_sum > self.mempool_info.max_block_clvm_cost
                     or fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
                 ):
+                    log.info(
+                        f"WJB item_cost {item_cost} + cost_sum {cost_sum} > self.mempool_info.max_block_clvm_cost {self.mempool_info.max_block_clvm_cost} or fee {fee} + fee_sum {fee_sum} > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT {DEFAULT_CONSTANTS.MAX_COIN_AMOUNT}"
+                    )
+                    log.info(f"WJB name {name} fee {fee} item {item}")
                     break
                 coin_spends.extend(unique_coin_spends)
                 additions.extend(unique_additions)
@@ -422,6 +426,7 @@ class Mempool:
             except Exception as e:
                 log.debug(f"Exception while checking a mempool item for deduplication: {e}")
                 continue
+        log.info(f"WJB done")
         if processed_spend_bundles == 0:
             return None
         log.info(
