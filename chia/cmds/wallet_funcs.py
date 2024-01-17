@@ -1000,11 +1000,13 @@ async def transfer_did(
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     did_wallet_id: int,
-    fee: int,
+    d_fee: Decimal,
     target_address: str,
     with_recovery: bool,
     reuse_puzhash: Optional[bool],
 ) -> None:
+    fee: int = int(d_fee * units["chia"])
+
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.did_transfer_did(

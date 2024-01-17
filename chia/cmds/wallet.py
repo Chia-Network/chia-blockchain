@@ -878,14 +878,20 @@ def did_transfer_did(
     id: int,
     target_address: str,
     reset_recovery: bool,
-    fee: int,
+    fee: str,
     reuse: bool,
 ) -> None:
     from .wallet_funcs import transfer_did
 
     asyncio.run(
         transfer_did(
-            wallet_rpc_port, fingerprint, id, fee, target_address, reset_recovery is False, True if reuse else None
+            wallet_rpc_port,
+            fingerprint,
+            id,
+            Decimal(fee),
+            target_address,
+            reset_recovery is False,
+            True if reuse else None,
         )
     )
 
