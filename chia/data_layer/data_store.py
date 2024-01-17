@@ -32,7 +32,6 @@ from chia.data_layer.data_layer_util import (
     Status,
     Subscription,
     TerminalNode,
-    get_hashes_for_page,
     internal_hash,
     key_hash,
     leaf_hash,
@@ -781,9 +780,9 @@ class DataStore:
 
     async def get_keys_paginated(
         self, tree_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
-    ) -> List[KeysPaginationData]:
+    ) -> KeysPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(tree_id, root_hash)
-        pagination_data = get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
+        pagination_data = self.get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
 
         keys: List[bytes] = []
         for hash in pagination_data.hashes:
@@ -799,9 +798,9 @@ class DataStore:
 
     async def get_keys_values_paginated(
         self, tree_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
-    ) -> List[KeysValuesPaginationData]:
+    ) -> KeysValuesPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(tree_id, root_hash)
-        pagination_data = get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
+        pagination_data = self.get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
 
         keys_values: List[TerminalNode] = []
         for hash in pagination_data.hashes:
@@ -817,7 +816,7 @@ class DataStore:
 
     async def get_kv_diff_paginated(
         self, tree_id: bytes32, page: int, max_page_size: int, hash1: bytes32, hash2: bytes32
-    ) -> List[KVDiffPaginationData]:
+    ) -> KVDiffPaginationData:
         old_pairs = await self.get_keys_values_compressed(tree_id, hash1)
         new_pairs = await self.get_keys_values_compressed(tree_id, hash2)
         if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
@@ -835,7 +834,7 @@ class DataStore:
             leaf_hash = old_pairs.keys_values_hashed[k]
             lengths[k] = old_pairs.leaf_hash_to_length[leaf_hash]
 
-        pagination_data = get_hashes_for_page(page, lengths, max_page_size)
+        pagination_data = self.get_hashes_for_page(page, lengths, max_page_size)
         kv_diff: List[DiffData] = []
 
         for hash in pagination_data.hashes:
