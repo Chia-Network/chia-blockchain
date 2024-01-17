@@ -15,9 +15,14 @@ from chia.data_layer.data_layer_util import (
     DiffData,
     InsertResult,
     InternalNode,
+    KeysPaginationData,
+    KeysValuesCompressed,
+    KeysValuesPaginationData,
+    KVDiffPaginationData,
     Node,
     NodeType,
     OperationType,
+    PaginationData,
     ProofOfInclusion,
     ProofOfInclusionLayer,
     Root,
@@ -27,6 +32,7 @@ from chia.data_layer.data_layer_util import (
     Status,
     Subscription,
     TerminalNode,
+    get_hashes_for_page,
     internal_hash,
     key_hash,
     leaf_hash,
@@ -730,23 +736,121 @@ class DataStore:
 
     async def get_keys_values_compressed(
         self, tree_id: bytes32, root_hash: Optional[bytes32] = None
-    ) -> Dict[bytes32, bytes32]:
+    ) -> KeysValuesCompressed:
         async with self.db_wrapper.reader() as reader:
             if root_hash is None:
                 root = await self.get_tree_root(tree_id=tree_id)
                 root_hash = root.node_hash
 
             cursor = await self.get_keys_values_cursor(reader, root_hash)
-            kv_compressed: Dict[bytes32, bytes32] = {}
+            keys_values_hashed: Dict[bytes32, bytes32] = {}
+            key_hash_to_length: Dict[bytes32, int] = {}
+            leaf_hash_to_length: Dict[bytes32, int] = {}
             async for row in cursor:
                 if row["depth"] > 62:
                     raise Exception("Tree depth exceeded 62, unable to guarantee left-to-right node order.")
                 node = row_to_node(row=row)
                 if not isinstance(node, TerminalNode):
                     raise Exception(f"Unexpected internal node found: {node.hash.hex()}")
-                kv_compressed[key_hash(node.key)] = leaf_hash(node.key, node.value)
+                keys_values_hashed[key_hash(node.key)] = leaf_hash(node.key, node.value)
+                key_hash_to_length[key_hash(node.key)] = len(node.key)
+                leaf_hash_to_length[leaf_hash(node.key, node.value)] = len(node.key) + len(node.value)
 
-            return kv_compressed
+            return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length)
+
+    def get_hashes_for_page(self, page: int, lengths: Dict[bytes32, int], max_page_size: int) -> PaginationData:
+        current_page = 0
+        current_page_size = 0
+        total_bytes = 0
+        hashes: List[bytes32] = []
+        for hash, length in sorted(lengths.items(), key=lambda x: x[1], reverse=True):
+            if length >= max_page_size:
+                raise RuntimeError(
+                    f"Cannot paginate data, item size is larger than max page size: {length} {max_page_size}"
+                )
+            total_bytes += length
+            if current_page_size + length <= max_page_size:
+                current_page_size += length
+            else:
+                current_page += 1
+                current_page_size = length
+            if current_page == page:
+                hashes.append(hash)
+
+        return PaginationData(current_page + 1, total_bytes, hashes)
+
+    async def get_keys_paginated(
+        self, tree_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
+    ) -> List[KeysPaginationData]:
+        keys_values_compressed = await self.get_keys_values_compressed(tree_id, root_hash)
+        pagination_data = get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
+
+        keys: List[bytes] = []
+        for hash in pagination_data.hashes:
+            node = await self.get_node(hash)
+            assert isinstance(node, TerminalNode)
+            keys.append(node.key)
+
+        return KeysPaginationData(
+            pagination_data.total_pages,
+            pagination_data.total_bytes,
+            keys,
+        )
+
+    async def get_keys_values_paginated(
+        self, tree_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
+    ) -> List[KeysValuesPaginationData]:
+        keys_values_compressed = await self.get_keys_values_compressed(tree_id, root_hash)
+        pagination_data = get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
+
+        keys_values: List[TerminalNode] = []
+        for hash in pagination_data.hashes:
+            node = await self.get_node(hash)
+            assert isinstance(node, TerminalNode)
+            keys_values.append(node)
+
+        return KeysValuesPaginationData(
+            pagination_data.total_pages,
+            pagination_data.total_bytes,
+            keys_values,
+        )
+
+    async def get_kv_diff_paginated(
+        self, tree_id: bytes32, page: int, max_page_size: int, hash1: bytes32, hash2: bytes32
+    ) -> List[KVDiffPaginationData]:
+        old_pairs = await self.get_keys_values_compressed(tree_id, hash1)
+        new_pairs = await self.get_keys_values_compressed(tree_id, hash2)
+        if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
+            return set()
+        if len(new_pairs.keys_values_hashed) == 0 and hash2 != bytes32([0] * 32):
+            return set()
+
+        insertions = {k for k in new_pairs.keys_values_hashed.keys() if k not in old_pairs.keys_values_hashed}
+        deletions = {k for k in old_pairs.keys_values_hashed.keys() if k not in new_pairs.keys_values_hashed}
+        lengths = {}
+        for k in insertions:
+            leaf_hash = new_pairs.keys_values_hashed[k]
+            lengths[k] = new_pairs.leaf_hash_to_length[leaf_hash]
+        for k in deletions:
+            leaf_hash = old_pairs.keys_values_hashed[k]
+            lengths[k] = old_pairs.leaf_hash_to_length[leaf_hash]
+
+        pagination_data = get_hashes_for_page(page, lengths, max_page_size)
+        kv_diff: List[DiffData] = []
+
+        for hash in pagination_data.hashes:
+            node = await self.get_node(hash)
+            assert isinstance(node, TerminalNode)
+            if hash in insertions:
+                kv_diff.append(DiffData(OperationType.INSERT, node.key, node.value))
+            else:
+                kv_diff.append(DiffData(OperationType.DELETE, node.key, node.value))
+
+        return KVDiffPaginationData(
+            pagination_data.total_pages,
+            pagination_data.total_bytes,
+            kv_diff,
+        )
 
     async def get_node_type(self, node_hash: bytes32) -> NodeType:
         async with self.db_wrapper.reader() as reader:
@@ -1258,7 +1362,8 @@ class DataStore:
             if old_root.node_hash is None:
                 hint_keys_values = {}
             else:
-                hint_keys_values = await self.get_keys_values_compressed(tree_id, root_hash=root_hash)
+                kv_compressed = await self.get_keys_values_compressed(tree_id, root_hash=root_hash)
+                hint_keys_values = kv_compressed.keys_values_hashed
 
             intermediate_root: Optional[Root] = old_root
             for change in changelist:

@@ -735,3 +735,38 @@ class InsertResult:
 class UnsubscribeData:
     tree_id: bytes32
     retain_data: bool
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysValuesCompressed:
+    keys_values_hashed: Dict[bytes32, bytes32]
+    key_hash_to_length: Dict[bytes32, int]
+    leaf_hash_to_length: Dict[bytes32, int]
+
+
+@dataclasses.dataclass(frozen=True)
+class PaginationData:
+    total_pages: int
+    total_bytes: int
+    hashes: List[bytes32]
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysPaginationData:
+    total_pages: int
+    total_bytes: int
+    keys: List[bytes]
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysValuesPaginationData:
+    total_pages: int
+    total_bytes: int
+    keys_values: List[TerminalNode]
+
+
+@dataclasses.dataclass(frozen=True)
+class KVDiffPaginationData:
+    total_pages: int
+    total_bytes: int
+    kv_diff: List[DiffData]
