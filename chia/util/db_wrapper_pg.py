@@ -10,9 +10,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Optional, Sequence, TextIO
 
+import aiomysql
+
 # import aiosqlite
 import anyio
-import aiomysql
 from typing_extensions import final
 
 SQLITE_MAX_VARIABLE_NUMBER = 32700
@@ -46,7 +47,13 @@ async def _create_connection(
     row_factory: Optional[Any] = None,
 ) -> aiomysql.Connection:
     connection = await aiomysql.connect(
-        host=host, port=port, user="root", password="mysql", db=database, loop=asyncio.get_event_loop()
+        host=host,
+        port=port,
+        user="root",
+        password="mysql",
+        db=database,
+        loop=asyncio.get_event_loop(),
+        cursorclass=aiomysql.DictCursor,
     )
 
     # if log_file is not None:
@@ -116,6 +123,7 @@ class DBWrapperPG:
         host: str,
         port: int,
         database: str,
+        create_db: bool = True,
         *,
         db_version: int = 1,
         uri: bool = False,
@@ -126,6 +134,13 @@ class DBWrapperPG:
         foreign_keys: bool = False,
         row_factory: Optional[Any] = None,
     ) -> AsyncIterator[DBWrapperPG]:
+        if create_db:
+            async with aiomysql.connect(
+                host=host, port=port, user="root", password="mysql", autocommit=True
+            ) as connection:
+                async with connection.cursor() as cursor:
+                    await cursor.execute(f"CREATE DATABASE {database};")
+
         async with contextlib.AsyncExitStack() as async_exit_stack:
             if log_path is None:
                 log_file = None
@@ -162,6 +177,12 @@ class DBWrapperPG:
                     while self._num_read_connections > 0:
                         await self._read_connections.get()
                         self._num_read_connections -= 1
+                if create_db:
+                    async with aiomysql.connect(
+                        host=host, port=port, user="root", password="mysql", autocommit=True
+                    ) as connection:
+                        async with connection.cursor() as cursor:
+                            cursor.execute(f"DROP DATABASE {database};")
 
     @classmethod
     async def create(
