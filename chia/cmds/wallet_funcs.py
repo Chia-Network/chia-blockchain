@@ -1384,9 +1384,7 @@ async def get_notifications(
             ids = None
 
         response = await wallet_client.get_notifications(
-            GetNotifications(
-                ids=ids, start=None if start is None else uint32(start), end=None if end is None else uint32(end)
-            )
+            GetNotifications(ids=ids, start=uint32.construct_optional(start), end=uint32.construct_optional(end))
         )
         for notification in response.notifications:
             print("")
