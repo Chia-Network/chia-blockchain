@@ -56,6 +56,10 @@ async def _create_connection(
         cursorclass=aiomysql.DictCursor,
     )
 
+    async with connection.cursor() as cursor:
+        await cursor.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
+        await connection.commit()
+
     # if log_file is not None:
     #     await connection.set_trace_callback(functools.partial(sql_trace_callback, file=log_file, name=name))
     return connection
@@ -136,7 +140,7 @@ class DBWrapperPG:
     ) -> AsyncIterator[DBWrapperPG]:
         if create_db:
             async with aiomysql.connect(
-                host=host, port=port, user="root", password="mysql", autocommit=True
+                host=host, port=port, user="root", password="mysql", autocommit=True, cursorclass=aiomysql.DictCursor
             ) as connection:
                 async with connection.cursor() as cursor:
                     await cursor.execute(f"CREATE DATABASE {database};")
@@ -179,7 +183,12 @@ class DBWrapperPG:
                         self._num_read_connections -= 1
                 if create_db:
                     async with aiomysql.connect(
-                        host=host, port=port, user="root", password="mysql", autocommit=True
+                        host=host,
+                        port=port,
+                        user="root",
+                        password="mysql",
+                        autocommit=True,
+                        cursorclass=aiomysql.DictCursor,
                     ) as connection:
                         async with connection.cursor() as cursor:
                             cursor.execute(f"DROP DATABASE {database};")

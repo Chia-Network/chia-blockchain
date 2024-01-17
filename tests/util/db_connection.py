@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
-
-import aiomysql
 
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.db_wrapper_pg import DBWrapperPG, generate_postgres_db_name

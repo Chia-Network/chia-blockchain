@@ -327,7 +327,7 @@ class DataStore:
                         values,
                     )
                 except aiomysql.IntegrityError as e:
-                    if not e.args[0].startswith("UNIQUE constraint"):
+                    if not e.args[0] == 1062:  # ("UNIQUE constraint") / Duplicate entry
                         # UNIQUE constraint failed: ancestors.hash, ancestors.tree_id, ancestors.generation
                         raise
 
@@ -356,6 +356,7 @@ class DataStore:
                             "Requested insertion of ancestor, where ancestor differ, but other values are identical: "
                             f"{hash} {generation} {tree_id}"
                         ) from None
+                    cursor = await writer.cursor()
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
         # forcing type hint here for:
@@ -540,6 +541,7 @@ class DataStore:
                 {"tree_id": tree_id, "generation": generation, "status": Status.COMMITTED.value},
             )
             row = await cursor.fetchone()
+            # print("ARRRR", row)
 
             if row is None:
                 raise Exception(f"unable to find root for id, generation: {tree_id.hex()}, {generation}")
@@ -577,7 +579,7 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.cursor()
             max_generation_str = f"AND generation < {max_generation} " if max_generation is not None else ""
-            node_hash_str = "AND node_hash = :node_hash " if hash is not None else "AND node_hash is NULL "
+            node_hash_str = "AND node_hash = %(node_hash)s " if hash is not None else "AND node_hash is NULL "
             await cursor.execute(
                 "SELECT * FROM root WHERE tree_id = %(tree_id)s "
                 f"{max_generation_str}"
@@ -673,7 +675,7 @@ class DataStore:
             await cursor.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left_hash, right_hash, key, value) AS (
+                    tree_from_root_hash(hash, node_type, left_hash, right_hash, `key`, value) AS (
                         SELECT node.* FROM node WHERE node.hash = %(root_hash)s
                         UNION ALL
                         SELECT node.* FROM node, tree_from_root_hash WHERE node.hash = tree_from_root_hash.left_hash
@@ -1285,6 +1287,7 @@ class DataStore:
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
+        use_optimized: bool = False,
     ) -> Optional[bytes32]:
         async with self.db_wrapper.writer() as writer:
             old_root = await self.get_tree_root(tree_id)
@@ -1303,7 +1306,13 @@ class DataStore:
                     side = change.get("side", None)
                     if reference_node_hash is None and side is None:
                         insert_result = await self.autoinsert(
-                            key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
+                            key,
+                            value,
+                            tree_id,
+                            hint_keys_values,
+                            use_optimized=use_optimized,
+                            status=Status.COMMITTED,
+                            root=intermediate_root,
                         )
                         intermediate_root = insert_result.root
                     else:
@@ -1316,21 +1325,32 @@ class DataStore:
                             reference_node_hash,
                             side,
                             hint_keys_values,
-                            True,
-                            Status.COMMITTED,
+                            use_optimized=use_optimized,
+                            status=Status.COMMITTED,
                             root=intermediate_root,
                         )
                         intermediate_root = insert_result.root
                 elif change["action"] == "delete":
                     key = change["key"]
                     intermediate_root = await self.delete(
-                        key, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
+                        key,
+                        tree_id,
+                        hint_keys_values,
+                        use_optimized=use_optimized,
+                        status=Status.COMMITTED,
+                        root=intermediate_root,
                     )
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
                     insert_result = await self.upsert(
-                        key, new_value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
+                        key,
+                        new_value,
+                        tree_id,
+                        hint_keys_values,
+                        use_optimized=use_optimized,
+                        status=Status.COMMITTED,
+                        root=intermediate_root,
                     )
                     intermediate_root = insert_result.root
                 else:
@@ -1445,7 +1465,8 @@ class DataStore:
 
     async def get_node(self, node_hash: bytes32) -> Node:
         async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute("SELECT * FROM node WHERE hash = %(hash)s LIMIT 1", {"hash": node_hash})
+            cursor = await reader.cursor()
+            await cursor.execute("SELECT * FROM node WHERE hash = %(hash)s LIMIT 1", {"hash": node_hash})
             row = await cursor.fetchone()
 
         if row is None:
@@ -1456,15 +1477,16 @@ class DataStore:
 
     async def get_tree_as_program(self, tree_id: bytes32) -> Program:
         async with self.db_wrapper.reader() as reader:
+            cursor = await reader.cursor()
             root = await self.get_tree_root(tree_id=tree_id)
             # TODO: consider actual proper behavior
             assert root.node_hash is not None
             root_node = await self.get_node(node_hash=root.node_hash)
 
-            cursor = await reader.execute(
+            await cursor.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left_hash, right_hash, key, value) AS (
+                    tree_from_root_hash(hash, node_type, left_hash, right_hash, `key`, value) AS (
                         SELECT node.* FROM node WHERE node.hash = %(root_hash)s
                         UNION ALL
                         SELECT node.* FROM node, tree_from_root_hash
@@ -1536,16 +1558,17 @@ class DataStore:
 
     async def get_first_generation(self, node_hash: bytes32, tree_id: bytes32) -> int:
         async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute(
-                "SELECT MIN(generation) AS generation FROM ancestors WHERE hash = %(hash)s AND tree_id = %(tree_id)s",
-                {"hash": node_hash, "tree_id": tree_id},
-            )
-            row = await cursor.fetchone()
-            if row is None:
-                raise RuntimeError("Hash not found in ancestor table.")
+            async with reader.cursor() as cursor:
+                await cursor.execute(
+                    "SELECT MIN(generation) AS generation FROM ancestors WHERE hash = %(hash)s AND tree_id = %(tree_id)s",
+                    {"hash": node_hash, "tree_id": tree_id},
+                )
+                row = await cursor.fetchone()
+                if row is None:
+                    raise RuntimeError("Hash not found in ancestor table.")
 
-            generation = row["generation"]
-            return int(generation)
+                generation = row["generation"]
+                return int(generation)
 
     async def write_tree_to_file(
         self,
@@ -1616,11 +1639,11 @@ class DataStore:
 
     async def subscribe(self, subscription: Subscription) -> None:
         async with self.db_wrapper.writer() as writer:
+            cursor = await writer.cursor()
             # Add a fake subscription, so we always have the tree_id, even with no URLs.
-            await writer.execute(
+            await cursor.execute(
                 "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
-                "VALUES (%(tree_id)s, '', NULL, NULL, 0)"
-                "ON CONFLICT DO NOTHING",
+                "VALUES (%(tree_id)s, '', NULL, NULL, 0) ON DUPLICATE KEY UPDATE tree_id = tree_id",
                 {
                     "tree_id": subscription.tree_id,
                 },
@@ -1639,7 +1662,7 @@ class DataStore:
                 old_urls = {server_info.url for server_info in old_subscription.servers_info}
             new_servers = [server_info for server_info in subscription.servers_info if server_info.url not in old_urls]
             for server_info in new_servers:
-                await writer.execute(
+                await cursor.execute(
                     "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
                     "VALUES (%(tree_id)s, %(url)s, %(ignore_till)s, %(num_consecutive_failures)s, 0)",
                     {
@@ -1652,8 +1675,9 @@ class DataStore:
 
     async def remove_subscriptions(self, tree_id: bytes32, urls: List[str]) -> None:
         async with self.db_wrapper.writer() as writer:
+            cursor = await writer.cursor()
             for url in urls:
-                await writer.execute(
+                await cursor.execute(
                     "DELETE FROM subscriptions WHERE tree_id = %(tree_id)s AND url = %(url)s",
                     {
                         "tree_id": tree_id,
@@ -1663,8 +1687,9 @@ class DataStore:
 
     async def delete_store_data(self, tree_id: bytes32) -> None:
         async with self.db_wrapper.writer() as writer:
+            cursor = await writer.cursor()
             await self.clean_node_table(writer)
-            cursor = await writer.execute(
+            await cursor.execute(
                 """
                 WITH RECURSIVE all_nodes AS (
                     SELECT a.hash, n.left_hash, n.right_hash
@@ -1709,8 +1734,8 @@ class DataStore:
                 if right is not None:
                     ref_counts[right] = ref_counts.get(right, 0) + 1
 
-            await writer.execute("DELETE FROM ancestors WHERE tree_id = ?", (tree_id,))
-            await writer.execute("DELETE FROM root WHERE tree_id = ?", (tree_id,))
+            await cursor.execute("DELETE FROM ancestors WHERE tree_id = ?", (tree_id,))
+            await cursor.execute("DELETE FROM root WHERE tree_id = ?", (tree_id,))
             queue = [hash for hash in to_delete if ref_counts.get(hash, 0) == 0]
             while queue:
                 hash = queue.pop(0)
@@ -1731,10 +1756,11 @@ class DataStore:
 
     async def unsubscribe(self, tree_id: bytes32) -> None:
         async with self.db_wrapper.writer() as writer:
-            await writer.execute(
-                "DELETE FROM subscriptions WHERE tree_id = %(tree_id)s",
-                {"tree_id": tree_id},
-            )
+            async with writer.cursor() as cursor:
+                await cursor.execute(
+                    "DELETE FROM subscriptions WHERE tree_id = %(tree_id)s",
+                    {"tree_id": tree_id},
+                )
 
     async def rollback_to_generation(self, tree_id: bytes32, target_generation: int) -> None:
         async with self.db_wrapper.writer() as writer:
@@ -1750,16 +1776,17 @@ class DataStore:
 
     async def update_server_info(self, tree_id: bytes32, server_info: ServerInfo) -> None:
         async with self.db_wrapper.writer() as writer:
-            await writer.execute(
-                "UPDATE subscriptions SET ignore_till = %(ignore_till)s, "
-                "num_consecutive_failures = %(num_consecutive_failures)s WHERE tree_id = %(tree_id)s AND url = %(url)s",
-                {
-                    "ignore_till": server_info.ignore_till,
-                    "num_consecutive_failures": server_info.num_consecutive_failures,
-                    "tree_id": tree_id,
-                    "url": server_info.url,
-                },
-            )
+            async with writer.cursor() as cursor:
+                await cursor.execute(
+                    "UPDATE subscriptions SET ignore_till = %(ignore_till)s, "
+                    "num_consecutive_failures = %(num_consecutive_failures)s WHERE tree_id = %(tree_id)s AND url = %(url)s",
+                    {
+                        "ignore_till": server_info.ignore_till,
+                        "num_consecutive_failures": server_info.num_consecutive_failures,
+                        "tree_id": tree_id,
+                        "url": server_info.url,
+                    },
+                )
 
     async def received_incorrect_file(self, tree_id: bytes32, server_info: ServerInfo, timestamp: int) -> None:
         SEVEN_DAYS_BAN = 7 * 24 * 60 * 60
@@ -1803,7 +1830,8 @@ class DataStore:
         subscriptions: List[Subscription] = []
 
         async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute(
+            cursor = await reader.cursor()
+            await cursor.execute(
                 "SELECT * from subscriptions",
             )
             async for row in cursor:
