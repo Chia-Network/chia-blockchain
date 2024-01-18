@@ -1699,7 +1699,7 @@ class DataStore:
                 ),
                 pending_nodes AS (
                     SELECT node_hash AS hash FROM root
-                    WHERE status = :status
+                    WHERE status = %(status)s
                     UNION ALL
                     SELECT n.left_hash FROM node n
                     INNER JOIN pending_nodes pn ON n.hash = pn.hash
@@ -1734,14 +1734,14 @@ class DataStore:
                 if right is not None:
                     ref_counts[right] = ref_counts.get(right, 0) + 1
 
-            await cursor.execute("DELETE FROM ancestors WHERE tree_id = ?", (tree_id,))
-            await cursor.execute("DELETE FROM root WHERE tree_id = ?", (tree_id,))
+            await cursor.execute("DELETE FROM ancestors WHERE tree_id = %s", (tree_id,))
+            await cursor.execute("DELETE FROM root WHERE tree_id = %s", (tree_id,))
             queue = [hash for hash in to_delete if ref_counts.get(hash, 0) == 0]
             while queue:
                 hash = queue.pop(0)
                 if hash not in to_delete:
                     continue
-                await writer.execute("DELETE FROM node WHERE hash = ?", (hash,))
+                await cursor.execute("DELETE FROM node WHERE hash = %s", (hash,))
 
                 left, right = to_delete[hash]
                 if left is not None:

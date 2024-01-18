@@ -711,7 +711,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
     hint_keys_values: Dict[bytes, bytes] = {}
     hashes = []
 
-    for i in range(200):
+    for i in range(2000):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
         insert_result = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
@@ -730,7 +730,7 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
     hint_keys_values: Dict[bytes, bytes] = {}
     hashes = []
 
-    for i in range(200):
+    for i in range(2000):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
         if i == 0 or i > 10:
@@ -746,11 +746,11 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
                 hint_keys_values=hint_keys_values,
                 status=Status.COMMITTED,
             )
-            ancestors = await data_store.get_ancestors_optimized(insert_result.node_hash, tree_id)
+            ancestors = await data_store.get_ancestors(insert_result.node_hash, tree_id)
             assert len(ancestors) == i
         hashes.append(insert_result.node_hash)
 
-    heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
+    heights = {node_hash: len(await data_store.get_ancestors(node_hash, tree_id)) for node_hash in hashes}
     too_tall = {hash: height for hash, height in heights.items() if height > 14}
     assert too_tall == {}
     assert 11 <= statistics.mean(heights.values()) <= 12
@@ -1544,13 +1544,13 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
     await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
     keys_values_before = await raw_data_store.get_keys_values(tree_id_2)
     async with raw_data_store.db_wrapper.reader() as reader:
-        cursor = await reader.cursor()
-        result = await cursor.execute("SELECT * FROM node")
-        nodes = await result.fetchall()
-        kv_nodes_before = {}
-        for node in nodes:
-            if node["key"] is not None:
-                kv_nodes_before[node["key"]] = node["value"]
+        async with reader.cursor() as cursor:
+            await cursor.execute("SELECT * FROM node")
+            nodes = await cursor.fetchall()
+            kv_nodes_before = {}
+            for node in nodes:
+                if node["key"] is not None:
+                    kv_nodes_before[node["key"]] = node["value"]
     assert [kv_nodes_before[key] for key in keys] == keys
     await raw_data_store.delete_store_data(tree_id)
     # Deleting from `node` table doesn't alter other stores.
@@ -1558,8 +1558,8 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
     assert keys_values_before == keys_values_after
     async with raw_data_store.db_wrapper.reader() as reader:
         cursor = await reader.cursor()
-        result = await cursor.execute("SELECT * FROM node")
-        nodes = await result.fetchall()
+        await cursor.execute("SELECT * FROM node")
+        nodes = await cursor.fetchall()
         kv_nodes_after = {}
         for node in nodes:
             if node["key"] is not None:
@@ -1574,10 +1574,10 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
     await raw_data_store.delete_store_data(tree_id_2)
     async with raw_data_store.db_wrapper.reader() as reader:
         async with reader.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM node")
+            await cursor.execute("SELECT COUNT(*) FROM node")
             row_count = await cursor.fetchone()
             assert row_count is not None
-            assert row_count[0] == 0
+            assert row_count["COUNT(*)"] == 0
     assert not await raw_data_store.tree_id_exists(tree_id_2)
 
 
@@ -1604,9 +1604,9 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
 
         for tree_index in range(num_stores):
             async with raw_data_store.db_wrapper.reader() as reader:
-                cursor = await reader.cursor()
-                result = await cursor.execute("SELECT * FROM node")
-                nodes = await result.fetchall()
+                async with reader.cursor() as cursor:
+                    await cursor.execute("SELECT * FROM node")
+                    nodes = await cursor.fetchall()
 
             keys = {node["key"] for node in nodes if node["key"] is not None}
             assert len(keys) == total_keys - tree_index * keys_deleted_per_store
@@ -1618,10 +1618,10 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
 
         async with raw_data_store.db_wrapper.reader() as reader:
             async with reader.cursor() as cursor:
-                cursor.execute("SELECT COUNT(*) FROM node")
+                await cursor.execute("SELECT COUNT(*) FROM node")
                 row_count = await cursor.fetchone()
                 assert row_count is not None
-                assert row_count[0] == 0
+                assert row_count["COUNT(*)"] == 0
 
 
 @pytest.mark.parametrize("common_keys_count", [1, 250, 499])
@@ -1652,9 +1652,9 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
 
     await raw_data_store.delete_store_data(tree_id_1)
     async with raw_data_store.db_wrapper.reader() as reader:
-        cursor = await reader.cursor()
-        result = await cursor.execute("SELECT * FROM node")
-        nodes = await result.fetchall()
+        async with reader.cursor() as cursor:
+            await cursor.execute("SELECT * FROM node")
+            nodes = await cursor.fetchall()
 
     keys = {node["key"] for node in nodes if node["key"] is not None}
     # Since one store got all its keys deleted, we're left only with the keys of the other store.
@@ -1687,18 +1687,18 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
     await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
 
     async with raw_data_store.db_wrapper.reader() as reader:
-        cursor = await reader.cursor()
-        result = await cursor.execute("SELECT * FROM node")
-        nodes = await result.fetchall()
+        async with reader.cursor() as cursor:
+            await cursor.execute("SELECT * FROM node")
+            nodes = await cursor.fetchall()
 
     keys = {node["key"] for node in nodes if node["key"] is not None}
     assert keys == set(original_keys)
 
     await raw_data_store.delete_store_data(tree_id)
     async with raw_data_store.db_wrapper.reader() as reader:
-        cursor = await reader.cursor()
-        result = await cursor.execute("SELECT * FROM node")
-        nodes = await result.fetchall()
+        async with reader.cursor() as cursor:
+            await cursor.execute("SELECT * FROM node")
+            nodes = await cursor.fetchall()
 
     keys = {node["key"] for node in nodes if node["key"] is not None}
     assert keys == set(original_keys[: (num_stores - 1) * keys_per_pending_root])
