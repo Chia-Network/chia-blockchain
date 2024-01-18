@@ -546,13 +546,12 @@ async def test_coin_state_batches(db_version: int) -> None:
         async def test_states(
             expected_records: List[CoinRecord], *, include_spent: bool, include_unspent: bool, include_hinted: bool
         ) -> None:
-            height = uint32(0)
+            height: Optional[uint32] = uint32(0)
             all_coin_states: List[CoinState] = []
-            is_finished = False
             remaining_phs = puzzle_hashes.copy()
 
-            while not is_finished:
-                (coin_states, height, is_finished) = await coin_store.batch_coin_states_by_puzzle_hashes(
+            while height is not None:
+                (coin_states, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
                     remaining_phs[:15000],
                     min_height=height,
                     include_spent=include_spent,
@@ -561,12 +560,11 @@ async def test_coin_state_batches(db_version: int) -> None:
                 )
                 all_coin_states += coin_states
 
-                if is_finished:
+                if height is None:
                     remaining_phs = remaining_phs[15000:]
 
                     if len(remaining_phs) > 0:
                         height = uint32(0)
-                        is_finished = False
 
             all_coin_states.sort(key=lambda cs: cs.coin.amount)
 
@@ -646,10 +644,9 @@ async def test_batch_many_coin_states(db_version: int) -> None:
         await coin_store._add_coin_records(coin_records)
 
         # Make sure all of the coin states are found.
-        (all_coin_states, next_height, is_finished) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
+        (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
         all_coin_states.sort(key=lambda cs: cs.coin.amount)
 
-        assert is_finished
         assert next_height == 0
         assert len(all_coin_states) == len(coin_records)
 
@@ -668,9 +665,8 @@ async def test_batch_many_coin_states(db_version: int) -> None:
             ]
         )
 
-        (all_coin_states, next_height, is_finished) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
+        (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
 
-        assert not is_finished
         assert next_height == 101
         assert len(all_coin_states) == 50000
 

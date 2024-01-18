@@ -420,9 +420,9 @@ class CoinStore:
         include_unspent: bool = True,
         include_hinted: bool = True,
         max_items: int = 50000,
-    ) -> Tuple[List[CoinState], uint32, bool]:
+    ) -> Tuple[List[CoinState], Optional[uint32]]:
         """
-        Returns the coin states, as well as the next block height and whether finished.
+        Returns the coin states, as well as the next block height (or `None` if finished).
         Note that the maximum number of puzzle hashes is currently set to 15000.
         """
 
@@ -448,8 +448,8 @@ class CoinStore:
             elif include_unspent:
                 height_filter = f"AND {require_unspent}"
             else:
-                # There are no coins which are both spent and unspent, so return an empty list.
-                return [], min_height, True
+                # There are no coins which are both spent and unspent, so we're finished.
+                return [], None
 
             if include_hinted:
                 cursor = await conn.execute(
@@ -479,26 +479,26 @@ class CoinStore:
             for row in await cursor.fetchall():
                 coin_states.append(self.row_to_coin_state(row))
 
-            is_finished: bool
+        # If there aren't too many coin states, we've finished syncing these hashes.
+        # There is no next height to start from, so return `None`.
+        if len(coin_states) <= max_items:
+            return coin_states, None
 
-            if len(coin_states) <= max_items:
-                next_height = min_height
-                is_finished = True
-            else:
-                next_coin_state = coin_states.pop()
-                next_height = uint32(max(next_coin_state.created_height or 0, next_coin_state.spent_height or 0))
+        # The last item is the start of the next batch of coin states.
+        next_coin_state = coin_states.pop()
+        next_height = uint32(max(next_coin_state.created_height or 0, next_coin_state.spent_height or 0))
 
-                while len(coin_states) > 0:
-                    last_coin_state = coin_states[-1]
-                    height = uint32(max(last_coin_state.created_height or 0, last_coin_state.spent_height or 0))
-                    if height == min_height:
-                        coin_states.pop()
-                    else:
-                        break
+        # In order to prevent blocks from being split up between batches, remove
+        # all coin states whose max height is the same as the last coin state's height.
+        while len(coin_states) > 0:
+            last_coin_state = coin_states[-1]
+            height = uint32(max(last_coin_state.created_height or 0, last_coin_state.spent_height or 0))
+            if height != next_height:
+                break
 
-                is_finished = False
+            coin_states.pop()
 
-        return coin_states, next_height, is_finished
+        return coin_states, next_height
 
     async def rollback_to_block(self, block_index: int) -> List[CoinRecord]:
         """
