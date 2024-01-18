@@ -495,52 +495,57 @@ async def test_get_coin_states(db_version: int) -> None:
         assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(0), max_items=10000)) == 600
 
 
+# Generate coin records, puzzle hashes, and hints.
+batch_coin_records: List[CoinRecord] = []
+batch_puzzle_hashes: List[bytes32] = []
+batch_hints: List[Tuple[bytes32, bytes]] = []
+
+for i in range(50000):
+    is_spent = i % 2 == 0
+    is_hinted = i % 7 == 0
+    created_height = uint32(i % 10)
+    spent_height = uint32(created_height + 100)
+
+    puzzle_hash = std_hash(i.to_bytes(4, byteorder="big"))
+
+    coin = Coin(
+        std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
+        puzzle_hash,
+        uint64(i),
+    )
+
+    if is_hinted:
+        hint = std_hash(b"Hinted " + puzzle_hash)
+        batch_hints.append((coin.name(), hint))
+        batch_puzzle_hashes.append(hint)
+    else:
+        batch_puzzle_hashes.append(puzzle_hash)
+
+    batch_coin_records.append(
+        CoinRecord(
+            coin=coin,
+            confirmed_block_index=created_height,
+            spent_block_index=spent_height if is_spent else uint32(0),
+            coinbase=False,
+            timestamp=uint64(0),
+        )
+    )
+
+
 @pytest.mark.anyio
-async def test_coin_state_batches(db_version: int) -> None:
+@pytest.mark.parametrize("include_spent", [True, False])
+@pytest.mark.parametrize("include_unspent", [True, False])
+@pytest.mark.parametrize("include_hinted", [True, False])
+async def test_coin_state_batches(
+    db_version: int, include_spent: bool, include_unspent: bool, include_hinted: bool
+) -> None:
     async with DBConnection(db_version) as db_wrapper:
-        # Generate coin records, puzzle hashes, and hints.
-        coin_records: List[CoinRecord] = []
-        puzzle_hashes: List[bytes32] = []
-        hints: List[Tuple[bytes32, bytes]] = []
-        count = 50000
-
-        for i in range(count):
-            is_spent = i % 2 == 0
-            is_hinted = i % 7 == 0
-            created_height = uint32(i % 10)
-            spent_height = uint32(created_height + 100)
-
-            puzzle_hash = std_hash(i.to_bytes(4, byteorder="big"))
-
-            coin = Coin(
-                std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
-                puzzle_hash,
-                uint64(i),
-            )
-
-            if is_hinted:
-                hint = std_hash(b"Hinted " + puzzle_hash)
-                hints.append((coin.name(), hint))
-                puzzle_hashes.append(hint)
-            else:
-                puzzle_hashes.append(puzzle_hash)
-
-            coin_records.append(
-                CoinRecord(
-                    coin=coin,
-                    confirmed_block_index=created_height,
-                    spent_block_index=spent_height if is_spent else uint32(0),
-                    coinbase=False,
-                    timestamp=uint64(0),
-                )
-            )
-
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
         hint_store = await HintStore.create(db_wrapper)
 
-        await coin_store._add_coin_records(coin_records)
-        await hint_store.add_hints(hints)
+        await coin_store._add_coin_records(batch_coin_records)
+        await hint_store.add_hints(batch_hints)
 
         # Helper for syncing all of the coin states.
         async def test_states(
@@ -548,7 +553,7 @@ async def test_coin_state_batches(db_version: int) -> None:
         ) -> None:
             height: Optional[uint32] = uint32(0)
             all_coin_states: List[CoinState] = []
-            remaining_phs = puzzle_hashes.copy()
+            remaining_phs = batch_puzzle_hashes.copy()
 
             while height is not None:
                 (coin_states, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
@@ -574,40 +579,19 @@ async def test_coin_state_batches(db_version: int) -> None:
                 assert expected_records[i].coin.name().hex() == all_coin_states[i].coin.name().hex(), i
 
         # Make sure all of the coin states are found when batching.
-        await test_states(coin_records, include_spent=True, include_unspent=True, include_hinted=True)
-
-        # Make sure you can filter out hints.
-        ph_set = set(puzzle_hashes)
+        ph_set = set(batch_puzzle_hashes)
+        expected_crs = []
+        for cr in batch_coin_records:
+            if cr.spent_block_index == 0 and not include_unspent:
+                continue
+            elif cr.spent_block_index > 0 and not include_spent:
+                continue
+            elif cr.coin.puzzle_hash not in ph_set and not include_hinted:
+                continue
+            expected_crs.append(cr)
 
         await test_states(
-            [cr for cr in coin_records if cr.coin.puzzle_hash in ph_set],
-            include_spent=True,
-            include_unspent=True,
-            include_hinted=False,
-        )
-
-        # Make sure you can filter out spent coins.
-        await test_states(
-            [cr for cr in coin_records if cr.spent_block_index == 0],
-            include_spent=False,
-            include_unspent=True,
-            include_hinted=True,
-        )
-
-        # Make sure you can filter out unspent coins.
-        await test_states(
-            [cr for cr in coin_records if cr.spent_block_index > 0],
-            include_spent=True,
-            include_unspent=False,
-            include_hinted=True,
-        )
-
-        # Make sure you can filter out spent and unspent coins.
-        await test_states(
-            [],
-            include_spent=False,
-            include_unspent=False,
-            include_hinted=True,
+            expected_crs, include_spent=include_spent, include_unspent=include_unspent, include_hinted=include_hinted
         )
 
 
