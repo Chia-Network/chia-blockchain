@@ -103,14 +103,14 @@ if len(args.only) == 0:
 else:
     test_paths = [root_path.joinpath(path) for path in args.only]
 
-test_paths = [path for path in test_paths for _ in range(args.duplicates)]
+test_paths_with_index = [(path, index + 1) for path in test_paths for index in range(args.duplicates)]
 
 configuration = []
 
 specified_defaults: Dict[Path, Dict[str, Any]] = {}
 pytest_monitor_enabling_paths: List[Path] = []
 
-for path in test_paths:
+for path, index in test_paths_with_index:
     if path.is_dir():
         test_files = sorted(path.glob("test_*.py"))
         test_file_paths = [file.relative_to(project_root_path) for file in test_files]
@@ -143,6 +143,12 @@ for path in test_paths:
 
         pytest_monitor_enabling_paths.append(path)
 
+    max_index_characters = len(str(args.duplicates))
+    index_string = f"{index:0{max_index_characters}d}"
+    name = ".".join(path.relative_to(root_path).with_suffix("").parts)
+    if args.duplicates > 1:
+        name += f" #{index_string}"
+
     for_matrix = {
         "check_resource_usage": conf["check_resource_usage"],
         "enable_pytest_monitor": "-p monitor" if enable_pytest_monitor else "",
@@ -151,8 +157,10 @@ for path in test_paths:
         "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
         "install_timelord": conf["install_timelord"],
         "test_files": paths_for_cli,
-        "name": ".".join(path.relative_to(root_path).with_suffix("").parts),
+        "name": name,
         "legacy_keyring_required": conf.get("legacy_keyring_required", False),
+        "index": index,
+        "index_string": index_string,
     }
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
