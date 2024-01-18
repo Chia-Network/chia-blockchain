@@ -503,7 +503,7 @@ batch_hints: List[Tuple[bytes32, bytes]] = []
 for i in range(50000):
     is_spent = i % 2 == 0
     is_hinted = i % 7 == 0
-    created_height = uint32(i % 10)
+    created_height = uint32(i)
     spent_height = uint32(created_height + 100)
 
     puzzle_hash = std_hash(i.to_bytes(4, byteorder="big"))
@@ -511,7 +511,7 @@ for i in range(50000):
     coin = Coin(
         std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
         puzzle_hash,
-        uint64(i),
+        uint64(1000),
     )
 
     if is_hinted:
@@ -530,6 +530,8 @@ for i in range(50000):
             timestamp=uint64(0),
         )
     )
+
+batch_coin_records.sort(key=lambda cr: max(cr.confirmed_block_index, cr.spent_block_index))
 
 
 @pytest.mark.anyio
@@ -555,6 +557,9 @@ async def test_coin_state_batches(
             all_coin_states: List[CoinState] = []
             remaining_phs = batch_puzzle_hashes.copy()
 
+            def height_of(coin_state: CoinState) -> int:
+                return max(coin_state.created_height or 0, coin_state.spent_height or 0)
+
             while height is not None:
                 (coin_states, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
                     remaining_phs[:15000],
@@ -563,6 +568,12 @@ async def test_coin_state_batches(
                     include_unspent=include_unspent,
                     include_hinted=include_hinted,
                 )
+
+                # Ensure that all of the returned coin states are in order.
+                assert all(
+                    height_of(coin_states[i]) <= height_of(coin_states[i + 1]) for i in range(len(coin_states) - 1)
+                )
+
                 all_coin_states += coin_states
 
                 if height is None:
@@ -571,12 +582,17 @@ async def test_coin_state_batches(
                     if len(remaining_phs) > 0:
                         height = uint32(0)
 
-            all_coin_states.sort(key=lambda cs: cs.coin.amount)
-
             assert len(all_coin_states) == len(expected_records)
 
+            all_coin_states.sort(key=height_of)
+
             for i in range(len(expected_records)):
-                assert expected_records[i].coin.name().hex() == all_coin_states[i].coin.name().hex(), i
+                actual = all_coin_states[i]
+                expected = expected_records[i]
+
+                assert actual.coin == expected.coin, i
+                assert uint32(actual.created_height or 0) == expected.confirmed_block_index, i
+                assert uint32(actual.spent_height or 0) == expected.spent_block_index, i
 
         # Make sure all of the coin states are found when batching.
         ph_set = set(batch_puzzle_hashes)
