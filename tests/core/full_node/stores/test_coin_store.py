@@ -621,7 +621,7 @@ async def test_batch_many_coin_states(db_version: int) -> None:
         count = 50000
 
         for i in range(count):
-            created_height = uint32(i % 2 + 100)
+            created_height = uint32(i % 2 + 10)
             coin = Coin(
                 std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
                 ph,
@@ -647,12 +647,13 @@ async def test_batch_many_coin_states(db_version: int) -> None:
         (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
         all_coin_states.sort(key=lambda cs: cs.coin.amount)
 
-        assert next_height == 0
+        assert next_height is None
         assert len(all_coin_states) == len(coin_records)
 
         for i in range(min(len(coin_records), len(all_coin_states))):
             assert coin_records[i].coin.name().hex() == all_coin_states[i].coin.name().hex(), i
 
+        # Make sure that all but the last are found, since it's at a higher height.
         await coin_store._add_coin_records(
             [
                 CoinRecord(
@@ -667,7 +668,7 @@ async def test_batch_many_coin_states(db_version: int) -> None:
 
         (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
 
-        assert next_height == 101
+        assert next_height == 50
         assert len(all_coin_states) == 50000
 
 
