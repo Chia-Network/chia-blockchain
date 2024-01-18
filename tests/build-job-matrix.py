@@ -145,9 +145,13 @@ for path, index in test_paths_with_index:
 
     max_index_characters = len(str(args.duplicates))
     index_string = f"{index:0{max_index_characters}d}"
-    name = ".".join(path.relative_to(root_path).with_suffix("").parts)
-    if args.duplicates > 1:
-        name += f" #{index_string}"
+    module_import_path = ".".join(path.relative_to(root_path).with_suffix("").parts)
+    if args.duplicates == 1:
+        name = module_import_path
+        file_name_index = ""
+    else:
+        name = f"{module_import_path} #{index_string}"
+        file_name_index = f"_{index_string}"
 
     for_matrix = {
         "check_resource_usage": conf["check_resource_usage"],
@@ -161,6 +165,8 @@ for path, index in test_paths_with_index:
         "legacy_keyring_required": conf.get("legacy_keyring_required", False),
         "index": index,
         "index_string": index_string,
+        "module_import_path": module_import_path,
+        "file_name_index": file_name_index,
     }
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
