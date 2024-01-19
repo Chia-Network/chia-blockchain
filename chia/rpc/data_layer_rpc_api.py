@@ -392,9 +392,10 @@ class DataLayerRpcApi:
         hash_2_bytes = bytes32.from_hexstr(hash_2)
         page = request.get("page", None)
         max_page_size = request.get("max_page_size", None)
-        if page is not None:
+        res: List[Dict[str, Any]] = []
+
+        if page is None:
             records = await self.service.get_kv_diff(id_bytes, hash_1_bytes, hash_2_bytes)
-            res: List[Dict[str, Any]] = []
             for rec in records:
                 res.insert(0, {"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
             return {"diff": res}
@@ -402,7 +403,6 @@ class DataLayerRpcApi:
             kv_diff_paginated = await self.service.get_kv_diff_paginated(
                 id_bytes, hash_1_bytes, hash_2_bytes, page, max_page_size
             )
-            res: List[Dict[str, Any]] = []
             for rec in kv_diff_paginated.kv_diff:
                 res.insert(0, {"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
             return {

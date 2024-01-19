@@ -733,7 +733,7 @@ class DataLayer:
     async def get_kv_diff_paginated(
         self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: int, max_page_size: int = 40 * 1024 * 1024
     ) -> KVDiffPaginationData:
-        return await self.data_store.get_kv_diff(tree_id, page, max_page_size, hash_1, hash_2)
+        return await self.data_store.get_kv_diff_paginated(tree_id, page, max_page_size, hash_1, hash_2)
 
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)

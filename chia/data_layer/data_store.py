@@ -820,9 +820,9 @@ class DataStore:
         old_pairs = await self.get_keys_values_compressed(tree_id, hash1)
         new_pairs = await self.get_keys_values_compressed(tree_id, hash2)
         if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
-            return KVDiffPaginationData(1, 0, {})
+            return KVDiffPaginationData(1, 0, set())
         if len(new_pairs.keys_values_hashed) == 0 and hash2 != bytes32([0] * 32):
-            return KVDiffPaginationData(1, 0, {})
+            return KVDiffPaginationData(1, 0, set())
 
         insertions = {k for k in new_pairs.keys_values_hashed.keys() if k not in old_pairs.keys_values_hashed}
         deletions = {k for k in old_pairs.keys_values_hashed.keys() if k not in new_pairs.keys_values_hashed}
@@ -835,7 +835,7 @@ class DataStore:
             lengths[k] = old_pairs.leaf_hash_to_length[leaf_hash]
 
         pagination_data = self.get_hashes_for_page(page, lengths, max_page_size)
-        kv_diff: Set[DiffData] = {}
+        kv_diff: Set[DiffData] = set()
 
         for hash in pagination_data.hashes:
             node = await self.get_node(hash)
