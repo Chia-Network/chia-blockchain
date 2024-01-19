@@ -602,7 +602,8 @@ async def test_coin_state_batches(
 
 
 @pytest.mark.anyio
-async def test_batch_many_coin_states(db_version: int) -> None:
+@pytest.mark.parametrize("cut_off_middle", [True, False])
+async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> None:
     async with DBConnection(db_version) as db_wrapper:
         ph = bytes32(b"0" * 32)
 
@@ -611,7 +612,8 @@ async def test_batch_many_coin_states(db_version: int) -> None:
         count = 50000
 
         for i in range(count):
-            created_height = uint32(i % 2 + 10)
+            # Create coin records at either height 10 or 12.
+            created_height = uint32((i % 2) * 2 + 10)
             coin = Coin(
                 std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
                 ph,
@@ -643,12 +645,14 @@ async def test_batch_many_coin_states(db_version: int) -> None:
         for i in range(min(len(coin_records), len(all_coin_states))):
             assert coin_records[i].coin.name().hex() == all_coin_states[i].coin.name().hex(), i
 
-        # Make sure that all but the last are found, since it's at a higher height.
+        # For the middle case, insert a coin record between the two heights 10 and 12.
         await coin_store._add_coin_records(
             [
                 CoinRecord(
                     coin=Coin(std_hash(b"extra coin"), ph, 0),
-                    confirmed_block_index=uint32(50),
+                    # Insert a coin record in the middle between heights 10 and 12.
+                    # Or after all of the other coins if testing the batch limit.
+                    confirmed_block_index=uint32(11 if cut_off_middle else 50),
                     spent_block_index=uint32(0),
                     coinbase=False,
                     timestamp=uint64(0),
@@ -658,8 +662,9 @@ async def test_batch_many_coin_states(db_version: int) -> None:
 
         (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
 
-        assert next_height == 50
-        assert len(all_coin_states) == 50000
+        # Make sure that the extra coin records are not included in the results.
+        assert next_height == (12 if cut_off_middle else 50)
+        assert len(all_coin_states) == (25001 if cut_off_middle else 50000)
 
 
 @pytest.mark.anyio
