@@ -301,8 +301,9 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
         "c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2",
     ]
 
-    # ancestors_2 = await data_store.get_ancestors_optimized(node_hash=reference_node_hash, tree_id=tree_id)
-    # assert ancestors == ancestors_2
+    await _debug_dump(db=data_store.db_wrapper, description="before calling _optized")
+    ancestors_2 = await data_store.get_ancestors_optimized(node_hash=reference_node_hash, tree_id=tree_id)
+    assert ancestors == ancestors_2
 
 
 @pytest.mark.skip(reason="ancestors_optimized is broken for mysql (and postgres)")

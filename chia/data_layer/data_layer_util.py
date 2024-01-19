@@ -12,7 +12,7 @@ from typing_extensions import final
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper_pg import DBWrapperPG
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
@@ -43,15 +43,19 @@ def leaf_hash(key: bytes, value: bytes) -> bytes32:
     return Program.to((key, value)).get_tree_hash()  # type: ignore[no-any-return]
 
 
-async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
+async def _debug_dump(db: DBWrapperPG, description: str = "") -> None:
     async with db.reader() as reader:
-        cursor = await reader.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        print("-" * 50, description, flush=True)
-        for [name] in await cursor.fetchall():
-            cursor = await reader.execute(f"SELECT * FROM {name}")
-            print(f"\n -- {name} ------", flush=True)
-            async for row in cursor:
-                print(f"        {dict(row)}")
+        async with reader.cursor() as cursor:
+            # await cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            await cursor.execute(f"SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = '{reader.db}'")
+            print("-" * 50, description, flush=True)
+            rows = await cursor.fetchall()
+            for row in rows:
+                name = row["TABLE_NAME"]
+                await cursor.execute(f"SELECT * FROM {name}")
+                print(f"\n -- {name} ------", flush=True)
+                async for row in cursor:
+                    print(f"        {dict(row)}")
 
 
 async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
