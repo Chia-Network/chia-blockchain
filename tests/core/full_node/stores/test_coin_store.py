@@ -555,9 +555,9 @@ async def test_coin_state_batches(
         for cr in batch_coin_records:
             if cr.spent_block_index == 0 and not include_unspent:
                 continue
-            elif cr.spent_block_index > 0 and not include_spent:
+            if cr.spent_block_index > 0 and not include_spent:
                 continue
-            elif cr.coin.puzzle_hash not in ph_set and not include_hinted:
+            if cr.coin.puzzle_hash not in ph_set and not include_hinted:
                 continue
             expected_crs.append(cr)
 
