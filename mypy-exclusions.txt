@@ -111,7 +111,6 @@ tests.wallet.test_chialisp
 tests.wallet.test_singleton_lifecycle
 tests.wallet.test_singleton_lifecycle_fast
 tests.wallet.test_taproot
-tests.wallet.test_wallet_blockchain
 tests.wallet.test_wallet_interested_store
 tests.wallet.test_wallet_key_val_store
 tools.analyze-chain
