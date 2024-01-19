@@ -18,7 +18,7 @@ from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from tests.util.temp_file import TempFile
 
 
@@ -141,7 +141,7 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
         bc = await Blockchain.create(coin_store, block_store, test_constants, Path("."), reserved_cores=0)
 
         for block in blocks:
-            results = PreValidationResult(None, uint64(1), None, False)
+            results = PreValidationResult(None, uint64(1), None, False, uint32(0))
             result, err, _ = await bc.add_block(block, results)
             assert err is None
 
