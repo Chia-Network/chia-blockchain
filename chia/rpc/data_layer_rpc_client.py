@@ -102,7 +102,7 @@ class DataLayerRpcClient(RpcClient):
     async def get_kv_diff(
         self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: Optional[int], max_page_size: Optional[int]
     ) -> Dict[str, Any]:
-        request = {"id": store_id.hex(), "hash_1": hash_1.hex(), "hash_2": hash_2.hex()}
+        request: Dict[str, Any] = {"id": store_id.hex(), "hash_1": hash_1.hex(), "hash_2": hash_2.hex()}
         if page is not None:
             request["page"] = page
         if max_page_size is not None:
