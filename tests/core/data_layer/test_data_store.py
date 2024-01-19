@@ -220,7 +220,7 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
     kv_node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
-    ancestors = await data_store.get_ancestors(node_hash=kv_node.hash, tree_id=tree_id)
+    ancestors = await data_store.get_ancestors_optimized(node_hash=kv_node.hash, tree_id=tree_id)
     parent = ancestors[0]
 
     async with data_store.db_wrapper.reader() as reader:
@@ -301,12 +301,12 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
         "c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2",
     ]
 
-    await _debug_dump(db=data_store.db_wrapper, description="before calling _optized")
+    # await _debug_dump(db=data_store.db_wrapper, description="before calling _optized")
     ancestors_2 = await data_store.get_ancestors_optimized(node_hash=reference_node_hash, tree_id=tree_id)
     assert ancestors == ancestors_2
 
 
-@pytest.mark.skip(reason="ancestors_optimized is broken for mysql (and postgres)")
+# @pytest.mark.skip(reason="ancestors_optimized is broken for mysql (and postgres)")
 @pytest.mark.anyio
 async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) -> None:
     ancestors: List[Tuple[int, bytes32, List[InternalNode]]] = []
@@ -384,7 +384,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
     "use_optimized",
-    [False],
+    [True, False],
 )
 async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimized: bool, tmp_path: Path) -> None:
     num_batches = 10
@@ -483,7 +483,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
             while ancestor in ancestors:
                 ancestor = ancestors[ancestor]
                 expected_ancestors.append(ancestor)
-            result_ancestors = await data_store.get_ancestors(node_hash, tree_id)
+            result_ancestors = await data_store.get_ancestors_optimized(node_hash, tree_id)
             assert [node.hash for node in result_ancestors] == expected_ancestors
             node = await data_store.get_node(node_hash)
             if isinstance(node, InternalNode):
@@ -718,7 +718,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
         insert_result = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
         hashes.append(insert_result.node_hash)
 
-    heights = {node_hash: len(await data_store.get_ancestors(node_hash, tree_id)) for node_hash in hashes}
+    heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
     too_tall = {hash: height for hash, height in heights.items() if height > 14}
     assert too_tall == {}
     assert 11 <= statistics.mean(heights.values()) <= 12
@@ -747,11 +747,11 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
                 hint_keys_values=hint_keys_values,
                 status=Status.COMMITTED,
             )
-            ancestors = await data_store.get_ancestors(insert_result.node_hash, tree_id)
+            ancestors = await data_store.get_ancestors_optimized(insert_result.node_hash, tree_id)
             assert len(ancestors) == i
         hashes.append(insert_result.node_hash)
 
-    heights = {node_hash: len(await data_store.get_ancestors(node_hash, tree_id)) for node_hash in hashes}
+    heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
     too_tall = {hash: height for hash, height in heights.items() if height > 14}
     assert too_tall == {}
     assert 11 <= statistics.mean(heights.values()) <= 12

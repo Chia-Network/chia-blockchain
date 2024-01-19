@@ -823,7 +823,7 @@ class DataStore:
         value: bytes,
         tree_id: bytes32,
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
-        use_optimized: bool = False,
+        use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
     ) -> InsertResult:
@@ -888,7 +888,7 @@ class DataStore:
         tree_id: bytes32,
         root_hash: Optional[bytes32],
         generation: Optional[int] = None,
-        use_optimized: bool = False,
+        use_optimized: bool = True,
     ) -> List[InternalNode]:
         if use_optimized:
             ancestors: List[InternalNode] = await self.get_ancestors_optimized(
@@ -898,15 +898,15 @@ class DataStore:
                 root_hash=root_hash,
             )
         else:
-            # ancestors = await self.get_ancestors_optimized(
-            #     node_hash=node_hash,
-            #     tree_id=tree_id,
-            #     generation=generation,
-            #     root_hash=root_hash,
-            # )
-            ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash)
-            # if ancestors != ancestors_2:
-            #     raise RuntimeError("Ancestors optimized didn't produce the expected result.")
+            ancestors = await self.get_ancestors_optimized(
+                node_hash=node_hash,
+                tree_id=tree_id,
+                generation=generation,
+                root_hash=root_hash,
+            )
+            ancestors_2 = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash)
+            if ancestors != ancestors_2:
+                raise RuntimeError("Ancestors optimized didn't produce the expected result.")
 
         if len(ancestors) >= 62:
             raise RuntimeError("Tree exceeds max height of 62.")
@@ -967,7 +967,7 @@ class DataStore:
         reference_node_hash: Optional[bytes32],
         side: Optional[Side],
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
-        use_optimized: bool = False,
+        use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
     ) -> InsertResult:
@@ -1048,7 +1048,7 @@ class DataStore:
         key: bytes,
         tree_id: bytes32,
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
-        use_optimized: bool = False,
+        use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
     ) -> Optional[Root]:
@@ -1132,7 +1132,7 @@ class DataStore:
         new_value: bytes,
         tree_id: bytes32,
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
-        use_optimized: bool = False,
+        use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
     ) -> InsertResult:
@@ -1287,7 +1287,7 @@ class DataStore:
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
-        use_optimized: bool = False,
+        use_optimized: bool = True,
     ) -> Optional[bytes32]:
         async with self.db_wrapper.writer() as writer:
             old_root = await self.get_tree_root(tree_id)
@@ -1397,16 +1397,18 @@ class DataStore:
             await cursor.execute(
                 """
                 SELECT * from node INNER JOIN (
-                    SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
+                    SELECT ancestors.ancestor, MAX(ancestors.generation) AS generation
                     FROM ancestors
                     WHERE ancestors.hash = %(hash)s
                     AND ancestors.tree_id = %(tree_id)s
                     AND ancestors.generation <= %(generation)s
                     GROUP BY ancestors.ancestor
-                ) subquery ON subquery.hash = node.hash
+                ) as subq on subq.ancestor = node.hash
+                order by subq.generation DESC LIMIT 1
                 """,
                 {"hash": node_hash, "tree_id": tree_id, "generation": generation},
             )
+
             row = await cursor.fetchone()
             if row is None:
                 return None
