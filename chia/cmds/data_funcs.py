@@ -83,11 +83,15 @@ async def get_keys_cmd(
     store_id: str,
     root_hash: Optional[str],
     fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_keys(store_id=store_id_bytes, root_hash=root_hash_bytes)
+        res = await client.get_keys(
+            store_id=store_id_bytes, root_hash=root_hash_bytes, page=page, max_page_size=max_page_size
+        )
         print(json.dumps(res, indent=4, sort_keys=True))
 
 
@@ -96,11 +100,15 @@ async def get_keys_values_cmd(
     store_id: str,
     root_hash: Optional[str],
     fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_keys_values(store_id=store_id_bytes, root_hash=root_hash_bytes)
+        res = await client.get_keys_values(
+            store_id=store_id_bytes, root_hash=root_hash_bytes, page=page, max_page_size=max_page_size
+        )
         print(json.dumps(res, indent=4, sort_keys=True))
 
 
@@ -157,12 +165,16 @@ async def get_kv_diff_cmd(
     hash_1: str,
     hash_2: str,
     fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     hash_1_bytes = bytes32.from_hexstr(hash_1)
     hash_2_bytes = bytes32.from_hexstr(hash_2)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_kv_diff(store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes)
+        res = await client.get_kv_diff(
+            store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes, page=page, max_page_size=max_page_size
+        )
         print(json.dumps(res, indent=4, sort_keys=True))
 
 

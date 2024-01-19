@@ -32,7 +32,10 @@ from chia.data_layer.data_layer_errors import KeyNotFoundError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
+    KeysPaginationData,
+    KeysValuesPaginationData,
     KeyValue,
+    KVDiffPaginationData,
     Layer,
     Offer,
     OfferStore,
@@ -330,10 +333,26 @@ class DataLayer:
             self.log.error("Failed to fetch keys values")
         return res
 
+    async def get_keys_values_paginated(
+        self, store_id: bytes32, root_hash: Optional[bytes32], page: int, max_page_size: int = 40 * 1024 * 1024
+    ) -> KeysValuesPaginationData:
+        await self._update_confirmation_status(tree_id=store_id)
+
+        res = await self.data_store.get_keys_values_paginated(store_id, page, max_page_size, root_hash)
+        return res
+
     async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[bytes]:
         await self._update_confirmation_status(tree_id=store_id)
 
         res = await self.data_store.get_keys(store_id, root_hash)
+        return res
+
+    async def get_keys_paginated(
+        self, store_id: bytes32, root_hash: Optional[bytes32], page: int, max_page_size: int = 40 * 1024 * 1024
+    ) -> KeysPaginationData:
+        await self._update_confirmation_status(tree_id=store_id)
+
+        res = await self.data_store.get_keys_paginated(store_id, page, max_page_size, root_hash)
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
@@ -710,6 +729,11 @@ class DataLayer:
 
     async def get_kv_diff(self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Set[DiffData]:
         return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
+
+    async def get_kv_diff_paginated(
+        self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: int, max_page_size: int = 40 * 1024 * 1024
+    ) -> KVDiffPaginationData:
+        return await self.data_store.get_kv_diff(tree_id, page, max_page_size, hash_1, hash_2)
 
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
