@@ -549,51 +549,6 @@ async def test_coin_state_batches(
         await coin_store._add_coin_records(batch_coin_records)
         await hint_store.add_hints(batch_hints)
 
-        # Helper for syncing all of the coin states.
-        async def test_states(
-            expected_records: List[CoinRecord], *, include_spent: bool, include_unspent: bool, include_hinted: bool
-        ) -> None:
-            height: Optional[uint32] = uint32(0)
-            all_coin_states: List[CoinState] = []
-            remaining_phs = batch_puzzle_hashes.copy()
-
-            def height_of(coin_state: CoinState) -> int:
-                return max(coin_state.created_height or 0, coin_state.spent_height or 0)
-
-            while height is not None:
-                (coin_states, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
-                    remaining_phs[:15000],
-                    min_height=height,
-                    include_spent=include_spent,
-                    include_unspent=include_unspent,
-                    include_hinted=include_hinted,
-                )
-
-                # Ensure that all of the returned coin states are in order.
-                assert all(
-                    height_of(coin_states[i]) <= height_of(coin_states[i + 1]) for i in range(len(coin_states) - 1)
-                )
-
-                all_coin_states += coin_states
-
-                if height is None:
-                    remaining_phs = remaining_phs[15000:]
-
-                    if len(remaining_phs) > 0:
-                        height = uint32(0)
-
-            assert len(all_coin_states) == len(expected_records)
-
-            all_coin_states.sort(key=height_of)
-
-            for i in range(len(expected_records)):
-                actual = all_coin_states[i]
-                expected = expected_records[i]
-
-                assert actual.coin == expected.coin, i
-                assert uint32(actual.created_height or 0) == expected.confirmed_block_index, i
-                assert uint32(actual.spent_height or 0) == expected.spent_block_index, i
-
         # Make sure all of the coin states are found when batching.
         ph_set = set(batch_puzzle_hashes)
         expected_crs = []
@@ -606,9 +561,44 @@ async def test_coin_state_batches(
                 continue
             expected_crs.append(cr)
 
-        await test_states(
-            expected_crs, include_spent=include_spent, include_unspent=include_unspent, include_hinted=include_hinted
-        )
+        height: Optional[uint32] = uint32(0)
+        all_coin_states: List[CoinState] = []
+        remaining_phs = batch_puzzle_hashes.copy()
+
+        def height_of(coin_state: CoinState) -> int:
+            return max(coin_state.created_height or 0, coin_state.spent_height or 0)
+
+        while height is not None:
+            (coin_states, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
+                remaining_phs[:15000],
+                min_height=height,
+                include_spent=include_spent,
+                include_unspent=include_unspent,
+                include_hinted=include_hinted,
+            )
+
+            # Ensure that all of the returned coin states are in order.
+            assert all(height_of(coin_states[i]) <= height_of(coin_states[i + 1]) for i in range(len(coin_states) - 1))
+
+            all_coin_states += coin_states
+
+            if height is None:
+                remaining_phs = remaining_phs[15000:]
+
+                if len(remaining_phs) > 0:
+                    height = uint32(0)
+
+        assert len(all_coin_states) == len(expected_crs)
+
+        all_coin_states.sort(key=height_of)
+
+        for i in range(len(expected_crs)):
+            actual = all_coin_states[i]
+            expected = expected_crs[i]
+
+            assert actual.coin == expected.coin, i
+            assert uint32(actual.created_height or 0) == expected.confirmed_block_index, i
+            assert uint32(actual.spent_height or 0) == expected.spent_block_index, i
 
 
 @pytest.mark.anyio
