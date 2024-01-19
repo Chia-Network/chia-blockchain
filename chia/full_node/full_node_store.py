@@ -92,6 +92,10 @@ class FullNodeStore:
     # Partial hashes of unfinished blocks we are requesting
     requesting_unfinished_blocks: Set[bytes32]
 
+    # with the updated protocol for UnfinishedBlocks, when we request a block
+    # with a specific foliage hash, we add the outstanding request to this dict
+    requesting_unfinished_blocks2: Dict[bytes32, Set[Optional[bytes32]]]
+
     previous_generator: Optional[CompressorArg]
     pending_tx_request: Dict[bytes32, bytes32]  # tx_id: peer_id
     peers_with_tx: Dict[bytes32, Set[bytes32]]  # tx_id: Set[peer_ids}
@@ -113,6 +117,7 @@ class FullNodeStore:
         self.recent_signage_points = LRUCache(500)
         self.recent_eos = LRUCache(50)
         self.requesting_unfinished_blocks = set()
+        self.requesting_unfinished_blocks2 = {}
         self.previous_generator = None
         self.future_cache_key_times = {}
         self.constants = constants
@@ -124,6 +129,22 @@ class FullNodeStore:
         self.serialized_wp_message = None
         self.serialized_wp_message_tip = None
         self.max_seen_unfinished_blocks = 1000
+
+    def is_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]) -> bool:
+        ents = self.requesting_unfinished_blocks2.get(reward_block_hash)
+        return ents is not None and foliage_hash in ents
+
+    def mark_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]) -> None:
+        ents = self.requesting_unfinished_blocks2.setdefault(reward_block_hash, set())
+        ents.add(foliage_hash)
+
+    def remove_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]) -> None:
+        ents = self.requesting_unfinished_blocks2.get(reward_block_hash)
+        if ents is None:
+            return
+        ents.discard(foliage_hash)
+        if len(ents) == 0:
+            del self.requesting_unfinished_blocks2[reward_block_hash]
 
     def add_candidate_block(
         self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False

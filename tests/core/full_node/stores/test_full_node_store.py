@@ -9,6 +9,7 @@ import pytest
 
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.constants import ConsensusConstants
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -958,3 +959,61 @@ async def test_long_chain_slots(
         store.new_peak(
             peak, peak_full_block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
         )
+
+
+@pytest.mark.anyio
+async def test_mark_requesting(
+    seeded_random: random.Random,
+) -> None:
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    a = bytes32.random(seeded_random)
+    b = bytes32.random(seeded_random)
+    c = bytes32.random(seeded_random)
+
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(a, b)
+    assert not store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+    assert not store.is_requesting_unfinished_block(c, c)
+
+    store.mark_requesting_unfinished_block(a, b)
+    assert store.is_requesting_unfinished_block(a, b)
+    assert not store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(b, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+
+    store.mark_requesting_unfinished_block(a, c)
+    assert store.is_requesting_unfinished_block(a, b)
+    assert store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(b, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+
+    # this is a no-op
+    store.remove_requesting_unfinished_block(a, a)
+    store.remove_requesting_unfinished_block(c, a)
+
+    assert store.is_requesting_unfinished_block(a, b)
+    assert store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(b, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+
+    store.remove_requesting_unfinished_block(a, b)
+
+    assert not store.is_requesting_unfinished_block(a, b)
+    assert store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(b, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+
+    store.remove_requesting_unfinished_block(a, c)
+
+    assert not store.is_requesting_unfinished_block(a, b)
+    assert not store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(b, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+
+    assert len(store.requesting_unfinished_blocks) == 0
