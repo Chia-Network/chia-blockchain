@@ -413,7 +413,7 @@ class Mempool:
                     bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
                 )
                 item_cost = cost - cost_saving
-                log.info("Cumulative cost: %d, item cost: %d fee per cost: %0.4f, percent: %0.4f", cost_sum, item_cost, fee / item_cost, (item_cost / self.mempool_info.max_block_clvm_cost) * 100)
+                log.info("Cumulative cost: %d, item cost: %d, fee per cost: %0.4f, percent: %0.2f", cost_sum, item_cost, fee / item_cost, (item_cost / self.mempool_info.max_block_clvm_cost) * 100)
                 if fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
                     log.info("Fee sum exceeds MAX_COIN_AMOUNT")
                     break
