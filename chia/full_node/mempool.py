@@ -392,6 +392,8 @@ class Mempool:
         eligible_coin_spends = EligibleCoinSpends()
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
+        retry_add_last_items = 0
+        max_retry_add_last_items = 10
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
@@ -407,18 +409,24 @@ class Mempool:
                     bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
                 )
                 item_cost = cost - cost_saving
-                log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, fee / item_cost)
-                if (
-                    item_cost + cost_sum > self.mempool_info.max_block_clvm_cost
-                    or fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
-                ):
+                log.info("Cumulative cost: %d, item cost: %d fee per cost: %0.4f, percent: %0.4f", cost_sum, item_cost, fee / item_cost, (item_cost / self.mempool_info.max_block_clvm_cost) * 100)
+                if fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
+                    log.info("Fee sum exceeds MAX_COIN_AMOUNT")
                     break
+                if item_cost + cost_sum > self.mempool_info.max_block_clvm_cost:
+                    log.info("Cost sum exceeds max block cost: %d", item_cost + cost_sum)
+                    if retry_add_last_items >= max_retry_add_last_items:
+                        break
+                    retry_add_last_items += 1
+                    log.info(f"Retry to add more items: {retry_add_last_items}/{max_retry_add_last_items}")
+                    continue
                 coin_spends.extend(unique_coin_spends)
                 additions.extend(unique_additions)
                 sigs.append(item.spend_bundle.aggregated_signature)
                 cost_sum += item_cost
                 fee_sum += fee
                 processed_spend_bundles += 1
+                retry_add_last_items = 0
             except Exception as e:
                 log.debug(f"Exception while checking a mempool item for deduplication: {e}")
                 continue
