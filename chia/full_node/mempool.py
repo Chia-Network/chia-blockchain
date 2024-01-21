@@ -392,8 +392,12 @@ class Mempool:
         eligible_coin_spends = EligibleCoinSpends()
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
-        retry_add_last_items = 0
-        max_retry_add_last_items = 10
+        
+        # We retry to add more items if we can't fit the next item in the block
+        # This allows maximizing the block space usage if an item takes a lot of space and exceeds the block cost limit
+        # Instead of breaking out, we look at the next x items to see if we can squeeze more items into the block
+        retry_add_more_items = 0
+        max_retry_add_more_items = 10
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
@@ -415,10 +419,10 @@ class Mempool:
                     break
                 if item_cost + cost_sum > self.mempool_info.max_block_clvm_cost:
                     log.info("Cost sum exceeds max block cost: %d", item_cost + cost_sum)
-                    if retry_add_last_items >= max_retry_add_last_items:
+                    if retry_add_more_items >= max_retry_add_more_items:
                         break
-                    retry_add_last_items += 1
-                    log.info(f"Retry to add more items: {retry_add_last_items}/{max_retry_add_last_items}")
+                    retry_add_more_items += 1
+                    log.info(f"Retry to add more items: {retry_add_more_items}/{max_retry_add_more_items}")
                     continue
                 coin_spends.extend(unique_coin_spends)
                 additions.extend(unique_additions)
@@ -426,7 +430,7 @@ class Mempool:
                 cost_sum += item_cost
                 fee_sum += fee
                 processed_spend_bundles += 1
-                retry_add_last_items = 0
+                retry_add_more_items = 0
             except Exception as e:
                 log.debug(f"Exception while checking a mempool item for deduplication: {e}")
                 continue
