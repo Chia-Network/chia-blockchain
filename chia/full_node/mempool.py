@@ -392,9 +392,12 @@ class Mempool:
         eligible_coin_spends = EligibleCoinSpends()
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
+        limit = 750  # Maximum number of spendbundles to consider - should be based on the BLOCK_SIZE_LIMIT_FACTOR
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         with self._db_conn:
-            cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
+            cursor = self._db_conn.execute(
+                f"SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC LIMIT {limit}"
+            )
         for row in cursor:
             name = bytes32(row[0])
             fee = int(row[1])
@@ -412,13 +415,15 @@ class Mempool:
                     item_cost + cost_sum > self.mempool_info.max_block_clvm_cost
                     or fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
                 ):
-                    break
+                    continue  # Keep looking for smaller items to fill the block
                 coin_spends.extend(unique_coin_spends)
                 additions.extend(unique_additions)
                 sigs.append(item.spend_bundle.aggregated_signature)
                 cost_sum += item_cost
                 fee_sum += fee
                 processed_spend_bundles += 1
+                if cost_sum / self.mempool_info.max_block_clvm_cost >= 0.998:  # 99.8% full seems a reasonable target
+                    break
             except Exception as e:
                 log.debug(f"Exception while checking a mempool item for deduplication: {e}")
                 continue
