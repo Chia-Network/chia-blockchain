@@ -32,7 +32,7 @@ from chia.util.block_cache import BlockCache
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -257,7 +257,7 @@ async def pre_validate_blocks_multiprocessing(
             constants, len(block.finished_sub_slots) > 0, prev_b, block_records
         )
 
-        overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+        overflow = is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index))
         challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             cc_sp_hash: bytes32 = challenge

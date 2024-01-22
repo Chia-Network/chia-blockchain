@@ -9,7 +9,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 def get_hints_and_subscription_coin_ids(
     state_change_summary: StateChangeSummary,
     has_coin_subscription: Callable[[bytes32], bool],
-    has_ph_subscription: Callable[[bytes32], bool],
+    has_puzzle_subscription: Callable[[bytes32], bool],
 ) -> Tuple[List[Tuple[bytes32, bytes]], List[bytes32]]:
     # Precondition: all hints passed in are max 32 bytes long
     # Returns the hints that we need to add to the DB, and the coin ids that need to be looked up
@@ -26,7 +26,7 @@ def get_hints_and_subscription_coin_ids(
             lookup_coin_ids.add(coin_id)
 
     def add_if_ph_subscription(puzzle_hash: bytes32, coin_id: bytes32) -> None:
-        if has_ph_subscription(puzzle_hash):
+        if has_puzzle_subscription(puzzle_hash):
             lookup_coin_ids.add(coin_id)
 
     for spend_id, puzzle_hash in state_change_summary.removals:

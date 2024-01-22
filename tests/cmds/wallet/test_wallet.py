@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
+import pkg_resources
 from chia_rs import Coin, G2Element
 
 from chia.server.outbound_message import NodeType
@@ -35,7 +36,7 @@ from tests.cmds.wallet.test_consts import (
     get_bytes32,
 )
 
-test_offer_file_path: Path = Path("tests") / "cmds" / "wallet" / "test_offer.toffer"
+test_offer_file_path: Path = Path(pkg_resources.resource_filename(__name__, "test_offer.toffer"))
 test_offer_file_name: str = str(test_offer_file_path)
 test_offer_file_bech32: str = open(test_offer_file_name).read()
 test_offer_id: str = "0xdfb7e8643376820ec995b0bcdb3fc1f764c16b814df5e074631263fcf1e00839"
@@ -696,6 +697,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         "Including Fees: 1 XCH, 1000000000000 mojos",
         "Created offer with ID 0202020202020202020202020202020202020202020202020202020202020202",
     ]
+    run_cli_command_and_assert(capsys, root_dir, command_args[:-4], ["without --override"])
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "cat_asset_id_to_name": [(request_cat_id,)],
