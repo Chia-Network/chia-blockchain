@@ -2395,49 +2395,49 @@ async def test_pagination_rpcs(
         )
         assert keys_values_paginated["total_pages"] == 3
         assert keys_values_paginated["total_bytes"] == 19
-        res = keys_values_paginated["keys_values"]
-        assert len(res) == 1
-        assert res[0]["hash"] == "0x" + leaf_hash3.hex()
-        assert res[0]["key"] == "0x" + key3.hex()
-        assert res[0]["value"] == "0x" + value3.hex()
+        res_kv = keys_values_paginated["keys_values"]
+        assert len(res_kv) == 1
+        assert res_kv[0]["hash"] == "0x" + leaf_hash3.hex()
+        assert res_kv[0]["key"] == "0x" + key3.hex()
+        assert res_kv[0]["value"] == "0x" + value3.hex()
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
             {"id": store_id.hex(), "page": 1, "max_page_size": 8}
         )
         assert keys_values_paginated["total_pages"] == 3
         assert keys_values_paginated["total_bytes"] == 19
-        res = keys_values_paginated["keys_values"]
-        assert len(res) == 2
+        res_kv = keys_values_paginated["keys_values"]
+        assert len(res_kv) == 2
         assert leaf_hash1 < leaf_hash2
-        assert res[0]["hash"] == "0x" + leaf_hash1.hex()
-        assert res[0]["key"] == "0x" + key1.hex()
-        assert res[0]["value"] == "0x" + value1.hex()
-        assert res[1]["hash"] == "0x" + leaf_hash2.hex()
-        assert res[1]["key"] == "0x" + key2.hex()
-        assert res[1]["value"] == "0x" + value2.hex()
+        assert res_kv[0]["hash"] == "0x" + leaf_hash1.hex()
+        assert res_kv[0]["key"] == "0x" + key1.hex()
+        assert res_kv[0]["value"] == "0x" + value1.hex()
+        assert res_kv[1]["hash"] == "0x" + leaf_hash2.hex()
+        assert res_kv[1]["key"] == "0x" + key2.hex()
+        assert res_kv[1]["value"] == "0x" + value2.hex()
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
             {"id": store_id.hex(), "page": 2, "max_page_size": 8}
         )
         assert keys_values_paginated["total_pages"] == 3
         assert keys_values_paginated["total_bytes"] == 19
-        res = keys_values_paginated["keys_values"]
-        assert len(res) == 2
+        res_kv = keys_values_paginated["keys_values"]
+        assert len(res_kv) == 2
         assert leaf_hash5 < leaf_hash4
-        assert res[0]["hash"] == "0x" + leaf_hash5.hex()
-        assert res[0]["key"] == "0x" + key5.hex()
-        assert res[0]["value"] == "0x" + value5.hex()
-        assert res[1]["hash"] == "0x" + leaf_hash4.hex()
-        assert res[1]["key"] == "0x" + key4.hex()
-        assert res[1]["value"] == "0x" + value4.hex()
+        assert res_kv[0]["hash"] == "0x" + leaf_hash5.hex()
+        assert res_kv[0]["key"] == "0x" + key5.hex()
+        assert res_kv[0]["value"] == "0x" + value5.hex()
+        assert res_kv[1]["hash"] == "0x" + leaf_hash4.hex()
+        assert res_kv[1]["key"] == "0x" + key4.hex()
+        assert res_kv[1]["value"] == "0x" + value4.hex()
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
             {"id": store_id.hex(), "page": 3, "max_page_size": 8}
         )
         assert keys_values_paginated["total_pages"] == 3
         assert keys_values_paginated["total_bytes"] == 19
-        res = keys_values_paginated["keys_values"]
-        assert len(res) == 0
+        res_kv = keys_values_paginated["keys_values"]
+        assert len(res_kv) == 0
 
         key6 = b"ab"
         value6 = b"\x01\x01"
