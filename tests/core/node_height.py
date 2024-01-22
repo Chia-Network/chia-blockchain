@@ -1,20 +1,28 @@
 from __future__ import annotations
 
+from chia.full_node.full_node_api import FullNodeAPI
+from chia.util.ints import uint32
 
-def node_height_at_least(node, h):
+
+def node_height_at_least(node: FullNodeAPI, h: uint32) -> bool:
     if node.full_node.blockchain.get_peak() is not None:
-        return node.full_node.blockchain.get_peak().height >= h
+        peak = node.full_node.blockchain.get_peak()
+        if peak is not None:
+            return peak.height >= h
     return False
 
 
-def node_height_exactly(node, h):
+def node_height_exactly(node: FullNodeAPI, h: uint32) -> bool:
     if node.full_node.blockchain.get_peak() is not None:
-        return node.full_node.blockchain.get_peak().height == h
+        peak = node.full_node.blockchain.get_peak()
+        if peak is not None:
+            return peak.height == h
     return False
 
 
-def node_height_between(node, h1, h2):
+def node_height_between(node: FullNodeAPI, h1: uint32, h2: uint32) -> bool:
     if node.full_node.blockchain.get_peak() is not None:
-        height = node.full_node.blockchain.get_peak().height
-        return h1 <= height <= h2
+        peak = node.full_node.blockchain.get_peak()
+        if peak is not None:
+            return h1 <= peak.height <= h2
     return False

@@ -91,7 +91,7 @@ def verify_passphrase_meets_requirements(
 
 def prompt_for_passphrase(prompt: str) -> str:
     if sys.platform == "win32" or sys.platform == "cygwin":
-        print(prompt, end="")
+        print(prompt, end="", flush=True)
         prompt = ""
     return getpass(prompt)
 

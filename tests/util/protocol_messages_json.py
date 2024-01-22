@@ -10,6 +10,7 @@ new_signage_point_json: Dict[str, Any] = {
     "difficulty": 2329045448547720842,
     "sub_slot_iters": 8265724497259558930,
     "signage_point_index": 194,
+    "peak_height": 1,
 }
 
 declare_proof_of_space_json: Dict[str, Any] = {
@@ -48,6 +49,7 @@ farming_info_json: Dict[str, Any] = {
     "passed": 1390832181,
     "proofs": 908923578,
     "total_plots": 2259819406,
+    "lookup_time": 3942498,
 }
 
 signed_values_json: Dict[str, Any] = {
@@ -2023,6 +2025,7 @@ new_signage_point_harvester_json: Dict[str, Any] = {
             "pool_contract_puzzle_hash": "0xc9423123ea65e6923e973b95531b4874570dae942cb757a2daec4a6971753886",
         }
     ],
+    "filter_prefix_bits": 9,
 }
 
 new_proof_of_space_json: Dict[str, Any] = {
@@ -2070,6 +2073,7 @@ plot_json: Dict[str, Any] = {
     "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "file_size": 3368414292564311420,
     "time_modified": 2573238947935295522,
+    "compression_level": 0,
 }
 
 request_plots_json: Dict[str, Any] = {}
@@ -2085,6 +2089,7 @@ respond_plots_json: Dict[str, Any] = {
             "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
             "file_size": 3368414292564311420,
             "time_modified": 2573238947935295522,
+            "compression_level": 0,
         }
     ],
     "failed_to_open_filenames": ["str"],
@@ -2492,3 +2497,7 @@ respond_compact_proof_of_time_json: Dict[str, Any] = {
     "height": 386395693,
     "field_vdf": 224,
 }
+
+error_without_data_json: Dict[str, Any] = {"code": 1, "message": "Unknown", "data": None}
+
+error_with_data_json: Dict[str, Any] = {"code": 1, "message": "Unknown", "data": "0x65787472612064617461"}

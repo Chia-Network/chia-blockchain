@@ -8,12 +8,14 @@ have to worry about blowing out the python stack.
 
 from __future__ import annotations
 
-from typing import Optional, Set
+from typing import Callable, List, Optional, Set
 
 from clvm import CLVMObject
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
+
+Op = Callable[[List["CLVMObject"], List["Op"], Set[bytes32]], None]
 
 
 def sha256_treehash(sexp: CLVMObject, precalculated: Optional[Set[bytes32]] = None) -> bytes32:
@@ -24,7 +26,7 @@ def sha256_treehash(sexp: CLVMObject, precalculated: Optional[Set[bytes32]] = No
     if precalculated is None:
         precalculated = set()
 
-    def handle_sexp(sexp_stack, op_stack, precalculated: Set[bytes32]) -> None:
+    def handle_sexp(sexp_stack: List[CLVMObject], op_stack: List[Op], precalculated: Set[bytes32]) -> None:
         sexp = sexp_stack.pop()
         if sexp.pair:
             p0, p1 = sexp.pair
@@ -41,19 +43,19 @@ def sha256_treehash(sexp: CLVMObject, precalculated: Optional[Set[bytes32]] = No
                 r = std_hash(b"\1" + sexp.atom)
             sexp_stack.append(r)
 
-    def handle_pair(sexp_stack, op_stack, precalculated) -> None:
+    def handle_pair(sexp_stack: List[CLVMObject], op_stack: List[Op], precalculated: Set[bytes32]) -> None:
         p0 = sexp_stack.pop()
         p1 = sexp_stack.pop()
         sexp_stack.append(std_hash(b"\2" + p0 + p1))
 
-    def roll(sexp_stack, op_stack, precalculated) -> None:
+    def roll(sexp_stack: List[CLVMObject], op_stack: List[Op], precalculated: Set[bytes32]) -> None:
         p0 = sexp_stack.pop()
         p1 = sexp_stack.pop()
         sexp_stack.append(p0)
         sexp_stack.append(p1)
 
     sexp_stack = [sexp]
-    op_stack = [handle_sexp]
+    op_stack: List[Op] = [handle_sexp]
     while len(op_stack) > 0:
         op = op_stack.pop()
         op(sexp_stack, op_stack, precalculated)

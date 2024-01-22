@@ -41,7 +41,7 @@ class AddressManagerTest(AddressManager):
 
 
 class TestPeerManager:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addr_manager(self):
         addrman = AddressManagerTest()
         # Test: Does Addrman respond correctly when empty.
@@ -76,7 +76,7 @@ class TestPeerManager:
         assert await addrman2.add_peer_info(peers)
         assert await addrman2.size() >= 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addr_manager_ports(self):
         addrman = AddressManagerTest()
         assert await addrman.size() == 0
@@ -102,7 +102,7 @@ class TestPeerManager:
 
     # This is a fleaky test, since it uses randomness.
     # TODO: Make sure it always succeeds.
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_select(self):
         addrman = AddressManagerTest()
         source = PeerInfo("252.2.2.2", 8444)
@@ -158,7 +158,7 @@ class TestPeerManager:
                 break
         assert len(ports) == 3
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_collisions_new(self):
         addrman = AddressManagerTest()
         assert await addrman.size() == 0
@@ -178,7 +178,7 @@ class TestPeerManager:
         assert await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 8
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_collisions_tried(self):
         addrman = AddressManagerTest()
         assert await addrman.size() == 0
@@ -200,7 +200,7 @@ class TestPeerManager:
         assert await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 77
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_find(self):
         addrman = AddressManagerTest()
         assert await addrman.size() == 0
@@ -231,7 +231,7 @@ class TestPeerManager:
         assert info3[0] is not None and info3[1] is not None
         assert info3[0].peer_info == peer3
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_create(self):
         addrman = AddressManagerTest()
         assert await addrman.size() == 0
@@ -243,7 +243,7 @@ class TestPeerManager:
         info, _ = addrman.find_(peer1)
         assert info.peer_info == peer1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_delete(self):
         addrman = AddressManagerTest()
         assert await addrman.size() == 0
@@ -259,7 +259,7 @@ class TestPeerManager:
         info2, _ = addrman.find_(peer1)
         assert info2 is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_get_peers(self):
         addrman = AddressManagerTest()
         assert await addrman.size() == 0
@@ -305,7 +305,7 @@ class TestPeerManager:
         percent = math.ceil(percent * 23 / 100)
         assert len(peers4) == percent
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_tried_bucket(self):
         peer1 = PeerInfo("250.1.1.1", 8444)
         t_peer1 = TimestampedPeerInfo("250.1.1.1", 8444, 0)
@@ -352,7 +352,7 @@ class TestPeerManager:
                 buckets.append(bucket)
         assert len(buckets) > 8
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_new_bucket(self):
         t_peer1 = TimestampedPeerInfo("250.1.2.1", 8444, 0)
         source1 = PeerInfo("250.1.2.1", 8444)
@@ -407,7 +407,7 @@ class TestPeerManager:
 
         assert len(buckets) > 64
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_select_collision_no_collision(self):
         addrman = AddressManagerTest()
         collision = await addrman.select_tried_collision()
@@ -433,7 +433,7 @@ class TestPeerManager:
             collision = await addrman.select_tried_collision()
             assert collision is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_no_evict(self):
         addrman = AddressManagerTest()
 
@@ -483,7 +483,7 @@ class TestPeerManager:
         collision = await addrman.select_tried_collision()
         assert collision is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_addrman_eviction_works(self):
         addrman = AddressManagerTest()
         assert await addrman.size() == 0
@@ -526,7 +526,7 @@ class TestPeerManager:
         await addrman.resolve_tried_collisions()
         assert await addrman.select_tried_collision() is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_serialization(self, tmp_path: Path):
         addrman = AddressManagerTest()
@@ -572,7 +572,7 @@ class TestPeerManager:
         assert recovered == 3
         peers_dat_filename.unlink()
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cleanup(self):
         addrman = AddressManagerTest()
         peer1 = TimestampedPeerInfo("250.250.2.1", 8444, 100000)

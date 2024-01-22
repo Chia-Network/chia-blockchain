@@ -27,5 +27,5 @@ def test_show_fee_info(
 ) -> None:
     _, _, _ = one_node_one_block
     runner = CliRunner()
-    result = runner.invoke(cli, ["show", "-f"])
+    result = runner.invoke(cli, ["show", "-f"], catch_exceptions=False)
     assert result.exit_code == 0

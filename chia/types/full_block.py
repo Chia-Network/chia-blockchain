@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import List, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint128
 from chia.util.streamable import Streamable, streamable
 
 
@@ -39,15 +39,15 @@ class FullBlock(Streamable):
 
     @property
     def height(self) -> uint32:
-        return self.reward_chain_block.height
+        return uint32(self.reward_chain_block.height)
 
     @property
-    def weight(self):
-        return self.reward_chain_block.weight
+    def weight(self) -> uint128:
+        return uint128(self.reward_chain_block.weight)
 
     @property
-    def total_iters(self):
-        return self.reward_chain_block.total_iters
+    def total_iters(self) -> uint128:
+        return uint128(self.reward_chain_block.total_iters)
 
     @property
     def header_hash(self) -> bytes32:
@@ -56,11 +56,11 @@ class FullBlock(Streamable):
     def is_transaction_block(self) -> bool:
         return self.foliage_transaction_block is not None
 
-    def get_included_reward_coins(self) -> Set[Coin]:
+    def get_included_reward_coins(self) -> List[Coin]:
         if not self.is_transaction_block():
-            return set()
+            return []
         assert self.transactions_info is not None
-        return set(self.transactions_info.reward_claims_incorporated)
+        return self.transactions_info.reward_claims_incorporated
 
     def is_fully_compactified(self) -> bool:
         for sub_slot in self.finished_sub_slots:

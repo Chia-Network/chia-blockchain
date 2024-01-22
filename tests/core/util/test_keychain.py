@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import json
-import unittest
+import random
 from dataclasses import replace
-from secrets import token_bytes
 from typing import Callable, List, Optional, Tuple
 
+import pkg_resources
 import pytest
-from blspy import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
-from chia.simulator.keyring import using_temp_file_keyring
+import tests
+import tests.util
+from chia.simulator.keyring import TempKeyring
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
     KeychainFingerprintExists,
     KeychainFingerprintNotFound,
@@ -26,6 +29,7 @@ from chia.util.keychain import (
     bytes_from_mnemonic,
     bytes_to_mnemonic,
     generate_mnemonic,
+    mnemonic_from_short_words,
     mnemonic_to_seed,
 )
 
@@ -41,9 +45,8 @@ public_key = G1Element.from_bytes(
 )
 
 
-class TestKeychain(unittest.TestCase):
-    @using_temp_file_keyring()
-    def test_basic_add_delete(self):
+class TestKeychain:
+    def test_basic_add_delete(self, empty_temp_file_keyring: TempKeyring, seeded_random: random.Random):
         kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
 
@@ -61,12 +64,8 @@ class TestKeychain(unittest.TestCase):
         # misspelled words in the mnemonic
         bad_mnemonic = mnemonic.split(" ")
         bad_mnemonic[6] = "ZZZZZZ"
-        self.assertRaisesRegex(
-            ValueError,
-            "'ZZZZZZ' is not in the mnemonic dictionary; may be misspelled",
-            bytes_from_mnemonic,
-            " ".join(bad_mnemonic),
-        )
+        with pytest.raises(ValueError, match="'ZZZZZZ' is not in the mnemonic dictionary; may be misspelled"):
+            bytes_from_mnemonic(" ".join(bad_mnemonic))
 
         kc.add_private_key(mnemonic)
         assert kc._get_free_private_key_index() == 1
@@ -97,9 +96,9 @@ class TestKeychain(unittest.TestCase):
         assert kc._get_free_private_key_index() == 0
         assert len(kc.get_all_private_keys()) == 0
 
-        kc.add_private_key(bytes_to_mnemonic(token_bytes(32)))
-        kc.add_private_key(bytes_to_mnemonic(token_bytes(32)))
-        kc.add_private_key(bytes_to_mnemonic(token_bytes(32)))
+        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
+        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
+        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
 
         assert len(kc.get_all_public_keys()) == 3
 
@@ -107,11 +106,10 @@ class TestKeychain(unittest.TestCase):
         assert kc.get_first_public_key() is not None
 
         kc.delete_all_keys()
-        kc.add_private_key(bytes_to_mnemonic(token_bytes(32)))
+        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
         assert kc.get_first_public_key() is not None
 
-    @using_temp_file_keyring()
-    def test_add_private_key_label(self):
+    def test_add_private_key_label(self, empty_temp_file_keyring: TempKeyring):
         keychain: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
 
         key_data_0 = KeyData.generate(label="key_0")
@@ -145,8 +143,7 @@ class TestKeychain(unittest.TestCase):
             key_data in [key_data_0, key_data_1, key_data_2] for key_data in keychain.get_keys(include_secrets=True)
         )
 
-    @using_temp_file_keyring()
-    def test_bip39_eip2333_test_vector(self):
+    def test_bip39_eip2333_test_vector(self, empty_temp_file_keyring: TempKeyring):
         kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
 
@@ -160,7 +157,8 @@ class TestKeychain(unittest.TestCase):
         assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
 
     def test_bip39_test_vectors(self):
-        with open("tests/util/bip39_test_vectors.json") as f:
+        test_vectors_path = pkg_resources.resource_filename(tests.util.__name__, "bip39_test_vectors.json")
+        with open(test_vectors_path) as f:
             all_vectors = json.loads(f.read())
 
         for vector_list in all_vectors["english"]:
@@ -171,6 +169,23 @@ class TestKeychain(unittest.TestCase):
             assert bytes_from_mnemonic(mnemonic) == entropy_bytes
             assert bytes_to_mnemonic(entropy_bytes) == mnemonic
             assert mnemonic_to_seed(mnemonic) == seed
+
+    def test_bip39_test_vectors_short(self):
+        """
+        Tests that the first 4 letters of each mnemonic phrase matches as if it were the full phrase
+        """
+        test_vectors_path = pkg_resources.resource_filename(tests.util.__name__, "bip39_test_vectors.json")
+        with open(test_vectors_path) as f:
+            all_vectors = json.load(f)
+
+        for idx, [entropy_hex, full_mnemonic, seed, short_mnemonic] in enumerate(all_vectors["english"]):
+            entropy_bytes = bytes.fromhex(entropy_hex)
+            seed = bytes.fromhex(seed)
+
+            assert mnemonic_from_short_words(short_mnemonic) == full_mnemonic
+            assert bytes_from_mnemonic(short_mnemonic) == entropy_bytes
+            assert bytes_to_mnemonic(entropy_bytes) == full_mnemonic
+            assert mnemonic_to_seed(short_mnemonic) == seed
 
     def test_utf8_nfkd(self):
         # Test code from trezor:
@@ -280,7 +295,8 @@ def test_key_data_post_init(
 
 
 @pytest.mark.parametrize("include_secrets", [True, False])
-def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
+@pytest.mark.anyio
+async def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
     keychain: Keychain = get_temp_keyring
     expected_keys = []
     # Add 10 keys and validate the result `get_key` for each of them after each addition
@@ -307,7 +323,8 @@ def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
 
 
 @pytest.mark.parametrize("include_secrets", [True, False])
-def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
+@pytest.mark.anyio
+async def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
     keychain: Keychain = get_temp_keyring
     # Should be empty on start
     assert keychain.get_keys(include_secrets) == []
@@ -330,7 +347,8 @@ def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
     assert keychain.get_keys(include_secrets) == []
 
 
-def test_set_label(get_temp_keyring: Keychain) -> None:
+@pytest.mark.anyio
+async def test_set_label(get_temp_keyring: Keychain) -> None:
     keychain: Keychain = get_temp_keyring
     # Generate a key and add it without label
     key_data_0 = KeyData.generate(label=None)
@@ -372,7 +390,8 @@ def test_set_label(get_temp_keyring: Keychain) -> None:
         ("a" * 70, "label exceeds max length: 70/65"),
     ],
 )
-def test_set_label_invalid_labels(label: str, message: str, get_temp_keyring: Keychain) -> None:
+@pytest.mark.anyio
+async def test_set_label_invalid_labels(label: str, message: str, get_temp_keyring: Keychain) -> None:
     keychain: Keychain = get_temp_keyring
     key_data = KeyData.generate()
     keychain.add_private_key(key_data.mnemonic_str())
@@ -381,7 +400,8 @@ def test_set_label_invalid_labels(label: str, message: str, get_temp_keyring: Ke
     assert e.value.label == label
 
 
-def test_delete_label(get_temp_keyring: Keychain) -> None:
+@pytest.mark.anyio
+async def test_delete_label(get_temp_keyring: Keychain) -> None:
     keychain: Keychain = get_temp_keyring
     # Generate two keys and add them to the keychain
     key_data_0 = KeyData.generate(label="key_0")
@@ -420,7 +440,8 @@ def test_delete_label(get_temp_keyring: Keychain) -> None:
 
 
 @pytest.mark.parametrize("delete_all", [True, False])
-def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool) -> None:
+@pytest.mark.anyio
+async def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool) -> None:
     keychain: Keychain = get_temp_keyring
     # Generate some keys and add them to the keychain
     labels = [f"key_{i}" for i in range(5)]

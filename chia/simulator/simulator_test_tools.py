@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 import sys
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, Optional, Tuple
 
-from blspy import PrivateKey
+from chia_rs import PrivateKey
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
@@ -27,6 +26,7 @@ from chia.util.errors import KeychainFingerprintExists
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.util.lock import Lockfile
+from chia.util.misc import SignalHandlers
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 
 """
@@ -108,13 +108,11 @@ def create_config(
 
 async def start_simulator(chia_root: Path, automated_testing: bool = False) -> AsyncGenerator[FullNodeSimulator, None]:
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
-    service = await start_simulator_main(True, automated_testing, root_path=chia_root)
-    await service.start()
+    started_simulator = await start_simulator_main(True, automated_testing, root_path=chia_root)
+    service = started_simulator.service
 
-    yield service._api
-
-    service.stop()
-    await service.wait_closed()
+    async with service.manage():
+        yield service._api
 
 
 async def get_full_chia_simulator(
@@ -136,7 +134,6 @@ async def get_full_chia_simulator(
         keychain = Keychain()
 
     with Lockfile.create(daemon_launch_lock_path(chia_root)):
-
         mnemonic, fingerprint = mnemonic_fingerprint(keychain)
 
         ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
@@ -158,13 +155,9 @@ async def get_full_chia_simulator(
         ca_crt_path = chia_root / config["private_ssl_ca"]["crt"]
         ca_key_path = chia_root / config["private_ssl_ca"]["key"]
 
-        shutdown_event = asyncio.Event()
-        ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
-        await ws_server.setup_process_global_state()
-        await ws_server.start()
-
-        async for simulator in start_simulator(chia_root, automated_testing):
-            yield simulator, chia_root, config, mnemonic, fingerprint, keychain
-
-        await ws_server.stop()
-        await shutdown_event.wait()  # wait till shutdown is complete
+        ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path)
+        async with SignalHandlers.manage() as signal_handlers:
+            await ws_server.setup_process_global_state(signal_handlers=signal_handlers)
+            async with ws_server.run():
+                async for simulator in start_simulator(chia_root, automated_testing):
+                    yield simulator, chia_root, config, mnemonic, fingerprint, keychain

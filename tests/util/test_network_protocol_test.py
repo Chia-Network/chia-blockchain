@@ -1,7 +1,9 @@
 # flake8: noqa
 from __future__ import annotations
 
-from typing import Any, List, Set
+import ast
+import inspect
+from typing import Any, Dict, Set, cast
 
 from chia.protocols import (
     farmer_protocol,
@@ -9,6 +11,7 @@ from chia.protocols import (
     harvester_protocol,
     introducer_protocol,
     pool_protocol,
+    protocol_message_types,
     shared_protocol,
     timelord_protocol,
     wallet_protocol,
@@ -19,16 +22,16 @@ from chia.protocols import (
 
 
 def types_in_module(mod: Any) -> Set[str]:
-    ret: List[str] = []
-    mod_name = mod.__name__
-    for sym in dir(mod):
-        obj = getattr(mod, sym)
-        if hasattr(obj, "__module__") and obj.__module__ == mod_name:
-            ret.append(sym)
-
-    if hasattr(mod, "__all__"):
-        ret += getattr(mod, "__all__")
-    return set(ret)
+    parsed = ast.parse(inspect.getsource(mod))
+    types = set()
+    for line in parsed.body:
+        if isinstance(line, ast.Assign):
+            name = cast(ast.Name, line.targets[0])
+            if inspect.isclass(getattr(mod, name.id)):
+                types.add(name.id)
+        elif isinstance(line, ast.ClassDef):
+            types.add(line.name)
+    return types
 
 
 def test_missing_messages_state_machine() -> None:
@@ -45,8 +48,31 @@ def test_missing_messages_state_machine() -> None:
     ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
 
 
-def test_missing_messages() -> None:
+def test_message_ids() -> None:
+    parsed = ast.parse(inspect.getsource(protocol_message_types))
+    message_ids: Dict[int, str] = {}
+    for line in parsed.body:
+        if not isinstance(line, ast.ClassDef) or line.name != "ProtocolMessageTypes":
+            continue
+        for entry in line.body:
+            if not isinstance(entry, ast.Assign):  # pragma: no cover
+                continue
+            assert isinstance(entry.value, ast.Constant)
+            assert isinstance(entry.targets[0], ast.Name)
+            message_id = entry.value.value
+            message_name = entry.targets[0].id
+            if message_id in message_ids:  # pragma: no cover
+                raise AssertionError(
+                    f'protocol message ID clash between "{message_name}" and "{message_ids[message_id]}". Value {message_id}'
+                )
+            message_ids[message_id] = message_name
+            if message_id < 0 or message_id > 255:  # pragma: no cover
+                raise AssertionError(f'message ID must fit in a uint8. "{message_name}" has value {message_id}')
+        break
+    assert len(message_ids) > 0
 
+
+def test_missing_messages() -> None:
     wallet_msgs = {
         "CoinState",
         "CoinStateUpdate",
@@ -156,8 +182,6 @@ def test_missing_messages() -> None:
         "PutFarmerPayload",
         "PutFarmerRequest",
         "PutFarmerResponse",
-        "get_current_authentication_token",
-        "validate_authentication_token",
     }
 
     timelord_msgs = {
@@ -170,7 +194,7 @@ def test_missing_messages() -> None:
         "RespondCompactProofOfTime",
     }
 
-    shared_msgs = {"Handshake", "Capability"}
+    shared_msgs = {"Handshake", "Capability", "Error"}
 
     # if these asserts fail, make sure to add the new network protocol messages
     # to the visitor in build_network_protocol_files.py and rerun it. Then

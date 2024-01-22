@@ -9,8 +9,13 @@ from typing import Dict, Set, Tuple
 
 
 def check_create(sql_type: str, cwd: str, exemptions: Set[Tuple[str, str]] = set()) -> int:
-
-    lines = check_output(["git", "grep", f"CREATE {sql_type}"], cwd=cwd).decode("ascii").split("\n")
+    # the need for this change seems to come from the git precommit plus the python pre-commit environment
+    # having GIT_DIR specified but not GIT_WORK_TREE.  this is an issue in some less common git setups
+    # such as with worktrees, at least in particular uses of them.  i think that we could switch to letting
+    # pre-commit provide the file list instead of reaching out to git to build that list ourselves.  until we
+    # make time to handle that, this is an alternative to alleviate the issue.
+    exemptions = {(cwd + "/" + file, name) for file, name in exemptions}
+    lines = check_output(["git", "grep", f"CREATE {sql_type}"]).decode("ascii").split("\n")
 
     ret = 0
 
@@ -21,6 +26,8 @@ def check_create(sql_type: str, cwd: str, exemptions: Set[Tuple[str, str]] = set
         if line.startswith("tests/"):
             continue
         if "db_upgrade_func.py" in line:
+            continue
+        if not line.startswith(cwd):
             continue
 
         name = line.split(f"CREATE {sql_type}")[1]
@@ -47,24 +54,20 @@ ret += check_create("INDEX", "chia/wallet")
 ret += check_create(
     "INDEX",
     "chia/full_node",
-    set(
-        [
-            ("block_store.py", "is_fully_compactified"),
-            ("block_store.py", "height"),
-        ]
-    ),
+    {
+        ("block_store.py", "is_fully_compactified"),
+        ("block_store.py", "height"),
+    },
 )
 ret += check_create("TABLE", "chia/wallet")
 ret += check_create(
     "TABLE",
     "chia/full_node",
-    set(
-        [
-            ("block_store.py", "sub_epoch_segments_v3"),
-            ("block_store.py", "full_blocks"),
-            ("coin_store.py", "coin_record"),
-            ("hint_store.py", "hints"),
-        ]
-    ),
+    {
+        ("block_store.py", "sub_epoch_segments_v3"),
+        ("block_store.py", "full_blocks"),
+        ("coin_store.py", "coin_record"),
+        ("hint_store.py", "hints"),
+    },
 )
 sys.exit(ret)

@@ -5,14 +5,13 @@ set -o errexit
 echo "Installing global npm packages"
 cd npm_linux || exit 1
 npm ci
-PATH=$(npm bin):$PATH
 
 cd ../../ || exit 1
 git submodule update --init chia-blockchain-gui
 
 cd ./chia-blockchain-gui || exit 1
 echo "npm build"
-lerna clean -y
+npx lerna clean -y
 npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix

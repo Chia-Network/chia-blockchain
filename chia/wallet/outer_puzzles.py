@@ -13,6 +13,7 @@ from chia.wallet.nft_wallet.singleton_outer_puzzle import SingletonOuterPuzzle
 from chia.wallet.nft_wallet.transfer_program_puzzle import TransferProgramPuzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.vc_wallet.cr_outer_puzzle import CROuterPuzzle
 
 """
 This file provides a central location for acquiring drivers for outer puzzles like CATs, NFTs, etc.
@@ -40,6 +41,7 @@ class AssetType(Enum):
     METADATA = "metadata"
     OWNERSHIP = "ownership"
     ROYALTY_TRANSFER_PROGRAM = "royalty transfer program"
+    CR = "credential restricted"
 
 
 def match_puzzle(puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
@@ -78,4 +80,5 @@ driver_lookup: Dict[AssetType, DriverProtocol] = {
     AssetType.METADATA: MetadataOuterPuzzle(*function_args),
     AssetType.OWNERSHIP: OwnershipOuterPuzzle(*function_args),
     AssetType.ROYALTY_TRANSFER_PROGRAM: TransferProgramPuzzle(*function_args),
+    AssetType.CR: CROuterPuzzle(*function_args),
 }

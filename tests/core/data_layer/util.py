@@ -6,12 +6,12 @@ import os
 import pathlib
 import subprocess
 from dataclasses import dataclass
-from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Union
+from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Literal, Optional, Union, overload
 
 from chia.data_layer.data_layer_util import NodeType, Side, Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.tree_hash import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 # from subprocess.pyi
 _FILE = Union[None, int, IO[Any]]
@@ -34,7 +34,7 @@ async def general_insert(
     reference_node_hash: bytes32,
     side: Optional[Side],
 ) -> bytes32:
-    return await data_store.insert(
+    insert_result = await data_store.insert(
         key=key,
         value=value,
         tree_id=tree_id,
@@ -42,6 +42,7 @@ async def general_insert(
         side=side,
         status=Status.COMMITTED,
     )
+    return insert_result.node_hash
 
 
 @dataclass(frozen=True)
@@ -182,12 +183,30 @@ class ChiaRoot:
             self.print_log()
 
 
+@overload
+def create_valid_node_values(
+    node_type: Literal[NodeType.INTERNAL],
+    left_hash: bytes32,
+    right_hash: bytes32,
+) -> Dict[str, Any]:
+    ...
+
+
+@overload
+def create_valid_node_values(
+    node_type: Literal[NodeType.TERMINAL],
+) -> Dict[str, Any]:
+    ...
+
+
 def create_valid_node_values(
     node_type: NodeType,
     left_hash: Optional[bytes32] = None,
     right_hash: Optional[bytes32] = None,
 ) -> Dict[str, Any]:
     if node_type == NodeType.INTERNAL:
+        assert left_hash is not None
+        assert right_hash is not None
         return {
             "hash": Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash),
             "node_type": node_type,
@@ -197,6 +216,7 @@ def create_valid_node_values(
             "value": None,
         }
     elif node_type == NodeType.TERMINAL:
+        assert left_hash is None and right_hash is None
         key = b""
         value = b""
         return {
@@ -208,4 +228,4 @@ def create_valid_node_values(
             "value": value,
         }
 
-    raise Exception(f"Unhandled node type: {node_type!r}")
+    raise Exception(f"Unhandled node type: {node_type!r}")  # pragma: no cover

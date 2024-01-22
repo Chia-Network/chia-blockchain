@@ -16,9 +16,9 @@ class BlockCache(BlockchainInterface):
     def __init__(
         self,
         blocks: Dict[bytes32, BlockRecord],
-        headers: Dict[bytes32, HeaderBlock] = None,
-        height_to_hash: Dict[uint32, bytes32] = None,
-        sub_epoch_summaries: Dict[uint32, SubEpochSummary] = None,
+        headers: Optional[Dict[bytes32, HeaderBlock]] = None,
+        height_to_hash: Optional[Dict[uint32, bytes32]] = None,
+        sub_epoch_summaries: Optional[Dict[uint32, SubEpochSummary]] = None,
     ):
         if sub_epoch_summaries is None:
             sub_epoch_summaries = {}
@@ -59,6 +59,9 @@ class BlockCache(BlockchainInterface):
     def contains_block(self, header_hash: bytes32) -> bool:
         return header_hash in self._block_records
 
+    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
+        return header_hash in self._block_records
+
     def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash
 
@@ -74,10 +77,16 @@ class BlockCache(BlockchainInterface):
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records[header_hash]
 
-    def remove_block_record(self, header_hash: bytes32):
+    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+        ret = []
+        for h in header_hashes:
+            ret.append(self._block_records[h].prev_hash)
+        return ret
+
+    def remove_block_record(self, header_hash: bytes32) -> None:
         del self._block_records[header_hash]
 
-    def add_block_record(self, block: BlockRecord):
+    def add_block_record(self, block: BlockRecord) -> None:
         self._block_records[block.header_hash] = block
 
     async def get_header_blocks_in_range(
@@ -87,7 +96,7 @@ class BlockCache(BlockchainInterface):
 
     async def persist_sub_epoch_challenge_segments(
         self, sub_epoch_summary_hash: bytes32, segments: List[SubEpochChallengeSegment]
-    ):
+    ) -> None:
         self._sub_epoch_segments[sub_epoch_summary_hash] = SubEpochSegments(segments)
 
     async def get_sub_epoch_challenge_segments(

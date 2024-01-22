@@ -48,7 +48,7 @@ def fontcolor(pct: float) -> str:
 @lru_cache(maxsize=10000)
 def resolve_function(file: str, line: int) -> str:
     try:
-        with open(file, "r") as f:
+        with open(file) as f:
             all_lines: List[str] = []
             for row in f:
                 all_lines.append(row)
@@ -162,7 +162,6 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
         filter_frames = set()
 
         for name, fr in all_frames.items():
-
             # frames that are less than 0.1% of the total allocations are
             # filtered
             if fr.size / total_size < 0.001:
@@ -181,7 +180,6 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
 
         # print all edges (calls)
         for name, fr in all_frames.items():
-
             if name in filter_frames:
                 continue
 

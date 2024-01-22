@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
-from blspy import PrivateKey
+from chia_rs import PrivateKey
 
 from chia.cmds.init_funcs import check_keys
 from chia.util.errors import KeychainException, KeychainFingerprintNotFound
@@ -24,6 +24,8 @@ keychain_commands = [
     "get_key_for_fingerprint",
     "get_key",
     "get_keys",
+    "get_public_key",
+    "get_public_keys",
     "set_label",
     "delete_label",
 ]
@@ -76,6 +78,50 @@ class GetKeysRequest(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetPublicKeyRequest(Streamable):
+    fingerprint: uint32
+
+    def run(self, keychain: Keychain) -> GetPublicKeyResponse:
+        return GetPublicKeyResponse(key=keychain.get_key(self.fingerprint, include_secrets=False))
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeyResponse(Streamable):
+    key: KeyData
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        # Ensure that only approved keys are returned
+        approved_keys = ["fingerprint", "public_key", "label"]
+        key_dict = self.key.to_json_dict()
+        return {"key": {key: key_dict[key] for key in approved_keys if key in key_dict}}
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeysRequest(Streamable):
+    def run(self, keychain: Keychain) -> GetPublicKeysResponse:
+        return GetPublicKeysResponse(keys=keychain.get_keys(include_secrets=False))
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeysResponse(Streamable):
+    keys: List[KeyData]
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        # Ensure that only approved keys are returned
+        approved_keys = ["fingerprint", "public_key", "label"]
+        return {
+            "keys": [
+                {key: key_data_dict[key] for key in approved_keys if key in key_data_dict}
+                for key_data_dict in (key_data.to_json_dict() for key_data in self.keys)
+            ]
+        }
+
+
+@streamable
+@dataclass(frozen=True)
 class SetLabelRequest(Streamable):
     fingerprint: uint32
     label: str
@@ -95,23 +141,22 @@ class DeleteLabelRequest(Streamable):
         return EmptyResponse()
 
 
+@dataclass
 class KeychainServer:
     """
     Implements a remote keychain service for clients to perform key operations on
     """
 
-    def __init__(self):
-        self._default_keychain = Keychain()
-        self._alt_keychains = {}
+    _default_keychain: Keychain = field(default_factory=Keychain)
+    _alt_keychains: Dict[str, Keychain] = field(default_factory=dict)
 
-    def get_keychain_for_request(self, request: Dict[str, Any]):
+    def get_keychain_for_request(self, request: Dict[str, Any]) -> Keychain:
         """
         Keychain instances can have user and service strings associated with them.
         The keychain backends ultimately point to the same data stores, but the user
         and service strings are used to partition those data stores. We attempt to
         maintain a mapping of user/service pairs to their corresponding Keychain.
         """
-        keychain = None
         user = request.get("kc_user", self._default_keychain.user)
         service = request.get("kc_service", self._default_keychain.service)
         if user == self._default_keychain.user and service == self._default_keychain.service:
@@ -145,6 +190,10 @@ class KeychainServer:
                 return await self.run_request(data, GetKeyRequest)
             elif command == "get_keys":
                 return await self.run_request(data, GetKeysRequest)
+            elif command == "get_public_key":
+                return await self.run_request(data, GetPublicKeyRequest)
+            elif command == "get_public_keys":
+                return await self.run_request(data, GetPublicKeysRequest)
             elif command == "set_label":
                 return await self.run_request(data, SetLabelRequest)
             elif command == "delete_label":

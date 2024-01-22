@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 from chia.full_node.fee_estimate_store import FeeStore
-from chia.full_node.fee_estimation import EmptyFeeMempoolInfo, FeeBlockInfo, FeeMempoolInfo
+from chia.full_node.fee_estimation import EmptyFeeMempoolInfo, FeeBlockInfo, FeeMempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.fee_tracker import FeeTracker
 from chia.types.clvm_cost import CLVMCost
-from chia.types.fee_rate import FeeRate
-from chia.types.mempool_item import MempoolItem
+from chia.types.fee_rate import FeeRateV2
 from chia.util.ints import uint32, uint64
 
 
@@ -35,27 +34,27 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
         self.block_height = block_info.block_height
         self.tracker.process_block(block_info.block_height, block_info.included_items)
 
-    def add_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
+    def add_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItemInfo) -> None:
         self.last_mempool_info = mempool_info
         self.tracker.add_tx(mempool_item)
 
-    def remove_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
+    def remove_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItemInfo) -> None:
         self.last_mempool_info = mempool_info
         self.tracker.remove_tx(mempool_item)
 
-    def estimate_fee_rate(self, *, time_offset_seconds: int) -> FeeRate:
+    def estimate_fee_rate(self, *, time_offset_seconds: int) -> FeeRateV2:
         """
         time_offset_seconds: Target time in the future we want our tx included by
         """
         fee_estimate = self.fee_rate_estimator.get_estimate(time_offset_seconds)
         if fee_estimate.error is not None:
-            return FeeRate(uint64(0))
+            return FeeRateV2(0)
         return fee_estimate.estimated_fee_rate
 
-    def estimate_fee_rate_for_block(self, block: uint32) -> FeeRate:
+    def estimate_fee_rate_for_block(self, block: uint32) -> FeeRateV2:
         fee_estimate = self.fee_rate_estimator.get_estimate_for_block(block)
         if fee_estimate.error is not None:
-            return FeeRate(uint64(0))
+            return FeeRateV2(0)
         return fee_estimate.estimated_fee_rate
 
     def mempool_size(self) -> CLVMCost:

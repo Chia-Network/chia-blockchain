@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
-from chia.util.ints import uint8, uint16
+from chia.util.ints import int16, uint8, uint16
 from chia.util.streamable import Streamable, streamable
 
-protocol_version = "0.0.34"
+protocol_version = "0.0.35"
+
 
 """
 Handshake when establishing a connection between two servers.
@@ -49,3 +50,11 @@ capabilities = [
     (uint16(Capability.RATE_LIMITS_V2.value), "1"),
     # (uint16(Capability.NONE_RESPONSE.value), "1"), # capability removed but functionality is still supported
 ]
+
+
+@streamable
+@dataclass(frozen=True)
+class Error(Streamable):
+    code: int16  # Err
+    message: str
+    data: Optional[bytes] = None

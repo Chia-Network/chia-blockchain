@@ -9,7 +9,6 @@ Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
 npm ci
-$Env:Path = $(npm bin) + ";" + $Env:Path
 
 Set-Location -Path "..\..\" -PassThru
 git submodule update --init chia-blockchain-gui
@@ -22,7 +21,7 @@ Write-Output "   ---"
 $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 
 Write-Output "lerna clean -y"
-lerna clean -y
+npx lerna clean -y
 Write-Output "npm ci"
 npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
@@ -49,11 +48,11 @@ Remove-Item packages\icons -Recurse -Force
 Remove-Item packages\wallets -Recurse -Force
 
 # Remove unused fat npm modules from the gui package
-Set-Location -Path ".\packages\gui\node_modules" -PassThru
-Write-Output "Remove unused node_modules in the gui package to make cache slim more"
-Remove-Item electron\dist -Recurse -Force # ~186MB
-Remove-Item "@mui" -Recurse -Force # ~71MB
-Remove-Item typescript -Recurse -Force # ~63MB
+#Set-Location -Path ".\packages\gui\node_modules" -PassThru
+#Write-Output "Remove unused node_modules in the gui package to make cache slim more"
+#Remove-Item electron\dist -Recurse -Force # ~186MB
+#Remove-Item "@mui" -Recurse -Force # ~71MB
+#Remove-Item typescript -Recurse -Force # ~63MB
 
 # Remove `packages/gui/node_modules/@chia-network` because it causes an error on later `electron-packager` command
-Remove-Item "@chia-network" -Recurse -Force
+#Remove-Item "@chia-network" -Recurse -Force

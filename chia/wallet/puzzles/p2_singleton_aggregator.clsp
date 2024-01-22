@@ -1,0 +1,81 @@
+;; Works with p2_singleton_via_delegated_puzzle
+;; When we have many p2_singleton coins and want to aggregate them together
+
+;; all coins make announcements of their puzhash, amount, and ID
+;; the aggregator coin (the one creating the output) creates an announcement of the ID of each merge coin
+;; each merge coin asserts that the aggregator has an announcement of their (the merge coin's) ID
+;; The merge coins each create an announcement of 0 (equivalent to announcing their coin ID)
+;; The aggregator asserts that there is a 0 announcement from each of the merge coins
+
+;; merge coin announces 0 <-> aggregator asserts that merge coin ID announces 0
+;; aggregator announces merge coin ID <-> merge coin asserts that aggregator announces my_id
+
+(mod
+  (
+    my_id
+    my_puzhash
+    my_amount
+    list_of_parent_puzhash_amounts  ; list of (parent_id puzhash amount) for the merge
+    output_parent_amount  ; (parent_id amount) of the coin creating the output
+  )
+
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+  (include *standard-cl-21*)
+
+  (defun cons_announcements_to_output (coin_id output)
+    (c
+      (list ASSERT_COIN_ANNOUNCEMENT (sha256 coin_id 0))
+      (c
+        (list CREATE_COIN_ANNOUNCEMENT coin_id)
+        output
+      )
+    )
+  )
+
+  (defun for_parent_puzhash_amounts
+    (
+      my_puzhash
+      (@ coin_info_list ((@ first (parent puzhash amount)) . rest))
+      total
+    )
+    (if coin_info_list
+        (cons_announcements_to_output
+          (calculate_coin_id parent puzhash amount)
+          (for_parent_puzhash_amounts my_puzhash rest (+ total amount))
+        )
+        (list
+          (list ASSERT_HEIGHT_RELATIVE 5)  ; TODO: should this be higher or lower?
+          (list CREATE_COIN my_puzhash total (list my_puzhash))
+        )
+    )
+  )
+
+  (defun-inline give_self_to_merge (my_id my_puzhash (@ output_info (parent amount)))
+    ;; Coins being merged are asserting the output coin id, and insisting it has the same puzhash as them
+    ;; This ensures that the puzzle which issues the CREATE_COIN condition is the same as this puzzle.
+    (list
+      (list CREATE_COIN_ANNOUNCEMENT 0)
+      (list ASSERT_COIN_ANNOUNCEMENT (sha256 (calculate_coin_id parent my_puzhash amount) my_id))
+    )
+  )
+
+
+
+  (c
+    (list ASSERT_MY_AMOUNT my_amount)
+    (c
+      (list ASSERT_MY_PUZZLEHASH my_puzhash)
+      (c
+        (list ASSERT_MY_COIN_ID my_id)
+        (if list_of_parent_puzhash_amounts
+            ; we are making the output
+            (for_parent_puzhash_amounts my_puzhash list_of_parent_puzhash_amounts my_amount)
+            ; we are letting another coin make the output
+            (give_self_to_merge my_id my_puzhash output_parent_amount)
+        )
+      )
+    )
+  )
+
+)

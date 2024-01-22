@@ -60,7 +60,7 @@ def ensure_ssl_dirs(dirs: List[Path]):
     """Create SSL dirs with a default 755 mode if necessary"""
     for dir in dirs:
         if not dir.exists():
-            dir.mkdir(mode=0o755)
+            dir.mkdir(mode=0o755, parents=True)
 
 
 def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_out: Path):
@@ -95,7 +95,7 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
     cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
     key_pem = cert_key.private_bytes(
         encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
     )
 
@@ -126,7 +126,7 @@ def make_ca_cert(cert_path: Path, key_path: Path):
     cert_pem = root_cert.public_bytes(encoding=serialization.Encoding.PEM)
     key_pem = root_key.private_bytes(
         encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
     )
 
