@@ -320,7 +320,7 @@ class TestConditions:
         )
         await check_conditions(bt, conditions)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invalid_puzzle_announcement(self, bt: BlockTools) -> None:
         announce = AssertPuzzleAnnouncement(asserted_ph=EASY_PUZZLE_HASH, asserted_msg=b"test_bad")
         conditions = Program.to(
@@ -331,7 +331,7 @@ class TestConditions:
         )
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_valid_puzzle_announcement(self, bt: BlockTools) -> None:
         announce = AssertPuzzleAnnouncement(asserted_ph=EASY_PUZZLE_HASH, asserted_msg=b"test")
         conditions = Program.to(
