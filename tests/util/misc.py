@@ -203,7 +203,7 @@ def measure_runtime(
     entry_file, entry_line = caller_file_and_line(
         relative_to=(
             pathlib.Path(chia.__file__).parent.parent,
-            pathlib.Path(tests.__file__).parent.parent,
+            pathlib.Path(chia._tests.__file__).parent.parent,
         )
     )
 
@@ -315,7 +315,7 @@ class _AssertRuntime:
         self.entry_file, self.entry_line = caller_file_and_line(
             relative_to=(
                 pathlib.Path(chia.__file__).parent.parent,
-                pathlib.Path(tests.__file__).parent.parent,
+                pathlib.Path(chia._tests.__file__).parent.parent,
             )
         )
 

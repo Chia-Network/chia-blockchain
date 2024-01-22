@@ -11,11 +11,11 @@ from typing import Any, Dict, List
 import testconfig
 
 root_path = Path(__file__).parent.absolute()
-project_root_path = root_path.parent
+project_root_path = root_path.parent.parent
 
 
 def skip(path: Path) -> bool:
-    return any(part.startswith(("_", ".")) for part in path.parts)
+    return any(part.startswith(("_", ".")) and part != "_tests" for part in path.parts)
 
 
 def subdirs(per: str) -> List[Path]:
@@ -113,12 +113,18 @@ pytest_monitor_enabling_paths: List[Path] = []
 for path, index in test_paths_with_index:
     if path.is_dir():
         test_files = sorted(path.glob("test_*.py"))
-        test_file_paths = [file.relative_to(project_root_path) for file in test_files]
-        paths_for_cli = " ".join(path.as_posix() for path in test_file_paths)
+        paths_for_cli_list = [file.relative_to(project_root_path) for file in test_files]
         config_path = path
     else:
-        paths_for_cli = path.relative_to(project_root_path).as_posix()
+        paths_for_cli_list = [path.relative_to(project_root_path)]
         config_path = path.parent
+
+    def mung_path(path: Path) -> str:
+        # TODO: shell escaping, but that's per platform...
+        return ".".join(path.with_suffix("").parts)
+
+    paths_for_cli = " ".join(mung_path(path) for path in paths_for_cli_list)
+    paths_for_cli = f"--pyargs {paths_for_cli}"
 
     try:
         conf = update_config(module_dict(testconfig), dir_config(config_path))

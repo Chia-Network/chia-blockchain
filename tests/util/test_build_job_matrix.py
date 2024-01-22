@@ -6,9 +6,9 @@ import subprocess
 import sys
 from typing import Dict, List
 
-import tests
+import chia._tests
 
-build_job_matrix_path = pathlib.Path(tests.__file__).with_name("build-job-matrix.py")
+build_job_matrix_path = pathlib.Path(chia._tests.__file__).with_name("build-job-matrix.py")
 
 
 def run(args: List[str]) -> str:

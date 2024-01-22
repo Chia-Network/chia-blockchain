@@ -31,7 +31,9 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 from tests.core.make_block_generator import make_spend_bundle
 from tests.generator.test_rom import run_generator
 
-TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clsp", package_or_requirement="tests.generator.puzzles")
+TEST_GEN_DESERIALIZE = load_clvm(
+    "test_generator_deserialize.clsp", package_or_requirement="chia._tests.generator.puzzles"
+)
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles")
 
 DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clsp", package_or_requirement="chia.full_node.puzzles")
@@ -42,7 +44,7 @@ DECOMPRESS_CSE_WITH_PREFIX = load_clvm(
 )
 DECOMPRESS_BLOCK = load_clvm("block_program_zero.clsp", package_or_requirement="chia.full_node.puzzles")
 TEST_MULTIPLE = load_clvm(
-    "test_multiple_generator_input_arguments.clsp", package_or_requirement="tests.generator.puzzles"
+    "test_multiple_generator_input_arguments.clsp", package_or_requirement="chia._tests.generator.puzzles"
 )
 
 Nil = Program.from_bytes(b"\x80")
