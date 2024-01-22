@@ -3,10 +3,10 @@ from __future__ import annotations
 import pytest
 from clvm_tools import binutils
 
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.condition_tools import parse_sexp_to_conditions
+from chia.wallet.conditions import AssertPuzzleAnnouncement
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
@@ -105,7 +105,9 @@ def test_p2_singleton() -> None:
 
     # create a fake coin id for the `p2_singleton`
     p2_singleton_coin_id = Program.to(["test_hash"]).get_tree_hash()
-    expected_announcement = Announcement(singleton_full_puzzle.get_tree_hash(), p2_singleton_coin_id).name()
+    expected_announcement = AssertPuzzleAnnouncement(
+        asserted_ph=singleton_full_puzzle.get_tree_hash(), asserted_msg=p2_singleton_coin_id
+    ).msg_calc
 
     # create a `p2_singleton` puzzle. This should call driver code.
     p2_singleton_full = p2_singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH)
