@@ -20,7 +20,7 @@ from chia.cmds.data_funcs import clear_pending_roots, wallet_log_in_cmd
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import OfferIntegrityError
-from chia.data_layer.data_layer_util import OfferStore, Status, StoreProofs
+from chia.data_layer.data_layer_util import OfferStore, Status, StoreProofs, key_hash, leaf_hash
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
@@ -2328,3 +2328,188 @@ async def test_mirrors(
 
         with pytest.raises(RuntimeError, match="URL list can't be empty"):
             res = await data_rpc_api.add_mirror({"id": store_id.hex(), "urls": [], "amount": 1, "fee": 1})
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_pagination_rpcs(
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    # TODO: with this being a pseudo context manager'ish thing it doesn't actually handle shutdown
+    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        res = await data_rpc_api.create_data_store({})
+        assert res is not None
+        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+        key1 = b"aa"
+        value1 = b"\x01\x02"
+        key1_hash = key_hash(key1)
+        leaf_hash1 = leaf_hash(key1, value1)
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        key2 = b"ba"
+        value2 = b"\x03\x02"
+        key2_hash = key_hash(key2)
+        leaf_hash2 = leaf_hash(key2, value2)
+        changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
+        key3 = b"ccc"
+        value3 = b"\x04\x05"
+        changelist.append({"action": "insert", "key": key3.hex(), "value": value3.hex()})
+        leaf_hash3 = leaf_hash(key3, value3)
+        key4 = b"d"
+        value4 = b"\x06\x03"
+        key4_hash = key_hash(key4)
+        leaf_hash4 = leaf_hash(key4, value4)
+        changelist.append({"action": "insert", "key": key4.hex(), "value": value4.hex()})
+        key5 = b"e"
+        value5 = b"\x07\x01"
+        key5_hash = key_hash(key5)
+        leaf_hash5 = leaf_hash(key5, value5)
+        changelist.append({"action": "insert", "key": key5.hex(), "value": value5.hex()})
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
+
+        keys_paginated = await data_rpc_api.get_keys({"id": store_id.hex(), "page": 0, "max_page_size": 5})
+        assert keys_paginated["total_pages"] == 2
+        assert keys_paginated["total_bytes"] == 9
+        assert key2_hash < key1_hash
+        assert keys_paginated["keys"] == ["0x" + key3.hex(), "0x" + key2.hex()]
+
+        keys_paginated = await data_rpc_api.get_keys({"id": store_id.hex(), "page": 1, "max_page_size": 5})
+        assert keys_paginated["total_pages"] == 2
+        assert keys_paginated["total_bytes"] == 9
+        assert key5_hash < key4_hash
+        assert keys_paginated["keys"] == ["0x" + key1.hex(), "0x" + key5.hex(), "0x" + key4.hex()]
+
+        keys_paginated = await data_rpc_api.get_keys({"id": store_id.hex(), "page": 2, "max_page_size": 5})
+        assert keys_paginated["total_pages"] == 2
+        assert keys_paginated["total_bytes"] == 9
+        assert keys_paginated["keys"] == []
+
+        keys_values_paginated = await data_rpc_api.get_keys_values(
+            {"id": store_id.hex(), "page": 0, "max_page_size": 8}
+        )
+        assert keys_values_paginated["total_pages"] == 3
+        assert keys_values_paginated["total_bytes"] == 19
+        res = keys_values_paginated["keys_values"]
+        assert len(res) == 1
+        assert res[0]["hash"] == "0x" + leaf_hash3.hex()
+        assert res[0]["key"] == "0x" + key3.hex()
+        assert res[0]["value"] == "0x" + value3.hex()
+
+        keys_values_paginated = await data_rpc_api.get_keys_values(
+            {"id": store_id.hex(), "page": 1, "max_page_size": 8}
+        )
+        assert keys_values_paginated["total_pages"] == 3
+        assert keys_values_paginated["total_bytes"] == 19
+        res = keys_values_paginated["keys_values"]
+        assert len(res) == 2
+        assert leaf_hash1 < leaf_hash2
+        assert res[0]["hash"] == "0x" + leaf_hash1.hex()
+        assert res[0]["key"] == "0x" + key1.hex()
+        assert res[0]["value"] == "0x" + value1.hex()
+        assert res[1]["hash"] == "0x" + leaf_hash2.hex()
+        assert res[1]["key"] == "0x" + key2.hex()
+        assert res[1]["value"] == "0x" + value2.hex()
+
+        keys_values_paginated = await data_rpc_api.get_keys_values(
+            {"id": store_id.hex(), "page": 2, "max_page_size": 8}
+        )
+        assert keys_values_paginated["total_pages"] == 3
+        assert keys_values_paginated["total_bytes"] == 19
+        res = keys_values_paginated["keys_values"]
+        assert len(res) == 2
+        assert leaf_hash5 < leaf_hash4
+        assert res[0]["hash"] == "0x" + leaf_hash5.hex()
+        assert res[0]["key"] == "0x" + key5.hex()
+        assert res[0]["value"] == "0x" + value5.hex()
+        assert res[1]["hash"] == "0x" + leaf_hash4.hex()
+        assert res[1]["key"] == "0x" + key4.hex()
+        assert res[1]["value"] == "0x" + value4.hex()
+
+        keys_values_paginated = await data_rpc_api.get_keys_values(
+            {"id": store_id.hex(), "page": 3, "max_page_size": 8}
+        )
+        assert keys_values_paginated["total_pages"] == 3
+        assert keys_values_paginated["total_bytes"] == 19
+        res = keys_values_paginated["keys_values"]
+        assert len(res) == 0
+
+        key6 = b"ab"
+        value6 = b"\x01\x01"
+        leaf_hash6 = leaf_hash(key6, value6)
+        key7 = b"ac"
+        value7 = b"\x01\x01"
+        leaf_hash7 = leaf_hash(key7, value7)
+
+        changelist = [{"action": "delete", "key": key3.hex()}]
+        changelist.append({"action": "insert", "key": key6.hex(), "value": value6.hex()})
+        changelist.append({"action": "insert", "key": key7.hex(), "value": value7.hex()})
+
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec1 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
+
+        history = await data_rpc_api.get_root_history({"id": store_id.hex()})
+        hash1 = history["root_history"][1]["root_hash"]
+        hash2 = history["root_history"][2]["root_hash"]
+
+        diff_res = await data_rpc_api.get_kv_diff(
+            {
+                "id": store_id.hex(),
+                "hash_1": hash1.hex(),
+                "hash_2": hash2.hex(),
+                "page": 0,
+                "max_page_size": 5,
+            }
+        )
+        assert diff_res["total_pages"] == 3
+        assert diff_res["total_bytes"] == 13
+        assert len(diff_res["diff"]) == 1
+        assert {"type": "DELETE", "key": key3.hex(), "value": value3.hex()} in diff_res["diff"]
+
+        diff_res = await data_rpc_api.get_kv_diff(
+            {
+                "id": store_id.hex(),
+                "hash_1": hash1.hex(),
+                "hash_2": hash2.hex(),
+                "page": 1,
+                "max_page_size": 5,
+            }
+        )
+        assert diff_res["total_pages"] == 3
+        assert diff_res["total_bytes"] == 13
+        assert len(diff_res["diff"]) == 1
+        assert leaf_hash6 < leaf_hash7
+        assert {"type": "INSERT", "key": key6.hex(), "value": value6.hex()} in diff_res["diff"]
+
+        diff_res = await data_rpc_api.get_kv_diff(
+            {
+                "id": store_id.hex(),
+                "hash_1": hash1.hex(),
+                "hash_2": hash2.hex(),
+                "page": 2,
+                "max_page_size": 5,
+            }
+        )
+        assert diff_res["total_pages"] == 3
+        assert diff_res["total_bytes"] == 13
+        assert len(diff_res["diff"]) == 1
+        assert {"type": "INSERT", "key": key7.hex(), "value": value7.hex()} in diff_res["diff"]
+
+        diff_res = await data_rpc_api.get_kv_diff(
+            {
+                "id": store_id.hex(),
+                "hash_1": hash1.hex(),
+                "hash_2": hash2.hex(),
+                "page": 3,
+                "max_page_size": 5,
+            }
+        )
+        assert diff_res["total_pages"] == 3
+        assert diff_res["total_bytes"] == 13
+        assert len(diff_res["diff"]) == 0

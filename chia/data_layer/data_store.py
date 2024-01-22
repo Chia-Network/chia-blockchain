@@ -762,8 +762,8 @@ class DataStore:
         current_page_size = 0
         total_bytes = 0
         hashes: List[bytes32] = []
-        for hash, length in sorted(lengths.items(), key=lambda x: x[1], reverse=True):
-            if length >= max_page_size:
+        for hash, length in sorted(lengths.items(), key=lambda x: (-x[1], x[0])):
+            if length > max_page_size:
                 raise RuntimeError(
                     f"Cannot paginate data, item size is larger than max page size: {length} {max_page_size}"
                 )
@@ -786,7 +786,8 @@ class DataStore:
 
         keys: List[bytes] = []
         for hash in pagination_data.hashes:
-            node = await self.get_node(hash)
+            leaf_hash = keys_values_compressed.keys_values_hashed[hash]
+            node = await self.get_node(leaf_hash)
             assert isinstance(node, TerminalNode)
             keys.append(node.key)
 
@@ -829,10 +830,10 @@ class DataStore:
         lengths = {}
         for k in insertions:
             leaf_hash = new_pairs.keys_values_hashed[k]
-            lengths[k] = new_pairs.leaf_hash_to_length[leaf_hash]
+            lengths[leaf_hash] = new_pairs.leaf_hash_to_length[leaf_hash]
         for k in deletions:
             leaf_hash = old_pairs.keys_values_hashed[k]
-            lengths[k] = old_pairs.leaf_hash_to_length[leaf_hash]
+            lengths[leaf_hash] = old_pairs.leaf_hash_to_length[leaf_hash]
 
         pagination_data = self.get_hashes_for_page(page, lengths, max_page_size)
         kv_diff: Set[DiffData] = set()
@@ -840,7 +841,7 @@ class DataStore:
         for hash in pagination_data.hashes:
             node = await self.get_node(hash)
             assert isinstance(node, TerminalNode)
-            if hash in insertions:
+            if key_hash(node.key) in insertions:
                 kv_diff.add(DiffData(OperationType.INSERT, node.key, node.value))
             else:
                 kv_diff.add(DiffData(OperationType.DELETE, node.key, node.value))
