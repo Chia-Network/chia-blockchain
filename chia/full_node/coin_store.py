@@ -426,6 +426,8 @@ class CoinStore:
         Note that the maximum number of puzzle hashes is currently set to 15000.
         """
 
+        # This number is chosen such that it's below half of the Python 3.8+ SQLite variable limit.
+        # It can be changed later without breaking the protocol, but this is a practical limit for now.
         assert len(puzzle_hashes) <= 15000
 
         coin_states: List[CoinState] = []
