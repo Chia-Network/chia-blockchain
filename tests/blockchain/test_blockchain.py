@@ -15,10 +15,12 @@ from clvm.casts import int_to_bytes
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_header_validation import validate_finished_header_block
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.constants import ConsensusConstants
+from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
@@ -3101,6 +3103,12 @@ class TestBodyValidation:
         assert preval_results[0].error == Err.BAD_AGGREGATE_SIGNATURE.value
 
 
+def maybe_header_hash(block: Optional[BlockRecord]) -> Optional[bytes32]:
+    if block is None:
+        return None
+    return block.header_hash
+
+
 class TestReorgs:
     @pytest.mark.anyio
     async def test_basic_reorg(self, empty_blockchain, bt):
@@ -3119,6 +3127,46 @@ class TestReorgs:
                 await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
             elif reorg_block.height >= 15:
                 await _validate_and_add_block(b, reorg_block)
+        assert b.get_peak().height == 16
+
+    @pytest.mark.anyio
+    async def test_get_tx_peak_reorg(self, empty_blockchain, bt, consensus_mode: ConsensusMode):
+        b = empty_blockchain
+
+        if consensus_mode == ConsensusMode.PLAIN:
+            reorg_point = 13
+        else:
+            reorg_point = 12
+        blocks = bt.get_consecutive_blocks(reorg_point)
+
+        last_tx_block: Optional[bytes32] = None
+        for block in blocks:
+            assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
+            await _validate_and_add_block(b, block)
+            if block.is_transaction_block():
+                last_tx_block = block.header_hash
+        assert b.get_peak().height == reorg_point - 1
+        assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
+
+        reorg_last_tx_block: Optional[bytes32] = None
+
+        blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
+        assert blocks_reorg_chain[reorg_point].is_transaction_block() is False
+        for reorg_block in blocks_reorg_chain:
+            if reorg_block.height < 10:
+                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
+            elif reorg_block.height < reorg_point:
+                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+            elif reorg_block.height >= reorg_point:
+                await _validate_and_add_block(b, reorg_block)
+
+            if reorg_block.is_transaction_block():
+                reorg_last_tx_block = reorg_block.header_hash
+            if reorg_block.height >= reorg_point:
+                last_tx_block = reorg_last_tx_block
+
+            assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
+
         assert b.get_peak().height == 16
 
     @pytest.mark.anyio
@@ -3693,3 +3741,28 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 
     for block in chain_b[40:]:
         await _validate_and_add_block(b, block)
+
+
+async def test_get_tx_peak(default_400_blocks, empty_blockchain):
+    bc = empty_blockchain
+    test_blocks = default_400_blocks[:100]
+
+    res = await bc.pre_validate_blocks_multiprocessing(test_blocks, {}, validate_signatures=False)
+
+    last_tx_block: Optional[FullBlock] = None
+    for b, prevalidation_res in zip(test_blocks, res):
+        assert bc.get_tx_peak() == last_tx_block
+        res, err, state = await bc.add_block(b, prevalidation_res)
+        assert err is None
+
+        if b.is_transaction_block():
+            block_record = block_to_block_record(
+                bc.constants,
+                bc,
+                prevalidation_res.required_iters,
+                b,
+                None,
+            )
+            last_tx_block = block_record
+
+    assert bc.get_tx_peak() == last_tx_block

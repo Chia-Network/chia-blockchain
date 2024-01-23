@@ -22,7 +22,6 @@ chia.wallet.chialisp
 chia.wallet.did_wallet.did_wallet
 chia.wallet.key_val_store
 chia.wallet.lineage_proof
-chia.wallet.nft_wallet.nft_puzzles
 chia.wallet.payment
 chia.wallet.puzzles.load_clvm
 chia.wallet.puzzles.p2_conditions
@@ -105,7 +104,6 @@ tests.util.time_out_assert
 tests.wallet.cat_wallet.test_trades
 tests.wallet.did_wallet.test_did
 tests.wallet.rpc.test_wallet_rpc
-tests.wallet.simple_sync.test_simple_sync_protocol
 tests.wallet.sync.test_wallet_sync
 tests.wallet.test_chialisp
 tests.wallet.test_singleton_lifecycle

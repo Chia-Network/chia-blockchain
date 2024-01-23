@@ -343,15 +343,10 @@ def claim_p2_singleton(
 
 # Get the CoinSpend for spending to a delayed puzzle
 def spend_to_delayed_puzzle(
-    p2_singleton_coin: Coin,
-    output_amount: uint64,
-    launcher_id: bytes32,
-    delay_time: uint64,
-    delay_ph: bytes32,
+    p2_singleton_coin: Coin, output_amount: uint64, launcher_id: bytes32, delay_time: uint64, delay_ph: bytes32
 ) -> CoinSpend:
-    claim_coinsol = make_spend(
+    return make_spend(
         p2_singleton_coin,
         pay_to_singleton_or_delay_puzzle(launcher_id, delay_time, delay_ph),
         solution_for_p2_delayed_puzzle(output_amount),
     )
-    return claim_coinsol
