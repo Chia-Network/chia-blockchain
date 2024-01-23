@@ -94,7 +94,7 @@ def next_sub_epoch_summary(
     Returns:
         object: the new sub-epoch summary
     """
-    signage_point_index = block.reward_chain_block.signage_point_index
+    signage_point_index = uint8(block.reward_chain_block.signage_point_index)
     prev_b: Optional[BlockRecord] = blocks.try_block_record(block.prev_header_hash)
     if prev_b is None or prev_b.height == 0:
         return None

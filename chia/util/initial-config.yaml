@@ -440,6 +440,11 @@ full_node:
   # analyze with chia/utils/profiler.py
   enable_profiler: False
 
+  # when enabled, each time a block is validated, the python profiler is
+  # engaged. If the validation takes more than 2 seconds, the profile is saved
+  # to disk, in the chia root/block-validation-profile
+  profile_block_validation: False
+
   enable_memory_profiler: False
 
   # this is a debug and profiling facility that logs all SQLite commands to a

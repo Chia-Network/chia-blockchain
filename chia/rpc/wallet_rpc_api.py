@@ -11,6 +11,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
@@ -105,6 +106,7 @@ from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPE
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.vault.vault_drivers import get_vault_hidden_puzzle_with_index
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
@@ -282,6 +284,8 @@ class WalletRpcApi:
             "/vc_revoke": self.vc_revoke,
             # CR-CATs
             "/crcat_approve_pending": self.crcat_approve_pending,
+            # VAULT
+            "/vault_create": self.vault_create,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -3494,7 +3498,7 @@ class WalletRpcApi:
         full_puzzle = nft_puzzles.create_full_puzzle(
             uncurried_nft.singleton_launcher_id,
             metadata,
-            uncurried_nft.metadata_updater_hash,
+            bytes32(uncurried_nft.metadata_updater_hash.as_atom()),
             inner_puzzle,
         )
 
@@ -4504,4 +4508,34 @@ class WalletRpcApi:
 
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+        }
+
+    ##########################################################################################
+    # VAULT
+    ##########################################################################################
+    @tx_endpoint(push=False)
+    async def vault_create(
+        self,
+        request: Dict[str, Any],
+        tx_config: TXConfig = DEFAULT_TX_CONFIG,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        """
+        Create a new vault
+        """
+        assert self.service.wallet_state_manager
+        secp_pk = bytes.fromhex(str(request.get("secp_pk")))
+        hp_index = request.get("hp_index", 0)
+        hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(hp_index).get_tree_hash()
+        bls_pk = G1Element.from_bytes(bytes.fromhex(str(request.get("bls_pk"))))
+        timelock = uint64(request["timelock"])
+        fee = uint64(request.get("fee", 0))
+        genesis_challenge = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+
+        vault_record = await self.service.wallet_state_manager.create_vault_wallet(
+            secp_pk, hidden_puzzle_hash, bls_pk, timelock, genesis_challenge, tx_config, fee=fee
+        )
+
+        return {
+            "transactions": [vault_record.to_json_dict_convenience(self.service.config)],
         }

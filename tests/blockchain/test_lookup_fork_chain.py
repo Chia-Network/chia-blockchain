@@ -5,12 +5,12 @@ from typing import Dict, List
 
 import pytest
 
-from benchmarks.utils import rand_hash
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.find_fork_point import find_fork_point_in_chain, lookup_fork_chain
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
+from tests.util.benchmarks import rand_hash
 
 
 class DummyChain:

@@ -1058,7 +1058,7 @@ class WalletNode:
                 self.log.debug(f"get_timestamp_for_height_from_peer use cached block for height {request_height}")
 
             if block is not None and block.foliage_transaction_block is not None:
-                return block.foliage_transaction_block.timestamp
+                return uint64(block.foliage_transaction_block.timestamp)
 
             request_height -= 1
 
