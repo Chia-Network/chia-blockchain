@@ -262,6 +262,7 @@ class SignalHandlers:
         loop = asyncio.get_event_loop()
 
         if sys.platform == "win32" or sys.platform == "cygwin":
+
             def ensure_signal_object_not_int(
                 signal_: int,
                 stack_frame: Optional[FrameType],
