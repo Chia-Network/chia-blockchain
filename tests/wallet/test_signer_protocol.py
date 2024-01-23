@@ -41,7 +41,7 @@ def test_signing_lifecycle() -> None:
         TransactionInfo([Spend.from_coin_spend(coin_spend)]),
         SigningInstructions(
             KeyHints([], []),
-            [SigningTarget(bytes(pubkey), message, bytes32([1] * 32))],
+            [SigningTarget(pubkey.get_fingerprint().to_bytes(4, "big"), message, bytes32([1] * 32))],
         ),
     )
 
