@@ -316,7 +316,7 @@ class FullNode:
                     f"time taken: {int(time_taken)}s"
                 )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                    pending_tx = await self.mempool_manager.new_peak(peak, None)
+                    pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
                 assert len(pending_tx) == 0  # no pending transactions when starting up
 
                 full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
@@ -1544,9 +1544,8 @@ class FullNode:
 
         # Update the mempool (returns successful pending transactions added to the mempool)
         spent_coins: List[bytes32] = [coin_id for coin_id, _ in state_change_summary.removals]
-        mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
-            self.blockchain.get_peak(), spent_coins
-        )
+        mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]]
+        mempool_new_peak_result = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), spent_coins)
 
         # Check if we detected a spent transaction, to load up our generator cache
         if block.transactions_generator is not None and self.full_node_store.previous_generator is None:
