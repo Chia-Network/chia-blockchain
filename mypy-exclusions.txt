@@ -105,7 +105,6 @@ tests.util.time_out_assert
 tests.wallet.cat_wallet.test_trades
 tests.wallet.did_wallet.test_did
 tests.wallet.rpc.test_wallet_rpc
-tests.wallet.simple_sync.test_simple_sync_protocol
 tests.wallet.sync.test_wallet_sync
 tests.wallet.test_chialisp
 tests.wallet.test_singleton_lifecycle
