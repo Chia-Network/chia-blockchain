@@ -183,11 +183,6 @@ def adapt_inner_puzzle_hash_to_singleton(inner_puzzle_hash: bytes32) -> bytes32:
     return puzzle.get_tree_hash_precalc(inner_puzzle_hash)
 
 
-def remove_singleton_truth_wrapper(puzzle: Program) -> Program:
-    inner_puzzle = puzzle.rest().first().rest()
-    return inner_puzzle
-
-
 # Take standard coin and amount -> launch conditions & launcher coin solution
 def launch_conditions_and_coinsol(
     coin: Coin,
