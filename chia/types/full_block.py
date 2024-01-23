@@ -39,15 +39,15 @@ class FullBlock(Streamable):
 
     @property
     def height(self) -> uint32:
-        return self.reward_chain_block.height
+        return uint32(self.reward_chain_block.height)
 
     @property
     def weight(self) -> uint128:
-        return self.reward_chain_block.weight
+        return uint128(self.reward_chain_block.weight)
 
     @property
     def total_iters(self) -> uint128:
-        return self.reward_chain_block.total_iters
+        return uint128(self.reward_chain_block.total_iters)
 
     @property
     def header_hash(self) -> bytes32:

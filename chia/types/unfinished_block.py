@@ -42,4 +42,4 @@ class UnfinishedBlock(Streamable):
 
     @property
     def total_iters(self) -> uint128:
-        return self.reward_chain_block.total_iters
+        return uint128(self.reward_chain_block.total_iters)

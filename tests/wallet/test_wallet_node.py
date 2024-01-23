@@ -6,10 +6,9 @@ import sys
 import time
 import types
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import pytest
-from chia_rs import PrivateKey
 
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -35,12 +34,12 @@ from tests.util.time_out_assert import time_out_assert
 
 @pytest.mark.anyio
 async def test_get_private_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
-    sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
-    fingerprint: int = sk.get_g1().get_fingerprint()
+    root_path = root_path_populated_with_config
+    keychain = get_temp_keyring
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants, keychain)
+    sk = keychain.add_private_key(generate_mnemonic())
+    fingerprint = sk.get_g1().get_fingerprint()
 
     key = await node.get_private_key(fingerprint)
 
@@ -50,12 +49,12 @@ async def test_get_private_key(root_path_populated_with_config: Path, get_temp_k
 
 @pytest.mark.anyio
 async def test_get_private_key_default_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
-    sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
-    fingerprint: int = sk.get_g1().get_fingerprint()
+    root_path = root_path_populated_with_config
+    keychain = get_temp_keyring
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants, keychain)
+    sk = keychain.add_private_key(generate_mnemonic())
+    fingerprint = sk.get_g1().get_fingerprint()
 
     # Add a couple more keys
     keychain.add_private_key(generate_mnemonic())
@@ -73,10 +72,10 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
 async def test_get_private_key_missing_key(
     root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: Optional[int]
 ) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring  # empty keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
+    root_path = root_path_populated_with_config
+    keychain = get_temp_keyring  # empty keyring
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants, keychain)
 
     # Keyring is empty, so requesting a key by fingerprint or None should return None
     key = await node.get_private_key(fingerprint)
@@ -88,12 +87,12 @@ async def test_get_private_key_missing_key(
 async def test_get_private_key_missing_key_use_default(
     root_path_populated_with_config: Path, get_temp_keyring: Keychain
 ) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
-    sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
-    fingerprint: int = sk.get_g1().get_fingerprint()
+    root_path = root_path_populated_with_config
+    keychain = get_temp_keyring
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants, keychain)
+    sk = keychain.add_private_key(generate_mnemonic())
+    fingerprint = sk.get_g1().get_fingerprint()
 
     # Stupid sanity check that the fingerprint we're going to use isn't actually in the keychain
     assert fingerprint != 1234567890
@@ -106,12 +105,12 @@ async def test_get_private_key_missing_key_use_default(
 
 
 def test_log_in(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants)
-    sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
-    fingerprint: int = sk.get_g1().get_fingerprint()
+    root_path = root_path_populated_with_config
+    keychain = get_temp_keyring
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants)
+    sk = keychain.add_private_key(generate_mnemonic())
+    fingerprint = sk.get_g1().get_fingerprint()
 
     node.log_in(sk)
 
@@ -121,23 +120,23 @@ def test_log_in(root_path_populated_with_config: Path, get_temp_keyring: Keychai
 
 
 def test_log_in_failure_to_write_last_used_fingerprint(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, monkeypatch: Any
+    root_path_populated_with_config: Path, get_temp_keyring: Keychain, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     called_update_last_used_fingerprint: bool = False
 
-    def patched_update_last_used_fingerprint(self: Any) -> None:
+    def patched_update_last_used_fingerprint(self: Self) -> None:
         nonlocal called_update_last_used_fingerprint
         called_update_last_used_fingerprint = True
         raise Exception("Generic write failure")
 
     with monkeypatch.context() as m:
         m.setattr(WalletNode, "update_last_used_fingerprint", patched_update_last_used_fingerprint)
-        root_path: Path = root_path_populated_with_config
-        keychain: Keychain = get_temp_keyring
-        config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-        node: WalletNode = WalletNode(config, root_path, test_constants)
-        sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
-        fingerprint: int = sk.get_g1().get_fingerprint()
+        root_path = root_path_populated_with_config
+        keychain = get_temp_keyring
+        config = load_config(root_path, "config.yaml", "wallet")
+        node = WalletNode(config, root_path, test_constants)
+        sk = keychain.add_private_key(generate_mnemonic())
+        fingerprint = sk.get_g1().get_fingerprint()
 
         # Expect log_in to succeed, even though we can't write the last used fingerprint
         node.log_in(sk)
@@ -149,12 +148,12 @@ def test_log_in_failure_to_write_last_used_fingerprint(
 
 
 def test_log_out(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants)
-    sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
-    fingerprint: int = sk.get_g1().get_fingerprint()
+    root_path = root_path_populated_with_config
+    keychain = get_temp_keyring
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants)
+    sk = keychain.add_private_key(generate_mnemonic())
+    fingerprint = sk.get_g1().get_fingerprint()
 
     node.log_in(sk)
 
@@ -170,32 +169,32 @@ def test_log_out(root_path_populated_with_config: Path, get_temp_keyring: Keycha
 
 
 def test_get_last_used_fingerprint_path(root_path_populated_with_config: Path) -> None:
-    root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants)
-    path: Optional[Path] = node.get_last_used_fingerprint_path()
+    root_path = root_path_populated_with_config
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants)
+    path = node.get_last_used_fingerprint_path()
 
     assert path == root_path / "wallet" / "db" / "last_used_fingerprint"
 
 
 def test_get_last_used_fingerprint(root_path_populated_with_config: Path) -> None:
-    path: Path = root_path_populated_with_config / "wallet" / "db" / "last_used_fingerprint"
+    path = root_path_populated_with_config / "wallet" / "db" / "last_used_fingerprint"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("1234567890")
 
-    root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants)
-    last_used_fingerprint: Optional[int] = node.get_last_used_fingerprint()
+    root_path = root_path_populated_with_config
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants)
+    last_used_fingerprint = node.get_last_used_fingerprint()
 
     assert last_used_fingerprint == 1234567890
 
 
 def test_get_last_used_fingerprint_file_doesnt_exist(root_path_populated_with_config: Path) -> None:
-    root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants)
-    last_used_fingerprint: Optional[int] = node.get_last_used_fingerprint()
+    root_path = root_path_populated_with_config
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants)
+    last_used_fingerprint = node.get_last_used_fingerprint()
 
     assert last_used_fingerprint is None
 
@@ -204,10 +203,10 @@ def test_get_last_used_fingerprint_file_cant_read_unix(root_path_populated_with_
     if sys.platform in ["win32", "cygwin"]:
         pytest.skip("Setting UNIX file permissions doesn't apply to Windows")
 
-    root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants)
-    path: Path = node.get_last_used_fingerprint_path()
+    root_path = root_path_populated_with_config
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants)
+    path = node.get_last_used_fingerprint_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("1234567890")
 
@@ -216,7 +215,7 @@ def test_get_last_used_fingerprint_file_cant_read_unix(root_path_populated_with_
     # Make the file unreadable
     path.chmod(0o000)
 
-    last_used_fingerprint: Optional[int] = node.get_last_used_fingerprint()
+    last_used_fingerprint = node.get_last_used_fingerprint()
 
     assert last_used_fingerprint is None
 
@@ -231,22 +230,22 @@ def test_get_last_used_fingerprint_file_cant_read_unix(root_path_populated_with_
 
 
 def test_get_last_used_fingerprint_file_cant_read_win32(
-    root_path_populated_with_config: Path, monkeypatch: Any
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     if sys.platform not in ["win32", "cygwin"]:
         pytest.skip("Windows-specific test")
 
-    called_read_text: bool = False
+    called_read_text = False
 
-    def patched_pathlib_path_read_text(self: Any) -> str:
+    def patched_pathlib_path_read_text(self: Self) -> str:
         nonlocal called_read_text
         called_read_text = True
         raise PermissionError("Permission denied")
 
-    root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants)
-    path: Path = node.get_last_used_fingerprint_path()
+    root_path = root_path_populated_with_config
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants)
+    path = node.get_last_used_fingerprint_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("1234567890")
 
@@ -268,10 +267,10 @@ def test_get_last_used_fingerprint_file_cant_read_win32(
 
 
 def test_get_last_used_fingerprint_file_with_whitespace(root_path_populated_with_config: Path) -> None:
-    root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants)
-    path: Path = node.get_last_used_fingerprint_path()
+    root_path = root_path_populated_with_config
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants)
+    path = node.get_last_used_fingerprint_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n\r\n \t1234567890\r\n\n")
 
@@ -279,9 +278,9 @@ def test_get_last_used_fingerprint_file_with_whitespace(root_path_populated_with
 
 
 def test_update_last_used_fingerprint_missing_fingerprint(root_path_populated_with_config: Path) -> None:
-    root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants)
+    root_path = root_path_populated_with_config
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants)
     node.logged_in_fingerprint = None
 
     with pytest.raises(AssertionError):
@@ -289,9 +288,9 @@ def test_update_last_used_fingerprint_missing_fingerprint(root_path_populated_wi
 
 
 def test_update_last_used_fingerprint_create_intermediate_dirs(root_path_populated_with_config: Path) -> None:
-    root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants)
+    root_path = root_path_populated_with_config
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants)
     node.logged_in_fingerprint = 9876543210
     path = node.get_last_used_fingerprint_path()
 
@@ -303,9 +302,9 @@ def test_update_last_used_fingerprint_create_intermediate_dirs(root_path_populat
 
 
 def test_update_last_used_fingerprint(root_path_populated_with_config: Path) -> None:
-    root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants)
+    root_path = root_path_populated_with_config
+    config = load_config(root_path, "config.yaml", "wallet")
+    node = WalletNode(config, root_path, test_constants)
     node.logged_in_fingerprint = 9876543210
     path = node.get_last_used_fingerprint_path()
 
@@ -318,8 +317,8 @@ def test_update_last_used_fingerprint(root_path_populated_with_config: Path) -> 
 @pytest.mark.parametrize("testing", [True, False])
 @pytest.mark.parametrize("offset", [0, 550, 650])
 def test_timestamp_in_sync(root_path_populated_with_config: Path, testing: bool, offset: int) -> None:
-    root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
+    root_path = root_path_populated_with_config
+    config = load_config(root_path, "config.yaml", "wallet")
     wallet_node = WalletNode(config, root_path, test_constants)
     now = time.time()
     wallet_node.config["testing"] = testing
@@ -353,8 +352,8 @@ async def test_get_timestamp_for_height_from_peer(
     # Clear the cache and add the peak back with a modified timestamp
     cache = wallet_node.get_cache_for_peer(full_node_peer)
     cache.clear_after_height(0)
-    modified_foliage_transaction_block = dataclasses.replace(
-        block_at_peak.foliage_transaction_block, timestamp=uint64(timestamp_at_peak + 1)
+    modified_foliage_transaction_block = block_at_peak.foliage_transaction_block.replace(
+        timestamp=uint64(timestamp_at_peak + 1)
     )
     modified_peak = dataclasses.replace(peak, foliage_transaction_block=modified_foliage_transaction_block)
     cache.add_to_blocks(modified_peak)
@@ -385,7 +384,7 @@ async def test_get_timestamp_for_height_from_peer(
 
 @pytest.mark.anyio
 async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
-    _, [(node, _)], bt = simulator_and_wallet
+    _, [(node, _)], _ = simulator_and_wallet
     puzzle_hashes = await node.get_puzzle_hashes_to_subscribe()
     assert len(puzzle_hashes) > 1
     assert len(set(puzzle_hashes)) == len(puzzle_hashes)
@@ -557,7 +556,7 @@ async def test_transaction_send_cache(
         await time_out_assert(5, logged_spends_len, 2)
 
     # Tell the wallet that we recieved the spend (but failed to process it so it should send again)
-    msg: Message = make_msg(
+    msg = make_msg(
         ProtocolMessageTypes.transaction_ack,
         wallet_protocol.TransactionAck(tx.name, uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name),
     )

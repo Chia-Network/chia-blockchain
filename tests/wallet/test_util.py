@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Dict, List, Tuple
+
 import pytest
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -9,7 +11,9 @@ from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_spend import make_spend
 from chia.util.errors import ValidationError
 from chia.util.ints import uint64
+from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
+from chia.wallet.util.merkle_utils import list_to_binary_tree
 from chia.wallet.util.tx_config import (
     DEFAULT_COIN_SELECTION_CONFIG,
     DEFAULT_TX_CONFIG,
@@ -92,3 +96,86 @@ def test_tx_config() -> None:
     assert TXConfigLoader.from_json_dict({}).autofill(
         constants=DEFAULT_CONSTANTS, config={"reuse_public_key_for_change": {"1": True}}, logged_in_fingerprint=1
     ).to_json_dict() == {**default_tx_config, "reuse_puzhash": True}
+
+
+def test_list_to_binary_tree() -> None:
+    assert list_to_binary_tree([1]) == 1
+    assert list_to_binary_tree([1, 2]) == (1, 2)
+    assert list_to_binary_tree([1, 2, 3]) == ((1, 2), 3)
+    assert list_to_binary_tree([1, 2, 3, 4]) == ((1, 2), (3, 4))
+    assert list_to_binary_tree([1, 2, 3, 4, 5]) == (((1, 2), 3), (4, 5))
+    with pytest.raises(ValueError):
+        list_to_binary_tree([])
+
+
+@pytest.mark.parametrize(
+    "serializations",
+    [
+        (tuple(), Program.to(None), []),
+        ((bytes32([0] * 32),), Program.to([bytes32([0] * 32)]), [LineageProofField.PARENT_NAME]),
+        (
+            (bytes32([0] * 32), bytes32([0] * 32)),
+            Program.to([bytes32([0] * 32), bytes32([0] * 32)]),
+            [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH],
+        ),
+        (
+            (bytes32([0] * 32), bytes32([0] * 32), uint64(0)),
+            Program.to([bytes32([0] * 32), bytes32([0] * 32), uint64(0)]),
+            [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
+        ),
+    ],
+)
+def test_lineage_proof_varargs(serializations: Tuple[Tuple[Any, ...], Program, List[LineageProofField]]) -> None:
+    var_args, expected_program, lp_fields = serializations
+    assert LineageProof(*var_args).to_program() == expected_program
+    assert LineageProof(*var_args) == LineageProof.from_program(expected_program, lp_fields)
+
+
+@pytest.mark.parametrize(
+    "serializations",
+    [
+        ({}, Program.to(None), []),
+        ({"parent_name": bytes32([0] * 32)}, Program.to([bytes32([0] * 32)]), [LineageProofField.PARENT_NAME]),
+        (
+            {"parent_name": bytes32([0] * 32), "inner_puzzle_hash": bytes32([0] * 32)},
+            Program.to([bytes32([0] * 32), bytes32([0] * 32)]),
+            [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH],
+        ),
+        (
+            {"parent_name": bytes32([0] * 32), "inner_puzzle_hash": bytes32([0] * 32), "amount": uint64(0)},
+            Program.to([bytes32([0] * 32), bytes32([0] * 32), uint64(0)]),
+            [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
+        ),
+        (
+            {"parent_name": bytes32([0] * 32), "amount": uint64(0)},
+            Program.to([bytes32([0] * 32), uint64(0)]),
+            [LineageProofField.PARENT_NAME, LineageProofField.AMOUNT],
+        ),
+        (
+            {"inner_puzzle_hash": bytes32([0] * 32), "amount": uint64(0)},
+            Program.to([bytes32([0] * 32), uint64(0)]),
+            [LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
+        ),
+        ({"amount": uint64(0)}, Program.to([uint64(0)]), [LineageProofField.AMOUNT]),
+        (
+            {"inner_puzzle_hash": bytes32([0] * 32)},
+            Program.to([bytes32([0] * 32)]),
+            [LineageProofField.INNER_PUZZLE_HASH],
+        ),
+    ],
+)
+def test_lineage_proof_kwargs(serializations: Tuple[Dict[str, Any], Program, List[LineageProofField]]) -> None:
+    kwargs, expected_program, lp_fields = serializations
+    assert LineageProof(**kwargs).to_program() == expected_program
+    assert LineageProof(**kwargs) == LineageProof.from_program(expected_program, lp_fields)
+
+
+def test_lineage_proof_errors() -> None:
+    with pytest.raises(ValueError, match="Mismatch"):
+        LineageProof.from_program(Program.to([]), [LineageProofField.PARENT_NAME])
+    with pytest.raises(StopIteration):
+        LineageProof.from_program(Program.to([bytes32([0] * 32)]), [])
+    with pytest.raises(ValueError):
+        LineageProof.from_program(Program.to([bytes32([1] * 32)]), [LineageProofField.AMOUNT])
+    with pytest.raises(ValueError):
+        LineageProof.from_program(Program.to([uint64(0)]), [LineageProofField.PARENT_NAME])

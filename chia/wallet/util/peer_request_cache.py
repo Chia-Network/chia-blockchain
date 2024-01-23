@@ -41,7 +41,7 @@ class PeerRequestCache:
         if header_block.is_transaction_block:
             assert header_block.foliage_transaction_block is not None
             if self._timestamps.get(header_block.height) is None:
-                self._timestamps.put(header_block.height, header_block.foliage_transaction_block.timestamp)
+                self._timestamps.put(header_block.height, uint64(header_block.foliage_transaction_block.timestamp))
 
     def get_block_request(self, start: uint32, end: uint32) -> Optional[asyncio.Task[Any]]:
         return self._block_requests.get((start, end))
