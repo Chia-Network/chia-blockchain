@@ -9,7 +9,12 @@ from typing import List, Optional
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.rpc.wallet_request_types import ApplySignatures, GatherSigningInfo, SubmitTransactions
+from chia.rpc.wallet_request_types import (
+    ApplySignatures,
+    GatherSigningInfo,
+    GatherSigningInfoResponse,
+    SubmitTransactions,
+)
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
@@ -25,6 +30,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_offset,
 )
 from chia.wallet.signer_protocol import (
+    Coin,
     KeyHints,
     PathHint,
     SignedTransaction,
@@ -36,7 +42,23 @@ from chia.wallet.signer_protocol import (
     TransactionInfo,
     UnsignedTransaction,
 )
-from chia.wallet.util.clvm_streamable import ClvmSerializationConfig, _ClvmSerializationMode, clvm_serialization_mode
+from chia.wallet.util.blind_signer_tl import (
+    BLIND_SIGNER_TRANSPORT,
+    BSTLPathHint,
+    BSTLSigningInstructions,
+    BSTLSigningResponse,
+    BSTLSigningTarget,
+    BSTLSumHint,
+    BSTLUnsignedTransaction,
+)
+from chia.wallet.util.clvm_streamable import (
+    ClvmSerializationConfig,
+    ClvmStreamable,
+    TransportLayer,
+    TransportLayerMapping,
+    _ClvmSerializationMode,
+    clvm_serialization_mode,
+)
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -182,6 +204,153 @@ async def test_serialization_config_coroutine_safe() -> None:
     await get_and_check_config(False, 1, 3)
     await get_and_check_config(True, 2, 4)
     await get_and_check_config(False, 3, 5)
+
+
+class FooSpend(ClvmStreamable):
+    coin: Coin
+    blah: Program
+    blah_also: Program = dataclasses.field(metadata=dict(key="solution"))  # pylint: disable=invalid-field-call
+
+    @staticmethod
+    def from_wallet_api(_from: Spend) -> FooSpend:
+        return FooSpend(
+            _from.coin,
+            _from.puzzle,
+            _from.solution,
+        )
+
+    @staticmethod
+    def to_wallet_api(_from: FooSpend) -> Spend:
+        return Spend(
+            _from.coin,
+            _from.blah,
+            _from.blah_also,
+        )
+
+
+def test_transport_layer() -> None:
+    FOO_TRANSPORT = TransportLayer(
+        [
+            TransportLayerMapping(
+                Spend,
+                FooSpend,
+                FooSpend.from_wallet_api,
+                FooSpend.to_wallet_api,
+            )
+        ]
+    )
+
+    spend = Spend(
+        Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0)),
+        Program.to(1),
+        Program.to([]),
+    )
+
+    with clvm_serialization_mode(True):
+        spend_bytes = bytes(spend)
+
+    spend_program = Program.from_bytes(spend_bytes)
+    assert spend_program.at("ff") == Program.to("coin")
+    assert spend_program.at("rff") == Program.to("puzzle")
+    assert spend_program.at("rrff") == Program.to("solution")
+
+    with clvm_serialization_mode(True, FOO_TRANSPORT):
+        foo_spend_bytes = bytes(spend)
+        assert foo_spend_bytes.hex() == spend.to_json_dict()  # type: ignore[comparison-overlap]
+        assert spend == Spend.from_bytes(foo_spend_bytes)
+        assert spend == Spend.from_json_dict(foo_spend_bytes.hex())
+
+    # Deserialization should only work now if using the transport layer
+    with pytest.raises(Exception):
+        Spend.from_bytes(foo_spend_bytes)
+    with pytest.raises(Exception):
+        Spend.from_json_dict(foo_spend_bytes.hex())
+
+    assert foo_spend_bytes != spend_bytes
+    foo_spend_program = Program.from_bytes(foo_spend_bytes)
+    assert foo_spend_program.at("ff") == Program.to("coin")
+    assert foo_spend_program.at("rff") == Program.to("blah")
+    assert foo_spend_program.at("rrff") == Program.to("solution")
+
+
+def test_blind_signer_transport_layer() -> None:
+    sum_hints: List[SumHint] = [
+        SumHint([b"a", b"b", b"c"], b"offset", b"final"),
+        SumHint([b"c", b"b", b"a"], b"offset2", b"final"),
+    ]
+    path_hints: List[PathHint] = [
+        PathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
+        PathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
+    ]
+    signing_targets: List[SigningTarget] = [
+        SigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
+        SigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
+    ]
+
+    instructions: SigningInstructions = SigningInstructions(
+        KeyHints(sum_hints, path_hints),
+        signing_targets,
+    )
+    transaction: UnsignedTransaction = UnsignedTransaction(
+        TransactionInfo([]),
+        instructions,
+    )
+    signing_response: SigningResponse = SigningResponse(
+        b"signature",
+        bytes32([1] * 32),
+    )
+
+    bstl_sum_hints: List[BSTLSumHint] = [
+        BSTLSumHint([b"a", b"b", b"c"], b"offset", b"final"),
+        BSTLSumHint([b"c", b"b", b"a"], b"offset2", b"final"),
+    ]
+    bstl_path_hints: List[BSTLPathHint] = [
+        BSTLPathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
+        BSTLPathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
+    ]
+    bstl_signing_targets: List[BSTLSigningTarget] = [
+        BSTLSigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
+        BSTLSigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
+    ]
+
+    BSTLSigningInstructions(
+        bstl_sum_hints,
+        bstl_path_hints,
+        bstl_signing_targets,
+    )
+    bstl_transaction: BSTLUnsignedTransaction = BSTLUnsignedTransaction(
+        bstl_sum_hints,
+        bstl_path_hints,
+        bstl_signing_targets,
+    )
+    bstl_signing_response: BSTLSigningResponse = BSTLSigningResponse(
+        b"signature",
+        bytes32([1] * 32),
+    )
+    with clvm_serialization_mode(True, None):
+        bstl_transaction_bytes = bytes(bstl_transaction)
+        bstl_signing_response_bytes = bytes(bstl_signing_response)
+
+    with clvm_serialization_mode(True, BLIND_SIGNER_TRANSPORT):
+        transaction_bytes = bytes(transaction)
+        signing_response_bytes = bytes(signing_response)
+        assert transaction_bytes == bstl_transaction_bytes == bytes(bstl_transaction)
+        assert signing_response_bytes == bstl_signing_response_bytes == bytes(bstl_signing_response)
+
+    # Deserialization should only work now if using the transport layer
+    with pytest.raises(Exception):
+        UnsignedTransaction.from_bytes(transaction_bytes)
+    with pytest.raises(Exception):
+        SigningResponse.from_bytes(signing_response_bytes)
+
+    assert BSTLUnsignedTransaction.from_bytes(transaction_bytes) == bstl_transaction
+    assert BSTLSigningResponse.from_bytes(signing_response_bytes) == bstl_signing_response
+    with clvm_serialization_mode(True, BLIND_SIGNER_TRANSPORT):
+        assert UnsignedTransaction.from_bytes(transaction_bytes) == transaction
+        assert SigningResponse.from_bytes(signing_response_bytes) == signing_response
+
+    assert Program.from_bytes(transaction_bytes).at("ff") == Program.to("s")
+    assert Program.from_bytes(signing_response_bytes).at("ff") == Program.to("s")
 
 
 @pytest.mark.parametrize(
@@ -349,3 +518,14 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
             ),
         ]
     )
+
+    # And test that we can get compressed versions if we want
+    request = GatherSigningInfo(
+        [Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]
+    ).to_json_dict()
+    response_dict = await wallet_rpc.fetch("gather_signing_info", {"compression": "chip-TBD", **request})
+    with pytest.raises(Exception):
+        GatherSigningInfoResponse.from_json_dict(response_dict)
+    with clvm_serialization_mode(True, transport_layer=BLIND_SIGNER_TRANSPORT):
+        response: GatherSigningInfoResponse = GatherSigningInfoResponse.from_json_dict(response_dict)
+        assert response.signing_instructions == not_our_utx.signing_instructions
