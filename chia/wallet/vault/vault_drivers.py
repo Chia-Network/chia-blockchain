@@ -11,6 +11,8 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import DEFAULT_HIDDEN_PUZZLE, puzzle_hash_for_pk
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
+    SINGLETON_LAUNCHER_HASH,
+    SINGLETON_MOD_HASH,
     puzzle_for_singleton,
     puzzle_hash_for_singleton,
     solution_for_singleton,
@@ -26,6 +28,8 @@ P2_RECOVERY_MOD: Program = load_clvm("vault_p2_recovery.clsp")
 P2_RECOVERY_MOD_HASH = P2_RECOVERY_MOD.get_tree_hash()
 RECOVERY_FINISH_MOD: Program = load_clvm("vault_recovery_finish.clsp")
 RECOVERY_FINISH_MOD_HASH = RECOVERY_FINISH_MOD.get_tree_hash()
+P2_SINGLETON_MOD: Program = load_clvm("p2_singleton.clsp")
+P2_SINGLETON_MOD_HASH = P2_SINGLETON_MOD.get_tree_hash()
 
 
 # PUZZLES
@@ -103,6 +107,15 @@ def get_recovery_conditions(bls_pk: G1Element, amount: uint64) -> Program:
 def get_recovery_finish_puzzle(bls_pk: G1Element, timelock: uint64, amount: uint64) -> Program:
     recovery_condition = get_recovery_conditions(bls_pk, amount)
     return RECOVERY_FINISH_MOD.curry(timelock, recovery_condition)
+
+
+def get_p2_singleton_puzzle(launcher_id: bytes32) -> Program:
+    puzzle = P2_SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_id, SINGLETON_LAUNCHER_HASH)
+    return puzzle
+
+
+def get_p2_singleton_puzzle_hash(launcher_id: bytes32) -> bytes32:
+    return get_p2_singleton_puzzle(launcher_id).get_tree_hash()
 
 
 # SOLUTIONS

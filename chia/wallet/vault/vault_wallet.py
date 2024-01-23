@@ -16,7 +16,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64, uint128
+from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import Condition, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
@@ -31,11 +32,12 @@ from chia.wallet.signer_protocol import (
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import TXConfig
+from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.vault.vault_drivers import (
     construct_p2_delegated_secp,
     construct_vault_merkle_tree,
+    get_p2_singleton_puzzle_hash,
     get_recovery_finish_puzzle,
     get_recovery_inner_puzzle,
     get_recovery_puzzle,
@@ -171,6 +173,27 @@ class Vault(Wallet):
         if self.vault_info.is_recoverable:
             return self.recovery_info.bls_pk, self.recovery_info.timelock
         return None, None
+
+    def get_p2_singleton_puzzle_hash(self) -> bytes32:
+        return get_p2_singleton_puzzle_hash(self.vault_info.launcher_coin_id)
+
+    async def select_coins(self, amount: uint64, coin_selection_config: CoinSelectionConfig) -> Set[Coin]:
+        unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+            self.id()
+        )
+        puzhash = self.get_p2_singleton_puzzle_hash()
+        records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
+        assert records is not None
+        spendable_amount = uint128(sum([rec.coin.amount for rec in records]))
+        coins = await select_coins(
+            spendable_amount,
+            coin_selection_config,
+            records,
+            unconfirmed_removals,
+            self.log,
+            uint128(amount),
+        )
+        return coins
 
     def derivation_for_index(self, index: int) -> List[DerivationRecord]:
         hidden_puzzle = get_vault_hidden_puzzle_with_index(uint32(index))
@@ -308,6 +331,7 @@ class Vault(Wallet):
             raise ValueError(f"No coin found for launcher id: {launcher_id}.")
         coin_state: CoinState = coin_states[0]
         parent_state: CoinState = (await wallet_node.get_coin_state([coin_state.coin.parent_coin_info], peer))[0]
+
         assert parent_state.spent_height is not None
         launcher_spend = await fetch_coin_spend(uint32(parent_state.spent_height), parent_state.coin, peer)
         launcher_solution = launcher_spend.solution.to_program()
@@ -353,6 +377,10 @@ class Vault(Wallet):
         vault_info = dataclasses.replace(vault_info, coin=coin_state.coin)
         await self.save_info(vault_info)
         await self.wallet_state_manager.create_more_puzzle_hashes()
+
+        # subscribe to p2_singleton puzzle hash
+        p2_puzzle_hash = self.get_p2_singleton_puzzle_hash()
+        await self.wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [self.id()])
 
     async def save_info(self, vault_info: VaultInfo) -> None:
         self.vault_info = vault_info
