@@ -19,6 +19,7 @@ from chia.cmds.cmds_util import (
 )
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
+from chia.rpc.wallet_request_types import GetNotifications
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
@@ -1384,10 +1385,12 @@ async def get_notifications(
         if ids is not None and len(ids) == 0:
             ids = None
 
-        notifications = await wallet_client.get_notifications(ids=ids, pagination=(start, end))
-        for notification in notifications:
+        response = await wallet_client.get_notifications(
+            GetNotifications(ids=ids, start=uint32.construct_optional(start), end=uint32.construct_optional(end))
+        )
+        for notification in response.notifications:
             print("")
-            print(f"ID: {notification.coin_id.hex()}")
+            print(f"ID: {notification.id.hex()}")
             print(f"message: {notification.message.decode('utf-8')}")
             print(f"amount: {notification.amount}")
 
