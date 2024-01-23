@@ -85,6 +85,7 @@ def list_cmd(
     )
 
 
+# MARK: tx_endpoint
 @coins_cmd.command("combine", help="Combine dust coins")
 @click.option(
     "-p",
@@ -182,6 +183,7 @@ def combine_cmd(
     )
 
 
+# MARK: tx_endpoint
 @coins_cmd.command("split", help="Split up larger coins")
 @click.option(
     "-p",

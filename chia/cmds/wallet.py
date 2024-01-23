@@ -8,8 +8,10 @@ import click
 
 from chia.cmds import options
 from chia.cmds.check_wallet_db import help_text as check_help_text
+from chia.cmds.cmds_util import tx_out_cmd
 from chia.cmds.coins import coins_cmd
 from chia.cmds.plotnft import validate_fee
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
@@ -131,6 +133,7 @@ def get_transactions_cmd(
     )
 
 
+# MARK: tx_endpoint
 @wallet_cmd.command("send", help="Send chia to another wallet")
 @click.option(
     "-wp",
@@ -191,6 +194,7 @@ def get_transactions_cmd(
     type=int,
     default=0,
 )
+@tx_out_cmd
 def send_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -205,10 +209,11 @@ def send_cmd(
     coins_to_exclude: Sequence[str],
     reuse: bool,
     clawback_time: int,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import send
 
-    asyncio.run(
+    return asyncio.run(
         send(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -223,6 +228,7 @@ def send_cmd(
             excluded_coin_ids=coins_to_exclude,
             reuse_puzhash=True if reuse else None,
             clawback_time_lock=clawback_time,
+            push=push,
         )
     )
 
@@ -275,6 +281,7 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int, n
     asyncio.run(get_address(wallet_rpc_port, fingerprint, id, new_address))
 
 
+# MARK: tx_endpoint
 @wallet_cmd.command(
     "clawback",
     help="Claim or revert a Clawback transaction."
@@ -421,6 +428,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     asyncio.run(add_token(wallet_rpc_port, fingerprint, asset_id, token_name))
 
 
+# MARK: tx_endpoint
 @wallet_cmd.command("make_offer", help="Create an offer of XCH/CATs/NFTs for XCH/CATs/NFTs")
 @click.option(
     "-wp",
@@ -531,6 +539,7 @@ def get_offers_cmd(
     )
 
 
+# MARK: tx_endpoint
 @wallet_cmd.command("take_offer", help="Examine or take an offer")
 @click.argument("path_or_hex", type=str, nargs=1, required=True)
 @click.option(
@@ -564,6 +573,7 @@ def take_offer_cmd(
     asyncio.run(take_offer(wallet_rpc_port, fingerprint, Decimal(fee), path_or_hex, examine_only))  # reuse is not used
 
 
+# MARK: tx_endpoint
 @wallet_cmd.command("cancel_offer", help="Cancel an existing offer")
 @click.option(
     "-wp",
@@ -603,6 +613,7 @@ def did_cmd() -> None:
     pass
 
 
+# MARK: tx_endpoint
 @did_cmd.command("create", help="Create DID wallet")
 @click.option(
     "-wp",
@@ -713,6 +724,7 @@ def did_get_details_cmd(wallet_rpc_port: Optional[int], fingerprint: int, coin_i
     asyncio.run(get_did_info(wallet_rpc_port, fingerprint, coin_id, latest))
 
 
+# MARK: tx_endpoint
 @did_cmd.command("update_metadata", help="Update the metadata of a DID")
 @click.option(
     "-wp",
@@ -786,6 +798,7 @@ def did_find_lost_cmd(
     )
 
 
+# MARK: tx_endpoint
 @did_cmd.command("message_spend", help="Generate a DID spend bundle for announcements")
 @click.option(
     "-wp",
@@ -843,6 +856,7 @@ def did_message_spend_cmd(
     asyncio.run(did_message_spend(wallet_rpc_port, fingerprint, id, puzzle_list, coin_list))
 
 
+# MARK: tx_endpoint
 @did_cmd.command("transfer", help="Transfer a DID")
 @click.option(
     "-wp",
@@ -945,6 +959,7 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: s
     )
 
 
+# MARK: tx_endpoint
 @nft_cmd.command("mint", help="Mint an NFT")
 @click.option(
     "-wp",
@@ -1043,6 +1058,7 @@ def nft_mint_cmd(
     )
 
 
+# MARK: tx_endpoint
 @nft_cmd.command("add_uri", help="Add an URI to an NFT")
 @click.option(
     "-wp",
@@ -1100,6 +1116,7 @@ def nft_add_uri_cmd(
     )
 
 
+# MARK: tx_endpoint
 @nft_cmd.command("transfer", help="Transfer an NFT")
 @click.option(
     "-wp",
@@ -1249,6 +1266,7 @@ def notification_cmd() -> None:
     pass
 
 
+# MARK: tx_endpoint
 @notification_cmd.command("send", help="Send a notification to the owner of an address")
 @click.option(
     "-wp",
@@ -1334,6 +1352,7 @@ def vcs_cmd() -> None:  # pragma: no cover
     pass
 
 
+# MARK: tx_endpoint
 @vcs_cmd.command("mint", short_help="Mint a VC")
 @click.option(
     "-wp",
@@ -1384,6 +1403,7 @@ def get_vcs_cmd(
     asyncio.run(get_vcs(wallet_rpc_port, fingerprint, start, count))
 
 
+# MARK: tx_endpoint
 @vcs_cmd.command("update_proofs", short_help="Update a VC's proofs if you have the provider DID")
 @click.option(
     "-wp",
@@ -1477,6 +1497,7 @@ def get_proofs_for_root_cmd(
     asyncio.run(get_proofs_for_root(wallet_rpc_port, fingerprint, proof_hash))
 
 
+# MARK: tx_endpoint
 @vcs_cmd.command("revoke", short_help="Revoke any VC if you have the proper DID and the VCs parent coin")
 @click.option(
     "-wp",
@@ -1522,6 +1543,7 @@ def revoke_vc_cmd(
     asyncio.run(revoke_vc(wallet_rpc_port, fingerprint, parent_coin_id, vc_id, Decimal(fee), reuse_puzhash))
 
 
+# MARK: tx_endpoint
 @vcs_cmd.command("approve_r_cats", help="Claim any R-CATs that are currently pending VC approval")
 @click.option(
     "-wp",

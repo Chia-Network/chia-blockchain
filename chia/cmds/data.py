@@ -106,6 +106,7 @@ def create_fee_option() -> Callable[[FC], FC]:
     )
 
 
+# MARK: tx_endpoint
 @data_cmd.command("create_data_store", help="Create a new data store")
 @create_rpc_port_option()
 @create_fee_option()
@@ -140,6 +141,7 @@ def get_value(
     run(get_value_cmd(data_rpc_port, id, key_string, root_hash, fingerprint=fingerprint))
 
 
+# MARK: tx_endpoint
 @data_cmd.command("update_data_store", help="Update a store by providing the changelist operations")
 @create_data_store_id_option()
 @create_changelist_option()
@@ -340,6 +342,7 @@ def add_missing_files(
     )
 
 
+# MARK: tx_endpoint
 @data_cmd.command("add_mirror", help="Publish mirror urls on chain")
 @click.option("-i", "--id", help="Store id", type=str, required=True)
 @click.option(
@@ -378,6 +381,7 @@ def add_mirror(
     )
 
 
+# MARK: tx_endpoint
 @data_cmd.command("delete_mirror", help="Delete an owned mirror by its coin id")
 @click.option("-c", "--coin_id", help="Coin id", type=str, required=True)
 @create_fee_option()

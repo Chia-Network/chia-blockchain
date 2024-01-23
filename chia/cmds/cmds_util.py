@@ -311,6 +311,33 @@ def timelock_args(func: Callable[..., None]) -> Callable[..., None]:
 
 @streamable
 @dataclasses.dataclass(frozen=True)
+class TransactionBundle(Streamable):
+    txs: List[TransactionRecord]
+
+
+def tx_out_cmd(func: Callable[..., List[TransactionRecord]]) -> Callable[..., None]:
+    def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
+        txs: List[TransactionRecord] = func(**kwargs)
+        if transaction_file is not None:
+            print(f"Writing transactions to file {transaction_file}:")
+            with open(Path(transaction_file), "wb") as file:
+                file.write(bytes(TransactionBundle(txs)))
+
+    return click.option(
+        "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
+    )(
+        click.option(
+            "--transaction-file",
+            help="A file to write relevant transactions to",
+            type=str,
+            required=False,
+            default=None,
+        )(original_cmd)
+    )
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
 class CMDCoinSelectionConfigLoader(Streamable):
     min_coin_amount: Optional[str] = None
     max_coin_amount: Optional[str] = None
