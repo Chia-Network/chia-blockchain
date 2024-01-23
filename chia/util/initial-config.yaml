@@ -353,6 +353,8 @@ timelord:
 full_node:
   # The full node server (if run) will run on this port
   port: 8444
+  # The full node will attempt to connect to these full nodes
+  full_node_peers: []
 
   # controls the sync-to-disk behavior of the database connection. Can be one of:
   # "on"    enables syncing to disk, minimizes risk of corrupting the DB in
