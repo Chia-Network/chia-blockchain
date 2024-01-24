@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 import time
 from typing import Optional, Tuple
@@ -67,7 +66,7 @@ def validate_unfinished_header_block(
     if genesis_block and header_block.prev_header_hash != constants.GENESIS_CHALLENGE:
         return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
 
-    overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
+    overflow = is_overflow_block(constants, uint8(header_block.reward_chain_block.signage_point_index))
     if skip_overflow_last_ss_validation and overflow:
         if final_eos_is_already_included(header_block, blocks, expected_sub_slot_iters):
             skip_overflow_last_ss_validation = False
@@ -194,9 +193,9 @@ def validate_unfinished_header_block(
                         icc_iters_proof,
                         sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
                     )
-                    if sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf != dataclasses.replace(
-                        target_vdf_info,
-                        number_of_iterations=icc_iters_committed,
+                    if (
+                        sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
+                        != target_vdf_info.replace(number_of_iterations=icc_iters_committed)
                     ):
                         return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
                     if not skip_vdf_is_valid:
@@ -338,9 +337,8 @@ def validate_unfinished_header_block(
                 else:
                     cc_eos_vdf_info_iters = expected_sub_slot_iters
             # Check that the modified data is correct
-            if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf != dataclasses.replace(
-                partial_cc_vdf_info,
-                number_of_iterations=cc_eos_vdf_info_iters,
+            if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf != partial_cc_vdf_info.replace(
+                number_of_iterations=cc_eos_vdf_info_iters
             ):
                 return None, ValidationError(Err.INVALID_CC_EOS_VDF, "wrong challenge chain end of slot vdf")
 
@@ -526,13 +524,13 @@ def validate_unfinished_header_block(
     sp_iters: uint64 = calculate_sp_iters(
         constants,
         expected_sub_slot_iters,
-        header_block.reward_chain_block.signage_point_index,
+        uint8(header_block.reward_chain_block.signage_point_index),
     )
 
     ip_iters: uint64 = calculate_ip_iters(
         constants,
         expected_sub_slot_iters,
-        header_block.reward_chain_block.signage_point_index,
+        uint8(header_block.reward_chain_block.signage_point_index),
         required_iters,
     )
     if header_block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -659,9 +657,8 @@ def validate_unfinished_header_block(
             header_block.reward_chain_block.challenge_chain_sp_vdf.output,
         )
 
-        if header_block.reward_chain_block.challenge_chain_sp_vdf != dataclasses.replace(
-            target_vdf_info,
-            number_of_iterations=sp_iters,
+        if header_block.reward_chain_block.challenge_chain_sp_vdf != target_vdf_info.replace(
+            number_of_iterations=sp_iters
         ):
             return None, ValidationError(Err.INVALID_CC_SP_VDF)
         if not skip_vdf_is_valid:
@@ -879,7 +876,7 @@ def validate_finished_header_block(
     ip_iters: uint64 = calculate_ip_iters(
         constants,
         expected_sub_slot_iters,
-        header_block.reward_chain_block.signage_point_index,
+        uint8(header_block.reward_chain_block.signage_point_index),
         required_iters,
     )
     if not genesis_block:
@@ -944,14 +941,10 @@ def validate_finished_header_block(
         ip_vdf_iters,
         header_block.reward_chain_block.challenge_chain_ip_vdf.output,
     )
-    if header_block.reward_chain_block.challenge_chain_ip_vdf != dataclasses.replace(
-        cc_target_vdf_info,
-        number_of_iterations=ip_iters,
+    if header_block.reward_chain_block.challenge_chain_ip_vdf != cc_target_vdf_info.replace(
+        number_of_iterations=ip_iters
     ):
-        expected = dataclasses.replace(
-            cc_target_vdf_info,
-            number_of_iterations=ip_iters,
-        )
+        expected = cc_target_vdf_info.replace(number_of_iterations=ip_iters)
         log.error(f"{header_block.reward_chain_block.challenge_chain_ip_vdf }. expected {expected}")
         log.error(f"Block: {header_block}")
         return None, ValidationError(Err.INVALID_CC_IP_VDF)
@@ -990,7 +983,7 @@ def validate_finished_header_block(
 
     # 31. Check infused challenge chain infusion point VDF
     if not genesis_block:
-        overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
+        overflow = is_overflow_block(constants, uint8(header_block.reward_chain_block.signage_point_index))
         deficit = calculate_deficit(
             constants,
             header_block.height,

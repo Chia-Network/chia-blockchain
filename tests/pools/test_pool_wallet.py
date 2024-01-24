@@ -8,9 +8,9 @@ from unittest.mock import MagicMock
 import pytest
 from chia_rs import G1Element
 
-from benchmarks.utils import rand_g1, rand_hash
 from chia.pools.pool_wallet import PoolWallet
 from chia.types.blockchain_format.sized_bytes import bytes32
+from tests.util.benchmarks import rand_g1, rand_hash
 
 
 @dataclass

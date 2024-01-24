@@ -2292,3 +2292,39 @@ async def test_wallet_log_in_changes_active_fingerprint(
 
         active_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
         assert active_fingerprint == secondary_fingerprint
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_mirrors(
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        res = await data_rpc_api.create_data_store({})
+        assert res is not None
+        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+
+        urls = ["http://127.0.0.1/8000", "http://127.0.0.1/8001"]
+        res = await data_rpc_api.add_mirror({"id": store_id.hex(), "urls": urls, "amount": 1, "fee": 1})
+
+        await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+        mirrors = await data_rpc_api.get_mirrors({"id": store_id.hex()})
+        mirror_list = mirrors["mirrors"]
+        assert len(mirror_list) == 1
+        mirror = mirror_list[0]
+        assert mirror["urls"] == ["http://127.0.0.1/8000", "http://127.0.0.1/8001"]
+        coin_id = mirror["coin_id"]
+
+        res = await data_rpc_api.delete_mirror({"coin_id": coin_id, "fee": 1})
+        await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+        mirrors = await data_rpc_api.get_mirrors({"id": store_id.hex()})
+        mirror_list = mirrors["mirrors"]
+        assert len(mirror_list) == 0
+
+        with pytest.raises(RuntimeError, match="URL list can't be empty"):
+            res = await data_rpc_api.add_mirror({"id": store_id.hex(), "urls": [], "amount": 1, "fee": 1})

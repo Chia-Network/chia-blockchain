@@ -59,13 +59,13 @@ class LastState:
                 state.reward_chain_block,
                 state.sub_slot_iters,
                 state.difficulty,
-                state.reward_chain_block.height,
+                uint32(state.reward_chain_block.height),
             )
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary
-            self.last_weight = state.reward_chain_block.weight
-            self.last_height = state.reward_chain_block.height
-            self.total_iters = state.reward_chain_block.total_iters
+            self.last_weight = uint128(state.reward_chain_block.weight)
+            self.last_height = uint32(state.reward_chain_block.height)
+            self.total_iters = uint128(state.reward_chain_block.total_iters)
             self.last_peak_challenge = state.reward_chain_block.get_hash()
             self.difficulty = state.difficulty
             self.sub_slot_iters = state.sub_slot_iters
@@ -87,11 +87,11 @@ class LastState:
             self.peak = None
             self.subslot_end = state
             self.last_ip = uint64(0)
-            self.deficit = state.reward_chain.deficit
+            self.deficit = uint8(state.reward_chain.deficit)
             if state.challenge_chain.new_difficulty is not None:
                 assert state.challenge_chain.new_sub_slot_iters is not None
-                self.difficulty = state.challenge_chain.new_difficulty
-                self.sub_slot_iters = state.challenge_chain.new_sub_slot_iters
+                self.difficulty = uint64(state.challenge_chain.new_difficulty)
+                self.sub_slot_iters = uint64(state.challenge_chain.new_sub_slot_iters)
                 self.new_epoch = True
             else:
                 self.new_epoch = False
