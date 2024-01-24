@@ -118,4 +118,20 @@ class ProtocolMessageTypes(Enum):
     new_unfinished_block2 = 92
     request_unfinished_block2 = 93
 
+    # New wallet sync protocol
+    request_add_puzzle_subscriptions = 94
+    respond_add_puzzle_subscriptions = 95
+    request_add_coin_subscriptions = 96
+    respond_add_coin_subscriptions = 97
+    request_remove_puzzle_subscriptions = 98
+    respond_remove_puzzle_subscriptions = 99
+    request_remove_coin_subscriptions = 100
+    respond_remove_coin_subscriptions = 101
+    request_puzzle_state = 104
+    respond_puzzle_state = 105
+    reject_puzzle_state = 106
+    request_coin_state = 107
+    respond_coin_state = 108
+    reject_coin_state = 109
+
     error = 255

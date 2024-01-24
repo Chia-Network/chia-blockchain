@@ -2012,6 +2012,156 @@ respond_ses_info_json: Dict[str, Any] = {
     "heights": [[1, 2, 3], [4, 606340525]],
 }
 
+coin_state_filters_json: Dict[str, Any] = {"include_spent": True, "include_unspent": True, "include_hinted": True}
+
+request_add_puzzle_subscriptions_json: Dict[str, Any] = {
+    "puzzle_hashes": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ],
+    "min_height": 2585637244,
+    "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411",
+}
+
+respond_add_puzzle_subscriptions_json: Dict[str, Any] = {
+    "puzzle_hashes": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ]
+}
+
+request_remove_puzzle_subscriptions_json: Dict[str, Any] = {
+    "puzzle_hashes": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ]
+}
+
+respond_remove_puzzle_subscriptions_json: Dict[str, Any] = {
+    "puzzle_hashes": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ]
+}
+
+request_add_coin_subscriptions_json: Dict[str, Any] = {
+    "coin_ids": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ],
+    "min_height": 2585637244,
+    "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411",
+}
+
+respond_add_coin_subscriptions_json: Dict[str, Any] = {
+    "coin_ids": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ]
+}
+
+request_remove_coin_subscriptions_json: Dict[str, Any] = {
+    "coin_ids": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ]
+}
+
+respond_remove_coin_subscriptions_json: Dict[str, Any] = {
+    "coin_ids": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ]
+}
+
+request_reset_subscriptions_json: Dict[str, Any] = {}
+
+respond_reset_subscriptions_json: Dict[str, Any] = {
+    "puzzle_hashes": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ],
+    "coin_ids": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ],
+}
+
+request_puzzle_state_json: Dict[str, Any] = {
+    "puzzle_hashes": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ],
+    "min_height": 0,
+    "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411",
+    "filters": {"include_spent": True, "include_unspent": True, "include_hinted": True},
+    "subscribe_when_finished": True,
+}
+
+reject_puzzle_state_json: Dict[str, Any] = {
+    "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411"
+}
+
+respond_puzzle_state_json: Dict[str, Any] = {
+    "puzzle_hashes": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ],
+    "next_height": None,
+    "next_header_hash": None,
+    "coin_states": [
+        {
+            "coin": {
+                "parent_coin_info": "0xd56f435d3382cb9aa5f50f51816e4c54487c66402339901450f3c810f1d77098",
+                "puzzle_hash": "0x9944f63fcc251719b2f04c47ab976a167f96510736dc6fdfa8e037d740f4b5f3",
+                "amount": 6602327684212801382,
+            },
+            "spent_height": 2287030048,
+            "created_height": 3361305811,
+        }
+    ],
+}
+
+request_coin_state_json: Dict[str, Any] = {
+    "coin_ids": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ],
+    "subscribe": False,
+}
+
+respond_coin_state_json: Dict[str, Any] = {
+    "coin_ids": [
+        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
+        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
+        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
+    ],
+    "coin_states": [
+        {
+            "coin": {
+                "parent_coin_info": "0xd56f435d3382cb9aa5f50f51816e4c54487c66402339901450f3c810f1d77098",
+                "puzzle_hash": "0x9944f63fcc251719b2f04c47ab976a167f96510736dc6fdfa8e037d740f4b5f3",
+                "amount": 6602327684212801382,
+            },
+            "spent_height": 2287030048,
+            "created_height": 3361305811,
+        }
+    ],
+}
+
 pool_difficulty_json: Dict[str, Any] = {
     "difficulty": 14819251421858580996,
     "sub_slot_iters": 12852879676624401630,

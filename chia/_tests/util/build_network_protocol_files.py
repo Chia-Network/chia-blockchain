@@ -87,7 +87,7 @@ def visit_wallet_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(respond_header_blocks, "respond_header_blocks")
     visitor(coin_state, "coin_state")
     visitor(register_for_ph_updates, "register_for_ph_updates")
-    visitor(reject_block_headers, "reject_block_headers"),
+    visitor(reject_block_headers, "reject_block_headers")
     visitor(respond_to_ph_updates, "respond_to_ph_updates")
     visitor(register_for_coin_updates, "register_for_coin_updates")
     visitor(respond_to_coin_updates, "respond_to_coin_updates")
@@ -96,6 +96,22 @@ def visit_wallet_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(respond_children, "respond_children")
     visitor(request_ses_info, "request_ses_info")
     visitor(respond_ses_info, "respond_ses_info")
+    visitor(coin_state_filters, "coin_state_filters")
+    visitor(request_add_puzzle_subscriptions, "request_add_puzzle_subscriptions")
+    visitor(respond_add_puzzle_subscriptions, "respond_add_puzzle_subscriptions")
+    visitor(request_remove_puzzle_subscriptions, "request_remove_puzzle_subscriptions")
+    visitor(respond_remove_puzzle_subscriptions, "respond_remove_puzzle_subscriptions")
+    visitor(request_add_coin_subscriptions, "request_add_coin_subscriptions")
+    visitor(respond_add_coin_subscriptions, "respond_add_coin_subscriptions")
+    visitor(request_remove_coin_subscriptions, "request_remove_coin_subscriptions")
+    visitor(respond_remove_coin_subscriptions, "respond_remove_coin_subscriptions")
+    visitor(request_reset_subscriptions, "request_reset_subscriptions")
+    visitor(respond_reset_subscriptions, "respond_reset_subscriptions")
+    visitor(request_puzzle_state, "request_puzzle_state")
+    visitor(reject_puzzle_state, "reject_puzzle_state")
+    visitor(respond_puzzle_state, "respond_puzzle_state")
+    visitor(request_coin_state, "request_coin_state")
+    visitor(respond_coin_state, "respond_coin_state")
 
 
 def visit_harvester_protocol(visitor: Callable[[Any, str], None]) -> None:
