@@ -146,6 +146,68 @@ def test_protocol_json() -> None:
     assert type(request_ses_info).from_json_dict(request_ses_info_json) == request_ses_info
     assert str(respond_ses_info_json) == str(respond_ses_info.to_json_dict())
     assert type(respond_ses_info).from_json_dict(respond_ses_info_json) == respond_ses_info
+    assert str(coin_state_filters_json) == str(coin_state_filters.to_json_dict())
+    assert type(coin_state_filters).from_json_dict(coin_state_filters_json) == coin_state_filters
+    assert str(request_add_puzzle_subscriptions_json) == str(request_add_puzzle_subscriptions.to_json_dict())
+    assert (
+        type(request_add_puzzle_subscriptions).from_json_dict(request_add_puzzle_subscriptions_json)
+        == request_add_puzzle_subscriptions
+    )
+    assert str(respond_add_puzzle_subscriptions_json) == str(respond_add_puzzle_subscriptions.to_json_dict())
+    assert (
+        type(respond_add_puzzle_subscriptions).from_json_dict(respond_add_puzzle_subscriptions_json)
+        == respond_add_puzzle_subscriptions
+    )
+    assert str(request_remove_puzzle_subscriptions_json) == str(request_remove_puzzle_subscriptions.to_json_dict())
+    assert (
+        type(request_remove_puzzle_subscriptions).from_json_dict(request_remove_puzzle_subscriptions_json)
+        == request_remove_puzzle_subscriptions
+    )
+    assert str(respond_remove_puzzle_subscriptions_json) == str(respond_remove_puzzle_subscriptions.to_json_dict())
+    assert (
+        type(respond_remove_puzzle_subscriptions).from_json_dict(respond_remove_puzzle_subscriptions_json)
+        == respond_remove_puzzle_subscriptions
+    )
+    assert str(request_add_coin_subscriptions_json) == str(request_add_coin_subscriptions.to_json_dict())
+    assert (
+        type(request_add_coin_subscriptions).from_json_dict(request_add_coin_subscriptions_json)
+        == request_add_coin_subscriptions
+    )
+    assert str(respond_add_coin_subscriptions_json) == str(respond_add_coin_subscriptions.to_json_dict())
+    assert (
+        type(respond_add_coin_subscriptions).from_json_dict(respond_add_coin_subscriptions_json)
+        == respond_add_coin_subscriptions
+    )
+    assert str(request_remove_coin_subscriptions_json) == str(request_remove_coin_subscriptions.to_json_dict())
+    assert (
+        type(request_remove_coin_subscriptions).from_json_dict(request_remove_coin_subscriptions_json)
+        == request_remove_coin_subscriptions
+    )
+    assert str(respond_remove_coin_subscriptions_json) == str(respond_remove_coin_subscriptions.to_json_dict())
+    assert (
+        type(respond_remove_coin_subscriptions).from_json_dict(respond_remove_coin_subscriptions_json)
+        == respond_remove_coin_subscriptions
+    )
+    assert str(request_reset_subscriptions_json) == str(request_reset_subscriptions.to_json_dict())
+    assert (
+        type(request_reset_subscriptions).from_json_dict(request_reset_subscriptions_json)
+        == request_reset_subscriptions
+    )
+    assert str(respond_reset_subscriptions_json) == str(respond_reset_subscriptions.to_json_dict())
+    assert (
+        type(respond_reset_subscriptions).from_json_dict(respond_reset_subscriptions_json)
+        == respond_reset_subscriptions
+    )
+    assert str(request_puzzle_state_json) == str(request_puzzle_state.to_json_dict())
+    assert type(request_puzzle_state).from_json_dict(request_puzzle_state_json) == request_puzzle_state
+    assert str(reject_puzzle_state_json) == str(reject_puzzle_state.to_json_dict())
+    assert type(reject_puzzle_state).from_json_dict(reject_puzzle_state_json) == reject_puzzle_state
+    assert str(respond_puzzle_state_json) == str(respond_puzzle_state.to_json_dict())
+    assert type(respond_puzzle_state).from_json_dict(respond_puzzle_state_json) == respond_puzzle_state
+    assert str(request_coin_state_json) == str(request_coin_state.to_json_dict())
+    assert type(request_coin_state).from_json_dict(request_coin_state_json) == request_coin_state
+    assert str(respond_coin_state_json) == str(respond_coin_state.to_json_dict())
+    assert type(respond_coin_state).from_json_dict(respond_coin_state_json) == respond_coin_state
     assert str(pool_difficulty_json) == str(pool_difficulty.to_json_dict())
     assert type(pool_difficulty).from_json_dict(pool_difficulty_json) == pool_difficulty
     assert str(harvester_handhsake_json) == str(harvester_handhsake.to_json_dict())

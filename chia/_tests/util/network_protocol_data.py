@@ -686,6 +686,61 @@ respond_ses_info = wallet_protocol.RespondSESInfo(
     [[uint32(1), uint32(2), uint32(3)], [uint32(4), uint32(606340525)]],
 )
 
+coin_state_filters = wallet_protocol.CoinStateFilters(True, True, True)
+
+hashes = [
+    bytes32(bytes.fromhex("59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7")),
+    bytes32(bytes.fromhex("d4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca")),
+    bytes32(bytes.fromhex("0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1")),
+]
+
+request_add_puzzle_subscriptions = wallet_protocol.RequestAddPuzzleSubscriptions(
+    hashes,
+    uint32(2585637244),
+    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
+)
+
+respond_add_puzzle_subscriptions = wallet_protocol.RespondAddPuzzleSubscriptions(hashes)
+
+request_add_coin_subscriptions = wallet_protocol.RequestAddCoinSubscriptions(
+    hashes,
+    uint32(2585637244),
+    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
+)
+
+respond_add_coin_subscriptions = wallet_protocol.RespondAddCoinSubscriptions(hashes)
+
+
+request_remove_puzzle_subscriptions = wallet_protocol.RequestRemovePuzzleSubscriptions(hashes)
+
+respond_remove_puzzle_subscriptions = wallet_protocol.RespondRemovePuzzleSubscriptions(hashes)
+
+request_remove_coin_subscriptions = wallet_protocol.RequestRemoveCoinSubscriptions(hashes)
+
+respond_remove_coin_subscriptions = wallet_protocol.RespondRemoveCoinSubscriptions(hashes)
+
+request_reset_subscriptions = wallet_protocol.RequestResetSubscriptions()
+
+respond_reset_subscriptions = wallet_protocol.RespondResetSubscriptions(hashes, hashes)
+
+request_puzzle_state = wallet_protocol.RequestPuzzleState(
+    hashes,
+    uint32(0),
+    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
+    coin_state_filters,
+    True,
+)
+
+respond_puzzle_state = wallet_protocol.RespondPuzzleState(hashes, None, None, [coin_state])
+
+reject_puzzle_state = wallet_protocol.RejectPuzzleState(
+    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411"))
+)
+
+request_coin_state = wallet_protocol.RequestCoinState(hashes, False)
+
+respond_coin_state = wallet_protocol.RespondCoinState(hashes, [coin_state])
+
 
 ### HARVESTER PROTOCOL
 pool_difficulty = harvester_protocol.PoolDifficulty(
