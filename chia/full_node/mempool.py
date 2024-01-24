@@ -25,6 +25,20 @@ from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
 
+# Maximum number of mempool items that can be skipped (not considered) during
+# the creation of a block bundle. An item is skipped if it won't fit in the
+# block we're trying to create.
+MAX_SKIPPED_ITEMS = 20
+
+# Threshold after which we stop including mempool items with eligible spends
+# during the creation of a block bundle. We do that to avoid spending too much
+# time on potentially expensive items.
+PRIORITY_TX_THRESHOLD = 3
+
+# Typical cost of a standard XCH spend. It's used as a heuristic to help
+# determine how close to the block size limit we're willing to go.
+MIN_COST_THRESHOLD = 6_000_000
+
 # We impose a limit on the fee a single transaction can pay in order to have the
 # sum of all fees in the mempool be less than 2^63. That's the limit of sqlite's
 # integers, which we rely on for computing fee per cost as well as the fee sum
@@ -395,6 +409,7 @@ class Mempool:
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
+        skipped_items = 0
         for row in cursor:
             name = bytes32(row[0])
             fee = int(row[1])
@@ -403,22 +418,58 @@ class Mempool:
                 continue
             try:
                 cost = uint64(0 if item.npc_result.conds is None else item.npc_result.conds.cost)
-                unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-                    bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
-                )
+                if skipped_items >= PRIORITY_TX_THRESHOLD:
+                    # If we've encountered `PRIORITY_TX_THRESHOLD` number of
+                    # transactions that don't fit in the remaining block size,
+                    # we want to keep looking for smaller transactions that
+                    # might fit, but we also want to avoid spending too much
+                    # time on potentially expensive ones, hence this shortcut.
+                    unique_coin_spends = []
+                    unique_additions = []
+                    for spend_data in item.bundle_coin_spends.values():
+                        if spend_data.eligible_for_dedup:
+                            raise Exception(f"Skipping transaction with eligible coin(s): {name.hex()}")
+                        unique_coin_spends.append(spend_data.coin_spend)
+                        unique_additions.extend(spend_data.additions)
+                    cost_saving = 0
+                else:
+                    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+                        bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
+                    )
                 item_cost = cost - cost_saving
-                log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, fee / item_cost)
-                if (
-                    item_cost + cost_sum > self.mempool_info.max_block_clvm_cost
-                    or fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
-                ):
+                log.info(
+                    "Cumulative cost: %d, fee per cost: %0.4f, item cost: %d", cost_sum, fee / item_cost, item_cost
+                )
+                new_fee_sum = fee_sum + fee
+                if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
+                    # Such a fee is very unlikely to happen but we're defensively
+                    # accounting for it
+                    break  # pragma: no cover
+                new_cost_sum = cost_sum + item_cost
+                if new_cost_sum > self.mempool_info.max_block_clvm_cost:
+                    # Let's skip this item
+                    log.info(
+                        "Skipping mempool item. Cumulative cost %d exceeds maximum block cost %d",
+                        new_cost_sum,
+                        self.mempool_info.max_block_clvm_cost,
+                    )
+                    skipped_items += 1
+                    if skipped_items < MAX_SKIPPED_ITEMS:
+                        continue
+                    # Let's stop taking more items if we skipped `MAX_SKIPPED_ITEMS`
                     break
                 coin_spends.extend(unique_coin_spends)
                 additions.extend(unique_additions)
                 sigs.append(item.spend_bundle.aggregated_signature)
-                cost_sum += item_cost
-                fee_sum += fee
+                cost_sum = new_cost_sum
+                fee_sum = new_fee_sum
                 processed_spend_bundles += 1
+                # Let's stop taking more items if we don't have enough cost left
+                # for at least `MIN_COST_THRESHOLD` because that would mean we're
+                # getting very close to the limit anyway and *probably* won't
+                # find transactions small enough to fit at this point
+                if self.mempool_info.max_block_clvm_cost - cost_sum < MIN_COST_THRESHOLD:
+                    break
             except Exception as e:
                 log.debug(f"Exception while checking a mempool item for deduplication: {e}")
                 continue
