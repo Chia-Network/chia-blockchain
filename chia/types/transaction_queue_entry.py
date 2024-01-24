@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
@@ -9,6 +8,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
+from chia.util.misc import ValuedEvent
 
 
 @dataclass(frozen=True)
@@ -22,7 +22,7 @@ class TransactionQueueEntry:
     spend_name: bytes32
     peer: Optional[WSChiaConnection] = field(compare=False)
     test: bool = field(compare=False)
-    done: asyncio.Future[Tuple[MempoolInclusionStatus, Optional[Err]]] = field(
-        default_factory=asyncio.Future,
+    done: ValuedEvent[Tuple[MempoolInclusionStatus, Optional[Err]]] = field(
+        default_factory=ValuedEvent,
         compare=False,
     )

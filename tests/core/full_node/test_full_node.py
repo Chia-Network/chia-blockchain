@@ -63,8 +63,8 @@ from tests.conftest import ConsensusMode
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.make_block_generator import make_spend_bundle
-from tests.core.mempool.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
+from tests.util.misc import wallet_height_at_least
 from tests.util.setup_nodes import SimulatorsAndWalletsServices
 from tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
@@ -1586,12 +1586,10 @@ class TestFullNodeProtocol:
         # Submit the sub slot, but not the last block
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
         for ss in blocks[-1].finished_sub_slots:
-            challenge_chain = dataclasses.replace(
-                ss.challenge_chain,
+            challenge_chain = ss.challenge_chain.replace(
                 new_difficulty=20,
             )
-            slot2 = dataclasses.replace(
-                ss,
+            slot2 = ss.replace(
                 challenge_chain=challenge_chain,
             )
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot2), peer)

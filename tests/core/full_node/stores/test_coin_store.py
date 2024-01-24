@@ -111,7 +111,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                     assert block.foliage_transaction_block is not None
                     await coin_store.new_block(
                         block.height,
-                        block.foliage_transaction_block.timestamp,
+                        uint64(block.foliage_transaction_block.timestamp),
                         block.get_included_reward_coins(),
                         tx_additions,
                         tx_removals,
@@ -121,7 +121,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                         with pytest.raises(Exception):
                             await coin_store.new_block(
                                 block.height,
-                                block.foliage_transaction_block.timestamp,
+                                uint64(block.foliage_transaction_block.timestamp),
                                 block.get_included_reward_coins(),
                                 tx_additions,
                                 tx_removals,
@@ -179,7 +179,7 @@ async def test_set_spent(db_version: int, bt: BlockTools) -> None:
                         assert block.foliage_transaction_block is not None
                         await coin_store.new_block(
                             block.height,
-                            block.foliage_transaction_block.timestamp,
+                            uint64(block.foliage_transaction_block.timestamp),
                             block.get_included_reward_coins(),
                             additions,
                             removals,
@@ -227,7 +227,7 @@ async def test_num_unspent(bt: BlockTools, db_version: int) -> None:
                 additions: List[Coin] = []
                 await coin_store.new_block(
                     block.height,
-                    block.foliage_transaction_block.timestamp,
+                    uint64(block.foliage_transaction_block.timestamp),
                     block.get_included_reward_coins(),
                     additions,
                     removals,
@@ -259,7 +259,7 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
                 assert block.foliage_transaction_block is not None
                 await coin_store.new_block(
                     block.height,
-                    block.foliage_transaction_block.timestamp,
+                    uint64(block.foliage_transaction_block.timestamp),
                     block.get_included_reward_coins(),
                     additions,
                     removals,
