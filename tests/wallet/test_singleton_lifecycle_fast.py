@@ -272,12 +272,13 @@ def launcher_conditions_and_spend_bundle(
     puzzle_db.add_puzzle(launcher_puzzle)
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
-    singleton_full_puzzle = singleton_puzzle(launcher_coin.name(), launcher_puzzle_hash, initial_singleton_inner_puzzle)
+    launcher_id = launcher_coin.name()
+    singleton_full_puzzle = singleton_puzzle(launcher_id, launcher_puzzle_hash, initial_singleton_inner_puzzle)
     puzzle_db.add_puzzle(singleton_full_puzzle)
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
     expected_announcement = AssertCoinAnnouncement(
-        asserted_id=launcher_coin.name(), asserted_msg=message_program.get_tree_hash()
+        asserted_id=launcher_id, asserted_msg=message_program.get_tree_hash()
     )
     expected_conditions = []
     expected_conditions.append(
@@ -301,7 +302,7 @@ def launcher_conditions_and_spend_bundle(
     )
     coin_spend = make_spend(launcher_coin, SerializedProgram.from_program(launcher_puzzle), solution)
     spend_bundle = SpendBundle([coin_spend], G2Element())
-    return launcher_coin.name(), expected_conditions, spend_bundle
+    return launcher_id, expected_conditions, spend_bundle
 
 
 def singleton_puzzle(launcher_id: bytes32, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
@@ -440,7 +441,7 @@ def spend_coin_to_singleton(
     return additions, removals
 
 
-def find_interesting_singletons(puzzle_db: PuzzleDB, removals: List[CoinSpend]) -> List[SingletonWallet]:
+def find_interesting_singletons(removals: List[CoinSpend]) -> List[SingletonWallet]:
     singletons = []
     for coin_spend in removals:
         if coin_spend.coin.puzzle_hash == LAUNCHER_PUZZLE_HASH:
@@ -462,7 +463,7 @@ def find_interesting_singletons(puzzle_db: PuzzleDB, removals: List[CoinSpend]) 
     return singletons
 
 
-def filter_p2_singleton(puzzle_db: PuzzleDB, singleton_wallet: SingletonWallet, additions: List[Coin]) -> List[Coin]:
+def filter_p2_singleton(puzzle_db: PuzzleDB, additions: List[Coin]) -> List[Coin]:
     r = []
     for coin in additions:
         puzzle = puzzle_db.puzzle_for_hash(coin.puzzle_hash)
@@ -495,7 +496,7 @@ def test_lifecycle_with_coinstore_as_wallet():
 
     assert len(list(coin_store.all_unspent_coins())) == 1
 
-    new_singletons = find_interesting_singletons(PUZZLE_DB, removals)
+    new_singletons = find_interesting_singletons(removals)
     interested_singletons.extend(new_singletons)
 
     assert len(interested_singletons) == 1
@@ -512,7 +513,7 @@ def test_lifecycle_with_coinstore_as_wallet():
     now.seconds += 500
     now.height += 1
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 2
@@ -544,7 +545,7 @@ def test_lifecycle_with_coinstore_as_wallet():
     now.seconds += 500
     now.height += 1
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 2
@@ -622,7 +623,7 @@ def test_lifecycle_with_coinstore_as_wallet():
     now.seconds += 500
     now.height += 1
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 2
@@ -676,7 +677,7 @@ def test_lifecycle_with_coinstore_as_wallet():
     now.seconds += 500
     now.height += 1
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 3

@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import contextlib
-from typing import AsyncIterator, Iterator, List
+from typing import AsyncIterator, Iterator, List, Optional, TypeVar
 
+import anyio
 import pytest
 
 from chia.util.errors import InvalidPathError
 from chia.util.misc import (
     SplitAsyncManager,
     SplitManager,
+    ValuedEvent,
     format_bytes,
     format_minutes,
     split_async_manager,
@@ -16,6 +18,9 @@ from chia.util.misc import (
     to_batches,
     validate_directory_writable,
 )
+from chia.util.timing import adjusted_timeout, backoff_times
+
+T = TypeVar("T")
 
 
 class TestMisc:
@@ -306,3 +311,103 @@ async def test_split_async_manager_raises_on_exit_without_entry() -> None:
 
     with pytest.raises(Exception, match="^not yet entered$"):
         await split.exit()
+
+
+async def wait_for_valued_event_waiters(
+    event: ValuedEvent[T],
+    count: int,
+    timeout: float = 10,
+) -> None:
+    with anyio.fail_after(delay=adjusted_timeout(timeout)):
+        for delay in backoff_times():
+            # ignoring the type since i'm hacking into the private attribute
+            # hopefully this is ok for testing and if it becomes invalid we
+            # will end up with an exception and can adjust then
+            if len(event._event._waiters) >= count:  # type: ignore[attr-defined]
+                return
+            await anyio.sleep(delay)
+
+
+@pytest.mark.anyio
+async def test_valued_event_wait_already_set() -> None:
+    valued_event = ValuedEvent[int]()
+    value = 37
+    valued_event.set(value)
+
+    with anyio.fail_after(adjusted_timeout(10)):
+        result = await valued_event.wait()
+
+    assert result == value
+
+
+@pytest.mark.anyio
+async def test_valued_event_wait_not_yet_set() -> None:
+    valued_event = ValuedEvent[int]()
+    value = 37
+    result: Optional[int] = None
+
+    async def wait(valued_event: ValuedEvent[int]) -> None:
+        nonlocal result
+        result = await valued_event.wait()
+
+    with anyio.fail_after(adjusted_timeout(10)):
+        async with anyio.create_task_group() as task_group:
+            task_group.start_soon(wait, valued_event)
+            await wait_for_valued_event_waiters(event=valued_event, count=1)
+            valued_event.set(value)
+
+    assert result == value
+
+
+@pytest.mark.anyio
+async def test_valued_event_wait_blocks_when_not_set() -> None:
+    valued_event = ValuedEvent[int]()
+    with pytest.raises(TimeoutError):
+        # if we could just process until there are no pending events, that would be great
+        with anyio.fail_after(adjusted_timeout(1)):
+            await valued_event.wait()
+
+
+@pytest.mark.anyio
+async def test_valued_event_multiple_waits_all_get_values() -> None:
+    results: List[int] = []
+    valued_event = ValuedEvent[int]()
+    value = 37
+    task_count = 10
+
+    async def wait_and_append() -> None:
+        results.append(await valued_event.wait())
+
+    async with anyio.create_task_group() as task_group:
+        for i in range(task_count):
+            task_group.start_soon(wait_and_append, name=f"wait_and_append_{i}")
+
+        await wait_for_valued_event_waiters(event=valued_event, count=task_count)
+        valued_event.set(value)
+
+    assert results == [value] * task_count
+
+
+@pytest.mark.anyio
+async def test_valued_event_set_again_raises_and_does_not_change_value() -> None:
+    valued_event = ValuedEvent[int]()
+    value = 37
+    valued_event.set(value)
+
+    with pytest.raises(Exception, match="^Value already set$"):
+        valued_event.set(value + 1)
+
+    with anyio.fail_after(adjusted_timeout(10)):
+        result = await valued_event.wait()
+
+    assert result == value
+
+
+@pytest.mark.anyio
+async def test_valued_event_wait_raises_if_not_set() -> None:
+    valued_event = ValuedEvent[int]()
+    valued_event._event.set()
+
+    with pytest.raises(Exception, match="^Value not set despite event being set$"):
+        with anyio.fail_after(adjusted_timeout(10)):
+            await valued_event.wait()

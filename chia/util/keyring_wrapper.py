@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from sys import platform
-from typing import Optional, Tuple, Union, overload
+from typing import ClassVar, Optional, Tuple, Union, overload
 
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
@@ -63,8 +63,8 @@ class KeyringWrapper:
     """
 
     # Static members
-    __shared_instance = None
-    __keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH
+    __shared_instance: ClassVar[Optional[KeyringWrapper]] = None
+    __keys_root_path: ClassVar[Path] = DEFAULT_KEYS_ROOT_PATH
 
     # Instance members
     keys_root_path: Path
