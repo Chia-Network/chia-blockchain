@@ -170,6 +170,7 @@ class DataLayerRpcApi:
                     "total_pages": keys_paginated.total_pages,
                     "total_bytes": keys_paginated.total_bytes,
                     "keys": [f"0x{key.hex()}" for key in keys_paginated.keys],
+                    "root_hash": keys_paginated.root_hash,
                 }
 
     async def get_keys_values(self, request: Dict[str, Any]) -> EndpointResult:
@@ -204,6 +205,7 @@ class DataLayerRpcApi:
                 "total_pages": keys_values_paginated.total_pages,
                 "total_bytes": keys_values_paginated.total_bytes,
                 "keys_values": json_nodes,
+                "root_hash": keys_values_paginated.root_hash,
             }
 
     async def get_ancestors(self, request: Dict[str, Any]) -> EndpointResult:

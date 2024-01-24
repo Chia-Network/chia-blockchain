@@ -2372,23 +2372,27 @@ async def test_pagination_rpcs(
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
+        local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
 
         keys_paginated = await data_rpc_api.get_keys({"id": store_id.hex(), "page": 0, "max_page_size": 5})
         assert keys_paginated["total_pages"] == 2
         assert keys_paginated["total_bytes"] == 9
         assert key2_hash < key1_hash
         assert keys_paginated["keys"] == ["0x" + key3.hex(), "0x" + key2.hex()]
+        assert keys_paginated["root_hash"] == local_root["hash"]
 
         keys_paginated = await data_rpc_api.get_keys({"id": store_id.hex(), "page": 1, "max_page_size": 5})
         assert keys_paginated["total_pages"] == 2
         assert keys_paginated["total_bytes"] == 9
         assert key5_hash < key4_hash
         assert keys_paginated["keys"] == ["0x" + key1.hex(), "0x" + key5.hex(), "0x" + key4.hex()]
+        assert keys_paginated["root_hash"] == local_root["hash"]
 
         keys_paginated = await data_rpc_api.get_keys({"id": store_id.hex(), "page": 2, "max_page_size": 5})
         assert keys_paginated["total_pages"] == 2
         assert keys_paginated["total_bytes"] == 9
         assert keys_paginated["keys"] == []
+        assert keys_paginated["root_hash"] == local_root["hash"]
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
             {"id": store_id.hex(), "page": 0, "max_page_size": 8}
@@ -2400,6 +2404,7 @@ async def test_pagination_rpcs(
         assert res_kv[0]["hash"] == "0x" + leaf_hash3.hex()
         assert res_kv[0]["key"] == "0x" + key3.hex()
         assert res_kv[0]["value"] == "0x" + value3.hex()
+        assert keys_values_paginated["root_hash"] == local_root["hash"]
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
             {"id": store_id.hex(), "page": 1, "max_page_size": 8}
@@ -2415,6 +2420,7 @@ async def test_pagination_rpcs(
         assert res_kv[1]["hash"] == "0x" + leaf_hash2.hex()
         assert res_kv[1]["key"] == "0x" + key2.hex()
         assert res_kv[1]["value"] == "0x" + value2.hex()
+        assert keys_values_paginated["root_hash"] == local_root["hash"]
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
             {"id": store_id.hex(), "page": 2, "max_page_size": 8}
@@ -2430,6 +2436,7 @@ async def test_pagination_rpcs(
         assert res_kv[1]["hash"] == "0x" + leaf_hash4.hex()
         assert res_kv[1]["key"] == "0x" + key4.hex()
         assert res_kv[1]["value"] == "0x" + value4.hex()
+        assert keys_values_paginated["root_hash"] == local_root["hash"]
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
             {"id": store_id.hex(), "page": 3, "max_page_size": 8}
@@ -2438,6 +2445,7 @@ async def test_pagination_rpcs(
         assert keys_values_paginated["total_bytes"] == 19
         res_kv = keys_values_paginated["keys_values"]
         assert len(res_kv) == 0
+        assert keys_values_paginated["root_hash"] == local_root["hash"]
 
         key6 = b"ab"
         value6 = b"\x01\x01"

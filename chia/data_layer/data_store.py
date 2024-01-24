@@ -755,7 +755,7 @@ class DataStore:
                 key_hash_to_length[key_hash(node.key)] = len(node.key)
                 leaf_hash_to_length[leaf_hash(node.key, node.value)] = len(node.key) + len(node.value)
 
-            return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length)
+            return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length, root_hash)
 
     def get_hashes_for_page(self, page: int, lengths: Dict[bytes32, int], max_page_size: int) -> PaginationData:
         current_page = 0
@@ -795,6 +795,7 @@ class DataStore:
             pagination_data.total_pages,
             pagination_data.total_bytes,
             keys,
+            keys_values_compressed.root_hash,
         )
 
     async def get_keys_values_paginated(
@@ -813,6 +814,7 @@ class DataStore:
             pagination_data.total_pages,
             pagination_data.total_bytes,
             keys_values,
+            keys_values_compressed.root_hash,
         )
 
     async def get_kv_diff_paginated(

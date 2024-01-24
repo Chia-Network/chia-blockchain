@@ -742,6 +742,7 @@ class KeysValuesCompressed:
     keys_values_hashed: Dict[bytes32, bytes32]
     key_hash_to_length: Dict[bytes32, int]
     leaf_hash_to_length: Dict[bytes32, int]
+    root_hash: Optional[bytes32]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -756,6 +757,7 @@ class KeysPaginationData:
     total_pages: int
     total_bytes: int
     keys: List[bytes]
+    root_hash: Optional[bytes32]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -763,6 +765,7 @@ class KeysValuesPaginationData:
     total_pages: int
     total_bytes: int
     keys_values: List[TerminalNode]
+    root_hash: Optional[bytes32]
 
 
 @dataclasses.dataclass(frozen=True)
