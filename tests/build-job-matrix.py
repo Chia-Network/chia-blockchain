@@ -129,8 +129,8 @@ for path in test_paths:
     # TODO: design a configurable system for this
     process_count = {
         "macos": {False: 0, True: 4}.get(conf["parallel"], conf["parallel"]),
-        "ubuntu": {False: 0, True: 4}.get(conf["parallel"], conf["parallel"]),
-        "windows": {False: 0, True: 3}.get(conf["parallel"], conf["parallel"]),
+        "ubuntu": {False: 0, True: 6}.get(conf["parallel"], conf["parallel"]),
+        "windows": {False: 0, True: 6}.get(conf["parallel"], conf["parallel"]),
     }
     pytest_parallel_args = {os: f" -n {count}" for os, count in process_count.items()}
 

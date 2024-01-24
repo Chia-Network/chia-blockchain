@@ -47,7 +47,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
@@ -119,7 +119,12 @@ from chia.wallet.signer_protocol import (
     TransactionInfo,
     UnsignedTransaction,
 )
-from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE,
+    create_singleton_puzzle,
+    get_inner_puzzle_from_singleton,
+    get_singleton_id_from_puzzle,
+)
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -138,6 +143,7 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
+from chia.wallet.vault.vault_drivers import get_vault_inner_puzzle_hash
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
@@ -2592,7 +2598,8 @@ class WalletStateManager:
                 conditions_dict, _coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
             ):
                 pks.append(pk_bytes)
-                signing_targets.append(SigningTarget(pk_bytes, msg, std_hash(pk_bytes + msg)))
+                fingerprint: bytes = G1Element.from_bytes(pk_bytes).get_fingerprint().to_bytes(4, "big")
+                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
 
         return SigningInstructions(
             await self.key_hints_for_pubkeys(pks),
@@ -2711,3 +2718,70 @@ class WalletStateManager:
         for bundle in bundles:
             await self.wallet_node.push_tx(bundle)
         return [bundle.name() for bundle in bundles]
+
+    async def create_vault_wallet(
+        self,
+        secp_pk: bytes,
+        hidden_puzzle_hash: bytes32,
+        bls_pk: G1Element,
+        timelock: uint64,
+        genesis_challenge: bytes32,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+    ) -> TransactionRecord:
+        """
+        Returns a tx record for creating a new vault
+        """
+        wallet = self.main_wallet
+        vault_inner_puzzle_hash = get_vault_inner_puzzle_hash(
+            secp_pk, genesis_challenge, hidden_puzzle_hash, bls_pk, timelock
+        )
+        # Get xch coin
+        amount = uint64(1)
+        coins = await wallet.select_coins(uint64(amount + fee), tx_config.coin_selection_config)
+
+        # Create singleton launcher
+        origin = next(iter(coins))
+        launcher_coin = Coin(origin.name(), SINGLETON_LAUNCHER_HASH, amount)
+
+        genesis_launcher_solution = Program.to([vault_inner_puzzle_hash, amount, [secp_pk, hidden_puzzle_hash]])
+        announcement_message = genesis_launcher_solution.get_tree_hash()
+
+        [tx_record] = await wallet.generate_signed_transaction(
+            amount,
+            SINGLETON_LAUNCHER_HASH,
+            tx_config,
+            fee,
+            coins,
+            None,
+            origin_id=origin.name(),
+            extra_conditions=(
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
+        )
+
+        launcher_cs = make_spend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
+        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+        assert tx_record.spend_bundle is not None
+        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb])
+
+        vault_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            amount=uint64(amount),
+            to_puzzle_hash=vault_inner_puzzle_hash,
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=full_spend,
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
+            wallet_id=wallet.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=full_spend.name(),
+            memos=[],
+            valid_times=ConditionValidTimes(),
+        )
+        return vault_record

@@ -51,7 +51,7 @@ class TransactionInfo(ClvmStreamable):
 
 
 class SigningTarget(ClvmStreamable):
-    pubkey: bytes
+    fingerprint: bytes
     message: bytes
     hook: bytes32
 
@@ -59,6 +59,7 @@ class SigningTarget(ClvmStreamable):
 class SumHint(ClvmStreamable):
     fingerprints: List[bytes]
     synthetic_offset: bytes
+    final_pubkey: bytes
 
 
 class PathHint(ClvmStreamable):

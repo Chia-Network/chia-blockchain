@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.test_full_sync import run_sync_test
+from tests.util.full_sync import run_sync_test
 
 
 @pytest.mark.parametrize("keep_up", [True, False])
