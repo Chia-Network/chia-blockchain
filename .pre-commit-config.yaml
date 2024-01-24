@@ -28,6 +28,10 @@ repos:
         language: system
         require_serial: true
         types_or: [python, pyi]
+-   repo: https://github.com/google/yamlfmt
+    rev: v0.10.0
+    hooks:
+    -   id: yamlfmt
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.3.0
     hooks:
