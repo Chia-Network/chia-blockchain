@@ -576,10 +576,9 @@ class TestBlockHeaderValidation:
                         block.finished_sub_slots[-1],
                         "infused_challenge_chain",
                         InfusedChallengeChainSubSlot(
-                            replace(
-                                block.finished_sub_slots[
-                                    -1
-                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                            block.finished_sub_slots[
+                                -1
+                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.replace(
                                 number_of_iterations=uint64(10000000),
                             )
                         ),
@@ -594,10 +593,9 @@ class TestBlockHeaderValidation:
                         block.finished_sub_slots[-1],
                         "infused_challenge_chain",
                         InfusedChallengeChainSubSlot(
-                            replace(
-                                block.finished_sub_slots[
-                                    -1
-                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                            block.finished_sub_slots[
+                                -1
+                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.replace(
                                 output=ClassgroupElement.get_default_element(),
                             )
                         ),
@@ -613,11 +611,10 @@ class TestBlockHeaderValidation:
                         block.finished_sub_slots[-1],
                         "infused_challenge_chain",
                         InfusedChallengeChainSubSlot(
-                            replace(
-                                block.finished_sub_slots[
-                                    -1
-                                ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                                challenge=bytes32([0] * 32),
+                            block.finished_sub_slots[
+                                -1
+                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.replace(
+                                challenge=bytes32([0] * 32)
                             )
                         ),
                     )
@@ -660,8 +657,7 @@ class TestBlockHeaderValidation:
                     new_finished_ss = recursive_replace(
                         block.finished_sub_slots[-1],
                         "challenge_chain",
-                        replace(
-                            block.finished_sub_slots[-1].challenge_chain,
+                        block.finished_sub_slots[-1].challenge_chain.replace(
                             infused_challenge_chain_sub_slot_hash=bytes([1] * 32),
                         ),
                     )
@@ -671,8 +667,7 @@ class TestBlockHeaderValidation:
                     new_finished_ss = recursive_replace(
                         block.finished_sub_slots[-1],
                         "challenge_chain",
-                        replace(
-                            block.finished_sub_slots[-1].challenge_chain,
+                        block.finished_sub_slots[-1].challenge_chain.replace(
                             infused_challenge_chain_sub_slot_hash=block.finished_sub_slots[
                                 -1
                             ].infused_challenge_chain.get_hash(),
@@ -698,7 +693,7 @@ class TestBlockHeaderValidation:
                 new_finished_ss_bad_rc = recursive_replace(
                     block.finished_sub_slots[-1],
                     "reward_chain",
-                    replace(block.finished_sub_slots[-1].reward_chain, infused_challenge_chain_sub_slot_hash=None),
+                    block.finished_sub_slots[-1].reward_chain.replace(infused_challenge_chain_sub_slot_hash=None),
                 )
                 block_bad = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_bad_rc]
@@ -746,7 +741,7 @@ class TestBlockHeaderValidation:
         new_finished_ss = recursive_replace(
             blocks[-1].finished_sub_slots[-1],
             "challenge_chain",
-            replace(blocks[-1].finished_sub_slots[-1].challenge_chain, subepoch_summary_hash=std_hash(b"0")),
+            blocks[-1].finished_sub_slots[-1].challenge_chain.replace(subepoch_summary_hash=std_hash(b"0")),
         )
         block_bad = recursive_replace(
             blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
@@ -794,7 +789,7 @@ class TestBlockHeaderValidation:
         new_finished_ss = recursive_replace(
             blocks[-1].finished_sub_slots[-1],
             "reward_chain",
-            replace(blocks[-1].finished_sub_slots[-1].reward_chain, challenge_chain_sub_slot_hash=bytes([3] * 32)),
+            blocks[-1].finished_sub_slots[-1].reward_chain.replace(challenge_chain_sub_slot_hash=bytes([3] * 32)),
         )
         block_1_bad = recursive_replace(
             blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
@@ -1040,8 +1035,8 @@ class TestBlockHeaderValidation:
         new_finished_ss = recursive_replace(
             new_finished_ss,
             "reward_chain",
-            replace(
-                new_finished_ss.reward_chain, challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash()
+            new_finished_ss.reward_chain.replace(
+                challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash()
             ),
         )
         block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:])
@@ -1075,8 +1070,7 @@ class TestBlockHeaderValidation:
                 new_finished_ss = recursive_replace(
                     new_finished_ss,
                     "reward_chain",
-                    replace(
-                        new_finished_ss.reward_chain,
+                    new_finished_ss.reward_chain.replace(
                         challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash(),
                     ),
                 )

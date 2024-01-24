@@ -63,7 +63,7 @@ runs:
 
     - name: Upload constraints file
       if: inputs.constraints-file-artifact-name != ''
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.constraints-file-artifact-name }}
         path: venv/constraints.txt
