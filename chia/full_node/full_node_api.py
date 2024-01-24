@@ -576,7 +576,7 @@ class FullNodeAPI:
         else:
             if self.full_node.full_node_store.get_sub_slot(request.challenge_hash) is None:
                 if request.challenge_hash != self.full_node.constants.GENESIS_CHALLENGE:
-                    self.log.info(f"Don't have challenge hash {request.challenge_hash}")
+                    self.log.info(f"Don't have challenge hash {request.challenge_hash.hex()}")
 
             sp: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index(
                 request.challenge_hash,
@@ -651,7 +651,8 @@ class FullNodeAPI:
             else:
                 self.log.debug(
                     f"Signage point {request.index_from_challenge} not added, CC challenge: "
-                    f"{request.challenge_chain_vdf.challenge}, RC challenge: {request.reward_chain_vdf.challenge}"
+                    f"{request.challenge_chain_vdf.challenge.hex()}, "
+                    f"RC challenge: {request.reward_chain_vdf.challenge.hex()}"
                 )
 
             return None
@@ -706,7 +707,7 @@ class FullNodeAPI:
                 if sp_vdfs.rc_vdf.output.get_hash() != request.reward_chain_sp:
                     self.log.debug(
                         f"Received proof of space for a potentially old signage point {request.challenge_chain_sp}. "
-                        f"Current sp: {sp_vdfs.rc_vdf.output.get_hash()}"
+                        f"Current sp: {sp_vdfs.rc_vdf.output.get_hash().hex()}"
                     )
                     return None
 
@@ -879,9 +880,9 @@ class FullNodeAPI:
                 sub_slot_iters = peak.sub_slot_iters
                 for sub_slot in finished_sub_slots:
                     if sub_slot.challenge_chain.new_difficulty is not None:
-                        difficulty = sub_slot.challenge_chain.new_difficulty
+                        difficulty = uint64(sub_slot.challenge_chain.new_difficulty)
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
-                        sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
+                        sub_slot_iters = uint64(sub_slot.challenge_chain.new_sub_slot_iters)
 
             required_iters: uint64 = calculate_iterations_quality(
                 self.full_node.constants.DIFFICULTY_CONSTANT_FACTOR,
@@ -1012,14 +1013,9 @@ class FullNodeAPI:
             self.log.warning("Signature not valid. There might be a collision in plots. Ignore this during tests.")
             return None
 
-        fsb2 = dataclasses.replace(
-            candidate.foliage,
-            foliage_block_data_signature=farmer_request.foliage_block_data_signature,
-        )
+        fsb2 = candidate.foliage.replace(foliage_block_data_signature=farmer_request.foliage_block_data_signature)
         if candidate.is_transaction_block():
-            fsb2 = dataclasses.replace(
-                fsb2, foliage_transaction_block_signature=farmer_request.foliage_transaction_block_signature
-            )
+            fsb2 = fsb2.replace(foliage_transaction_block_signature=farmer_request.foliage_transaction_block_signature)
 
         new_candidate = dataclasses.replace(candidate, foliage=fsb2)
         if not self.full_node.has_valid_pool_sig(new_candidate):
@@ -1093,7 +1089,7 @@ class FullNodeAPI:
         if not added:
             self.log.error(
                 f"Was not able to add end of sub-slot: "
-                f"{request.end_of_sub_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}. "
+                f"{request.end_of_sub_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge.hex()}. "
                 f"Re-sending new-peak to timelord"
             )
             await self.full_node.send_peak_to_timelords(peer=peer)
@@ -1276,7 +1272,7 @@ class FullNodeAPI:
         await self.full_node.transaction_queue.put(queue_entry, peer_id=None, high_priority=True)
         try:
             with anyio.fail_after(delay=45):
-                status, error = await queue_entry.done
+                status, error = await queue_entry.done.wait()
         except TimeoutError:
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.PENDING), None)
         else:
@@ -1496,7 +1492,7 @@ class FullNodeAPI:
         # the returned puzzle hashes are the ones we ended up subscribing to.
         # It will have filtered duplicates and ones exceeding the subscription
         # limit.
-        puzzle_hashes = self.full_node.subscriptions.add_ph_subscriptions(
+        puzzle_hashes = self.full_node.subscriptions.add_puzzle_subscriptions(
             peer.peer_node_id, request.puzzle_hashes, max_subscriptions
         )
 
