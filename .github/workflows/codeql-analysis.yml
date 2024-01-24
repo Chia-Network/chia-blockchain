@@ -14,14 +14,14 @@ name: 🚨 CodeQL
 on:
   push:
     branches:
-      - 'long_lived/**'
-      - main
-      - 'release/**'
+    - long_lived/**
+    - main
+    - release/**
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [ main ]
+    branches: [main]
   schedule:
-    - cron: '34 14 * * 3'
+  - cron: 34 14 * * 3
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python' ]
+        language: [python]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python' ]
         # Learn more:
         # https://docs.github.com/en/free-pro-team@latest/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#changing-the-languages-that-are-analyzed

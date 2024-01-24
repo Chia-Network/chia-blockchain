@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_type:
-        description: 'Tagged release testing scenario'
+        description: Tagged release testing scenario
         required: false
         type: choice
         default: ''
@@ -17,16 +17,16 @@ on:
     paths-ignore:
     - '**.md'
     branches:
-      - 'long_lived/**'
-      - main
-      - 'release/**'
+    - long_lived/**
+    - main
+    - release/**
   release:
     types: [published]
   pull_request:
     paths-ignore:
     - '**.md'
     branches:
-      - '**'
+    - '**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ['3.10']
 
     steps:
     - name: Checkout Code
@@ -114,7 +114,7 @@ jobs:
     - name: Setup Node 18.x
       uses: actions/setup-node@v4
       with:
-        node-version: '18.x'
+        node-version: 18.x
 
     - name: Test for secrets access
       id: check_secrets
@@ -125,7 +125,7 @@ jobs:
         if [ -n "$SIGNING_SECRET" ]; then HAS_SIGNING_SECRET='true' ; fi
         echo "HAS_SIGNING_SECRET=${HAS_SIGNING_SECRET}" >> "$GITHUB_OUTPUT"
       env:
-        SIGNING_SECRET: "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}"
+        SIGNING_SECRET: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
 
     - name: Setup Certificate
       if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
@@ -282,7 +282,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ['3.10']
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}
@@ -334,15 +334,15 @@ jobs:
         if [ -n "$GLUE_API_URL" ]; then HAS_GLUE_SECRET='true' ; fi
         echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
       env:
-        SIGNING_SECRET: "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}"
-        AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
-        GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
+        SIGNING_SECRET: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
+        AWS_SECRET: ${{ secrets.CHIA_AWS_ACCOUNT_ID }}
+        GLUE_API_URL: ${{ secrets.GLUE_API_URL }}
 
     - name: Install AWS CLI
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
       shell: pwsh
       run: |
-          msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
+        msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
 
     - name: Configure AWS credentials
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
@@ -364,8 +364,8 @@ jobs:
     - name: Create Checksums
       shell: pwsh
       run: |
-         certutil.exe -hashfile ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256
-         ls ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/
+        certutil.exe -hashfile ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256
+        ls ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/
 
     - name: Create torrent
       if: env.FULL_RELEASE == 'true'
@@ -418,17 +418,17 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - name: 2019
-            matrix: 2019
-            runs-on:
-              intel: windows-2019
-          - name: 2022
-            matrix: 2022
-            runs-on:
-              intel: windows-2022
+        - name: 2019
+          matrix: 2019
+          runs-on:
+            intel: windows-2019
+        - name: 2022
+          matrix: 2022
+          runs-on:
+            intel: windows-2022
         arch:
-          - name: Intel
-            matrix: intel
+        - name: Intel
+          matrix: intel
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main

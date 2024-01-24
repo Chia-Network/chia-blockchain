@@ -5,7 +5,7 @@ on:
     paths-ignore:
     - '**.md'
     branches:
-      - main
+    - main
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -21,9 +21,9 @@ jobs:
     name: Trigger building a new `main` tag for the chia-docker image
     runs-on: ubuntu-latest
     steps:
-      - uses: Chia-Network/actions/github/jwt@main
+    - uses: Chia-Network/actions/github/jwt@main
 
-      - name: Trigger docker main workflow via github-glue
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-main/${{ github.sha }}/start
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-main/${{ github.sha }}/success/build-main
+    - name: Trigger docker main workflow via github-glue
+      run: |
+        curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-main/${{ github.sha }}/start
+        curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-main/${{ github.sha }}/success/build-main

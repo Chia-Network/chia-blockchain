@@ -14,14 +14,14 @@ jobs:
     name: Starts Sync Test
     runs-on: ubuntu-latest
     steps:
-      - name: Set Env
-        uses: Chia-Network/actions/setjobenv@main
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Set Env
+      uses: Chia-Network/actions/setjobenv@main
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: Chia-Network/actions/github/jwt@main
+    - uses: Chia-Network/actions/github/jwt@main
 
-      - name: Trigger Workflow
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"test_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/sync-test/$RELEASE_TAG/start
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"test_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/sync-test/$RELEASE_TAG/success/deploy
+    - name: Trigger Workflow
+      run: |
+        curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"test_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/sync-test/$RELEASE_TAG/start
+        curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"test_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/sync-test/$RELEASE_TAG/success/deploy

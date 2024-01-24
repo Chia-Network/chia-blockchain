@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_type:
-        description: 'Tagged release testing scenario'
+        description: Tagged release testing scenario
         required: false
         type: choice
         default: ''
@@ -17,16 +17,16 @@ on:
     paths-ignore:
     - '**.md'
     branches:
-      - 'long_lived/**'
-      - main
-      - 'release/**'
+    - long_lived/**
+    - main
+    - release/**
   release:
     types: [published]
   pull_request:
     paths-ignore:
     - '**.md'
     branches:
-      - '**'
+    - '**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -48,16 +48,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ['3.10']
         os:
-          - runs-on: ubuntu-latest
-            arch: amd64
-            madmax-suffix: "x86-64"
-            bladebit-suffix: "ubuntu-x86-64.tar.gz"
-          - runs-on: [Linux, ARM64]
-            arch: arm64
-            madmax-suffix: "arm64"
-            bladebit-suffix: "ubuntu-arm64.tar.gz"
+        - runs-on: ubuntu-latest
+          arch: amd64
+          madmax-suffix: x86-64
+          bladebit-suffix: ubuntu-x86-64.tar.gz
+        - runs-on: [Linux, ARM64]
+          arch: arm64
+          madmax-suffix: arm64
+          bladebit-suffix: ubuntu-arm64.tar.gz
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
@@ -210,14 +210,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ['3.10']
         os:
-          - runs-on: ubuntu-latest
-            arch: amd64
-            glue-name: "build-amd64-deb"
-          - runs-on: [Linux, ARM64]
-            arch: arm64
-            glue-name: "build-arm64-deb"
+        - runs-on: ubuntu-latest
+          arch: amd64
+          glue-name: build-amd64-deb
+        - runs-on: [Linux, ARM64]
+          arch: arm64
+          glue-name: build-arm64-deb
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}
@@ -266,8 +266,8 @@ jobs:
         if [ -n "$GLUE_API_URL" ]; then HAS_GLUE_SECRET='true' ; fi
         echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
       env:
-        AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
-        GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
+        AWS_SECRET: ${{ secrets.CHIA_AWS_ACCOUNT_ID }}
+        GLUE_API_URL: ${{ secrets.GLUE_API_URL }}
 
     - name: Configure AWS credentials
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
@@ -361,19 +361,19 @@ jobs:
         - name: debian:bullseye
           type: debian
           # https://packages.debian.org/bullseye/python/python3 (3.9)
-          url: "docker://debian:bullseye"
+          url: docker://debian:bullseye
         - name: debian:bookworm
           type: debian
           # https://packages.debian.org/bookworm/python/python3 (3.11)
-          url: "docker://debian:bookworm"
+          url: docker://debian:bookworm
         - name: ubuntu:focal (20.04)
           type: ubuntu
           # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
-          url: "docker://ubuntu:focal"
+          url: docker://ubuntu:focal
         - name: ubuntu:jammy (22.04)
           type: ubuntu
           # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
-          url: "docker://ubuntu:jammy"
+          url: docker://ubuntu:jammy
         mode:
         - name: GUI
           file: chia-blockchain_*.deb
