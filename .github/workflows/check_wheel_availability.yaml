@@ -1,5 +1,4 @@
 name: 🚨 Check Dependency Artifacts
-
 on:
   push:
     branches:
@@ -11,12 +10,10 @@ on:
   pull_request:
     branches:
       - '**'
-
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
-
 jobs:
   check_dependency_artifacts:
     name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python-version }}
@@ -55,17 +52,13 @@ jobs:
               matrix: windows
             arch:
               matrix: arm
-
     steps:
-    - uses: Chia-Network/actions/clean-workspace@main
-
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - uses: Chia-Network/actions/setup-python@main
-      with:
-        python-version: ${{ matrix.python-version }}
-        force-pyenv: ${{ matrix.os.matrix == 'macos' && matrix.arch.matrix == 'intel' }}
-
-    - name: Check Wheel Availability
-      run: python build_scripts/check_dependency_artifacts.py
+      - uses: Chia-Network/actions/clean-workspace@main
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
+          force-pyenv: ${{ matrix.os.matrix == 'macos' && matrix.arch.matrix == 'intel' }}
+      - name: Check Wheel Availability
+        run: python build_scripts/check_dependency_artifacts.py

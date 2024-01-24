@@ -1,9 +1,8 @@
 name: 🚨🚀 Lint and upload source distribution
-
 on:
   push:
     paths-ignore:
-    - '**.md'
+      - '**.md'
     branches:
       - 'long_lived/**'
       - main
@@ -12,19 +11,16 @@ on:
     types: [published]
   pull_request:
     paths-ignore:
-    - '**.md'
+      - '**.md'
     branches:
       - '**'
-
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
-
 permissions:
   contents: read
   id-token: write
-
 jobs:
   mypy:
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
@@ -78,33 +74,25 @@ jobs:
               matrix: windows
             arch:
               matrix: arm
-
     steps:
-    - uses: chia-network/actions/clean-workspace@main
-
-    - name: Add safe git directory
-      uses: chia-network/actions/git-mark-workspace-safe@main
-
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        submodules: recursive
-
-    - uses: chia-network/actions/setup-python@main
-      with:
-        python-version: ${{ matrix.python.major_dot_minor }}
-
-    - uses: ./.github/actions/install
-      with:
-        python-version: ${{ matrix.python.major_dot_minor }}
-        development: true
-
-    - uses: chia-network/actions/activate-venv@main
-
-    - name: Check with ${{ matrix.check.name }}
-      run: |
-        ${{ matrix.check.command }}
-
+      - uses: chia-network/actions/clean-workspace@main
+      - name: Add safe git directory
+        uses: chia-network/actions/git-mark-workspace-safe@main
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: chia-network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+          development: true
+      - uses: chia-network/actions/activate-venv@main
+      - name: Check with ${{ matrix.check.name }}
+        run: |
+          ${{ matrix.check.command }}
   check:
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
@@ -135,33 +123,25 @@ jobs:
             command: |
               python3 -m tests.util.build_network_protocol_files
               git diff --exit-code
-
     steps:
-    - uses: chia-network/actions/clean-workspace@main
-
-    - name: Add safe git directory
-      uses: chia-network/actions/git-mark-workspace-safe@main
-
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        submodules: recursive
-
-    - uses: chia-network/actions/setup-python@main
-      with:
-        python-version: ${{ matrix.python.major_dot_minor }}
-
-    - uses: ./.github/actions/install
-      with:
-        python-version: ${{ matrix.python.major_dot_minor }}
-        development: true
-
-    - uses: chia-network/actions/activate-venv@main
-
-    - name: Check with ${{ matrix.check.name }}
-      run: |
-        ${{ matrix.check.command }}
-
+      - uses: chia-network/actions/clean-workspace@main
+      - name: Add safe git directory
+        uses: chia-network/actions/git-mark-workspace-safe@main
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: chia-network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+          development: true
+      - uses: chia-network/actions/activate-venv@main
+      - name: Check with ${{ matrix.check.name }}
+        run: |
+          ${{ matrix.check.command }}
   upload_source_dist:
     name: Lint and Upload source distribution
     runs-on: [ubuntu-latest]
@@ -170,40 +150,33 @@ jobs:
       - mypy
       - check
     steps:
-    - name: Add safe git directory
-      uses: chia-network/actions/git-mark-workspace-safe@main
-
-    - name: Checkout Code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        submodules: recursive
-
-    - uses: Chia-Network/actions/setup-python@main
-      name: Install Python
-      with:
-        python-version: '3.10'
-
-    - uses: ./.github/actions/install
-      with:
-        python-version: ${{ matrix.python.major_dot_minor }}
-        development: true
-
-    - uses: chia-network/actions/activate-venv@main
-
-    - name: Build source distribution
-      run: |
-        python -m build --sdist --outdir dist .
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist
-        path: ./dist
-
-    - name: Publish distribution to PyPI
-      if: startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        packages-dir: dist/
-        skip-existing: true
+      - name: Add safe git directory
+        uses: chia-network/actions/git-mark-workspace-safe@main
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: Chia-Network/actions/setup-python@main
+        name: Install Python
+        with:
+          python-version: '3.10'
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+          development: true
+      - uses: chia-network/actions/activate-venv@main
+      - name: Build source distribution
+        run: |
+          python -m build --sdist --outdir dist .
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: ./dist
+      - name: Publish distribution to PyPI
+        if: startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          skip-existing: true

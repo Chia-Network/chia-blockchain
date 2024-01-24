@@ -1,7 +1,5 @@
 name: "Install chia-blockchain"
-
 description: "Run the platform appropriate installer script."
-
 inputs:
   python-version:
     description: "Value to be set for INSTALL_PYTHON_VERSION."
@@ -35,7 +33,6 @@ inputs:
     description: "Name of the artifact to upload the constraints file to."
     required: false
     default: ""
-
 runs:
   using: "composite"
   steps:
@@ -46,7 +43,6 @@ runs:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
         ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }} ${{ (fromJSON(inputs.do-system-installs) != true) && '-s' || '' }}
-
     - name: Run install script (Windows)
       if: runner.os == 'windows'
       shell: pwsh
@@ -54,13 +50,11 @@ runs:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
         ${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }}
-
     - name: Create constraints file
       if: inputs.constraints-file-artifact-name != ''
       shell: bash
       run: |
         ${{ runner.os == 'windows' && 'venv/scripts/pip' || 'venv/bin/pip' }} freeze --exclude-editable > venv/constraints.txt
-
     - name: Upload constraints file
       if: inputs.constraints-file-artifact-name != ''
       uses: actions/upload-artifact@v4

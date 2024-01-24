@@ -23,7 +23,6 @@ updates:
     reviewers:
       - "emlowe"
       - "altendky"
-
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -43,7 +42,6 @@ updates:
     reviewers:
       - "cmmarslender"
       - "altendky"
-
   - package-ecosystem: "npm"
     directory: "/"
     # Check for updates once a week

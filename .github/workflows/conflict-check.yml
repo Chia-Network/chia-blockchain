@@ -7,7 +7,6 @@ on:
   # In `pull_request` we wouldn't be able to change labels of fork PRs
   pull_request_target:
     types: [opened, synchronize, reopened]
-
 jobs:
   main:
     runs-on: ubuntu-latest
