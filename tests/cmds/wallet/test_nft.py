@@ -3,14 +3,23 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
+from chia_rs import G2Element
+
+from chia.rpc.wallet_request_types import (
+    NFTAddURIResponse,
+    NFTMintNFTResponse,
+    NFTSetNFTDIDResponse,
+    NFTTransferNFTResponse,
+)
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.signing_mode import SigningMode
+from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
-from tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, get_bytes32
+from tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 
 # NFT Commands
 
@@ -87,7 +96,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             royalty_percentage: int = 0,
             did_id: Optional[str] = None,
             reuse_puzhash: Optional[bool] = None,
-        ) -> dict[str, object]:
+        ) -> NFTMintNFTResponse:
             self.add_to_log(
                 "mint_nft",
                 (
@@ -108,7 +117,13 @@ def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
                     reuse_puzhash,
                 ),
             )
-            return {"spend_bundle": "spend bundle here"}
+            return NFTMintNFTResponse(
+                [STD_UTX],
+                [STD_TX],
+                uint32(wallet_id),
+                SpendBundle([], G2Element()),
+                bytes32([0] * 32).hex(),
+            )
 
     inst_rpc_client = NFTCreateRpcClient()  # pylint: disable=no-value-for-parameter
     target_addr = encode_puzzle_hash(get_bytes32(2), "xch")
@@ -129,7 +144,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
         "--reuse",
     ]
     # these are various things that should be in the output
-    assert_list = ["NFT minted Successfully with spend bundle: spend bundle here"]
+    assert_list = [f"NFT minted Successfully with spend bundle: {STD_TX.spend_bundle}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "get_nft_wallet_did": [(4,)],
@@ -175,9 +190,9 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
             uri: str,
             fee: int,
             tx_config: TXConfig,
-        ) -> dict[str, object]:
+        ) -> NFTAddURIResponse:
             self.add_to_log("add_uri_to_nft", (wallet_id, nft_coin_id, key, uri, fee, tx_config))
-            return {"spend_bundle": "spend bundle here"}
+            return NFTAddURIResponse([STD_UTX], [STD_TX], uint32(wallet_id), SpendBundle([], G2Element()))
 
     inst_rpc_client = NFTAddUriRpcClient()  # pylint: disable=no-value-for-parameter
     nft_coin_id = get_bytes32(2).hex()
@@ -196,7 +211,8 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
         "--reuse",
     ]
     # these are various things that should be in the output
-    assert_list = ["URI added successfully with spend bundle: spend bundle here"]
+    assert STD_TX.spend_bundle is not None
+    assert_list = [f"URI added successfully with spend bundle: {STD_TX.spend_bundle.to_json_dict()}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "add_uri_to_nft": [
@@ -225,9 +241,14 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
             target_address: str,
             fee: int,
             tx_config: TXConfig,
-        ) -> dict[str, object]:
+        ) -> NFTTransferNFTResponse:
             self.add_to_log("transfer_nft", (wallet_id, nft_coin_id, target_address, fee, tx_config))
-            return {"spend_bundle": "spend bundle here"}
+            return NFTTransferNFTResponse(
+                [STD_UTX],
+                [STD_TX],
+                uint32(wallet_id),
+                SpendBundle([], G2Element()),
+            )
 
     inst_rpc_client = NFTTransferRpcClient()  # pylint: disable=no-value-for-parameter
     nft_coin_id = get_bytes32(2).hex()
@@ -247,7 +268,8 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
         "--reuse",
     ]
     # these are various things that should be in the output
-    assert_list = ["NFT transferred successfully with spend bundle: spend bundle here"]
+    assert STD_TX.spend_bundle is not None
+    assert_list = [f"NFT transferred successfully with spend bundle: {STD_TX.spend_bundle.to_json_dict()}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "transfer_nft": [
@@ -331,9 +353,14 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
             nft_coin_id: str,
             fee: int,
             tx_config: TXConfig,
-        ) -> dict[str, object]:
+        ) -> NFTSetNFTDIDResponse:
             self.add_to_log("set_nft_did", (wallet_id, did_id, nft_coin_id, fee, tx_config))
-            return {"spend_bundle": "this is a spend bundle"}
+            return NFTSetNFTDIDResponse(
+                [STD_UTX],
+                [STD_TX],
+                uint32(wallet_id),
+                SpendBundle([], G2Element()),
+            )
 
     inst_rpc_client = NFTSetDidRpcClient()  # pylint: disable=no-value-for-parameter
     nft_coin_id = get_bytes32(2).hex()
@@ -353,7 +380,8 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
         "--reuse",
     ]
     # these are various things that should be in the output
-    assert_list = ["Transaction to set DID on NFT has been initiated with: this is a spend bundle"]
+    assert STD_TX.spend_bundle is not None
+    assert_list = [f"Transaction to set DID on NFT has been initiated with: {STD_TX.spend_bundle.to_json_dict()}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "set_nft_did": [(4, did_id, nft_coin_id, 500000000000, DEFAULT_TX_CONFIG.override(reuse_puzhash=True))],

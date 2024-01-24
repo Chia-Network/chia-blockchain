@@ -58,7 +58,7 @@ def transaction_submitted_msg(tx: TransactionRecord) -> str:
 
 
 def transaction_status_msg(fingerprint: int, tx_id: bytes32) -> str:
-    return f"Run 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status"
+    return f"Run 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id.hex()}' to get status"
 
 
 async def validate_client_connection(

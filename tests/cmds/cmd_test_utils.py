@@ -17,6 +17,7 @@ from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import RpcClient
+from chia.rpc.wallet_request_types import SendTransactionMultiResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -34,6 +35,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from tests.cmds.testing_classes import create_test_block_record
+from tests.cmds.wallet.test_consts import STD_TX, STD_UTX
 
 # Any functions that are the same for every command being tested should be below.
 # Functions that are specific to a command should be in the test file for that command.
@@ -252,26 +254,32 @@ class TestWalletRpcClient(TestRpcClient):
         tx_config: TXConfig,
         coins: Optional[List[Coin]] = None,
         fee: uint64 = uint64(0),
-    ) -> TransactionRecord:
+    ) -> SendTransactionMultiResponse:
         self.add_to_log("send_transaction_multi", (wallet_id, additions, tx_config, coins, fee))
-        return TransactionRecord(
-            confirmed_at_height=uint32(1),
-            created_at_time=uint64(1234),
-            to_puzzle_hash=bytes32([1] * 32),
-            amount=uint64(12345678),
-            fee_amount=uint64(1234567),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=SpendBundle([], G2Element()),
-            additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
-            removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
-            wallet_id=uint32(1),
-            sent_to=[("aaaaa", uint8(1), None)],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32([2] * 32),
-            memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
-            valid_times=ConditionValidTimes(),
+        name = bytes32([2] * 32)
+        return SendTransactionMultiResponse(
+            [STD_UTX],
+            [STD_TX],
+            TransactionRecord(
+                confirmed_at_height=uint32(1),
+                created_at_time=uint64(1234),
+                to_puzzle_hash=bytes32([1] * 32),
+                amount=uint64(12345678),
+                fee_amount=uint64(1234567),
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=SpendBundle([], G2Element()),
+                additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
+                removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
+                wallet_id=uint32(1),
+                sent_to=[("aaaaa", uint8(1), None)],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=name,
+                memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+                valid_times=ConditionValidTimes(),
+            ),
+            name,
         )
 
 
