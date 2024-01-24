@@ -1288,7 +1288,8 @@ class FullNode:
 
         self.log.log(
             logging.WARNING if pre_validate_time > 10 else logging.DEBUG,
-            f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds "
+            f"Block pre-validation: {pre_validate_end - pre_validate_start:0.2f}s "
+            f"CLVM: {sum([pvr.timing/1000.0 for pvr in pre_validation_results]):0.2f}s "
             f"({len(blocks_to_validate)} blocks, start height: {blocks_to_validate[0].height})",
         )
         for i, block in enumerate(blocks_to_validate):
@@ -1804,9 +1805,10 @@ class FullNode:
         )
         self.log.log(
             logging.WARNING if validation_time > 2 else logging.DEBUG,
-            f"Block validation time: {validation_time:0.2f} seconds, "
-            f"pre_validation time: {pre_validation_time:0.2f} seconds, "
-            f"post-process time: {post_process_time:0.2f} seconds, "
+            f"Block validation: {validation_time:0.2f}s, "
+            f"pre_validation: {pre_validation_time:0.2f}s, "
+            f"CLVM: {pre_validation_results[0].timing/1000.0:0.2f}s, "
+            f"post-process: {post_process_time:0.2f}s, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
             f"{percent_full_str} header_hash: {header_hash.hex()} height: {block.height}",
         )

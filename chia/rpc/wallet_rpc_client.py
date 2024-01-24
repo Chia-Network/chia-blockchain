@@ -436,7 +436,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> Dict[str, Any]:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "new_list": recovery_list,
             "num_verifications_required": num_verification,
@@ -461,7 +461,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = False,
     ) -> Dict[str, Any]:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
             "push": push,
@@ -480,7 +480,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> Dict[str, Any]:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "metadata": metadata,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
@@ -556,7 +556,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> Dict[str, Any]:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "inner_address": address,
             "fee": fee,
@@ -920,7 +920,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> Dict[str, Any]:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "royalty_address": royalty_address,
             "target_address": target_address,
@@ -955,7 +955,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> Dict[str, Any]:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
             "uri": uri,
@@ -1001,7 +1001,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> Dict[str, Any]:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
             "target_address": target_address,
@@ -1035,7 +1035,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> Dict[str, Any]:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "did_id": did_id,
             "nft_coin_id": nft_coin_id,

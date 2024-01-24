@@ -728,7 +728,7 @@ class Blockchain(BlockchainInterface):
         required_iters, error = await self.validate_unfinished_block_header(block, skip_overflow_ss_validation)
 
         if error is not None:
-            return PreValidationResult(uint16(error.value), None, None, False)
+            return PreValidationResult(uint16(error.value), None, None, False, uint32(0))
 
         prev_height = (
             -1
@@ -753,9 +753,9 @@ class Blockchain(BlockchainInterface):
         )
 
         if error_code is not None:
-            return PreValidationResult(uint16(error_code.value), None, None, False)
+            return PreValidationResult(uint16(error_code.value), None, None, False, uint32(0))
 
-        return PreValidationResult(None, required_iters, cost_result, False)
+        return PreValidationResult(None, required_iters, cost_result, False, uint32(0))
 
     async def pre_validate_blocks_multiprocessing(
         self,
