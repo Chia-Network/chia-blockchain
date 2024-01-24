@@ -228,9 +228,9 @@ jobs:
           mv notchia/ chia/
 
       - name: Publish JUnit results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: junit-data
+          name: junit-data-${{ env.JOB_FILE_NAME }}
           path: junit-data/*
           if-no-files-found: error
 
@@ -243,9 +243,9 @@ jobs:
           coverage report --rcfile=.coveragerc --show-missing
 
       - name: Publish coverage data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage-data
+          name: coverage-data-${{ env.JOB_FILE_NAME }}
           path: coverage-data/*
           if-no-files-found: error
 

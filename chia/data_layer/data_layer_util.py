@@ -43,6 +43,10 @@ def leaf_hash(key: bytes, value: bytes) -> bytes32:
     return Program.to((key, value)).get_tree_hash()  # type: ignore[no-any-return]
 
 
+def key_hash(key: bytes) -> bytes32:
+    return Program.to(key).get_tree_hash()  # type: ignore[no-any-return]
+
+
 async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
     async with db.reader() as reader:
         cursor = await reader.execute("SELECT name FROM sqlite_master WHERE type='table';")

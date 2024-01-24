@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import random
-from dataclasses import replace
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import chia_rs
@@ -501,10 +500,7 @@ def unfinished_block_to_full_block(
         is_transaction_block,
     )
     if prev_block is None:
-        new_foliage = replace(
-            unfinished_block.foliage,
-            reward_block_hash=reward_chain_block.get_hash(),
-        )
+        new_foliage = unfinished_block.foliage.replace(reward_block_hash=reward_chain_block.get_hash())
     else:
         if is_transaction_block:
             new_fbh = unfinished_block.foliage.foliage_transaction_block_hash
@@ -513,8 +509,7 @@ def unfinished_block_to_full_block(
             new_fbh = None
             new_fbs = None
         assert (new_fbh is None) == (new_fbs is None)
-        new_foliage = replace(
-            unfinished_block.foliage,
+        new_foliage = unfinished_block.foliage.replace(
             reward_block_hash=reward_chain_block.get_hash(),
             prev_block_hash=prev_block.header_hash,
             foliage_transaction_block_hash=new_fbh,

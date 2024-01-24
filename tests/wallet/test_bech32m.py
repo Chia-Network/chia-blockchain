@@ -6,7 +6,7 @@ from __future__ import annotations
 from chia.util.bech32m import bech32_decode
 
 
-def test_valid_imports():
+def test_valid_imports() -> None:
     test_strings = [
         "A1LQFN3A",
         "a1lqfn3a",
@@ -18,11 +18,11 @@ def test_valid_imports():
         "?1v759aa",
     ]
     for test_str in test_strings:
-        hrp, data = bech32_decode(test_str)
+        _, data = bech32_decode(test_str)
         assert data is not None
 
 
-def test_invalid_imports():
+def test_invalid_imports() -> None:
     test_strings = [
         f"{0x20}1xj0phk",
         f"{0x7F}1g6xzxy",
@@ -41,5 +41,5 @@ def test_invalid_imports():
         "1p2gdwpf",
     ]
     for test_str in test_strings:
-        hrp, data = bech32_decode(test_str)
+        _, data = bech32_decode(test_str)
         assert data is None
