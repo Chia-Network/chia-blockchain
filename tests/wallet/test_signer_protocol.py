@@ -550,6 +550,19 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         assert response.signing_instructions == not_our_utx.signing_instructions
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "trusted": True,
+            "reuse_puzhash": True,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
 async def test_signer_commands(wallet_environments: WalletTestFramework) -> None:
     wallet: Wallet = wallet_environments.environments[0].xch_wallet
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
@@ -865,7 +878,7 @@ def test_qr_code_display(monkeypatch: pytest.MonkeyPatch) -> None:
 
     def new_start(self, *args) -> None:  # type: ignore[no-untyped-def]
         old_start(self)
-        time.sleep(5)
+        time.sleep(11)
 
     monkeypatch.setattr(Thread, "start", new_start)
 
@@ -883,7 +896,7 @@ def test_qr_code_display(monkeypatch: pytest.MonkeyPatch) -> None:
     runner = CliRunner()
     result = runner.invoke(
         cmd,
-        ["temp_cmd", "--qr-density", str(int(len(bytes_to_encode) / 2)), "--rotation-speed", "3"],
+        ["temp_cmd", "--qr-density", str(int(len(bytes_to_encode) / 2)), "--rotation-speed", "6"],
         input="\n",
         catch_exceptions=False,
     )
