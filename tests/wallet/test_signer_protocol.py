@@ -58,7 +58,7 @@ def test_signing_serialization() -> None:
         TransactionInfo([Spend.from_coin_spend(coin_spend)]),
         SigningInstructions(
             KeyHints([], []),
-            [SigningTarget(bytes(pubkey), message, bytes32([1] * 32))],
+            [SigningTarget(pubkey.get_fingerprint().to_bytes(4, "big"), message, bytes32([1] * 32))],
         ),
     )
 
@@ -233,6 +233,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         SumHint(
             [pubkey.get_fingerprint().to_bytes(4, "big")],
             calculate_synthetic_offset(pubkey, DEFAULT_HIDDEN_PUZZLE_HASH).to_bytes(32, "big"),
+            wallet_state_manager.main_wallet.puzzle_for_pk(pubkey).uncurry()[1].at("f").as_atom(),
         )
     ]
     assert utx.signing_instructions.key_hints.path_hints == [
@@ -242,7 +243,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         )
     ]
     assert len(utx.signing_instructions.targets) == 1
-    assert utx.signing_instructions.targets[0].pubkey == bytes(synthetic_pubkey)
+    assert utx.signing_instructions.targets[0].fingerprint == synthetic_pubkey.get_fingerprint().to_bytes(4, "big")
     assert utx.signing_instructions.targets[0].message == message
 
     signing_responses: List[SigningResponse] = await wallet_state_manager.execute_signing_instructions(
@@ -255,7 +256,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     # Now test that we can partially sign a transaction
     ACS: Program = Program.to(1)
     ACS_PH: Program = Program.to(1).get_tree_hash()
-    not_our_private_key: PrivateKey = PrivateKey.from_bytes(bytes(32))
+    not_our_private_key: PrivateKey = PrivateKey.from_bytes(bytes([1] * 32))
     not_our_pubkey: G1Element = not_our_private_key.get_g1()
     not_our_message: bytes = b"not our message"
     not_our_coin: ConsensusCoin = ConsensusCoin(
@@ -275,9 +276,13 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     )
     assert not_our_utx.signing_instructions.key_hints == utx.signing_instructions.key_hints
     assert len(not_our_utx.signing_instructions.targets) == 2
-    assert not_our_utx.signing_instructions.targets[0].pubkey == bytes(synthetic_pubkey)
+    assert not_our_utx.signing_instructions.targets[0].fingerprint == synthetic_pubkey.get_fingerprint().to_bytes(
+        4, "big"
+    )
     assert not_our_utx.signing_instructions.targets[0].message == bytes(message)
-    assert not_our_utx.signing_instructions.targets[1].pubkey == bytes(not_our_pubkey)
+    assert not_our_utx.signing_instructions.targets[1].fingerprint == not_our_pubkey.get_fingerprint().to_bytes(
+        4, "big"
+    )
     assert not_our_utx.signing_instructions.targets[1].message == bytes(not_our_message)
     not_our_signing_instructions: SigningInstructions = not_our_utx.signing_instructions
     with pytest.raises(ValueError, match=r"not found \(or path/sum hinted to\)"):
@@ -289,7 +294,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
                 not_our_signing_instructions.key_hints,
                 sum_hints=[
                     *not_our_signing_instructions.key_hints.sum_hints,
-                    SumHint([bytes(not_our_pubkey)], b""),
+                    SumHint([bytes(not_our_pubkey)], b"", bytes(G1Element())),
                 ],
             ),
         )

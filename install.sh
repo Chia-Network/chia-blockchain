@@ -210,7 +210,9 @@ elif [ "$(uname)" = "Linux" ]; then
     echo "Installing on Arch Linux."
     case $(uname -m) in
       x86_64|aarch64)
-        sudo pacman ${PACMAN_AUTOMATED} -S --needed git openssl
+        if ! pacman -Qs "^git$" > /dev/null || ! pacman -Qs "^openssl$" > /dev/null ; then
+          sudo pacman ${PACMAN_AUTOMATED} -S --needed git openssl
+        fi
         ;;
       *)
         echo "Incompatible CPU architecture. Must be x86_64 or aarch64."

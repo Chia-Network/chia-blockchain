@@ -109,12 +109,14 @@ class ForkInfo:
                 self.removals_since_fork[bytes32(spend.coin_id)] = ForkRem(bytes32(spend.puzzle_hash), height)
                 for puzzle_hash, amount, hint in spend.create_coin:
                     coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
-                    self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
+                    self.additions_since_fork[coin.name()] = ForkAdd(
+                        coin, uint32(height), uint64(timestamp), hint, False
+                    )
         for coin in block.get_included_reward_coins():
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
             assert coin.name() not in self.additions_since_fork
-            self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
+            self.additions_since_fork[coin.name()] = ForkAdd(coin, uint32(block.height), uint64(timestamp), None, True)
 
 
 async def validate_block_body(
@@ -391,7 +393,7 @@ async def validate_block_body(
                 height,
                 height,
                 False,
-                block.foliage_transaction_block.timestamp,
+                uint64(block.foliage_transaction_block.timestamp),
             )
             removal_coin_records[new_unspent.name] = new_unspent
         else:
@@ -490,7 +492,7 @@ async def validate_block_body(
         block_timestamp: uint64
         if height < constants.SOFT_FORK2_HEIGHT:
             # this does not happen on mainnet. testnet10 only
-            block_timestamp = block.foliage_transaction_block.timestamp  # pragma: no cover
+            block_timestamp = uint64(block.foliage_transaction_block.timestamp)  # pragma: no cover
         else:
             block_timestamp = prev_transaction_block_timestamp
 

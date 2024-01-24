@@ -224,7 +224,7 @@ def test_proposal() -> None:
 
     with pytest.raises(ValueError) as e_info:
         conditions_dict_for_solution(full_proposal, repeat_solution_2, INFINITE_COST)
-    assert e_info.value.args[0] == "clvm raise"
+    assert "clvm raise" in e_info.value.args[0]
 
     # Test Launch
     current_yes_votes = 0
@@ -937,7 +937,7 @@ def test_lockup() -> None:
     )
     with pytest.raises(ValueError) as e_info:
         conds = full_lockup_puz.run(revote_solution)
-    assert e_info.value.args[0] == "clvm raise"
+    assert "clvm raise" in e_info.value.args[0]
 
     # Test vote removal
     solution = Program.to(

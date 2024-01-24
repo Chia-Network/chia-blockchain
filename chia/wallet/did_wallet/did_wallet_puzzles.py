@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Iterator, List, Optional, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Tuple, Union, cast
 
 from chia_rs import G1Element
 
@@ -48,7 +48,7 @@ def create_innerpuz(
     Note: Receiving a standard P2 puzzle hash wouldn't calculate a valid puzzle, but
     that can be useful if calling `.get_tree_hash_precalc()` on it.
     """
-    backup_ids_hash = Program(Program.to(recovery_list)).get_tree_hash()
+    backup_ids_hash = Program.to(recovery_list).get_tree_hash()
     if recovery_list_hash is not None:
         backup_ids_hash = recovery_list_hash
     singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
@@ -123,7 +123,7 @@ def create_recovery_message_puzzle(recovering_coin_id: bytes32, newpuz: bytes32,
     :param pubkey: New wallet pubkey
     :return: Message puzzle
     """
-    return Program.to(
+    puzzle = Program.to(
         (
             1,
             [
@@ -132,6 +132,8 @@ def create_recovery_message_puzzle(recovering_coin_id: bytes32, newpuz: bytes32,
             ],
         )
     )
+    # TODO: Remove cast when we have proper hinting for this
+    return cast(Program, puzzle)
 
 
 def create_spend_for_message(
@@ -153,7 +155,7 @@ def create_spend_for_message(
 
 def match_did_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:
     """
-        Given a puzzle test if it's a DID, if it is, return the curried arguments
+    Given a puzzle test if it's a DID, if it is, return the curried arguments
     :param puzzle: Puzzle
     :return: Curried parameters
     """
@@ -161,7 +163,8 @@ def match_did_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[P
         if mod == SINGLETON_TOP_LAYER_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DID_INNERPUZ_MOD:
-                return curried_args.as_iter()
+                # TODO: Remove cast when we have clvm type hinting for this
+                return cast(Iterator[Program], curried_args.as_iter())
     except Exception:
         import traceback
 
@@ -178,11 +181,11 @@ def check_is_did_puzzle(puzzle: Program) -> bool:
     r = puzzle.uncurry()
     if r is None:
         return False
-    inner_f, args = r
+    inner_f, _ = r
     return is_singleton(inner_f)
 
 
-def metadata_to_program(metadata: Dict) -> Program:
+def metadata_to_program(metadata: Dict[str, str]) -> Program:
     """
     Convert the metadata dict to a Chialisp program
     :param metadata: User defined metadata
@@ -191,10 +194,11 @@ def metadata_to_program(metadata: Dict) -> Program:
     kv_list = []
     for key, value in metadata.items():
         kv_list.append((key, value))
-    return Program.to(kv_list)
+    # TODO: Remove cast when we have proper hinting for this
+    return cast(Program, Program.to(kv_list))
 
 
-def did_program_to_metadata(program: Program) -> Dict:
+def did_program_to_metadata(program: Program) -> Dict[str, str]:
     """
     Convert a program to a metadata dict
     :param program: Chialisp program contains the metadata
