@@ -1830,6 +1830,8 @@ class WalletRpcApi:
                     "requested": requested,
                     "fees": offer.fees(),
                     "infos": infos,
+                    "additions": [c.name().hex() for c in offer.additions()],
+                    "removals": [c.name().hex() for c in offer.removals()],
                     "valid_times": {
                         k: v
                         for k, v in valid_times.to_json_dict().items()
