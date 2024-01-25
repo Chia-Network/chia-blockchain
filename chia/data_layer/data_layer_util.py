@@ -766,6 +766,15 @@ class HashOnlyProof(Streamable):
             return self.node_hash
         return self.layers[-1].combined_hash
 
+    @classmethod
+    def from_key_value(cls, key: bytes, value: bytes, node_hash: bytes32, layers: List[ProofLayer]) -> HashOnlyProof:
+        return cls(
+            key_clvm_hash=Program.to(key).get_tree_hash(),
+            value_clvm_hash=Program.to(value).get_tree_hash(),
+            node_hash=node_hash,
+            layers=layers,
+        )
+
 
 @streamable
 @dataclasses.dataclass(frozen=True)

@@ -12,7 +12,6 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from tests.conftest import ConsensusMode
@@ -237,9 +236,10 @@ class TestWalletRpc:
         wallet_node = wallet_service._node
 
         # Create fake proof
-        fakeproof = HashOnlyProof(
-            key_clvm_hash=std_hash(b"\1" + b"key"),
-            value_clvm_hash=std_hash(b"\1" + b"value"),
+        # Specifically
+        fakeproof = HashOnlyProof.from_key_value(
+            key=b"key",
+            value=b"value",
             node_hash=bytes32([1] * 32),
             layers=[
                 ProofLayer(

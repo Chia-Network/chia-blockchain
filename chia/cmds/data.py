@@ -51,26 +51,15 @@ def create_changelist_option() -> Callable[[FC], FC]:
     )
 
 
-def create_key_option() -> Callable[[FC], FC]:
+def create_key_option(multiple: bool = False) -> Callable[[FC], FC]:
     return click.option(
         "-k",
         "--key",
-        "key_string",
+        "key_strings" if multiple else "key_string",
         help="str representing the key",
         type=str,
         required=True,
-    )
-
-
-def create_multiple_keys_option() -> Callable[[FC], FC]:
-    return click.option(
-        "-k",
-        "--key",
-        "key_strings",
-        help="str representing the key",
-        type=str,
-        required=True,
-        multiple=True,
+        multiple=multiple,
     )
 
 
@@ -550,7 +539,7 @@ def wallet_log_in(
 )
 @create_data_store_id_option()
 @create_rpc_port_option()
-@create_multiple_keys_option()
+@create_key_option(multiple=True)
 @options.create_fingerprint()
 def get_proof(
     id: str,

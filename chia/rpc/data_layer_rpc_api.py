@@ -28,7 +28,6 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_of
 from chia.rpc.data_layer_rpc_util import marshal
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.rpc.util import marshal as streamable_marshal
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
@@ -480,9 +479,9 @@ class DataLayerRpcApi:
             key_value = await self.service.get_value(store_id=request.store_id, key=key)
             pi = await self.service.data_store.get_proof_of_inclusion_by_key(tree_id=request.store_id, key=key)
 
-            proof = HashOnlyProof(
-                key_clvm_hash=Program.to(key).get_tree_hash(),
-                value_clvm_hash=Program.to(key_value).get_tree_hash(),
+            proof = HashOnlyProof.from_key_value(
+                key=key,
+                value=key_value,
                 node_hash=pi.node_hash,
                 layers=[
                     ProofLayer(
