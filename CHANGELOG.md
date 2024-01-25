@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.1.4 Chia blockchain 2024-01-10
+
+### Fixed
+* Update chia_rs to 0.2.15 for AMD K10 architecture (fixes #16386)
+
+### Changed
+* improved CPU usage due to tight loop in `send_transaction()`
+* improve performance of `total_mempool_fees()` and `total_mempool_cost()`
+* reduced the default maximum peer count to 40 from 80 (only applies to new configs)
+* changed to `normal` SQlite db sync option (previously was `full`)
+* reduced the mempool size to 10 blocks from 50 blocks (improves performance)
+* improve performance of the mempool by batch fetching items from the db
+
+
 ## 2.1.3 Chia blockchain 2023-12-18
 
 ### Fixed

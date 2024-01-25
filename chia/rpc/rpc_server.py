@@ -376,7 +376,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
                         autoclose=True,
                         autoping=True,
                         heartbeat=self.daemon_heartbeat,
-                        ssl_context=self.ssl_client_context,
+                        ssl=self.ssl_client_context,
                         max_msg_size=max_message_size,
                     )
                     await self.connection(self.websocket)

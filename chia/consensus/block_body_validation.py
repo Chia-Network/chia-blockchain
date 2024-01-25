@@ -109,12 +109,21 @@ class ForkInfo:
                 self.removals_since_fork[bytes32(spend.coin_id)] = ForkRem(bytes32(spend.puzzle_hash), height)
                 for puzzle_hash, amount, hint in spend.create_coin:
                     coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
-                    self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
+                    self.additions_since_fork[coin.name()] = ForkAdd(
+                        coin, uint32(height), uint64(timestamp), hint, False
+                    )
         for coin in block.get_included_reward_coins():
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
             assert coin.name() not in self.additions_since_fork
-            self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
+            self.additions_since_fork[coin.name()] = ForkAdd(coin, uint32(block.height), uint64(timestamp), None, True)
+
+    def rollback(self, header_hash: bytes32, height: int) -> None:
+        assert height <= self.peak_height
+        self.peak_height = height
+        self.peak_hash = header_hash
+        self.additions_since_fork = {k: v for k, v in self.additions_since_fork.items() if v.confirmed_height <= height}
+        self.removals_since_fork = {k: v for k, v in self.removals_since_fork.items() if v.height <= height}
 
 
 async def validate_block_body(
@@ -294,7 +303,7 @@ async def validate_block_body(
         # Get List of names removed, puzzles hashes for removed coins and conditions created
 
         assert npc_result is not None
-        cost = npc_result.cost
+        cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
 
         # 7. Check that cost <= MAX_BLOCK_COST_CLVM
         log.debug(
@@ -391,7 +400,7 @@ async def validate_block_body(
                 height,
                 height,
                 False,
-                block.foliage_transaction_block.timestamp,
+                uint64(block.foliage_transaction_block.timestamp),
             )
             removal_coin_records[new_unspent.name] = new_unspent
         else:
@@ -399,6 +408,7 @@ async def validate_block_body(
             # and coins created after fork (additions_since_fork)
             if rem in fork_info.removals_since_fork:
                 # This coin was spent in the fork
+                log.error(f"Err.DOUBLE_SPEND_IN_FORK {fork_info.removals_since_fork[rem]}")
                 return Err.DOUBLE_SPEND_IN_FORK, None
             removals_from_db.append(rem)
 
@@ -431,7 +441,7 @@ async def validate_block_body(
         # This coin is not in the current heaviest chain, so it must be in the fork
         if rem not in fork_info.additions_since_fork:
             # Check for spending a coin that does not exist in this fork
-            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
+            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} fork_info: {fork_info}")
             return Err.UNKNOWN_UNSPENT, None
         addition: ForkAdd = fork_info.additions_since_fork[rem]
         new_coin_record: CoinRecord = CoinRecord(
@@ -490,7 +500,7 @@ async def validate_block_body(
         block_timestamp: uint64
         if height < constants.SOFT_FORK2_HEIGHT:
             # this does not happen on mainnet. testnet10 only
-            block_timestamp = block.foliage_transaction_block.timestamp  # pragma: no cover
+            block_timestamp = uint64(block.foliage_transaction_block.timestamp)  # pragma: no cover
         else:
             block_timestamp = prev_transaction_block_timestamp
 

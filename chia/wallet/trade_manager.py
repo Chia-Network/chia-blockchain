@@ -536,7 +536,7 @@ class TradeManager:
             fee_left_to_pay: uint64 = fee
             # The access of the sorted keys here makes sure we create the XCH transaction first to make sure we pay fee
             # with the XCH side of the offer and don't create an extra fee transaction in other wallets.
-            for id in sorted(coins_to_offer.keys()):
+            for id in sorted(coins_to_offer.keys(), key=lambda id: id != 1):
                 selected_coins = coins_to_offer[id]
                 if isinstance(id, int):
                     wallet = self.wallet_state_manager.wallets[id]
@@ -919,6 +919,8 @@ class TradeManager:
             "offered": offered,
             "requested": requested,
             "fees": offer.fees(),
+            "additions": [c.name().hex() for c in offer.additions()],
+            "removals": [c.name().hex() for c in offer.removals()],
             "infos": infos,
             "valid_times": {
                 k: v

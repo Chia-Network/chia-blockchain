@@ -119,9 +119,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: junit-data
+          merge-multiple: true
+          pattern: junit-data-*
           path: junit-data
 
       - name: Format JUnit data and prepare results
@@ -135,7 +136,7 @@ jobs:
           ls junit-results/*.xml | xargs --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
 
       - name: Publish formatted JUnit data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: junit-data
           path: junit-data/*
@@ -143,16 +144,17 @@ jobs:
 
       - name: Publish JUnit results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: junit-results
           path: junit-results/*
           if-no-files-found: error
 
       - name: Download Coverage
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: coverage-data
+          merge-multiple: true
+          pattern: coverage-data-*
           path: coverage-data
 
       - name: Set up ${{ matrix.python.name }}
@@ -217,7 +219,7 @@ jobs:
           if [[ -n "$COMMENT_ID" ]]; then
             gh api -X DELETE /repos/"${ORG_REPO}"/issues/comments/"${COMMENT_ID}"
           fi
-          if [[ "$COV_STATUS" != '0' ]]; then
+          if [[ "$COV_STATUS" == '0' ]]; then
             if [[ "$COVERAGE_LABEL" == "coverage-diff" ]]; then
               gh pr edit "$PR_NUM" --remove-label "coverage-diff"
             fi
@@ -280,7 +282,7 @@ jobs:
 
       - name: Publish coverage reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
           path: coverage-reports/*

@@ -8,11 +8,12 @@ from pathlib import Path
 from time import monotonic
 from typing import List, Tuple
 
-from benchmarks.utils import rand_hash, rewards, setup_db
+from benchmarks.utils import setup_db
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
+from tests.util.benchmarks import rand_hash, rewards
 
 # to run this benchmark:
 # python -m benchmarks.coin_store

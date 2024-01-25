@@ -47,7 +47,7 @@ def make_mempoolitem() -> MempoolItem:
     mempool_item = MempoolItem(
         spend_bundle,
         fee,
-        NPCResult(None, conds, cost),
+        NPCResult(None, conds),
         spend_bundle.name(),
         uint32(block_height),
     )

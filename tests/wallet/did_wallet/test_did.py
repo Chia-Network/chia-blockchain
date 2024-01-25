@@ -23,6 +23,8 @@ from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_state_manager import WalletStateManager
+from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from tests.util.setup_nodes import OldSimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 
@@ -109,9 +111,7 @@ class TestDIDWallet:
 
         #######################
         all_node_0_wallets = await wallet_node_0.wallet_state_manager.user_store.get_all_wallet_info_entries()
-        print(f"Node 0: {all_node_0_wallets}")
         all_node_1_wallets = await wallet_node_1.wallet_state_manager.user_store.get_all_wallet_info_entries()
-        print(f"Node 1: {all_node_1_wallets}")
         assert (
             json.loads(all_node_0_wallets[1].data)["current_inner"]
             == json.loads(all_node_1_wallets[1].data)["current_inner"]
@@ -1242,9 +1242,7 @@ class TestDIDWallet:
 
         #######################
         all_node_0_wallets = await wallet_node_0.wallet_state_manager.user_store.get_all_wallet_info_entries()
-        print(f"Node 0: {all_node_0_wallets}")
         all_node_1_wallets = await wallet_node_1.wallet_state_manager.user_store.get_all_wallet_info_entries()
-        print(f"Node 1: {all_node_1_wallets}")
         assert len(all_node_0_wallets) == len(all_node_1_wallets)
 
         # Note that the inner program we expect is different than the on-chain inner.
@@ -1342,3 +1340,68 @@ class TestDIDWallet:
         await time_out_assert(30, get_wallet_num, 2, wallet_node_2.wallet_state_manager)
         did_wallet_2 = wallet_node_2.wallet_state_manager.get_wallet(uint32(2), DIDWallet)
         assert did_info == did_wallet_2.did_info
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_did_coin_records(wallet_environments: WalletTestFramework, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Setup
+    wallet_node = wallet_environments.environments[0].node
+    wallet = wallet_environments.environments[0].xch_wallet
+    client = wallet_environments.environments[0].rpc_client
+
+    # Generate DID wallet
+    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(wallet_node.wallet_state_manager, wallet, uint64(1))
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {"set_remainder": True},
+                    2: {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    1: {"set_remainder": True},
+                    2: {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
+
+    # When transfer_did doesn't push the transactions automatically, this monkeypatching is no longer necessary
+    with monkeypatch.context() as m:
+
+        async def nothing(*args) -> None:
+            pass
+
+        m.setattr(WalletStateManager, "add_pending_transaction", nothing)
+        for _ in range(0, 2):
+            tx = await did_wallet.transfer_did(
+                await wallet.get_puzzle_hash(new=False), uint64(0), True, wallet_environments.tx_config
+            )
+            assert tx.spend_bundle is not None
+            await client.push_tx(tx.spend_bundle)
+            await wallet_environments.process_pending_states(
+                [
+                    WalletStateTransition(
+                        pre_block_balance_updates={},
+                        post_block_balance_updates={
+                            1: {"set_remainder": True},
+                            2: {"set_remainder": True},
+                        },
+                    ),
+                    WalletStateTransition(),
+                ]
+            )
+
+    assert len(await wallet.wallet_state_manager.get_spendable_coins_for_wallet(did_wallet.id())) == 1

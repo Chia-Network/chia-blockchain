@@ -166,7 +166,7 @@ async def test_notifications(
     assert len(notifications) == 1
     assert notifications[0].message == b"allow_larger"
     assert (
-        await notification_manager_2.notification_store.get_notifications([n.coin_id for n in notifications])
+        await notification_manager_2.notification_store.get_notifications([n.id for n in notifications])
         == notifications
     )
 
@@ -176,7 +176,7 @@ async def test_notifications(
     await notification_manager_2.notification_store.delete_all_notifications()
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
     await notification_manager_2.notification_store.add_notification(notifications[0])
-    await notification_manager_2.notification_store.delete_notifications([n.coin_id for n in notifications])
+    await notification_manager_2.notification_store.delete_notifications([n.id for n in notifications])
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
 
     assert not await func(*notification_manager_2.most_recent_args)

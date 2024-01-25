@@ -100,7 +100,7 @@ def make_item(idx: int, cost: uint64 = uint64(80), assert_height=100) -> Mempool
     return MempoolItem(
         SpendBundle([], G2Element()),
         uint64(0),
-        NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost, 0, 0), cost),
+        NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost, 0, 0)),
         spend_bundle_name,
         uint32(0),
         assert_height,
@@ -2134,7 +2134,8 @@ class TestGeneratorConditions:
             height=softfork_height,
         )
         assert npc_result.error is None
-        assert npc_result.cost == generator_base_cost + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value
+        assert npc_result.conds is not None
+        assert npc_result.conds.cost == generator_base_cost + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value
         assert len(npc_result.conds.spends) == 1
         assert len(npc_result.conds.spends[0].create_coin) == 1
 
@@ -2186,7 +2187,8 @@ class TestGeneratorConditions:
             height=softfork_height,
         )
         assert npc_result.error is None
-        assert npc_result.cost == generator_base_cost + 117 * COST_PER_BYTE + expected_cost
+        assert npc_result.conds is not None
+        assert npc_result.conds.cost == generator_base_cost + 117 * COST_PER_BYTE + expected_cost
         assert len(npc_result.conds.spends) == 1
 
         # if we subtract one from max cost, this should fail

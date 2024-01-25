@@ -16,6 +16,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
+from chia.util.streamable import InvalidTypeError
 
 
 @pytest.fixture(scope="function")
@@ -155,8 +156,8 @@ async def test_cost_invalid_type(setup_node_and_rpc: Tuple[FullNodeRpcClient, Fu
 @pytest.mark.anyio
 async def test_tx_invalid_type(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
     client, full_node_rpc_api = setup_node_and_rpc
-    with pytest.raises(TypeError):
-        await full_node_rpc_api.get_fee_estimate({"target_times": [], "spend_bundle": 1})
+    with pytest.raises(InvalidTypeError):
+        await full_node_rpc_api.get_fee_estimate({"target_times": [], "spend_bundle": {"coin_spends": 1}})
 
 
 #####################
