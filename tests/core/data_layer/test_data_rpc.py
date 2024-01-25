@@ -425,6 +425,11 @@ async def test_keys_values_ancestors(
         assert len(pairs_before["keys_values"]) == len(keys_before["keys"]) == 5
         assert len(pairs_after["keys_values"]) == len(keys_after["keys"]) == 7
 
+        with pytest.raises(Exception, match="Can't find keys"):
+            await data_rpc_api.get_keys({"id": store_id.hex(), "root_hash": bytes32([0] * 31 + [1]).hex()})
+        with pytest.raises(Exception, match="Can't find keys and values"):
+            await data_rpc_api.get_keys_values({"id": store_id.hex(), "root_hash": bytes32([0] * 31 + [1]).hex()})
+
 
 @pytest.mark.anyio
 async def test_get_roots(
@@ -2521,3 +2526,56 @@ async def test_pagination_rpcs(
         assert diff_res["total_pages"] == 3
         assert diff_res["total_bytes"] == 13
         assert len(diff_res["diff"]) == 0
+
+        with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
+            keys_paginated = await data_rpc_api.get_keys_values({"id": store_id.hex(), "page": 0, "max_page_size": 1})
+        with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
+            keys_values_paginated = await data_rpc_api.get_keys_values(
+                {"id": store_id.hex(), "page": 0, "max_page_size": 1}
+            )
+        with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
+            diff_res = await data_rpc_api.get_kv_diff(
+                {
+                    "id": store_id.hex(),
+                    "hash_1": hash1.hex(),
+                    "hash_2": hash2.hex(),
+                    "page": 0,
+                    "max_page_size": 1,
+                }
+            )
+
+        diff_res = await data_rpc_api.get_kv_diff(
+            {
+                "id": store_id.hex(),
+                "hash_1": hash1.hex(),
+                "hash_2": bytes32([0] * 31 + [1]).hex(),
+                "page": 0,
+                "max_page_size": 10,
+            }
+        )
+        assert diff_res["total_pages"] == 1
+        assert diff_res["total_bytes"] == 0
+        assert len(diff_res["diff"]) == 0
+
+        diff_res = await data_rpc_api.get_kv_diff(
+            {
+                "id": store_id.hex(),
+                "hash_1": bytes32([0] * 31 + [1]).hex(),
+                "hash_2": hash2.hex(),
+                "page": 0,
+                "max_page_size": 10,
+            }
+        )
+        assert diff_res["total_pages"] == 1
+        assert diff_res["total_bytes"] == 0
+        assert len(diff_res["diff"]) == 0
+
+        with pytest.raises(Exception, match="Can't find keys"):
+            await data_rpc_api.get_keys(
+                {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()}
+            )
+
+        with pytest.raises(Exception, match="Can't find keys and values"):
+            await data_rpc_api.get_keys_values(
+                {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()}
+            )
