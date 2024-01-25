@@ -2527,23 +2527,6 @@ async def test_pagination_rpcs(
         assert diff_res["total_bytes"] == 13
         assert len(diff_res["diff"]) == 0
 
-        with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
-            keys_paginated = await data_rpc_api.get_keys_values({"id": store_id.hex(), "page": 0, "max_page_size": 1})
-        with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
-            keys_values_paginated = await data_rpc_api.get_keys_values(
-                {"id": store_id.hex(), "page": 0, "max_page_size": 1}
-            )
-        with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
-            diff_res = await data_rpc_api.get_kv_diff(
-                {
-                    "id": store_id.hex(),
-                    "hash_1": hash1.hex(),
-                    "hash_2": hash2.hex(),
-                    "page": 0,
-                    "max_page_size": 1,
-                }
-            )
-
         diff_res = await data_rpc_api.get_kv_diff(
             {
                 "id": store_id.hex(),
@@ -2570,6 +2553,32 @@ async def test_pagination_rpcs(
         assert diff_res["total_bytes"] == 0
         assert len(diff_res["diff"]) == 0
 
+        new_value = b"\x02\x02"
+        changelist = [{"action": "upsert", "key": key6.hex(), "value": new_value.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec3 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec3, wallet_rpc_api)
+
+        history = await data_rpc_api.get_root_history({"id": store_id.hex()})
+        hash1 = history["root_history"][2]["root_hash"]
+        hash2 = history["root_history"][3]["root_hash"]
+
+        diff_res = await data_rpc_api.get_kv_diff(
+            {
+                "id": store_id.hex(),
+                "hash_1": hash1.hex(),
+                "hash_2": hash2.hex(),
+                "page": 0,
+                "max_page_size": 100,
+            }
+        )
+
+        assert diff_res["total_pages"] == 1
+        assert diff_res["total_bytes"] == 8
+        assert len(diff_res["diff"]) == 2
+        assert {"type": "INSERT", "key": key6.hex(), "value": new_value.hex()} in diff_res["diff"]
+        assert {"type": "DELETE", "key": key6.hex(), "value": value6.hex()} in diff_res["diff"]
+
         with pytest.raises(Exception, match="Can't find keys"):
             await data_rpc_api.get_keys(
                 {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()}
@@ -2578,4 +2587,23 @@ async def test_pagination_rpcs(
         with pytest.raises(Exception, match="Can't find keys and values"):
             await data_rpc_api.get_keys_values(
                 {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()}
+            )
+
+        with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
+            keys_paginated = await data_rpc_api.get_keys_values({"id": store_id.hex(), "page": 0, "max_page_size": 1})
+
+        with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
+            keys_values_paginated = await data_rpc_api.get_keys_values(
+                {"id": store_id.hex(), "page": 0, "max_page_size": 1}
+            )
+
+        with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
+            diff_res = await data_rpc_api.get_kv_diff(
+                {
+                    "id": store_id.hex(),
+                    "hash_1": hash1.hex(),
+                    "hash_2": hash2.hex(),
+                    "page": 0,
+                    "max_page_size": 1,
+                }
             )

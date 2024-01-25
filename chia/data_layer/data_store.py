@@ -827,15 +827,15 @@ class DataStore:
         if len(new_pairs.keys_values_hashed) == 0 and hash2 != bytes32([0] * 32):
             return KVDiffPaginationData(1, 0, set())
 
-        insertions = {k for k in new_pairs.keys_values_hashed.keys() if k not in old_pairs.keys_values_hashed}
-        deletions = {k for k in old_pairs.keys_values_hashed.keys() if k not in new_pairs.keys_values_hashed}
+        old_pairs_leaf_hashes = {v for v in old_pairs.keys_values_hashed.values()}
+        new_pairs_leaf_hashes = {v for v in new_pairs.keys_values_hashed.values()}
+        insertions = {k for k in new_pairs_leaf_hashes if k not in old_pairs_leaf_hashes}
+        deletions = {k for k in old_pairs_leaf_hashes if k not in new_pairs_leaf_hashes}
         lengths = {}
-        for k in insertions:
-            leaf_hash = new_pairs.keys_values_hashed[k]
-            lengths[leaf_hash] = new_pairs.leaf_hash_to_length[leaf_hash]
-        for k in deletions:
-            leaf_hash = old_pairs.keys_values_hashed[k]
-            lengths[leaf_hash] = old_pairs.leaf_hash_to_length[leaf_hash]
+        for hash in insertions:
+            lengths[hash] = new_pairs.leaf_hash_to_length[hash]
+        for hash in deletions:
+            lengths[hash] = old_pairs.leaf_hash_to_length[hash]
 
         pagination_data = self.get_hashes_for_page(page, lengths, max_page_size)
         kv_diff: Set[DiffData] = set()
@@ -843,7 +843,7 @@ class DataStore:
         for hash in pagination_data.hashes:
             node = await self.get_node(hash)
             assert isinstance(node, TerminalNode)
-            if key_hash(node.key) in insertions:
+            if hash in insertions:
                 kv_diff.add(DiffData(OperationType.INSERT, node.key, node.value))
             else:
                 kv_diff.add(DiffData(OperationType.DELETE, node.key, node.value))
