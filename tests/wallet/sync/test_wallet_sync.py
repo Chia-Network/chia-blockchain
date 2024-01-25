@@ -1360,7 +1360,7 @@ async def test_long_sync_untrusted_break(
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
         assert time_out_assert(10, synced_to_trusted)
         assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
-        assert "Connected to a a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
+        assert "Connected to a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
 
     # Make sure the sync was interrupted
     assert time_out_assert(30, check_sync_canceled)
