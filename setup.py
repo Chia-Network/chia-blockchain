@@ -7,14 +7,14 @@ from setuptools import find_packages, setup
 
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
-    "anyio==4.1.0",
+    "anyio==4.2.0",
     "boto3==1.34.11",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.1",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
     "chiapos==2.0.3",  # proof of space
     "clvm==0.9.8",
     "clvm_tools==0.4.7",  # Currying, Program.to, other conveniences
-    "chia_rs==0.3.3",
+    "chia_rs==0.4.0",
     "clvm-tools-rs==0.1.40",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.9.1",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
@@ -48,7 +48,7 @@ dev_dependencies = [
     "diff-cover==8.0.1",
     "pre-commit==3.5.0; python_version < '3.9'",
     "pre-commit==3.6.0; python_version >= '3.9'",
-    "py3createtorrent==1.1.0",
+    "py3createtorrent==1.2.0",
     "pylint==3.0.3",
     "pytest==7.4.4",
     "pytest-cov==4.1.0",
@@ -56,9 +56,9 @@ dev_dependencies = [
     "pytest-xdist==3.5.0",
     "pyupgrade==3.15.0",
     "twine==4.0.2",
-    "isort==5.12.0",
+    "isort==5.13.2",
     "flake8==7.0.0",
-    "mypy==1.7.1",
+    "mypy==1.8.0",
     "black==23.12.1",
     "lxml==4.9.3",
     "aiohttp_cors==0.7.0",  # For blackd
@@ -66,7 +66,7 @@ dev_dependencies = [
     "types-aiofiles==23.2.0.20240106",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.12",
-    "types-setuptools==69.0.0.20240106",
+    "types-setuptools==69.0.0.20240115",
 ]
 
 legacy_keyring_dependencies = [

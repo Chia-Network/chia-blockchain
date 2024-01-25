@@ -620,6 +620,11 @@ class MempoolManager:
     ) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
+        new_peak should always be the most recent *transaction* block of the chain. Since
+        the mempool cannot traverse the chain to find the most recent transaction block,
+        we wouldn't be able to detect, and correctly update the mempool, if we saw a
+        non-transaction block on a fork. self.peak must always be set to a transaction
+        block.
         """
         if new_peak is None:
             return []

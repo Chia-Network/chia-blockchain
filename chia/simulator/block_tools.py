@@ -981,8 +981,8 @@ class BlockTools:
                 pending_ses = True
                 ses_hash: Optional[bytes32] = sub_epoch_summary.get_hash()
                 # if the last block is the last block of the epoch, we set the new sub-slot iters and difficulty
-                new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
-                new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
+                new_sub_slot_iters: Optional[uint64] = uint64.construct_optional(sub_epoch_summary.new_sub_slot_iters)
+                new_difficulty: Optional[uint64] = uint64.construct_optional(sub_epoch_summary.new_difficulty)
 
                 self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height+1}")
             else:  # the previous block is not the last block of the sub-epoch or epoch
@@ -1252,8 +1252,8 @@ class BlockTools:
                 num_empty_slots_added += 1
 
             if new_sub_slot_iters is not None and new_difficulty is not None:  # new epoch
-                sub_slot_iters = new_sub_slot_iters
-                difficulty = new_difficulty
+                sub_slot_iters = uint64(new_sub_slot_iters)
+                difficulty = uint64(new_difficulty)
 
     def create_genesis_block(
         self,
@@ -1750,7 +1750,7 @@ def get_icc(
     if len(finished_sub_slots) == 0:
         prev_deficit = latest_block.deficit
     else:
-        prev_deficit = finished_sub_slots[-1].reward_chain.deficit
+        prev_deficit = uint8(finished_sub_slots[-1].reward_chain.deficit)
 
     if deficit == prev_deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
         # new slot / overflow sb to new slot / overflow sb

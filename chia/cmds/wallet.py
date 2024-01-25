@@ -453,7 +453,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     is_flag=True,
     default=False,
 )
-@click.option("-o", "--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
+@click.option("--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
 def make_offer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -878,14 +878,20 @@ def did_transfer_did(
     id: int,
     target_address: str,
     reset_recovery: bool,
-    fee: int,
+    fee: str,
     reuse: bool,
 ) -> None:
     from .wallet_funcs import transfer_did
 
     asyncio.run(
         transfer_did(
-            wallet_rpc_port, fingerprint, id, fee, target_address, reset_recovery is False, True if reuse else None
+            wallet_rpc_port,
+            fingerprint,
+            id,
+            Decimal(fee),
+            target_address,
+            reset_recovery is False,
+            True if reuse else None,
         )
     )
 

@@ -183,11 +183,6 @@ def adapt_inner_puzzle_hash_to_singleton(inner_puzzle_hash: bytes32) -> bytes32:
     return puzzle.get_tree_hash_precalc(inner_puzzle_hash)
 
 
-def remove_singleton_truth_wrapper(puzzle: Program) -> Program:
-    inner_puzzle = puzzle.rest().first().rest()
-    return inner_puzzle
-
-
 # Take standard coin and amount -> launch conditions & launcher coin solution
 def launch_conditions_and_coinsol(
     coin: Coin,
@@ -343,15 +338,10 @@ def claim_p2_singleton(
 
 # Get the CoinSpend for spending to a delayed puzzle
 def spend_to_delayed_puzzle(
-    p2_singleton_coin: Coin,
-    output_amount: uint64,
-    launcher_id: bytes32,
-    delay_time: uint64,
-    delay_ph: bytes32,
+    p2_singleton_coin: Coin, output_amount: uint64, launcher_id: bytes32, delay_time: uint64, delay_ph: bytes32
 ) -> CoinSpend:
-    claim_coinsol = make_spend(
+    return make_spend(
         p2_singleton_coin,
         pay_to_singleton_or_delay_puzzle(launcher_id, delay_time, delay_ph),
         solution_for_p2_delayed_puzzle(output_amount),
     )
-    return claim_coinsol

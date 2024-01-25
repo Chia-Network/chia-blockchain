@@ -1586,12 +1586,10 @@ class TestFullNodeProtocol:
         # Submit the sub slot, but not the last block
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
         for ss in blocks[-1].finished_sub_slots:
-            challenge_chain = dataclasses.replace(
-                ss.challenge_chain,
+            challenge_chain = ss.challenge_chain.replace(
                 new_difficulty=20,
             )
-            slot2 = dataclasses.replace(
-                ss,
+            slot2 = ss.replace(
                 challenge_chain=challenge_chain,
             )
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot2), peer)

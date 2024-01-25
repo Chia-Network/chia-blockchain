@@ -16,6 +16,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
+from chia.rpc.wallet_request_types import GetNotifications
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -1163,6 +1164,8 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
         "requested": {cat_asset_id.hex(): 1},
         "infos": driver_dict,
         "fees": 1,
+        "additions": [c.name().hex() for c in offer.additions()],
+        "removals": [c.name().hex() for c in offer.removals()],
         "valid_times": {
             "max_height": None,
             "max_time": None,
@@ -1842,12 +1845,12 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
             excluded_coin_ids=[c.name() for c in excluded_amt_coins]
         ),
     )
-    assert excluded_amt_coins not in all_coins
+    assert set(excluded_amt_coins).intersection({rec.coin for rec in all_coins}) == set()
     all_coins, _, _ = await client_2.get_spendable_coins(
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
     )
-    assert excluded_amt_coins not in all_coins
+    assert len([rec for rec in all_coins if rec.coin.amount == 1000]) == 0
     all_coins_2, _, _ = await client_2.get_spendable_coins(
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(max_coin_amount=uint64(999)),
@@ -2064,14 +2067,14 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
     await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(100000000000))
 
-    notification = (await client_2.get_notifications())[0]
-    assert [notification] == (await client_2.get_notifications([notification.coin_id]))
-    assert [] == (await client_2.get_notifications(pagination=(0, 0)))
-    assert [notification] == (await client_2.get_notifications(pagination=(None, 1)))
-    assert [] == (await client_2.get_notifications(pagination=(1, None)))
-    assert [notification] == (await client_2.get_notifications(pagination=(None, None)))
+    notification = (await client_2.get_notifications(GetNotifications())).notifications[0]
+    assert [notification] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
+    assert [] == (await client_2.get_notifications(GetNotifications(None, uint32(0), uint32(0)))).notifications
+    assert [notification] == (await client_2.get_notifications(GetNotifications(None, None, uint32(1)))).notifications
+    assert [] == (await client_2.get_notifications(GetNotifications(None, uint32(1), None))).notifications
+    assert [notification] == (await client_2.get_notifications(GetNotifications(None, None, None))).notifications
     assert await client_2.delete_notifications()
-    assert [] == (await client_2.get_notifications([notification.coin_id]))
+    assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
     tx = await client.send_notification(
         await wallet_2.get_new_puzzlehash(),
@@ -2090,9 +2093,9 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
     await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(200000000000))
 
-    notification = (await client_2.get_notifications())[0]
-    assert await client_2.delete_notifications([notification.coin_id])
-    assert [] == (await client_2.get_notifications([notification.coin_id]))
+    notification = (await client_2.get_notifications(GetNotifications())).notifications[0]
+    assert await client_2.delete_notifications([notification.id])
+    assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
 
 # The signatures below were made from an ephemeral key pair that isn't included in the test code.

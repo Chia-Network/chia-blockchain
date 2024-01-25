@@ -31,11 +31,17 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from tests.util.misc import wallet_height_at_least
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
+
+
+async def get_tx_count(wsm: WalletStateManager, wallet_id: int) -> int:
+    txs = await wsm.get_all_transactions(wallet_id)
+    return len(txs)
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
@@ -353,10 +359,6 @@ async def test_wallet_reorg_sync(two_wallet_nodes, default_400_blocks, self_host
         [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
 
-    async def get_tx_count(wsm, wallet_id):
-        txs = await wsm.get_all_transactions(wallet_id)
-        return len(txs)
-
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
         await time_out_assert(60, wallet.get_confirmed_balance, funds)
@@ -401,10 +403,6 @@ async def test_wallet_reorg_get_coinbase(two_wallet_nodes, default_400_blocks, s
 
     for block in blocks_reorg[:-5]:
         await full_node_api.full_node.add_block(block)
-
-    async def get_tx_count(wsm, wallet_id):
-        txs = await wsm.get_all_transactions(wallet_id)
-        return len(txs)
 
     for wallet_node, wallet_server in wallets:
         await time_out_assert(30, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
@@ -793,9 +791,8 @@ async def test_dusted_wallet(
     # Selecting coins by using the wallet's coin selection algorithm won't work for large
     # numbers of coins, so we'll use the state manager for the rest of the test
     # num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance))
-    num_coins: Optional[Message] = len(
-        list(await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1))
-    )
+    spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
+    num_coins = len(spendable_coins)
 
     log.info(f"Small coin count is {small_unspent_count}")
     log.info(f"Wallet balance is {balance}")
@@ -835,9 +832,8 @@ async def test_dusted_wallet(
     all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
     balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
-    num_coins: Optional[Message] = len(
-        list(await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1))
-    )
+    spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
+    num_coins = len(spendable_coins)
 
     log.info(f"Small coin count is {small_unspent_count}")
     log.info(f"Wallet balance is {balance}")
@@ -872,9 +868,8 @@ async def test_dusted_wallet(
     all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
     balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
-    num_coins: Optional[Message] = len(
-        list(await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1))
-    )
+    spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
+    num_coins = len(spendable_coins)
 
     log.info(f"Small coin count is {small_unspent_count}")
     log.info(f"Wallet balance is {balance}")
@@ -929,9 +924,8 @@ async def test_dusted_wallet(
     all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
     balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
-    num_coins: Optional[Message] = len(
-        list(await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1))
-    )
+    spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
+    num_coins = len(spendable_coins)
 
     log.info(f"Small coin count is {small_unspent_count}")
     log.info(f"Wallet balance is {balance}")
@@ -961,7 +955,7 @@ async def test_dusted_wallet(
 
     # Obtain and log important values
     all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-    unspent_count = len([r for r in all_unspent])
+    unspent_count = len(all_unspent)
     balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
 
     # Make sure the dust wallet is empty
@@ -1014,7 +1008,7 @@ async def test_dusted_wallet(
 
     # Obtain and log important values
     all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-    unspent_count = len([r for r in all_unspent])
+    unspent_count = len(all_unspent)
     balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
 
     # Verify the number of coins and value
@@ -1041,7 +1035,7 @@ async def test_dusted_wallet(
 
     # Obtain and log important values
     all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-    unspent_count = len([r for r in all_unspent])
+    unspent_count = len(all_unspent)
     balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
 
     # Make sure the dust wallet received a change coin worth 1 mojo less than the original coin size
@@ -1080,7 +1074,7 @@ async def test_dusted_wallet(
     assert farm_sb
 
     # ensure hints are generated
-    assert compute_memos(farm_sb)
+    assert len(compute_memos(farm_sb)) > 0
 
     # Farm a new block
     await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, farm_sb.name())
@@ -1091,7 +1085,7 @@ async def test_dusted_wallet(
     # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered
     # if it were a normal dust coin (and not an NFT)
     all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-    unspent_count = len([r for r in all_unspent])
+    unspent_count = len(all_unspent)
     assert unspent_count >= spam_filter_after_n_txs
 
     # Make sure the NFT is in the farmer's NFT wallet, and the dust NFT wallet is empty
@@ -1109,7 +1103,7 @@ async def test_dusted_wallet(
     assert len(txs) == 1
     assert txs[0].spend_bundle is not None
     await farm_wallet_node.wallet_state_manager.add_pending_transaction(txs[0])
-    assert compute_memos(txs[0].spend_bundle)
+    assert len(compute_memos(txs[0].spend_bundle)) > 0
 
     # Farm a new block.
     await full_node_api.wait_transaction_records_entered_mempool(txs)
@@ -1120,7 +1114,7 @@ async def test_dusted_wallet(
     # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered
     # if it were a normal dust coin (and not an NFT)
     all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-    unspent_count = len([r for r in all_unspent])
+    unspent_count = len(all_unspent)
     assert unspent_count >= spam_filter_after_n_txs
 
     # The dust wallet should now hold the NFT. It should not be filtered
@@ -1258,7 +1252,9 @@ async def test_retry_store(two_wallet_nodes, self_hostname):
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def test_bad_peak_mismatch(two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants):
+async def test_bad_peak_mismatch(
+    two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants, monkeypatch
+):
     full_nodes, wallets, bt = two_wallet_nodes
     wallet_node, wallet_server = wallets[0]
     full_node_api = full_nodes[0]
@@ -1281,31 +1277,32 @@ async def test_bad_peak_mismatch(two_wallet_nodes, default_1000_blocks, self_hos
         ProtocolMessageTypes.respond_proof_of_weight,
         full_node_protocol.RespondProofOfWeight(wp, wp.recent_chain_data[-1].header_hash),
     )
-    f = asyncio.Future()
-    f.set_result(wp_msg)
-    full_node_api.request_proof_of_weight = MagicMock(return_value=f)
+    with monkeypatch.context() as m:
+        f = asyncio.Future()
+        f.set_result(wp_msg)
+        m.setattr(full_node_api, "request_proof_of_weight", MagicMock(return_value=f))
 
-    # create the node respond with the lighter header block
-    header_block_msg = make_msg(
-        ProtocolMessageTypes.respond_block_header,
-        wallet_protocol.RespondBlockHeader(wp.recent_chain_data[-1]),
-    )
-    f2 = asyncio.Future()
-    f2.set_result(header_block_msg)
-    full_node_api.request_block_header = MagicMock(return_value=f2)
+        # create the node respond with the lighter header block
+        header_block_msg = make_msg(
+            ProtocolMessageTypes.respond_block_header,
+            wallet_protocol.RespondBlockHeader(wp.recent_chain_data[-1]),
+        )
+        f2 = asyncio.Future()
+        f2.set_result(header_block_msg)
+        m.setattr(full_node_api, "request_block_header", MagicMock(return_value=f2))
 
-    # create new fake peak msg
-    fake_peak_height = uint32(11000)
-    fake_peak_weight = uint32(1000000000)
-    msg = wallet_protocol.NewPeakWallet(
-        blocks[-1].header_hash, fake_peak_height, fake_peak_weight, uint32(max(blocks[-1].height - 1, uint32(0)))
-    )
-    await asyncio.sleep(3)
-    await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await wallet_node.new_peak_wallet(msg, wallet_server.all_connections.popitem()[1])
-    await asyncio.sleep(3)
-    assert wallet_node.wallet_state_manager.blockchain.get_peak_height() != fake_peak_height
-    log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
+        # create new fake peak msg
+        fake_peak_height = uint32(11000)
+        fake_peak_weight = uint32(1000000000)
+        msg = wallet_protocol.NewPeakWallet(
+            blocks[-1].header_hash, fake_peak_height, fake_peak_weight, uint32(max(blocks[-1].height - 1, uint32(0)))
+        )
+        await asyncio.sleep(3)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await wallet_node.new_peak_wallet(msg, wallet_server.all_connections.popitem()[1])
+        await asyncio.sleep(3)
+        assert wallet_node.wallet_state_manager.blockchain.get_peak_height() != fake_peak_height
+        log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")

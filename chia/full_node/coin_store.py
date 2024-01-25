@@ -411,6 +411,97 @@ class CoinStore:
 
         return coins
 
+    async def batch_coin_states_by_puzzle_hashes(
+        self,
+        puzzle_hashes: List[bytes32],
+        *,
+        min_height: uint32 = uint32(0),
+        include_spent: bool = True,
+        include_unspent: bool = True,
+        include_hinted: bool = True,
+        max_items: int = 50000,
+    ) -> Tuple[List[CoinState], Optional[uint32]]:
+        """
+        Returns the coin states, as well as the next block height (or `None` if finished).
+        Note that the maximum number of puzzle hashes is currently set to 15000.
+        """
+
+        # This number is chosen such that it's below half of the Python 3.8+ SQLite variable limit.
+        # It can be changed later without breaking the protocol, but this is a practical limit for now.
+        assert len(puzzle_hashes) <= 15000
+
+        coin_states: List[CoinState] = []
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            puzzle_hashes_db = tuple(puzzle_hashes)
+            puzzle_hash_count = len(puzzle_hashes_db)
+
+            if include_hinted:
+                require_spent = "cr.spent_index>0"
+                require_unspent = "cr.spent_index=0"
+            else:
+                require_spent = "spent_index>0"
+                require_unspent = "spent_index=0"
+
+            if include_spent and include_unspent:
+                height_filter = ""
+            elif include_spent:
+                height_filter = f"AND {require_spent}"
+            elif include_unspent:
+                height_filter = f"AND {require_unspent}"
+            else:
+                # There are no coins which are both spent and unspent, so we're finished.
+                return [], None
+
+            if include_hinted:
+                cursor = await conn.execute(
+                    f"SELECT cr.confirmed_index, cr.spent_index, cr.coinbase, cr.puzzle_hash, "
+                    f"cr.coin_parent, cr.amount, cr.timestamp FROM coin_record cr "
+                    f"LEFT JOIN hints h ON cr.coin_name = h.coin_id "
+                    f'WHERE (cr.puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
+                    f'OR h.hint in ({"?," * (puzzle_hash_count - 1)}?)) '
+                    f"AND (cr.confirmed_index>=? OR cr.spent_index>=?) "
+                    f"{height_filter} "
+                    f"ORDER BY MAX(cr.confirmed_index, cr.spent_index) ASC "
+                    f"LIMIT ?",
+                    puzzle_hashes_db + puzzle_hashes_db + (min_height, min_height, max_items + 1),
+                )
+            else:
+                cursor = await conn.execute(
+                    f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                    f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
+                    f'WHERE puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
+                    f"AND (confirmed_index>=? OR spent_index>=?) "
+                    f"{height_filter} "
+                    f"ORDER BY MAX(confirmed_index, spent_index) ASC "
+                    f"LIMIT ?",
+                    puzzle_hashes_db + (min_height, min_height, max_items + 1),
+                )
+
+            for row in await cursor.fetchall():
+                coin_states.append(self.row_to_coin_state(row))
+
+        # If there aren't too many coin states, we've finished syncing these hashes.
+        # There is no next height to start from, so return `None`.
+        if len(coin_states) <= max_items:
+            return coin_states, None
+
+        # The last item is the start of the next batch of coin states.
+        next_coin_state = coin_states.pop()
+        next_height = uint32(max(next_coin_state.created_height or 0, next_coin_state.spent_height or 0))
+
+        # In order to prevent blocks from being split up between batches, remove
+        # all coin states whose max height is the same as the last coin state's height.
+        while len(coin_states) > 0:
+            last_coin_state = coin_states[-1]
+            height = uint32(max(last_coin_state.created_height or 0, last_coin_state.spent_height or 0))
+            if height != next_height:
+                break
+
+            coin_states.pop()
+
+        return coin_states, next_height
+
     async def rollback_to_block(self, block_index: int) -> List[CoinRecord]:
         """
         Note that block_index can be negative, in which case everything is rolled back

@@ -320,6 +320,6 @@ def test_did_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "did_transfer_did": [(w_id, t_address, "0.5", True, DEFAULT_TX_CONFIG.override(reuse_puzhash=True))],
+        "did_transfer_did": [(w_id, t_address, 500000000000, True, DEFAULT_TX_CONFIG.override(reuse_puzhash=True))],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)

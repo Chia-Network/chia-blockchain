@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 from chia_rs import G1Element, G2Element
 from clvm_tools import binutils
@@ -31,7 +31,7 @@ SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 P2_SINGLETON_MOD_HASH = P2_SINGLETON_MOD.get_tree_hash()
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)
-ANYONE_CAN_SPEND_WITH_PADDING_PUZZLE_HASH = Program.to(binutils.assemble("(a (q . 1) 3)")).get_tree_hash()
+ANYONE_CAN_SPEND_WITH_PADDING_PUZZLE_HASH = Program.to(binutils.assemble("(a (q . 1) 3)")).get_tree_hash()  # type: ignore[no-untyped-call] # noqa: E501
 
 POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
@@ -39,17 +39,17 @@ MAX_BLOCK_COST_CLVM = int(1e18)
 
 
 class PuzzleDB:
-    def __init__(self):
-        self._db = {}
+    def __init__(self) -> None:
+        self._db: Dict[bytes32, Program] = {}
 
-    def add_puzzle(self, puzzle: Program):
+    def add_puzzle(self, puzzle: Program) -> None:
         self._db[puzzle.get_tree_hash()] = Program.from_bytes(bytes(puzzle))
 
     def puzzle_for_hash(self, puzzle_hash: bytes32) -> Optional[Program]:
         return self._db.get(puzzle_hash)
 
 
-def from_kwargs(kwargs, key, type_info=Any):
+def from_kwargs(kwargs: Dict[str, Any], key: str, type_info: Any = Any) -> Any:
     """Raise an exception if `kwargs[key]` is missing or the wrong type"""
     """for now, we just check that it's present"""
     if key not in kwargs:
@@ -65,15 +65,15 @@ class Solver:
     This class registers puzzle templates by hash and solves them.
     """
 
-    def __init__(self):
-        self.solvers_by_puzzle_hash = {}
+    def __init__(self) -> None:
+        self.solvers_by_puzzle_hash: Dict[bytes32, Solver_F] = {}
 
-    def register_solver(self, puzzle_hash: bytes32, solver_f: Solver_F):
+    def register_solver(self, puzzle_hash: bytes32, solver_f: Solver_F) -> None:
         if puzzle_hash in self.solvers_by_puzzle_hash:
             raise ValueError(f"solver registered for {puzzle_hash}")
         self.solvers_by_puzzle_hash[puzzle_hash] = solver_f
 
-    def solve(self, puzzle_db: PuzzleDB, puzzle: Program, **kwargs: Any) -> Program:
+    def solve(self, puzzle_db: PuzzleDB, puzzle: Program, **kwargs: Dict[str, Any]) -> Program:
         """
         The legal values and types for `kwargs` depends on the underlying solver
         that's invoked. The `kwargs` are passed through to any inner solvers
@@ -92,47 +92,51 @@ class Solver:
         raise ValueError("can't solve")
 
 
-def solve_launcher(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict) -> Program:
+def solve_launcher(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
     launcher_amount = from_kwargs(kwargs, "launcher_amount", int)
     destination_puzzle_hash = from_kwargs(kwargs, "destination_puzzle_hash", bytes32)
     metadata = from_kwargs(kwargs, "metadata", List[Tuple[str, Program]])
     solution = Program.to([destination_puzzle_hash, launcher_amount, metadata])
-    return solution
+    # TODO: Remove cast when we improve typing
+    return cast(Program, solution)
 
 
-def solve_anyone_can_spend(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict) -> Program:
+def solve_anyone_can_spend(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
     """
     This is the anyone-can-spend puzzle `1`. Note that farmers can easily steal this coin, so don't use
     it except for testing.
     """
     conditions = from_kwargs(kwargs, "conditions", List[Program])
     solution = Program.to(conditions)
-    return solution
+    # TODO: Remove cast when we improve typing
+    return cast(Program, solution)
 
 
 def solve_anyone_can_spend_with_padding(
-    solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict
+    solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]
 ) -> Program:
     """This is the puzzle `(a (q . 1) 3)`. It's only for testing."""
     conditions = from_kwargs(kwargs, "conditions", List[Program])
     solution = Program.to((0, conditions))
-    return solution
+    # TODO: Remove cast when we improve typing
+    return cast(Program, solution)
 
 
-def solve_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict) -> Program:
+def solve_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
     """
     `lineage_proof`: a `Program` that proves the parent is also a singleton (or the launcher).
     `coin_amount`: a necessarily-odd value of mojos in this coin.
     """
-    singleton_struct, inner_puzzle = args
+    _, inner_puzzle = args
     inner_solution = solver.solve(puzzle_db, inner_puzzle, **kwargs)
     lineage_proof = from_kwargs(kwargs, "lineage_proof", Program)
     coin_amount = from_kwargs(kwargs, "coin_amount", int)
     solution = inner_solution.to([lineage_proof, coin_amount, inner_solution.rest()])
-    return solution
+    # TODO: Remove cast when we improve typing
+    return cast(Program, solution)
 
 
-def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict) -> Program:
+def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
     pool_member_spend_type = from_kwargs(kwargs, "pool_member_spend_type")
     allowable = ["to-waiting-room", "claim-p2-nft"]
     if pool_member_spend_type not in allowable:
@@ -140,15 +144,19 @@ def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], 
     to_waiting_room = pool_member_spend_type == "to-waiting-room"
     if to_waiting_room:
         key_value_list = from_kwargs(kwargs, "key_value_list", List[Tuple[str, Program]])
-        return Program.to([0, 1, 0, 0, key_value_list])
+        # TODO: Remove cast when we improve typing
+        return cast(Program, Program.to([0, 1, 0, 0, key_value_list]))
     # it's an "absorb_pool_reward" type
     pool_reward_amount = from_kwargs(kwargs, "pool_reward_amount", int)
     pool_reward_height = from_kwargs(kwargs, "pool_reward_height", int)
     solution = Program.to([0, pool_reward_amount, pool_reward_height])
-    return solution
+    # TODO: Remove cast when we improve typing
+    return cast(Program, solution)
 
 
-def solve_pool_waiting_room(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict) -> Program:
+def solve_pool_waiting_room(
+    solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]
+) -> Program:
     pool_leaving_spend_type = from_kwargs(kwargs, "pool_leaving_spend_type")
     allowable = ["exit-waiting-room", "claim-p2-nft"]
     if pool_leaving_spend_type not in allowable:
@@ -157,15 +165,17 @@ def solve_pool_waiting_room(solver: Solver, puzzle_db: PuzzleDB, args: List[Prog
     if exit_waiting_room:
         key_value_list = from_kwargs(kwargs, "key_value_list", List[Tuple[str, Program]])
         destination_puzzle_hash = from_kwargs(kwargs, "destination_puzzle_hash", int)
-        return Program.to([0, 1, key_value_list, destination_puzzle_hash])
+        # TODO: Remove cast when we improve typing
+        return cast(Program, Program.to([0, 1, key_value_list, destination_puzzle_hash]))
     # it's an "absorb_pool_reward" type
     pool_reward_amount = from_kwargs(kwargs, "pool_reward_amount", int)
     pool_reward_height = from_kwargs(kwargs, "pool_reward_height", int)
     solution = Program.to([0, 0, pool_reward_amount, pool_reward_height])
-    return solution
+    # TODO: Remove cast when we improve typing
+    return cast(Program, solution)
 
 
-def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict) -> Program:
+def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
     p2_singleton_spend_type = from_kwargs(kwargs, "p2_singleton_spend_type")
     allowable = ["claim-p2-nft", "delayed-spend"]
     if p2_singleton_spend_type not in allowable:
@@ -175,7 +185,8 @@ def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program],
         singleton_inner_puzzle_hash = from_kwargs(kwargs, "singleton_inner_puzzle_hash")
         p2_singleton_coin_name = from_kwargs(kwargs, "p2_singleton_coin_name")
         solution = Program.to([singleton_inner_puzzle_hash, p2_singleton_coin_name])
-        return solution
+        # TODO: Remove cast when we improve typing
+        return cast(Program, solution)
     raise ValueError("can't solve `delayed-spend` yet")
 
 
@@ -189,7 +200,7 @@ SOLVER.register_solver(ANYONE_CAN_SPEND_PUZZLE.get_tree_hash(), solve_anyone_can
 SOLVER.register_solver(P2_SINGLETON_MOD_HASH, solve_p2_singleton)
 
 
-def solve_puzzle(puzzle_db: PuzzleDB, puzzle: Program, **kwargs) -> Program:
+def solve_puzzle(puzzle_db: PuzzleDB, puzzle: Program, **kwargs: Any) -> Program:
     return SOLVER.solve(puzzle_db, puzzle, **kwargs)
 
 
@@ -207,16 +218,15 @@ class SingletonWallet:
             return None
         return self.inner_puzzle_for_puzzle(puzzle)
 
-    def inner_puzzle_for_puzzle(self, puzzle: Program) -> Optional[Program]:
+    def inner_puzzle_for_puzzle(self, puzzle: Program) -> Program:
         assert puzzle.get_tree_hash() == self.current_state.puzzle_hash
-        if puzzle is None:
-            return puzzle
         template, args = puzzle.uncurry()
         assert bytes(template) == bytes(SINGLETON_MOD)
-        singleton_struct, inner_puzzle = list(args.as_iter())
-        return inner_puzzle
+        _, inner_puzzle = list(args.as_iter())
+        # TODO: Remove cast when we improve typing
+        return cast(Program, inner_puzzle)
 
-    def coin_spend_for_conditions(self, puzzle_db: PuzzleDB, **kwargs) -> CoinSpend:
+    def coin_spend_for_conditions(self, puzzle_db: PuzzleDB, **kwargs: object) -> CoinSpend:
         coin = self.current_state
         puzzle_reveal = puzzle_db.puzzle_for_hash(coin.puzzle_hash)
         assert puzzle_reveal is not None
@@ -258,7 +268,9 @@ def adaptor_for_singleton_inner_puzzle(puzzle: Program) -> Program:
     puzzle to work as a singleton inner puzzle.
     """
     # this is pretty slow and lame
-    return Program.to(binutils.assemble("(a (q . %s) 3)" % binutils.disassemble(puzzle)))
+    program = binutils.assemble("(a (q . %s) 3)" % binutils.disassemble(puzzle))  # type: ignore[no-untyped-call]
+    # TODO: Remove cast when we improve typing
+    return cast(Program, Program.to(program))
 
 
 def launcher_conditions_and_spend_bundle(
@@ -272,22 +284,17 @@ def launcher_conditions_and_spend_bundle(
     puzzle_db.add_puzzle(launcher_puzzle)
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
-    singleton_full_puzzle = singleton_puzzle(launcher_coin.name(), launcher_puzzle_hash, initial_singleton_inner_puzzle)
+    launcher_id = launcher_coin.name()
+    singleton_full_puzzle = singleton_puzzle(launcher_id, launcher_puzzle_hash, initial_singleton_inner_puzzle)
     puzzle_db.add_puzzle(singleton_full_puzzle)
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
-    expected_announcement = Announcement(launcher_coin.name(), message_program.get_tree_hash())
+    expected_announcement = Announcement(launcher_id, message_program.get_tree_hash())
     expected_conditions = []
-    expected_conditions.append(
-        Program.to(
-            binutils.assemble(f"(0x{ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.hex()} 0x{expected_announcement.name()})")
-        )
-    )
-    expected_conditions.append(
-        Program.to(
-            binutils.assemble(f"(0x{ConditionOpcode.CREATE_COIN.hex()} 0x{launcher_puzzle_hash} {launcher_amount})")
-        )
-    )
+    clsp = f"(0x{ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.hex()} 0x{expected_announcement.name()})"
+    expected_conditions.append(Program.to(binutils.assemble(clsp)))  # type: ignore[no-untyped-call]
+    clsp = f"(0x{ConditionOpcode.CREATE_COIN.hex()} 0x{launcher_puzzle_hash} {launcher_amount})"
+    expected_conditions.append(Program.to(binutils.assemble(clsp)))  # type: ignore[no-untyped-call]
     solution = solve_puzzle(
         puzzle_db,
         launcher_puzzle,
@@ -297,7 +304,7 @@ def launcher_conditions_and_spend_bundle(
     )
     coin_spend = make_spend(launcher_coin, SerializedProgram.from_program(launcher_puzzle), solution)
     spend_bundle = SpendBundle([coin_spend], G2Element())
-    return launcher_coin.name(), expected_conditions, spend_bundle
+    return launcher_id, expected_conditions, spend_bundle
 
 
 def singleton_puzzle(launcher_id: bytes32, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
@@ -309,12 +316,13 @@ def singleton_puzzle_hash(launcher_id: bytes32, launcher_puzzle_hash: bytes32, i
 
 
 def solution_for_singleton_puzzle(lineage_proof: Program, my_amount: int, inner_solution: Program) -> Program:
-    return Program.to([lineage_proof, my_amount, inner_solution])
+    # TODO: Remove cast when we improve typing
+    return cast(Program, Program.to([lineage_proof, my_amount, inner_solution]))
 
 
 def p2_singleton_puzzle_for_launcher(
     puzzle_db: PuzzleDB,
-    launcher_id: Program,
+    launcher_id: bytes32,
     launcher_puzzle_hash: bytes32,
     seconds_delay: int,
     delayed_puzzle_hash: bytes32,
@@ -328,7 +336,7 @@ def p2_singleton_puzzle_for_launcher(
 
 def p2_singleton_puzzle_hash_for_launcher(
     puzzle_db: PuzzleDB,
-    launcher_id: Program,
+    launcher_id: bytes32,
     launcher_puzzle_hash: bytes32,
     seconds_delay: int,
     delayed_puzzle_hash: bytes32,
@@ -355,9 +363,7 @@ def claim_p2_singleton(
         p2_singleton_coin_name=p2_singleton_coin_name,
     )
     p2_singleton_coin_spend = make_spend(
-        p2_singleton_coin,
-        SerializedProgram.from_program(p2_singleton_puzzle),
-        p2_singleton_solution,
+        p2_singleton_coin, SerializedProgram.from_program(p2_singleton_puzzle), p2_singleton_solution
     )
     expected_p2_singleton_announcement = Announcement(p2_singleton_coin_name, b"$").name()
     singleton_conditions = [
@@ -376,21 +382,23 @@ def lineage_proof_for_coin_spend(coin_spend: CoinSpend) -> Program:
 
     inner_puzzle_hash = None
     if coin.puzzle_hash == LAUNCHER_PUZZLE_HASH:
-        return Program.to([parent_name, amount])
+        # TODO: Remove cast when we improve typing
+        return cast(Program, Program.to([parent_name, amount]))
 
     full_puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
     _, args = full_puzzle.uncurry()
     _, __, ___, inner_puzzle = list(args.as_iter())
     inner_puzzle_hash = inner_puzzle.get_tree_hash()
 
-    return Program.to([parent_name, inner_puzzle_hash, amount])
+    # TODO: Remove cast when we improve typing
+    return cast(Program, Program.to([parent_name, inner_puzzle_hash, amount]))
 
 
 def create_throwaway_pubkey(seed: bytes) -> G1Element:
     return G1Element.generator()
 
 
-def assert_coin_spent(coin_store: CoinStore, coin: Coin, is_spent=True):
+def assert_coin_spent(coin_store: CoinStore, coin: Coin, is_spent: bool = True) -> None:
     coin_record = coin_store.coin_record(coin.name())
     assert coin_record is not None
     assert coin_record.spent is is_spent
@@ -434,41 +442,35 @@ def spend_coin_to_singleton(
     return additions, removals
 
 
-def find_interesting_singletons(puzzle_db: PuzzleDB, removals: List[CoinSpend]) -> List[SingletonWallet]:
+def find_interesting_singletons(removals: List[CoinSpend]) -> List[SingletonWallet]:
     singletons = []
     for coin_spend in removals:
         if coin_spend.coin.puzzle_hash == LAUNCHER_PUZZLE_HASH:
             r = Program.from_bytes(bytes(coin_spend.solution))
             key_value_list = r.rest().rest().first()
-
             eve_coin = compute_additions(coin_spend)[0]
-
             lineage_proof = lineage_proof_for_coin_spend(coin_spend)
             launcher_id = coin_spend.coin.name()
             singleton = SingletonWallet(
-                launcher_id,
-                coin_spend.coin.puzzle_hash,
-                key_value_list,
-                eve_coin,
-                lineage_proof,
+                launcher_id, coin_spend.coin.puzzle_hash, key_value_list, eve_coin, lineage_proof
             )
             singletons.append(singleton)
     return singletons
 
 
-def filter_p2_singleton(puzzle_db: PuzzleDB, singleton_wallet: SingletonWallet, additions: List[Coin]) -> List[Coin]:
+def filter_p2_singleton(puzzle_db: PuzzleDB, additions: List[Coin]) -> List[Coin]:
     r = []
     for coin in additions:
         puzzle = puzzle_db.puzzle_for_hash(coin.puzzle_hash)
         if puzzle is None:
             continue
-        template, args = puzzle.uncurry()
+        template, _ = puzzle.uncurry()
         if template.get_tree_hash() == P2_SINGLETON_MOD_HASH:
             r.append(coin)
     return r
 
 
-def test_lifecycle_with_coinstore_as_wallet():
+def test_lifecycle_with_coinstore_as_wallet() -> None:
     PUZZLE_DB = PuzzleDB()
 
     interested_singletons = []
@@ -477,10 +479,10 @@ def test_lifecycle_with_coinstore_as_wallet():
     # farm a coin
 
     coin_store = CoinStore(DEFAULT_CONSTANTS, int.from_bytes(POOL_REWARD_PREFIX_MAINNET, "big"))
-    now = CoinTimestamp(10012300, 1)
+    now = CoinTimestamp(10012300, uint32(1))
 
     DELAY_SECONDS = 86400
-    DELAY_PUZZLE_HASH = bytes([0] * 32)
+    DELAY_PUZZLE_HASH = bytes32([0] * 32)
 
     #######
     # spend coin to a singleton
@@ -489,12 +491,12 @@ def test_lifecycle_with_coinstore_as_wallet():
 
     assert len(list(coin_store.all_unspent_coins())) == 1
 
-    new_singletons = find_interesting_singletons(PUZZLE_DB, removals)
+    new_singletons = find_interesting_singletons(removals)
     interested_singletons.extend(new_singletons)
 
     assert len(interested_singletons) == 1
 
-    SINGLETON_WALLET = interested_singletons[0]
+    SINGLETON_WALLET: SingletonWallet = interested_singletons[0]
 
     #######
     # farm a `p2_singleton`
@@ -504,9 +506,9 @@ def test_lifecycle_with_coinstore_as_wallet():
     )
     farmed_coin = coin_store.farm_coin(pool_reward_puzzle_hash, now)
     now.seconds += 500
-    now.height += 1
+    now.height = uint32(now.height + 1)
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 2
@@ -522,7 +524,7 @@ def test_lifecycle_with_coinstore_as_wallet():
 
         _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
         now.seconds += 500
-        now.height += 1
+        now.height = uint32(now.height + 1)
 
         SINGLETON_WALLET.update_state(PUZZLE_DB, removals)
 
@@ -536,9 +538,9 @@ def test_lifecycle_with_coinstore_as_wallet():
     )
     farmed_coin = coin_store.farm_coin(pool_reward_puzzle_hash, now)
     now.seconds += 500
-    now.height += 1
+    now.height = uint32(now.height + 1)
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 2
@@ -551,7 +553,7 @@ def test_lifecycle_with_coinstore_as_wallet():
 
         _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
         now.seconds += 500
-        now.height += 1
+        now.height = uint32(now.height + 1)
 
         SINGLETON_WALLET.update_state(PUZZLE_DB, removals)
 
@@ -576,11 +578,7 @@ def test_lifecycle_with_coinstore_as_wallet():
     pool_escaping_puzzle_hash = pool_escaping_puzzle.get_tree_hash()
 
     pool_member_puzzle = POOL_MEMBER_MOD.curry(
-        pool_puzzle_hash,
-        pool_reward_puzzle_hash,
-        owner_public_key,
-        pool_reward_prefix,
-        pool_escaping_puzzle_hash,
+        pool_puzzle_hash, pool_reward_puzzle_hash, owner_public_key, pool_reward_prefix, pool_escaping_puzzle_hash
     )
     pool_member_puzzle_hash = pool_member_puzzle.get_tree_hash()
 
@@ -614,9 +612,9 @@ def test_lifecycle_with_coinstore_as_wallet():
     )
     farmed_coin = coin_store.farm_coin(pool_reward_puzzle_hash, now)
     now.seconds += 500
-    now.height += 1
+    now.height = uint32(now.height + 1)
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 2
@@ -638,7 +636,7 @@ def test_lifecycle_with_coinstore_as_wallet():
 
         _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
         now.seconds += 500
-        now.height += 1
+        now.height = uint32(now.height + 1)
 
         SINGLETON_WALLET.update_state(PUZZLE_DB, removals)
 
@@ -654,7 +652,7 @@ def test_lifecycle_with_coinstore_as_wallet():
 
     _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
     now.seconds += 500
-    now.height += 1
+    now.height = uint32(now.height + 1)
     change_count = SINGLETON_WALLET.update_state(PUZZLE_DB, removals)
     assert change_count == 1
 
@@ -668,9 +666,9 @@ def test_lifecycle_with_coinstore_as_wallet():
     )
     farmed_coin = coin_store.farm_coin(pool_reward_puzzle_hash, now)
     now.seconds += 500
-    now.height += 1
+    now.height = uint32(now.height + 1)
 
-    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, [farmed_coin])
+    p2_singleton_coins = filter_p2_singleton(PUZZLE_DB, [farmed_coin])
     assert p2_singleton_coins == [farmed_coin]
 
     assert len(list(coin_store.all_unspent_coins())) == 3
@@ -691,7 +689,7 @@ def test_lifecycle_with_coinstore_as_wallet():
 
         _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
         now.seconds += 500
-        now.height += 1
+        now.height = uint32(now.height + 1)
 
         SINGLETON_WALLET.update_state(PUZZLE_DB, removals)
 
@@ -723,7 +721,7 @@ def test_lifecycle_with_coinstore_as_wallet():
         assert ex.args[0] == "condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"
 
     now.seconds += 350000
-    now.height += 1445
+    now.height = uint32(now.height + 1445)
 
     _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
 

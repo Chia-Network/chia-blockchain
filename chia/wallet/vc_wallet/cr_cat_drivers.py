@@ -363,6 +363,7 @@ class CRCAT:
                 raise ValueError(
                     "Previous spend was not a CR-CAT, nor did it properly remark the CR params"
                 )  # pragma: no cover
+            authorized_providers = [bytes32(p.as_atom()) for p in authorized_providers_as_prog.as_iter()]
             lineage_inner_puzhash: bytes32 = potential_cr_layer.get_tree_hash()
         else:
             # Otherwise the info we need will be in the puzzle reveal
@@ -373,14 +374,14 @@ class CRCAT:
             if conditions is None:
                 conditions = inner_puzzle.run(inner_solution)
             inner_puzzle_hash: bytes32 = inner_puzzle.get_tree_hash()
+            authorized_providers = [bytes32(p.as_atom()) for p in authorized_providers_as_prog.as_iter()]
             lineage_inner_puzhash = construct_cr_layer(
-                authorized_providers_as_prog,
+                authorized_providers,
                 proofs_checker,
                 inner_puzzle_hash,  # type: ignore
             ).get_tree_hash_precalc(inner_puzzle_hash)
 
         # Convert all of the old stuff into python
-        authorized_providers: List[bytes32] = [bytes32(p.as_atom()) for p in authorized_providers_as_prog.as_iter()]
         new_lineage_proof: LineageProof = LineageProof(
             parent_spend.coin.parent_coin_info,
             lineage_inner_puzhash,
