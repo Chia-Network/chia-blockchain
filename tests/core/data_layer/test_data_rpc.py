@@ -2635,6 +2635,4 @@ async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: ran
     )
 
     root_changed = await offer_setup.taker.api.verify_proof(request=proof)
-    assert root_changed["current_root"] is False
-    # comparing everything except "current_root"
-    assert root_changed == {**verify, "current_root": root_changed["current_root"]}
+    assert root_changed == {**verify, "current_root": False}
