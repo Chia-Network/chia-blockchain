@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import dataclasses
+import logging
 from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple
 
 import pytest
@@ -11,6 +12,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.mempool_manager import (
     MEMPOOL_MIN_FEE_INCREASE,
@@ -68,7 +70,7 @@ TEST_COIN_RECORD3 = CoinRecord(TEST_COIN3, uint32(0), uint32(0), False, TEST_TIM
 TEST_HEIGHT = uint32(5)
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class TestBlockRecord:
     """
     This is a subset of BlockRecord that the mempool manager uses for peak.
@@ -133,7 +135,9 @@ async def instantiate_mempool_manager(
     return mempool_manager
 
 
-async def setup_mempool_with_coins(*, coin_amounts: List[int]) -> Tuple[MempoolManager, List[Coin]]:
+async def setup_mempool_with_coins(
+    *, coin_amounts: List[int], max_block_clvm_cost: Optional[int] = None
+) -> Tuple[MempoolManager, List[Coin]]:
     coins = []
     test_coin_records = {}
     for amount in coin_amounts:
@@ -149,7 +153,11 @@ async def setup_mempool_with_coins(*, coin_amounts: List[int]) -> Tuple[MempoolM
                 ret.append(r)
         return ret
 
-    mempool_manager = await instantiate_mempool_manager(get_coin_records)
+    if max_block_clvm_cost is not None:
+        constants = dataclasses.replace(DEFAULT_CONSTANTS, MAX_BLOCK_COST_CLVM=max_block_clvm_cost)
+    else:
+        constants = DEFAULT_CONSTANTS
+    mempool_manager = await instantiate_mempool_manager(get_coin_records, constants=constants)
     return (mempool_manager, coins)
 
 
@@ -976,37 +984,82 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
     assert len([s for s in low_rate_spends if s in result[0].coin_spends]) == 0
 
 
+@pytest.mark.parametrize("num_skipped_items", [PRIORITY_TX_THRESHOLD, MAX_SKIPPED_ITEMS])
 @pytest.mark.anyio
-async def test_create_bundle_from_mempool_on_max_cost() -> None:
+async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, caplog: pytest.LogCaptureFixture) -> None:
     # This test exercises the path where an item's inclusion would exceed the
     # maximum cumulative cost, so it gets skipped as a result
+
+    # NOTE:
+    # 1. After PRIORITY_TX_THRESHOLD, we skip items with eligible coins.
+    # 2. After skipping MAX_SKIPPED_ITEMS, we stop processing further items.
+
     async def make_and_send_big_cost_sb(coin: Coin) -> None:
         conditions = []
         g1 = G1Element()
-        for _ in range(2436):
+        for _ in range(120):
             conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
-        conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 1])
+        conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 10_000_000])
         # Create a spend bundle with a big enough cost that gets it close to the limit
         _, _, res = await generate_and_add_spendbundle(mempool_manager, conditions, coin)
         assert res[1] == MempoolInclusionStatus.SUCCESS
 
-    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=[1000000000, 1000000001])
-    # Create a spend bundle with a big enough cost that gets it close to the limit
-    await make_and_send_big_cost_sb(coins[0])
-    # Create a second spend bundle with a relatively smaller cost.
-    # Combined with the first spend bundle, we'd exceed the maximum block clvm cost
-    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coins[1].amount - 2]]
-    sb2, _, res = await generate_and_add_spendbundle(mempool_manager, conditions, coins[1])
+    mempool_manager, coins = await setup_mempool_with_coins(
+        coin_amounts=list(range(1_000_000_000, 1_000_000_030)), max_block_clvm_cost=550_000_000
+    )
+    # Create the spend bundles with a big enough cost that they get close to the limit
+    for i in range(num_skipped_items):
+        await make_and_send_big_cost_sb(coins[i])
+
+    # Create a spend bundle with a relatively smaller cost.
+    # Combined with a big cost spend bundle, we'd exceed the maximum block clvm cost
+    sb2_coin = coins[num_skipped_items]
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, sb2_coin.amount - 200_000]]
+    sb2, _, res = await generate_and_add_spendbundle(mempool_manager, conditions, sb2_coin)
     assert res[1] == MempoolInclusionStatus.SUCCESS
+    sb2_addition = Coin(sb2_coin.name(), IDENTITY_PUZZLE_HASH, sb2_coin.amount - 200_000)
+    # Create 4 extra spend bundles with smaller FPC and smaller costs
+    extra_sbs = []
+    extra_additions = []
+    for i in range(num_skipped_items + 1, num_skipped_items + 5):
+        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coins[i].amount - 30_000]]
+        # Make the first of these without eligible coins
+        if i == num_skipped_items + 1:
+            conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH])
+        sb, _, res = await generate_and_add_spendbundle(mempool_manager, conditions, coins[i])
+        extra_sbs.append(sb)
+        coin = Coin(coins[i].name(), IDENTITY_PUZZLE_HASH, coins[i].amount - 30_000)
+        extra_additions.append(coin)
+        assert res[1] == MempoolInclusionStatus.SUCCESS
+
     assert mempool_manager.peak is not None
+    caplog.set_level(logging.DEBUG)
     result = mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
     agg, additions = result
-    # The second spend bundle has a higher FPC so it should get picked first
-    assert agg == sb2
-    # The first spend bundle hits the maximum block clvm cost and gets skipped
-    assert additions == [Coin(coins[1].name(), IDENTITY_PUZZLE_HASH, coins[1].amount - 2)]
-    assert agg.removals() == [coins[1]]
+    skipped_due_to_eligible_coins = sum(
+        1
+        for line in caplog.text.split("\n")
+        if "DEBUG Exception while checking a mempool item for deduplication: Skipping transaction with eligible coin(s)"
+        in line
+    )
+    if num_skipped_items == PRIORITY_TX_THRESHOLD:
+        # We skipped enough big cost items to reach `PRIORITY_TX_THRESHOLD`,
+        # so the first from the extra 4 (the one without eligible coins) went in,
+        # and the other 3 were skipped (they have eligible coins)
+        assert skipped_due_to_eligible_coins == 3
+        assert agg == SpendBundle.aggregate([sb2, extra_sbs[0]])
+        assert additions == [sb2_addition, extra_additions[0]]
+        assert agg.removals() == [sb2_coin, coins[num_skipped_items + 1]]
+    elif num_skipped_items == MAX_SKIPPED_ITEMS:
+        # We skipped enough big cost items to trigger `MAX_SKIPPED_ITEMS` so
+        # we didn't process any of the extra items
+        assert skipped_due_to_eligible_coins == 0
+        assert agg == SpendBundle.aggregate([sb2])
+        assert additions == [sb2_addition]
+        assert agg.removals() == [sb2_coin]
+    else:
+        raise ValueError("num_skipped_items must be PRIORITY_TX_THRESHOLD or MAX_SKIPPED_ITEMS")  # pragma: no cover
 
 
 @pytest.mark.parametrize(
