@@ -343,7 +343,7 @@ class Farmer:
                         response: Dict[str, Any] = json.loads(await resp.text())
                         self.log.info(f"GET /pool_info response: {response}")
                         new_pool_url: Optional[str] = None
-                        if resp.url != url:
+                        if resp.url != url and all(r.status in {301, 308} for r in resp.history):
                             new_pool_url = f"{resp.url}".replace("/pool_info", "")
 
                         return GetPoolInfoResult(pool_info=response, new_pool_url=new_pool_url)

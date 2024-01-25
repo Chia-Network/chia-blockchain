@@ -975,11 +975,17 @@ def make_pool_state(p2_singleton_puzzle_hash: bytes32, overrides: Dict[str, Any]
 
 
 @dataclass
+class DummyClientResponse:
+    status: int
+
+
+@dataclass
 class DummyPoolInfoResponse:
     ok: bool
     status: int
     url: URL
     pool_info: Optional[Dict[str, Any]] = None
+    history: Tuple[DummyClientResponse, ...] = ()
 
     async def text(self) -> str:
         if self.pool_info is None:
@@ -1025,15 +1031,76 @@ class PoolInfoCase(DataCase):
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
     ),
     PoolInfoCase(
-        "valid_response_with_redirect",
+        "valid_response_with_301_redirect",
         initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
         pool_response=DummyPoolInfoResponse(
             ok=True,
             status=200,
             url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
             pool_info=make_pool_info({}),
+            history=tuple([DummyClientResponse(status=301)]),
         ),
         expected_pool_url_in_config="https://endpoint-1337.pool-domain.tld/some-other-path",
+    ),
+    PoolInfoCase(
+        "valid_response_with_302_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            pool_info=make_pool_info({}),
+            history=tuple([DummyClientResponse(status=302)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "valid_response_with_307_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            pool_info=make_pool_info({}),
+            history=tuple([DummyClientResponse(status=307)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "valid_response_with_308_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            pool_info=make_pool_info({}),
+            history=tuple([DummyClientResponse(status=308)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1337.pool-domain.tld/some-other-path",
+    ),
+    PoolInfoCase(
+        "valid_response_with_multiple_308_redirects",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            pool_info=make_pool_info({}),
+            history=tuple([DummyClientResponse(status=308), DummyClientResponse(status=308)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1337.pool-domain.tld/some-other-path",
+    ),
+    PoolInfoCase(
+        "valid_response_with_multiple_307_and_308_redirects",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            pool_info=make_pool_info({}),
+            history=tuple([DummyClientResponse(status=307), DummyClientResponse(status=308)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
     ),
     PoolInfoCase(
         "failed_request_without_redirect",
@@ -1046,12 +1113,46 @@ class PoolInfoCase(DataCase):
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
     ),
     PoolInfoCase(
-        "failed_request_with_redirect",
+        "failed_request_with_301_redirect",
         initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
         pool_response=DummyPoolInfoResponse(
             ok=False,
             status=500,
             url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            history=tuple([DummyClientResponse(status=301)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "failed_request_with_302_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=False,
+            status=500,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            history=tuple([DummyClientResponse(status=302)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "failed_request_with_307_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=False,
+            status=500,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            history=tuple([DummyClientResponse(status=307)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "failed_request_with_308_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=False,
+            status=500,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            history=tuple([DummyClientResponse(status=308)]),
         ),
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
     ),
