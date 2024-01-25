@@ -417,7 +417,8 @@ class Mempool:
             if not item_inclusion_filter(name):
                 continue
             try:
-                cost = uint64(0 if item.npc_result.conds is None else item.npc_result.conds.cost)
+                assert item.npc_result.conds is not None
+                cost = item.npc_result.conds.cost
                 if skipped_items >= PRIORITY_TX_THRESHOLD:
                     # If we've encountered `PRIORITY_TX_THRESHOLD` number of
                     # transactions that don't fit in the remaining block size,
