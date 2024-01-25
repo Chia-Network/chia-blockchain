@@ -2473,7 +2473,7 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
         request={"store_id": offer_setup.maker.id.hex(), "keys": reference.keys_to_prove}
     )
     assert proof["success"] is True
-    verify = await offer_setup.taker.api.verify_proof(request=proof)
+    verify = await offer_setup.taker.api.verify_proof(request=proof["proof"])
     assert verify == reference.verify_proof_response
 
     # test InterfaceLayer.client
@@ -2483,7 +2483,7 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
         store_id=offer_setup.maker.id, keys=[hexstr_to_bytes(key) for key in reference.keys_to_prove]
     )
     assert proof["success"] is True
-    verify = await offer_setup.taker.data_rpc_client.verify_proof(proof=proof)
+    verify = await offer_setup.taker.data_rpc_client.verify_proof(proof=proof["proof"])
     assert verify == reference.verify_proof_response
 
     # test InterfaceLayer.func
@@ -2497,7 +2497,9 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
     )
     assert proof["success"] is True
     verify = await verify_proof_cmd(
-        proof=proof, rpc_port=offer_setup.taker.data_rpc_client.port, root_path=offer_setup.taker.data_layer.root_path
+        proof=proof["proof"],
+        rpc_port=offer_setup.taker.data_rpc_client.port,
+        root_path=offer_setup.taker.data_layer.root_path,
     )
     assert verify == reference.verify_proof_response
 
@@ -2526,7 +2528,7 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
         "data",
         "verify_proof",
         "-p",
-        json.dumps(proof),
+        json.dumps(proof["proof"]),
         "--data-rpc-port",
         str(offer_setup.taker.data_rpc_client.port),
         root_path=offer_setup.taker.data_layer.root_path,
@@ -2572,36 +2574,36 @@ async def test_dl_proof_verify_errors(offer_setup: OfferSetup, seeded_random: ra
     )
     assert proof["success"] is True
 
-    verify = await offer_setup.taker.api.verify_proof(request=proof)
+    verify = await offer_setup.taker.api.verify_proof(request=proof["proof"])
     assert verify == two_key_proof.verify_proof_response
 
     # test bad coin id
-    badproof = deepcopy(proof)
+    badproof = deepcopy(proof["proof"])
     badproof["coin_id"] = bytes32.random(seeded_random).hex()
     with pytest.raises(ValueError, match="Invalid Proof: No DL singleton found at coin id"):
         await offer_setup.taker.api.verify_proof(request=badproof)
 
     # test bad innerpuz
-    badproof = deepcopy(proof)
+    badproof = deepcopy(proof["proof"])
     badproof["inner_puzzle_hash"] = bytes32.random(seeded_random).hex()
     with pytest.raises(ValueError, match="Invalid Proof: incorrect puzzle hash"):
         await offer_setup.taker.api.verify_proof(request=badproof)
 
     # test bad key
-    badproof = deepcopy(proof)
-    badproof["proof"]["proofs"][0]["key_clvm_hash"] = bytes32.random(seeded_random).hex()
+    badproof = deepcopy(proof["proof"])
+    badproof["store_proofs"]["proofs"][0]["key_clvm_hash"] = bytes32.random(seeded_random).hex()
     with pytest.raises(ValueError, match="Invalid Proof: node hash does not match key and value"):
         await offer_setup.taker.api.verify_proof(request=badproof)
 
     # test bad value
-    badproof = deepcopy(proof)
-    badproof["proof"]["proofs"][0]["value_clvm_hash"] = bytes32.random(seeded_random).hex()
+    badproof = deepcopy(proof["proof"])
+    badproof["store_proofs"]["proofs"][0]["value_clvm_hash"] = bytes32.random(seeded_random).hex()
     with pytest.raises(ValueError, match="Invalid Proof: node hash does not match key and value"):
         await offer_setup.taker.api.verify_proof(request=badproof)
 
     # test bad layer hash
-    badproof = deepcopy(proof)
-    badproof["proof"]["proofs"][0]["layers"][1]["other_hash"] = bytes32.random(seeded_random).hex()
+    badproof = deepcopy(proof["proof"])
+    badproof["store_proofs"]["proofs"][0]["layers"][1]["other_hash"] = bytes32.random(seeded_random).hex()
     with pytest.raises(ValueError, match="Invalid Proof: invalid proof of inclusion found"):
         await offer_setup.taker.api.verify_proof(request=badproof)
 
@@ -2618,7 +2620,7 @@ async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: ran
     )
     assert proof["success"] is True
 
-    verify = await offer_setup.taker.api.verify_proof(request=proof)
+    verify = await offer_setup.taker.api.verify_proof(request=proof["proof"])
     assert verify == two_key_proof.verify_proof_response
 
     key = b"a"
@@ -2634,5 +2636,5 @@ async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: ran
         store_id=offer_setup.maker.id,
     )
 
-    root_changed = await offer_setup.taker.api.verify_proof(request=proof)
+    root_changed = await offer_setup.taker.api.verify_proof(request=proof["proof"])
     assert root_changed == {**verify, "current_root": False}

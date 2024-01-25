@@ -806,10 +806,16 @@ class StoreProofsHashes(Streamable):
 
 @streamable
 @dataclasses.dataclass(frozen=True)
-class GetProofResponse(Streamable):
-    proof: StoreProofsHashes
+class DLProof(Streamable):
+    store_proofs: StoreProofsHashes
     coin_id: bytes32
     inner_puzzle_hash: bytes32
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class GetProofResponse(Streamable):
+    proof: DLProof
     success: bool
 
 
@@ -821,15 +827,15 @@ class VerifyProofResponse(Streamable):
     success: bool
 
 
-def dl_verify_proof_internal(get_proof_response: GetProofResponse, puzzle_hash: bytes32) -> List[KeyValueHashes]:
+def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> List[KeyValueHashes]:
     """Verify a proof of inclusion for a DL singleton"""
 
     verified_keys: List[KeyValueHashes] = []
 
-    for reference_proof in get_proof_response.proof.proofs:
-        inner_puz_hash = get_proof_response.inner_puzzle_hash
+    for reference_proof in dl_proof.store_proofs.proofs:
+        inner_puz_hash = dl_proof.inner_puzzle_hash
         host_fullpuz_program = create_host_fullpuz(
-            inner_puz_hash, reference_proof.root(), get_proof_response.proof.store_id
+            inner_puz_hash, reference_proof.root(), dl_proof.store_proofs.store_id
         )
         expected_puzzle_hash = host_fullpuz_program.get_tree_hash_precalc(inner_puz_hash)
 
@@ -872,17 +878,17 @@ async def dl_verify_proof(
 ) -> Dict[str, Any]:
     """Verify a proof of inclusion for a DL singleton"""
 
-    get_proof_response = GetProofResponse.from_json_dict(request)
+    dlproof = DLProof.from_json_dict(request)
 
-    coin_id = get_proof_response.coin_id
+    coin_id = dlproof.coin_id
     coin_states = await wallet_node.get_coin_state([coin_id], peer=peer)
     if len(coin_states) == 0:
         raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
 
-    verified_keys = dl_verify_proof_internal(get_proof_response, coin_states[0].coin.puzzle_hash)
+    verified_keys = dl_verify_proof_internal(dlproof, coin_states[0].coin.puzzle_hash)
 
     response = VerifyProofResponse(
-        verified_clvm_hashes=ProofResultInclusions(get_proof_response.proof.store_id, verified_keys),
+        verified_clvm_hashes=ProofResultInclusions(dlproof.store_proofs.store_id, verified_keys),
         success=True,
         current_root=coin_states[0].spent_height is None,
     )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
-from chia.data_layer.data_layer_util import GetProofResponse, VerifyProofResponse
+from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -1225,7 +1225,7 @@ class WalletRpcClient(RpcClient):
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
-    async def dl_verify_proof(self, request: GetProofResponse) -> VerifyProofResponse:
+    async def dl_verify_proof(self, request: DLProof) -> VerifyProofResponse:
         response = await self.fetch(path="dl_verify_proof", request_json=request.to_json_dict())
         return VerifyProofResponse.from_json_dict(response)
 

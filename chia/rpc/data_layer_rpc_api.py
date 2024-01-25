@@ -10,6 +10,7 @@ from chia.data_layer.data_layer_util import (
     CancelOfferResponse,
     ClearPendingRootsRequest,
     ClearPendingRootsResponse,
+    DLProof,
     GetProofRequest,
     GetProofResponse,
     HashOnlyProof,
@@ -496,13 +497,15 @@ class DataLayerRpcApi:
 
         store_proof = StoreProofsHashes(store_id=request.store_id, proofs=all_proofs)
         return GetProofResponse(
-            proof=store_proof,
+            proof=DLProof(
+                store_proofs=store_proof,
+                coin_id=root.coin_id,
+                inner_puzzle_hash=root.inner_puzzle_hash,
+            ),
             success=True,
-            coin_id=root.coin_id,
-            inner_puzzle_hash=root.inner_puzzle_hash,
         )
 
     @streamable_marshal
-    async def verify_proof(self, request: GetProofResponse) -> VerifyProofResponse:
+    async def verify_proof(self, request: DLProof) -> VerifyProofResponse:
         response = await self.service.wallet_rpc.dl_verify_proof(request)
         return response

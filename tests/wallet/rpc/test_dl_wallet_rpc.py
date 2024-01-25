@@ -6,7 +6,7 @@ import logging
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.data_layer.data_layer_util import GetProofResponse, HashOnlyProof, ProofLayer, StoreProofsHashes
+from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, StoreProofsHashes
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -250,9 +250,8 @@ class TestWalletRpc:
             ],
         )
         fake_coin_id = bytes32([5] * 32)
-        fake_gpr = GetProofResponse(
-            proof=StoreProofsHashes(store_id=bytes32([1] * 32), proofs=[fakeproof]),
-            success=True,
+        fake_gpr = DLProof(
+            store_proofs=StoreProofsHashes(store_id=bytes32([1] * 32), proofs=[fakeproof]),
             coin_id=fake_coin_id,
             inner_puzzle_hash=bytes32([1] * 32),
         )
