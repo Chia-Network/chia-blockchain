@@ -114,13 +114,17 @@ async def test_basic_store(
     h_hash_1 = bytes32.random(seeded_random)
     assert not store.seen_unfinished_block(h_hash_1)
     assert store.seen_unfinished_block(h_hash_1)
-    store.clear_seen_unfinished_blocks()
+    # this will crowd out h_hash_1
+    for _ in range(store.max_seen_unfinished_blocks):
+        store.seen_unfinished_block(bytes32.random(seeded_random))
     assert not store.seen_unfinished_block(h_hash_1)
 
     # Add/get unfinished block
     for height, unf_block in enumerate(unfinished_blocks):
         assert store.get_unfinished_block(unf_block.partial_hash) is None
-        store.add_unfinished_block(uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, False))
+        store.add_unfinished_block(
+            uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, False, uint32(0))
+        )
         assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
         store.remove_unfinished_block(unf_block.partial_hash)
         assert store.get_unfinished_block(unf_block.partial_hash) is None
@@ -501,7 +505,7 @@ async def test_basic_store(
         blocks[1].reward_chain_sp_proof,
     )
     assert not store.new_signage_point(
-        blocks[1].reward_chain_block.signage_point_index,
+        uint8(blocks[1].reward_chain_block.signage_point_index),
         blockchain,
         peak,
         uint64(blockchain.block_record(blocks[1].header_hash).sp_sub_slot_total_iters(custom_block_tools.constants)),
@@ -803,9 +807,9 @@ async def test_basic_store(
 
         blocks = custom_block_tools.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
 
-        i3 = blocks[-3].reward_chain_block.signage_point_index
-        i2 = blocks[-2].reward_chain_block.signage_point_index
-        i1 = blocks[-1].reward_chain_block.signage_point_index
+        i3 = uint8(blocks[-3].reward_chain_block.signage_point_index)
+        i2 = uint8(blocks[-2].reward_chain_block.signage_point_index)
+        i1 = uint8(blocks[-1].reward_chain_block.signage_point_index)
         if (
             len(blocks[-2].finished_sub_slots) == len(blocks[-1].finished_sub_slots) == 0
             and not is_overflow_block(custom_block_tools.constants, signage_point_index=i2)

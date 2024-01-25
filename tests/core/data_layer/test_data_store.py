@@ -308,7 +308,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
         if i > 25 and i <= 200 and random.randint(0, 4):
             is_insert = True
         if i > 200:
-            hint_keys_values = await data_store.get_keys_values_dict(tree_id)
+            hint_keys_values = await data_store.get_keys_values_compressed(tree_id)
             if not deleted_all:
                 while node_count > 0:
                     node_count -= 1
@@ -383,7 +383,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
 
         batch: List[Dict[str, Any]] = []
         keys_values: Dict[bytes, bytes] = {}
-        hint_keys_values: Optional[Dict[bytes, bytes]] = {} if use_optimized else None
+        hint_keys_values: Optional[Dict[bytes32, bytes32]] = {} if use_optimized else None
         for operation in range(num_batches * num_ops_per_batch):
             [op_type] = random.choices(
                 ["insert", "upsert-insert", "upsert-update", "delete"],
@@ -490,7 +490,7 @@ async def test_upsert_ignores_existing_arguments(
 ) -> None:
     key = b"key"
     value = b"value1"
-    hint_keys_values: Optional[Dict[bytes, bytes]] = {} if use_optimized else None
+    hint_keys_values: Optional[Dict[bytes32, bytes32]] = {} if use_optimized else None
 
     await data_store.autoinsert(
         key=key,
@@ -643,7 +643,7 @@ async def test_inserting_duplicate_key_fails(
             side=Side.RIGHT,
         )
 
-    hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+    hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
     # TODO: more specific exception
     with pytest.raises(Exception):
         await data_store.insert(
@@ -691,7 +691,7 @@ async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
 async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: bytes32) -> None:
     random = Random()
     random.seed(100, version=2)
-    hint_keys_values: Dict[bytes, bytes] = {}
+    hint_keys_values: Dict[bytes32, bytes32] = {}
     hashes = []
 
     for i in range(2000):
@@ -710,7 +710,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
 async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32) -> None:
     random = Random()
     random.seed(101, version=2)
-    hint_keys_values: Dict[bytes, bytes] = {}
+    hint_keys_values: Dict[bytes32, bytes32] = {}
     hashes = []
 
     for i in range(2000):
@@ -749,7 +749,7 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -789,7 +789,7 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -827,7 +827,7 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -867,7 +867,7 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -1206,6 +1206,33 @@ async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
     assert diff_2 == {DiffData(OperationType.DELETE, b"000", b"000")}
     diff_3 = await data_store.get_kv_diff(tree_id, invalid_hash, insert_result.node_hash)
     assert diff_3 == set()
+
+
+@pytest.mark.anyio
+async def test_kv_diff_3(data_store: DataStore, tree_id: bytes32) -> None:
+    insert_result = await data_store.autoinsert(
+        key=b"000",
+        value=b"000",
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+    await data_store.delete(tree_id=tree_id, key=b"000", status=Status.COMMITTED)
+    insert_result_2 = await data_store.autoinsert(
+        key=b"000",
+        value=b"001",
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+    diff_1 = await data_store.get_kv_diff(tree_id, insert_result.node_hash, insert_result_2.node_hash)
+    assert diff_1 == {DiffData(OperationType.DELETE, b"000", b"000"), DiffData(OperationType.INSERT, b"000", b"001")}
+    insert_result_3 = await data_store.upsert(
+        key=b"000",
+        new_value=b"002",
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+    diff_2 = await data_store.get_kv_diff(tree_id, insert_result_2.node_hash, insert_result_3.node_hash)
+    assert diff_2 == {DiffData(OperationType.DELETE, b"000", b"001"), DiffData(OperationType.INSERT, b"000", b"002")}
 
 
 @pytest.mark.anyio

@@ -237,16 +237,10 @@ def create_eml_covenant_morpher(
 
 
 def construct_exigent_metadata_layer(
-    metadata: Optional[bytes32],
-    transfer_program: Program,
-    inner_puzzle: Program,
+    metadata: Optional[Program], transfer_program: Program, inner_puzzle: Program
 ) -> Program:
     return EXTIGENT_METADATA_LAYER.curry(
-        EXTIGENT_METADATA_LAYER_HASH,
-        metadata,
-        transfer_program,
-        transfer_program.get_tree_hash(),
-        inner_puzzle,
+        EXTIGENT_METADATA_LAYER_HASH, metadata, transfer_program, transfer_program.get_tree_hash(), inner_puzzle
     )
 
 
