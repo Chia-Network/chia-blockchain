@@ -351,9 +351,8 @@ def prepare_sp_and_pos_for_fee_test(
             "txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej"
         ),
         fee_info=ProofOfSpaceFeeInfo(
-            applied_fee_threshold=uint32(
-                fee_quality + fee_threshold_offset
-            )  # Apply threshold offset to make the fee either pass or fail
+            # Apply threshold offset to make the fee either pass or fail
+            applied_fee_threshold=uint32(fee_quality + fee_threshold_offset)
         ),
     )
 
