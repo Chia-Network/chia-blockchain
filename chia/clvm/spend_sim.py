@@ -259,7 +259,11 @@ class SpendSim:
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
             if peak is not None:
-                result = self.mempool_manager.create_bundle_from_mempool(peak.header_hash, item_inclusion_filter)
+                result = await self.mempool_manager.create_bundle_from_mempool(
+                    last_tb_header_hash=peak.header_hash,
+                    get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                    item_inclusion_filter=item_inclusion_filter,
+                )
 
                 if result is not None:
                     bundle, additions = result
