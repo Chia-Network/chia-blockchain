@@ -194,29 +194,38 @@ class SPOut(QrCodeDisplay, _SPCompression):
     "gather_signing_info",
     "Gather the information from a transaction that a signer needs in order to create a signature",
 )
-class GatherSigningInfoCMD(SPOut, TransactionsIn, NeedsWalletRPC):
+class GatherSigningInfoCMD:
+    sp_out: SPOut
+    txs_in: TransactionsIn
+    rpc_info: NeedsWalletRPC
+
     async def run(self) -> None:
-        async with self.wallet_rpc() as wallet_rpc:
+        async with self.rpc_info.wallet_rpc() as wallet_rpc:
             spends: List[Spend] = [
                 Spend.from_coin_spend(cs)
-                for tx in self.transaction_bundle.txs
+                for tx in self.txs_in.transaction_bundle.txs
                 if tx.spend_bundle is not None
                 for cs in tx.spend_bundle.coin_spends
             ]
             signing_instructions: SigningInstructions = (
                 await wallet_rpc.client.gather_signing_info(GatherSigningInfo(spends=spends))
             ).signing_instructions
-            self.handle_clvm_output([signing_instructions])
+            self.sp_out.handle_clvm_output([signing_instructions])
 
 
 @chia_command(signer_cmd, "apply_signatures", "Apply a signer's signatures to a transaction bundle")
-class ApplySignaturesCMD(TransactionsOut, SPIn, TransactionsIn, NeedsWalletRPC):
+class ApplySignaturesCMD:
+    txs_out: TransactionsOut
+    sp_in: SPIn
+    txs_in: TransactionsIn
+    rpc_info: NeedsWalletRPC
+
     async def run(self) -> None:
-        async with self.wallet_rpc() as wallet_rpc:
-            signing_responses: List[SigningResponse] = self.read_sp_input(SigningResponse)
+        async with self.rpc_info.wallet_rpc() as wallet_rpc:
+            signing_responses: List[SigningResponse] = self.sp_in.read_sp_input(SigningResponse)
             spends: List[Spend] = [
                 Spend.from_coin_spend(cs)
-                for tx in self.transaction_bundle.txs
+                for tx in self.txs_in.transaction_bundle.txs
                 if tx.spend_bundle is not None
                 for cs in tx.spend_bundle.coin_spends
             ]
@@ -236,18 +245,24 @@ class ApplySignaturesCMD(TransactionsOut, SPIn, TransactionsIn, NeedsWalletRPC):
                 [spend.as_coin_spend() for spend in signed_spends], final_signature
             )
             new_transactions: List[TransactionRecord] = [
-                replace(self.transaction_bundle.txs[0], spend_bundle=new_spend_bundle, name=new_spend_bundle.name()),
-                *(replace(tx, spend_bundle=None) for tx in self.transaction_bundle.txs),
+                replace(
+                    self.txs_in.transaction_bundle.txs[0], spend_bundle=new_spend_bundle, name=new_spend_bundle.name()
+                ),
+                *(replace(tx, spend_bundle=None) for tx in self.txs_in.transaction_bundle.txs),
             ]
-            self.handle_transaction_output(new_transactions)
+            self.txs_out.handle_transaction_output(new_transactions)
 
 
 @chia_command(signer_cmd, "execute_signing_instructions", "Given some signing instructions, return signing responses")
-class ExecuteSigningInstructionsCMD(SPOut, SPIn, NeedsWalletRPC):
+class ExecuteSigningInstructionsCMD:
+    sp_out: SPOut
+    sp_in: SPIn
+    rpc_info: NeedsWalletRPC
+
     async def run(self) -> None:
-        async with self.wallet_rpc() as wallet_rpc:
-            signing_instructions: List[SigningInstructions] = self.read_sp_input(SigningInstructions)
-            self.handle_clvm_output(
+        async with self.rpc_info.wallet_rpc() as wallet_rpc:
+            signing_instructions: List[SigningInstructions] = self.sp_in.read_sp_input(SigningInstructions)
+            self.sp_out.handle_clvm_output(
                 [
                     signing_response
                     for instruction_set in signing_instructions
@@ -261,7 +276,10 @@ class ExecuteSigningInstructionsCMD(SPOut, SPIn, NeedsWalletRPC):
 
 
 @chia_command(wallet_cmd, "push_transactions", "Push a transaction bundle to the wallet to send to the network")
-class PushTransactionsCMD(TransactionsIn, NeedsWalletRPC):
+class PushTransactionsCMD:
+    txs_in: TransactionsIn
+    rpc_info: NeedsWalletRPC
+
     async def run(self) -> None:
-        async with self.wallet_rpc() as wallet_rpc:
-            await wallet_rpc.client.push_transactions(self.transaction_bundle.txs)
+        async with self.rpc_info.wallet_rpc() as wallet_rpc:
+            await wallet_rpc.client.push_transactions(self.txs_in.transaction_bundle.txs)

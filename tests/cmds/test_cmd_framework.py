@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Any, TypeVar
+from typing import Any, Dict, TypeVar
 
 import click
 import pytest
 from click.testing import CliRunner
 
-from chia.cmds.cmd_classes import ChiaCommand, NeedsContext, NeedsWalletRPC, chia_command, option
+from chia.cmds.cmd_classes import ChiaCommand, Context, NeedsWalletRPC, chia_command, option
 from tests.conftest import ConsensusMode
 from tests.environments.wallet import WalletTestFramework
 from tests.wallet.conftest import *  # noqa
@@ -22,13 +22,18 @@ def check_click_parsing(cmd: ChiaCommand, *args: str) -> None:
 
     mock_type = type(cmd.__class__.__name__, (cmd.__class__,), {})
 
-    def new_run(self: Any) -> None:
-        # cmd is appropriately not recognized as a dataclass but I'm not sure how to hint that something is a dataclass
-        other_dict = asdict(cmd)  # type: ignore[call-overload]
-        for k, v in asdict(self).items():
+    def dict_compare_with_ignore_context(one: Dict[str, Any], two: Dict[str, Any]) -> None:
+        for k, v in one.items():
             if k == "context":
                 continue
-            assert v == other_dict[k]
+            elif isinstance(v, dict):
+                dict_compare_with_ignore_context(v, two[k])
+            else:
+                assert v == two[k]
+
+    def new_run(self: Any) -> None:
+        # cmd is appropriately not recognized as a dataclass but I'm not sure how to hint that something is a dataclass
+        dict_compare_with_ignore_context(asdict(cmd), asdict(self))  # type: ignore[call-overload]
 
     setattr(mock_type, "run", new_run)
     chia_command(_cmd, "_", "")(mock_type)
@@ -132,7 +137,9 @@ def test_context_requirement() -> None:
         ctx.obj = {"foo": "bar"}
 
     @chia_command(cmd, "temp_cmd", "blah")
-    class TempCMD(NeedsContext):
+    class TempCMD:
+        context: Context
+
         def run(self) -> None:
             assert self.context["foo"] == "bar"
 
@@ -170,7 +177,9 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
         pass
 
     @chia_command(cmd, "temp_cmd", "blah")
-    class TempCMD(NeedsWalletRPC):
+    class TempCMD:
+        rpc_info: NeedsWalletRPC
+
         def run(self) -> None:
             pass
 
@@ -198,11 +207,13 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
     assert result.output == ""
 
     expected_command = TempCMD(
-        context={"root_path": wallet_environments.environments[0].node.root_path},
-        wallet_rpc_port=port,
-        fingerprint=fingerprint,
+        rpc_info=NeedsWalletRPC(
+            context={"root_path": wallet_environments.environments[0].node.root_path},
+            wallet_rpc_port=port,
+            fingerprint=fingerprint,
+        ),
     )
     check_click_parsing(expected_command, "-wp", str(port), "-f", str(fingerprint))
 
-    async with expected_command.wallet_rpc(consume_errors=False) as client_info:
+    async with expected_command.rpc_info.wallet_rpc(consume_errors=False) as client_info:
         assert await client_info.client.get_logged_in_fingerprint() == fingerprint

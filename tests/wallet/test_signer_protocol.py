@@ -12,7 +12,7 @@ import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from click.testing import CliRunner
 
-from chia.cmds.cmd_classes import WalletClientInfo, chia_command
+from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo, chia_command
 from chia.cmds.cmds_util import TransactionBundle
 from chia.cmds.signer import (
     ApplySignaturesCMD,
@@ -793,32 +793,41 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
             file.write(bytes(TransactionBundle([tx])))
 
         await GatherSigningInfoCMD(
-            client_info=client_info,
-            transaction_file_in="./temp-tb",
-            compression="chip-TBD",
-            output_format="file",
-            output_file=["./temp-si"],
+            rpc_info=NeedsWalletRPC(client_info=client_info),
+            sp_out=SPOut(
+                compression="chip-TBD",
+                output_format="file",
+                output_file=["./temp-si"],
+            ),
+            txs_in=TransactionsIn(transaction_file_in="./temp-tb"),
         ).run()
 
         await ExecuteSigningInstructionsCMD(
-            client_info=client_info,
-            compression="chip-TBD",
-            signer_protocol_input=["./temp-si"],
-            output_format="file",
-            output_file=["./temp-sr"],
+            rpc_info=NeedsWalletRPC(client_info=client_info),
+            sp_in=SPIn(
+                compression="chip-TBD",
+                signer_protocol_input=["./temp-si"],
+            ),
+            sp_out=SPOut(
+                compression="chip-TBD",
+                output_format="file",
+                output_file=["./temp-sr"],
+            ),
         ).run()
 
         await ApplySignaturesCMD(
-            client_info=client_info,
-            transaction_file_in="./temp-tb",
-            compression="chip-TBD",
-            signer_protocol_input=["./temp-sr"],
-            transaction_file_out="./temp-stb",
+            rpc_info=NeedsWalletRPC(client_info=client_info),
+            txs_in=TransactionsIn(transaction_file_in="./temp-tb"),
+            sp_in=SPIn(
+                compression="chip-TBD",
+                signer_protocol_input=["./temp-sr"],
+            ),
+            txs_out=TransactionsOut(transaction_file_out="./temp-stb"),
         ).run()
 
         await PushTransactionsCMD(
-            client_info=client_info,
-            transaction_file_in="./temp-stb",
+            rpc_info=NeedsWalletRPC(client_info=client_info),
+            txs_in=TransactionsIn(transaction_file_in="./temp-stb"),
         ).run()
 
         await wallet_environments.process_pending_states(
@@ -849,13 +858,13 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
 def test_signer_command_default_parsing() -> None:
     check_click_parsing(
         GatherSigningInfoCMD(
-            client_info=None,
-            wallet_rpc_port=None,
-            fingerprint=None,
-            transaction_file_in="in",
-            compression="none",
-            output_format="hex",
-            output_file=tuple(),
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            sp_out=SPOut(
+                compression="none",
+                output_format="hex",
+                output_file=tuple(),
+            ),
+            txs_in=TransactionsIn(transaction_file_in="in"),
         ),
         "-i",
         "in",
@@ -863,13 +872,16 @@ def test_signer_command_default_parsing() -> None:
 
     check_click_parsing(
         ExecuteSigningInstructionsCMD(
-            client_info=None,
-            wallet_rpc_port=None,
-            fingerprint=None,
-            compression="none",
-            signer_protocol_input=("sp-in",),
-            output_format="hex",
-            output_file=tuple(),
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            sp_in=SPIn(
+                compression="none",
+                signer_protocol_input=("sp-in",),
+            ),
+            sp_out=SPOut(
+                compression="none",
+                output_format="hex",
+                output_file=tuple(),
+            ),
         ),
         "-p",
         "sp-in",
@@ -877,13 +889,13 @@ def test_signer_command_default_parsing() -> None:
 
     check_click_parsing(
         ApplySignaturesCMD(
-            client_info=None,
-            wallet_rpc_port=None,
-            fingerprint=None,
-            transaction_file_in="in",
-            compression="none",
-            signer_protocol_input=("sp-in",),
-            transaction_file_out="out",
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            txs_in=TransactionsIn(transaction_file_in="in"),
+            sp_in=SPIn(
+                compression="none",
+                signer_protocol_input=("sp-in",),
+            ),
+            txs_out=TransactionsOut(transaction_file_out="out"),
         ),
         "-i",
         "in",
@@ -895,8 +907,8 @@ def test_signer_command_default_parsing() -> None:
 
     check_click_parsing(
         PushTransactionsCMD(
-            client_info=None,
-            transaction_file_in="in",
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            txs_in=TransactionsIn(transaction_file_in="in"),
         ),
         "-i",
         "in",
