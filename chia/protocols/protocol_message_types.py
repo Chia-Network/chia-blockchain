@@ -118,7 +118,4 @@ class ProtocolMessageTypes(Enum):
     new_unfinished_block2 = 92
     request_unfinished_block2 = 93
 
-    # Third-party harvester services
-    respond_harvester_handshake = 100
-
     error = 255
