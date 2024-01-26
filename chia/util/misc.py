@@ -405,6 +405,8 @@ class ValuedEvent(Generic[T]):
 
 def available_logical_cores() -> int:
     if sys.platform == "darwin":
-        return os.cpu_count()
+        count = os.cpu_count()
+        assert count is not None
+        return count
 
     return len(psutil.Process().cpu_affinity())
