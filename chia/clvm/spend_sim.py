@@ -327,7 +327,7 @@ class SimClient:
             )
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
-        assert self.service.mempool_manager.peak
+        assert self.service.mempool_manager.peak is not None
         cost, status, error = await self.service.mempool_manager.add_spend_bundle(
             spend_bundle, cost_result, spend_bundle_id, self.service.mempool_manager.peak.height
         )
