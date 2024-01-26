@@ -927,8 +927,8 @@ def make_pool_list_entry(overrides: Dict[str, Any]) -> Dict[str, Any]:
     return pool_list_entry
 
 
-def make_pool_info(overrides: Dict[str, Any]) -> Dict[str, Any]:
-    pool_info = {
+def make_pool_info() -> Dict[str, Any]:
+    return {
         "name": "Pool Name",
         "description": "Pool Description",
         "logo_url": "https://subdomain.pool-domain.tld/path/to/logo.svg",
@@ -939,9 +939,6 @@ def make_pool_info(overrides: Dict[str, Any]) -> Dict[str, Any]:
         "minimum_difficulty": 1,
         "authentication_token_timeout": 5,
     }
-    for key, value in overrides.items():
-        pool_info[key] = value
-    return pool_info
 
 
 def make_pool_state(p2_singleton_puzzle_hash: bytes32, overrides: Dict[str, Any]) -> Dict[str, Any]:
@@ -1026,7 +1023,7 @@ class PoolInfoCase(DataCase):
             ok=True,
             status=200,
             url=URL("https://endpoint-1.pool-domain.tld/some-path"),
-            pool_info=make_pool_info({}),
+            pool_info=make_pool_info(),
         ),
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
     ),
@@ -1037,7 +1034,7 @@ class PoolInfoCase(DataCase):
             ok=True,
             status=200,
             url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
-            pool_info=make_pool_info({}),
+            pool_info=make_pool_info(),
             history=tuple([DummyClientResponse(status=301)]),
         ),
         expected_pool_url_in_config="https://endpoint-1337.pool-domain.tld/some-other-path",
@@ -1049,7 +1046,7 @@ class PoolInfoCase(DataCase):
             ok=True,
             status=200,
             url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
-            pool_info=make_pool_info({}),
+            pool_info=make_pool_info(),
             history=tuple([DummyClientResponse(status=302)]),
         ),
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
@@ -1061,7 +1058,7 @@ class PoolInfoCase(DataCase):
             ok=True,
             status=200,
             url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
-            pool_info=make_pool_info({}),
+            pool_info=make_pool_info(),
             history=tuple([DummyClientResponse(status=307)]),
         ),
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
@@ -1073,7 +1070,7 @@ class PoolInfoCase(DataCase):
             ok=True,
             status=200,
             url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
-            pool_info=make_pool_info({}),
+            pool_info=make_pool_info(),
             history=tuple([DummyClientResponse(status=308)]),
         ),
         expected_pool_url_in_config="https://endpoint-1337.pool-domain.tld/some-other-path",
@@ -1085,7 +1082,7 @@ class PoolInfoCase(DataCase):
             ok=True,
             status=200,
             url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
-            pool_info=make_pool_info({}),
+            pool_info=make_pool_info(),
             history=tuple([DummyClientResponse(status=308), DummyClientResponse(status=308)]),
         ),
         expected_pool_url_in_config="https://endpoint-1337.pool-domain.tld/some-other-path",
@@ -1097,7 +1094,7 @@ class PoolInfoCase(DataCase):
             ok=True,
             status=200,
             url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
-            pool_info=make_pool_info({}),
+            pool_info=make_pool_info(),
             history=tuple([DummyClientResponse(status=307), DummyClientResponse(status=308)]),
         ),
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
