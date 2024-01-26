@@ -27,6 +27,7 @@ from typing import (
     final,
 )
 
+import psutil
 from typing_extensions import Protocol
 
 from chia.util.errors import InvalidPathError
@@ -399,3 +400,7 @@ class ValuedEvent(Generic[T]):
         if isinstance(self._value, ValuedEventSentinel):
             raise Exception("Value not set despite event being set")
         return self._value
+
+
+def available_logical_cores() -> int:
+    return len(psutil.Process().cpu_affinity())
