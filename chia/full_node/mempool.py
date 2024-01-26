@@ -4,17 +4,18 @@ import logging
 import sqlite3
 from datetime import datetime
 from enum import Enum
-from typing import Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Tuple
 
 from chia_rs import AugSchemeMPL, Coin, G2Element
 
+from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
-from chia.types.eligible_coin_spends import EligibleCoinSpends
+from chia.types.eligible_coin_spends import EligibleCoinSpends, UnspentLineageInfo
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
@@ -392,17 +393,25 @@ class Mempool:
 
         return self._total_cost + cost > self.mempool_info.max_size_in_cost
 
-    def create_bundle_from_mempool_items(
-        self, item_inclusion_filter: Callable[[bytes32], bool]
+    async def create_bundle_from_mempool_items(
+        self,
+        item_inclusion_filter: Callable[[bytes32], bool],
+        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
+        constants: ConsensusConstants,
+        height: uint32,
     ) -> Optional[Tuple[SpendBundle, List[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         processed_spend_bundles = 0
         additions: List[Coin] = []
-        # This contains a map of coin ID to a coin spend solution and its isolated cost
-        # We reconstruct it for every bundle we create from mempool items because we
-        # deduplicate on the first coin spend solution that comes with the highest
-        # fee rate item, and that can change across calls
+        # This contains:
+        # 1. A map of coin ID to a coin spend solution and its isolated cost
+        #   We reconstruct it for every bundle we create from mempool items because we
+        #   deduplicate on the first coin spend solution that comes with the highest
+        #   fee rate item, and that can change across calls
+        # 2. A map of fast forward eligible singleton puzzle hash to the most
+        #   recent unspent singleton data, to allow chaining fast forward
+        #   singleton spends
         eligible_coin_spends = EligibleCoinSpends()
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
@@ -428,12 +437,18 @@ class Mempool:
                     unique_coin_spends = []
                     unique_additions = []
                     for spend_data in item.bundle_coin_spends.values():
-                        if spend_data.eligible_for_dedup:
+                        if spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward:
                             raise Exception(f"Skipping transaction with eligible coin(s): {name.hex()}")
                         unique_coin_spends.append(spend_data.coin_spend)
                         unique_additions.extend(spend_data.additions)
                     cost_saving = 0
                 else:
+                    await eligible_coin_spends.process_fast_forward_spends(
+                        mempool_item=item,
+                        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+                        height=height,
+                        constants=constants,
+                    )
                     unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
                         bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
                     )

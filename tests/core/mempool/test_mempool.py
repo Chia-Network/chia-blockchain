@@ -35,7 +35,7 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.eligible_coin_spends import run_for_cost
+from chia.types.eligible_coin_spends import UnspentLineageInfo, run_for_cost
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -2908,9 +2908,13 @@ def test_get_items_by_coin_ids(items: List[MempoolItem], coin_ids: List[bytes32]
     assert set(result) == set(expected)
 
 
-def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None:
+@pytest.mark.anyio
+async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None:
     def always(_: bytes32) -> bool:
         return True
+
+    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
+        assert False  # pragma: no cover
 
     def make_test_spendbundle(coin: Coin, *, fee: int = 0, with_higher_cost: bool = False) -> SpendBundle:
         conditions = []
@@ -2940,7 +2944,7 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
     )
     mempool = Mempool(mempool_info, fee_estimator)
     coins = [
-        Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(amount)) for amount in range(2000000000, 2000000010)
+        Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(amount)) for amount in range(2000000000, 2000000020, 2)
     ]
     # Create a ~10 FPC item that spends the eligible coin[0]
     sb_A = make_test_spendbundle(coins[0])
@@ -2952,7 +2956,9 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
     sb_low_rate = make_test_spendbundle(coins[2], fee=highest_fee // 5)
     saved_cost_on_solution_A = agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
     invariant_check_mempool(mempool)
-    result = mempool.create_bundle_from_mempool_items(always)
+    result = await mempool.create_bundle_from_mempool_items(
+        always, get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
+    )
     assert result is not None
     agg, _ = result
     # Make sure both items would be processed
@@ -2971,7 +2977,9 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
     # If we process everything now, the 3 x ~3 FPC items get skipped because
     # sb_A1 gets picked before them (~10 FPC), so from then on only sb_A2 (~2 FPC)
     # would get picked
-    result = mempool.create_bundle_from_mempool_items(always)
+    result = await mempool.create_bundle_from_mempool_items(
+        always, get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
+    )
     assert result is not None
     agg, _ = result
     # The 3 items got skipped here

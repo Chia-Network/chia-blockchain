@@ -8,11 +8,13 @@ from typing import Any, Collection, Dict, List, Optional, Set, Tuple
 
 import typing_extensions
 from aiosqlite import Cursor
+from clvm.casts import int_from_bytes
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
@@ -585,4 +587,34 @@ class CoinStore:
             if rows_updated != len(coin_names):
                 raise ValueError(
                     f"Invalid operation to set spent, total updates {rows_updated} expected {len(coin_names)}"
+                )
+
+    # Lookup the most recent unspent lineage that matches a puzzle hash
+    async def get_unspent_lineage_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT unspent.coin_name, "
+                "unspent.amount, "
+                "unspent.coin_parent, "
+                "parent.amount, "
+                "parent.coin_parent "
+                "FROM coin_record AS unspent "
+                "LEFT JOIN coin_record AS parent ON unspent.coin_parent = parent.coin_name "
+                "WHERE unspent.spent_index = 0 "
+                "AND parent.spent_index > 0 "
+                "AND unspent.puzzle_hash = ? "
+                "AND parent.puzzle_hash = unspent.puzzle_hash",
+                (puzzle_hash,),
+            ) as cursor:
+                rows = list(await cursor.fetchall())
+                if len(rows) != 1:
+                    log.debug("Expected 1 unspent with puzzle hash %s, but found %s", puzzle_hash.hex(), len(rows))
+                    return None
+                coin_id, coin_amount, parent_id, parent_amount, parent_parent_id = rows[0]
+                return UnspentLineageInfo(
+                    coin_id=bytes32(coin_id),
+                    coin_amount=int_from_bytes(coin_amount),
+                    parent_id=bytes32(parent_id),
+                    parent_amount=int_from_bytes(parent_amount),
+                    parent_parent_id=bytes32(parent_parent_id),
                 )
