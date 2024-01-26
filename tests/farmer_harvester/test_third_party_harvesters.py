@@ -360,7 +360,7 @@ def prepare_sp_and_pos_for_fee_test(
     return (sp, pos)
 
 
-async def scan_log_for_message(caplog: pytest.LogCaptureFixture, find_message: str) -> bool:
+async def scan_log_for_message(caplog: pytest.LogCaptureFixture, find_message: str) -> bool:  # pragma: no cover
     log_text_len = 0
 
     def log_has_new_text() -> bool:
