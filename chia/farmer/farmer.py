@@ -857,21 +857,21 @@ class Farmer:
         )
 
         fee_quality = calculate_harvester_fee_quality(proof_of_space.proof.proof, sp.challenge_hash)
-        fee_quality_rate = int(float(fee_quality) / float(0xFFFFFFFF) * 100.0)
+        fee_quality_rate = float(fee_quality) / float(0xFFFFFFFF) * 100.0
 
         if proof_of_space.fee_info is not None:
             fee_threshold = proof_of_space.fee_info.applied_fee_threshold
-            fee_threshold_rate = int(float(fee_threshold) / float(0xFFFFFFFF) * 100.0)
+            fee_threshold_rate = float(fee_threshold) / float(0xFFFFFFFF) * 100.0
 
             if fee_quality <= fee_threshold:
                 self.log.info(
                     f"Fee threshold passed for challenge '{challenge_str}': "
-                    + f"{fee_quality_rate}%/{fee_threshold_rate}% ({fee_quality}/{fee_threshold})"
+                    + f"{fee_quality_rate:.3f}%/{fee_threshold_rate:.3f}% ({fee_quality}/{fee_threshold})"
                 )
             else:
                 self.log.warning(
                     f"Invalid fee threshold for challenge '{challenge_str}': "
-                    + f"{fee_quality_rate}%/{fee_threshold_rate}% ({fee_quality}/{fee_threshold})"
+                    + f"{fee_quality_rate:.3f}%/{fee_threshold_rate:.3f}% ({fee_quality}/{fee_threshold})"
                 )
                 self.log.warning(
                     "Harvester illegitimately took a fee reward that "
@@ -881,7 +881,7 @@ class Farmer:
             self.log.warning(
                 "Harvester illegitimately took reward by failing to provide its fee rate "
                 + f"for challenge '{challenge_str}'. "
-                + f"Fee quality was {fee_quality_rate}% ({fee_quality} or 0x{fee_quality:08x})"
+                + f"Fee quality was {fee_quality_rate:.3f}% ({fee_quality} or 0x{fee_quality:08x})"
             )
 
 
