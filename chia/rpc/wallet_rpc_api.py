@@ -1014,21 +1014,24 @@ class WalletRpcApi:
         tx_list = []
         # Format for clawback transactions
         for tr in transactions:
+            tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
+            tx_list.append(tx)
+            if tx["type"] not in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                continue
+            coin: Coin = tr.additions[0]
+            record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
+                coin.name()
+            )
+            if record is None:
+                log.error(f"Cannot find coin record for type {tx['type']} transaction {tx['name']}")
+                continue
             try:
-                tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
-                tx_list.append(tx)
-                if tx["type"] not in CLAWBACK_INCOMING_TRANSACTION_TYPES:
-                    continue
-                coin: Coin = tr.additions[0]
-                record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
-                    coin.name()
-                )
-                assert record is not None, f"Cannot find coin record for type {tx['type']} transaction {tx['name']}"
                 tx["metadata"] = record.parsed_metadata().to_json_dict()
-                tx["metadata"]["coin_id"] = coin.name().hex()
-                tx["metadata"]["spent"] = record.spent
-            except Exception:
-                log.exception(f"Failed to get transaction {tr.name}.")
+            except ValueError as e:
+                log.error(f"Could not parse coin record metadata: {type(e).__name__} {e}")
+                continue
+            tx["metadata"]["coin_id"] = coin.name().hex()
+            tx["metadata"]["spent"] = record.spent
         return {
             "transactions": tx_list,
             "wallet_id": wallet_id,
