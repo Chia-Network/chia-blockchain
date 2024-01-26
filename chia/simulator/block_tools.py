@@ -2050,8 +2050,10 @@ def create_block_tools(
     return bt
 
 
-def make_unfinished_block(block: FullBlock, constants: ConsensusConstants) -> UnfinishedBlock:
-    if is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index)):
+def make_unfinished_block(
+    block: FullBlock, constants: ConsensusConstants, *, force_overflow: bool = False
+) -> UnfinishedBlock:
+    if force_overflow or is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index)):
         finished_ss = block.finished_sub_slots[:-1]
     else:
         finished_ss = block.finished_sub_slots

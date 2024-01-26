@@ -1222,6 +1222,16 @@ request_peers_json: Dict[str, Any] = {}
 
 respond_peers_json: Dict[str, Any] = {"peer_list": [{"host": "127.0.0.1", "port": 8444, "timestamp": 10796}]}
 
+new_unfinished_block2_json: Dict[str, Any] = {
+    "unfinished_reward_hash": "0x229646fb33551966039d9324c0d10166c554d20e9a11e3f30942ec0bb346377e",
+    "foliage_hash": "0x166c554d20e9a11e3f30942ec0bb346377e229646fb33551966039d9324c0d10",
+}
+
+request_unfinished_block2_json: Dict[str, Any] = {
+    "unfinished_reward_hash": "0x8b5e5a59f33bb89e1bfd5aca79409352864e70aa7765c331d641875f83d59d1d",
+    "foliage_hash": "0xa79409352864e70aa7765c331d641875f83d59d1d8b5e5a59f33bb89e1bfd5ac",
+}
+
 request_puzzle_solution_json: Dict[str, Any] = {
     "coin_name": "0x6edddb46bd154f50566b49c95812e0f1131a0a7162630349fc8d1d696e463e47",
     "height": 3905474497,

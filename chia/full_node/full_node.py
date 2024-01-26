@@ -30,6 +30,7 @@ from typing import (
 )
 
 from chia_rs import AugSchemeMPL
+from packaging.version import Version
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
@@ -1895,10 +1896,11 @@ class FullNode:
             return None
 
         block_hash = bytes32(block.reward_chain_block.get_hash())
+        foliage_tx_hash = block.foliage.foliage_transaction_block_hash
 
-        # This searched for the trunk hash (unfinished reward hash). If we have already added a block with the same
-        # hash, return
-        if self.full_node_store.get_unfinished_block(block_hash) is not None:
+        # If we have already added the block with this reward block hash and
+        # foliage hash, return
+        if self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)[0] is not None:
             return None
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1985,7 +1987,7 @@ class FullNode:
         assert validate_result.required_iters is not None
 
         # Perform another check, in case we have already concurrently added the same unfinished block
-        if self.full_node_store.get_unfinished_block(block_hash) is not None:
+        if self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)[0] is not None:
             return None
 
         if block.prev_header_hash == self.constants.GENESIS_CHALLENGE:
@@ -2064,12 +2066,27 @@ class FullNode:
         timelord_msg = make_msg(ProtocolMessageTypes.new_unfinished_block_timelord, timelord_request)
         await self.server.send_to_all([timelord_msg], NodeType.TIMELORD)
 
+        # create two versions of the NewUnfinishedBlock message, one to be sent
+        # to newer clients and one for older clients
         full_node_request = full_node_protocol.NewUnfinishedBlock(block.reward_chain_block.get_hash())
         msg = make_msg(ProtocolMessageTypes.new_unfinished_block, full_node_request)
-        if peer is not None:
-            await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
-        else:
-            await self.server.send_to_all([msg], NodeType.FULL_NODE)
+
+        full_node_request2 = full_node_protocol.NewUnfinishedBlock2(
+            block.reward_chain_block.get_hash(), block.foliage.foliage_transaction_block_hash
+        )
+        msg2 = make_msg(ProtocolMessageTypes.new_unfinished_block2, full_node_request2)
+
+        def old_clients(conn: WSChiaConnection) -> bool:
+            # don't send this to peers with new clients
+            return conn.protocol_version <= Version("0.0.35")
+
+        def new_clients(conn: WSChiaConnection) -> bool:
+            # don't send this to peers with old clients
+            return conn.protocol_version > Version("0.0.35")
+
+        peer_id: Optional[bytes32] = None if peer is None else peer.peer_node_id
+        await self.server.send_to_all_if([msg], NodeType.FULL_NODE, old_clients, peer_id)
+        await self.server.send_to_all_if([msg2], NodeType.FULL_NODE, new_clients, peer_id)
 
         self._state_changed("unfinished_block")
 

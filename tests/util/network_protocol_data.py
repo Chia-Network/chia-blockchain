@@ -408,11 +408,21 @@ respond_block = full_node_protocol.RespondBlock(
 )
 
 new_unfinished_block = full_node_protocol.NewUnfinishedBlock(
-    bytes32(bytes.fromhex("229646fb33551966039d9324c0d10166c554d20e9a11e3f30942ec0bb346377e")),
+    bytes32.fromhex("229646fb33551966039d9324c0d10166c554d20e9a11e3f30942ec0bb346377e"),
 )
 
 request_unfinished_block = full_node_protocol.RequestUnfinishedBlock(
-    bytes32(bytes.fromhex("8b5e5a59f33bb89e1bfd5aca79409352864e70aa7765c331d641875f83d59d1d")),
+    bytes32.fromhex("8b5e5a59f33bb89e1bfd5aca79409352864e70aa7765c331d641875f83d59d1d"),
+)
+
+new_unfinished_block2 = full_node_protocol.NewUnfinishedBlock2(
+    bytes32.fromhex("229646fb33551966039d9324c0d10166c554d20e9a11e3f30942ec0bb346377e"),
+    bytes32.fromhex("166c554d20e9a11e3f30942ec0bb346377e229646fb33551966039d9324c0d10"),
+)
+
+request_unfinished_block2 = full_node_protocol.RequestUnfinishedBlock2(
+    bytes32.fromhex("8b5e5a59f33bb89e1bfd5aca79409352864e70aa7765c331d641875f83d59d1d"),
+    bytes32.fromhex("a79409352864e70aa7765c331d641875f83d59d1d8b5e5a59f33bb89e1bfd5ac"),
 )
 
 unfinished_block = UnfinishedBlock(
