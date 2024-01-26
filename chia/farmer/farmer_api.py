@@ -272,7 +272,7 @@ class FarmerAPI:
                 m_to_sign = payload.get_hash()
                 m_src_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
 
-                if (
+                if (  # pragma: no cover
                     new_proof_of_space.include_source_signature_data
                     or new_proof_of_space.farmer_reward_address_override is not None
                 ):

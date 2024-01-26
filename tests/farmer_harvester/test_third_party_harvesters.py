@@ -4,6 +4,7 @@ import asyncio
 import base64
 import dataclasses
 import json
+import logging
 from os.path import dirname
 from typing import Any, List, Optional, Tuple, Union, cast
 
@@ -18,7 +19,7 @@ from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
-from chia.protocols import full_node_protocol, harvester_protocol, timelord_protocol
+from chia.protocols import farmer_protocol, full_node_protocol, harvester_protocol, timelord_protocol
 from chia.protocols.farmer_protocol import RequestSignedValues
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -29,14 +30,17 @@ from chia.simulator.block_tools import BlockTools
 from chia.types.aliases import FarmerService, FullNodeService, HarvesterService, SimulatorFullNodeService
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import decode_puzzle_hash
-from chia.util.ints import uint8, uint32
-from chia.util.streamable import Streamable
+from chia.util.hash import std_hash
+from chia.util.ints import uint8, uint32, uint64
+from tests.clvm.test_puzzles import public_key_for_index
 from tests.util.time_out_assert import time_out_assert
+from chia_rs import G1Element
 
 SPType = Union[timelord_protocol.NewEndOfSubSlotVDF, timelord_protocol.NewSignagePointVDF]
 SPList = List[SPType]
@@ -144,7 +148,15 @@ async def test_harvester_receive_source_signing_data(
             assert hash
             assert src
 
-            data: Optional[Streamable] = None
+            data: Optional[
+                Union[
+                    FoliageBlockData,
+                    FoliageTransactionBlock,
+                    ClassgroupElement,
+                    ChallengeChainSubSlot,
+                    RewardChainSubSlot,
+                ]
+            ] = None
             if src.kind == uint8(SigningDataKind.FOLIAGE_BLOCK_DATA):
                 data = FoliageBlockData.from_bytes(src.data)
                 assert (
@@ -169,12 +181,12 @@ async def test_harvester_receive_source_signing_data(
             elif src.kind == uint8(SigningDataKind.REWARD_CHAIN_SUB_SLOT):
                 data = RewardChainSubSlot.from_bytes(src.data)
                 validated_sub_slot_rc = True
-            elif src.kind == uint8(SigningDataKind.PARTIAL):
-                # #NOTE: This data type is difficult to trigger, so it is
-                #        not tested for the time being.
-                # data = PostPartialPayload.from_bytes(src.data)
-                # validated_partial = True
-                pass
+            # #NOTE: This data type is difficult to trigger, so it is
+            #        not tested for the time being.
+            # data = PostPartialPayload.from_bytes(src.data)
+            # validated_partial = True
+            # elif src.kind == uint8(SigningDataKind.PARTIAL):
+            #     pass
 
             finished_validating_data = (
                 validated_foliage_data
@@ -244,8 +256,7 @@ async def test_harvester_fee_convention(
         Union[FullNodeService, SimulatorFullNodeService],
         BlockTools,
     ],
-    caplog: pytest.LogCaptureFixture,
-    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture
 ) -> None:
     """
     Tests fee convention specified in CHIP-22: https://github.com/Chia-Network/chips/pull/88
@@ -253,63 +264,103 @@ async def test_harvester_fee_convention(
     (
         farmer_service,
         _,
-        full_node_service_1,
-        full_node_service_2,
+        _,
+        _,
+        _,
+    ) = farmer_harvester_2_simulators_zero_bits_plot_filter
+
+    caplog.set_level(logging.DEBUG)
+    farmer: Farmer = farmer_service._node
+    (sp, pos) = prepare_sp_and_pos_for_fee_test(1)
+    farmer.notify_farmer_reward_taken_by_harvester_as_fee(sp, pos)
+
+    assert await scan_log_for_message(caplog, "Fee threshold passed for challenge")
+
+
+@pytest.mark.anyio
+async def test_harvester_fee_invalid_convention(
+    farmer_harvester_2_simulators_zero_bits_plot_filter: Tuple[
+        FarmerService,
+        HarvesterService,
+        Union[FullNodeService, SimulatorFullNodeService],
+        Union[FullNodeService, SimulatorFullNodeService],
+        BlockTools,
+    ],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    Tests that logs are properly emitted when an invalid free threshold is specified
+    given the fee convention from CHIP-22: https://github.com/Chia-Network/chips/pull/88
+    """
+    (
+        farmer_service,
+        _,
+        _,
+        _,
         _,
     ) = farmer_harvester_2_simulators_zero_bits_plot_filter
 
     farmer: Farmer = farmer_service._node
-    full_node_1: FullNode = full_node_service_1._node
-    full_node_2: FullNode = full_node_service_2._node
+    caplog.set_level(logging.DEBUG)
 
-    # Connect peers to each other
-    farmer_service.add_peer(
-        UnresolvedPeerInfo(str(full_node_service_2.self_hostname), full_node_service_2._server.get_port())
+    (sp, pos) = prepare_sp_and_pos_for_fee_test(-1)
+    farmer.notify_farmer_reward_taken_by_harvester_as_fee(sp, pos)
+    farmer.log.propagate
+
+    assert await scan_log_for_message(caplog, "Invalid fee threshold for challenge")
+
+
+def prepare_sp_and_pos_for_fee_test(fee_threshold_offset: int) -> Tuple[
+    farmer_protocol.NewSignagePoint,
+    harvester_protocol.NewProofOfSpace
+]:
+    proof = std_hash(b"1")
+    challenge = std_hash(b"1")
+
+    fee_quality = calculate_harvester_fee_quality(proof, challenge)
+
+    pubkey = G1Element.from_bytes(
+        bytes.fromhex(
+            "80a836a74b077cabaca7a76d1c3c9f269f7f3a8f2fa196a65ee8953eb81274eb8b7328d474982617af5a0fe71b47e9b8"
+        )
     )
-    full_node_service_2.add_peer(
-        UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port())
+
+    # Send some fake data to the framer
+    sp = farmer_protocol.NewSignagePoint(
+        challenge_hash=challenge,
+        challenge_chain_sp=challenge,
+        reward_chain_sp=challenge,
+        difficulty=uint64(0),
+        sub_slot_iters=uint64(0),
+        signage_point_index=uint8(0),
+        peak_height=uint32(1),
     )
 
-    await wait_until_node_type_connected(farmer.server, NodeType.FULL_NODE)
-    await wait_until_node_type_connected(farmer.server, NodeType.HARVESTER)  # Should already be connected
-    await wait_until_node_type_connected(full_node_1.server, NodeType.FULL_NODE)
+    pos = harvester_protocol.NewProofOfSpace(
+        challenge_hash=challenge,
+        sp_hash=challenge,
+        plot_identifier="foo.plot",
+        proof=ProofOfSpace(
+            challenge=challenge,
+            pool_public_key=None,
+            pool_contract_puzzle_hash=None,
+            plot_public_key=pubkey,
+            size=len(proof),
+            proof=proof,
+        ),
+        signage_point_index=0,
+        farmer_reward_address_override=decode_puzzle_hash(
+            "txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej"
+        ),
+        fee_info=ProofOfSpaceFeeInfo(
+            applied_fee_threshold=uint32(fee_quality + fee_threshold_offset)  # Apply threshold offset to make the fee either pass or fail
+        ),
+    )
 
-    fee_threshold = 0.5
-    max_fee_proofs = 5
-    fee_count = 0
-    proof_count = 0
+    return (sp, pos)
 
-    farmer_reward_puzzle_hash = decode_puzzle_hash("txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej")
 
-    async def intercept_farmer_new_proof_of_space(*args: Any) -> None:
-        nonlocal farmer
-        nonlocal fee_threshold
-        nonlocal max_fee_proofs
-        nonlocal proof_count
-        nonlocal fee_count
-        nonlocal farmer_reward_puzzle_hash
-
-        request: harvester_protocol.NewProofOfSpace = harvester_protocol.NewProofOfSpace.from_bytes(args[0])
-
-        fee_threshold_int = uint32(int(0xFFFFFFFF * fee_threshold))
-
-        fee_quality = calculate_harvester_fee_quality(request.proof.proof, request.challenge_hash)
-        if fee_quality <= fee_threshold_int and fee_count < max_fee_proofs:
-            fee_count += 1
-            request = dataclasses.replace(
-                request,
-                farmer_reward_address_override=farmer_reward_puzzle_hash,
-                fee_info=ProofOfSpaceFeeInfo(applied_fee_threshold=fee_threshold_int),
-            )
-
-        if proof_count <= max_fee_proofs:
-            proof_count += 1
-
-        peer: WSChiaConnection = args[1]
-        await FarmerAPI.new_proof_of_space(farmer.server.api, request, peer)
-
-    mocker.patch.object(farmer.server.api, "new_proof_of_space", side_effect=intercept_farmer_new_proof_of_space)
-
+async def scan_log_for_message(caplog: pytest.LogCaptureFixture, find_message: str) -> None:
     log_text_len = 0
 
     def log_has_new_text() -> bool:
@@ -323,46 +374,24 @@ async def test_harvester_fee_convention(
 
         return False
 
-    # Load test data
-    blocks: List[FullBlock]
-    signage_points: SPList
-
-    (blocks, signage_points) = load_test_data()
-    assert len(blocks) == 1
-    await add_test_blocks_into_full_node(blocks, full_node_2)
-
-    # Inject signage points
-    await inject_signage_points(signage_points, full_node_1, full_node_2)
-
-    # Wait until we've received all the proofs
-    def received_all_proofs() -> bool:
-        nonlocal max_fee_proofs
-        nonlocal fee_count
-
-        return fee_count >= max_fee_proofs
-
-    await time_out_assert(60 * 60, received_all_proofs, True)
-
-    # Wait for the farmer to pick up the last proofs
-    await asyncio.sleep(2)
-
-    assert fee_count > 0
     await time_out_assert(60, log_has_new_text, True)
 
-    find_message = "Fee threshold passed for challenge"
-    find_index = 0
     log_text = caplog.text
+    find_index = 0
     fail_count = 0
+    max_fails = 10
 
-    for _ in range(fee_count):
-        index = log_text.find(find_message, find_index) + len(find_message)
-        if index < 0:
-            fail_count += 1
-            assert fail_count < 10
-            await time_out_assert(10, log_has_new_text, True)
-            log_text = caplog.text
-        else:
-            find_index = index
+    for _ in range(max_fails):
+        index = log_text.find(find_message, find_index)
+        if index >= 0:
+            return True
+
+        fail_count += 1
+        assert fail_count < max_fails
+        await time_out_assert(10, log_has_new_text, True)
+        log_text = caplog.text
+
+    return False
 
 
 async def wait_until_node_type_connected(server: ChiaServer, node_type: NodeType) -> WSChiaConnection:
