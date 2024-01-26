@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-import multiprocessing
+import os
 import random
 import time
 from contextlib import asynccontextmanager
@@ -1741,7 +1741,7 @@ class TestPreValidation:
     async def test_pre_validation(self, empty_blockchain, default_1000_blocks, bt):
         blocks = default_1000_blocks[:100]
         start = time.time()
-        n_at_a_time = min(multiprocessing.cpu_count(), 32)
+        n_at_a_time = min(os.cpu_count(), 32)
         times_pv = []
         times_rb = []
         for i in range(0, len(blocks), n_at_a_time):

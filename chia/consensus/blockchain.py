@@ -4,7 +4,7 @@ import asyncio
 import dataclasses
 import enum
 import logging
-import multiprocessing
+import os
 import time
 import traceback
 from concurrent.futures import Executor
@@ -141,7 +141,8 @@ class Blockchain(BlockchainInterface):
         if single_threaded:
             self.pool = InlineExecutor()
         else:
-            cpu_count = multiprocessing.cpu_count()
+            cpu_count = os.cpu_count()
+            assert cpu_count is not None
             if cpu_count > 61:
                 cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
             num_workers = max(cpu_count - reserved_cores, 1)
