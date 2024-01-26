@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import functools
+import os
 import signal
 import sys
 from dataclasses import dataclass
@@ -403,4 +404,7 @@ class ValuedEvent(Generic[T]):
 
 
 def available_logical_cores() -> int:
+    if sys.platform == "darwin":
+        return os.cpu_count()
+
     return len(psutil.Process().cpu_affinity())
