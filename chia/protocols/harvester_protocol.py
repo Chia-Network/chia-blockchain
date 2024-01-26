@@ -58,9 +58,9 @@ class NewProofOfSpace(Streamable):
     plot_identifier: str
     proof: ProofOfSpace
     signage_point_index: uint8
-    include_source_signature_data: bool = False
-    farmer_reward_address_override: Optional[bytes32] = None
-    fee_info: Optional[ProofOfSpaceFeeInfo] = None
+    include_source_signature_data: bool
+    farmer_reward_address_override: Optional[bytes32]
+    fee_info: Optional[ProofOfSpaceFeeInfo]
 
 
 # Source data corresponding to the hash that is sent to the Harvester for signing
@@ -90,7 +90,7 @@ class RequestSignatures(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     messages: List[bytes32]
-    message_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
+    message_data: Optional[List[Optional[SignatureRequestSourceData]]]
 
 
 @streamable
@@ -102,8 +102,8 @@ class RespondSignatures(Streamable):
     local_pk: G1Element
     farmer_pk: G1Element
     message_signatures: List[Tuple[bytes32, G2Element]]
-    include_source_signature_data: bool = False
-    farmer_reward_address_override: Optional[bytes32] = None
+    include_source_signature_data: bool
+    farmer_reward_address_override: Optional[bytes32]
 
 
 @streamable

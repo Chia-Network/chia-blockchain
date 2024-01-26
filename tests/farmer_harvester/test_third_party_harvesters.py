@@ -347,6 +347,7 @@ def prepare_sp_and_pos_for_fee_test(
             proof=proof,
         ),
         signage_point_index=uint8(0),
+        include_source_signature_data=False,
         farmer_reward_address_override=decode_puzzle_hash(
             "txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej"
         ),
