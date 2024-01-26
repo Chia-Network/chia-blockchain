@@ -9,6 +9,7 @@ from os.path import dirname
 from typing import Any, List, Optional, Tuple, Union, cast
 
 import pytest
+from chia_rs import G1Element
 from pytest_mock import MockerFixture
 
 from chia.consensus.blockchain import AddBlockResult
@@ -40,7 +41,6 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from tests.clvm.test_puzzles import public_key_for_index
 from tests.util.time_out_assert import time_out_assert
-from chia_rs import G1Element
 
 SPType = Union[timelord_protocol.NewEndOfSubSlotVDF, timelord_protocol.NewSignagePointVDF]
 SPList = List[SPType]
@@ -256,7 +256,7 @@ async def test_harvester_fee_convention(
         Union[FullNodeService, SimulatorFullNodeService],
         BlockTools,
     ],
-    caplog: pytest.LogCaptureFixture
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """
     Tests fee convention specified in CHIP-22: https://github.com/Chia-Network/chips/pull/88
@@ -310,10 +310,9 @@ async def test_harvester_fee_invalid_convention(
     assert await scan_log_for_message(caplog, "Invalid fee threshold for challenge")
 
 
-def prepare_sp_and_pos_for_fee_test(fee_threshold_offset: int) -> Tuple[
-    farmer_protocol.NewSignagePoint,
-    harvester_protocol.NewProofOfSpace
-]:
+def prepare_sp_and_pos_for_fee_test(
+    fee_threshold_offset: int,
+) -> Tuple[farmer_protocol.NewSignagePoint, harvester_protocol.NewProofOfSpace]:
     proof = std_hash(b"1")
     challenge = std_hash(b"1")
 
@@ -348,19 +347,21 @@ def prepare_sp_and_pos_for_fee_test(fee_threshold_offset: int) -> Tuple[
             size=len(proof),
             proof=proof,
         ),
-        signage_point_index=0,
+        signage_point_index=uint8(0),
         farmer_reward_address_override=decode_puzzle_hash(
             "txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej"
         ),
         fee_info=ProofOfSpaceFeeInfo(
-            applied_fee_threshold=uint32(fee_quality + fee_threshold_offset)  # Apply threshold offset to make the fee either pass or fail
+            applied_fee_threshold=uint32(
+                fee_quality + fee_threshold_offset
+            )  # Apply threshold offset to make the fee either pass or fail
         ),
     )
 
     return (sp, pos)
 
 
-async def scan_log_for_message(caplog: pytest.LogCaptureFixture, find_message: str) -> None:
+async def scan_log_for_message(caplog: pytest.LogCaptureFixture, find_message: str) -> bool:
     log_text_len = 0
 
     def log_has_new_text() -> bool:
