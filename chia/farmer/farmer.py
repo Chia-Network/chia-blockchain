@@ -852,7 +852,8 @@ class Farmer:
         farmer_reward_puzzle_hash = encode_puzzle_hash(proof_of_space.farmer_reward_address_override, ph_prefix)
 
         self.log.info(
-            f"Farmer reward for challenge '{challenge_str}' taken by harvester for reward address '{farmer_reward_puzzle_hash}'"
+            f"Farmer reward for challenge '{challenge_str}' "
+            + f"taken by harvester for reward address '{farmer_reward_puzzle_hash}'"
         )
 
         fee_quality = calculate_harvester_fee_quality(proof_of_space.proof.proof, sp.challenge_hash)
@@ -867,12 +868,13 @@ class Farmer:
                     f"Invalid fee threshold for challenge '{challenge_str}': {fee_quality}/{fee_threshold}"
                 )
                 self.log.warning(
-                    "Harvester illegitimately took a fee reward that did not belong to it or incorrectly applied fee convention."
+                    "Harvester illegitimately took a fee reward that "
+                    + "did not belong to it or incorrectly applied fee convention."
                 )
         else:
             self.log.warning(
                 f"No fee information given by harvester for challenge '{challenge_str}'. "
-                f"Fee quality was {fee_quality} (0x{fee_quality:08x})"
+                + f"Fee quality was {fee_quality} (0x{fee_quality:08x})"
             )
 
 

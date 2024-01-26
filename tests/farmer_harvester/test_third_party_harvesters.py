@@ -39,7 +39,6 @@ from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
-from tests.clvm.test_puzzles import public_key_for_index
 from tests.util.time_out_assert import time_out_assert
 
 SPType = Union[timelord_protocol.NewEndOfSubSlotVDF, timelord_protocol.NewSignagePointVDF]
