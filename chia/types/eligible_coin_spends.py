@@ -28,6 +28,13 @@ class DedupCoinSpend:
 
 
 @dataclasses.dataclass(frozen=True)
+class UnspentLineageIds:
+    coin_id: bytes32
+    parent_id: bytes32
+    parent_parent_id: bytes32
+
+
+@dataclasses.dataclass(frozen=True)
 class EligibleCoinSpends:
     eligible_spends: Dict[bytes32, DedupCoinSpend] = dataclasses.field(default_factory=dict)
 
