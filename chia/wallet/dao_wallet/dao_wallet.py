@@ -15,7 +15,6 @@ import chia.wallet.singleton
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.wallet_protocol import CoinState, RequestBlockHeader, RespondBlockHeader
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -30,7 +29,7 @@ from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import Condition, parse_timelock_info
+from chia.wallet.conditions import AssertCoinAnnouncement, Condition, parse_timelock_info
 from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo, ProposalType
 from chia.wallet.dao_wallet.dao_utils import (
     DAO_FINISHED_STATE,
@@ -729,9 +728,7 @@ class DAOWallet:
         full_treasury_puzzle = curry_singleton(launcher_coin.name(), dao_treasury_puzzle)
         full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
 
-        announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
         tx_records: List[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             uint64(1),
             genesis_launcher_puz.get_tree_hash(),
@@ -739,8 +736,10 @@ class DAOWallet:
             fee,
             origin_id=origin.name(),
             coins=set(coins),
-            coin_announcements_to_consume=announcement_set,
             memos=[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name()],
+            extra_conditions=(
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
         )
         tx_record: TransactionRecord = tx_records[0]
 
@@ -889,11 +888,9 @@ class DAOWallet:
         full_proposal_puzzle = curry_singleton(launcher_coin.name(), dao_proposal_puzzle)
         full_proposal_puzzle_hash = full_proposal_puzzle.get_tree_hash()
 
-        announcement_set: Set[Announcement] = set()
         announcement_message = Program.to(
             [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
         ).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_records: List[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             uint64(dao_rules.proposal_minimum_amount),
@@ -902,7 +899,9 @@ class DAOWallet:
             fee,
             origin_id=origin.name(),
             coins=coins,
-            coin_announcements_to_consume=announcement_set,
+            extra_conditions=(
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
         )
         tx_record: TransactionRecord = tx_records[0]
 

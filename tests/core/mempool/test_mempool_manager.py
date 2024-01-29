@@ -27,7 +27,6 @@ from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -49,6 +48,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint64
+from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.payment import Payment
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
@@ -1629,7 +1629,7 @@ async def test_identical_spend_aggregation_e2e(
     e_coin_id = e_coin.name()
     # Restrict spending E with an announcement to consume
     message = b"Identical spend aggregation test"
-    e_announcement = Announcement(e_coin_id, message)
+    e_announcement = AssertCoinAnnouncement(asserted_id=e_coin_id, asserted_msg=message)
     # Create transactions D and F that consume an announcement created by E
     [tx_d] = await wallet.generate_signed_transaction(
         uint64(100),
@@ -1637,7 +1637,7 @@ async def test_identical_spend_aggregation_e2e(
         DEFAULT_TX_CONFIG,
         fee=uint64(0),
         coins={coins[4].coin},
-        coin_announcements_to_consume={e_announcement},
+        extra_conditions=(e_announcement,),
     )
     [tx_f] = await wallet.generate_signed_transaction(
         uint64(150),
@@ -1645,7 +1645,7 @@ async def test_identical_spend_aggregation_e2e(
         DEFAULT_TX_CONFIG,
         fee=uint64(0),
         coins={coins[5].coin},
-        coin_announcements_to_consume={e_announcement},
+        extra_conditions=(e_announcement,),
     )
     assert tx_d.spend_bundle is not None
     assert tx_f.spend_bundle is not None
@@ -1673,7 +1673,7 @@ async def test_identical_spend_aggregation_e2e(
     g_coin = coins[6].coin
     g_coin_id = g_coin.name()
     [tx_g] = await wallet.generate_signed_transaction(
-        uint64(13), ph, DEFAULT_TX_CONFIG, coins={g_coin}, coin_announcements_to_consume={e_announcement}
+        uint64(13), ph, DEFAULT_TX_CONFIG, coins={g_coin}, extra_conditions=(e_announcement,)
     )
     assert tx_g.spend_bundle is not None
     sb_e2g = SpendBundle.aggregate([sb_e2, tx_g.spend_bundle])

@@ -6,7 +6,6 @@ import pytest
 from chia_rs import G2Element
 
 from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -21,7 +20,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import AssertPuzzleAnnouncement, ConditionValidTimes
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -115,11 +114,11 @@ async def generate_coins(
 # but doesn't bother with non-offer announcements
 def generate_secure_bundle(
     selected_coins: List[Coin],
-    announcements: List[Announcement],
+    announcements: List[AssertPuzzleAnnouncement],
     offered_amount: uint64,
     tail_str: Optional[str] = None,
 ) -> SpendBundle:
-    announcement_assertions = [[63, a.name()] for a in announcements]
+    announcement_assertions = [a.to_program() for a in announcements]
     selected_coin_amount = sum([c.amount for c in selected_coins])
     non_primaries = [] if len(selected_coins) < 2 else selected_coins[1:]
     inner_solution: List[List[Any]] = [

@@ -11,13 +11,13 @@ from chia.protocols import wallet_protocol
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint32, uint64
+from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
 
@@ -577,7 +577,7 @@ class TestBlockchainTransactions:
         # This condition requires block2 coinbase to be spent
         block1_cvp = ConditionWithArgs(
             ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
-            [Announcement(spend_coin_block_2.name(), b"test").name()],
+            [AssertCoinAnnouncement(asserted_id=spend_coin_block_2.name(), asserted_msg=b"test").msg_calc],
         )
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
@@ -661,7 +661,7 @@ class TestBlockchainTransactions:
         # This condition requires block2 coinbase to be spent
         block1_cvp = ConditionWithArgs(
             ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT,
-            [Announcement(spend_coin_block_2.puzzle_hash, b"test").name()],
+            [AssertPuzzleAnnouncement(asserted_ph=spend_coin_block_2.puzzle_hash, asserted_msg=b"test").msg_calc],
         )
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(

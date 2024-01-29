@@ -550,8 +550,7 @@ class TradeManager:
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcements_to_assert),
                     )
                     all_transactions.append(tx)
                 elif wallet.type() == WalletType.NFT:
@@ -565,8 +564,7 @@ class TradeManager:
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcements_to_assert),
                     )
                     all_transactions.extend(txs)
                 else:
@@ -577,8 +575,7 @@ class TradeManager:
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcements_to_assert),
                         add_authorizations_to_cr_cats=False,
                     )
                     all_transactions.extend(txs)

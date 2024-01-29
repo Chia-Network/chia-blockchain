@@ -23,7 +23,6 @@ from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -41,7 +40,7 @@ from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.conditions import ConditionValidTimes, Remark
+from chia.wallet.conditions import ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement, Remark
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -583,19 +582,18 @@ async def test_create_signed_transaction_with_coin_announcement(wallet_rpc_envir
 
     signed_tx_amount = uint64(888000)
     tx_coin_announcements = [
-        Announcement(
+        CreateCoinAnnouncement(
+            std_hash(b"\xca" + std_hash(b"message")),
             std_hash(b"coin_id_1"),
-            std_hash(b"message"),
-            b"\xca",
         ),
-        Announcement(
-            std_hash(b"coin_id_2"),
+        CreateCoinAnnouncement(
             bytes(Program.to("a string")),
+            std_hash(b"coin_id_2"),
         ),
     ]
     outputs = await create_tx_outputs(wallet_2, [(signed_tx_amount, None)])
     tx_res: TransactionRecord = await client.create_signed_transaction(
-        outputs, tx_config=DEFAULT_TX_CONFIG, coin_announcements=tx_coin_announcements
+        outputs, tx_config=DEFAULT_TX_CONFIG, extra_conditions=(*tx_coin_announcements,)
     )
     assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
     await assert_push_tx_error(client_node, tx_res)
@@ -615,19 +613,18 @@ async def test_create_signed_transaction_with_puzzle_announcement(wallet_rpc_env
 
     signed_tx_amount = uint64(888000)
     tx_puzzle_announcements = [
-        Announcement(
+        CreatePuzzleAnnouncement(
+            std_hash(b"\xca" + std_hash(b"message")),
             std_hash(b"puzzle_hash_1"),
-            b"message",
-            b"\xca",
         ),
-        Announcement(
-            std_hash(b"puzzle_hash_2"),
+        CreatePuzzleAnnouncement(
             bytes(Program.to("a string")),
+            std_hash(b"puzzle_hash_2"),
         ),
     ]
     outputs = await create_tx_outputs(wallet_2, [(signed_tx_amount, None)])
     tx_res = await client.create_signed_transaction(
-        outputs, tx_config=DEFAULT_TX_CONFIG, puzzle_announcements=tx_puzzle_announcements
+        outputs, tx_config=DEFAULT_TX_CONFIG, extra_conditions=(*tx_puzzle_announcements,)
     )
     assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
     await assert_push_tx_error(client_node, tx_res)
@@ -1489,7 +1486,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     last_did_coin = await did_wallet_2.get_coin()
     bundle = SpendBundle.from_json_dict(
-        (await wallet_2_rpc.did_message_spend(did_wallet_2.id(), [], [], DEFAULT_TX_CONFIG))["spend_bundle"]
+        (await wallet_2_rpc.did_message_spend(did_wallet_2.id(), DEFAULT_TX_CONFIG))["spend_bundle"]
     )
     await env.full_node.rpc_client.push_tx(bundle)
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
@@ -1502,11 +1499,9 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     last_did_coin = next_did_coin
 
     bundle = SpendBundle.from_json_dict(
-        (
-            await wallet_2_rpc.did_message_spend(
-                did_wallet_2.id(), [], [], DEFAULT_TX_CONFIG.override(reuse_puzhash=True)
-            )
-        )["spend_bundle"]
+        (await wallet_2_rpc.did_message_spend(did_wallet_2.id(), DEFAULT_TX_CONFIG.override(reuse_puzhash=True)))[
+            "spend_bundle"
+        ]
     )
     await env.full_node.rpc_client.push_tx(bundle)
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
