@@ -30,12 +30,13 @@ class DataLayerRpcClient(RpcClient):
         self, store_id: bytes32, changelist: List[Dict[str, str]], fee: Optional[uint64], publish_on_chain: bool = True
     ) -> Dict[str, Any]:
         response = await self.fetch(
-            "batch_update", {
+            "batch_update",
+            {
                 "id": store_id.hex(),
                 "changelist": changelist,
                 "fee": fee,
                 "publish_on_chain": publish_on_chain,
-            }
+            },
         )
         return response
 
