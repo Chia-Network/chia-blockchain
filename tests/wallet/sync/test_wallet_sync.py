@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+from dataclasses import dataclass
 from typing import List, Optional, Set
 from unittest.mock import MagicMock
 
@@ -1123,7 +1124,7 @@ async def test_dusted_wallet(
 
 
 @pytest.mark.anyio
-async def test_retry_store(two_wallet_nodes, self_hostname):
+async def test_retry_store(two_wallet_nodes, self_hostname, monkeypatch):
     full_nodes, wallets, bt = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.full_node.server
@@ -1136,13 +1137,20 @@ async def test_retry_store(two_wallet_nodes, self_hostname):
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
 
-    def flaky_get_coin_state(node, func):
-        async def new_func(*args, **kwargs):
-            if node.coin_state_flaky:
-                node.coin_state_flaky = False
+    @dataclass
+    class FlakinessInfo:
+        coin_state_flaky: bool = True
+        fetch_children_flaky: bool = True
+        get_timestamp_flaky: bool = True
+        db_flaky: bool = True
+
+    def flaky_get_coin_state(flakiness_info, func):
+        async def new_func(coin_names, peer, fork_height=None):
+            if flakiness_info.coin_state_flaky:
+                flakiness_info.coin_state_flaky = False
                 raise PeerRequestException()
             else:
-                return await func(*args, **kwargs)
+                return await func(coin_names, peer, fork_height)
 
         return new_func
 
@@ -1150,7 +1158,7 @@ async def test_retry_store(two_wallet_nodes, self_hostname):
 
     def flaky_request_puzzle_solution(func):
         @functools.wraps(func)
-        async def new_func(*args, **kwargs):
+        async def new_func(request):
             nonlocal request_puzzle_solution_failure_tested
             if not request_puzzle_solution_failure_tested:
                 request_puzzle_solution_failure_tested = True
@@ -1158,96 +1166,105 @@ async def test_retry_store(two_wallet_nodes, self_hostname):
                 reject = wallet_protocol.RejectPuzzleSolution(bytes32([0] * 32), uint32(0))
                 return make_msg(ProtocolMessageTypes.reject_puzzle_solution, reject)
             else:
-                return await func(*args, **kwargs)
+                return await func(request)
 
         return new_func
 
-    def flaky_fetch_children(node, func):
-        async def new_func(*args, **kwargs):
-            if node.fetch_children_flaky:
-                node.fetch_children_flaky = False
+    def flaky_fetch_children(flakiness_info, func):
+        async def new_func(coin_name, peer, fork_height=None):
+            if flakiness_info.fetch_children_flaky:
+                flakiness_info.fetch_children_flaky = False
                 raise PeerRequestException()
             else:
-                return await func(*args, **kwargs)
+                return await func(coin_name, peer, fork_height)
 
         return new_func
 
-    def flaky_get_timestamp(node, func):
-        async def new_func(*args, **kwargs):
-            if node.get_timestamp_flaky:
-                node.get_timestamp_flaky = False
+    def flaky_get_timestamp(flakiness_info, func):
+        async def new_func(height):
+            if flakiness_info.get_timestamp_flaky:
+                flakiness_info.get_timestamp_flaky = False
                 raise PeerRequestException()
             else:
-                return await func(*args, **kwargs)
+                return await func(height)
 
         return new_func
 
-    def flaky_info_for_puzhash(node, func):
-        async def new_func(*args, **kwargs):
-            if node.db_flaky:
-                node.db_flaky = False
+    def flaky_info_for_puzhash(flakiness_info, func):
+        async def new_func(puzzle_hash):
+            if flakiness_info.db_flaky:
+                flakiness_info.db_flaky = False
                 raise AIOSqliteError()
             else:
-                return await func(*args, **kwargs)
+                return await func(puzzle_hash)
 
         return new_func
 
-    full_node_api.request_puzzle_solution = flaky_request_puzzle_solution(full_node_api.request_puzzle_solution)
-
-    for wallet_node, wallet_server in wallets:
-        wallet_node.coin_state_retry_seconds = 1
-        request_puzzle_solution_failure_tested = False
-        wallet_node.coin_state_flaky = True
-        wallet_node.fetch_children_flaky = True
-        wallet_node.get_timestamp_flaky = True
-        wallet_node.db_flaky = True
-
-        wallet_node.get_coin_state = flaky_get_coin_state(wallet_node, wallet_node.get_coin_state)
-        wallet_node.fetch_children = flaky_fetch_children(wallet_node, wallet_node.fetch_children)
-        wallet_node.get_timestamp_for_height = flaky_get_timestamp(wallet_node, wallet_node.get_timestamp_for_height)
-        wallet_node.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash = flaky_info_for_puzhash(
-            wallet_node, wallet_node.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash
+    with monkeypatch.context() as m:
+        m.setattr(
+            full_node_api,
+            "request_puzzle_solution",
+            flaky_request_puzzle_solution(full_node_api.request_puzzle_solution),
         )
 
-        await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        for wallet_node, wallet_server in wallets:
+            wallet_node.coin_state_retry_seconds = 1
+            request_puzzle_solution_failure_tested = False
+            flakiness_info = FlakinessInfo()
+            m.setattr(wallet_node, "get_coin_state", flaky_get_coin_state(flakiness_info, wallet_node.get_coin_state))
+            m.setattr(wallet_node, "fetch_children", flaky_fetch_children(flakiness_info, wallet_node.fetch_children))
+            m.setattr(
+                wallet_node,
+                "get_timestamp_for_height",
+                flaky_get_timestamp(flakiness_info, wallet_node.get_timestamp_for_height),
+            )
+            m.setattr(
+                wallet_node.wallet_state_manager.puzzle_store,
+                "get_wallet_identifier_for_puzzle_hash",
+                flaky_info_for_puzhash(
+                    flakiness_info, wallet_node.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash
+                ),
+            )
 
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-        async def retry_store_empty() -> bool:
-            return len(await wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry()) == 0
+            wallet = wallet_node.wallet_state_manager.main_wallet
+            ph = await wallet.get_new_puzzlehash()
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
-        async def assert_coin_state_retry() -> None:
-            # Wait for retry coin states to show up
-            await time_out_assert(15, retry_store_empty, False)
-            # And become retried/removed
-            await time_out_assert(30, retry_store_empty, True)
+            async def retry_store_empty() -> bool:
+                return len(await wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry()) == 0
 
-        await assert_coin_state_retry()
+            async def assert_coin_state_retry() -> None:
+                # Wait for retry coin states to show up
+                await time_out_assert(15, retry_store_empty, False)
+                # And become retried/removed
+                await time_out_assert(30, retry_store_empty, True)
 
-        await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
+            await assert_coin_state_retry()
 
-        [tx] = await wallet.generate_signed_transaction(
-            1_000_000_000_000, bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
-        )
-        await wallet_node.wallet_state_manager.add_pending_transaction(tx)
+            await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
 
-        async def tx_in_mempool():
-            return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None
+            [tx] = await wallet.generate_signed_transaction(
+                1_000_000_000_000, bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
+            )
+            await wallet_node.wallet_state_manager.add_pending_transaction(tx)
 
-        await time_out_assert(15, tx_in_mempool)
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            async def tx_in_mempool():
+                return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None
 
-        await assert_coin_state_retry()
+            await time_out_assert(15, tx_in_mempool)
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
-        assert not wallet_node.coin_state_flaky
-        assert request_puzzle_solution_failure_tested
-        assert not wallet_node.fetch_children_flaky
-        assert not wallet_node.get_timestamp_flaky
-        assert not wallet_node.db_flaky
-        await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
+            await assert_coin_state_retry()
+
+            assert not flakiness_info.coin_state_flaky
+            assert request_puzzle_solution_failure_tested
+            assert not flakiness_info.fetch_children_flaky
+            assert not flakiness_info.get_timestamp_flaky
+            assert not flakiness_info.db_flaky
+            await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
