@@ -36,7 +36,7 @@ dependencies = [
     "zstd==1.5.5.1",
     "packaging==23.2",
     "psutil==5.9.4",
-    "hsms==0.3.0",
+    "hsms==0.3.1",
     "ecdsa==0.18.0",  # For SECP
 ]
 
