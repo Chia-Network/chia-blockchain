@@ -2102,6 +2102,7 @@ async def test_issue_15955_deadlock(
             changelist=[{"action": "insert", "key": key, "value": value}],
             fee=uint64(0),
         )
+        assert transaction_record is not None
         await full_node_api.process_transaction_records(records=[transaction_record])
         await full_node_api.wait_for_wallet_synced(wallet_node)
         assert await check_singleton_confirmed(dl=data_layer, tree_id=tree_id)

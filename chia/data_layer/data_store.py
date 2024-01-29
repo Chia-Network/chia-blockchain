@@ -1270,7 +1270,7 @@ class DataStore:
             old_root = await self.get_tree_root(tree_id)
             pending_root = await self.get_pending_root(tree_id=tree_id)
             if pending_root is None:
-                intermediate_root = old_root
+                intermediate_root: Optional[Root] = old_root
             else:
                 if pending_root.status == Status.PENDING_BATCH:
                     # We have an unfinished batch, continue the current batch on top of it.
@@ -1282,6 +1282,7 @@ class DataStore:
                 else:
                     raise Exception("Internal error")
 
+            assert intermediate_root is not None
             root_hash = intermediate_root.node_hash
             if intermediate_root.node_hash is None:
                 hint_keys_values = {}
