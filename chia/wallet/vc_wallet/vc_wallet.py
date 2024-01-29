@@ -544,8 +544,7 @@ class VCWallet:
                 if crcat_spend.crcat.coin.name() in spends_to_fix:
                     spend_to_fix: CoinSpend = spends_to_fix[crcat_spend.crcat.coin.name()]
                     other_spends.append(
-                        dataclasses.replace(
-                            spend_to_fix,
+                        spend_to_fix.replace(
                             solution=SerializedProgram.from_program(
                                 spend_to_fix.solution.to_program().replace(
                                     ff=coin_args[coin_name][0],
