@@ -21,7 +21,6 @@ chia.types.blockchain_format.program
 chia.wallet.chialisp
 chia.wallet.did_wallet.did_wallet
 chia.wallet.key_val_store
-chia.wallet.lineage_proof
 chia.wallet.payment
 chia.wallet.puzzles.load_clvm
 chia.wallet.puzzles.p2_conditions
