@@ -169,7 +169,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
     coin = Coin(
         bytes32.fromhex("3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa"),
         bytes32.fromhex("14947eb0e69ee8fc8279190fc2d38cb4bbb61ba28f1a270cfd643a0e8d759576"),
-        300,
+        uint64(300),
     )
     spend_info = get_puzzle_and_solution_for_coin(generator, coin, softfork_height, bt.constants)
     assert spend_info.puzzle.to_program() == puzzle

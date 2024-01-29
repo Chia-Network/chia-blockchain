@@ -76,34 +76,34 @@ def test_construction() -> None:
     H1 = b"a" * 32
     H2 = b"b" * 32
 
-    with pytest.raises(OverflowError, match="int too big to convert"):
+    with pytest.raises(ValueError, match="Value 18446744073709551616 does not fit into uint64"):
         # overflow
-        Coin(H1, H2, 0x10000000000000000)
+        Coin(H1, H2, uint64(0x10000000000000000))
 
-    with pytest.raises(OverflowError, match="can't convert negative int to unsigned"):
+    with pytest.raises(ValueError, match="Value -1 does not fit into uint64"):
         # overflow
-        Coin(H1, H2, -1)
+        Coin(H1, H2, uint64(-1))
 
     H1_short = b"a" * 31
     H1_long = b"a" * 33
 
     with pytest.raises(ValueError):
         # short hash
-        Coin(H1_short, H2, 1)
+        Coin(H1_short, H2, uint64(1))
 
     with pytest.raises(ValueError):
         # long hash
-        Coin(H1_long, H2, 1)
+        Coin(H1_long, H2, uint64(1))
 
     with pytest.raises(ValueError):
         # short hash
-        Coin(H2, H1_short, 1)
+        Coin(H2, H1_short, uint64(1))
 
     with pytest.raises(ValueError):
         # long hash
-        Coin(H2, H1_long, 1)
+        Coin(H2, H1_long, uint64(1))
 
-    c = Coin(H1, H2, 1000)
+    c = Coin(H1, H2, uint64(1000))
     assert c.parent_coin_info == H1
     assert c.puzzle_hash == H2
     assert c.amount == 1000

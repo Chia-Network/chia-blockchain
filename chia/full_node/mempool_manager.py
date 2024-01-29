@@ -434,7 +434,7 @@ class MempoolManager:
             removal_names.add(coin_id)
             spend_additions = []
             for puzzle_hash, amount, _ in spend.create_coin:
-                child_coin = Coin(coin_id, puzzle_hash, amount)
+                child_coin = Coin(coin_id, puzzle_hash, uint64(amount))
                 spend_additions.append(child_coin)
                 additions_dict[child_coin.name()] = child_coin
                 addition_amount = addition_amount + child_coin.amount
