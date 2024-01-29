@@ -191,13 +191,17 @@ class DataLayerRpcApi:
         fee = get_fee(self.service.config, request)
         changelist = [process_change(change) for change in request["changelist"]]
         store_id = bytes32(hexstr_to_bytes(request["id"]))
+        publish_on_chain = request.get("publish_on_chain", True)
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
-        if transaction_record is None:
+        if transaction_record is None and publish_on_chain:
             raise Exception(f"Batch update failed for: {store_id}")
-        return {"tx_id": transaction_record.name}
+        if publish_on_chain:
+            return {"tx_id": transaction_record.name}
+        else:
+            return {}
 
     async def insert(self, request: Dict[str, Any]) -> EndpointResult:
         """

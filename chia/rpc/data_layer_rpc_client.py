@@ -27,9 +27,16 @@ class DataLayerRpcClient(RpcClient):
         return response
 
     async def update_data_store(
-        self, store_id: bytes32, changelist: List[Dict[str, str]], fee: Optional[uint64]
+        self, store_id: bytes32, changelist: List[Dict[str, str]], fee: Optional[uint64], publish_on_chain: bool = True
     ) -> Dict[str, Any]:
-        response = await self.fetch("batch_update", {"id": store_id.hex(), "changelist": changelist, "fee": fee})
+        response = await self.fetch(
+            "batch_update", {
+                "id": store_id.hex(),
+                "changelist": changelist,
+                "fee": fee,
+                "publish_on_chain": publish_on_chain,
+            }
+        )
         return response
 
     async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> Dict[str, Any]:
