@@ -1118,7 +1118,7 @@ class Timelord:
                                     ip,
                                     reader,
                                     writer,
-                                    uint64(info[1].new_proof_of_time.number_of_iterations),
+                                    info[1].new_proof_of_time.number_of_iterations,
                                     info[1].header_hash,
                                     info[1].height,
                                     info[1].field_vdf,
@@ -1170,7 +1170,7 @@ class Timelord:
                     bluebox_process_data = BlueboxProcessData(
                         picked_info.new_proof_of_time.challenge,
                         uint16(self.constants.DISCRIMINANT_SIZE_BITS),
-                        uint64(picked_info.new_proof_of_time.number_of_iterations),
+                        picked_info.new_proof_of_time.number_of_iterations,
                     )
                     proof = await asyncio.get_running_loop().run_in_executor(
                         pool,
