@@ -112,6 +112,8 @@ class DummyHarvesterPeer:
             local_pk=local_sk.get_g1(),
             farmer_pk=farmer_public_key,
             message_signatures=[(message, signature)],
+            include_source_signature_data=False,
+            farmer_reward_address_override=None,
         )
 
 
@@ -576,6 +578,9 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
         plot_identifier=case.plot_identifier,
         proof=pos,
         signage_point_index=case.signage_point_index,
+        include_source_signature_data=False,
+        farmer_reward_address_override=None,
+        fee_info=None,
     )
 
     p2_singleton_puzzle_hash = case.pool_contract_puzzle_hash
@@ -713,6 +718,9 @@ def create_valid_pos(farmer: Farmer) -> Tuple[farmer_protocol.NewSignagePoint, P
         plot_identifier=case.plot_identifier,
         proof=pos,
         signage_point_index=case.signage_point_index,
+        include_source_signature_data=False,
+        farmer_reward_address_override=None,
+        fee_info=None,
     )
     p2_singleton_puzzle_hash = case.pool_contract_puzzle_hash
     farmer.constants = dataclasses.replace(DEFAULT_CONSTANTS, POOL_SUB_SLOT_ITERS=case.sub_slot_iters)

@@ -50,8 +50,9 @@ def launcher_conditions_and_spend_bundle(
 ) -> Tuple[bytes32, List[Program], SpendBundle]:
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
+    launcher_id = launcher_coin.name()
     singleton_full_puzzle = SINGLETON_MOD.curry(
-        SINGLETON_MOD_HASH, launcher_coin.name(), launcher_puzzle_hash, initial_singleton_inner_puzzle
+        SINGLETON_MOD_HASH, launcher_id, launcher_puzzle_hash, initial_singleton_inner_puzzle
     )
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
@@ -74,7 +75,7 @@ def launcher_conditions_and_spend_bundle(
     launcher_solution = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
     coin_spend = make_spend(launcher_coin, launcher_puzzle, launcher_solution)
     spend_bundle = SpendBundle([coin_spend], G2Element())
-    return launcher_coin.name(), expected_conditions, spend_bundle
+    return launcher_id, expected_conditions, spend_bundle
 
 
 def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:

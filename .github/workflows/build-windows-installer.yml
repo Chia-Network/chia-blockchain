@@ -85,7 +85,7 @@ jobs:
         echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
 
     - name: Cache npm
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.npm-cache.outputs.dir }}
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -99,7 +99,7 @@ jobs:
         echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
 
     - name: Cache pip
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
@@ -234,7 +234,7 @@ jobs:
         rm -rf ./chia-blockchain-gui
 
     - name: Cache GUI
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-gui
       with:
         path: .\chia-blockchain-gui

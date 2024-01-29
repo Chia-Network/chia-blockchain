@@ -5,7 +5,7 @@ import concurrent
 import contextlib
 import dataclasses
 import logging
-import multiprocessing
+import os
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Tuple, cast
@@ -101,8 +101,10 @@ class Harvester:
 
         context_count = config.get("parallel_decompressor_count", DEFAULT_PARALLEL_DECOMPRESSOR_COUNT)
         thread_count = config.get("decompressor_thread_count", DEFAULT_DECOMPRESSOR_THREAD_COUNT)
+        cpu_count = os.cpu_count()
+        assert cpu_count is not None
         if thread_count == 0:
-            thread_count = multiprocessing.cpu_count() // 2
+            thread_count = cpu_count // 2
         disable_cpu_affinity = config.get("disable_cpu_affinity", DEFAULT_DISABLE_CPU_AFFINITY)
         max_compression_level_allowed = config.get(
             "max_compression_level_allowed", DEFAULT_MAX_COMPRESSION_LEVEL_ALLOWED
