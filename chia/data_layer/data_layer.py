@@ -247,20 +247,25 @@ class DataLayer:
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
         fee: uint64,
+        publish_on_chain: bool = True,
     ) -> TransactionRecord:
-        await self.batch_insert(tree_id=tree_id, changelist=changelist)
-        return await self.publish_update(tree_id=tree_id, fee=fee)
+        status = Status.PENDING if publish_on_chain else Status.PENDING_BATCH
+        await self.batch_insert(tree_id=tree_id, changelist=changelist, status=status)
+
+        if publish_on_chain:
+            return await self.publish_update(tree_id=tree_id, fee=fee)
 
     async def batch_insert(
         self,
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
+        status: Status = Status.PENDING,
     ) -> bytes32:
         await self._update_confirmation_status(tree_id=tree_id)
 
         async with self.data_store.transaction():
             pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
-            if pending_root is not None:
+            if pending_root is not None and pending_root.status == Status.PENDING:
                 raise Exception("Already have a pending root waiting for confirmation.")
 
             # check before any DL changes that this singleton is currently owned by this wallet
@@ -269,7 +274,7 @@ class DataLayer:
                 raise ValueError(f"Singleton with launcher ID {tree_id} is not owned by DL Wallet")
 
             t1 = time.monotonic()
-            batch_hash = await self.data_store.insert_batch(tree_id, changelist)
+            batch_hash = await self.data_store.insert_batch(tree_id, changelist, status)
             t2 = time.monotonic()
             self.log.info(f"Data store batch update process time: {t2 - t1}.")
             # todo return empty node hash from get_tree_root
@@ -290,6 +295,8 @@ class DataLayer:
         pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
         if pending_root is None:
             raise Exception("Latest root is already confirmed.")
+        if pending_root.status == Status.PENDING_BATCH:
+            raise Exception("Publishing on chain an unfinished batch.")
 
         root_hash = self.none_bytes if pending_root.node_hash is None else pending_root.node_hash
 
@@ -382,7 +389,7 @@ class DataLayer:
                 return
             if root is None:
                 pending_root = await self.data_store.get_pending_root(tree_id=tree_id)
-                if pending_root is not None:
+                if pending_root is not None and pending_root.status == Status.PENDING:
                     if pending_root.generation == 0 and pending_root.node_hash is None:
                         await self.data_store.change_root_status(pending_root, Status.COMMITTED)
                         await self.data_store.clear_pending_roots(tree_id=tree_id)
@@ -421,6 +428,7 @@ class DataLayer:
                     pending_root is not None
                     and pending_root.generation == root.generation + 1
                     and pending_root.node_hash == expected_root_hash
+                    and pending_root.status == Status.PENDING
                 ):
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED)
                     await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
