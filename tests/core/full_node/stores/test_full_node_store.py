@@ -240,9 +240,9 @@ async def test_basic_store(
 
     # Multiple unfinished blocks with colliding partial hashes
     unf1 = unfinished_blocks[0]
-    unf2 = dataclasses.replace(unf1, foliage=unfinished_blocks[1].foliage)
-    unf3 = dataclasses.replace(unf1, foliage=unfinished_blocks[2].foliage)
-    unf4 = dataclasses.replace(unf1, foliage=unfinished_blocks[3].foliage)
+    unf2 = unf1.replace(foliage=unfinished_blocks[1].foliage)
+    unf3 = unf1.replace(foliage=unfinished_blocks[2].foliage)
+    unf4 = unf1.replace(foliage=unfinished_blocks[3].foliage)
 
     # we have none of these blocks in the store
     for unf_block in [unf1, unf2, unf3, unf4]:
