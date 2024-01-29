@@ -48,7 +48,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
@@ -382,10 +382,13 @@ class WalletStateManager:
         if len(root_bytes) == 32:
             return Vault
 
-        raise ValueError(f"Could not find a valid wallet type for observation_root: {root_bytes.hex()}")
+        raise ValueError(  # pragma: no cover
+            f"Could not find a valid wallet type for observation_root: {root_bytes.hex()}"
+        )
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
-        if not isinstance(self.observation_root, G1Element):
+        if not isinstance(self.observation_root, G1Element):  # pragma: no cover
+            # TODO: Add test coverage when vault wallet exists
             raise ValueError("Public key derivation is not supported for non-G1Element keys")
         return master_pk_to_wallet_pk_unhardened(self.observation_root, index)
 
@@ -479,9 +482,6 @@ class WalletStateManager:
                     if target_wallet.handle_own_derivation():
                         derivation_paths.extend(target_wallet.derivation_for_index(index))
                     else:
-                        if target_wallet.type() == WalletType.POOLING_WALLET:
-                            continue
-
                         if self.private_key is not None:
                             # Hardened
                             pubkey: G1Element = _derive_path(intermediate_sk, [index]).get_g1()
@@ -834,7 +834,7 @@ class WalletStateManager:
         # Check if the coin is a DAO CAT
         dao_cat_args = match_dao_cat_puzzle(uncurried)
         if dao_cat_args:
-            return await self.handle_dao_cat(dao_cat_args, parent_coin_state, coin_state, coin_spend), None
+            return await self.handle_dao_cat(dao_cat_args, parent_coin_state, coin_state, coin_spend, fork_height), None
 
         # Check if the coin is a CAT
         cat_curried_args = match_cat_puzzle(uncurried)
@@ -1084,6 +1084,7 @@ class WalletStateManager:
         parent_coin_state: CoinState,
         coin_state: CoinState,
         coin_spend: CoinSpend,
+        fork_height: Optional[uint32],
     ) -> Optional[WalletIdentifier]:
         """
         Handle the new coin when it is a DAO CAT
@@ -1095,6 +1096,19 @@ class WalletStateManager:
                 assert isinstance(wallet, DAOCATWallet)
                 if wallet.dao_cat_info.limitations_program_hash == asset_id:
                     return WalletIdentifier.create(wallet)
+        # Found a DAO_CAT, but we don't have a wallet for it. Add to unacknowledged
+        await self.interested_store.add_unacknowledged_token(
+            asset_id,
+            CATWallet.default_wallet_name_for_unknown_cat(asset_id.hex()),
+            None if parent_coin_state.spent_height is None else uint32(parent_coin_state.spent_height),
+            parent_coin_state.coin.puzzle_hash,
+        )
+        await self.interested_store.add_unacknowledged_coin_state(
+            asset_id,
+            coin_state,
+            fork_height,
+        )
+        self.state_changed("added_stray_cat")
         return None  # pragma: no cover
 
     async def handle_cat(
@@ -2594,14 +2608,17 @@ class WalletStateManager:
             _coin_spend = coin_spend.as_coin_spend()
             # Get AGG_SIG conditions
             conditions_dict = conditions_dict_for_solution(
-                _coin_spend.puzzle_reveal, _coin_spend.solution, self.constants.MAX_BLOCK_COST_CLVM
+                _coin_spend.puzzle_reveal.to_program(),
+                _coin_spend.solution.to_program(),
+                self.constants.MAX_BLOCK_COST_CLVM,
             )
             # Create signature
             for pk_bytes, msg in pkm_pairs_for_conditions_dict(
                 conditions_dict, _coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
             ):
                 pks.append(pk_bytes)
-                signing_targets.append(SigningTarget(pk_bytes, msg, std_hash(pk_bytes + msg)))
+                fingerprint: bytes = G1Element.from_bytes(pk_bytes).get_fingerprint().to_bytes(4, "big")
+                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
 
         return SigningInstructions(
             await self.key_hints_for_pubkeys(pks),
@@ -2768,7 +2785,7 @@ class WalletStateManager:
             ),
         )
 
-        launcher_cs = CoinSpend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
+        launcher_cs = make_spend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
         assert tx_record.spend_bundle is not None
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb])

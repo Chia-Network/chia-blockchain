@@ -11,7 +11,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
@@ -36,7 +36,6 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
-    GROUP_ORDER,
     calculate_synthetic_offset,
     calculate_synthetic_secret_key,
     puzzle_for_pk,
@@ -357,7 +356,7 @@ class Wallet:
                 primary_announcement = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=message)
 
                 spends.append(
-                    CoinSpend(
+                    make_spend(
                         coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
                     )
                 )
@@ -373,7 +372,7 @@ class Wallet:
             solution = self.make_solution(primaries=[], conditions=(primary_announcement,))
             solution = decorator_manager.solve(puzzle, [], solution)
             spends.append(
-                CoinSpend(
+                make_spend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
                 )
             )
@@ -533,6 +532,7 @@ class Wallet:
         return SumHint(
             [dr.pubkey.get_fingerprint().to_bytes(4, "big")],
             calculate_synthetic_offset(dr.pubkey, DEFAULT_HIDDEN_PUZZLE_HASH).to_bytes(32, "big"),
+            pk,
         )
 
     async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:
@@ -566,32 +566,43 @@ class Wallet:
     ) -> List[SigningResponse]:
         assert isinstance(self.wallet_state_manager.observation_root, G1Element)
         root_pubkey: G1Element = self.wallet_state_manager.observation_root
-        pk_lookup: Dict[int, G1Element] = {root_pubkey.get_fingerprint(): root_pubkey}
-        sk_lookup: Dict[int, PrivateKey] = {
-            root_pubkey.get_fingerprint(): self.wallet_state_manager.get_master_private_key()
-        }
+        pk_lookup: Dict[int, G1Element] = (
+            {root_pubkey.get_fingerprint(): root_pubkey} if self.wallet_state_manager.private_key is not None else {}
+        )
+        sk_lookup: Dict[int, PrivateKey] = (
+            {root_pubkey.get_fingerprint(): self.wallet_state_manager.get_master_private_key()}
+            if self.wallet_state_manager.private_key is not None
+            else {}
+        )
+        aggregate_responses_at_end: bool = True
+        responses: List[SigningResponse] = []
 
-        for path_hint in signing_instructions.key_hints.path_hints:
-            if int.from_bytes(path_hint.root_fingerprint, "big") != root_pubkey.get_fingerprint():
-                if not partial_allowed:
-                    raise ValueError(f"No root pubkey for fingerprint {root_pubkey.get_fingerprint()}")
+        # TODO: expand path hints and sum hints recursively (a sum hint can give a new key to path hint)
+        # Next, expand our pubkey set with path hints
+        if self.wallet_state_manager.private_key is not None:
+            for path_hint in signing_instructions.key_hints.path_hints:
+                if int.from_bytes(path_hint.root_fingerprint, "big") != root_pubkey.get_fingerprint():
+                    if not partial_allowed:
+                        raise ValueError(f"No root pubkey for fingerprint {root_pubkey.get_fingerprint()}")
+                    else:
+                        continue
                 else:
-                    continue
-            else:
-                path = [int(step) for step in path_hint.path]
-                derive_child_sk = _derive_path(self.wallet_state_manager.get_master_private_key(), path)
-                derive_child_sk_unhardened = _derive_path_unhardened(
-                    self.wallet_state_manager.get_master_private_key(), path
-                )
-                derive_child_pk = derive_child_sk.get_g1()
-                derive_child_pk_unhardened = derive_child_sk_unhardened.get_g1()
-                pk_lookup[derive_child_pk.get_fingerprint()] = derive_child_pk
-                pk_lookup[derive_child_pk_unhardened.get_fingerprint()] = derive_child_pk_unhardened
-                sk_lookup[derive_child_pk.get_fingerprint()] = derive_child_sk
-                sk_lookup[derive_child_pk_unhardened.get_fingerprint()] = derive_child_sk_unhardened
+                    path = [int(step) for step in path_hint.path]
+                    derive_child_sk = _derive_path(self.wallet_state_manager.get_master_private_key(), path)
+                    derive_child_sk_unhardened = _derive_path_unhardened(
+                        self.wallet_state_manager.get_master_private_key(), path
+                    )
+                    derive_child_pk = derive_child_sk.get_g1()
+                    derive_child_pk_unhardened = derive_child_sk_unhardened.get_g1()
+                    pk_lookup[derive_child_pk.get_fingerprint()] = derive_child_pk
+                    pk_lookup[derive_child_pk_unhardened.get_fingerprint()] = derive_child_pk_unhardened
+                    sk_lookup[derive_child_pk.get_fingerprint()] = derive_child_sk
+                    sk_lookup[derive_child_pk_unhardened.get_fingerprint()] = derive_child_sk_unhardened
 
+        # Next, expand our pubkey set with sum hints
+        sum_hint_lookup: Dict[int, List[int]] = {}
         for sum_hint in signing_instructions.key_hints.sum_hints:
-            final_sk_int: int = 0
+            fingerprints_we_have: List[int] = []
             for fingerprint in sum_hint.fingerprints:
                 fingerprint_as_int = int.from_bytes(fingerprint, "big")
                 if fingerprint_as_int not in pk_lookup:
@@ -601,39 +612,81 @@ class Wallet:
                             f"fingerprint {int.from_bytes(fingerprint, 'big')}"
                         )
                     else:
-                        break
+                        aggregate_responses_at_end = False
                 else:
-                    final_sk_int += int.from_bytes(bytes(sk_lookup[fingerprint_as_int]), "big")
-            else:  # Only do this if we don't break
-                synthetic_secret_exponent = (
-                    final_sk_int + int.from_bytes(sum_hint.synthetic_offset, "big")
-                ) % GROUP_ORDER
-                blob = synthetic_secret_exponent.to_bytes(32, "big")
-                synthetic_sk = PrivateKey.from_bytes(blob)
-                synthetic_pk = synthetic_sk.get_g1()
-                pk_lookup[synthetic_pk.get_fingerprint()] = synthetic_pk
-                sk_lookup[synthetic_pk.get_fingerprint()] = synthetic_sk
+                    fingerprints_we_have.append(fingerprint_as_int)
 
-        responses: List[SigningResponse] = []
+            # Add any synthetic offsets as keys we "have"
+            offset_sk = PrivateKey.from_bytes(sum_hint.synthetic_offset)
+            offset_pk = offset_sk.get_g1()
+            pk_lookup[offset_pk.get_fingerprint()] = offset_pk
+            sk_lookup[offset_pk.get_fingerprint()] = offset_sk
+            final_pubkey: G1Element = G1Element.from_bytes(sum_hint.final_pubkey)
+            final_fingerprint: int = final_pubkey.get_fingerprint()
+            pk_lookup[final_fingerprint] = final_pubkey
+            sum_hint_lookup[final_fingerprint] = [*fingerprints_we_have, offset_pk.get_fingerprint()]
+
         for target in signing_instructions.targets:
-            pk_fingerprint: int = G1Element.from_bytes(target.pubkey).get_fingerprint()
-            if pk_fingerprint not in sk_lookup:
+            pk_fingerprint: int = int.from_bytes(target.fingerprint, "big")
+            if pk_fingerprint not in sk_lookup and pk_fingerprint not in sum_hint_lookup:
                 if not partial_allowed:
                     raise ValueError(f"Pubkey {pk_fingerprint} not found (or path/sum hinted to)")
                 else:
+                    aggregate_responses_at_end = False
                     continue
-            responses.append(
-                SigningResponse(
-                    bytes(AugSchemeMPL.sign(sk_lookup[pk_fingerprint], target.message)),
-                    target.hook,
+            elif pk_fingerprint in sk_lookup:
+                responses.append(
+                    SigningResponse(
+                        bytes(AugSchemeMPL.sign(sk_lookup[pk_fingerprint], target.message)),
+                        target.hook,
+                    )
                 )
-            )
+            else:  # Implicit if pk_fingerprint in sum_hint_lookup
+                signatures: List[G2Element] = []
+                for partial_fingerprint in sum_hint_lookup[pk_fingerprint]:
+                    signatures.append(
+                        AugSchemeMPL.sign(sk_lookup[partial_fingerprint], target.message, pk_lookup[pk_fingerprint])
+                    )
+                if partial_allowed:
+                    # In multisig scenarios, we return everything as a component signature
+                    for sig in signatures:
+                        responses.append(
+                            SigningResponse(
+                                bytes(sig),
+                                target.hook,
+                            )
+                        )
+                else:
+                    # In the scenario where we are the only signer, we can collapse many responses into one
+                    responses.append(
+                        SigningResponse(
+                            bytes(AugSchemeMPL.aggregate(signatures)),
+                            target.hook,
+                        )
+                    )
+
+        # If we have the full set of signing responses for the instructions, aggregate them as much as possible
+        if aggregate_responses_at_end:
+            new_responses: List[SigningResponse] = []
+            grouped_responses: Dict[bytes32, List[SigningResponse]] = {}
+            for response in responses:
+                grouped_responses.setdefault(response.hook, [])
+                grouped_responses[response.hook].append(response)
+            for hook, group in grouped_responses.items():
+                new_responses.append(
+                    SigningResponse(
+                        bytes(AugSchemeMPL.aggregate([G2Element.from_bytes(res.signature) for res in group])),
+                        hook,
+                    )
+                )
+            responses = new_responses
 
         return responses
 
     async def apply_signatures(
         self, spends: List[Spend], signing_responses: List[SigningResponse]
     ) -> SignedTransaction:
+        signing_responses_set = set(signing_responses)
         return SignedTransaction(
             TransactionInfo(spends),
             [
@@ -641,7 +694,10 @@ class Wallet:
                     "bls_12381_aug_scheme",
                     bytes(
                         AugSchemeMPL.aggregate(
-                            [G2Element.from_bytes(signing_response.signature) for signing_response in signing_responses]
+                            [
+                                G2Element.from_bytes(signing_response.signature)
+                                for signing_response in signing_responses_set
+                            ]
                         )
                     ),
                 )
@@ -651,5 +707,5 @@ class Wallet:
     def handle_own_derivation(self) -> bool:
         return False
 
-    def derivation_for_index(self, index: int) -> List[DerivationRecord]:
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
         raise NotImplementedError()

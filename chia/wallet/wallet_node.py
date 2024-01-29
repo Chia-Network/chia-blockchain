@@ -387,9 +387,7 @@ class WalletNode:
         #   got Future <Future pending> attached to a different loop
         self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
         if not fingerprint:
-            fingerprint = self.get_last_used_fingerprint()
-            if fingerprint is not None and await self.get_key_for_fingerprint(fingerprint) is None:
-                fingerprint = None
+            fingerprint = await self.get_last_used_fingerprint_if_exists()
         multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
         multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
@@ -675,6 +673,12 @@ class WalletNode:
             self.log.exception("Non-fatal: Unable to read last used fingerprint.")
         return fingerprint
 
+    async def get_last_used_fingerprint_if_exists(self) -> Optional[int]:
+        fingerprint = self.get_last_used_fingerprint()
+        if fingerprint is not None and await self.get_key_for_fingerprint(fingerprint) is None:
+            fingerprint = None
+        return fingerprint
+
     def get_last_used_fingerprint_path(self) -> Path:
         db_path: Path = path_from_root(self.root_path, self.config["database_path"])
         fingerprint_path = db_path.parent / "last_used_fingerprint"
@@ -715,7 +719,7 @@ class WalletNode:
             )
             asyncio.create_task(self.wallet_peers.start())
 
-    def on_disconnect(self, peer: WSChiaConnection) -> None:
+    async def on_disconnect(self, peer: WSChiaConnection) -> None:
         if self.is_trusted(peer):
             self.local_node_synced = False
             self.initialize_wallet_peers()
@@ -1082,7 +1086,7 @@ class WalletNode:
                 self.log.debug(f"get_timestamp_for_height_from_peer use cached block for height {request_height}")
 
             if block is not None and block.foliage_transaction_block is not None:
-                return block.foliage_transaction_block.timestamp
+                return uint64(block.foliage_transaction_block.timestamp)
 
             request_height -= 1
 

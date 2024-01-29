@@ -12,7 +12,7 @@ from typing_extensions import Unpack
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
@@ -37,7 +37,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.wallet.conftest import WalletStateTransition, WalletTestFramework
+from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 
 ACS: Program = Program.to(1)
 ACS_PH: bytes32 = ACS.get_tree_hash()
@@ -57,10 +57,10 @@ class AnyoneCanSpend(Wallet):
         self.log = logging.getLogger(name)
         return self
 
-    async def get_new_puzzle(self) -> Program:
+    async def get_new_puzzle(self) -> Program:  # pragma: no cover
         return ACS
 
-    async def get_new_puzzlehash(self) -> bytes32:
+    async def get_new_puzzlehash(self) -> bytes32:  # pragma: no cover
         return ACS_PH
 
     async def generate_signed_transaction(
@@ -91,7 +91,7 @@ class AnyoneCanSpend(Wallet):
 
         spend_bundle = SpendBundle(
             [
-                CoinSpend(
+                make_spend(
                     coin,
                     ACS,
                     self.make_solution(condition_list, extra_conditions, fee) if i == 0 else Program.to([]),
@@ -124,17 +124,17 @@ class AnyoneCanSpend(Wallet):
             )
         ]
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+    def puzzle_for_pk(self, pubkey: G1Element) -> Program:  # pragma: no cover
         raise ValueError("This won't work")
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         if puzzle_hash == ACS_PH:
             return ACS
         else:
-            raise ValueError("puzzle hash was not ACS_PH")
+            raise ValueError("puzzle hash was not ACS_PH")  # pragma: no cover
 
     async def sign_message(self, message: str, puzzle_hash: bytes32, mode: SigningMode) -> Tuple[G1Element, G2Element]:
-        raise ValueError("This won't work")
+        raise ValueError("This won't work")  # pragma: no cover
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
         return ACS_PH
@@ -151,14 +151,14 @@ class AnyoneCanSpend(Wallet):
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
     ) -> List[SigningResponse]:
         if len(signing_instructions.targets) > 0:
-            raise ValueError("This won't work")
+            raise ValueError("This won't work")  # pragma: no cover
         else:
             return []
 
-    async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:
+    async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:  # pragma: no cover
         return None
 
-    async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
+    async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:  # pragma: no cover
         return None
 
     def make_solution(
@@ -173,16 +173,16 @@ class AnyoneCanSpend(Wallet):
         prog: Program = Program.to([c.to_program() for c in condition_list])
         return prog
 
-    async def get_puzzle(self, new: bool) -> Program:
+    async def get_puzzle(self, new: bool) -> Program:  # pragma: no cover
         return ACS
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:  # pragma: no cover
         raise ValueError("This won't work")
 
     def require_derivation_paths(self) -> bool:
         return True
 
-    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:  # pragma: no cover
         if coin.puzzle_hash == ACS_PH or hint == ACS_PH:
             return True
         else:
@@ -218,7 +218,7 @@ async def acs_setup(wallet_environments: WalletTestFramework, monkeypatch: pytes
         pk = PrivateKey.from_bytes(
             bytes.fromhex("548dd25590a19f0a6a294560fc36f2900575fb9d1b2650e6fe80ad9abc1c4a60")
         ).get_g1()
-        await env.wallet_node.keychain_proxy.add_public_key(bytes(pk).hex())
+        await env.node.keychain_proxy.add_public_key(bytes(pk).hex())
         await env.restart(pk.get_fingerprint())
 
 
@@ -299,3 +299,10 @@ async def test_main_wallet(
             )
         ]
     )
+
+    # Miscellaneous checks
+    assert [coin.puzzle_hash for tx in txs for coin in tx.removals] == [
+        (await main_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)).get_tree_hash()
+        for tx in txs
+        for coin in tx.removals
+    ]

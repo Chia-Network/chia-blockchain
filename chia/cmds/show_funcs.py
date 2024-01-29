@@ -121,7 +121,7 @@ async def print_block_from_hash(
             cost = str(full_block.transactions_info.cost)
             tx_filter_hash: Union[str, bytes32] = "Not a transaction block"
             if full_block.foliage_transaction_block:
-                tx_filter_hash = full_block.foliage_transaction_block.filter_hash
+                tx_filter_hash = bytes32(full_block.foliage_transaction_block.filter_hash)
             fees: Any = block.fees
         else:
             block_time_string = "Not a transaction block"

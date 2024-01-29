@@ -31,7 +31,6 @@ from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_server
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.beta_metrics import BetaMetricsLogger
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
@@ -632,7 +631,7 @@ class WebSocketServer:
         wallet_addresses_by_fingerprint = {}
         for key in keys:
             if not isinstance(key.observation_root, G1Element):
-                continue
+                continue  # pragma: no cover
             address_entries = []
 
             # we require access to the private key to generate wallet addresses for non observer
@@ -666,6 +665,8 @@ class WebSocketServer:
 
         keys_for_plot: Dict[uint32, Any] = {}
         for key in keys:
+            if key.secrets is None:
+                continue
             sk = key.private_key
             farmer_public_key: G1Element = master_sk_to_farmer_sk(sk).get_g1()
             pool_public_key: G1Element = master_sk_to_pool_sk(sk).get_g1()
@@ -1537,8 +1538,10 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
             log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
-            beta_metrics: Optional[BetaMetricsLogger] = None
+            beta_metrics = None
             if config.get("beta", {}).get("enabled", False):
+                from chia.util.beta_metrics import BetaMetricsLogger
+
                 beta_metrics = BetaMetricsLogger(root_path)
                 beta_metrics.start_logging()
 

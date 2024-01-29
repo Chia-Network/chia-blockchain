@@ -886,6 +886,9 @@ async def print_balances(
                     get_id_response = await wallet_client.dao_get_treasury_id(wallet_id)
                     treasury_id = get_id_response["treasury_id"][2:]
                     print(f"{indent}{'-Treasury ID:'.ljust(ljust)} {treasury_id}")
+                elif typ == WalletType.DAO_CAT:
+                    cat_asset_id = summary["data"][32:96]
+                    print(f"{indent}{'-Asset ID:'.ljust(ljust)} {cat_asset_id}")
                 elif len(asset_id) > 0:
                     print(f"{indent}{'-Asset ID:'.ljust(ljust)} {asset_id}")
                 print(f"{indent}{'-Wallet ID:'.ljust(ljust)} {wallet_id}")
@@ -1001,11 +1004,13 @@ async def transfer_did(
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     did_wallet_id: int,
-    fee: int,
+    d_fee: Decimal,
     target_address: str,
     with_recovery: bool,
     reuse_puzhash: Optional[bool],
 ) -> None:
+    fee: int = int(d_fee * units["chia"])
+
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.did_transfer_did(

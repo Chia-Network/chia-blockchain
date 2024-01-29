@@ -43,7 +43,7 @@ def create_farmer_service(
         root_path, service_config, config_pool, consensus_constants=updated_constants, local_keychain=keychain
     )
     peer_api = FarmerAPI(farmer)
-    rpc_info: Optional[RpcInfo] = None
+    rpc_info: Optional[RpcInfo[FarmerRpcApi]] = None
     if service_config["start_rpc_server"]:
         rpc_info = (FarmerRpcApi, service_config["rpc_port"])
     return Service(

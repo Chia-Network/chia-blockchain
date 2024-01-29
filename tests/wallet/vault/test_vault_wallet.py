@@ -12,7 +12,7 @@ from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
 from tests.conftest import ConsensusMode
-from tests.wallet.conftest import WalletStateTransition, WalletTestFramework
+from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 
 
 async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: bool) -> None:

@@ -42,7 +42,7 @@ from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfi
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
@@ -63,8 +63,8 @@ from tests.conftest import ConsensusMode
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.make_block_generator import make_spend_bundle
-from tests.core.mempool.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
+from tests.util.misc import wallet_height_at_least
 from tests.util.setup_nodes import SimulatorsAndWalletsServices
 from tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
@@ -341,7 +341,7 @@ class TestFullNodeBlockCompression:
         )
         extra_spend = SpendBundle(
             [
-                CoinSpend(
+                make_spend(
                     next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
                     Program.to(1),
                     Program.to([[51, ph, 30000]]),
@@ -387,7 +387,7 @@ class TestFullNodeBlockCompression:
         )
         extra_spend = SpendBundle(
             [
-                CoinSpend(
+                make_spend(
                     next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
                     Program.to(1),
                     Program.to([[51, ph, 30000]]),
@@ -800,7 +800,9 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
         result = full_node_1.full_node.full_node_store.get_unfinished_block_result(unf.partial_hash)
         assert result is not None
-        assert result.npc_result is not None and result.npc_result.cost > 0
+        assert result.npc_result is not None
+        assert result.npc_result.conds is not None
+        assert result.npc_result.conds.cost > 0
 
         assert not full_node_1.full_node.blockchain.contains_block(block.header_hash)
         assert block.transactions_generator is not None
@@ -1584,12 +1586,10 @@ class TestFullNodeProtocol:
         # Submit the sub slot, but not the last block
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
         for ss in blocks[-1].finished_sub_slots:
-            challenge_chain = dataclasses.replace(
-                ss.challenge_chain,
+            challenge_chain = ss.challenge_chain.replace(
                 new_difficulty=20,
             )
-            slot2 = dataclasses.replace(
-                ss,
+            slot2 = ss.replace(
                 challenge_chain=challenge_chain,
             )
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot2), peer)

@@ -9,7 +9,7 @@ from clvm_tools import binutils
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
@@ -47,7 +47,7 @@ def launcher_conditions_and_spend_bundle(
     initial_singleton_inner_puzzle: Program,
     metadata: List[Tuple[str, str]],
     launcher_puzzle: Program = LAUNCHER_PUZZLE,
-) -> Tuple[Program, bytes32, List[Program], SpendBundle]:
+) -> Tuple[bytes32, List[Program], SpendBundle]:
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
     singleton_full_puzzle = SINGLETON_MOD.curry(
@@ -72,10 +72,9 @@ def launcher_conditions_and_spend_bundle(
         )
     )
     launcher_solution = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
-    coin_spend = CoinSpend(launcher_coin, launcher_puzzle, launcher_solution)
+    coin_spend = make_spend(launcher_coin, launcher_puzzle, launcher_solution)
     spend_bundle = SpendBundle([coin_spend], G2Element())
-    lineage_proof = Program.to([parent_coin_id, launcher_amount])
-    return lineage_proof, launcher_coin.name(), expected_conditions, spend_bundle
+    return launcher_coin.name(), expected_conditions, spend_bundle
 
 
 def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
@@ -109,12 +108,12 @@ async def test_only_odd_coins_0(bt):
     launcher_puzzle = LAUNCHER_PUZZLE
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     initial_singleton_puzzle = adaptor_for_singleton_inner_puzzle(ANYONE_CAN_SPEND_PUZZLE)
-    lineage_proof, launcher_id, condition_list, launcher_spend_bundle = launcher_conditions_and_spend_bundle(
+    launcher_id, condition_list, launcher_spend_bundle = launcher_conditions_and_spend_bundle(
         farmed_coin.name(), launcher_amount, initial_singleton_puzzle, metadata, launcher_puzzle
     )
 
     conditions = Program.to(condition_list)
-    coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
+    coin_spend = make_spend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
     coins_added, coins_removed, _ = await check_spend_bundle_validity(bt, blocks, spend_bundle)
 

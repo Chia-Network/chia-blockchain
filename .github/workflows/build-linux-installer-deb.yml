@@ -191,7 +191,7 @@ jobs:
         sh build_linux_deb-2-installer.sh ${{ matrix.os.arch }}
 
     - name: Upload Linux artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: chia-installers-linux-deb-${{ matrix.os.arch }}
         path: ${{ github.workspace }}/build_scripts/final_installer/
@@ -233,7 +233,7 @@ jobs:
         directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
 
     - name: Download constraints file
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: constraints-file-${{ matrix.os.arch }}
         path: venv
@@ -243,7 +243,7 @@ jobs:
         pip install --constraint venv/constraints.txt py3createtorrent
 
     - name: Download packages
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: chia-installers-linux-deb-${{ matrix.os.arch }}
         path: build_scripts/final_installer/
@@ -377,8 +377,10 @@ jobs:
         mode:
         - name: GUI
           file: chia-blockchain_*.deb
+          package: chia-blockchain
         - name: CLI
           file: chia-blockchain-cli_*.deb
+          package: chia-blockchain-cli
         arch:
         - name: ARM64
           matrix: arm
@@ -394,7 +396,7 @@ jobs:
     - uses: Chia-Network/actions/clean-workspace@main
 
     - name: Download packages
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       id: download
       with:
         name: chia-installers-linux-deb-${{ matrix.arch.artifact-name }}
@@ -411,4 +413,32 @@ jobs:
 
     - name: Run chia version
       run: |
-        chia version
+        ACTUAL=$(chia version)
+        echo "  actual version: ${ACTUAL}"
+        if [ "${ACTUAL}" = "None" ]
+        then
+          echo "  !!! should not be None"
+          false
+        else
+          echo "  :] at least it isn't None"
+        fi
+
+    - name: Verify /opt/chia present
+      run: |
+        if [ ! -e /opt/chia ]
+        then
+          ls -l /opt
+          false
+        fi
+
+    - name: Remove package
+      run: |
+        apt-get remove --yes ${{ matrix.mode.package }}
+
+    - name: Verify /opt/chia not present
+      run: |
+        if [ -e /opt/chia ]
+        then
+          ls -lR /opt/chia
+          false
+        fi

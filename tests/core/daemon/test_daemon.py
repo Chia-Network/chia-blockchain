@@ -9,6 +9,7 @@ import aiohttp
 import pkg_resources
 import pytest
 from aiohttp.web_ws import WebSocketResponse
+from chia_rs import G1Element
 from pytest_mock import MockerFixture
 
 from chia.daemon.client import connect_to_daemon
@@ -386,6 +387,9 @@ def mock_daemon_with_config_and_keys(get_keychain_for_function, root_path_popula
     keychain.add_private_key(test_key_data.mnemonic_str())
     keychain.add_private_key(test_key_data_2.mnemonic_str())
 
+    # Throw in an unused pubkey-only entry
+    keychain.add_public_key(bytes(G1Element()).hex())
+
     # Mock daemon server with net_config set for mainnet
     return Daemon(services={}, connections={}, net_config=config)
 
@@ -420,7 +424,7 @@ async def test_daemon_passthru(get_daemon, bt):
             f"wss://127.0.0.1:{daemon_port}",
             autoclose=True,
             autoping=True,
-            ssl_context=bt.get_daemon_ssl_context(),
+            ssl=bt.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
         ) as ws:
             service_name = "test_service_name"
@@ -572,6 +576,12 @@ async def test_get_routes(mock_lonely_daemon):
         response={
             "success": True,
             "wallet_addresses": {
+                G1Element().get_fingerprint(): [
+                    {
+                        "address": "xch1dr2sj4jqdt6nj4l32d4f5dk7mrwak3qw5hsykty5lhhd00053y0szaz8zj",
+                        "hd_path": "m/12381/8444/2/0",
+                    }
+                ],
                 test_key_data.fingerprint: [
                     {
                         "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
