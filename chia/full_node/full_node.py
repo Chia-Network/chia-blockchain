@@ -2169,7 +2169,7 @@ class FullNode:
             + calculate_sp_iters(
                 self.constants,
                 sub_slot_iters,
-                uint8(unfinished_block.reward_chain_block.signage_point_index),
+                unfinished_block.reward_chain_block.signage_point_index,
             )
         )
 
