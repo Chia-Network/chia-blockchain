@@ -15,10 +15,13 @@ if ($d)
     $extras += "dev"
 }
 
-$editable_cli = "--editable"
+$pip_parameters = @()
 if ($i)
 {
-    $editable_cli = ""
+}
+else
+{
+    $pip_parameters += "--editable"
 }
 
 if ([Environment]::Is64BitOperatingSystem -eq $false)
@@ -104,17 +107,14 @@ if ($extras.length -gt 0)
 {
     $extras_cli = $extras -join ","
     $extras_cli = "[$extras_cli]"
-}
-else
-{
-    $extras_cli = ""
+    $pip_parameters += $extras_cli
 }
 
 py -$pythonVersion -m venv venv
 
 venv\scripts\python -m pip install --upgrade pip setuptools wheel
 venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-venv\scripts\pip install $editable_cli ".$extras_cli" --extra-index-url https://pypi.chia.net/simple/
+& venv\scripts\pip install @pip_parameters --extra-index-url https://pypi.chia.net/simple/
 
 if ($p)
 {
