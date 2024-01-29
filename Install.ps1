@@ -16,10 +16,7 @@ if ($d)
 }
 
 $pip_parameters = @()
-if ($i)
-{
-}
-else
+if (-not $i)
 {
     $pip_parameters += "--editable"
 }
