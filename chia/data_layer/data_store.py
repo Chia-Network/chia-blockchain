@@ -369,7 +369,10 @@ class DataStore:
     async def get_pending_root(self, tree_id: bytes32) -> Optional[Root]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id AND status IN (:pending_status, :pending_batch_status) LIMIT 2",
+                """
+                SELECT * FROM root WHERE tree_id == :tree_id
+                AND status IN (:pending_status, :pending_batch_status) LIMIT 2
+                """,
                 {
                     "tree_id": tree_id,
                     "pending_status": Status.PENDING.value,
@@ -1267,7 +1270,7 @@ class DataStore:
             old_root = await self.get_tree_root(tree_id)
             pending_root = await self.get_pending_root(tree_id=tree_id)
             if pending_root is None:
-                intermediate_root: Optional[Root] = old_root
+                intermediate_root = old_root
             else:
                 if pending_root.status == Status.PENDING_BATCH:
                     # We have an unfinished batch, continue the current batch on top of it.

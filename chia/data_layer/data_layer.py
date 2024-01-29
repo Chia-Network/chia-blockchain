@@ -248,12 +248,14 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
         publish_on_chain: bool = True,
-    ) -> TransactionRecord:
+    ) -> Optional[TransactionRecord]:
         status = Status.PENDING if publish_on_chain else Status.PENDING_BATCH
         await self.batch_insert(tree_id=tree_id, changelist=changelist, status=status)
 
         if publish_on_chain:
             return await self.publish_update(tree_id=tree_id, fee=fee)
+        else:
+            return None
 
     async def batch_insert(
         self,
