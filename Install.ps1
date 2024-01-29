@@ -106,8 +106,7 @@ if ($openSSLVersion -lt 269488367)
 if ($extras.length -gt 0)
 {
     $extras_cli = $extras -join ","
-    $extras_cli = "[$extras_cli]"
-    $pip_parameters += $extras_cli
+    $pip_parameters += ".[$extras_cli]"
 }
 
 py -$pythonVersion -m venv venv
