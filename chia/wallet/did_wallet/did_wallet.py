@@ -1271,7 +1271,6 @@ class DIDWallet:
             fee=fee,
             coins=coins,
             primaries=None,
-            ignore_max_send_amount=False,
             origin_id=origin.name(),
             extra_conditions=(
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),

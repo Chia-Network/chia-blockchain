@@ -293,7 +293,6 @@ class TradeManager:
                         ),
                         fee=fee_to_pay,
                         coins=selected_coins,
-                        ignore_max_send_amount=True,
                         extra_conditions=extra_conditions,
                     )
                     if tx is not None and tx.spend_bundle is not None:
@@ -310,7 +309,6 @@ class TradeManager:
                         ),
                         fee=fee_to_pay,
                         coins={coin},
-                        ignore_max_send_amount=True,
                         extra_conditions=extra_conditions,
                     )
                     for tx in txs:
