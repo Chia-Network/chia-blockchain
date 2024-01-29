@@ -709,8 +709,8 @@ def _create_sub_epoch_data(
     #  Number of subblocks overflow in previous slot
     previous_sub_epoch_overflows = uint8(sub_epoch_summary.num_blocks_overflow)  # total in sub epoch - expected
     #  New work difficulty and iterations per sub-slot
-    sub_slot_iters: Optional[int] = sub_epoch_summary.new_sub_slot_iters
-    new_difficulty: Optional[int] = sub_epoch_summary.new_difficulty
+    sub_slot_iters = sub_epoch_summary.new_sub_slot_iters
+    new_difficulty = sub_epoch_summary.new_difficulty
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
 
 

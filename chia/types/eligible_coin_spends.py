@@ -46,9 +46,9 @@ class DedupCoinSpend:
 @dataclasses.dataclass(frozen=True)
 class UnspentLineageInfo:
     coin_id: bytes32
-    coin_amount: int
+    coin_amount: uint64
     parent_id: bytes32
-    parent_amount: int
+    parent_amount: uint64
     parent_parent_id: bytes32
 
 
