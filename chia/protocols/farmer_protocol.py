@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 
 from chia_rs import G2Element
 
@@ -10,6 +9,7 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
 from chia.util.ints import uint8, uint32, uint64
@@ -80,6 +80,7 @@ class RequestSignedValues(Streamable):
     foliage_block_data: Optional[FoliageBlockData] = None
     foliage_transaction_block_data: Optional[FoliageTransactionBlock] = None
     rc_block_unfinished: Optional[RewardChainBlockUnfinished] = None
+
 
 @streamable
 @dataclass(frozen=True)

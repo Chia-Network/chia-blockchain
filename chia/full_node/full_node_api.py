@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 import anyio
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
 
@@ -49,6 +48,7 @@ from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord

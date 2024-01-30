@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import List, Optional, Tuple
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 
 from chia_rs import G1Element, G2Element
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import int16, uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
@@ -91,8 +91,10 @@ class RequestSignatures(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     messages: List[bytes32]
-    message_data: Optional[List[Optional[SignatureRequestSourceData]]]  # This, and rc_block_unfinished are only set when using a third-party harvester (see CHIP-22)
+    # This, and rc_block_unfinished are only set when using a third-party harvester (see CHIP-22)
+    message_data: Optional[List[Optional[SignatureRequestSourceData]]]
     rc_block_unfinished: Optional[RewardChainBlockUnfinished]
+
 
 @streamable
 @dataclass(frozen=True)

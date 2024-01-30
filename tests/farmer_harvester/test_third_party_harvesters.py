@@ -7,7 +7,6 @@ import json
 import logging
 from os.path import dirname
 from typing import Any, List, Optional, Tuple, Union, cast
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 
 import pytest
 from chia_rs import G1Element
