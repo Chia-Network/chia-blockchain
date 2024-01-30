@@ -3398,6 +3398,8 @@ async def test_dao_resync(self_hostname: str, two_wallet_nodes: OldSimulatorsAnd
     )
     assert dao_wallet_0 is not None
 
+    for tx in tx_queue:
+        await wallet_0.wallet_state_manager.add_pending_transaction(tx)
     await full_node_api.wait_transaction_records_entered_mempool(records=tx_queue, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)

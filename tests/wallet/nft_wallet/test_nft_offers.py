@@ -1086,6 +1086,13 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     assert trade_take is not None
     assert tx_records is not None
 
+    for tx in tx_records:
+        await nft_wallet_maker.wallet_state_manager.add_pending_transaction(tx)
+        if tx.spend_bundle is not None:
+            await time_out_assert_not_none(
+                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+            )
+
     await full_node_api.process_transaction_records(records=tx_records)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
@@ -1165,6 +1172,13 @@ async def test_nft_offer_nft0_and_xch_for_cat(
 
     assert trade_take is not None
     assert tx_records is not None
+
+    for tx in tx_records:
+        await nft_wallet_maker.wallet_state_manager.add_pending_transaction(tx)
+        if tx.spend_bundle is not None:
+            await time_out_assert_not_none(
+                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+            )
 
     await full_node_api.process_transaction_records(records=tx_records)
     # check balances: taker wallet down an NFT, up cats

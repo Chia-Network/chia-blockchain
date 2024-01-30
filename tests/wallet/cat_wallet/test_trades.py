@@ -1528,8 +1528,9 @@ async def test_cat_trades(
         assert result.error is None
 
 
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_trade_cancellation(self, wallets_prefarm):
+async def test_trade_cancellation(wallets_prefarm):
     (
         [wallet_node_maker, maker_funds],
         [wallet_node_taker, taker_funds],
@@ -1656,8 +1657,9 @@ async def test_trade_cancellation(self, wallets_prefarm):
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
 
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_trade_cancellation_balance_check(self, wallets_prefarm):
+async def test_trade_cancellation_balance_check(wallets_prefarm):
     (
         [wallet_node_maker, maker_funds],
         [wallet_node_taker, taker_funds],
@@ -1708,9 +1710,10 @@ async def test_trade_cancellation_balance_check(self, wallets_prefarm):
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
 
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
-async def test_trade_conflict(self, three_wallets_prefarm):
+async def test_trade_conflict(three_wallets_prefarm):
     (
         [wallet_node_maker, maker_funds],
         [wallet_node_taker, taker_funds],
@@ -1771,8 +1774,9 @@ async def test_trade_conflict(self, three_wallets_prefarm):
     await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_trader, tr2)
 
 
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_trade_bad_spend(self, wallets_prefarm):
+async def test_trade_bad_spend(wallets_prefarm):
     (
         [wallet_node_maker, maker_funds],
         [wallet_node_taker, taker_funds],
@@ -1832,8 +1836,9 @@ async def test_trade_bad_spend(self, wallets_prefarm):
     await time_out_assert(30, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
 
 
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_trade_high_fee(self, wallets_prefarm):
+async def test_trade_high_fee(wallets_prefarm):
     (
         [wallet_node_maker, maker_funds],
         [wallet_node_taker, taker_funds],
@@ -1882,8 +1887,9 @@ async def test_trade_high_fee(self, wallets_prefarm):
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, tr1)
 
 
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_aggregated_trade_state(self, wallets_prefarm):
+async def test_aggregated_trade_state(wallets_prefarm):
     (
         [wallet_node_maker, maker_funds],
         [wallet_node_taker, taker_funds],
@@ -1944,6 +1950,8 @@ async def test_aggregated_trade_state(self, wallets_prefarm):
     assert trade_take is not None
     assert tx_records is not None
 
+    for tx in tx_records:
+        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
     await full_node.process_transaction_records(records=tx_records)
     await full_node.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=60)
 
