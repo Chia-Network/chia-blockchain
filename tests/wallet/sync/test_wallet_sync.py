@@ -1308,7 +1308,7 @@ async def test_bad_peak_mismatch(
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_long_sync_untrusted_break(
-    setup_two_nodes_and_wallet, default_1000_blocks, default_400_blocks, self_hostname, caplog
+    setup_two_nodes_and_wallet, default_1000_blocks, default_400_blocks, self_hostname, caplog, monkeypatch
 ):
     full_nodes, [(wallet_node, wallet_server)], bt = setup_two_nodes_and_wallet
     trusted_full_node_api = full_nodes[0]
@@ -1347,22 +1347,25 @@ async def test_long_sync_untrusted_break(
     for block in default_1000_blocks[:400]:
         await untrusted_full_node_api.full_node.add_block(block)
 
-    untrusted_full_node_api.register_interest_in_puzzle_hash = MagicMock(
-        return_value=register_interest_in_puzzle_hash()
-    )
+    with monkeypatch.context() as m:
+        m.setattr(
+            untrusted_full_node_api,
+            "register_interest_in_puzzle_hash",
+            MagicMock(return_value=register_interest_in_puzzle_hash()),
+        )
 
-    # Connect to the untrusted peer and wait until the long sync started
-    await wallet_server.start_client(PeerInfo(self_hostname, untrusted_full_node_server.get_port()), None)
-    await time_out_assert(30, wallet_syncing)
-    with caplog.at_level(logging.INFO):
-        # Connect to the trusted peer and make sure the running untrusted long sync gets interrupted via disconnect
-        await wallet_server.start_client(PeerInfo(self_hostname, trusted_full_node_server.get_port()), None)
-        await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
-        assert time_out_assert(10, synced_to_trusted)
-        assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
-        assert "Connected to a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
+        # Connect to the untrusted peer and wait until the long sync started
+        await wallet_server.start_client(PeerInfo(self_hostname, untrusted_full_node_server.get_port()), None)
+        await time_out_assert(30, wallet_syncing)
+        with caplog.at_level(logging.INFO):
+            # Connect to the trusted peer and make sure the running untrusted long sync gets interrupted via disconnect
+            await wallet_server.start_client(PeerInfo(self_hostname, trusted_full_node_server.get_port()), None)
+            await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
+            assert time_out_assert(10, synced_to_trusted)
+            assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
+            assert "Connected to a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
 
-    # Make sure the sync was interrupted
-    assert time_out_assert(30, check_sync_canceled)
-    # And that we only have a trusted peer left
-    assert time_out_assert(30, only_trusted_peer)
+        # Make sure the sync was interrupted
+        assert time_out_assert(30, check_sync_canceled)
+        # And that we only have a trusted peer left
+        assert time_out_assert(30, only_trusted_peer)
