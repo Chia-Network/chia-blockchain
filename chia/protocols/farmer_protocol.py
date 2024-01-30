@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 
 from chia_rs import G2Element
 
@@ -78,7 +79,7 @@ class RequestSignedValues(Streamable):
     foliage_transaction_block_hash: bytes32
     foliage_block_data: Optional[FoliageBlockData] = None
     foliage_transaction_block_data: Optional[FoliageTransactionBlock] = None
-
+    rc_block_unfinished: Optional[RewardChainBlockUnfinished] = None
 
 @streamable
 @dataclass(frozen=True)

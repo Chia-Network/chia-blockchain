@@ -7,6 +7,7 @@ import json
 import logging
 from os.path import dirname
 from typing import Any, List, Optional, Tuple, Union, cast
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 
 import pytest
 from chia_rs import G1Element
@@ -114,6 +115,9 @@ async def test_harvester_receive_source_signing_data(
         request: harvester_protocol.RequestSignatures = harvester_protocol.RequestSignatures.from_bytes(args[0])
         nonlocal harvester
         nonlocal farmer_reward_address
+
+        # RC block unfinished must always be present
+        assert request.rc_block_unfinished
 
         validate_harvester_request_signatures(request)
         result_msg: Optional[Message] = await HarvesterAPI.request_signatures(

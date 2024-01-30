@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 import anyio
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
 
@@ -1021,8 +1022,10 @@ class FullNodeAPI:
 
             foliage_block_data: Optional[FoliageBlockData] = None
             foliage_transaction_block_data: Optional[FoliageTransactionBlock] = None
+            rc_block_unfinished: Optional[RewardChainBlockUnfinished] = None
             if request.include_signature_source_data:
                 foliage_block_data = unfinished_block.foliage.foliage_block_data
+                rc_block_unfinished = unfinished_block.reward_chain_block
                 if unfinished_block.is_transaction_block():
                     foliage_transaction_block_data = unfinished_block.foliage_transaction_block
 
@@ -1030,8 +1033,9 @@ class FullNodeAPI:
                 quality_string,
                 foliage_sb_data_hash,
                 foliage_transaction_block_hash,
-                foliage_block_data,
-                foliage_transaction_block_data,
+                foliage_block_data=foliage_block_data,
+                foliage_transaction_block_data=foliage_transaction_block_data,
+                rc_block_unfinished=rc_block_unfinished,
             )
             await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
 
