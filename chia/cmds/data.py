@@ -110,7 +110,7 @@ def create_page_option() -> Callable[[FC], FC]:
     return click.option(
         "-p",
         "--page",
-        help="Enables paginagion of the output and requests a specific page.",
+        help="Enables pagination of the output and requests a specific page.",
         type=int,
         required=False,
     )
