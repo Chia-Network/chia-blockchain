@@ -207,7 +207,7 @@ class WalletClientInfo:
 
 @command_helper
 class NeedsWalletRPC:
-    context: Context = field(default_factory=dict)
+    context: Context = field(default_factory=dict)  # pylint: disable=invalid-field-call
     client_info: Optional[WalletClientInfo] = None
     wallet_rpc_port: Optional[int] = option(
         "-wp",
@@ -233,7 +233,7 @@ class NeedsWalletRPC:
             yield self.client_info
         else:
             if "root_path" not in kwargs:
-                kwargs["root_path"] = self.context["root_path"]
+                kwargs["root_path"] = self.context["root_path"]  # pylint: disable=unsubscriptable-object
             async with get_wallet_client(self.wallet_rpc_port, self.fingerprint, **kwargs) as (
                 wallet_client,
                 fp,
