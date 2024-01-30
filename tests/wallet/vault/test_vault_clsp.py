@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from hashlib import sha256
-from typing import Optional, Tuple
+from typing import Optional
 
 import pytest
-from chia_rs import ENABLE_SECP_OPS, G1Element, PrivateKey
+from chia_rs import G1Element, PrivateKey
 from ecdsa import NIST256p, SigningKey
 from ecdsa.util import PRNG
 

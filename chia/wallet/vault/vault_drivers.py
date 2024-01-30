@@ -136,8 +136,12 @@ def get_vault_full_solution(lineage_proof: LineageProof, amount: uint64, inner_s
 
 
 # MERKLE
-def construct_vault_merkle_tree(secp_puzzle_hash: bytes32, recovery_puzzle_hash: bytes32) -> MerkleTree:
-    return MerkleTree([secp_puzzle_hash, recovery_puzzle_hash])
+def construct_vault_merkle_tree(
+    secp_puzzle_hash: bytes32, recovery_puzzle_hash: Optional[bytes32] = None
+) -> MerkleTree:
+    if recovery_puzzle_hash:
+        return MerkleTree([secp_puzzle_hash, recovery_puzzle_hash])
+    return MerkleTree([secp_puzzle_hash])
 
 
 def get_vault_proof(merkle_tree: MerkleTree, puzzle_hash: bytes32) -> Program:

@@ -8,6 +8,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.lineage_proof import LineageProof
 
 
 @streamable
@@ -20,6 +21,7 @@ class VaultInfo(Streamable):
     inner_puzzle_hash: bytes32
     is_recoverable: bool
     launcher_coin_id: bytes32
+    lineage_proof: LineageProof
 
 
 @dataclass(frozen=True)

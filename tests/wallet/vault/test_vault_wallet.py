@@ -8,10 +8,11 @@ from ecdsa import NIST256p, SigningKey
 from ecdsa.util import PRNG
 
 from chia.util.ints import uint32, uint64
+from chia.wallet.payment import Payment
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
-from tests.conftest import ConsensusMode
+from tests.conftest import SOFTFORK_HEIGHTS, ConsensusMode
 from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 
 
@@ -56,20 +57,27 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
             )
         ]
     )
-    await env.wallet_node.keychain_proxy.add_public_key(launcher_id.hex())
+    await env.node.keychain_proxy.add_public_key(launcher_id.hex())
     await env.restart(vault_root.get_fingerprint())
-    await wallet_environments.full_node.wait_for_wallet_synced(env.wallet_node, 20)
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node, 20)
+
+
+def sign_message(message: bytes) -> bytes:
+    seed = b"chia_secp"
+    SECP_SK = SigningKey.generate(curve=NIST256p, entropy=PRNG(seed), hashfunc=sha256)
+    signed_message: bytes = SECP_SK.sign_deterministic(message)
+    return signed_message
 
 
 @pytest.mark.parametrize(
-    "wallet_environments",
+    "wallet_environments,active_softfork_height",
     [
-        {
-            "num_environments": 2,
-            "blocks_needed": [1, 1],
-        }
+        (
+            {"num_environments": 2, "blocks_needed": [1, 1]},
+            SOFTFORK_HEIGHTS[2],
+        )
     ],
-    indirect=True,
+    indirect=["wallet_environments"],
 )
 @pytest.mark.parametrize("setup_function", [vault_setup])
 @pytest.mark.parametrize("with_recovery", [True, False])
@@ -78,6 +86,7 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
 async def test_vault_creation(
     setup_function: Callable[[WalletTestFramework, bool], Awaitable[None]],
     wallet_environments: WalletTestFramework,
+    active_softfork_height: uint32,
     with_recovery: bool,
 ) -> None:
     await setup_function(wallet_environments, with_recovery)
@@ -85,13 +94,12 @@ async def test_vault_creation(
     assert isinstance(env.xch_wallet, Vault)
 
     wallet: Vault = env.xch_wallet
-    await wallet.sync_singleton()
+    await wallet.sync_vault_launcher()
     assert wallet.vault_info
 
     # get a p2_singleton
     p2_singleton_puzzle_hash = wallet.get_p2_singleton_puzzle_hash()
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(1, p2_singleton_puzzle_hash)
-    # launcher_id = wallet.vault_info.launcher_id
 
     if with_recovery:
         assert wallet.vault_info.is_recoverable
@@ -102,15 +110,17 @@ async def test_vault_creation(
     else:
         assert not wallet.vault_info.is_recoverable
 
+    coins_to_create = 2
     funding_amount = uint64(1000000000)
     funding_wallet = wallet_environments.environments[1].xch_wallet
-    funding_tx = await funding_wallet.generate_signed_transaction(
-        funding_amount,
-        p2_singleton_puzzle_hash,
-        DEFAULT_TX_CONFIG,
-        memos=[wallet.vault_info.pubkey],
-    )
-    await funding_wallet.wallet_state_manager.add_pending_transactions(funding_tx)
+    for _ in range(coins_to_create):
+        funding_tx = await funding_wallet.generate_signed_transaction(
+            funding_amount,
+            p2_singleton_puzzle_hash,
+            DEFAULT_TX_CONFIG,
+            memos=[wallet.vault_info.pubkey],
+        )
+        await funding_wallet.wallet_state_manager.add_pending_transactions(funding_tx)
 
     await wallet_environments.process_pending_states(
         [
@@ -132,4 +142,51 @@ async def test_vault_creation(
     )
 
     recs = await wallet.select_coins(uint64(100), DEFAULT_COIN_SELECTION_CONFIG)
-    assert recs
+    coin = recs.pop()
+    assert coin.amount == funding_amount
+    p2_ph = await funding_wallet.get_new_puzzlehash()
+
+    payments = [
+        Payment(p2_ph, uint64(500000000)),
+        Payment(p2_ph, uint64(510000000)),
+    ]
+
+    fee = uint64(100)
+
+    p2_spends = await wallet.generate_p2_singleton_spends(payments, DEFAULT_TX_CONFIG, fee)
+    message, delegated_puz, delegated_sol = await wallet.generate_unsigned_vault_spend(payments, p2_spends)
+    sig = sign_message(message)
+
+    tx_records = await wallet.generate_signed_vault_spend(sig, delegated_puz, delegated_sol, p2_spends, payments, fee)
+    assert len(tx_records) == 1
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "set_remainder": True,
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        # "confirmed_wallet_balance": 0,
+                        "set_remainder": True,
+                    }
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "set_remainder": True,
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        # "confirmed_wallet_balance": +funding_amount,
+                        "set_remainder": True,
+                    }
+                },
+            ),
+        ],
+    )
