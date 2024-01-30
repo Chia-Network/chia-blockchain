@@ -158,6 +158,7 @@ class Wallet:
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
+        assert isinstance(dr.pubkey, G1Element)
         puzzle = puzzle_for_pk(dr.pubkey)
         return puzzle
 
@@ -170,6 +171,7 @@ class Wallet:
             ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
             if record is None:
                 return await self.get_new_puzzle()  # pragma: no cover
+            assert isinstance(record.pubkey, G1Element)
             puzzle = puzzle_for_pk(record.pubkey)
             return puzzle
 

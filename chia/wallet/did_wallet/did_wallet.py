@@ -1175,6 +1175,7 @@ class DIDWallet:
             # We have the recovery list, don't reset it
             old_recovery_list_hash = None
 
+        assert isinstance(record.pubkey, G1Element)
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
             p2_puzzle_or_hash=puzzle_for_pk(record.pubkey),
             recovery_list=self.did_info.backup_ids,

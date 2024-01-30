@@ -199,6 +199,7 @@ class NFTWallet:
         if derivation_record is None:
             self.log.debug("Not our NFT, pointing to %s, skipping", p2_puzzle_hash)
             return
+        assert isinstance(derivation_record.pubkey, G1Element)
         p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
         launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [singleton_id], peer=peer

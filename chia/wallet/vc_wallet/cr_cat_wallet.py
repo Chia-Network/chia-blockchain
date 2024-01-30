@@ -550,6 +550,7 @@ class CRCATWallet(CATWallet):
                 raise RuntimeError(  # pragma: no cover
                     f"CR-CAT {crcat} has an inner puzzle hash {crcat.inner_puzzle_hash} that we don't have the keys for"
                 )
+            assert isinstance(inner_derivation_record.pubkey, G1Element)
             inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_derivation_record.pubkey)
             inner_spends.append(
                 (
