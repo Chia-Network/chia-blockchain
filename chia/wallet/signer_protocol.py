@@ -10,6 +10,9 @@ from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.util.clvm_streamable import ClvmStreamable
 
+# This file contains the base types for communication between a wallet and an offline transaction signer.
+# These types should be compliant with CHIP-TBD
+
 
 class Coin(ClvmStreamable):
     parent_coin_id: bytes32

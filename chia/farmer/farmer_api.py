@@ -20,6 +20,8 @@ from chia.protocols.harvester_protocol import (
     PlotSyncPlotList,
     PlotSyncStart,
     PoolDifficulty,
+    SignatureRequestSourceData,
+    SigningDataKind,
 )
 from chia.protocols.pool_protocol import (
     PoolErrorCode,
@@ -112,12 +114,45 @@ class FarmerAPI:
 
             # If the iters are good enough to make a block, proceed with the block making flow
             if required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters):
+                if new_proof_of_space.farmer_reward_address_override is not None:
+                    self.farmer.notify_farmer_reward_taken_by_harvester_as_fee(sp, new_proof_of_space)
+
+                sp_src_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
+                if (
+                    new_proof_of_space.include_source_signature_data
+                    or new_proof_of_space.farmer_reward_address_override is not None
+                ):
+                    assert sp.sp_source_data
+
+                    cc_data: SignatureRequestSourceData
+                    rc_data: SignatureRequestSourceData
+                    if sp.sp_source_data.vdf_data is not None:
+                        cc_data = SignatureRequestSourceData(
+                            uint8(SigningDataKind.CHALLENGE_CHAIN_VDF), bytes(sp.sp_source_data.vdf_data.cc_vdf)
+                        )
+                        rc_data = SignatureRequestSourceData(
+                            uint8(SigningDataKind.REWARD_CHAIN_VDF), bytes(sp.sp_source_data.vdf_data.rc_vdf)
+                        )
+                    else:
+                        assert sp.sp_source_data.sub_slot_data is not None
+                        cc_data = SignatureRequestSourceData(
+                            uint8(SigningDataKind.CHALLENGE_CHAIN_SUB_SLOT),
+                            bytes(sp.sp_source_data.sub_slot_data.cc_sub_slot),
+                        )
+                        rc_data = SignatureRequestSourceData(
+                            uint8(SigningDataKind.REWARD_CHAIN_SUB_SLOT),
+                            bytes(sp.sp_source_data.sub_slot_data.rc_sub_slot),
+                        )
+
+                    sp_src_data = [cc_data, rc_data]
+
                 # Proceed at getting the signatures for this PoSpace
                 request = harvester_protocol.RequestSignatures(
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     [sp.challenge_chain_sp, sp.reward_chain_sp],
+                    message_data=sp_src_data,
                 )
 
                 if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
@@ -235,11 +270,20 @@ class FarmerAPI:
 
                 # The plot key is 2/2 so we need the harvester's half of the signature
                 m_to_sign = payload.get_hash()
+                m_src_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
+
+                if (  # pragma: no cover
+                    new_proof_of_space.include_source_signature_data
+                    or new_proof_of_space.farmer_reward_address_override is not None
+                ):
+                    m_src_data = [SignatureRequestSourceData(uint8(SigningDataKind.PARTIAL), bytes(payload))]
+
                 request = harvester_protocol.RequestSignatures(
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     [m_to_sign],
+                    message_data=m_src_data,
                 )
                 response: Any = await peer.call_api(HarvesterAPI.request_signatures, request)
                 if not isinstance(response, harvester_protocol.RespondSignatures):
@@ -520,11 +564,31 @@ class FarmerAPI:
         (plot_identifier, challenge_hash, sp_hash, node_id) = self.farmer.quality_str_to_identifiers[
             full_node_request.quality_string
         ]
+
+        foliage_block_data: Optional[SignatureRequestSourceData] = None
+        foliage_transaction_block_data: Optional[SignatureRequestSourceData] = None
+        include_source_data = False
+
+        if full_node_request.foliage_block_data is not None:
+            include_source_data = True
+            foliage_block_data = SignatureRequestSourceData(
+                uint8(SigningDataKind.FOLIAGE_BLOCK_DATA), bytes(full_node_request.foliage_block_data)
+            )
+
+        if full_node_request.foliage_transaction_block_data is not None:
+            assert foliage_block_data
+            include_source_data = True
+            foliage_transaction_block_data = SignatureRequestSourceData(
+                uint8(SigningDataKind.FOLIAGE_TRANSACTION_BLOCK),
+                bytes(full_node_request.foliage_transaction_block_data),
+            )
+
         request = harvester_protocol.RequestSignatures(
             plot_identifier,
             challenge_hash,
             sp_hash,
             [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
+            message_data=[foliage_block_data, foliage_transaction_block_data] if include_source_data else None,
         )
 
         response = await self.farmer.server.call_api_of_specific(HarvesterAPI.request_signatures, request, node_id)
@@ -677,6 +741,13 @@ class FarmerAPI:
                         pool_target = None
                         pool_target_signature = None
 
+                    include_source_signature_data = response.include_source_signature_data
+
+                    farmer_reward_address = self.farmer.farmer_target
+                    if response.farmer_reward_address_override is not None:
+                        farmer_reward_address = response.farmer_reward_address_override
+                        include_source_signature_data = True
+
                     return farmer_protocol.DeclareProofOfSpace(
                         response.challenge_hash,
                         challenge_chain_sp,
@@ -685,9 +756,10 @@ class FarmerAPI:
                         pospace,
                         agg_sig_cc_sp,
                         agg_sig_rc_sp,
-                        self.farmer.farmer_target,
+                        farmer_reward_address,
                         pool_target,
                         pool_target_signature,
+                        include_signature_source_data=include_source_signature_data,
                     )
         else:
             # This is a response with block signatures
