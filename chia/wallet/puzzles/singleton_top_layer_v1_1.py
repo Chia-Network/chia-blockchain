@@ -172,11 +172,6 @@ def generate_launcher_coin(coin: Coin, amount: uint64) -> Coin:
     return Coin(coin.name(), SINGLETON_LAUNCHER_HASH, amount)
 
 
-def remove_singleton_truth_wrapper(puzzle: Program) -> Program:
-    inner_puzzle: Program = puzzle.rest().first().rest()
-    return inner_puzzle
-
-
 # Take standard coin and amount -> launch conditions & launcher coin solution
 def launch_conditions_and_coinsol(
     coin: Coin,
