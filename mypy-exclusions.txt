@@ -24,7 +24,6 @@ chia.wallet.key_val_store
 chia.wallet.payment
 chia.wallet.puzzles.load_clvm
 chia.wallet.puzzles.p2_conditions
-chia.wallet.puzzles.p2_delegated_conditions
 chia.wallet.puzzles.p2_delegated_puzzle
 chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle
 chia.wallet.puzzles.p2_m_of_n_delegate_direct
