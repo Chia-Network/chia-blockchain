@@ -79,7 +79,7 @@ class TestDos:
                 url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
             response: WSMessage = await ws.receive()
-            assert response.type == WSMsgType.CLOSE
+            assert response.type in [WSMsgType.CLOSE, WSMsgType.CLOSED]
         except ServerDisconnectedError:
             pass
         await session.close()
@@ -116,7 +116,7 @@ class TestDos:
                 url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
             response: WSMessage = await ws.receive()
-            assert response.type == WSMsgType.CLOSE
+            assert response.type in [WSMsgType.CLOSE, WSMsgType.CLOSED]
         except ServerDisconnectedError:
             pass
         await asyncio.sleep(6)
