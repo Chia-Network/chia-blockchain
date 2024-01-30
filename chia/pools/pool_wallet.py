@@ -37,7 +37,6 @@ from chia.pools.pool_wallet_info import (
 )
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -45,7 +44,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.ints import uint32, uint64, uint128
-from chia.wallet.conditions import Condition, ConditionValidTimes, parse_timelock_info
+from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes, parse_timelock_info
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.sign_coin_spends import sign_coin_spends
@@ -515,7 +514,7 @@ class PoolWallet:
         self,
         fee: uint64,
         tx_config: TXConfig,
-        coin_announcements: Optional[Set[Announcement]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> TransactionRecord:
         [fee_tx] = await self.standard_wallet.generate_signed_transaction(
             uint64(0),
@@ -525,8 +524,7 @@ class PoolWallet:
             origin_id=None,
             coins=None,
             primaries=None,
-            ignore_max_send_amount=False,
-            coin_announcements_to_consume=coin_announcements,
+            extra_conditions=extra_conditions,
         )
         return fee_tx
 
@@ -702,9 +700,7 @@ class PoolWallet:
 
         puzzle_hash: bytes32 = full_pooling_puzzle.get_tree_hash()
         pool_state_bytes = Program.to([("p", bytes(initial_target_state)), ("t", delay_time), ("h", delay_ph)])
-        announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         [create_launcher_tx_record] = await standard_wallet.generate_signed_transaction(
             amount,
@@ -713,10 +709,11 @@ class PoolWallet:
             fee,
             coins,
             None,
-            False,
-            announcement_set,
             origin_id=launcher_parent.name(),
-            extra_conditions=extra_conditions,
+            extra_conditions=(
+                *extra_conditions,
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
         )
         assert create_launcher_tx_record.spend_bundle is not None
 
@@ -895,9 +892,13 @@ class PoolWallet:
 
         fee_tx = None
         if fee > 0:
-            absorb_announce = Announcement(first_coin_record.coin.name(), b"$")
-            assert absorb_announce is not None
-            fee_tx = await self.generate_fee_transaction(fee, tx_config, coin_announcements={absorb_announce})
+            fee_tx = await self.generate_fee_transaction(
+                fee,
+                tx_config,
+                extra_conditions=(
+                    AssertCoinAnnouncement(asserted_id=first_coin_record.coin.name(), asserted_msg=b"$"),
+                ),
+            )
             assert fee_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
 

@@ -23,7 +23,6 @@ from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResp
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -35,6 +34,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
+from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.misc import UInt32Range
@@ -46,7 +46,13 @@ from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    AssertPuzzleAnnouncement,
+    Condition,
+    CreateCoinAnnouncement,
+    CreatePuzzleAnnouncement,
+)
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_utils import (
     generate_mint_proposal_innerpuz,
@@ -2135,16 +2141,15 @@ class WalletRpcApi:
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        coin_announcements: Set[bytes] = set()
-        for ca in request.get("coin_announcements", []):
-            coin_announcements.add(bytes.fromhex(ca))
-        puzzle_announcements: Set[bytes] = set()
-        for pa in request.get("puzzle_announcements", []):
-            puzzle_announcements.add(bytes.fromhex(pa))
 
         spend_bundle = (
             await wallet.create_message_spend(
-                tx_config, coin_announcements, puzzle_announcements, extra_conditions=extra_conditions
+                tx_config,
+                extra_conditions=(
+                    *extra_conditions,
+                    *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in request.get("coin_announcements", [])),
+                    *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in request.get("puzzle_announcements", [])),
+                ),
             )
         ).spend_bundle
         return {"success": True, "spend_bundle": spend_bundle}
@@ -2166,28 +2171,27 @@ class WalletRpcApi:
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
+        launcher_id = singleton_struct.rest().first().as_atom()
         uncurried_p2 = uncurry_puzzle(p2_puzzle)
         (public_key,) = uncurried_p2.args.as_iter()
         memos = compute_memos(SpendBundle([coin_spend], G2Element()))
         hints = []
-        if coin_state.coin.name() in memos:
-            for memo in memos[coin_state.coin.name()]:
+        coin_memos = memos.get(coin_state.coin.name())
+        if coin_memos is not None:
+            for memo in coin_memos:
                 hints.append(memo.hex())
         return {
             "success": True,
-            "did_id": encode_puzzle_hash(
-                bytes32.from_hexstr(singleton_struct.rest().first().atom.hex()),
-                AddressType.DID.hrp(self.service.config),
-            ),
+            "did_id": encode_puzzle_hash(bytes32(launcher_id), AddressType.DID.hrp(self.service.config)),
             "latest_coin": coin_state.coin.name().hex(),
             "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
-            "public_key": public_key.atom.hex(),
-            "recovery_list_hash": recovery_list_hash.atom.hex(),
+            "public_key": public_key.as_atom().hex(),
+            "recovery_list_hash": recovery_list_hash.as_atom().hex(),
             "num_verification": num_verification.as_int(),
             "metadata": did_program_to_metadata(metadata),
-            "launcher_id": singleton_struct.rest().first().atom.hex(),
+            "launcher_id": launcher_id.hex(),
             "full_puzzle": full_puzzle,
-            "solution": Program.from_bytes(bytes(coin_spend.solution)).as_python(),
+            "solution": coin_spend.solution.to_program().as_python(),
             "hints": hints,
         }
 
@@ -2217,7 +2221,7 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            bytes32(recovery_list_hash.atom),
+            bytes32(recovery_list_hash.as_atom()),
             uint16(num_verification.as_int()),
             singleton_struct,
             metadata,
@@ -2243,9 +2247,9 @@ class WalletRpcApi:
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
             )
 
-        launcher_id = singleton_struct.rest().first().as_python()
+        launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         if derivation_record is None:
-            return {"success": False, "error": f"This DID {launcher_id.hex()} is not belong to the connected wallet"}
+            return {"success": False, "error": f"This DID {launcher_id} is not belong to the connected wallet"}
         else:
             our_inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
                 derivation_record.pubkey
@@ -2318,7 +2322,7 @@ class WalletRpcApi:
                     if not matched:
                         return {
                             "success": False,
-                            "error": f"Cannot recover DID {launcher_id.hex()}"
+                            "error": f"Cannot recover DID {launcher_id}"
                             f" because the last spend updated recovery_list_hash/num_verification/metadata.",
                         }
 
@@ -2326,7 +2330,7 @@ class WalletRpcApi:
                 # Create DID wallet
                 response: List[CoinState] = await self.service.get_coin_state([launcher_id], peer=peer)
                 if len(response) == 0:
-                    return {"success": False, "error": f"Could not find the launch coin with ID: {launcher_id.hex()}"}
+                    return {"success": False, "error": f"Could not find the launch coin with ID: {launcher_id}"}
                 launcher_coin: CoinState = response[0]
                 did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                     self.service.wallet_state_manager,
@@ -3727,40 +3731,6 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = {Coin.from_json_dict(coin_json) for coin_json in request["coins"]}
 
-        coin_announcements: Optional[Set[Announcement]] = None
-        if (
-            "coin_announcements" in request
-            and request["coin_announcements"] is not None
-            and len(request["coin_announcements"]) > 0
-        ):
-            coin_announcements = {
-                Announcement(
-                    bytes32.from_hexstr(announcement["coin_id"]),
-                    hexstr_to_bytes(announcement["message"]),
-                    hexstr_to_bytes(announcement["morph_bytes"])
-                    if "morph_bytes" in announcement and len(announcement["morph_bytes"]) > 0
-                    else None,
-                )
-                for announcement in request["coin_announcements"]
-            }
-
-        puzzle_announcements: Optional[Set[Announcement]] = None
-        if (
-            "puzzle_announcements" in request
-            and request["puzzle_announcements"] is not None
-            and len(request["puzzle_announcements"]) > 0
-        ):
-            puzzle_announcements = {
-                Announcement(
-                    bytes32.from_hexstr(announcement["puzzle_hash"]),
-                    hexstr_to_bytes(announcement["message"]),
-                    hexstr_to_bytes(announcement["morph_bytes"])
-                    if "morph_bytes" in announcement and len(announcement["morph_bytes"]) > 0
-                    else None,
-                )
-                for announcement in request["puzzle_announcements"]
-            }
-
         async def _generate_signed_transaction() -> EndpointResult:
             if isinstance(wallet, Wallet):
                 [tx] = await wallet.generate_signed_transaction(
@@ -3769,12 +3739,29 @@ class WalletRpcApi:
                     tx_config,
                     fee,
                     coins=coins,
-                    ignore_max_send_amount=True,
                     primaries=additional_outputs,
                     memos=memos_0,
-                    coin_announcements_to_consume=coin_announcements,
-                    puzzle_announcements_to_consume=puzzle_announcements,
-                    extra_conditions=extra_conditions,
+                    extra_conditions=(
+                        *extra_conditions,
+                        *(
+                            AssertCoinAnnouncement(
+                                asserted_id=bytes32.from_hexstr(ca["coin_id"]),
+                                asserted_msg=hexstr_to_bytes(ca["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"])),
+                            )
+                            for ca in request.get("coin_announcements", [])
+                        ),
+                        *(
+                            AssertPuzzleAnnouncement(
+                                asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
+                                asserted_msg=hexstr_to_bytes(pa["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"])),
+                            )
+                            for pa in request.get("puzzle_announcements", [])
+                        ),
+                    ),
                 )
                 signed_tx = tx.to_json_dict_convenience(self.service.config)
 
@@ -3789,11 +3776,28 @@ class WalletRpcApi:
                     tx_config,
                     fee,
                     coins=coins,
-                    ignore_max_send_amount=True,
                     memos=[memos_0] + [output.memos for output in additional_outputs],
-                    coin_announcements_to_consume=coin_announcements,
-                    puzzle_announcements_to_consume=puzzle_announcements,
-                    extra_conditions=extra_conditions,
+                    extra_conditions=(
+                        *extra_conditions,
+                        *(
+                            AssertCoinAnnouncement(
+                                asserted_id=bytes32.from_hexstr(ca["coin_id"]),
+                                asserted_msg=hexstr_to_bytes(ca["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"])),
+                            )
+                            for ca in request.get("coin_announcements", [])
+                        ),
+                        *(
+                            AssertPuzzleAnnouncement(
+                                asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
+                                asserted_msg=hexstr_to_bytes(pa["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"])),
+                            )
+                            for pa in request.get("puzzle_announcements", [])
+                        ),
+                    ),
                 )
                 signed_txs = [tx.to_json_dict_convenience(self.service.config) for tx in txs]
 

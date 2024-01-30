@@ -12,7 +12,6 @@ from typing_extensions import Unpack
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -22,7 +21,14 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
-from chia.wallet.conditions import Condition, UnknownCondition, parse_timelock_info
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    Condition,
+    CreateCoinAnnouncement,
+    CreatePuzzleAnnouncement,
+    UnknownCondition,
+    parse_timelock_info,
+)
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver
@@ -228,10 +234,6 @@ class VCWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         new_inner_puzhash: Optional[bytes32] = None,
-        coin_announcements: Optional[Set[bytes]] = None,
-        puzzle_announcements: Optional[Set[bytes]] = None,
-        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
-        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
@@ -258,31 +260,17 @@ class VCWallet:
         inner_puzzle: Program = await self.standard_wallet.puzzle_for_puzzle_hash(inner_puzhash)
         if new_inner_puzhash is None:
             new_inner_puzhash = inner_puzhash
-        if coin_announcements_to_consume is not None:
-            coin_announcements_bytes: Optional[Set[bytes32]] = {
-                a.name() for a in coin_announcements_to_consume
-            }  # pragma: no cover
-        else:
-            coin_announcements_bytes = None
-
-        if puzzle_announcements_to_consume is not None:
-            puzzle_announcements_bytes: Optional[Set[bytes32]] = {
-                a.name() for a in puzzle_announcements_to_consume
-            }  # pragma: no cover
-        else:
-            puzzle_announcements_bytes = None
 
         primaries: List[Payment] = [Payment(new_inner_puzhash, uint64(vc_record.vc.coin.amount), [new_inner_puzhash])]
 
         if fee > 0:
-            announcement_to_make = vc_record.vc.coin.name()
+            coin_name = vc_record.vc.coin.name()
             chia_tx = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                fee, tx_config, Announcement(vc_record.vc.coin.name(), announcement_to_make)
+                fee,
+                tx_config,
+                extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
-            if coin_announcements is None:
-                coin_announcements = {announcement_to_make}
-            else:
-                coin_announcements.add(announcement_to_make)  # pragma: no cover
+            extra_conditions += (CreateCoinAnnouncement(coin_name),)
         else:
             chia_tx = None
         if new_proof_hash is not None:
@@ -308,10 +296,6 @@ class VCWallet:
         extra_conditions = (*extra_conditions, UnknownCondition.from_program(magic_condition))
         innersol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
-            coin_announcements=coin_announcements,
-            puzzle_announcements=puzzle_announcements,
-            coin_announcements_to_assert=coin_announcements_bytes,
-            puzzle_announcements_to_assert=puzzle_announcements_bytes,
             conditions=extra_conditions,
         )
         did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
@@ -324,9 +308,7 @@ class VCWallet:
                     assert isinstance(wallet, DIDWallet)
                     if bytes32.fromhex(wallet.get_my_DID()) == vc_record.vc.proof_provider:
                         self.log.debug("Creating announcement from DID for vc: %s", vc_id.hex())
-                        did_tx = await wallet.create_message_spend(
-                            tx_config, puzzle_announcements={bytes(did_announcement)}
-                        )
+                        did_tx = await wallet.create_message_spend(tx_config, extra_conditions=(did_announcement,))
                         assert did_tx.spend_bundle is not None
                         spend_bundles.append(did_tx.spend_bundle)
                         tx_list.append(dataclasses.replace(did_tx, spend_bundle=None))
@@ -411,22 +393,20 @@ class VCWallet:
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
         sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
-        vc_announcement: Announcement = Announcement(vc.coin.name(), nonce)
+        vc_announcement: AssertCoinAnnouncement = AssertCoinAnnouncement(asserted_id=vc.coin.name(), asserted_msg=nonce)
 
         # Assemble final bundle
         expected_did_announcement, vc_spend = vc.activate_backdoor(provider_inner_puzhash, announcement_nonce=nonce)
         did_tx: TransactionRecord = await did_wallet.create_message_spend(
             tx_config,
-            puzzle_announcements={expected_did_announcement},
-            coin_announcements_to_assert={vc_announcement},
-            extra_conditions=extra_conditions,
+            extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),
         )
         assert did_tx.spend_bundle is not None
         final_bundle: SpendBundle = SpendBundle.aggregate([SpendBundle([vc_spend], G2Element()), did_tx.spend_bundle])
         did_tx = dataclasses.replace(did_tx, spend_bundle=final_bundle, name=final_bundle.name())
         if fee > 0:
             chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                fee, tx_config, vc_announcement
+                fee, tx_config, extra_conditions=(vc_announcement,)
             )
             assert did_tx.spend_bundle is not None
             assert chia_tx.spend_bundle is not None
@@ -469,8 +449,8 @@ class VCWallet:
                     other_spends.append(spend)
 
         # Figure out what VC announcements are needed
-        announcements_to_make: Dict[bytes32, List[bytes32]] = {}
-        announcements_to_assert: Dict[bytes32, List[Announcement]] = {}
+        announcements_to_make: Dict[bytes32, List[CreatePuzzleAnnouncement]] = {}
+        announcements_to_assert: Dict[bytes32, List[AssertCoinAnnouncement]] = {}
         vcs: Dict[bytes32, VerifiedCredential] = {}
         coin_args: Dict[str, List[str]] = {}
         for crcat_spend in crcat_spends:
@@ -518,12 +498,14 @@ class VCWallet:
             if our_crcat or outputs_ok:
                 announcements_to_make.setdefault(vc_to_use, [])
                 announcements_to_assert.setdefault(vc_to_use, [])
-                announcements_to_make[vc_to_use].append(crcat_spend.crcat.expected_announcement())
+                announcements_to_make[vc_to_use].append(
+                    CreatePuzzleAnnouncement(crcat_spend.crcat.expected_announcement())
+                )
                 announcements_to_assert[vc_to_use].extend(
                     [
-                        Announcement(
-                            crcat_spend.crcat.coin.name(),
-                            b"\xcd" + std_hash(crc.inner_puzzle_hash + int_to_bytes(crc.coin.amount)),
+                        AssertCoinAnnouncement(
+                            asserted_id=crcat_spend.crcat.coin.name(),
+                            asserted_msg=b"\xcd" + std_hash(crc.inner_puzzle_hash + int_to_bytes(crc.coin.amount)),
                         )
                         for crc in crcat_spend.children
                     ]
@@ -544,8 +526,7 @@ class VCWallet:
                 if crcat_spend.crcat.coin.name() in spends_to_fix:
                     spend_to_fix: CoinSpend = spends_to_fix[crcat_spend.crcat.coin.name()]
                     other_spends.append(
-                        dataclasses.replace(
-                            spend_to_fix,
+                        spend_to_fix.replace(
                             solution=SerializedProgram.from_program(
                                 spend_to_fix.solution.to_program().replace(
                                     ff=coin_args[coin_name][0],
@@ -570,8 +551,10 @@ class VCWallet:
                             await self.generate_signed_transaction(
                                 launcher_id,
                                 tx_config,
-                                puzzle_announcements=set(announcements_to_make[launcher_id]),
-                                coin_announcements_to_consume=set(announcements_to_assert[launcher_id]),
+                                extra_conditions=(
+                                    *announcements_to_assert[launcher_id],
+                                    *announcements_to_make[launcher_id],
+                                ),
                             )
                         )
                         if tx.spend_bundle is not None

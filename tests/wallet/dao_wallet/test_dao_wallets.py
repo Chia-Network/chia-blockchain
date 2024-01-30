@@ -28,7 +28,6 @@ from chia.wallet.dao_wallet.dao_utils import (
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from tests.conftest import ConsensusMode
 from tests.util.rpc import validate_get_routes
 from tests.util.setup_nodes import OldSimulatorsAndWallets, SimulatorsAndWalletsServices
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -83,9 +82,7 @@ puzzle_hash_0 = bytes32(32 * b"0")
     [True, False],
 )
 @pytest.mark.anyio
-async def test_dao_creation(
-    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
-) -> None:
+async def test_dao_creation(self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -263,9 +260,7 @@ async def test_dao_creation(
     [True, False],
 )
 @pytest.mark.anyio
-async def test_dao_funding(
-    self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
-) -> None:
+async def test_dao_funding(self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool) -> None:
     full_nodes, wallets, _ = three_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -428,9 +423,7 @@ async def test_dao_funding(
     [True, False],
 )
 @pytest.mark.anyio
-async def test_dao_proposals(
-    self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
-) -> None:
+async def test_dao_proposals(self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool) -> None:
     """
     Test a set of proposals covering:
     - the spend, update, and mint types.
@@ -905,7 +898,7 @@ async def test_dao_proposals(
 )
 @pytest.mark.anyio
 async def test_dao_proposal_partial_vote(
-    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
@@ -1143,9 +1136,7 @@ async def test_dao_proposal_partial_vote(
     [True, False],
 )
 @pytest.mark.anyio
-async def test_dao_rpc_api(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, consensus_mode: ConsensusMode
-) -> None:
+async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -1649,10 +1640,7 @@ async def test_dao_rpc_api(
 )
 @pytest.mark.anyio
 async def test_dao_rpc_client(
-    two_wallet_nodes_services: SimulatorsAndWalletsServices,
-    trusted: bool,
-    self_hostname: str,
-    consensus_mode: ConsensusMode,
+    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
@@ -2059,10 +2047,7 @@ async def test_dao_rpc_client(
 )
 @pytest.mark.anyio
 async def test_dao_complex_spends(
-    two_wallet_nodes_services: SimulatorsAndWalletsServices,
-    trusted: bool,
-    self_hostname: str,
-    consensus_mode: ConsensusMode,
+    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
@@ -2453,9 +2438,7 @@ async def test_dao_complex_spends(
     [True, False],
 )
 @pytest.mark.anyio
-async def test_dao_concurrency(
-    self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
-) -> None:
+async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool) -> None:
     full_nodes, wallets, _ = three_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -2679,10 +2662,7 @@ async def test_dao_concurrency(
 )
 @pytest.mark.anyio
 async def test_dao_cat_exits(
-    two_wallet_nodes_services: SimulatorsAndWalletsServices,
-    trusted: bool,
-    self_hostname: str,
-    consensus_mode: ConsensusMode,
+    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
@@ -2874,9 +2854,7 @@ async def test_dao_cat_exits(
     [True, False],
 )
 @pytest.mark.anyio
-async def test_dao_reorgs(
-    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
-) -> None:
+async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -3126,9 +3104,7 @@ async def test_dao_reorgs(
     [True, False],
 )
 @pytest.mark.anyio
-async def test_dao_votes(
-    self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
-) -> None:
+async def test_dao_votes(self_hostname: str, three_wallet_nodes: OldSimulatorsAndWallets, trusted: bool) -> None:
     full_nodes, wallets, _ = three_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -3356,9 +3332,7 @@ async def test_dao_votes(
     [True, False],
 )
 @pytest.mark.anyio
-async def test_dao_resync(
-    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
-) -> None:
+async def test_dao_resync(self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server

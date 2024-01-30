@@ -10,7 +10,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import Condition, CreatePuzzleAnnouncement
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
@@ -704,7 +704,7 @@ class VerifiedCredential(Streamable):
         inner_solution: Program,
         new_proof_hash: Optional[bytes32] = None,
         new_proof_provider: Optional[bytes32] = None,
-    ) -> Tuple[Optional[bytes32], CoinSpend, VerifiedCredential]:
+    ) -> Tuple[Optional[CreatePuzzleAnnouncement], CoinSpend, VerifiedCredential]:
         """
         Given an inner puzzle reveal and solution, spend the VC (potentially updating the proofs in the process).
         Note that the inner puzzle is already expected to output the 'magic' condition (which can be created above).
@@ -726,10 +726,12 @@ class VerifiedCredential(Streamable):
         )
 
         if new_proof_hash is not None:
-            expected_announcement: Optional[bytes32] = std_hash(
-                self.coin.name()
-                + Program.to(new_proof_hash).get_tree_hash()
-                + b""  # TP update is banned because singleton will leave the VC protocol
+            expected_announcement: Optional[CreatePuzzleAnnouncement] = CreatePuzzleAnnouncement(
+                std_hash(
+                    self.coin.name()
+                    + Program.to(new_proof_hash).get_tree_hash()
+                    + b""  # TP update is banned because singleton will leave the VC protocol
+                )
             )
         else:
             expected_announcement = None
@@ -755,7 +757,7 @@ class VerifiedCredential(Streamable):
 
     def activate_backdoor(
         self, provider_innerpuzhash: bytes32, announcement_nonce: Optional[bytes32] = None
-    ) -> Tuple[bytes32, CoinSpend]:
+    ) -> Tuple[CreatePuzzleAnnouncement, CoinSpend]:
         """
         Activates the backdoor in the VC to revoke the credentials and remove the provider's DID.
 
@@ -787,8 +789,8 @@ class VerifiedCredential(Streamable):
             ),
         )
 
-        expected_announcement: bytes32 = std_hash(
-            self.coin.name() + Program.to(None).get_tree_hash() + ACS_TRANSFER_PROGRAM.get_tree_hash()
+        expected_announcement: CreatePuzzleAnnouncement = CreatePuzzleAnnouncement(
+            std_hash(self.coin.name() + Program.to(None).get_tree_hash() + ACS_TRANSFER_PROGRAM.get_tree_hash())
         )
 
         return (
