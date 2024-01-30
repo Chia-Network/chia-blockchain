@@ -157,6 +157,8 @@ async def test_farmer_respond_signatures(
         local_pk=G1Element(),
         farmer_pk=G1Element(),
         message_signatures=[],
+        include_source_signature_data=False,
+        farmer_reward_address_override=None,
     )
     msg = make_msg(ProtocolMessageTypes.respond_signatures, response)
     await harvester_service._node.server.send_to_all([msg], NodeType.FARMER)
