@@ -9,7 +9,12 @@ from typing import List, Optional
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.rpc.wallet_request_types import ApplySignatures, GatherSigningInfo, SubmitTransactions
+from chia.rpc.wallet_request_types import (
+    ApplySignatures,
+    ExecuteSigningInstructions,
+    GatherSigningInfo,
+    SubmitTransactions,
+)
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
@@ -248,9 +253,9 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     assert utx.signing_instructions.targets[0].fingerprint == synthetic_pubkey.get_fingerprint().to_bytes(4, "big")
     assert utx.signing_instructions.targets[0].message == message
 
-    signing_responses: List[SigningResponse] = await wallet_state_manager.execute_signing_instructions(
-        utx.signing_instructions
-    )
+    signing_responses: List[SigningResponse] = (
+        await wallet_rpc.execute_signing_instructions(ExecuteSigningInstructions(utx.signing_instructions))
+    ).signing_responses
     assert len(signing_responses) == 1
     assert signing_responses[0].hook == utx.signing_instructions.targets[0].hook
     assert AugSchemeMPL.verify(synthetic_pubkey, message, G2Element.from_bytes(signing_responses[0].signature))

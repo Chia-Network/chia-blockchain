@@ -64,7 +64,7 @@ class SubmitTransactionsResponse(Streamable):
 @dataclass(frozen=True)
 class ExecuteSigningInstructions(Streamable):
     signing_instructions: SigningInstructions
-    partial_allowed: bool
+    partial_allowed: bool = False
 
 
 @streamable
