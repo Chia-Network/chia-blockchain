@@ -137,7 +137,9 @@ class TestPerformance:
         curr: BlockRecord = peak
         while not curr.is_transaction_block:
             curr = full_node_1.full_node.blockchain.block_record(curr.prev_hash)
-        mempool_bundle = full_node_1.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
+        mempool_bundle = await full_node_1.full_node.mempool_manager.create_bundle_from_mempool(
+            curr.header_hash, full_node_1.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
+        )
         if mempool_bundle is None:
             spend_bundle = None
         else:

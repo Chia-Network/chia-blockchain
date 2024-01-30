@@ -300,10 +300,10 @@ class TestConditions:
         coin = blocks[-2].get_included_reward_coins()[0]
         announce = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=b"test_bad")
         conditions = Program.to(
-            assemble(
+            assemble(  # type: ignore[no-untyped-call]
                 f"(({ConditionOpcode.CREATE_COIN_ANNOUNCEMENT[0]} 'test')"
                 f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
-            )  # type: ignore[no-untyped-call]
+            )
         )
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
@@ -313,10 +313,10 @@ class TestConditions:
         coin = blocks[-2].get_included_reward_coins()[0]
         announce = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=b"test")
         conditions = Program.to(
-            assemble(
+            assemble(  # type: ignore[no-untyped-call]
                 f"(({ConditionOpcode.CREATE_COIN_ANNOUNCEMENT[0]} 'test')"
                 f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
-            )  # type: ignore[no-untyped-call]
+            )
         )
         await check_conditions(bt, conditions)
 
@@ -324,10 +324,10 @@ class TestConditions:
     async def test_invalid_puzzle_announcement(self, bt: BlockTools) -> None:
         announce = AssertPuzzleAnnouncement(asserted_ph=EASY_PUZZLE_HASH, asserted_msg=b"test_bad")
         conditions = Program.to(
-            assemble(
+            assemble(  # type: ignore[no-untyped-call]
                 f"(({ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT[0]} 'test')"
                 f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
-            )  # type: ignore[no-untyped-call]
+            )
         )
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
@@ -335,10 +335,10 @@ class TestConditions:
     async def test_valid_puzzle_announcement(self, bt: BlockTools) -> None:
         announce = AssertPuzzleAnnouncement(asserted_ph=EASY_PUZZLE_HASH, asserted_msg=b"test")
         conditions = Program.to(
-            assemble(
+            assemble(  # type: ignore[no-untyped-call]
                 f"(({ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT[0]} 'test')"
                 f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
-            )  # type: ignore[no-untyped-call]
+            )
         )
         await check_conditions(bt, conditions)
 
