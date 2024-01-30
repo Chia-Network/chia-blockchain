@@ -78,6 +78,10 @@ def test_protocol_json() -> None:
     assert type(request_peers).from_json_dict(request_peers_json) == request_peers
     assert str(respond_peers_json) == str(respond_peers.to_json_dict())
     assert type(respond_peers).from_json_dict(respond_peers_json) == respond_peers
+    assert str(new_unfinished_block2_json) == str(new_unfinished_block2.to_json_dict())
+    assert type(new_unfinished_block2).from_json_dict(new_unfinished_block2_json) == new_unfinished_block2
+    assert str(request_unfinished_block2_json) == str(request_unfinished_block2.to_json_dict())
+    assert type(request_unfinished_block2).from_json_dict(request_unfinished_block2_json) == request_unfinished_block2
     assert str(request_puzzle_solution_json) == str(request_puzzle_solution.to_json_dict())
     assert type(request_puzzle_solution).from_json_dict(request_puzzle_solution_json) == request_puzzle_solution
     assert str(puzzle_solution_response_json) == str(puzzle_solution_response.to_json_dict())

@@ -8,7 +8,7 @@ from setuptools import find_packages, setup
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.2.0",
-    "boto3==1.34.11",  # AWS S3 for DL s3 plugin
+    "boto3==1.34.25",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.1",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
     "chiapos==2.0.3",  # proof of space
@@ -29,9 +29,9 @@ dependencies = [
     "setproctitle==1.3.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
-    "dnspython==2.4.2",  # Query DNS seeds
+    "dnspython==2.5.0",  # Query DNS seeds
     "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
-    "dnslib==0.9.23",  # dns lib
+    "dnslib==0.9.24",  # dns lib
     "typing-extensions==4.9.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
     "packaging==23.2",
@@ -45,7 +45,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build==1.0.3",
-    "coverage==7.3.3",
+    "coverage==7.4.0",
     "diff-cover==8.0.1",
     "pre-commit==3.5.0; python_version < '3.9'",
     "pre-commit==3.6.0; python_version >= '3.9'",
@@ -61,7 +61,7 @@ dev_dependencies = [
     "flake8==7.0.0",
     "mypy==1.8.0",
     "black==23.12.1",
-    "lxml==4.9.3",
+    "lxml==5.1.0",
     "aiohttp_cors==0.7.0",  # For blackd
     "pyinstaller==6.3.0",
     "types-aiofiles==23.2.0.20240106",

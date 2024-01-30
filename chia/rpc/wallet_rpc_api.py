@@ -19,7 +19,8 @@ from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletIn
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
-from chia.rpc.util import tx_endpoint
+from chia.rpc.util import marshal, tx_endpoint
+from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -1037,21 +1038,24 @@ class WalletRpcApi:
         tx_list = []
         # Format for clawback transactions
         for tr in transactions:
+            tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
+            tx_list.append(tx)
+            if tx["type"] not in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                continue
+            coin: Coin = tr.additions[0]
+            record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
+                coin.name()
+            )
+            if record is None:
+                log.error(f"Cannot find coin record for type {tx['type']} transaction {tx['name']}")
+                continue
             try:
-                tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
-                tx_list.append(tx)
-                if tx["type"] not in CLAWBACK_INCOMING_TRANSACTION_TYPES:
-                    continue
-                coin: Coin = tr.additions[0]
-                record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
-                    coin.name()
-                )
-                assert record is not None, f"Cannot find coin record for type {tx['type']} transaction {tx['name']}"
                 tx["metadata"] = record.parsed_metadata().to_json_dict()
-                tx["metadata"]["coin_id"] = coin.name().hex()
-                tx["metadata"]["spent"] = record.spent
-            except Exception:
-                log.exception(f"Failed to get transaction {tr.name}.")
+            except ValueError as e:
+                log.error(f"Could not parse coin record metadata: {type(e).__name__} {e}")
+                continue
+            tx["metadata"]["coin_id"] = coin.name().hex()
+            tx["metadata"]["spent"] = record.spent
         return {
             "transactions": tx_list,
             "wallet_id": wallet_id,
@@ -1443,34 +1447,22 @@ class WalletRpcApi:
 
         return {"success": True, "index": updated_index}
 
-    async def get_notifications(self, request: Dict[str, Any]) -> EndpointResult:
-        ids: Optional[List[str]] = request.get("ids", None)
-        start: Optional[int] = request.get("start", None)
-        end: Optional[int] = request.get("end", None)
-        if ids is None:
+    @marshal
+    async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
+        if request.ids is None:
             notifications: List[
                 Notification
             ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
-                pagination=(start, end)
+                pagination=(request.start, request.end)
             )
         else:
             notifications = (
                 await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
-                    [bytes32.from_hexstr(id) for id in ids]
+                    request.ids
                 )
             )
 
-        return {
-            "notifications": [
-                {
-                    "id": notification.coin_id.hex(),
-                    "message": notification.message.hex(),
-                    "amount": notification.amount,
-                    "height": notification.height,
-                }
-                for notification in notifications
-            ]
-        }
+        return GetNotificationsResponse(notifications)
 
     async def delete_notifications(self, request: Dict[str, Any]) -> EndpointResult:
         ids: Optional[List[str]] = request.get("ids", None)
@@ -1876,6 +1868,8 @@ class WalletRpcApi:
                     "requested": requested,
                     "fees": offer.fees(),
                     "infos": infos,
+                    "additions": [c.name().hex() for c in offer.additions()],
+                    "removals": [c.name().hex() for c in offer.removals()],
                     "valid_times": {
                         k: v
                         for k, v in valid_times.to_json_dict().items()
@@ -3133,11 +3127,7 @@ class WalletRpcApi:
         else:
             nfts = await self.service.wallet_state_manager.nft_store.get_nft_list(start_index=start_index, count=count)
         for nft in nfts:
-            nft_info = await nft_puzzles.get_nft_info_from_puzzle(
-                nft,
-                self.service.wallet_state_manager.config,
-                request.get("ignore_size_limit", False),
-            )
+            nft_info = await nft_puzzles.get_nft_info_from_puzzle(nft, self.service.wallet_state_manager.config)
             nft_info_list.append(nft_info)
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
@@ -3524,7 +3514,6 @@ class WalletRpcApi:
                 uint32(coin_state.created_height) if coin_state.created_height else uint32(0),
             ),
             self.service.wallet_state_manager.config,
-            request.get("ignore_size_limit", False),
         )
         # This is a bit hacky, it should just come out like this, but this works for this RPC
         nft_info = dataclasses.replace(nft_info, p2_address=p2_puzzle_hash)

@@ -4,7 +4,7 @@ import asyncio
 import dataclasses
 import enum
 import logging
-import multiprocessing
+import os
 import time
 import traceback
 from concurrent.futures import Executor
@@ -141,7 +141,8 @@ class Blockchain(BlockchainInterface):
         if single_threaded:
             self.pool = InlineExecutor()
         else:
-            cpu_count = multiprocessing.cpu_count()
+            cpu_count = os.cpu_count()
+            assert cpu_count is not None
             if cpu_count > 61:
                 cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
             num_workers = max(cpu_count - reserved_cores, 1)
@@ -193,6 +194,26 @@ class Blockchain(BlockchainInterface):
         if self._peak_height is None:
             return None
         return self.height_to_block_record(self._peak_height)
+
+    def get_tx_peak(self) -> Optional[BlockRecord]:
+        """
+        Return the most recent transaction block. i.e. closest to the peak of the blockchain
+        Requires the blockchain to be initialized and there to be a peak set
+        """
+
+        if self._peak_height is None:
+            return None
+        tx_height = self._peak_height
+        tx_peak = self.height_to_block_record(tx_height)
+        while not tx_peak.is_transaction_block:
+            # it seems BlockTools only produce chains where the first block is a
+            # transaction block, which makes it hard to test this case
+            if tx_height == 0:  # pragma: no cover
+                return None
+            tx_height = uint32(tx_height - 1)
+            tx_peak = self.height_to_block_record(tx_height)
+
+        return tx_peak
 
     async def get_full_peak(self) -> Optional[FullBlock]:
         if self._peak_height is None:
@@ -465,6 +486,13 @@ class Blockchain(BlockchainInterface):
                 self._peak_height = block_record.height
 
         except BaseException as e:
+            # depending on exactly when the failure of adding the block
+            # happened, we may not have added it to the block record cache
+            try:
+                self.remove_block_record(header_hash)
+            except KeyError:
+                pass
+            fork_info.rollback(header_hash, -1 if previous_peak_height is None else previous_peak_height)
             self.block_store.rollback_cache_block(header_hash)
             self._peak_height = previous_peak_height
             log.error(
