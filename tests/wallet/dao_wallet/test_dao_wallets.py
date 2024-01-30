@@ -134,7 +134,7 @@ async def test_dao_creation(
 
     # Try to create a DAO with more CATs than xch balance
     with pytest.raises(ValueError) as e_info:
-        dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+        await DAOWallet.create_new_dao_and_wallet(
             wallet_node_0.wallet_state_manager,
             wallet_0,
             uint64(funds + 1),
@@ -145,7 +145,7 @@ async def test_dao_creation(
         )
     assert e_info.value.args[0] == f"Your balance of {funds} mojos is not enough to create {funds + 1} CATs"
 
-    dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+    dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
         wallet_node_0.wallet_state_manager,
         wallet_0,
         uint64(cat_amt * 2),
@@ -156,8 +156,9 @@ async def test_dao_creation(
     )
     assert dao_wallet_0 is not None
 
-    txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    for tx in tx_queue:
+        await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=tx_queue, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -319,7 +320,7 @@ async def test_dao_funding(
         proposal_minimum_amount=uint64(1),
     )
 
-    dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+    dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
         wallet_node_0.wallet_state_manager,
         wallet_0,
         uint64(cat_amt),
@@ -331,8 +332,9 @@ async def test_dao_funding(
     treasury_id = dao_wallet_0.dao_info.treasury_id
 
     # Get the full node sim to process the wallet creation spend
-    txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    for tx in tx_queue:
+        await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=tx_queue, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -508,7 +510,7 @@ async def test_dao_proposals(
     # Create the DAO.
     # This takes two steps: create the treasury singleton, wait for oracle_spend_delay and
     # then complete the eve spend
-    dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+    dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
         wallet_node_0.wallet_state_manager,
         wallet_0,
         uint64(cat_issuance),
@@ -517,8 +519,9 @@ async def test_dao_proposals(
     )
     assert dao_wallet_0 is not None
 
-    txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    for tx in tx_queue:
+        await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=tx_queue, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -951,7 +954,7 @@ async def test_dao_proposal_partial_vote(
         proposal_minimum_amount=uint64(1),
     )
 
-    dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+    dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
         wallet_node_0.wallet_state_manager,
         wallet_0,
         uint64(cat_amt),
@@ -961,8 +964,9 @@ async def test_dao_proposal_partial_vote(
     assert dao_wallet_0 is not None
 
     # Get the full node sim to process the wallet creation spend
-    txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    for tx in tx_queue:
+        await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=tx_queue, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -2509,7 +2513,7 @@ async def test_dao_concurrency(
         proposal_minimum_amount=uint64(101),
     )
 
-    dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+    dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
         wallet_node_0.wallet_state_manager,
         wallet_0,
         uint64(cat_amt),
@@ -2519,8 +2523,9 @@ async def test_dao_concurrency(
     assert dao_wallet_0 is not None
 
     # Get the full node sim to process the wallet creation spend
-    txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    for tx in tx_queue:
+        await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=tx_queue, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -2921,7 +2926,7 @@ async def test_dao_reorgs(
         proposal_minimum_amount=uint64(101),
     )
 
-    dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+    dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
         wallet_node_0.wallet_state_manager,
         wallet_0,
         uint64(cat_amt),
@@ -2931,8 +2936,9 @@ async def test_dao_reorgs(
     assert dao_wallet_0 is not None
 
     # Get the full node sim to process the wallet creation spend
-    txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    for tx in tx_queue:
+        await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=tx_queue, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -3187,7 +3193,7 @@ async def test_dao_votes(
         proposal_minimum_amount=proposal_min_amt,
     )
 
-    dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+    dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
         wallet_node_0.wallet_state_manager,
         wallet_0,
         uint64(cat_issuance),
@@ -3196,8 +3202,9 @@ async def test_dao_votes(
     )
     assert dao_wallet_0 is not None
 
-    txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    for tx in tx_queue:
+        await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+    await full_node_api.wait_transaction_records_entered_mempool(records=tx_queue, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
@@ -3406,7 +3413,7 @@ async def test_dao_resync(
 
     fee = uint64(10)
     fee_for_cat = uint64(20)
-    dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+    dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
         wallet_node_0.wallet_state_manager,
         wallet_0,
         uint64(cat_amt * 2),
@@ -3417,8 +3424,7 @@ async def test_dao_resync(
     )
     assert dao_wallet_0 is not None
 
-    txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
-    await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
+    await full_node_api.wait_transaction_records_entered_mempool(records=tx_queue, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
