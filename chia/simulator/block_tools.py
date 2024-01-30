@@ -2023,13 +2023,20 @@ async def create_block_tools_async(
     root_path: Optional[Path] = None,
     keychain: Optional[Keychain] = None,
     config_overrides: Optional[Dict[str, Any]] = None,
+    num_og_plots: int = 15,
+    num_pool_plots: int = 5,
+    num_non_keychain_plots: int = 3,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
     print(f"  create_block_tools_async called {create_block_tools_async_count} times")
     bt = BlockTools(constants, root_path, keychain, config_overrides=config_overrides)
     await bt.setup_keys()
-    await bt.setup_plots()
+    await bt.setup_plots(
+        num_og_plots=num_og_plots,
+        num_pool_plots=num_pool_plots,
+        num_non_keychain_plots=num_non_keychain_plots,
+    )
 
     return bt
 
@@ -2050,8 +2057,10 @@ def create_block_tools(
     return bt
 
 
-def make_unfinished_block(block: FullBlock, constants: ConsensusConstants) -> UnfinishedBlock:
-    if is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index)):
+def make_unfinished_block(
+    block: FullBlock, constants: ConsensusConstants, *, force_overflow: bool = False
+) -> UnfinishedBlock:
+    if force_overflow or is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index)):
         finished_ss = block.finished_sub_slots[:-1]
     else:
         finished_ss = block.finished_sub_slots

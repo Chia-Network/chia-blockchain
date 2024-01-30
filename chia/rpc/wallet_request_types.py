@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Type, TypeVar
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
     SignedTransaction,
     SigningInstructions,
@@ -24,8 +25,22 @@ _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndp
 
 @streamable
 @dataclass(frozen=True)
+class GetNotifications(Streamable):
+    ids: Optional[List[bytes32]] = None
+    start: Optional[uint32] = None
+    end: Optional[uint32] = None
+
+
+@streamable
+@dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
     spends: List[Spend]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetNotificationsResponse(Streamable):
+    notifications: List[Notification]
 
 
 @streamable

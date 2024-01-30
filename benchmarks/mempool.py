@@ -15,6 +15,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
@@ -85,6 +86,10 @@ async def run_mempool_benchmark() -> None:
             if r is not None:
                 ret.append(r)
         return ret
+
+    # We currently don't need to keep track of these for our purpose
+    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
+        assert False
 
     wt = WalletTool(DEFAULT_CONSTANTS)
 
@@ -227,7 +232,10 @@ async def run_mempool_benchmark() -> None:
         with enable_profiler(True, f"create-{suffix}"):
             start = monotonic()
             for _ in range(500):
-                mempool.create_bundle_from_mempool(rec.header_hash)
+                await mempool.create_bundle_from_mempool(
+                    last_tb_header_hash=rec.header_hash,
+                    get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+                )
             stop = monotonic()
         print(f"  time: {stop - start:0.4f}s")
         print(f"  per call: {(stop - start) / 500 * 1000:0.2f}ms")
