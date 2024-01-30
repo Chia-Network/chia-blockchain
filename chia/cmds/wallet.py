@@ -453,7 +453,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     is_flag=True,
     default=False,
 )
-@click.option("-o", "--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
+@click.option("--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
 def make_offer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
