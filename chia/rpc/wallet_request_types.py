@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Type, TypeVar
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.signer_protocol import (
@@ -145,10 +144,7 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
     @classmethod
     def from_json_dict(cls: Type[_T_OfferEndpointResponse], json_dict: Dict[str, Any]) -> _T_OfferEndpointResponse:
         tx_endpoint: TransactionEndpointResponse = TransactionEndpointResponse.from_json_dict(json_dict)
-        try:
-            offer: Offer = Offer.from_bech32(json_dict["offer"])
-        except Exception:
-            offer = Offer.from_bytes(hexstr_to_bytes(json_dict["offer"]))
+        offer: Offer = Offer.from_bech32(json_dict["offer"])
 
         return cls(
             **tx_endpoint.__dict__,

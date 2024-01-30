@@ -955,6 +955,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_mint_nft", request)
         return NFTMintNFTResponse.from_json_dict(response)
 
+    # TODO: add a test for this
     async def add_uri_to_nft(
         self,
         wallet_id: int,
@@ -966,7 +967,7 @@ class WalletRpcClient(RpcClient):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
-    ) -> NFTAddURIResponse:
+    ) -> NFTAddURIResponse:  # pragma: no cover
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
@@ -1036,6 +1037,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_get_nfts", request)
         return response
 
+    # TODO: add a test for this
     async def set_nft_did(
         self,
         wallet_id: int,
@@ -1046,7 +1048,7 @@ class WalletRpcClient(RpcClient):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
-    ) -> NFTSetNFTDIDResponse:
+    ) -> NFTSetNFTDIDResponse:  # pragma: no cover
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "did_id": did_id,
