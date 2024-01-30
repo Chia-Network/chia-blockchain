@@ -237,7 +237,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
 
         block_spends_with_conditions = sorted(block_spends_with_conditions, key=lambda x: str(x.coin_spend))
 
-        coin_spend_with_conditions = block_spends_with_conditions[0]
+        coin_spend_with_conditions = block_spends_with_conditions[1]
 
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb9240000000000000000000000000000000a"),
@@ -275,7 +275,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             ),
         ]
 
-        coin_spend_with_conditions = block_spends_with_conditions[1]
+        coin_spend_with_conditions = block_spends_with_conditions[2]
 
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb9240000000000000000000000000000000b"),
@@ -313,7 +313,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             ),
         ]
 
-        coin_spend_with_conditions = block_spends_with_conditions[2]
+        coin_spend_with_conditions = block_spends_with_conditions[0]
 
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("27ae41e4649b934ca495991b7852b8550000000000000000000000000000000b"),
