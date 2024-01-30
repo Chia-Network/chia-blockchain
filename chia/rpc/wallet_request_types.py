@@ -61,19 +61,6 @@ class SubmitTransactionsResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class ExecuteSigningInstructions(Streamable):
-    signing_instructions: SigningInstructions
-    partial_allowed: bool
-
-
-@streamable
-@dataclass(frozen=True)
-class ExecuteSigningInstructionsResponse(Streamable):
-    signing_responses: List[SigningResponse]
-
-
-@streamable
-@dataclass(frozen=True)
 class TransactionEndpointResponse(Streamable):
     unsigned_transactions: List[UnsignedTransaction]
     transactions: List[TransactionRecord]
