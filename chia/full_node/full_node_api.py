@@ -45,6 +45,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
+from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -430,6 +431,12 @@ class FullNodeAPI:
         if block_hash in self.full_node.full_node_store.requesting_unfinished_blocks:
             return None
 
+        # if we've already learned about an unfinished block with this reward
+        # hash via the v2 protocol, and we've requested it. Assume it's the same
+        # block
+        if block_hash in self.full_node.full_node_store.requesting_unfinished_blocks2:
+            return None
+
         msg = make_msg(
             ProtocolMessageTypes.request_unfinished_block,
             full_node_protocol.RequestUnfinishedBlock(block_hash),
@@ -453,6 +460,70 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         unfinished_block: Optional[UnfinishedBlock] = self.full_node.full_node_store.get_unfinished_block(
             request_unfinished_block.unfinished_reward_hash
+        )
+        if unfinished_block is not None:
+            msg = make_msg(
+                ProtocolMessageTypes.respond_unfinished_block,
+                full_node_protocol.RespondUnfinishedBlock(unfinished_block),
+            )
+            return msg
+        return None
+
+    @api_request()
+    async def new_unfinished_block2(
+        self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock2
+    ) -> Optional[Message]:
+        # Ignore if syncing
+        if self.full_node.sync_store.get_sync_mode():
+            return None
+        block_hash = new_unfinished_block.unfinished_reward_hash
+        foliage_hash = new_unfinished_block.foliage_hash
+        entry, count, have_better = self.full_node.full_node_store.get_unfinished_block2(block_hash, foliage_hash)
+
+        if entry is not None:
+            return None
+
+        if have_better:
+            self.log.info(
+                f"Already have a better Unfinished Block with partial hash {block_hash.hex()} ignoring this one"
+            )
+            return None
+
+        max_duplicate_unfinished_blocks = self.full_node.config.get("max_duplicate_unfinished_blocks", 3)
+        if count > max_duplicate_unfinished_blocks:
+            self.log.info(
+                f"Already have {count} Unfinished Blocks with partial hash {block_hash.hex()} ignoring another one"
+            )
+            return None
+
+        # This prevents us from downloading the same block from many peers
+        if self.full_node.full_node_store.is_requesting_unfinished_block(block_hash, foliage_hash):
+            return None
+
+        msg = make_msg(
+            ProtocolMessageTypes.request_unfinished_block2,
+            full_node_protocol.RequestUnfinishedBlock2(block_hash, foliage_hash),
+        )
+        self.full_node.full_node_store.mark_requesting_unfinished_block(block_hash, foliage_hash)
+
+        # However, we want to eventually download from other peers, if this peer does not respond
+        # Todo: keep track of who it was
+        async def eventually_clear() -> None:
+            await asyncio.sleep(5)
+            self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, foliage_hash)
+
+        asyncio.create_task(eventually_clear())
+
+        return msg
+
+    @api_request(reply_types=[ProtocolMessageTypes.respond_unfinished_block])
+    async def request_unfinished_block2(
+        self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock2
+    ) -> Optional[Message]:
+        unfinished_block: Optional[UnfinishedBlock]
+        unfinished_block, _, _ = self.full_node.full_node_store.get_unfinished_block2(
+            request_unfinished_block.unfinished_reward_hash,
+            request_unfinished_block.foliage_hash,
         )
         if unfinished_block is not None:
             msg = make_msg(
@@ -763,8 +834,8 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        mempool_bundle = self.full_node.mempool_manager.create_bundle_from_mempool(
-                            curr_l_tb.header_hash
+                        mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
+                            curr_l_tb.header_hash, self.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
                         )
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
@@ -948,10 +1019,19 @@ class FullNodeAPI:
                 foliage_transaction_block_hash = bytes32([0] * 32)
             assert foliage_transaction_block_hash is not None
 
+            foliage_block_data: Optional[FoliageBlockData] = None
+            foliage_transaction_block_data: Optional[FoliageTransactionBlock] = None
+            if request.include_signature_source_data:
+                foliage_block_data = unfinished_block.foliage.foliage_block_data
+                if unfinished_block.is_transaction_block():
+                    foliage_transaction_block_data = unfinished_block.foliage_transaction_block
+
             message = farmer_protocol.RequestSignedValues(
                 quality_string,
                 foliage_sb_data_hash,
                 foliage_transaction_block_hash,
+                foliage_block_data,
+                foliage_transaction_block_data,
             )
             await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
 

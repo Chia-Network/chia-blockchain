@@ -11,6 +11,7 @@ import os
 import random
 import sysconfig
 import tempfile
+from contextlib import AsyncExitStack
 from enum import Enum
 from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Union
 
@@ -33,7 +34,14 @@ from chia.seeder.dns_server import DNSServer
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord
+from chia.simulator.setup_services import (
+    setup_crawler,
+    setup_daemon,
+    setup_full_node,
+    setup_introducer,
+    setup_seeder,
+    setup_timelord,
+)
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
@@ -1107,3 +1115,63 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
     """Populated with a payload containing 0 keys using the default passphrase."""
     with TempKeyring(populate=True) as keyring:
         yield keyring
+
+
+@pytest.fixture(scope="function")
+async def farmer_harvester_2_simulators_zero_bits_plot_filter(
+    tmp_path: Path, get_temp_keyring: Keychain
+) -> AsyncIterator[
+    Tuple[
+        FarmerService,
+        HarvesterService,
+        Union[FullNodeService, SimulatorFullNodeService],
+        Union[FullNodeService, SimulatorFullNodeService],
+        BlockTools,
+    ]
+]:
+    zero_bit_plot_filter_consts = dataclasses.replace(
+        test_constants_modified,
+        NUMBER_ZERO_BITS_PLOT_FILTER=0,
+        NUM_SPS_SUB_SLOT=uint32(8),
+    )
+
+    async with AsyncExitStack() as async_exit_stack:
+        bt = await create_block_tools_async(
+            zero_bit_plot_filter_consts,
+            keychain=get_temp_keyring,
+        )
+
+        config_overrides: Dict[str, int] = {"full_node.max_sync_wait": 0}
+
+        bts = [
+            await create_block_tools_async(
+                zero_bit_plot_filter_consts,
+                keychain=get_temp_keyring,
+                num_og_plots=0,
+                num_pool_plots=0,
+                num_non_keychain_plots=0,
+                config_overrides=config_overrides,
+            )
+            for _ in range(2)
+        ]
+
+        simulators: List[SimulatorFullNodeService] = [
+            await async_exit_stack.enter_async_context(
+                # Passing simulator=True gets us this type guaranteed
+                setup_full_node(  # type: ignore[arg-type]
+                    consensus_constants=bts[index].constants,
+                    db_name=f"blockchain_test_{index}_sim.db",
+                    self_hostname=bts[index].config["self_hostname"],
+                    local_bt=bts[index],
+                    simulator=True,
+                    db_version=2,
+                )
+            )
+            for index in range(len(bts))
+        ]
+
+        [harvester_service], farmer_service, _ = await async_exit_stack.enter_async_context(
+            setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True)
+        )
+
+        yield farmer_service, harvester_service, simulators[0], simulators[1], bt
