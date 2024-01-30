@@ -153,6 +153,7 @@ class FarmerAPI:
                     new_proof_of_space.sp_hash,
                     [sp.challenge_chain_sp, sp.reward_chain_sp],
                     message_data=sp_src_data,
+                    rc_block_unfinished=None,
                 )
 
                 if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
@@ -284,6 +285,7 @@ class FarmerAPI:
                     new_proof_of_space.sp_hash,
                     [m_to_sign],
                     message_data=m_src_data,
+                    rc_block_unfinished=None,
                 )
                 response: Any = await peer.call_api(HarvesterAPI.request_signatures, request)
                 if not isinstance(response, harvester_protocol.RespondSignatures):
