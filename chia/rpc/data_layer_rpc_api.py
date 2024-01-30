@@ -196,11 +196,13 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
-        if transaction_record is None and publish_on_chain:
-            raise Exception(f"Batch update failed for: {store_id}")
         if publish_on_chain:
+            if transaction_record is None:
+                raise Exception(f"Batch update failed for: {store_id}")
             return {"tx_id": transaction_record.name}
         else:
+            if transaction_record is not None:
+                raise Exception(f"Transaction published on chain, but publish_on_chain set to False")
             return {}
 
     async def insert(self, request: Dict[str, Any]) -> EndpointResult:
