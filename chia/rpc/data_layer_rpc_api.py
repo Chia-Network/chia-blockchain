@@ -202,7 +202,7 @@ class DataLayerRpcApi:
             return {"tx_id": transaction_record.name}
         else:
             if transaction_record is not None:
-                raise Exception(f"Transaction published on chain, but publish_on_chain set to False")
+                raise Exception("Transaction published on chain, but publish_on_chain set to False")
             return {}
 
     async def insert(self, request: Dict[str, Any]) -> EndpointResult:
