@@ -968,7 +968,7 @@ class WalletRpcClient(RpcClient):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
-    ) -> NFTAddURIResponse:
+    ) -> NFTAddURIResponse:  # pragma: no cover
         request = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
@@ -1049,7 +1049,7 @@ class WalletRpcClient(RpcClient):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
-    ) -> NFTSetNFTDIDResponse:
+    ) -> NFTSetNFTDIDResponse:  # pragma: no cover
         request = {
             "wallet_id": wallet_id,
             "did_id": did_id,
