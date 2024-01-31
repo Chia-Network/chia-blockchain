@@ -239,7 +239,7 @@ class TradeManager:
         secure: bool = True,  # Cancel with a transaction on chain
         trade_cache: Dict[bytes32, TradeRecord] = {},  # Optional pre-fetched trade records for optimization
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Optional[List[TransactionRecord]]:
+    ) -> List[TransactionRecord]:
         """This will create a transaction that includes coins that were offered"""
 
         all_txs: List[TransactionRecord] = []
@@ -345,8 +345,8 @@ class TradeManager:
         # Aggregate spend bundles to the first tx
         if len(all_txs) > 0:
             all_txs[0] = dataclasses.replace(all_txs[0], spend_bundle=SpendBundle.aggregate(bundles))
-        for tx in all_txs:
-            await self.wallet_state_manager.add_pending_transaction(tx_record=dataclasses.replace(tx, fee_amount=fee))
+
+        all_txs = [dataclasses.replace(tx, fee_amount=fee) for tx in all_txs]
 
         return all_txs
 
@@ -837,9 +837,6 @@ class TradeManager:
             memos=[],
             valid_times=ConditionValidTimes(),
         )
-        await self.wallet_state_manager.add_pending_transaction(push_tx)
-        for tx in tx_records:
-            await self.wallet_state_manager.add_transaction(tx)
 
         return trade_record, [push_tx, *tx_records]
 

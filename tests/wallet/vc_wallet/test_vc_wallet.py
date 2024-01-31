@@ -670,7 +670,9 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
         )
 
     # Send the DID to oblivion
-    await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config)
+    txs = await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config)
+    for tx in txs:
+        await did_wallet.wallet_state_manager.add_pending_transaction(tx)
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
