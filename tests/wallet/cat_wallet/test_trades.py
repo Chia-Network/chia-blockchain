@@ -1710,8 +1710,8 @@ async def test_trade_cancellation_balance_check(wallets_prefarm):
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
 
-@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_trade_conflict(three_wallets_prefarm):
     (
