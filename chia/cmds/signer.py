@@ -17,7 +17,7 @@ from segno import QRCode, make_qr
 from chia.cmds.cmd_classes import NeedsWalletRPC, chia_command, command_helper, option
 from chia.cmds.cmds_util import TransactionBundle
 from chia.cmds.wallet import wallet_cmd
-from chia.rpc.util import ALL_TRANSPORT_LAYERS
+from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.rpc.wallet_request_types import ApplySignatures, ExecuteSigningInstructions, GatherSigningInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.wallet.signer_protocol import SignedTransaction, SigningInstructions, SigningResponse, Spend
@@ -118,13 +118,13 @@ class TransactionsOut:
 
 
 @command_helper
-class _SPCompression:
-    compression: str = option(
-        "--compression",
+class _SPTranslation:
+    translation: str = option(
+        "--translation",
         "-c",
         type=click.Choice(["none", "chip-TBD"]),
         default="none",
-        help="Wallet Signer Protocol CHIP to use for compression of output",
+        help="Wallet Signer Protocol CHIP to use for translation of output",
     )
 
 
@@ -132,7 +132,7 @@ _T_ClvmStreamable = TypeVar("_T_ClvmStreamable", bound=ClvmStreamable)
 
 
 @command_helper
-class SPIn(_SPCompression):
+class SPIn(_SPTranslation):
     signer_protocol_input: Sequence[str] = option(
         "--signer-protocol-input",
         "-p",
@@ -147,7 +147,7 @@ class SPIn(_SPCompression):
         for filename in self.signer_protocol_input:  # pylint: disable=not-an-iterable
             with open(Path(filename), "rb") as file:
                 with clvm_serialization_mode(
-                    True, ALL_TRANSPORT_LAYERS[self.compression] if self.compression != "none" else None
+                    True, ALL_TRANSLATION_LAYERS[self.translation] if self.translation != "none" else None
                 ):
                     final_list.append(typ.from_bytes(file.read()))
 
@@ -155,7 +155,7 @@ class SPIn(_SPCompression):
 
 
 @command_helper
-class SPOut(QrCodeDisplay, _SPCompression):
+class SPOut(QrCodeDisplay, _SPTranslation):
     output_format: str = option(
         "--output-format",
         "-t",
@@ -173,7 +173,7 @@ class SPOut(QrCodeDisplay, _SPCompression):
 
     def handle_clvm_output(self, outputs: List[ClvmStreamable]) -> None:
         with clvm_serialization_mode(
-            True, ALL_TRANSPORT_LAYERS[self.compression] if self.compression != "none" else None
+            True, ALL_TRANSLATION_LAYERS[self.translation] if self.translation != "none" else None
         ):
             if self.output_format == "hex":
                 for output in outputs:

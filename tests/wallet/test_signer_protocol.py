@@ -25,7 +25,7 @@ from chia.cmds.signer import (
     TransactionsIn,
     TransactionsOut,
 )
-from chia.rpc.util import ALL_TRANSPORT_LAYERS
+from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.rpc.wallet_request_types import (
     ApplySignatures,
     ExecuteSigningInstructions,
@@ -806,7 +806,7 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
         await GatherSigningInfoCMD(
             rpc_info=NeedsWalletRPC(client_info=client_info),
             sp_out=SPOut(
-                compression="chip-TBD",
+                translation="chip-TBD",
                 output_format="file",
                 output_file=["./temp-si"],
             ),
@@ -816,11 +816,11 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
         await ExecuteSigningInstructionsCMD(
             rpc_info=NeedsWalletRPC(client_info=client_info),
             sp_in=SPIn(
-                compression="chip-TBD",
+                translation="chip-TBD",
                 signer_protocol_input=["./temp-si"],
             ),
             sp_out=SPOut(
-                compression="chip-TBD",
+                translation="chip-TBD",
                 output_format="file",
                 output_file=["./temp-sr"],
             ),
@@ -830,7 +830,7 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
             rpc_info=NeedsWalletRPC(client_info=client_info),
             txs_in=TransactionsIn(transaction_file_in="./temp-tb"),
             sp_in=SPIn(
-                compression="chip-TBD",
+                translation="chip-TBD",
                 signer_protocol_input=["./temp-sr"],
             ),
             txs_out=TransactionsOut(transaction_file_out="./temp-stb"),
@@ -871,7 +871,7 @@ def test_signer_command_default_parsing() -> None:
         GatherSigningInfoCMD(
             rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
             sp_out=SPOut(
-                compression="none",
+                translation="none",
                 output_format="hex",
                 output_file=tuple(),
             ),
@@ -885,11 +885,11 @@ def test_signer_command_default_parsing() -> None:
         ExecuteSigningInstructionsCMD(
             rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
             sp_in=SPIn(
-                compression="none",
+                translation="none",
                 signer_protocol_input=("sp-in",),
             ),
             sp_out=SPOut(
-                compression="none",
+                translation="none",
                 output_format="hex",
                 output_file=tuple(),
             ),
@@ -903,7 +903,7 @@ def test_signer_command_default_parsing() -> None:
             rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
             txs_in=TransactionsIn(transaction_file_in="in"),
             sp_in=SPIn(
-                compression="none",
+                translation="none",
                 signer_protocol_input=("sp-in",),
             ),
             txs_out=TransactionsOut(transaction_file_out="out"),
@@ -980,9 +980,9 @@ class FooCoin(ClvmStreamable):
         )
 
 
-FOO_COIN_TRANSPORT = TransportLayer(
+FOO_COIN_TRANSLATION = TranslationLayer(
     [
-        TransportLayerMapping(
+        TranslationLayerMapping(
             Coin,
             FooCoin,
             FooCoin.from_wallet_api,
@@ -993,7 +993,7 @@ FOO_COIN_TRANSPORT = TransportLayer(
 
 
 def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setitem(ALL_TRANSPORT_LAYERS, "chip-TBD", FOO_COIN_TRANSPORT)
+    monkeypatch.setitem(ALL_TRANSLATION_LAYERS, "chip-TBD", FOO_COIN_TRANSLATION)
 
     @click.group()
     def cmd() -> None:
@@ -1025,11 +1025,11 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with runner.isolated_filesystem():
         with open("some file", "wb") as file:
-            with clvm_serialization_mode(use=True, transport_layer=FOO_COIN_TRANSPORT):
+            with clvm_serialization_mode(use=True, translation_layer=FOO_COIN_TRANSLATION):
                 file.write(bytes(coin))
 
             with open("some file2", "wb") as file:
-                with clvm_serialization_mode(use=True, transport_layer=FOO_COIN_TRANSPORT):
+                with clvm_serialization_mode(use=True, translation_layer=FOO_COIN_TRANSLATION):
                     file.write(bytes(coin))
 
         result = runner.invoke(
@@ -1044,7 +1044,7 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
                 "some file",
                 "--signer-protocol-input",
                 "some file2",
-                "--compression",
+                "--translation",
                 "chip-TBD",
             ],
             catch_exceptions=False,
@@ -1053,7 +1053,7 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setitem(ALL_TRANSPORT_LAYERS, "chip-TBD", FOO_COIN_TRANSPORT)
+    monkeypatch.setitem(ALL_TRANSLATION_LAYERS, "chip-TBD", FOO_COIN_TRANSLATION)
 
     @click.group()
     def cmd() -> None:
@@ -1098,10 +1098,10 @@ def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
         assert result.output != ""  # separate test for QrCodeDisplay
 
         result = runner.invoke(
-            cmd, ["temp_cmd", "--output-format", "hex", "--compression", "chip-TBD"], catch_exceptions=False
+            cmd, ["temp_cmd", "--output-format", "hex", "--translation", "chip-TBD"], catch_exceptions=False
         )
         assert result.output.strip() != coin_bytes.hex()
-        with clvm_serialization_mode(use=True, transport_layer=ALL_TRANSPORT_LAYERS["chip-TBD"]):
+        with clvm_serialization_mode(use=True, translation_layer=ALL_TRANSLATION_LAYERS["chip-TBD"]):
             assert result.output.strip() == bytes(coin).hex() + "\n" + bytes(coin).hex()
 
 
