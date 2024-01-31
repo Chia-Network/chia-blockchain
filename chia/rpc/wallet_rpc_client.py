@@ -29,6 +29,8 @@ from chia.rpc.wallet_request_types import (
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
+    GetNotifications,
+    GetNotificationsResponse,
     NFTAddURIResponse,
     NFTMintBulkResponse,
     NFTMintNFTResponse,
@@ -51,7 +53,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
-from chia.wallet.notification_store import Notification
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -448,7 +449,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> DIDUpdateRecoveryIDsResponse:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "new_list": recovery_list,
             "num_verifications_required": num_verification,
@@ -473,7 +474,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = False,
     ) -> DIDMessageSpendResponse:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
             "push": push,
@@ -492,7 +493,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> DIDUpdateMetadataResponse:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "metadata": metadata,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
@@ -568,7 +569,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> DIDTransferDIDResponse:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "inner_address": address,
             "fee": fee,
@@ -934,7 +935,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> NFTMintNFTResponse:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "royalty_address": royalty_address,
             "target_address": target_address,
@@ -957,6 +958,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_mint_nft", request)
         return NFTMintNFTResponse.from_json_dict(response)
 
+    # TODO: add a test for this
     async def add_uri_to_nft(
         self,
         wallet_id: int,
@@ -968,8 +970,8 @@ class WalletRpcClient(RpcClient):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
-    ) -> NFTAddURIResponse:
-        request: Dict[str, Any] = {
+    ) -> NFTAddURIResponse:  # pragma: no cover
+        request = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
             "uri": uri,
@@ -1015,7 +1017,7 @@ class WalletRpcClient(RpcClient):
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
     ) -> NFTTransferNFTResponse:
-        request: Dict[str, Any] = {
+        request = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
             "target_address": target_address,
@@ -1038,6 +1040,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_get_nfts", request)
         return response
 
+    # TODO: add a test for this
     async def set_nft_did(
         self,
         wallet_id: int,
@@ -1048,8 +1051,8 @@ class WalletRpcClient(RpcClient):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
-    ) -> NFTSetNFTDIDResponse:
-        request: Dict[str, Any] = {
+    ) -> NFTSetNFTDIDResponse:  # pragma: no cover
+        request = {
             "wallet_id": wallet_id,
             "did_id": did_id,
             "nft_coin_id": nft_coin_id,
@@ -1250,27 +1253,8 @@ class WalletRpcClient(RpcClient):
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
-    async def get_notifications(
-        self, ids: Optional[List[bytes32]] = None, pagination: Optional[Tuple[Optional[int], Optional[int]]] = None
-    ) -> List[Notification]:
-        request: Dict[str, Any] = {}
-        if ids is not None:
-            request["ids"] = [id.hex() for id in ids]
-        if pagination is not None:
-            if pagination[0] is not None:
-                request["start"] = pagination[0]
-            if pagination[1] is not None:
-                request["end"] = pagination[1]
-        response = await self.fetch("get_notifications", request)
-        return [
-            Notification(
-                bytes32.from_hexstr(notification["id"]),
-                bytes.fromhex(notification["message"]),
-                uint64(notification["amount"]),
-                uint32(notification["height"]),
-            )
-            for notification in response["notifications"]
-        ]
+    async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
+        return GetNotificationsResponse.from_json_dict(await self.fetch("get_notifications", request.to_json_dict()))
 
     async def delete_notifications(self, ids: Optional[List[bytes32]] = None) -> bool:
         request = {}
