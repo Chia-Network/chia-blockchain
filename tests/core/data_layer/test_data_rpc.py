@@ -2379,78 +2379,62 @@ async def test_pagination_rpcs(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
         local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
 
+        keys_reference = {
+            "total_pages": 2,
+            "total_bytes": 9,
+            "keys": [],
+            "root_hash": local_root["hash"],
+        }
+
         keys_paginated = await data_rpc_api.get_keys({"id": store_id.hex(), "page": 0, "max_page_size": 5})
-        assert keys_paginated["total_pages"] == 2
-        assert keys_paginated["total_bytes"] == 9
         assert key2_hash < key1_hash
-        assert keys_paginated["keys"] == ["0x" + key3.hex(), "0x" + key2.hex()]
-        assert keys_paginated["root_hash"] == local_root["hash"]
+        assert keys_paginated == {**keys_reference, "keys": ["0x" + key3.hex(), "0x" + key2.hex()]}
 
         keys_paginated = await data_rpc_api.get_keys({"id": store_id.hex(), "page": 1, "max_page_size": 5})
-        assert keys_paginated["total_pages"] == 2
-        assert keys_paginated["total_bytes"] == 9
         assert key5_hash < key4_hash
-        assert keys_paginated["keys"] == ["0x" + key1.hex(), "0x" + key5.hex(), "0x" + key4.hex()]
-        assert keys_paginated["root_hash"] == local_root["hash"]
+        assert keys_paginated == {**keys_reference, "keys": ["0x" + key1.hex(), "0x" + key5.hex(), "0x" + key4.hex()]}
 
         keys_paginated = await data_rpc_api.get_keys({"id": store_id.hex(), "page": 2, "max_page_size": 5})
-        assert keys_paginated["total_pages"] == 2
-        assert keys_paginated["total_bytes"] == 9
-        assert keys_paginated["keys"] == []
-        assert keys_paginated["root_hash"] == local_root["hash"]
+        assert keys_paginated == keys_reference
 
+        keys_values_reference = {
+            "total_pages": 3,
+            "total_bytes": 19,
+            "keys_values": [],
+            "root_hash": local_root["hash"],
+        }
         keys_values_paginated = await data_rpc_api.get_keys_values(
-            {"id": store_id.hex(), "page": 0, "max_page_size": 8}
+            {"id": store_id.hex(), "page": 0, "max_page_size": 8},
         )
-        assert keys_values_paginated["total_pages"] == 3
-        assert keys_values_paginated["total_bytes"] == 19
-        res_kv = keys_values_paginated["keys_values"]
-        assert len(res_kv) == 1
-        assert res_kv[0]["hash"] == "0x" + leaf_hash3.hex()
-        assert res_kv[0]["key"] == "0x" + key3.hex()
-        assert res_kv[0]["value"] == "0x" + value3.hex()
-        assert keys_values_paginated["root_hash"] == local_root["hash"]
+        expected_kv = [
+            {"atom": None, "hash": "0x" + leaf_hash3.hex(), "key": "0x" + key3.hex(), "value": "0x" + value3.hex()},
+        ]
+        assert keys_values_paginated == {**keys_values_reference, "keys_values": expected_kv}
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
             {"id": store_id.hex(), "page": 1, "max_page_size": 8}
         )
-        assert keys_values_paginated["total_pages"] == 3
-        assert keys_values_paginated["total_bytes"] == 19
-        res_kv = keys_values_paginated["keys_values"]
-        assert len(res_kv) == 2
+        expected_kv = [
+            {"atom": None, "hash": "0x" + leaf_hash1.hex(), "key": "0x" + key1.hex(), "value": "0x" + value1.hex()},
+            {"atom": None, "hash": "0x" + leaf_hash2.hex(), "key": "0x" + key2.hex(), "value": "0x" + value2.hex()},
+        ]
         assert leaf_hash1 < leaf_hash2
-        assert res_kv[0]["hash"] == "0x" + leaf_hash1.hex()
-        assert res_kv[0]["key"] == "0x" + key1.hex()
-        assert res_kv[0]["value"] == "0x" + value1.hex()
-        assert res_kv[1]["hash"] == "0x" + leaf_hash2.hex()
-        assert res_kv[1]["key"] == "0x" + key2.hex()
-        assert res_kv[1]["value"] == "0x" + value2.hex()
-        assert keys_values_paginated["root_hash"] == local_root["hash"]
+        assert keys_values_paginated == {**keys_values_reference, "keys_values": expected_kv}
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
             {"id": store_id.hex(), "page": 2, "max_page_size": 8}
         )
-        assert keys_values_paginated["total_pages"] == 3
-        assert keys_values_paginated["total_bytes"] == 19
-        res_kv = keys_values_paginated["keys_values"]
-        assert len(res_kv) == 2
+        expected_kv = [
+            {"atom": None, "hash": "0x" + leaf_hash5.hex(), "key": "0x" + key5.hex(), "value": "0x" + value5.hex()},
+            {"atom": None, "hash": "0x" + leaf_hash4.hex(), "key": "0x" + key4.hex(), "value": "0x" + value4.hex()},
+        ]
         assert leaf_hash5 < leaf_hash4
-        assert res_kv[0]["hash"] == "0x" + leaf_hash5.hex()
-        assert res_kv[0]["key"] == "0x" + key5.hex()
-        assert res_kv[0]["value"] == "0x" + value5.hex()
-        assert res_kv[1]["hash"] == "0x" + leaf_hash4.hex()
-        assert res_kv[1]["key"] == "0x" + key4.hex()
-        assert res_kv[1]["value"] == "0x" + value4.hex()
-        assert keys_values_paginated["root_hash"] == local_root["hash"]
+        assert keys_values_paginated == {**keys_values_reference, "keys_values": expected_kv}
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
             {"id": store_id.hex(), "page": 3, "max_page_size": 8}
         )
-        assert keys_values_paginated["total_pages"] == 3
-        assert keys_values_paginated["total_bytes"] == 19
-        res_kv = keys_values_paginated["keys_values"]
-        assert len(res_kv) == 0
-        assert keys_values_paginated["root_hash"] == local_root["hash"]
+        assert keys_values_paginated == keys_values_reference
 
         key6 = b"ab"
         value6 = b"\x01\x01"
@@ -2470,7 +2454,11 @@ async def test_pagination_rpcs(
         history = await data_rpc_api.get_root_history({"id": store_id.hex()})
         hash1 = history["root_history"][1]["root_hash"]
         hash2 = history["root_history"][2]["root_hash"]
-
+        diff_reference = {
+            "total_pages": 3,
+            "total_bytes": 13,
+            "diff": [],
+        }
         diff_res = await data_rpc_api.get_kv_diff(
             {
                 "id": store_id.hex(),
@@ -2480,10 +2468,8 @@ async def test_pagination_rpcs(
                 "max_page_size": 5,
             }
         )
-        assert diff_res["total_pages"] == 3
-        assert diff_res["total_bytes"] == 13
-        assert len(diff_res["diff"]) == 1
-        assert {"type": "DELETE", "key": key3.hex(), "value": value3.hex()} in diff_res["diff"]
+        expected_diff = [{"type": "DELETE", "key": key3.hex(), "value": value3.hex()}]
+        assert diff_res == {**diff_reference, "diff": expected_diff}
 
         diff_res = await data_rpc_api.get_kv_diff(
             {
@@ -2494,11 +2480,9 @@ async def test_pagination_rpcs(
                 "max_page_size": 5,
             }
         )
-        assert diff_res["total_pages"] == 3
-        assert diff_res["total_bytes"] == 13
-        assert len(diff_res["diff"]) == 1
         assert leaf_hash6 < leaf_hash7
-        assert {"type": "INSERT", "key": key6.hex(), "value": value6.hex()} in diff_res["diff"]
+        expected_diff = [{"type": "INSERT", "key": key6.hex(), "value": value6.hex()}]
+        assert diff_res == {**diff_reference, "diff": expected_diff}
 
         diff_res = await data_rpc_api.get_kv_diff(
             {
@@ -2509,10 +2493,8 @@ async def test_pagination_rpcs(
                 "max_page_size": 5,
             }
         )
-        assert diff_res["total_pages"] == 3
-        assert diff_res["total_bytes"] == 13
-        assert len(diff_res["diff"]) == 1
-        assert {"type": "INSERT", "key": key7.hex(), "value": value7.hex()} in diff_res["diff"]
+        expected_diff = [{"type": "INSERT", "key": key7.hex(), "value": value7.hex()}]
+        assert diff_res == {**diff_reference, "diff": expected_diff}
 
         diff_res = await data_rpc_api.get_kv_diff(
             {
@@ -2523,9 +2505,7 @@ async def test_pagination_rpcs(
                 "max_page_size": 5,
             }
         )
-        assert diff_res["total_pages"] == 3
-        assert diff_res["total_bytes"] == 13
-        assert len(diff_res["diff"]) == 0
+        assert diff_res == diff_reference
 
         diff_res = await data_rpc_api.get_kv_diff(
             {
@@ -2536,9 +2516,12 @@ async def test_pagination_rpcs(
                 "max_page_size": 10,
             }
         )
-        assert diff_res["total_pages"] == 1
-        assert diff_res["total_bytes"] == 0
-        assert len(diff_res["diff"]) == 0
+        empty_diff_reference = {
+            "total_pages": 1,
+            "total_bytes": 0,
+            "diff": [],
+        }
+        assert diff_res == empty_diff_reference
 
         diff_res = await data_rpc_api.get_kv_diff(
             {
@@ -2549,9 +2532,7 @@ async def test_pagination_rpcs(
                 "max_page_size": 10,
             }
         )
-        assert diff_res["total_pages"] == 1
-        assert diff_res["total_bytes"] == 0
-        assert len(diff_res["diff"]) == 0
+        assert diff_res == empty_diff_reference
 
         new_value = b"\x02\x02"
         changelist = [{"action": "upsert", "key": key6.hex(), "value": new_value.hex()}]
@@ -2572,12 +2553,15 @@ async def test_pagination_rpcs(
                 "max_page_size": 100,
             }
         )
-
-        assert diff_res["total_pages"] == 1
-        assert diff_res["total_bytes"] == 8
-        assert len(diff_res["diff"]) == 2
-        assert {"type": "INSERT", "key": key6.hex(), "value": new_value.hex()} in diff_res["diff"]
-        assert {"type": "DELETE", "key": key6.hex(), "value": value6.hex()} in diff_res["diff"]
+        diff_reference = {
+            "total_pages": 1,
+            "total_bytes": 8,
+            "diff": [
+                {"type": "INSERT", "key": key6.hex(), "value": new_value.hex()},
+                {"type": "DELETE", "key": key6.hex(), "value": value6.hex()},
+            ],
+        }
+        assert diff_res == diff_reference
 
         with pytest.raises(Exception, match="Can't find keys"):
             await data_rpc_api.get_keys(
