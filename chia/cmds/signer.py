@@ -53,10 +53,9 @@ class QrCodeDisplay:
         default=2,
         show_default=True,
     )
-    stop_event: Event = Event()
 
-    def _display_qr(self, index: int, max_index: int, code_list: List[QRCode]) -> None:
-        while not self.stop_event.is_set():
+    def _display_qr(self, index: int, max_index: int, code_list: List[QRCode], stop_event: Event) -> None:
+        while not stop_event.is_set():
             for qr_code in itertools.cycle(code_list):
                 _clear_screen()
                 qr_code.terminal(compact=True)
@@ -65,7 +64,7 @@ class QrCodeDisplay:
 
                 for _ in range(self.rotation_speed * 100):
                     time.sleep(0.01)
-                    if self.stop_event.is_set():
+                    if stop_event.is_set():
                         return
 
     def display_qr_codes(self, blobs: List[bytes]) -> None:
@@ -74,16 +73,16 @@ class QrCodeDisplay:
         qr_codes = [[make_qr(chunk) for chunk in chks] for chks in chunks]
 
         for i, qr_code_list in enumerate(qr_codes):
-            self.stop_event.clear()
-            t = Thread(target=self._display_qr, args=(i, len(qr_codes), qr_code_list))
+            stop_event = Event()
+            t = Thread(target=self._display_qr, args=(i, len(qr_codes), qr_code_list, stop_event))
             t.start()
 
             try:
                 input("")
             finally:
-                self.stop_event.set()
+                stop_event.set()
                 t.join()
-                self.stop_event.clear()
+                stop_event.clear()
 
 
 @command_helper
