@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Type, TypeVar
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
     SignedTransaction,
     SigningInstructions,
@@ -25,8 +25,22 @@ _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndp
 
 @streamable
 @dataclass(frozen=True)
+class GetNotifications(Streamable):
+    ids: Optional[List[bytes32]] = None
+    start: Optional[uint32] = None
+    end: Optional[uint32] = None
+
+
+@streamable
+@dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
     spends: List[Spend]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetNotificationsResponse(Streamable):
+    notifications: List[Notification]
 
 
 @streamable
@@ -64,7 +78,7 @@ class SubmitTransactionsResponse(Streamable):
 @dataclass(frozen=True)
 class ExecuteSigningInstructions(Streamable):
     signing_instructions: SigningInstructions
-    partial_allowed: bool
+    partial_allowed: bool = False
 
 
 @streamable
@@ -145,10 +159,7 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
     @classmethod
     def from_json_dict(cls: Type[_T_OfferEndpointResponse], json_dict: Dict[str, Any]) -> _T_OfferEndpointResponse:
         tx_endpoint: TransactionEndpointResponse = TransactionEndpointResponse.from_json_dict(json_dict)
-        try:
-            offer: Offer = Offer.from_bech32(json_dict["offer"])
-        except Exception:
-            offer = Offer.from_bytes(hexstr_to_bytes(json_dict["offer"]))
+        offer: Offer = Offer.from_bech32(json_dict["offer"])
 
         return cls(
             **tx_endpoint.__dict__,
