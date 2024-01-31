@@ -52,7 +52,7 @@ class RouteCase:
 
 
 @dataclass
-class RouteCaseStatus:
+class RouteStatusCase:
     route: str
     description: str
     request: Dict[str, Any]
@@ -1561,7 +1561,7 @@ async def test_passphrase_apis(
 
 
 @datacases(
-    RouteCaseStatus(
+    RouteStatusCase(
         route="remove_keyring_passphrase",
         description="correct",
         request={"current_passphrase": "this is a passphrase"},
@@ -1576,7 +1576,7 @@ async def test_passphrase_apis(
             "user_passphrase_is_set": False,
         },
     ),
-    RouteCaseStatus(
+    RouteStatusCase(
         route="unlock_keyring",
         description="correct",
         request={"key": "this is a passphrase"},
@@ -1591,7 +1591,7 @@ async def test_passphrase_apis(
             "user_passphrase_is_set": True,
         },
     ),
-    RouteCaseStatus(
+    RouteStatusCase(
         route="set_keyring_passphrase",
         description="correct",
         request={
@@ -1614,7 +1614,7 @@ async def test_passphrase_apis(
 @pytest.mark.anyio
 async def test_keychain_status_messages(
     daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
-    case: RouteCaseStatus,
+    case: RouteStatusCase,
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
 

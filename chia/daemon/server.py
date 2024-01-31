@@ -728,9 +728,22 @@ class WebSocketServer:
         return data
 
     async def _process_state_changed_queue(self) -> None:
-        while True:
-            message = await self.state_changed_msg_queue.get()
-            await self._state_changed(message)
+        with log_exceptions(
+            log=self.log,
+            consume=True,
+            message="State changed task received Cancel",
+            level=logging.DEBUG,
+            show_traceback=False,
+            exceptions_to_process=asyncio.CancelledError,
+        ):
+            while True:
+                with log_exceptions(
+                    log=self.log,
+                    consume=True,
+                    message="Unexpected exception, continuing:",
+                ):
+                    message = await self.state_changed_msg_queue.get()
+                    await self._state_changed(message)
 
     async def _state_changed(self, message: StatusMessage) -> None:
         """If id is None, send the whole state queue"""
