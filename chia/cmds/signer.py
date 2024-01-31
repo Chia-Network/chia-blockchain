@@ -6,8 +6,8 @@ import time
 from dataclasses import replace
 from functools import cached_property
 from pathlib import Path
-from threading import Thread
-from typing import List, Optional, Sequence, Type, TypeVar
+from threading import Event, Thread
+from typing import List, Sequence, Type, TypeVar
 
 import click
 from chia_rs import AugSchemeMPL, G2Element
@@ -23,6 +23,11 @@ from chia.types.spend_bundle import SpendBundle
 from chia.wallet.signer_protocol import SignedTransaction, SigningInstructions, SigningResponse, Spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import ClvmStreamable, clvm_serialization_mode
+
+
+def _clear_screen() -> None:
+    # Cross-platform screen clear
+    os.system("cls" if os.name == "nt" else "clear")
 
 
 @wallet_cmd.group("signer", help="Get information for an external signer")
@@ -48,35 +53,37 @@ class QrCodeDisplay:
         default=2,
         show_default=True,
     )
+    stop_event: Event = Event()
+
+    def _display_qr(self, index: int, max_index: int, code_list: List[QRCode]) -> None:
+        while not self.stop_event.is_set():
+            for qr_code in itertools.cycle(code_list):
+                _clear_screen()
+                qr_code.terminal(compact=True)
+                print(f"Displaying QR Codes ({index + 1}/{max_index})")
+                print("<Press Enter to move to next QR code>")
+
+                for _ in range(self.rotation_speed * 100):
+                    time.sleep(0.01)
+                    if self.stop_event.is_set():
+                        return
 
     def display_qr_codes(self, blobs: List[bytes]) -> None:
-        chunk_sizes: List[int] = [optimal_chunk_size_for_max_chunk_size(len(blob), self.qr_density) for blob in blobs]
-        chunks: List[List[bytes]] = [
-            create_chunks_for_blob(blob, chunk_size) for blob, chunk_size in zip(blobs, chunk_sizes)
-        ]
-        qr_codes: List[List[QRCode]] = [[make_qr(chunk) for chunk in chks] for chks in chunks]
+        chunk_sizes = [optimal_chunk_size_for_max_chunk_size(len(blob), self.qr_density) for blob in blobs]
+        chunks = [create_chunks_for_blob(blob, chunk_size) for blob, chunk_size in zip(blobs, chunk_sizes)]
+        qr_codes = [[make_qr(chunk) for chunk in chks] for chks in chunks]
 
         for i, qr_code_list in enumerate(qr_codes):
-            confirmation: Optional[str] = None
-
-            def _display_qr(index: int, code_list: List[QRCode]) -> None:
-                for qr_code in itertools.cycle(code_list):
-                    os.system("clear")
-                    qr_code.terminal(compact=True)
-                    print(f"Displaying QR Codes ({index+1}/{len(qr_codes)})")
-                    print("<Press Enter to move to next qr code>")
-                    for _ in range(0, self.rotation_speed * 100):
-                        time.sleep(0.01)
-                        if confirmation is not None:
-                            return
-
-            t = Thread(target=_display_qr, args=(i, qr_code_list))
+            self.stop_event.clear()
+            t = Thread(target=self._display_qr, args=(i, len(qr_codes), qr_code_list))
             t.start()
+
             try:
-                confirmation = input("")
+                input("")
             finally:
-                confirmation = ""
+                self.stop_event.set()
                 t.join()
+                self.stop_event.clear()
 
 
 @command_helper
@@ -283,3 +290,12 @@ class PushTransactionsCMD:
     async def run(self) -> None:
         async with self.rpc_info.wallet_rpc() as wallet_rpc:
             await wallet_rpc.client.push_transactions(self.txs_in.transaction_bundle.txs)
+
+
+# Uncomment this for testing of qr code display
+# @chia_command(signer_cmd, "temp", "")
+# class Temp:
+#     qr: QrCodeDisplay
+#
+#     def run(self) -> None:
+#         self.qr.display_qr_codes([bytes([1] * 200), bytes([2] * 200)])

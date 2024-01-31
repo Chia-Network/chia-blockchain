@@ -1100,8 +1100,8 @@ def test_qr_code_display(monkeypatch: pytest.MonkeyPatch) -> None:
     old_start = Thread.start
 
     def new_start(self, *args) -> None:  # type: ignore[no-untyped-def]
-        old_start(self)
-        time.sleep(11)
+        old_start(self, *args)
+        time.sleep(5)
 
     monkeypatch.setattr(Thread, "start", new_start)
 
@@ -1119,7 +1119,7 @@ def test_qr_code_display(monkeypatch: pytest.MonkeyPatch) -> None:
     runner = CliRunner()
     result = runner.invoke(
         cmd,
-        ["temp_cmd", "--qr-density", str(int(len(bytes_to_encode) / 2)), "--rotation-speed", "6"],
+        ["temp_cmd", "--qr-density", str(int(len(bytes_to_encode) / 2)), "--rotation-speed", "4"],
         input="\n",
         catch_exceptions=False,
     )
