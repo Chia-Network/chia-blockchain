@@ -285,6 +285,10 @@ def test_translation_layer() -> None:
         assert Coin.from_bytes(coin_bytes) == coin
         assert Coin.from_json_dict(coin_json) == coin
 
+    # Test a TranslationLayer edge case (no mapping for serialized object)
+    foo_spend = FooSpend.from_wallet_api(spend)
+    assert foo_spend == TranslationLayer([]).deserialize_from_translation(foo_spend)
+
 
 def test_blind_signer_translation_layer() -> None:
     sum_hints: List[SumHint] = [
