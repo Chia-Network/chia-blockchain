@@ -46,7 +46,7 @@ from chia.wallet.signer_protocol import (
     UnsignedTransaction,
 )
 from chia.wallet.util.blind_signer_tl import (
-    BLIND_SIGNER_TRANSPORT,
+    BLIND_SIGNER_TRANSLATION,
     BSTLPathHint,
     BSTLSigningInstructions,
     BSTLSigningResponse,
@@ -57,8 +57,8 @@ from chia.wallet.util.blind_signer_tl import (
 from chia.wallet.util.clvm_streamable import (
     ClvmSerializationConfig,
     ClvmStreamable,
-    TransportLayer,
-    TransportLayerMapping,
+    TranslationLayer,
+    TranslationLayerMapping,
     _ClvmSerializationMode,
     clvm_serialization_mode,
 )
@@ -231,10 +231,10 @@ class FooSpend(ClvmStreamable):
         )
 
 
-def test_transport_layer() -> None:
-    FOO_TRANSPORT = TransportLayer(
+def test_translation_layer() -> None:
+    FOO_TRANSLATION = TranslationLayer(
         [
-            TransportLayerMapping(
+            TranslationLayerMapping(
                 Spend,
                 FooSpend,
                 FooSpend.from_wallet_api,
@@ -258,13 +258,13 @@ def test_transport_layer() -> None:
     assert spend_program.at("rff") == Program.to("puzzle")
     assert spend_program.at("rrff") == Program.to("solution")
 
-    with clvm_serialization_mode(True, FOO_TRANSPORT):
+    with clvm_serialization_mode(True, FOO_TRANSLATION):
         foo_spend_bytes = bytes(spend)
         assert foo_spend_bytes.hex() == spend.to_json_dict()  # type: ignore[comparison-overlap]
         assert spend == Spend.from_bytes(foo_spend_bytes)
         assert spend == Spend.from_json_dict(foo_spend_bytes.hex())
 
-    # Deserialization should only work now if using the transport layer
+    # Deserialization should only work now if using the translation layer
     with pytest.raises(Exception):
         Spend.from_bytes(foo_spend_bytes)
     with pytest.raises(Exception):
@@ -276,17 +276,17 @@ def test_transport_layer() -> None:
     assert foo_spend_program.at("rff") == Program.to("blah")
     assert foo_spend_program.at("rrff") == Program.to("solution")
 
-    # Test that types not registered with transport layer are serialized properly
+    # Test that types not registered with translation layer are serialized properly
     with clvm_serialization_mode(True):
         coin_bytes = bytes(coin)
         coin_json = coin.to_json_dict()
-    with clvm_serialization_mode(True, FOO_TRANSPORT):
+    with clvm_serialization_mode(True, FOO_TRANSLATION):
         assert coin_bytes == bytes(coin)
         assert Coin.from_bytes(coin_bytes) == coin
         assert Coin.from_json_dict(coin_json) == coin
 
 
-def test_blind_signer_transport_layer() -> None:
+def test_blind_signer_translation_layer() -> None:
     sum_hints: List[SumHint] = [
         SumHint([b"a", b"b", b"c"], b"offset", b"final"),
         SumHint([b"c", b"b", b"a"], b"offset2", b"final"),
@@ -344,13 +344,13 @@ def test_blind_signer_transport_layer() -> None:
         bstl_transaction_bytes = bytes(bstl_transaction)
         bstl_signing_response_bytes = bytes(bstl_signing_response)
 
-    with clvm_serialization_mode(True, BLIND_SIGNER_TRANSPORT):
+    with clvm_serialization_mode(True, BLIND_SIGNER_TRANSLATION):
         transaction_bytes = bytes(transaction)
         signing_response_bytes = bytes(signing_response)
         assert transaction_bytes == bstl_transaction_bytes == bytes(bstl_transaction)
         assert signing_response_bytes == bstl_signing_response_bytes == bytes(bstl_signing_response)
 
-    # Deserialization should only work now if using the transport layer
+    # Deserialization should only work now if using the translation layer
     with pytest.raises(Exception):
         UnsignedTransaction.from_bytes(transaction_bytes)
     with pytest.raises(Exception):
@@ -358,7 +358,7 @@ def test_blind_signer_transport_layer() -> None:
 
     assert BSTLUnsignedTransaction.from_bytes(transaction_bytes) == bstl_transaction
     assert BSTLSigningResponse.from_bytes(signing_response_bytes) == bstl_signing_response
-    with clvm_serialization_mode(True, BLIND_SIGNER_TRANSPORT):
+    with clvm_serialization_mode(True, BLIND_SIGNER_TRANSLATION):
         assert UnsignedTransaction.from_bytes(transaction_bytes) == transaction
         assert SigningResponse.from_bytes(signing_response_bytes) == signing_response
 
@@ -544,7 +544,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     response_dict = await wallet_rpc.fetch("gather_signing_info", {"compression": "chip-TBD", **request})
     with pytest.raises(Exception):
         GatherSigningInfoResponse.from_json_dict(response_dict)
-    with clvm_serialization_mode(True, transport_layer=BLIND_SIGNER_TRANSPORT):
+    with clvm_serialization_mode(True, translation_layer=BLIND_SIGNER_TRANSLATION):
         response: GatherSigningInfoResponse = GatherSigningInfoResponse.from_json_dict(response_dict)
         assert response.signing_instructions == not_our_utx.signing_instructions
 

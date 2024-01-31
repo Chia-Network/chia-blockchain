@@ -20,7 +20,7 @@ from chia.util.streamable import ConversionError, Streamable, streamable
 @dataclass
 class ClvmSerializationConfig:
     use: bool = False
-    transport_layer: Optional[TransportLayer] = None
+    translation_layer: Optional[TranslationLayer] = None
 
 
 class _ClvmSerializationMode:
@@ -36,9 +36,9 @@ class _ClvmSerializationMode:
 
 
 @contextmanager
-def clvm_serialization_mode(use: bool, transport_layer: Optional[TransportLayer] = None) -> Iterator[None]:
+def clvm_serialization_mode(use: bool, translation_layer: Optional[TranslationLayer] = None) -> Iterator[None]:
     old_config = _ClvmSerializationMode.get_config()
-    _ClvmSerializationMode.set_config(ClvmSerializationConfig(use=use, transport_layer=transport_layer))
+    _ClvmSerializationMode.set_config(ClvmSerializationConfig(use=use, translation_layer=translation_layer))
     yield
     _ClvmSerializationMode.set_config(old_config)
 
@@ -99,9 +99,9 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
         raise NotImplementedError()  # pragma: no cover
 
     def stream(self, f: BinaryIO) -> None:
-        transport_layer: Optional[TransportLayer] = _ClvmSerializationMode.get_config().transport_layer
-        if transport_layer is not None:
-            new_self = transport_layer.serialize_for_transport(self)
+        translation_layer: Optional[TranslationLayer] = _ClvmSerializationMode.get_config().translation_layer
+        if translation_layer is not None:
+            new_self = translation_layer.serialize_for_translation(self)
         else:
             new_self = self
 
@@ -113,11 +113,11 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
     @classmethod
     def parse(cls: Type[_T_ClvmStreamable], f: BinaryIO) -> _T_ClvmStreamable:
         assert isinstance(f, BytesIO)
-        transport_layer: Optional[TransportLayer] = _ClvmSerializationMode.get_config().transport_layer
-        if transport_layer is not None:
+        translation_layer: Optional[TranslationLayer] = _ClvmSerializationMode.get_config().translation_layer
+        if translation_layer is not None:
             cls_mapping: Optional[
-                TransportLayerMapping[_T_ClvmStreamable, ClvmStreamable]
-            ] = transport_layer.get_mapping(cls)
+                TranslationLayerMapping[_T_ClvmStreamable, ClvmStreamable]
+            ] = translation_layer.get_mapping(cls)
             if cls_mapping is not None:
                 new_cls: Type[Union[_T_ClvmStreamable, ClvmStreamable]] = cls_mapping.to_type
             else:
@@ -130,8 +130,8 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
         try:
             result = new_cls.from_program(Program.from_bytes(bytes(f.getbuffer())))
             f.read()
-            if transport_layer is not None and cls_mapping is not None:
-                deserialized_result = transport_layer.deserialize_from_transport(result)
+            if translation_layer is not None and cls_mapping is not None:
+                deserialized_result = translation_layer.deserialize_from_translation(result)
                 assert isinstance(deserialized_result, cls)
                 return deserialized_result
             else:
@@ -141,9 +141,9 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
             return super().parse(f)
 
     def override_json_serialization(self, default_recurse_jsonify: Callable[[Any], Dict[str, Any]]) -> Any:
-        transport_layer: Optional[TransportLayer] = _ClvmSerializationMode.get_config().transport_layer
-        if transport_layer is not None:
-            new_self = transport_layer.serialize_for_transport(self)
+        translation_layer: Optional[TranslationLayer] = _ClvmSerializationMode.get_config().translation_layer
+        if translation_layer is not None:
+            new_self = translation_layer.serialize_for_translation(self)
         else:
             new_self = self
 
@@ -158,11 +158,11 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
 
     @classmethod
     def from_json_dict(cls: Type[_T_ClvmStreamable], json_dict: Any) -> _T_ClvmStreamable:
-        transport_layer: Optional[TransportLayer] = _ClvmSerializationMode.get_config().transport_layer
-        if transport_layer is not None:
+        translation_layer: Optional[TranslationLayer] = _ClvmSerializationMode.get_config().translation_layer
+        if translation_layer is not None:
             cls_mapping: Optional[
-                TransportLayerMapping[_T_ClvmStreamable, ClvmStreamable]
-            ] = transport_layer.get_mapping(cls)
+                TranslationLayerMapping[_T_ClvmStreamable, ClvmStreamable]
+            ] = translation_layer.get_mapping(cls)
             if cls_mapping is not None:
                 new_cls: Type[Union[_T_ClvmStreamable, ClvmStreamable]] = cls_mapping.to_type
             else:
@@ -183,8 +183,8 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
 
             try:
                 result = new_cls.from_program(Program.from_bytes(byts))
-                if transport_layer is not None and cls_mapping is not None:
-                    deserialized_result = transport_layer.deserialize_from_transport(result)
+                if translation_layer is not None and cls_mapping is not None:
+                    deserialized_result = translation_layer.deserialize_from_translation(result)
                     assert isinstance(deserialized_result, cls)
                     return deserialized_result
                 else:
@@ -197,7 +197,7 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
 
 
 @dataclass(frozen=True)
-class TransportLayerMapping(Generic[_T_ClvmStreamable, _T_TLClvmStreamable]):
+class TranslationLayerMapping(Generic[_T_ClvmStreamable, _T_TLClvmStreamable]):
     from_type: Type[_T_ClvmStreamable]
     to_type: Type[_T_TLClvmStreamable]
     serialize_function: Callable[[_T_ClvmStreamable], _T_TLClvmStreamable]
@@ -205,14 +205,14 @@ class TransportLayerMapping(Generic[_T_ClvmStreamable, _T_TLClvmStreamable]):
 
 
 @dataclass(frozen=True)
-class TransportLayer:
-    type_mappings: List[TransportLayerMapping[Any, Any]]
+class TranslationLayer:
+    type_mappings: List[TranslationLayerMapping[Any, Any]]
 
     def get_mapping(
         self, _type: Type[_T_ClvmStreamable], for_serialized_type: bool = False
-    ) -> Optional[TransportLayerMapping[_T_ClvmStreamable, ClvmStreamable]]:
+    ) -> Optional[TranslationLayerMapping[_T_ClvmStreamable, ClvmStreamable]]:
         if for_serialized_type:
-            mappings: List[TransportLayerMapping[_T_ClvmStreamable, ClvmStreamable]] = [
+            mappings: List[TranslationLayerMapping[_T_ClvmStreamable, ClvmStreamable]] = [
                 m for m in self.type_mappings if m.to_type == _type
             ]
         else:
@@ -222,16 +222,16 @@ class TransportLayer:
         elif len(mappings) == 0:
             return None
         else:  # pragma: no cover
-            raise RuntimeError("Malformed TransportLayer")
+            raise RuntimeError("Malformed TranslationLayer")
 
-    def serialize_for_transport(self, instance: _T_ClvmStreamable) -> ClvmStreamable:
+    def serialize_for_translation(self, instance: _T_ClvmStreamable) -> ClvmStreamable:
         mapping = self.get_mapping(instance.__class__)
         if mapping is None:
             return instance
         else:
             return mapping.serialize_function(instance)
 
-    def deserialize_from_transport(self, instance: _T_ClvmStreamable) -> ClvmStreamable:
+    def deserialize_from_translation(self, instance: _T_ClvmStreamable) -> ClvmStreamable:
         mapping = self.get_mapping(instance.__class__, for_serialized_type=True)
         if mapping is None:
             return instance

@@ -15,7 +15,7 @@ from chia.wallet.signer_protocol import (
     TransactionInfo,
     UnsignedTransaction,
 )
-from chia.wallet.util.clvm_streamable import ClvmStreamable, TransportLayer, TransportLayerMapping
+from chia.wallet.util.clvm_streamable import ClvmStreamable, TranslationLayer, TranslationLayerMapping
 
 # Pylint doesn't understand that these classes are in fact dataclasses
 # pylint: disable=invalid-field-call
@@ -129,23 +129,23 @@ class BSTLSigningResponse(ClvmStreamable):
         return SigningResponse(**_from.__dict__)
 
 
-BLIND_SIGNER_TRANSPORT = TransportLayer(
+BLIND_SIGNER_TRANSLATION = TranslationLayer(
     [
-        TransportLayerMapping(
+        TranslationLayerMapping(
             SigningTarget, BSTLSigningTarget, BSTLSigningTarget.from_wallet_api, BSTLSigningTarget.to_wallet_api
         ),
-        TransportLayerMapping(SumHint, BSTLSumHint, BSTLSumHint.from_wallet_api, BSTLSumHint.to_wallet_api),
-        TransportLayerMapping(PathHint, BSTLPathHint, BSTLPathHint.from_wallet_api, BSTLPathHint.to_wallet_api),
-        TransportLayerMapping(
+        TranslationLayerMapping(SumHint, BSTLSumHint, BSTLSumHint.from_wallet_api, BSTLSumHint.to_wallet_api),
+        TranslationLayerMapping(PathHint, BSTLPathHint, BSTLPathHint.from_wallet_api, BSTLPathHint.to_wallet_api),
+        TranslationLayerMapping(
             SigningInstructions,
             BSTLSigningInstructions,
             BSTLSigningInstructions.from_wallet_api,
             BSTLSigningInstructions.to_wallet_api,
         ),
-        TransportLayerMapping(
+        TranslationLayerMapping(
             SigningResponse, BSTLSigningResponse, BSTLSigningResponse.from_wallet_api, BSTLSigningResponse.to_wallet_api
         ),
-        TransportLayerMapping(
+        TranslationLayerMapping(
             UnsignedTransaction,
             BSTLUnsignedTransaction,
             BSTLUnsignedTransaction.from_wallet_api,
