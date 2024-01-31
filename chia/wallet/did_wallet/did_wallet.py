@@ -381,7 +381,7 @@ class DIDWallet:
                 num_verification=uint16(num_verification.as_int()),
                 singleton_struct=singleton_struct,
                 metadata=metadata,
-                inner_puzzle=get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal.to_program()),
+                inner_puzzle=get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
                 coin_state=parent_state,
             )
         if parent is None:
@@ -504,7 +504,7 @@ class DIDWallet:
                 assert children_state.created_height
                 parent_spend = await fetch_coin_spend(uint32(children_state.created_height), parent_coin, peer)
                 assert parent_spend is not None
-                parent_innerpuz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
+                parent_innerpuz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal)
                 assert parent_innerpuz is not None
                 parent_info = LineageProof(
                     parent_name=parent_coin.parent_coin_info,
