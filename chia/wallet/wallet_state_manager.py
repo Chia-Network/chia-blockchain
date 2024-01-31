@@ -42,7 +42,6 @@ from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -65,7 +64,13 @@ from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
-from chia.wallet.conditions import Condition, ConditionValidTimes, parse_timelock_info
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    Condition,
+    ConditionValidTimes,
+    CreateCoinAnnouncement,
+    parse_timelock_info,
+)
 from chia.wallet.dao_wallet.dao_utils import (
     get_p2_singleton_puzhash,
     match_dao_cat_puzzle,
@@ -747,7 +752,7 @@ class WalletStateManager:
             [coin_state.coin.parent_coin_info], peer=peer, fork_height=fork_height
         )
         if len(response) == 0:
-            self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info}")
+            self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info.hex()}")
             return None, None
         parent_coin_state = response[0]
         assert parent_coin_state.spent_height == coin_state.created_height
@@ -789,7 +794,7 @@ class WalletStateManager:
         # Check if the coin is a DAO CAT
         dao_cat_args = match_dao_cat_puzzle(uncurried)
         if dao_cat_args:
-            return await self.handle_dao_cat(dao_cat_args, parent_coin_state, coin_state, coin_spend), None
+            return await self.handle_dao_cat(dao_cat_args, parent_coin_state, coin_state, coin_spend, fork_height), None
 
         # Check if the coin is a CAT
         cat_curried_args = match_cat_puzzle(uncurried)
@@ -940,8 +945,9 @@ class WalletStateManager:
                             memos,  # Forward memo of the first coin
                         )
                     ],
-                    coin_announcements=None if len(coin_spends) > 0 or fee == 0 else {message},
-                    conditions=extra_conditions,
+                    conditions=extra_conditions
+                    if len(coin_spends) > 0 or fee == 0
+                    else (*extra_conditions, CreateCoinAnnouncement(message)),
                 )
                 coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
                 coin_spends.append(coin_spend)
@@ -954,7 +960,11 @@ class WalletStateManager:
         spend_bundle: SpendBundle = await self.sign_transaction(coin_spends)
         if fee > 0:
             chia_tx = await self.main_wallet.create_tandem_xch_tx(
-                fee, tx_config, Announcement(coin_spends[0].coin.name(), message)
+                fee,
+                tx_config,
+                extra_conditions=(
+                    AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
+                ),
             )
             assert chia_tx.spend_bundle is not None
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
@@ -1021,6 +1031,7 @@ class WalletStateManager:
         parent_coin_state: CoinState,
         coin_state: CoinState,
         coin_spend: CoinSpend,
+        fork_height: Optional[uint32],
     ) -> Optional[WalletIdentifier]:
         """
         Handle the new coin when it is a DAO CAT
@@ -1032,6 +1043,19 @@ class WalletStateManager:
                 assert isinstance(wallet, DAOCATWallet)
                 if wallet.dao_cat_info.limitations_program_hash == asset_id:
                     return WalletIdentifier.create(wallet)
+        # Found a DAO_CAT, but we don't have a wallet for it. Add to unacknowledged
+        await self.interested_store.add_unacknowledged_token(
+            asset_id,
+            CATWallet.default_wallet_name_for_unknown_cat(asset_id.hex()),
+            None if parent_coin_state.spent_height is None else uint32(parent_coin_state.spent_height),
+            parent_coin_state.coin.puzzle_hash,
+        )
+        await self.interested_store.add_unacknowledged_coin_state(
+            asset_id,
+            coin_state,
+            fork_height,
+        )
+        self.state_changed("added_stray_cat")
         return None  # pragma: no cover
 
     async def handle_cat(

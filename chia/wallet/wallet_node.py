@@ -691,7 +691,7 @@ class WalletNode:
             )
             asyncio.create_task(self.wallet_peers.start())
 
-    def on_disconnect(self, peer: WSChiaConnection) -> None:
+    async def on_disconnect(self, peer: WSChiaConnection) -> None:
         if self.is_trusted(peer):
             self.local_node_synced = False
             self.initialize_wallet_peers()
@@ -1058,7 +1058,7 @@ class WalletNode:
                 self.log.debug(f"get_timestamp_for_height_from_peer use cached block for height {request_height}")
 
             if block is not None and block.foliage_transaction_block is not None:
-                return block.foliage_transaction_block.timestamp
+                return uint64(block.foliage_transaction_block.timestamp)
 
             request_height -= 1
 

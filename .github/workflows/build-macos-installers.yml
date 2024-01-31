@@ -203,7 +203,7 @@ jobs:
           rm -rf ./chia-blockchain-gui
 
       - name: Cache GUI
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-gui
         with:
           path: ./chia-blockchain-gui
@@ -230,7 +230,7 @@ jobs:
           sh build_macos-2-installer.sh
 
       - name: Upload MacOS artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: chia-installers-macos-dmg-${{ matrix.os.name }}
           path: ${{ github.workspace }}/build_scripts/final_installer/
@@ -284,7 +284,7 @@ jobs:
           directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
 
       - name: Download constraints file
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: constraints-file-${{ matrix.os.name }}
           path: venv
@@ -294,7 +294,7 @@ jobs:
           pip install --constraint venv/constraints.txt py3createtorrent
 
       - name: Download packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: chia-installers-macos-dmg-${{ matrix.os.name }}
           path: build_scripts/final_installer/
@@ -437,7 +437,7 @@ jobs:
     - uses: Chia-Network/actions/clean-workspace@main
 
     - name: Download packages
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       id: download
       with:
         name: chia-installers-macos-dmg-${{ matrix.arch.artifact-name }}

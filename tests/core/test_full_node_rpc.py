@@ -237,7 +237,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
 
         block_spends_with_conditions = sorted(block_spends_with_conditions, key=lambda x: str(x.coin_spend))
 
-        coin_spend_with_conditions = block_spends_with_conditions[0]
+        coin_spend_with_conditions = block_spends_with_conditions[1]
 
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb9240000000000000000000000000000000a"),
@@ -275,7 +275,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             ),
         ]
 
-        coin_spend_with_conditions = block_spends_with_conditions[1]
+        coin_spend_with_conditions = block_spends_with_conditions[2]
 
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb9240000000000000000000000000000000b"),
@@ -313,7 +313,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             ),
         ]
 
-        coin_spend_with_conditions = block_spends_with_conditions[2]
+        coin_spend_with_conditions = block_spends_with_conditions[0]
 
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("27ae41e4649b934ca495991b7852b8550000000000000000000000000000000b"),
@@ -631,6 +631,10 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         # When supplying genesis block, there are no older blocks so `None` should be returned
         assert await get_average_block_time(full_node_api_1.full_node.blockchain, block_records[0], 4608) is None
         assert await get_average_block_time(full_node_api_1.full_node.blockchain, block_records[-1], 4608) is not None
+        # Test that get_aggsig_additional_data() returns correctly
+        assert (
+            full_node_api_1.full_node.constants.AGG_SIG_ME_ADDITIONAL_DATA == await client.get_aggsig_additional_data()
+        )
 
     finally:
         # Checks that the RPC manages to stop the node

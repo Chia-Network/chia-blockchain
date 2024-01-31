@@ -3,21 +3,22 @@ from __future__ import annotations
 import dataclasses
 import logging
 import random
-from typing import AsyncIterator, List, Optional
+from typing import AsyncIterator, Dict, List, Optional
 
 import pytest
 
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.constants import ConsensusConstants
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.full_node_store import FullNodeStore
+from chia.full_node.full_node_store import FullNodeStore, UnfinishedBlockEntry, find_best_block
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewInfusionPointVDF
-from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point
+from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point, make_unfinished_block
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
@@ -25,6 +26,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.recursive_replace import recursive_replace
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from tests.util.blockchain import create_blockchain
 
@@ -59,6 +61,89 @@ async def empty_blockchain_with_original_constants(
 ) -> AsyncIterator[Blockchain]:
     async with create_blockchain(blockchain_constants, db_version) as (bc1, db_wrapper):
         yield bc1
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("num_duplicates", [0, 1, 3, 10])
+@pytest.mark.parametrize("include_none", [True, False])
+async def test_unfinished_block_rank(
+    empty_blockchain: Blockchain,
+    custom_block_tools: BlockTools,
+    seeded_random: random.Random,
+    num_duplicates: int,
+    include_none: bool,
+) -> None:
+    blocks = custom_block_tools.get_consecutive_blocks(
+        1,
+        guarantee_transaction_block=True,
+    )
+
+    assert blocks[-1].is_transaction_block()
+    store = FullNodeStore(custom_block_tools.constants)
+    unf: UnfinishedBlock = make_unfinished_block(blocks[-1], custom_block_tools.constants)
+
+    # create variants of the unfinished block, where all we do is to change
+    # the foliage_transaction_block_hash. As if they all had different foliage,
+    # but the same reward block hash (i.e. the same proof-of-space)
+    unfinished: List[UnfinishedBlock] = [
+        recursive_replace(unf, "foliage.foliage_transaction_block_hash", bytes32([idx + 4] * 32))
+        for idx in range(num_duplicates)
+    ]
+
+    if include_none:
+        unfinished.append(recursive_replace(unf, "foliage.foliage_transaction_block_hash", None))
+
+    # shuffle them to ensure the order we add them to the store isn't relevant
+    seeded_random.shuffle(unfinished)
+    for new_unf in unfinished:
+        store.add_unfinished_block(
+            uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, False, uint32(0))
+        )
+
+    # now ask for "the" unfinished block given the proof-of-space.
+    # the FullNodeStore should return the one with the lowest foliage tx block
+    # hash. We prefer a block with foliage over one without (i.e. where foliage
+    # is None)
+    if num_duplicates == 0 and not include_none:
+        assert store.get_unfinished_block(unf.partial_hash) is None
+    else:
+        best_unf = store.get_unfinished_block(unf.partial_hash)
+        assert best_unf is not None
+        if num_duplicates == 0:
+            # if a block without foliage is our only option, that's what we get
+            assert best_unf.foliage.foliage_transaction_block_hash is None
+        else:
+            assert best_unf.foliage.foliage_transaction_block_hash == bytes32([4] * 32)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "blocks,expected",
+    [
+        ([None, 1, 2, 3], 1),
+        ([None], None),
+        ([], None),
+        ([4, 5, 3], 3),
+        ([4], 4),
+    ],
+)
+async def test_find_best_block(
+    seeded_random: random.Random,
+    blocks: List[Optional[int]],
+    expected: Optional[int],
+) -> None:
+    result: Dict[Optional[bytes32], UnfinishedBlockEntry] = {}
+    for b in blocks:
+        if b is None:
+            result[b] = UnfinishedBlockEntry(None, None, 123)  # type: ignore
+        else:
+            result[bytes32(b.to_bytes(1, "big") * 32)] = UnfinishedBlockEntry(None, None, 123)  # type: ignore
+
+    foliage_hash, block = find_best_block(result)
+    if expected is None:
+        assert foliage_hash is None
+    else:
+        assert foliage_hash == bytes32(expected.to_bytes(1, "big") * 32)
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
@@ -114,16 +199,107 @@ async def test_basic_store(
     h_hash_1 = bytes32.random(seeded_random)
     assert not store.seen_unfinished_block(h_hash_1)
     assert store.seen_unfinished_block(h_hash_1)
-    store.clear_seen_unfinished_blocks()
+    # this will crowd out h_hash_1
+    for _ in range(store.max_seen_unfinished_blocks):
+        store.seen_unfinished_block(bytes32.random(seeded_random))
     assert not store.seen_unfinished_block(h_hash_1)
 
     # Add/get unfinished block
     for height, unf_block in enumerate(unfinished_blocks):
         assert store.get_unfinished_block(unf_block.partial_hash) is None
-        store.add_unfinished_block(uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, False))
+        assert store.get_unfinished_block2(unf_block.partial_hash, None) == (None, 0, False)
+        store.add_unfinished_block(
+            uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, False, uint32(0))
+        )
         assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
+        assert store.get_unfinished_block2(
+            unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+        ) == (unf_block, 1, False)
+
+        foliage_hash = unf_block.foliage.foliage_transaction_block_hash
+        dummy_hash = bytes32.fromhex("abababababababababababababababababababababababababababababababab")
+        assert store.get_unfinished_block2(unf_block.partial_hash, dummy_hash) == (
+            None,
+            1,
+            foliage_hash is not None and dummy_hash > foliage_hash,
+        )
+
+        ublock = store.get_unfinished_block_result(unf_block.partial_hash)
+        assert ublock is not None and ublock.required_iters == uint64(123532)
+        ublock = store.get_unfinished_block_result2(
+            unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+        )
+
+        assert ublock is not None and ublock.required_iters == uint64(123532)
+
         store.remove_unfinished_block(unf_block.partial_hash)
         assert store.get_unfinished_block(unf_block.partial_hash) is None
+        assert store.get_unfinished_block2(
+            unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+        ) == (None, 0, False)
+
+    # Multiple unfinished blocks with colliding partial hashes
+    unf1 = unfinished_blocks[0]
+    unf2 = dataclasses.replace(unf1, foliage=unfinished_blocks[1].foliage)
+    unf3 = dataclasses.replace(unf1, foliage=unfinished_blocks[2].foliage)
+    unf4 = dataclasses.replace(unf1, foliage=unfinished_blocks[3].foliage)
+
+    # we have none of these blocks in the store
+    for unf_block in [unf1, unf2, unf3, unf4]:
+        assert store.get_unfinished_block(unf_block.partial_hash) is None
+        assert store.get_unfinished_block2(unf_block.partial_hash, None) == (None, 0, False)
+
+    height = uint32(1)
+    # all blocks without a foliage all collapse down into being the same
+    assert unf1.foliage.foliage_transaction_block_hash is not None
+    assert unf2.foliage.foliage_transaction_block_hash is None
+    assert unf3.foliage.foliage_transaction_block_hash is None
+    assert unf4.foliage.foliage_transaction_block_hash is None
+    for val, unf_block in enumerate([unf1, unf2, unf3, unf4]):
+        store.add_unfinished_block(
+            uint32(height), unf_block, PreValidationResult(None, uint64(val), None, False, uint32(0))
+        )
+
+    # when not specifying a foliage hash, you get the "best" one
+    # best is defined as the lowest foliage hash
+    assert store.get_unfinished_block(unf1.partial_hash) == unf1
+    assert store.get_unfinished_block2(unf1.partial_hash, unf1.foliage.foliage_transaction_block_hash) == (
+        unf1,
+        2,
+        False,
+    )
+    # unf4 overwrote unf2 and unf3 (that's why there are only 2 blocks stored).
+    # however, there's no way to explicitly request the block with None foliage
+    # since when specifying None, you always get the first one. unf1 in this
+    # case
+    assert store.get_unfinished_block2(unf2.partial_hash, unf2.foliage.foliage_transaction_block_hash) == (
+        unf1,
+        2,
+        False,
+    )
+    assert store.get_unfinished_block2(unf3.partial_hash, unf3.foliage.foliage_transaction_block_hash) == (
+        unf1,
+        2,
+        False,
+    )
+    assert store.get_unfinished_block2(unf4.partial_hash, unf4.foliage.foliage_transaction_block_hash) == (
+        unf1,
+        2,
+        False,
+    )
+    assert store.get_unfinished_block2(unf4.partial_hash, None) == (unf1, 2, False)
+
+    ublock = store.get_unfinished_block_result(unf1.partial_hash)
+    assert ublock is not None and ublock.required_iters == uint64(0)
+    ublock = store.get_unfinished_block_result2(unf1.partial_hash, unf1.foliage.foliage_transaction_block_hash)
+    assert ublock is not None and ublock.required_iters == uint64(0)
+    # still, when not specifying a foliage hash, you just get the first ublock
+    ublock = store.get_unfinished_block_result2(unf1.partial_hash, None)
+    assert ublock is not None and ublock.required_iters == uint64(0)
+
+    # negative test cases
+    assert store.get_unfinished_block_result(bytes32([1] * 32)) is None
+    assert store.get_unfinished_block_result2(bytes32([1] * 32), None) is None
 
     blocks = custom_block_tools.get_consecutive_blocks(
         1,
@@ -501,7 +677,7 @@ async def test_basic_store(
         blocks[1].reward_chain_sp_proof,
     )
     assert not store.new_signage_point(
-        blocks[1].reward_chain_block.signage_point_index,
+        uint8(blocks[1].reward_chain_block.signage_point_index),
         blockchain,
         peak,
         uint64(blockchain.block_record(blocks[1].header_hash).sp_sub_slot_total_iters(custom_block_tools.constants)),
@@ -803,9 +979,9 @@ async def test_basic_store(
 
         blocks = custom_block_tools.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
 
-        i3 = blocks[-3].reward_chain_block.signage_point_index
-        i2 = blocks[-2].reward_chain_block.signage_point_index
-        i1 = blocks[-1].reward_chain_block.signage_point_index
+        i3 = uint8(blocks[-3].reward_chain_block.signage_point_index)
+        i2 = uint8(blocks[-2].reward_chain_block.signage_point_index)
+        i1 = uint8(blocks[-1].reward_chain_block.signage_point_index)
         if (
             len(blocks[-2].finished_sub_slots) == len(blocks[-1].finished_sub_slots) == 0
             and not is_overflow_block(custom_block_tools.constants, signage_point_index=i2)
@@ -954,3 +1130,61 @@ async def test_long_chain_slots(
         store.new_peak(
             peak, peak_full_block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
         )
+
+
+@pytest.mark.anyio
+async def test_mark_requesting(
+    seeded_random: random.Random,
+) -> None:
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    a = bytes32.random(seeded_random)
+    b = bytes32.random(seeded_random)
+    c = bytes32.random(seeded_random)
+
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(a, b)
+    assert not store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+    assert not store.is_requesting_unfinished_block(c, c)
+
+    store.mark_requesting_unfinished_block(a, b)
+    assert store.is_requesting_unfinished_block(a, b)
+    assert not store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(b, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+
+    store.mark_requesting_unfinished_block(a, c)
+    assert store.is_requesting_unfinished_block(a, b)
+    assert store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(b, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+
+    # this is a no-op
+    store.remove_requesting_unfinished_block(a, a)
+    store.remove_requesting_unfinished_block(c, a)
+
+    assert store.is_requesting_unfinished_block(a, b)
+    assert store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(b, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+
+    store.remove_requesting_unfinished_block(a, b)
+
+    assert not store.is_requesting_unfinished_block(a, b)
+    assert store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(b, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+
+    store.remove_requesting_unfinished_block(a, c)
+
+    assert not store.is_requesting_unfinished_block(a, b)
+    assert not store.is_requesting_unfinished_block(a, c)
+    assert not store.is_requesting_unfinished_block(a, a)
+    assert not store.is_requesting_unfinished_block(b, c)
+    assert not store.is_requesting_unfinished_block(b, b)
+
+    assert len(store.requesting_unfinished_blocks) == 0

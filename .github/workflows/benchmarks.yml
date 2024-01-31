@@ -81,7 +81,7 @@ jobs:
           echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pip
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
           key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
@@ -115,7 +115,7 @@ jobs:
 
       - name: Publish JUnit results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: junit-data
           path: junit-data/*

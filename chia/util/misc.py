@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import functools
+import os
 import signal
 import sys
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from typing import (
     Any,
     AsyncContextManager,
     AsyncIterator,
+    ClassVar,
     Collection,
     ContextManager,
     Dict,
@@ -26,6 +28,7 @@ from typing import (
     final,
 )
 
+import psutil
 from typing_extensions import Protocol
 
 from chia.util.errors import InvalidPathError
@@ -374,3 +377,36 @@ async def split_async_manager(manager: AsyncContextManager[object], object: T) -
         yield split
     finally:
         await split.exit(if_needed=True)
+
+
+class ValuedEventSentinel:
+    pass
+
+
+@dataclasses.dataclass
+class ValuedEvent(Generic[T]):
+    _value_sentinel: ClassVar[ValuedEventSentinel] = ValuedEventSentinel()
+
+    _event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
+    _value: Union[ValuedEventSentinel, T] = _value_sentinel
+
+    def set(self, value: T) -> None:
+        if not isinstance(self._value, ValuedEventSentinel):
+            raise Exception("Value already set")
+        self._value = value
+        self._event.set()
+
+    async def wait(self) -> T:
+        await self._event.wait()
+        if isinstance(self._value, ValuedEventSentinel):
+            raise Exception("Value not set despite event being set")
+        return self._value
+
+
+def available_logical_cores() -> int:
+    if sys.platform == "darwin":
+        count = os.cpu_count()
+        assert count is not None
+        return count
+
+    return len(psutil.Process().cpu_affinity())

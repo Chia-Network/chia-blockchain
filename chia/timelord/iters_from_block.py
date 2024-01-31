@@ -7,7 +7,7 @@ from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iteratio
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 
 
 def iters_from_block(
@@ -40,11 +40,11 @@ def iters_from_block(
         cc_sp,
     )
     return (
-        calculate_sp_iters(constants, sub_slot_iters, reward_chain_block.signage_point_index),
+        calculate_sp_iters(constants, sub_slot_iters, uint8(reward_chain_block.signage_point_index)),
         calculate_ip_iters(
             constants,
             sub_slot_iters,
-            reward_chain_block.signage_point_index,
+            uint8(reward_chain_block.signage_point_index),
             required_iters,
         ),
     )

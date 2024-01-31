@@ -441,7 +441,6 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     "-r",
     "--request",
     help="A wallet id of an asset to receive and the amount you wish to receive (formatted like wallet_id:amount)",
-    required=True,
     multiple=True,
 )
 @click.option("-p", "--filepath", help="The path to write the generated offer file to", required=True)
@@ -454,6 +453,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     is_flag=True,
     default=False,
 )
+@click.option("--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
 def make_offer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -462,8 +462,13 @@ def make_offer_cmd(
     filepath: str,
     fee: str,
     reuse: bool,
+    override: bool,
 ) -> None:
     from .wallet_funcs import make_offer
+
+    if len(request) == 0 and not override:
+        print("Cannot make an offer without requesting something without --override")
+        return
 
     asyncio.run(
         make_offer(
@@ -873,14 +878,20 @@ def did_transfer_did(
     id: int,
     target_address: str,
     reset_recovery: bool,
-    fee: int,
+    fee: str,
     reuse: bool,
 ) -> None:
     from .wallet_funcs import transfer_did
 
     asyncio.run(
         transfer_did(
-            wallet_rpc_port, fingerprint, id, fee, target_address, reset_recovery is False, True if reuse else None
+            wallet_rpc_port,
+            fingerprint,
+            id,
+            Decimal(fee),
+            target_address,
+            reset_recovery is False,
+            True if reuse else None,
         )
     )
 

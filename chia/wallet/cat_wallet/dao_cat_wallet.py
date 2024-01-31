@@ -22,7 +22,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
-from chia.wallet.conditions import Condition, parse_timelock_info
+from chia.wallet.conditions import Condition, CreatePuzzleAnnouncement, parse_timelock_info
 from chia.wallet.dao_wallet.dao_utils import (
     add_proposal_to_active_list,
     get_active_votes_from_lockup_puzzle,
@@ -159,8 +159,8 @@ class DAOCATWallet:
         else:
             inner_puzzle = get_innerpuz_from_lockup_puzzle(cat_inner)
             assert isinstance(inner_puzzle, Program)
-            active_votes_list = get_active_votes_from_lockup_puzzle(cat_inner)
-            active_votes_list = [x.as_atom() for x in active_votes_list.as_iter()]
+            active_votes_list_prg = get_active_votes_from_lockup_puzzle(cat_inner)
+            active_votes_list = [bytes32(x.as_atom()) for x in active_votes_list_prg.as_iter()]
 
         if parent_spend.coin.puzzle_hash == coin.puzzle_hash:
             # shortcut, works for change
@@ -296,9 +296,9 @@ class DAOCATWallet:
                     )
                 ]
                 message = Program.to([proposal_id, vote_amount, is_yes_vote, coin.name()]).get_tree_hash()
-                puzzle_announcements = {message}
                 inner_solution = self.standard_wallet.make_solution(
-                    primaries=primaries, puzzle_announcements=puzzle_announcements
+                    primaries=primaries,
+                    conditions=(CreatePuzzleAnnouncement(message),),
                 )
             else:
                 vote_amount = amount - running_sum
@@ -319,9 +319,9 @@ class DAOCATWallet:
                         )
                     )
                 message = Program.to([proposal_id, vote_amount, is_yes_vote, coin.name()]).get_tree_hash()
-                puzzle_announcements = {message}
                 inner_solution = self.standard_wallet.make_solution(
-                    primaries=primaries, puzzle_announcements=puzzle_announcements
+                    primaries=primaries,
+                    conditions=(CreatePuzzleAnnouncement(message),),
                 )
             if is_yes_vote:
                 vote_info = 1

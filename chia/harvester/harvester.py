@@ -5,7 +5,6 @@ import concurrent
 import contextlib
 import dataclasses
 import logging
-import multiprocessing
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Tuple, cast
@@ -40,6 +39,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.ints import uint32
+from chia.util.misc import available_logical_cores
 
 log = logging.getLogger(__name__)
 
@@ -101,8 +101,9 @@ class Harvester:
 
         context_count = config.get("parallel_decompressor_count", DEFAULT_PARALLEL_DECOMPRESSOR_COUNT)
         thread_count = config.get("decompressor_thread_count", DEFAULT_DECOMPRESSOR_THREAD_COUNT)
+        cpu_count = available_logical_cores()
         if thread_count == 0:
-            thread_count = multiprocessing.cpu_count() // 2
+            thread_count = cpu_count // 2
         disable_cpu_affinity = config.get("disable_cpu_affinity", DEFAULT_DISABLE_CPU_AFFINITY)
         max_compression_level_allowed = config.get(
             "max_compression_level_allowed", DEFAULT_MAX_COMPRESSION_LEVEL_ALLOWED
@@ -173,7 +174,7 @@ class Harvester:
         if event == PlotRefreshEvents.done:
             self.plot_sync_sender.sync_done(update_result.removed, update_result.duration)
 
-    def on_disconnect(self, connection: WSChiaConnection) -> None:
+    async def on_disconnect(self, connection: WSChiaConnection) -> None:
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection")
         self.plot_sync_sender.stop()

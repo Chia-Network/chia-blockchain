@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from typing import Any, Callable, Dict, Set, Tuple
+from typing import Any, Callable, Dict, Optional, Set, Tuple
 
 from chia_rs import ALLOW_BACKREFS, run_chia_program, tree_hash
 from clvm import SExp
@@ -176,6 +176,12 @@ class Program(SExp):
 
     def as_int(self) -> int:
         return int_from_bytes(self.as_atom())
+
+    def as_atom(self) -> bytes:
+        ret: Optional[bytes] = self.atom
+        if ret is None:
+            raise ValueError("expected atom")
+        return ret
 
     def __deepcopy__(self, memo):
         return type(self).from_bytes(bytes(self))

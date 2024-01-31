@@ -15,9 +15,7 @@ import pytest
 from chia_rs import G1Element
 
 from chia.farmer.farmer import Farmer
-from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants
@@ -26,9 +24,9 @@ from chia.plotting.util import PlotInfo
 from chia.protocols.harvester_protocol import PlotSyncError, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import make_msg
-from chia.server.start_service import Service
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
+from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import int16, uint8, uint64
 from chia.util.misc import to_batches
@@ -243,8 +241,8 @@ async def _testable_process(
 
 @contextlib.asynccontextmanager
 async def create_test_runner(
-    harvester_services: List[Service[Harvester, HarvesterAPI]],
-    farmer_service: Service[Farmer, FarmerAPI],
+    harvester_services: List[HarvesterService],
+    farmer_service: FarmerService,
     event_loop: asyncio.events.AbstractEventLoop,
 ) -> AsyncIterator[TestRunner]:
     async with farmer_service.manage():
@@ -298,9 +296,7 @@ def create_example_plots(count: int, seeded_random: random.Random) -> List[PlotI
 
 @pytest.mark.anyio
 async def test_sync_simulated(
-    farmer_three_harvester_not_started: Tuple[
-        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
-    ],
+    farmer_three_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     seeded_random: random.Random,
 ) -> None:
@@ -380,9 +376,7 @@ async def test_sync_simulated(
 )
 @pytest.mark.anyio
 async def test_farmer_error_simulation(
-    farmer_one_harvester_not_started: Tuple[
-        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
-    ],
+    farmer_one_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
     seeded_random: random.Random,
@@ -408,9 +402,7 @@ async def test_farmer_error_simulation(
 @pytest.mark.parametrize("simulate_error", [ErrorSimulation.NonRecoverableError, ErrorSimulation.NotConnected])
 @pytest.mark.anyio
 async def test_sync_reset_cases(
-    farmer_one_harvester_not_started: Tuple[
-        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
-    ],
+    farmer_one_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
     seeded_random: random.Random,

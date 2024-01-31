@@ -293,7 +293,6 @@ class TradeManager:
                         ),
                         fee=fee_to_pay,
                         coins=selected_coins,
-                        ignore_max_send_amount=True,
                         extra_conditions=extra_conditions,
                     )
                     if tx is not None and tx.spend_bundle is not None:
@@ -310,7 +309,6 @@ class TradeManager:
                         ),
                         fee=fee_to_pay,
                         coins={coin},
-                        ignore_max_send_amount=True,
                         extra_conditions=extra_conditions,
                     )
                     for tx in txs:
@@ -536,7 +534,7 @@ class TradeManager:
             fee_left_to_pay: uint64 = fee
             # The access of the sorted keys here makes sure we create the XCH transaction first to make sure we pay fee
             # with the XCH side of the offer and don't create an extra fee transaction in other wallets.
-            for id in sorted(coins_to_offer.keys()):
+            for id in sorted(coins_to_offer.keys(), key=lambda id: id != 1):
                 selected_coins = coins_to_offer[id]
                 if isinstance(id, int):
                     wallet = self.wallet_state_manager.wallets[id]
@@ -550,8 +548,7 @@ class TradeManager:
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcements_to_assert),
                     )
                     all_transactions.append(tx)
                 elif wallet.type() == WalletType.NFT:
@@ -565,8 +562,7 @@ class TradeManager:
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcements_to_assert),
                     )
                     all_transactions.extend(txs)
                 else:
@@ -577,8 +573,7 @@ class TradeManager:
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcements_to_assert),
                         add_authorizations_to_cr_cats=False,
                     )
                     all_transactions.extend(txs)
@@ -706,10 +701,22 @@ class TradeManager:
             removal_tree_hash = Program.to([coin_as_list(rem) for rem in grouped_removals]).get_tree_hash()
             # We also need to calculate the sent amount
             removed: int = sum(c.amount for c in grouped_removals)
+            removed_ids: List[bytes32] = [c.name() for c in grouped_removals]
+            all_additions_from_grouped_removals: List[Coin] = [
+                c for c in all_additions if c.parent_coin_info in removed_ids
+            ]
             potential_change_coins: List[Coin] = addition_dict[wid] if wid in addition_dict else []
             change_coins: List[Coin] = [c for c in potential_change_coins if c.parent_coin_info in all_removals]
             change_amount: int = sum(c.amount for c in change_coins)
-            sent_amount: int = removed - change_amount
+            sent_amount: int = (
+                removed
+                - change_amount
+                - (
+                    removed - sum(c.amount for c in all_additions_from_grouped_removals)  # removals - additions == fees
+                    if wallet == self.wallet_state_manager.main_wallet
+                    else 0
+                )
+            )
             txs.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
@@ -907,6 +914,8 @@ class TradeManager:
             "offered": offered,
             "requested": requested,
             "fees": offer.fees(),
+            "additions": [c.name().hex() for c in offer.additions()],
+            "removals": [c.name().hex() for c in offer.removals()],
             "infos": infos,
             "valid_times": {
                 k: v

@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import json
-import pathlib
 import random
 from dataclasses import replace
 from typing import Callable, List, Optional, Tuple
 
+import pkg_resources
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
 import tests
+import tests.util
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
@@ -156,7 +157,8 @@ class TestKeychain:
         assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
 
     def test_bip39_test_vectors(self):
-        with open("tests/util/bip39_test_vectors.json") as f:
+        test_vectors_path = pkg_resources.resource_filename(tests.util.__name__, "bip39_test_vectors.json")
+        with open(test_vectors_path) as f:
             all_vectors = json.loads(f.read())
 
         for vector_list in all_vectors["english"]:
@@ -172,7 +174,7 @@ class TestKeychain:
         """
         Tests that the first 4 letters of each mnemonic phrase matches as if it were the full phrase
         """
-        test_vectors_path = pathlib.Path(tests.__file__).parent.joinpath("util", "bip39_test_vectors.json")
+        test_vectors_path = pkg_resources.resource_filename(tests.util.__name__, "bip39_test_vectors.json")
         with open(test_vectors_path) as f:
             all_vectors = json.load(f)
 

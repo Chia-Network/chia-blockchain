@@ -353,6 +353,8 @@ timelord:
 full_node:
   # The full node server (if run) will run on this port
   port: 8444
+  # The full node will attempt to connect to these full nodes
+  full_node_peers: []
 
   # controls the sync-to-disk behavior of the database connection. Can be one of:
   # "on"    enables syncing to disk, minimizes risk of corrupting the DB in
@@ -378,6 +380,14 @@ full_node:
   peers_file_path: db/peers.dat
 
   multiprocessing_start_method: default
+
+  # The maximum number of UnfinishedBlocks we accept (and forward) with the
+  # same reward hash (but different foliage hashes). Traditionally this was
+  # effectively 1, meaning whichever UnfinishedBlock we saw first was the only
+  # one we forwarded. In 2.2.0 we relaxed the protocol to allow some
+  # duplicates be forwarded, in order to allow the timelords to,
+  # deterministically, pick which one to infuse
+  max_duplicate_unfinished_blocks: 3
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -408,7 +418,7 @@ full_node:
   # How long to wait for a peer connection
   peer_connect_timeout: 30
   # Accept peers until this number of connections
-  target_peer_count: 80
+  target_peer_count: 40
   # Initiate outbound connections until this number is hit.
   target_outbound_peer_count: 8
   # IPv4/IPv6 network addresses and CIDR blocks allowed to connect even when target_peer_count has been hit.
@@ -439,6 +449,11 @@ full_node:
   # when enabled, the full node will print a pstats profile to the root_dir/profile every second
   # analyze with chia/utils/profiler.py
   enable_profiler: False
+
+  # when enabled, each time a block is validated, the python profiler is
+  # engaged. If the validation takes more than 2 seconds, the profile is saved
+  # to disk, in the chia root/block-validation-profile
+  profile_block_validation: False
 
   enable_memory_profiler: False
 

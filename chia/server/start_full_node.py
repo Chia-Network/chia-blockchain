@@ -14,8 +14,9 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
+from chia.types.aliases import FullNodeService
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 from chia.util.misc import SignalHandlers
@@ -34,7 +35,7 @@ async def create_full_node_service(
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
     override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
-) -> Service[FullNode, FullNodeAPI]:
+) -> FullNodeService:
     service_config = config[SERVICE_NAME]
 
     full_node = await FullNode.create(
@@ -48,7 +49,7 @@ async def create_full_node_service(
     if service_config["enable_upnp"]:
         upnp_list = [service_config["port"]]
     network_id = service_config["selected_network"]
-    rpc_info: Optional[RpcInfo] = None
+    rpc_info: Optional[RpcInfo[FullNodeRpcApi]] = None
     if service_config["start_rpc_server"]:
         rpc_info = (FullNodeRpcApi, service_config["rpc_port"])
     return Service(
@@ -60,6 +61,7 @@ async def create_full_node_service(
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
         upnp_ports=upnp_list,
+        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
         on_connect_callback=full_node.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
@@ -90,7 +92,7 @@ def main() -> int:
 
     with maybe_manage_task_instrumentation(enable=os.environ.get("CHIA_INSTRUMENT_NODE") is not None):
         service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-        target_peer_count = service_config.get("target_peer_count", 80) - service_config.get(
+        target_peer_count = service_config.get("target_peer_count", 40) - service_config.get(
             "target_outbound_peer_count", 8
         )
         if target_peer_count < 0:
