@@ -7,7 +7,6 @@ from chia_rs import G2Element
 from clvm_tools.binutils import disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -16,7 +15,14 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint64
-from chia.wallet.conditions import Condition, ConditionValidTimes, parse_conditions_non_consensus, parse_timelock_info
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    AssertPuzzleAnnouncement,
+    Condition,
+    ConditionValidTimes,
+    parse_conditions_non_consensus,
+    parse_timelock_info,
+)
 from chia.wallet.outer_puzzles import (
     construct_puzzle,
     create_asset_id,
@@ -110,8 +116,8 @@ class Offer:
     def calculate_announcements(
         notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]],
         driver_dict: Dict[bytes32, PuzzleInfo],
-    ) -> List[Announcement]:
-        announcements: List[Announcement] = []
+    ) -> List[AssertPuzzleAnnouncement]:
+        announcements: List[AssertPuzzleAnnouncement] = []
         for asset_id, payments in notarized_payments.items():
             if asset_id is not None:
                 if asset_id not in driver_dict:
@@ -121,7 +127,7 @@ class Offer:
                 settlement_ph = OFFER_MOD_HASH
 
             msg: bytes32 = Program.to((payments[0].nonce, [p.as_condition_args() for p in payments])).get_tree_hash()
-            announcements.append(Announcement(settlement_ph, msg))
+            announcements.append(AssertPuzzleAnnouncement(asserted_ph=settlement_ph, asserted_msg=msg))
 
         return announcements
 
@@ -408,7 +414,9 @@ class Offer:
             conditions: Program = spend.puzzle_reveal.run_with_cost(INFINITE_COST, spend.solution)[1]
             for condition in conditions.as_iter():
                 if condition.first() == 60:  # create coin announcement
-                    announcements[name].append(Announcement(name, condition.at("rf").as_python()).name())
+                    announcements[name].append(
+                        AssertCoinAnnouncement(asserted_id=name, asserted_msg=condition.at("rf").as_python()).msg_calc
+                    )
                 elif condition.first() == 61:  # assert coin announcement
                     dependencies[name].append(bytes32(condition.at("rf").as_python()))
 

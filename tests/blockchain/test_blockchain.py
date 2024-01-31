@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-import multiprocessing
 import random
 import time
 from contextlib import asynccontextmanager
@@ -15,10 +14,12 @@ from clvm.casts import int_to_bytes
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_header_validation import validate_finished_header_block
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.constants import ConsensusConstants
+from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
@@ -45,6 +46,7 @@ from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.merkle_set import MerkleSet
+from chia.util.misc import available_logical_cores
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -657,8 +659,7 @@ class TestBlockHeaderValidation:
                     new_finished_ss = recursive_replace(
                         block.finished_sub_slots[-1],
                         "challenge_chain",
-                        replace(
-                            block.finished_sub_slots[-1].challenge_chain,
+                        block.finished_sub_slots[-1].challenge_chain.replace(
                             infused_challenge_chain_sub_slot_hash=bytes([1] * 32),
                         ),
                     )
@@ -668,8 +669,7 @@ class TestBlockHeaderValidation:
                     new_finished_ss = recursive_replace(
                         block.finished_sub_slots[-1],
                         "challenge_chain",
-                        replace(
-                            block.finished_sub_slots[-1].challenge_chain,
+                        block.finished_sub_slots[-1].challenge_chain.replace(
                             infused_challenge_chain_sub_slot_hash=block.finished_sub_slots[
                                 -1
                             ].infused_challenge_chain.get_hash(),
@@ -695,7 +695,7 @@ class TestBlockHeaderValidation:
                 new_finished_ss_bad_rc = recursive_replace(
                     block.finished_sub_slots[-1],
                     "reward_chain",
-                    replace(block.finished_sub_slots[-1].reward_chain, infused_challenge_chain_sub_slot_hash=None),
+                    block.finished_sub_slots[-1].reward_chain.replace(infused_challenge_chain_sub_slot_hash=None),
                 )
                 block_bad = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_bad_rc]
@@ -743,7 +743,7 @@ class TestBlockHeaderValidation:
         new_finished_ss = recursive_replace(
             blocks[-1].finished_sub_slots[-1],
             "challenge_chain",
-            replace(blocks[-1].finished_sub_slots[-1].challenge_chain, subepoch_summary_hash=std_hash(b"0")),
+            blocks[-1].finished_sub_slots[-1].challenge_chain.replace(subepoch_summary_hash=std_hash(b"0")),
         )
         block_bad = recursive_replace(
             blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
@@ -791,7 +791,7 @@ class TestBlockHeaderValidation:
         new_finished_ss = recursive_replace(
             blocks[-1].finished_sub_slots[-1],
             "reward_chain",
-            replace(blocks[-1].finished_sub_slots[-1].reward_chain, challenge_chain_sub_slot_hash=bytes([3] * 32)),
+            blocks[-1].finished_sub_slots[-1].reward_chain.replace(challenge_chain_sub_slot_hash=bytes([3] * 32)),
         )
         block_1_bad = recursive_replace(
             blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
@@ -1037,8 +1037,8 @@ class TestBlockHeaderValidation:
         new_finished_ss = recursive_replace(
             new_finished_ss,
             "reward_chain",
-            replace(
-                new_finished_ss.reward_chain, challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash()
+            new_finished_ss.reward_chain.replace(
+                challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash()
             ),
         )
         block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:])
@@ -1072,8 +1072,7 @@ class TestBlockHeaderValidation:
                 new_finished_ss = recursive_replace(
                     new_finished_ss,
                     "reward_chain",
-                    replace(
-                        new_finished_ss.reward_chain,
+                    new_finished_ss.reward_chain.replace(
                         challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash(),
                     ),
                 )
@@ -1742,7 +1741,7 @@ class TestPreValidation:
     async def test_pre_validation(self, empty_blockchain, default_1000_blocks, bt):
         blocks = default_1000_blocks[:100]
         start = time.time()
-        n_at_a_time = min(multiprocessing.cpu_count(), 32)
+        n_at_a_time = min(available_logical_cores(), 32)
         times_pv = []
         times_rb = []
         for i in range(0, len(blocks), n_at_a_time):
@@ -2546,7 +2545,7 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
-        err = (await b.add_block(blocks[-1], PreValidationResult(None, uint64(1), npc_result, True)))[1]
+        err = (await b.add_block(blocks[-1], PreValidationResult(None, uint64(1), npc_result, True, uint32(0))))[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
 
         results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
@@ -2607,7 +2606,7 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
-        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)))
         assert err == Err.INVALID_BLOCK_COST
 
         # too low
@@ -2632,7 +2631,7 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
-        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)))
         assert err == Err.INVALID_BLOCK_COST
 
         # too high
@@ -2658,7 +2657,7 @@ class TestBodyValidation:
             constants=bt.constants,
         )
 
-        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)))
         assert err == Err.INVALID_BLOCK_COST
 
         # when the CLVM program exceeds cost during execution, it will fail with
@@ -3104,6 +3103,12 @@ class TestBodyValidation:
         assert preval_results[0].error == Err.BAD_AGGREGATE_SIGNATURE.value
 
 
+def maybe_header_hash(block: Optional[BlockRecord]) -> Optional[bytes32]:
+    if block is None:
+        return None
+    return block.header_hash
+
+
 class TestReorgs:
     @pytest.mark.anyio
     async def test_basic_reorg(self, empty_blockchain, bt):
@@ -3122,6 +3127,46 @@ class TestReorgs:
                 await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
             elif reorg_block.height >= 15:
                 await _validate_and_add_block(b, reorg_block)
+        assert b.get_peak().height == 16
+
+    @pytest.mark.anyio
+    async def test_get_tx_peak_reorg(self, empty_blockchain, bt, consensus_mode: ConsensusMode):
+        b = empty_blockchain
+
+        if consensus_mode == ConsensusMode.PLAIN:
+            reorg_point = 13
+        else:
+            reorg_point = 12
+        blocks = bt.get_consecutive_blocks(reorg_point)
+
+        last_tx_block: Optional[bytes32] = None
+        for block in blocks:
+            assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
+            await _validate_and_add_block(b, block)
+            if block.is_transaction_block():
+                last_tx_block = block.header_hash
+        assert b.get_peak().height == reorg_point - 1
+        assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
+
+        reorg_last_tx_block: Optional[bytes32] = None
+
+        blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
+        assert blocks_reorg_chain[reorg_point].is_transaction_block() is False
+        for reorg_block in blocks_reorg_chain:
+            if reorg_block.height < 10:
+                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
+            elif reorg_block.height < reorg_point:
+                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+            elif reorg_block.height >= reorg_point:
+                await _validate_and_add_block(b, reorg_block)
+
+            if reorg_block.is_transaction_block():
+                reorg_last_tx_block = reorg_block.header_hash
+            if reorg_block.height >= reorg_point:
+                last_tx_block = reorg_last_tx_block
+
+            assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
+
         assert b.get_peak().height == 16
 
     @pytest.mark.anyio
@@ -3696,3 +3741,28 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 
     for block in chain_b[40:]:
         await _validate_and_add_block(b, block)
+
+
+async def test_get_tx_peak(default_400_blocks, empty_blockchain):
+    bc = empty_blockchain
+    test_blocks = default_400_blocks[:100]
+
+    res = await bc.pre_validate_blocks_multiprocessing(test_blocks, {}, validate_signatures=False)
+
+    last_tx_block: Optional[FullBlock] = None
+    for b, prevalidation_res in zip(test_blocks, res):
+        assert bc.get_tx_peak() == last_tx_block
+        res, err, state = await bc.add_block(b, prevalidation_res)
+        assert err is None
+
+        if b.is_transaction_block():
+            block_record = block_to_block_record(
+                bc.constants,
+                bc,
+                prevalidation_res.required_iters,
+                b,
+                None,
+            )
+            last_tx_block = block_record
+
+    assert bc.get_tx_peak() == last_tx_block

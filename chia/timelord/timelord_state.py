@@ -87,11 +87,11 @@ class LastState:
             self.peak = None
             self.subslot_end = state
             self.last_ip = uint64(0)
-            self.deficit = state.reward_chain.deficit
+            self.deficit = uint8(state.reward_chain.deficit)
             if state.challenge_chain.new_difficulty is not None:
                 assert state.challenge_chain.new_sub_slot_iters is not None
-                self.difficulty = state.challenge_chain.new_difficulty
-                self.sub_slot_iters = state.challenge_chain.new_sub_slot_iters
+                self.difficulty = uint64(state.challenge_chain.new_difficulty)
+                self.sub_slot_iters = uint64(state.challenge_chain.new_sub_slot_iters)
                 self.new_epoch = True
             else:
                 self.new_epoch = False

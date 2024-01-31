@@ -233,6 +233,8 @@ async def test_nft_mint_from_did_rpc(
     hex_did_id = did_wallet_maker.get_my_DID()
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(config))
 
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_maker, timeout=20)
+
     nft_wallet_maker = await api_maker.create_new_wallet(
         dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id)
     )
@@ -426,6 +428,8 @@ async def test_nft_mint_from_did_rpc_no_royalties(
 
     hex_did_id = did_wallet_maker.get_my_DID()
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(config))
+
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_maker, timeout=20)
 
     nft_wallet_maker = await api_maker.create_new_wallet(
         dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id)
@@ -831,6 +835,8 @@ async def test_nft_mint_from_xch_rpc(
 
     hex_did_id = did_wallet_maker.get_my_DID()
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(config))
+
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_maker, timeout=20)
 
     nft_wallet_maker = await api_maker.create_new_wallet(
         dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id)

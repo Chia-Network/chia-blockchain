@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
-from chia.types.announcement import Announcement
+from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -14,7 +14,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
-from chia.wallet.notification_store import Notification
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -287,8 +286,6 @@ class WalletRpcClient(RpcClient):
         tx_config: TXConfig,
         coins: Optional[List[Coin]] = None,
         fee: uint64 = uint64(0),
-        coin_announcements: Optional[List[Announcement]] = None,
-        puzzle_announcements: Optional[List[Announcement]] = None,
         wallet_id: Optional[int] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
@@ -308,26 +305,6 @@ class WalletRpcClient(RpcClient):
             **timelock_info.to_json_dict(),
         }
 
-        if coin_announcements is not None and len(coin_announcements) > 0:
-            request["coin_announcements"] = [
-                {
-                    "coin_id": ann.origin_info.hex(),
-                    "message": ann.message.hex(),
-                    "morph_bytes": ann.morph_bytes.hex() if ann.morph_bytes is not None else b"".hex(),
-                }
-                for ann in coin_announcements
-            ]
-
-        if puzzle_announcements is not None and len(puzzle_announcements) > 0:
-            request["puzzle_announcements"] = [
-                {
-                    "puzzle_hash": ann.origin_info.hex(),
-                    "message": ann.message.hex(),
-                    "morph_bytes": ann.morph_bytes.hex() if ann.morph_bytes is not None else b"".hex(),
-                }
-                for ann in puzzle_announcements
-            ]
-
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             request["coins"] = coins_json
@@ -344,18 +321,18 @@ class WalletRpcClient(RpcClient):
         tx_config: TXConfig,
         coins: Optional[List[Coin]] = None,
         fee: uint64 = uint64(0),
-        coin_announcements: Optional[List[Announcement]] = None,
-        puzzle_announcements: Optional[List[Announcement]] = None,
         wallet_id: Optional[int] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> TransactionRecord:
         txs: List[TransactionRecord] = await self.create_signed_transactions(
             additions=additions,
             tx_config=tx_config,
             coins=coins,
             fee=fee,
-            coin_announcements=coin_announcements,
-            puzzle_announcements=puzzle_announcements,
             wallet_id=wallet_id,
+            extra_conditions=extra_conditions,
+            timelock_info=timelock_info,
         )
         if len(txs) == 0:
             raise ValueError("`create_signed_transaction` returned empty list!")
@@ -464,16 +441,12 @@ class WalletRpcClient(RpcClient):
     async def did_message_spend(
         self,
         wallet_id: int,
-        puzzle_announcements: List[str],
-        coin_announcements: List[str],
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Dict[str, Any]:
         request = {
             "wallet_id": wallet_id,
-            "coin_announcements": coin_announcements,
-            "puzzle_announcements": puzzle_announcements,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
@@ -1224,27 +1197,8 @@ class WalletRpcClient(RpcClient):
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
-    async def get_notifications(
-        self, ids: Optional[List[bytes32]] = None, pagination: Optional[Tuple[Optional[int], Optional[int]]] = None
-    ) -> List[Notification]:
-        request: Dict[str, Any] = {}
-        if ids is not None:
-            request["ids"] = [id.hex() for id in ids]
-        if pagination is not None:
-            if pagination[0] is not None:
-                request["start"] = pagination[0]
-            if pagination[1] is not None:
-                request["end"] = pagination[1]
-        response = await self.fetch("get_notifications", request)
-        return [
-            Notification(
-                bytes32.from_hexstr(notification["id"]),
-                bytes.fromhex(notification["message"]),
-                uint64(notification["amount"]),
-                uint32(notification["height"]),
-            )
-            for notification in response["notifications"]
-        ]
+    async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
+        return GetNotificationsResponse.from_json_dict(await self.fetch("get_notifications", request.to_json_dict()))
 
     async def delete_notifications(self, ids: Optional[List[bytes32]] = None) -> bool:
         request = {}

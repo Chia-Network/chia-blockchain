@@ -7,13 +7,13 @@ import pytest
 from chia_rs import G2Element
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
+from chia.wallet.conditions import AssertPuzzleAnnouncement
 from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_METADATA_UPDATER,
     NFT_TRANSFER_PROGRAM_DEFAULT,
@@ -205,13 +205,13 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
                 make_bad_announcement_spend.solution.to_program()
             )
 
-        expected_announcement = Announcement(
-            ownership_puzzle.get_tree_hash(),
-            b"\xad\x4c" + Program.to([TARGET_OWNER, TARGET_TP]).get_tree_hash(),
+        expected_announcement = AssertPuzzleAnnouncement(
+            asserted_ph=ownership_puzzle.get_tree_hash(),
+            asserted_msg=b"\xad\x4c" + Program.to([TARGET_OWNER, TARGET_TP]).get_tree_hash(),
         )
-        harmless_announcement = Announcement(
-            ownership_puzzle.get_tree_hash(),
-            b"oy",
+        harmless_announcement = AssertPuzzleAnnouncement(
+            asserted_ph=ownership_puzzle.get_tree_hash(),
+            asserted_msg=b"oy",
         )
         update_everything_spend = make_spend(
             ownership_coin,
@@ -221,9 +221,10 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
                     [
                         [51, ACS_PH, 1],
                         [-10, TARGET_OWNER, TARGET_TP],
-                        [62, harmless_announcement.message],  # create a harmless puzzle announcement
-                        [63, expected_announcement.name()],
-                        [63, harmless_announcement.name()],
+                        expected_announcement.to_program(),
+                        # create and assert a harmless puzzle announcement
+                        harmless_announcement.corresponding_creation().to_program(),
+                        harmless_announcement.to_program(),
                     ]
                 ]
             ),

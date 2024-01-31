@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import functools
+import os
 import signal
 import sys
 from dataclasses import dataclass
@@ -30,6 +31,7 @@ from typing import (
     final,
 )
 
+import psutil
 from typing_extensions import Protocol
 
 from chia.util.errors import InvalidPathError
@@ -402,6 +404,15 @@ class ValuedEvent(Generic[T]):
         if isinstance(self._value, ValuedEventSentinel):
             raise Exception("Value not set despite event being set")
         return self._value
+
+
+def available_logical_cores() -> int:
+    if sys.platform == "darwin":
+        count = os.cpu_count()
+        assert count is not None
+        return count
+
+    return len(psutil.Process().cpu_affinity())
 
 
 def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:
