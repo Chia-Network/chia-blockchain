@@ -7,7 +7,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
 from chia.util.errors import Err
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 
 
 async def check_block_store_invariant(bc: Blockchain):
@@ -56,7 +56,7 @@ async def _validate_and_add_block(
 
     await check_block_store_invariant(blockchain)
     if skip_prevalidation:
-        results = PreValidationResult(None, uint64(1), None, False)
+        results = PreValidationResult(None, uint64(1), None, False, uint32(0))
     else:
         # Do not change this, validate_signatures must be False
         pre_validation_results: List[PreValidationResult] = await blockchain.pre_validate_blocks_multiprocessing(

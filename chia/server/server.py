@@ -585,6 +585,19 @@ class ChiaServer:
                 for message in messages:
                     await connection.send_message(message)
 
+    async def send_to_all_if(
+        self,
+        messages: List[Message],
+        node_type: NodeType,
+        predicate: Callable[[WSChiaConnection], bool],
+        exclude: Optional[bytes32] = None,
+    ) -> None:
+        await self.validate_broadcast_message_type(messages, node_type)
+        for _, connection in self.all_connections.items():
+            if connection.connection_type is node_type and connection.peer_node_id != exclude and predicate(connection):
+                for message in messages:
+                    await connection.send_message(message)
+
     async def send_to_specific(self, messages: List[Message], node_id: bytes32) -> None:
         if node_id in self.all_connections:
             connection = self.all_connections[node_id]

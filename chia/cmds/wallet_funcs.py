@@ -19,7 +19,7 @@ from chia.cmds.cmds_util import (
 )
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
-from chia.rpc.wallet_request_types import CATSpendResponse, SendTransactionResponse
+from chia.rpc.wallet_request_types import CATSpendResponse, GetNotifications, SendTransactionResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
@@ -287,19 +287,19 @@ async def send(
                 f"A transaction of amount {amount} and fee {fee} is unusual.\n"
                 f"Pass in --override if you are sure you mean to do this."
             )
-            return []
+            return []  # pragma: no cover
         if amount == 0:
             print("You can not send an empty transaction")
-            return []
+            return []  # pragma: no cover
         if clawback_time_lock < 0:
             print("Clawback time lock seconds cannot be negative.")
-            return []
+            return []  # pragma: no cover
         try:
             typ = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(typ)
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
-            return []
+            return []  # pragma: no cover
 
         final_fee: uint64 = uint64(int(fee * units["chia"]))  # fees are always in XCH mojos
         final_amount: uint64 = uint64(int(amount * mojo_per_unit))
@@ -342,7 +342,7 @@ async def send(
             )
         else:
             print("Only standard wallet and CAT wallets are supported")
-            return []
+            return []  # pragma: no cover
 
         tx_id = res.transaction.name
         if push:
@@ -356,9 +356,10 @@ async def send(
                     return res.transactions
 
         print("Transaction not yet submitted to nodes")
-        print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+        if push:  # pragma: no cover
+            print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
 
-        return res.transactions
+        return res.transactions  # pragma: no cover
 
 
 async def get_address(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, new_address: bool) -> None:
@@ -1399,10 +1400,12 @@ async def get_notifications(
         if ids is not None and len(ids) == 0:
             ids = None
 
-        notifications = await wallet_client.get_notifications(ids=ids, pagination=(start, end))
-        for notification in notifications:
+        response = await wallet_client.get_notifications(
+            GetNotifications(ids=ids, start=uint32.construct_optional(start), end=uint32.construct_optional(end))
+        )
+        for notification in response.notifications:
             print("")
-            print(f"ID: {notification.coin_id.hex()}")
+            print(f"ID: {notification.id.hex()}")
             print(f"message: {notification.message.decode('utf-8')}")
             print(f"amount: {notification.amount}")
 

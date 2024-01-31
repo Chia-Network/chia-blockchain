@@ -15,7 +15,7 @@ from chia.wallet.signer_protocol import (
     TransactionInfo,
     UnsignedTransaction,
 )
-from chia.wallet.util.clvm_streamable import ClvmStreamable, TransportLayer, TransportLayerMapping
+from chia.wallet.util.clvm_streamable import ClvmStreamable, TranslationLayer, TranslationLayerMapping
 
 # Pylint doesn't understand that these classes are in fact dataclasses
 # pylint: disable=invalid-field-call
@@ -70,19 +70,19 @@ class BSTLSigningInstructions(ClvmStreamable):
     @staticmethod
     def from_wallet_api(_from: SigningInstructions) -> BSTLSigningInstructions:
         return BSTLSigningInstructions(
-            [BSTLSumHint(**sum_hint.__dict__) for sum_hint in _from.key_hints.sum_hints],
-            [BSTLPathHint(**path_hint.__dict__) for path_hint in _from.key_hints.path_hints],
-            [BSTLSigningTarget(**signing_target.__dict__) for signing_target in _from.targets],
+            [BSTLSumHint.from_wallet_api(sum_hint) for sum_hint in _from.key_hints.sum_hints],
+            [BSTLPathHint.from_wallet_api(path_hint) for path_hint in _from.key_hints.path_hints],
+            [BSTLSigningTarget.from_wallet_api(signing_target) for signing_target in _from.targets],
         )
 
     @staticmethod
     def to_wallet_api(_from: BSTLSigningInstructions) -> SigningInstructions:
         return SigningInstructions(
             KeyHints(
-                [SumHint(**sum_hint.__dict__) for sum_hint in _from.sum_hints],
-                [PathHint(**path_hint.__dict__) for path_hint in _from.path_hints],
+                [BSTLSumHint.to_wallet_api(sum_hint) for sum_hint in _from.sum_hints],
+                [BSTLPathHint.to_wallet_api(path_hint) for path_hint in _from.path_hints],
             ),
-            [SigningTarget(**signing_target.__dict__) for signing_target in _from.targets],
+            [BSTLSigningTarget.to_wallet_api(signing_target) for signing_target in _from.targets],
         )
 
 
@@ -94,9 +94,12 @@ class BSTLUnsignedTransaction(ClvmStreamable):
     @staticmethod
     def from_wallet_api(_from: UnsignedTransaction) -> BSTLUnsignedTransaction:
         return BSTLUnsignedTransaction(
-            [BSTLSumHint(**sum_hint.__dict__) for sum_hint in _from.signing_instructions.key_hints.sum_hints],
-            [BSTLPathHint(**path_hint.__dict__) for path_hint in _from.signing_instructions.key_hints.path_hints],
-            [BSTLSigningTarget(**signing_target.__dict__) for signing_target in _from.signing_instructions.targets],
+            [BSTLSumHint.from_wallet_api(sum_hint) for sum_hint in _from.signing_instructions.key_hints.sum_hints],
+            [BSTLPathHint.from_wallet_api(path_hint) for path_hint in _from.signing_instructions.key_hints.path_hints],
+            [
+                BSTLSigningTarget.from_wallet_api(signing_target)
+                for signing_target in _from.signing_instructions.targets
+            ],
         )
 
     @staticmethod
@@ -105,10 +108,10 @@ class BSTLUnsignedTransaction(ClvmStreamable):
             TransactionInfo([]),
             SigningInstructions(
                 KeyHints(
-                    [SumHint(**sum_hint.__dict__) for sum_hint in _from.sum_hints],
-                    [PathHint(**path_hint.__dict__) for path_hint in _from.path_hints],
+                    [BSTLSumHint.to_wallet_api(sum_hint) for sum_hint in _from.sum_hints],
+                    [BSTLPathHint.to_wallet_api(path_hint) for path_hint in _from.path_hints],
                 ),
-                [SigningTarget(**signing_target.__dict__) for signing_target in _from.targets],
+                [BSTLSigningTarget.to_wallet_api(signing_target) for signing_target in _from.targets],
             ),
         )
 
@@ -126,23 +129,23 @@ class BSTLSigningResponse(ClvmStreamable):
         return SigningResponse(**_from.__dict__)
 
 
-BLIND_SIGNER_TRANSPORT = TransportLayer(
+BLIND_SIGNER_TRANSLATION = TranslationLayer(
     [
-        TransportLayerMapping(
+        TranslationLayerMapping(
             SigningTarget, BSTLSigningTarget, BSTLSigningTarget.from_wallet_api, BSTLSigningTarget.to_wallet_api
         ),
-        TransportLayerMapping(SumHint, BSTLSumHint, BSTLSumHint.from_wallet_api, BSTLSumHint.to_wallet_api),
-        TransportLayerMapping(PathHint, BSTLPathHint, BSTLPathHint.from_wallet_api, BSTLPathHint.to_wallet_api),
-        TransportLayerMapping(
+        TranslationLayerMapping(SumHint, BSTLSumHint, BSTLSumHint.from_wallet_api, BSTLSumHint.to_wallet_api),
+        TranslationLayerMapping(PathHint, BSTLPathHint, BSTLPathHint.from_wallet_api, BSTLPathHint.to_wallet_api),
+        TranslationLayerMapping(
             SigningInstructions,
             BSTLSigningInstructions,
             BSTLSigningInstructions.from_wallet_api,
             BSTLSigningInstructions.to_wallet_api,
         ),
-        TransportLayerMapping(
+        TranslationLayerMapping(
             SigningResponse, BSTLSigningResponse, BSTLSigningResponse.from_wallet_api, BSTLSigningResponse.to_wallet_api
         ),
-        TransportLayerMapping(
+        TranslationLayerMapping(
             UnsignedTransaction,
             BSTLUnsignedTransaction,
             BSTLUnsignedTransaction.from_wallet_api,

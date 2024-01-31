@@ -7,7 +7,7 @@ import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator, List, Optional, cast
+from typing import Callable, Iterator, List, Optional, cast
 
 import aiosqlite
 import zstd
@@ -56,6 +56,15 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 class FakeServer:
     async def send_to_all(
         self, messages: List[Message], node_type: NodeType, exclude: Optional[bytes32] = None
+    ) -> None:
+        pass
+
+    async def send_to_all_if(
+        self,
+        messages: List[Message],
+        node_type: NodeType,
+        predicate: Callable[[WSChiaConnection], bool],
+        exclude: Optional[bytes32] = None,
     ) -> None:
         pass
 
