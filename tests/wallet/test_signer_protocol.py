@@ -541,7 +541,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     request = GatherSigningInfo(
         [Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]
     ).to_json_dict()
-    response_dict = await wallet_rpc.fetch("gather_signing_info", {"compression": "chip-TBD", **request})
+    response_dict = await wallet_rpc.fetch("gather_signing_info", {"translation": "chip-TBD", **request})
     with pytest.raises(Exception):
         GatherSigningInfoResponse.from_json_dict(response_dict)
     with clvm_serialization_mode(True, translation_layer=BLIND_SIGNER_TRANSLATION):
