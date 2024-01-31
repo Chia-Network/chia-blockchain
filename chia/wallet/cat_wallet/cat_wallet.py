@@ -547,9 +547,7 @@ class CATWallet:
                 private = await self.wallet_state_manager.get_private_key(puzzle_hash)
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 conditions = conditions_dict_for_solution(
-                    spend.puzzle_reveal.to_program(),
-                    spend.solution.to_program(),
-                    self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                    spend.puzzle_reveal, spend.solution, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
                 )
                 synthetic_pk = synthetic_secret_key.get_g1()
                 for pk, msg in pkm_pairs_for_conditions_dict(
