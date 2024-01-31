@@ -432,6 +432,9 @@ class CoinStore:
         # It can be changed later without breaking the protocol, but this is a practical limit for now.
         assert len(puzzle_hashes) <= 15000
 
+        if len(puzzle_hashes) == 0:
+            return [], None
+
         coin_states: List[CoinState] = []
 
         async with self.db_wrapper.reader_no_transaction() as conn:

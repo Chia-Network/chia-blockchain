@@ -188,16 +188,6 @@ def test_protocol_json() -> None:
         type(respond_remove_coin_subscriptions).from_json_dict(respond_remove_coin_subscriptions_json)
         == respond_remove_coin_subscriptions
     )
-    assert str(request_reset_subscriptions_json) == str(request_reset_subscriptions.to_json_dict())
-    assert (
-        type(request_reset_subscriptions).from_json_dict(request_reset_subscriptions_json)
-        == request_reset_subscriptions
-    )
-    assert str(respond_reset_subscriptions_json) == str(respond_reset_subscriptions.to_json_dict())
-    assert (
-        type(respond_reset_subscriptions).from_json_dict(respond_reset_subscriptions_json)
-        == respond_reset_subscriptions
-    )
     assert str(request_puzzle_state_json) == str(request_puzzle_state.to_json_dict())
     assert type(request_puzzle_state).from_json_dict(request_puzzle_state_json) == request_puzzle_state
     assert str(reject_puzzle_state_json) == str(reject_puzzle_state.to_json_dict())
@@ -208,6 +198,8 @@ def test_protocol_json() -> None:
     assert type(request_coin_state).from_json_dict(request_coin_state_json) == request_coin_state
     assert str(respond_coin_state_json) == str(respond_coin_state.to_json_dict())
     assert type(respond_coin_state).from_json_dict(respond_coin_state_json) == respond_coin_state
+    assert str(reject_coin_state_json) == str(reject_coin_state.to_json_dict())
+    assert type(reject_coin_state).from_json_dict(reject_coin_state_json) == reject_coin_state
     assert str(pool_difficulty_json) == str(pool_difficulty.to_json_dict())
     assert type(pool_difficulty).from_json_dict(pool_difficulty_json) == pool_difficulty
     assert str(harvester_handhsake_json) == str(harvester_handhsake.to_json_dict())

@@ -105,13 +105,12 @@ def visit_wallet_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(respond_add_coin_subscriptions, "respond_add_coin_subscriptions")
     visitor(request_remove_coin_subscriptions, "request_remove_coin_subscriptions")
     visitor(respond_remove_coin_subscriptions, "respond_remove_coin_subscriptions")
-    visitor(request_reset_subscriptions, "request_reset_subscriptions")
-    visitor(respond_reset_subscriptions, "respond_reset_subscriptions")
     visitor(request_puzzle_state, "request_puzzle_state")
     visitor(reject_puzzle_state, "reject_puzzle_state")
     visitor(respond_puzzle_state, "respond_puzzle_state")
     visitor(request_coin_state, "request_coin_state")
     visitor(respond_coin_state, "respond_coin_state")
+    visitor(reject_coin_state, "reject_coin_state")
 
 
 def visit_harvester_protocol(visitor: Callable[[Any, str], None]) -> None:

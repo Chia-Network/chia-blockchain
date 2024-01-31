@@ -686,6 +686,15 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
 
 
 @pytest.mark.anyio
+async def test_batch_no_puzzle_hashes(db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        # Initialize coin and hint stores.
+        coin_store = await CoinStore.create(db_wrapper)
+        await HintStore.create(db_wrapper)
+        await coin_store.batch_coin_states_by_puzzle_hashes([])
+
+
+@pytest.mark.anyio
 async def test_unsupported_version() -> None:
     with pytest.raises(RuntimeError, match="CoinStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:

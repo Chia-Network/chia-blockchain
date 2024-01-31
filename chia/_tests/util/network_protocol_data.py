@@ -694,19 +694,11 @@ hashes = [
     bytes32(bytes.fromhex("0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1")),
 ]
 
-request_add_puzzle_subscriptions = wallet_protocol.RequestAddPuzzleSubscriptions(
-    hashes,
-    uint32(2585637244),
-    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
-)
+request_add_puzzle_subscriptions = wallet_protocol.RequestAddPuzzleSubscriptions(hashes)
 
 respond_add_puzzle_subscriptions = wallet_protocol.RespondAddPuzzleSubscriptions(hashes)
 
-request_add_coin_subscriptions = wallet_protocol.RequestAddCoinSubscriptions(
-    hashes,
-    uint32(2585637244),
-    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
-)
+request_add_coin_subscriptions = wallet_protocol.RequestAddCoinSubscriptions(hashes)
 
 respond_add_coin_subscriptions = wallet_protocol.RespondAddCoinSubscriptions(hashes)
 
@@ -718,10 +710,6 @@ respond_remove_puzzle_subscriptions = wallet_protocol.RespondRemovePuzzleSubscri
 request_remove_coin_subscriptions = wallet_protocol.RequestRemoveCoinSubscriptions(hashes)
 
 respond_remove_coin_subscriptions = wallet_protocol.RespondRemoveCoinSubscriptions(hashes)
-
-request_reset_subscriptions = wallet_protocol.RequestResetSubscriptions()
-
-respond_reset_subscriptions = wallet_protocol.RespondResetSubscriptions(hashes, hashes)
 
 request_puzzle_state = wallet_protocol.RequestPuzzleState(
     hashes,
@@ -737,9 +725,15 @@ reject_puzzle_state = wallet_protocol.RejectPuzzleState(
     bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411"))
 )
 
-request_coin_state = wallet_protocol.RequestCoinState(hashes, False)
+request_coin_state = wallet_protocol.RequestCoinState(
+    hashes, uint32(0), bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")), False
+)
 
 respond_coin_state = wallet_protocol.RespondCoinState(hashes, [coin_state])
+
+reject_coin_state = wallet_protocol.RejectCoinState(
+    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411"))
+)
 
 
 ### HARVESTER PROTOCOL
