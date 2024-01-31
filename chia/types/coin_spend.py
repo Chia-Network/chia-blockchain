@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple, Union
 
+import chia_rs
+
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
@@ -13,19 +15,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.errors import Err, ValidationError
 from chia.util.streamable import Streamable, streamable
 
-
-@streamable
-@dataclass(frozen=True)
-class CoinSpend(Streamable):
-    """
-    This is a rather disparate data structure that validates coin transfers. It's generally populated
-    with data from different sources, since burned coins are identified by name, so it is built up
-    more often that it is streamed.
-    """
-
-    coin: Coin
-    puzzle_reveal: SerializedProgram
-    solution: SerializedProgram
+CoinSpend = chia_rs.CoinSpend
 
 
 def make_spend(
