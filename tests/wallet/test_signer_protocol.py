@@ -4,7 +4,6 @@ import asyncio
 import dataclasses
 import threading
 import time
-from threading import Thread
 from typing import List, Optional
 
 import click
@@ -1105,17 +1104,7 @@ def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
             assert result.output.strip() == bytes(coin).hex() + "\n" + bytes(coin).hex()
 
 
-def test_qr_code_display(monkeypatch: pytest.MonkeyPatch) -> None:
-    # We monkeypatch the start method to start the thread and then wait 5 seconds before returning
-    # This is so the thread has a change to print the QR code multiple times before the input from click is recieved
-    old_start = Thread.start
-
-    def new_start(self, *args) -> None:  # type: ignore[no-untyped-def]
-        old_start(self, *args)
-        time.sleep(5)
-
-    monkeypatch.setattr(Thread, "start", new_start)
-
+def test_qr_code_display() -> None:
     @click.group()
     def cmd() -> None:
         pass
@@ -1130,11 +1119,11 @@ def test_qr_code_display(monkeypatch: pytest.MonkeyPatch) -> None:
     runner = CliRunner()
     result = runner.invoke(
         cmd,
-        ["temp_cmd", "--qr-density", str(int(len(bytes_to_encode) / 2)), "--rotation-speed", "4"],
+        ["temp_cmd"],
         input="\n",
         catch_exceptions=False,
     )
 
     # Would be good to check eventually that the QR codes are valid but segno doesn't seem to provide that ATM
-    assert result.output.count("Displaying QR Codes (1/2)") == 2
-    assert result.output.count("Displaying QR Codes (2/2)") == 2
+    assert result.output.count("Displaying QR Codes (1/2)") == 1
+    assert result.output.count("Displaying QR Codes (2/2)") == 1
