@@ -119,7 +119,7 @@ def create_page_option() -> Callable[[FC], FC]:
 def create_max_page_size_option() -> Callable[[FC], FC]:
     return click.option(
         "-mp",
-        "--max_page_size",
+        "--max-page-size",
         help="Set how many bytes to be included in a page, if pagination is enabled.",
         type=int,
         required=False,

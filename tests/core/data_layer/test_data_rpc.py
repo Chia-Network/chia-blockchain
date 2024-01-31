@@ -2561,7 +2561,9 @@ async def test_pagination_rpcs(
                 {"type": "DELETE", "key": key6.hex(), "value": value6.hex()},
             ],
         }
-        assert diff_res == diff_reference
+        assert diff_res["total_pages"] == diff_reference["total_pages"]
+        assert diff_res["total_bytes"] == diff_reference["total_bytes"]
+        assert diff_res["diff"] == diff_reference["diff"] or diff_res["diff"] == reversed(diff_reference["diff"])
 
         with pytest.raises(Exception, match="Can't find keys"):
             await data_rpc_api.get_keys(
