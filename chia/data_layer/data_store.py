@@ -22,7 +22,6 @@ from chia.data_layer.data_layer_util import (
     Node,
     NodeType,
     OperationType,
-    PaginationData,
     ProofOfInclusion,
     ProofOfInclusionLayer,
     Root,

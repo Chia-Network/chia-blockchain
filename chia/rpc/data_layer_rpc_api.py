@@ -166,7 +166,7 @@ class DataLayerRpcApi:
         if keys == [] and root_hash is not None and root_hash != bytes32([0] * 32):
             raise Exception(f"Can't find keys for {root_hash}")
 
-        response = {"keys": [f"0x{key.hex()}" for key in keys]}
+        response: EndpointResult = {"keys": [f"0x{key.hex()}" for key in keys]}
 
         if page is not None:
             response.update(
@@ -201,7 +201,7 @@ class DataLayerRpcApi:
         if not json_nodes and root_hash is not None and root_hash != bytes32([0] * 32):
             raise Exception(f"Can't find keys and values for {root_hash}")
 
-        response = {"keys_values": json_nodes}
+        response: EndpointResult = {"keys_values": json_nodes}
 
         if page is not None:
             response.update(
@@ -413,7 +413,7 @@ class DataLayerRpcApi:
         for rec in records:
             res.insert(0, {"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
 
-        response = {"diff": res}
+        response: EndpointResult = {"diff": res}
         if page is not None:
             response.update(
                 {
