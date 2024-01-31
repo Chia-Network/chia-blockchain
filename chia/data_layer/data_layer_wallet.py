@@ -1195,10 +1195,7 @@ class DataLayerWallet:
             )
 
             new_solution: Program = dl_solution.replace(rrffrf=new_graftroot, rrffrrf=Program.to([None] * 5))
-            new_spend: CoinSpend = dataclasses.replace(
-                dl_spend,
-                solution=SerializedProgram.from_program(new_solution),
-            )
+            new_spend: CoinSpend = dl_spend.replace(solution=SerializedProgram.from_program(new_solution))
             new_bundle: SpendBundle = dataclasses.replace(
                 txs[0].spend_bundle,
                 coin_spends=[*all_other_spends, new_spend],
@@ -1286,10 +1283,7 @@ class DataLayerWallet:
                             ]
                         )
                     )
-                    new_spend: CoinSpend = dataclasses.replace(
-                        spend,
-                        solution=SerializedProgram.from_program(new_solution),
-                    )
+                    new_spend: CoinSpend = spend.replace(solution=SerializedProgram.from_program(new_solution))
                     spend = new_spend
             new_spends.append(spend)
 

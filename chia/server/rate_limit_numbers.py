@@ -74,7 +74,7 @@ rate_limits = {
         "rate_limits_other": {
             ProtocolMessageTypes.handshake: RLSettings(5, 10 * 1024, 5 * 10 * 1024),
             ProtocolMessageTypes.harvester_handshake: RLSettings(5, 1024 * 1024),
-            ProtocolMessageTypes.new_signage_point_harvester: RLSettings(100, 1024),
+            ProtocolMessageTypes.new_signage_point_harvester: RLSettings(100, 4886),  # Size with 100 pool list
             ProtocolMessageTypes.new_proof_of_space: RLSettings(100, 2048),
             ProtocolMessageTypes.request_signatures: RLSettings(100, 2048),
             ProtocolMessageTypes.respond_signatures: RLSettings(100, 2048),
@@ -101,6 +101,8 @@ rate_limits = {
             ProtocolMessageTypes.respond_block: RLSettings(200, 2 * 1024 * 1024, 10 * 2 * 1024 * 1024),
             ProtocolMessageTypes.new_unfinished_block: RLSettings(200, 100),
             ProtocolMessageTypes.request_unfinished_block: RLSettings(200, 100),
+            ProtocolMessageTypes.new_unfinished_block2: RLSettings(200, 100),
+            ProtocolMessageTypes.request_unfinished_block2: RLSettings(200, 100),
             ProtocolMessageTypes.respond_unfinished_block: RLSettings(200, 2 * 1024 * 1024, 10 * 2 * 1024 * 1024),
             ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot: RLSettings(200, 200),
             ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot: RLSettings(200, 200),

@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Tuple, cast
 
+from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint32, uint64
@@ -62,11 +63,11 @@ def test_notifications_get(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
 
     # set RPC Client
     class NotificationsGetRpcClient(TestWalletRpcClient):
-        async def get_notifications(
-            self, ids: Optional[List[bytes32]] = None, pagination: Optional[Tuple[Optional[int], Optional[int]]] = None
-        ) -> List[Notification]:
-            self.add_to_log("get_notifications", (ids, pagination))
-            return [Notification(get_bytes32(1), bytes("hello", "utf8"), uint64(1000000000), uint32(50))]
+        async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
+            self.add_to_log("get_notifications", (request,))
+            return GetNotificationsResponse(
+                [Notification(get_bytes32(1), bytes("hello", "utf8"), uint64(1000000000), uint32(50))]
+            )
 
     inst_rpc_client = NotificationsGetRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -87,7 +88,7 @@ def test_notifications_get(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
         "amount: 1000000000",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {"get_notifications": [([get_bytes32(1)], (10, 10))]}
+    expected_calls: logType = {"get_notifications": [(GetNotifications([get_bytes32(1)], uint32(10), uint32(10)),)]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
