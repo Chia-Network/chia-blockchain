@@ -280,18 +280,8 @@ class RespondFeeEstimates(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class CoinStateFilters(Streamable):
-    include_spent: bool
-    include_unspent: bool
-    include_hinted: bool
-
-
-@streamable
-@dataclass(frozen=True)
 class RequestAddPuzzleSubscriptions(Streamable):
     puzzle_hashes: List[bytes32]
-    min_height: uint32
-    header_hash: Optional[bytes32]
 
 
 @streamable
@@ -304,8 +294,6 @@ class RespondAddPuzzleSubscriptions(Streamable):
 @dataclass(frozen=True)
 class RequestAddCoinSubscriptions(Streamable):
     coin_ids: List[bytes32]
-    min_height: uint32
-    header_hash: Optional[bytes32]
 
 
 @streamable
@@ -317,7 +305,7 @@ class RespondAddCoinSubscriptions(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RequestRemovePuzzleSubscriptions(Streamable):
-    puzzle_hashes: List[bytes32]
+    puzzle_hashes: Optional[List[bytes32]]
 
 
 @streamable
@@ -329,7 +317,7 @@ class RespondRemovePuzzleSubscriptions(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RequestRemoveCoinSubscriptions(Streamable):
-    coin_ids: List[bytes32]
+    coin_ids: Optional[List[bytes32]]
 
 
 @streamable
@@ -340,15 +328,10 @@ class RespondRemoveCoinSubscriptions(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class RequestResetSubscriptions(Streamable):
-    pass
-
-
-@streamable
-@dataclass(frozen=True)
-class RespondResetSubscriptions(Streamable):
-    puzzle_hashes: List[bytes32]
-    coin_ids: List[bytes32]
+class CoinStateFilters(Streamable):
+    include_spent: bool
+    include_unspent: bool
+    include_hinted: bool
 
 
 @streamable
@@ -380,6 +363,8 @@ class RejectPuzzleState(Streamable):
 @dataclass(frozen=True)
 class RequestCoinState(Streamable):
     coin_ids: List[bytes32]
+    min_height: uint32
+    header_hash: Optional[bytes32]
     subscribe: bool
 
 
@@ -388,3 +373,9 @@ class RequestCoinState(Streamable):
 class RespondCoinState(Streamable):
     coin_ids: List[bytes32]
     coin_states: List[CoinState]
+
+
+@streamable
+@dataclass(frozen=True)
+class RejectCoinState(Streamable):
+    header_hash: Optional[bytes32]

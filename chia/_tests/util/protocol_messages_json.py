@@ -2019,9 +2019,7 @@ request_add_puzzle_subscriptions_json: Dict[str, Any] = {
         "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
         "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
         "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
-    ],
-    "min_height": 2585637244,
-    "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411",
+    ]
 }
 
 respond_add_puzzle_subscriptions_json: Dict[str, Any] = {
@@ -2053,9 +2051,7 @@ request_add_coin_subscriptions_json: Dict[str, Any] = {
         "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
         "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
         "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
-    ],
-    "min_height": 2585637244,
-    "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411",
+    ]
 }
 
 respond_add_coin_subscriptions_json: Dict[str, Any] = {
@@ -2080,21 +2076,6 @@ respond_remove_coin_subscriptions_json: Dict[str, Any] = {
         "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
         "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
     ]
-}
-
-request_reset_subscriptions_json: Dict[str, Any] = {}
-
-respond_reset_subscriptions_json: Dict[str, Any] = {
-    "puzzle_hashes": [
-        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
-        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
-        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
-    ],
-    "coin_ids": [
-        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
-        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
-        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
-    ],
 }
 
 request_puzzle_state_json: Dict[str, Any] = {
@@ -2140,6 +2121,8 @@ request_coin_state_json: Dict[str, Any] = {
         "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
         "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
     ],
+    "min_height": 0,
+    "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411",
     "subscribe": False,
 }
 
@@ -2160,6 +2143,10 @@ respond_coin_state_json: Dict[str, Any] = {
             "created_height": 3361305811,
         }
     ],
+}
+
+reject_coin_state_json: Dict[str, Any] = {
+    "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411"
 }
 
 pool_difficulty_json: Dict[str, Any] = {
