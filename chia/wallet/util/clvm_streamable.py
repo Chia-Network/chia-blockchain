@@ -102,7 +102,8 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
             result = new_cls.from_program(Program.from_bytes(bytes(f.getbuffer())))
             f.read()
             if transport_layer is not None and cls_mapping is not None:
-                deserialized_result: _T_ClvmStreamable = cls_mapping.deserialize_function(result)
+                deserialized_result = transport_layer.deserialize_from_transport(result)
+                assert isinstance(deserialized_result, cls)
                 return deserialized_result
             else:
                 assert isinstance(result, cls)
@@ -148,7 +149,8 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
             try:
                 result = new_cls.from_program(Program.from_bytes(byts))
                 if transport_layer is not None and cls_mapping is not None:
-                    deserialized_result: _T_ClvmStreamable = cls_mapping.deserialize_function(result)
+                    deserialized_result = transport_layer.deserialize_from_transport(result)
+                    assert isinstance(deserialized_result, cls)
                     return deserialized_result
                 else:
                     assert isinstance(result, cls)
@@ -172,36 +174,31 @@ class TransportLayer:
     type_mappings: List[TransportLayerMapping[Any, Any]]
 
     def get_mapping(
-        self, _type: Type[_T_ClvmStreamable]
+        self, _type: Type[_T_ClvmStreamable], for_serialized_type: bool = False
     ) -> Optional[TransportLayerMapping[_T_ClvmStreamable, ClvmStreamable]]:
-        mappings: List[TransportLayerMapping[_T_ClvmStreamable, ClvmStreamable]] = [
-            m for m in self.type_mappings if m.from_type == _type
-        ]
+        if for_serialized_type:
+            mappings: List[TransportLayerMapping[_T_ClvmStreamable, ClvmStreamable]] = [
+                m for m in self.type_mappings if m.to_type == _type
+            ]
+        else:
+            mappings = [m for m in self.type_mappings if m.from_type == _type]
         if len(mappings) == 1:
             return mappings[0]
         elif len(mappings) == 0:
             return None
-        else:
+        else:  # pragma: no cover
             raise RuntimeError("Malformed TransportLayer")
 
     def serialize_for_transport(self, instance: _T_ClvmStreamable) -> ClvmStreamable:
-        mappings: List[TransportLayerMapping[_T_ClvmStreamable, ClvmStreamable]] = [
-            m for m in self.type_mappings if m.from_type == instance.__class__
-        ]
-        if len(mappings) == 1:
-            return mappings[0].serialize_function(instance)
-        elif len(mappings) == 0:
+        mapping = self.get_mapping(instance.__class__)
+        if mapping is None:
             return instance
         else:
-            raise RuntimeError("Malformed TransportLayer")
+            return mapping.serialize_function(instance)
 
     def deserialize_from_transport(self, instance: _T_ClvmStreamable) -> ClvmStreamable:
-        mappings: List[TransportLayerMapping[ClvmStreamable, _T_ClvmStreamable]] = [
-            m for m in self.type_mappings if m.to_type == instance.__class__
-        ]
-        if len(mappings) == 1:
-            return mappings[0].deserialize_function(instance)
-        elif len(mappings) == 0:
+        mapping = self.get_mapping(instance.__class__, for_serialized_type=True)
+        if mapping is None:
             return instance
         else:
-            raise RuntimeError("Malformed TransportLayer")
+            return mapping.deserialize_function(instance)

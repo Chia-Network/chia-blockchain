@@ -242,8 +242,9 @@ def test_transport_layer() -> None:
         ]
     )
 
+    coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
     spend = Spend(
-        Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0)),
+        coin,
         Program.to(1),
         Program.to([]),
     )
@@ -273,6 +274,15 @@ def test_transport_layer() -> None:
     assert foo_spend_program.at("ff") == Program.to("coin")
     assert foo_spend_program.at("rff") == Program.to("blah")
     assert foo_spend_program.at("rrff") == Program.to("solution")
+
+    # Test that types not registered with transport layer are serialized properly
+    with clvm_serialization_mode(True):
+        coin_bytes = bytes(coin)
+        coin_json = coin.to_json_dict()
+    with clvm_serialization_mode(True, FOO_TRANSPORT):
+        assert coin_bytes == bytes(coin)
+        assert Coin.from_bytes(coin_bytes) == coin
+        assert Coin.from_json_dict(coin_json) == coin
 
 
 def test_blind_signer_transport_layer() -> None:

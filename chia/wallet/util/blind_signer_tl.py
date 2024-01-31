@@ -70,19 +70,19 @@ class BSTLSigningInstructions(ClvmStreamable):
     @staticmethod
     def from_wallet_api(_from: SigningInstructions) -> BSTLSigningInstructions:
         return BSTLSigningInstructions(
-            [BSTLSumHint(**sum_hint.__dict__) for sum_hint in _from.key_hints.sum_hints],
-            [BSTLPathHint(**path_hint.__dict__) for path_hint in _from.key_hints.path_hints],
-            [BSTLSigningTarget(**signing_target.__dict__) for signing_target in _from.targets],
+            [BSTLSumHint.from_wallet_api(sum_hint) for sum_hint in _from.key_hints.sum_hints],
+            [BSTLPathHint.from_wallet_api(path_hint) for path_hint in _from.key_hints.path_hints],
+            [BSTLSigningTarget.from_wallet_api(signing_target) for signing_target in _from.targets],
         )
 
     @staticmethod
     def to_wallet_api(_from: BSTLSigningInstructions) -> SigningInstructions:
         return SigningInstructions(
             KeyHints(
-                [SumHint(**sum_hint.__dict__) for sum_hint in _from.sum_hints],
-                [PathHint(**path_hint.__dict__) for path_hint in _from.path_hints],
+                [BSTLSumHint.to_wallet_api(sum_hint) for sum_hint in _from.sum_hints],
+                [BSTLPathHint.to_wallet_api(path_hint) for path_hint in _from.path_hints],
             ),
-            [SigningTarget(**signing_target.__dict__) for signing_target in _from.targets],
+            [BSTLSigningTarget.to_wallet_api(signing_target) for signing_target in _from.targets],
         )
 
 
@@ -94,9 +94,12 @@ class BSTLUnsignedTransaction(ClvmStreamable):
     @staticmethod
     def from_wallet_api(_from: UnsignedTransaction) -> BSTLUnsignedTransaction:
         return BSTLUnsignedTransaction(
-            [BSTLSumHint(**sum_hint.__dict__) for sum_hint in _from.signing_instructions.key_hints.sum_hints],
-            [BSTLPathHint(**path_hint.__dict__) for path_hint in _from.signing_instructions.key_hints.path_hints],
-            [BSTLSigningTarget(**signing_target.__dict__) for signing_target in _from.signing_instructions.targets],
+            [BSTLSumHint.from_wallet_api(sum_hint) for sum_hint in _from.signing_instructions.key_hints.sum_hints],
+            [BSTLPathHint.from_wallet_api(path_hint) for path_hint in _from.signing_instructions.key_hints.path_hints],
+            [
+                BSTLSigningTarget.from_wallet_api(signing_target)
+                for signing_target in _from.signing_instructions.targets
+            ],
         )
 
     @staticmethod
@@ -105,10 +108,10 @@ class BSTLUnsignedTransaction(ClvmStreamable):
             TransactionInfo([]),
             SigningInstructions(
                 KeyHints(
-                    [SumHint(**sum_hint.__dict__) for sum_hint in _from.sum_hints],
-                    [PathHint(**path_hint.__dict__) for path_hint in _from.path_hints],
+                    [BSTLSumHint.to_wallet_api(sum_hint) for sum_hint in _from.sum_hints],
+                    [BSTLPathHint.to_wallet_api(path_hint) for path_hint in _from.path_hints],
                 ),
-                [SigningTarget(**signing_target.__dict__) for signing_target in _from.targets],
+                [BSTLSigningTarget.to_wallet_api(signing_target) for signing_target in _from.targets],
             ),
         )
 
