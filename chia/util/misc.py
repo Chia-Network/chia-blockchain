@@ -265,8 +265,19 @@ class SignalHandlers:
         loop = asyncio.get_event_loop()
 
         if sys.platform == "win32" or sys.platform == "cygwin":
+
+            def ensure_signal_object_not_int(
+                signal_: int,
+                stack_frame: Optional[FrameType],
+                *,
+                handler: Handler = handler,
+                loop: asyncio.AbstractEventLoop = loop,
+            ) -> None:
+                signal_ = signal.Signals(signal_)
+                handler(signal_=signal_, stack_frame=stack_frame, loop=loop)
+
             for signal_ in [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]:
-                signal.signal(signal_, functools.partial(handler, loop=loop))
+                signal.signal(signal_, ensure_signal_object_not_int)
         else:
             for signal_ in [signal.SIGINT, signal.SIGTERM]:
                 loop.add_signal_handler(
