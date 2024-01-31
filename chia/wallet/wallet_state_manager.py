@@ -752,7 +752,7 @@ class WalletStateManager:
             [coin_state.coin.parent_coin_info], peer=peer, fork_height=fork_height
         )
         if len(response) == 0:
-            self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info}")
+            self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info.hex()}")
             return None, None
         parent_coin_state = response[0]
         assert parent_coin_state.spent_height == coin_state.created_height
