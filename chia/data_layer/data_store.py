@@ -32,6 +32,7 @@ from chia.data_layer.data_layer_util import (
     Status,
     Subscription,
     TerminalNode,
+    get_hashes_for_page,
     internal_hash,
     key_hash,
     leaf_hash,
@@ -757,32 +758,11 @@ class DataStore:
 
             return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length, root_hash)
 
-    def get_hashes_for_page(self, page: int, lengths: Dict[bytes32, int], max_page_size: int) -> PaginationData:
-        current_page = 0
-        current_page_size = 0
-        total_bytes = 0
-        hashes: List[bytes32] = []
-        for hash, length in sorted(lengths.items(), key=lambda x: (-x[1], x[0])):
-            if length > max_page_size:
-                raise RuntimeError(
-                    f"Cannot paginate data, item size is larger than max page size: {length} {max_page_size}"
-                )
-            total_bytes += length
-            if current_page_size + length <= max_page_size:
-                current_page_size += length
-            else:
-                current_page += 1
-                current_page_size = length
-            if current_page == page:
-                hashes.append(hash)
-
-        return PaginationData(current_page + 1, total_bytes, hashes)
-
     async def get_keys_paginated(
         self, tree_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
     ) -> KeysPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(tree_id, root_hash)
-        pagination_data = self.get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
+        pagination_data = get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
 
         keys: List[bytes] = []
         for hash in pagination_data.hashes:
@@ -802,7 +782,7 @@ class DataStore:
         self, tree_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
     ) -> KeysValuesPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(tree_id, root_hash)
-        pagination_data = self.get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
+        pagination_data = get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
 
         keys_values: List[TerminalNode] = []
         for hash in pagination_data.hashes:
@@ -837,7 +817,7 @@ class DataStore:
         for hash in deletions:
             lengths[hash] = old_pairs.leaf_hash_to_length[hash]
 
-        pagination_data = self.get_hashes_for_page(page, lengths, max_page_size)
+        pagination_data = get_hashes_for_page(page, lengths, max_page_size)
         kv_diff: Set[DiffData] = set()
 
         for hash in pagination_data.hashes:
