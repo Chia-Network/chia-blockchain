@@ -177,14 +177,13 @@ async def test_dao_creation(self_hostname: str, two_wallet_nodes: OldSimulatorsA
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
     dao_cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.dao_cat_wallet_id]
     # Some dao_cat_wallet checks for coverage
-    dao_cat_wallet_0.get_name()
+    assert dao_cat_wallet_0.get_name() == f"CAT {cat_wallet_0.cat_info.limitations_program_hash.hex()[:16]}..."
     assert (await dao_cat_wallet_0.select_coins(uint64(1), DEFAULT_TX_CONFIG)) == set()
     dao_cat_puzhash = await dao_cat_wallet_0.get_new_puzzlehash()
-    assert dao_cat_puzhash
-    dao_cat_inner = await dao_cat_wallet_0.get_new_inner_puzzle(DEFAULT_TX_CONFIG)
-    assert dao_cat_inner
+    assert dao_cat_puzhash == bytes32.from_hexstr("09f905ba3e9db3644ac4537495565bf268c6f030266aa412863c5efced6b1800")
+    await dao_cat_wallet_0.get_new_inner_puzzle(DEFAULT_TX_CONFIG)
     dao_cat_inner_hash = await dao_cat_wallet_0.get_new_inner_hash(DEFAULT_TX_CONFIG)
-    assert dao_cat_inner_hash
+    assert dao_cat_inner_hash == bytes32.from_hexstr("8a66292fde9ef08198d996eae0ea21677eb478afeabed8030b1bf42c728f7dcc")
 
     cat_wallet_0_bal = await cat_wallet_0.get_confirmed_balance()
     assert cat_wallet_0_bal == cat_amt * 2
