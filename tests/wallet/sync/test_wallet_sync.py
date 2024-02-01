@@ -35,6 +35,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.misc import to_batches
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos
@@ -159,9 +160,9 @@ async def test_request_block_headers_rejected(
 async def test_basic_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
 ) -> None:
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -169,8 +170,9 @@ async def test_basic_sync_wallet(
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
 
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
@@ -182,8 +184,8 @@ async def test_basic_sync_wallet(
     num_blocks = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks - 1, block_list_input=default_400_blocks[:-5])
     blocks_reorg = bt.get_consecutive_blocks(1, blocks_reorg, guarantee_transaction_block=True, current_time=True)
-    for i in range(1, len(blocks_reorg)):
-        await full_node_api.full_node.add_block(blocks_reorg[i])
+    for block_batch in to_batches(blocks_reorg[1:], 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
