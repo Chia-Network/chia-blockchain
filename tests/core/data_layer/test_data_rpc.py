@@ -2557,13 +2557,13 @@ async def test_pagination_rpcs(
             "total_pages": 1,
             "total_bytes": 8,
             "diff": [
-                {"type": "INSERT", "key": key6.hex(), "value": new_value.hex()},
                 {"type": "DELETE", "key": key6.hex(), "value": value6.hex()},
+                {"type": "INSERT", "key": key6.hex(), "value": new_value.hex()},
             ],
         }
         assert diff_res["total_pages"] == diff_reference["total_pages"]
         assert diff_res["total_bytes"] == diff_reference["total_bytes"]
-        assert set(diff_res["diff"]) == set(diff_reference["diff"])
+        assert sorted(diff_res["diff"], key=lambda x: x["type"]) == diff_reference["diff"]
 
         with pytest.raises(Exception, match="Can't find keys"):
             await data_rpc_api.get_keys(
