@@ -281,9 +281,8 @@ async def test_nft_wallet_creation_and_transfer(
     await time_out_assert(10, wallet_0.get_confirmed_balance, 4000000000000)
 
     txs = await nft_wallet_0.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
-    await nft_wallet_0.wallet_state_manager.add_pending_transaction(tx)
+    await nft_wallet_0.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await nft_wallet_0.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             # ensure hints are generated
             assert len(compute_memos(tx.spend_bundle)) > 0

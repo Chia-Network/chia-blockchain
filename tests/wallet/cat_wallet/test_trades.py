@@ -1641,7 +1641,7 @@ async def test_trade_cancellation(wallets_prefarm):
     txs = await trade_manager_maker.cancel_pending_offers(
         [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=uint64(0), secure=True
     )
-    await trade_manager_maker.wallet_state_manager.add_pending_transaction(txs)
+    await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
     await full_node.process_transaction_records(records=txs)
 
@@ -1755,7 +1755,7 @@ async def test_trade_conflict(three_wallets_prefarm):
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_taker, tr1)
     # pushing into mempool while already in it should fail
     tr2, txs2 = await trade_manager_trader.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
-    await trade_manager_taker.wallet_state_manager.add_pending_transaction(txs2)
+    await trade_manager_taker.wallet_state_manager.add_pending_transactions(txs2)
     assert await trade_manager_trader.get_coins_of_interest()
     offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
     await full_node.process_transaction_records(records=offer_tx_records)
@@ -1868,7 +1868,7 @@ async def test_trade_high_fee(wallets_prefarm):
     peer = wallet_node_taker.get_full_node_peer()
     offer = Offer.from_bytes(trade_make.offer)
     tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(1000000000000))
-    await trade_manager_taker.wallet_state_manager.add_pending_transaction(txs1)
+    await trade_manager_taker.wallet_state_manager.add_pending_transactions(txs1)
     await full_node.process_transaction_records(records=txs1)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, tr1)
 
@@ -1936,8 +1936,7 @@ async def test_aggregated_trade_state(wallets_prefarm):
     assert trade_take is not None
     assert tx_records is not None
 
-    for tx in tx_records:
-        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
     await full_node.process_transaction_records(records=tx_records)
     await full_node.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=60)
 
