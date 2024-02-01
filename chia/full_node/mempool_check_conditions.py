@@ -176,11 +176,7 @@ def get_spends_for_block_with_conditions(
         puzzle_hash = puzzle.get_tree_hash()
         coin = Coin(parent.as_atom(), puzzle_hash, amount.as_int())
         coin_spend = make_spend(coin, puzzle, solution)
-        conditions = conditions_for_solution(
-            SerializedProgram.from_program(puzzle),
-            SerializedProgram.from_program(solution),
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-        )
+        conditions = conditions_for_solution(puzzle, solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
         spends.append(CoinSpendWithConditions(coin_spend, conditions))
 
     return spends
