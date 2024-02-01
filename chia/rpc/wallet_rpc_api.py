@@ -2308,7 +2308,7 @@ class WalletRpcApi:
             uint16(num_verification.as_int()),
             singleton_struct,
             metadata,
-            get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal.to_program()),
+            get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
             coin_state,
         )
         hinted_coins, _ = compute_spend_hints_and_additions(coin_spend)
