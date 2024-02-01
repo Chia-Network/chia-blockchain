@@ -60,6 +60,7 @@ async def test_failure_output_no_traceback(
         client_type=RpcClient,
         rpc_port=recording_web_server.web_server.listen_port,
         root_path=root_path_populated_with_config,
+        use_ssl=False,
     ) as (client, _):
         await client.fetch(path="/table", request_json={"response": expected_response})
 
@@ -82,6 +83,7 @@ async def test_failure_output_with_traceback(
         client_type=RpcClient,
         rpc_port=recording_web_server.web_server.listen_port,
         root_path=root_path_populated_with_config,
+        use_ssl=False,
     ) as (client, _):
         await client.fetch(path="/table", request_json={"response": expected_response})
 
