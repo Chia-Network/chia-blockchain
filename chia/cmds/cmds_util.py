@@ -94,7 +94,6 @@ async def get_any_service_client(
     rpc_port: Optional[int] = None,
     root_path: Optional[Path] = None,
     consume_errors: bool = True,
-    use_ssl: bool = True,
 ) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
