@@ -21,7 +21,6 @@ async def rpc_client_fixture(recording_web_server: RecordingWebServer) -> AsyncI
     async with RpcClient.create_as_context(
         self_hostname=recording_web_server.web_server.hostname,
         port=recording_web_server.web_server.listen_port,
-        use_ssl=False,
     ) as rpc_client:
         yield rpc_client
 

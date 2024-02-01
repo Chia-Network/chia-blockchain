@@ -50,11 +50,12 @@ class RpcClient:
         port: uint16,
         root_path: Optional[Path],
         net_config: Optional[Dict[str, Any]],
-        # TODO: duplicative of above being None or not
-        use_ssl: bool = True,
     ) -> _T_RpcClient:
+        if (root_path is not None) != (net_config is not None):
+            raise ValueError("Either both or neither of root_path and net_config must be provided")
+
         ssl_context: Optional[SSLContext]
-        if not use_ssl:
+        if root_path is None:
             scheme = "http"
             ssl_context = None
         else:
@@ -87,16 +88,13 @@ class RpcClient:
         self_hostname: str,
         port: uint16,
         root_path: Optional[Path] = None,
-        # TODO: now that we have use_ssl can we drop the optional here?
         net_config: Optional[Dict[str, Any]] = None,
-        use_ssl: bool = True,
     ) -> AsyncIterator[_T_RpcClient]:
         self = await cls.create(
             self_hostname=self_hostname,
             port=port,
             root_path=root_path,
             net_config=net_config,
-            use_ssl=use_ssl,
         )
         try:
             yield self
