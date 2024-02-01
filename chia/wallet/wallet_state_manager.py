@@ -2224,7 +2224,10 @@ class WalletStateManager:
         actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
         if merge_spends and actual_spend_involved:
             tx_records = [
-                dataclasses.replace(tx, spend_bundle=agg_spend if i == 0 else None) for i, tx in enumerate(tx_records)
+                dataclasses.replace(
+                    tx, spend_bundle=agg_spend if i == 0 else None, name=agg_spend.name() if i == 0 else tx.name
+                )
+                for i, tx in enumerate(tx_records)
             ]
         all_coins_names = []
         async with self.db_wrapper.writer_maybe_transaction():

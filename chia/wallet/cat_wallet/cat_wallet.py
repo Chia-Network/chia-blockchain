@@ -199,7 +199,7 @@ class CATWallet:
             memos=[],
             valid_times=ConditionValidTimes(),
         )
-        chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
+        chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle, name=spend_bundle.name())
         await self.wallet_state_manager.add_pending_transactions([chia_tx, cat_record])
         return self
 
@@ -730,7 +730,7 @@ class CATWallet:
                             primaries=primaries,
                             conditions=(*extra_conditions, announcement),
                         )
-                    elif regular_chia_to_claim > fee:
+                    elif regular_chia_to_claim > fee:  # pragma: no cover
                         chia_tx, xch_announcement = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
