@@ -35,6 +35,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.misc import to_batches
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos
@@ -305,9 +306,9 @@ async def test_long_sync_wallet(
     default_400_blocks: List[FullBlock],
     self_hostname: str,
 ) -> None:
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -315,8 +316,9 @@ async def test_long_sync_wallet(
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
 
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
@@ -325,8 +327,8 @@ async def test_long_sync_wallet(
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
 
     # Tests a long reorg
-    for block in default_1000_blocks:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(default_1000_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
@@ -340,12 +342,12 @@ async def test_long_sync_wallet(
     num_blocks = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks[:-5])
 
-    for i in range(len(blocks_reorg) - num_blocks - 10, len(blocks_reorg)):
-        await full_node_api.full_node.add_block(blocks_reorg[i])
+    await full_node.add_block_batch(blocks_reorg[-num_blocks - 10 : -1], dummy_peer_info, None)
+    await full_node.add_block(blocks_reorg[-1])
 
     for wallet_node, wallet_server in wallets:
         await time_out_assert(
-            600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) + num_blocks - 5 - 1
+            120, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) + num_blocks - 5 - 1
         )
 
 
