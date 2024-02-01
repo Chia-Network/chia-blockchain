@@ -121,7 +121,7 @@ class TestWalletSimulator:
             DEFAULT_TX_CONFIG,
             uint64(0),
         )
-        await wallet.push_transaction(tx)
+        await wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
 
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
@@ -177,7 +177,7 @@ class TestWalletSimulator:
         assert len(tx.spend_bundle.coin_spends) == 1
         new_puzhash = [c.puzzle_hash.hex() for c in tx.additions]
         assert tx.spend_bundle.coin_spends[0].coin.puzzle_hash.hex() in new_puzhash
-        await wallet.push_transaction(tx)
+        await wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
 
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
@@ -232,7 +232,7 @@ class TestWalletSimulator:
             uint64(0),
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
         )
-        await wallet.push_transaction(tx1)
+        await wallet.wallet_state_manager.add_pending_transactions([tx1])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx1])
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         await time_out_assert(
@@ -248,7 +248,7 @@ class TestWalletSimulator:
             uint64(0),
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
         )
-        await wallet.push_transaction(tx2)
+        await wallet.wallet_state_manager.add_pending_transactions([tx2])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx2])
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         await time_out_assert(
@@ -264,7 +264,7 @@ class TestWalletSimulator:
             uint64(0),
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
         )
-        await wallet.push_transaction(tx3)
+        await wallet.wallet_state_manager.add_pending_transactions([tx3])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx3])
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         await time_out_assert(
@@ -344,7 +344,7 @@ class TestWalletSimulator:
             memos=[b"Test"],
         )
 
-        await wallet.push_transaction(tx)
+        await wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         # Check merkle coins
@@ -467,7 +467,7 @@ class TestWalletSimulator:
             memos=[b"Test"],
         )
 
-        await wallet.push_transaction(tx)
+        await wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         # Check merkle coins
@@ -553,7 +553,7 @@ class TestWalletSimulator:
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
         )
 
-        await wallet.push_transaction(tx)
+        await wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         # Check merkle coins
@@ -643,7 +643,7 @@ class TestWalletSimulator:
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
         )
 
-        await wallet.push_transaction(tx)
+        await wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         # Check merkle coins
@@ -741,7 +741,7 @@ class TestWalletSimulator:
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 500}],
         )
 
-        await wallet.push_transaction(tx)
+        await wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         # Check merkle coins
@@ -801,7 +801,7 @@ class TestWalletSimulator:
 
         clawback_coin_id_1 = tx1.additions[0].name()
         assert tx1.spend_bundle is not None
-        await wallet_1.push_transaction(tx1)
+        await wallet_1.wallet_state_manager.add_pending_transactions([tx1])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx1])
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
         # Check merkle coins
@@ -820,7 +820,7 @@ class TestWalletSimulator:
         )
         clawback_coin_id_2 = tx2.additions[0].name()
         assert tx2.spend_bundle is not None
-        await wallet_1.push_transaction(tx2)
+        await wallet_1.wallet_state_manager.add_pending_transactions([tx2])
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx2])
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
         # Check merkle coins
@@ -1048,7 +1048,7 @@ class TestWalletSimulator:
             uint64(0),
         )
         assert tx.spend_bundle is not None
-        await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
+        await wallet_0.wallet_state_manager.main_wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api_0.wait_transaction_records_entered_mempool(records=[tx])
 
         # wallet0 <-> sever1
@@ -1105,7 +1105,7 @@ class TestWalletSimulator:
             uint64(0),
         )
 
-        await wallet_0.push_transaction(tx)
+        await wallet_0.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api_0.wait_transaction_records_entered_mempool(records=[tx])
 
         assert await wallet_0.get_confirmed_balance() == expected_confirmed_balance
@@ -1123,7 +1123,7 @@ class TestWalletSimulator:
         [tx] = await wallet_1.generate_signed_transaction(
             uint64(tx_amount), await wallet_0.get_new_puzzlehash(), DEFAULT_TX_CONFIG, uint64(0)
         )
-        await wallet_1.push_transaction(tx)
+        await wallet_1.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api_0.wait_transaction_records_entered_mempool(records=[tx])
 
         await full_node_api_0.farm_blocks_to_puzzlehash(count=4, guarantee_transaction_blocks=True)
@@ -1186,7 +1186,7 @@ class TestWalletSimulator:
         fees = estimate_fees(tx.spend_bundle)
         assert fees == tx_fee
 
-        await wallet.push_transaction(tx)
+        await wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_1.wait_transaction_records_entered_mempool(records=[tx])
 
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
@@ -1253,7 +1253,7 @@ class TestWalletSimulator:
         fees = estimate_fees(tx.spend_bundle)
         assert fees == tx_fee
 
-        await wallet.push_transaction(tx)
+        await wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_1.wait_transaction_records_entered_mempool(records=[tx])
         memos = await api_0.get_transaction_memo(dict(transaction_id=tx_id))
         # test json serialization
@@ -1315,7 +1315,7 @@ class TestWalletSimulator:
         )
         assert tx_split_coins.spend_bundle is not None
 
-        await wallet.push_transaction(tx_split_coins)
+        await wallet.wallet_state_manager.add_pending_transactions([tx_split_coins])
         await full_node_1.process_transaction_records(records=[tx_split_coins])
         await wait_for_coins_in_wallet(coins=set(tx_split_coins.additions), wallet=wallet, timeout=20)
 
@@ -1432,7 +1432,7 @@ class TestWalletSimulator:
             memos=list(compute_memos(stolen_sb).items()),
             valid_times=ConditionValidTimes(),
         )
-        await wallet.push_transaction(stolen_tx)
+        await wallet.wallet_state_manager.add_pending_transactions([stolen_tx])
 
         await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
         await time_out_assert(20, wallet.get_unconfirmed_balance, expected_confirmed_balance - stolen_cs.coin.amount)
@@ -1492,7 +1492,7 @@ class TestWalletSimulator:
 
         [tx] = await wallet.generate_signed_transaction(uint64(tx_amount), ph2, DEFAULT_TX_CONFIG, coins={coin})
         assert tx.spend_bundle is not None
-        await wallet.push_transaction(tx)
+        await wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api.process_transaction_records(records=[tx])
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2], timeout=20)
 
@@ -1745,7 +1745,7 @@ class TestWalletSimulator:
         assert tx.spend_bundle is not None
         paid_coin = [coin for coin in tx.spend_bundle.additions() if coin.amount == AMOUNT_TO_SEND][0]
         assert paid_coin.parent_coin_info == coin_list[2].name()
-        await wallet.push_transaction(tx)
+        await wallet.wallet_state_manager.add_pending_transactions([tx])
 
         await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
         await time_out_assert(20, wallet.get_unconfirmed_balance, expected_confirmed_balance - AMOUNT_TO_SEND)

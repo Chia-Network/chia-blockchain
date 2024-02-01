@@ -144,8 +144,7 @@ class DIDWallet:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
 
-        for tx in txs:
-            await self.wallet_state_manager.add_pending_transaction(tx)
+        await self.wallet_state_manager.add_pending_transactions(txs)
 
         await self.wallet_state_manager.add_new_wallet(self)
 
