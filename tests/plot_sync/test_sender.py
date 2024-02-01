@@ -113,7 +113,4 @@ def test_sync_done_with_negative_duration_does_not_crash(bt: BlockTools) -> None
     sender = Sender(bt.plot_manager, HarvestingMode.CPU)
     sender.sync_start(0, True)
 
-    try:
-        sender.sync_done([], -1)
-    except Exception as e:
-        assert False, f"'sender.sync_done' raised an exception: {e}"
+    sender.sync_done([], -1)
