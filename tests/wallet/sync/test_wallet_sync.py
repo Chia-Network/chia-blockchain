@@ -35,6 +35,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.misc import to_batches
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos
@@ -211,9 +212,9 @@ async def test_almost_recent(
     blockchain_constants: ConsensusConstants,
 ) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -222,8 +223,9 @@ async def test_almost_recent(
     wallets[1][0].config["trusted_peers"] = {}
 
     base_num_blocks = 400
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
     all_blocks = default_400_blocks
     both_phs = []
     for wallet_node, wallet_server in wallets:
@@ -234,13 +236,13 @@ async def test_almost_recent(
         # Tests a reorg with the wallet
         ph = both_phs[i % 2]
         all_blocks = bt.get_consecutive_blocks(1, block_list_input=all_blocks, pool_reward_puzzle_hash=ph)
-        await full_node_api.full_node.add_block(all_blocks[-1])
+        await full_node.add_block(all_blocks[-1])
 
     new_blocks = bt.get_consecutive_blocks(
         blockchain_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
     )
-    for i in range(base_num_blocks + 20, len(new_blocks)):
-        await full_node_api.full_node.add_block(new_blocks[i])
+    for block_batch in to_batches(new_blocks[base_num_blocks + 20 :], 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
