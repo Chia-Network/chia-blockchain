@@ -35,6 +35,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.misc import to_batches
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos
@@ -355,9 +356,9 @@ async def test_wallet_reorg_sync(
     two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
 ) -> None:
     num_blocks = 5
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -372,8 +373,9 @@ async def test_wallet_reorg_sync(
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # Insert 400 blocks
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    await full_node.add_block(default_400_blocks[0])
+    for block_batch in to_batches(default_400_blocks[1:], 64):
+        await full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     # Farm few more with reward
     for _ in range(num_blocks - 1):
@@ -397,7 +399,7 @@ async def test_wallet_reorg_sync(
     blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
 
     for block in blocks_reorg[-30:]:
-        await full_node_api.full_node.add_block(block)
+        await full_node.add_block(block)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
