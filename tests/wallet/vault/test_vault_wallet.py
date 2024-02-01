@@ -7,12 +7,14 @@ import pytest
 from ecdsa import NIST256p, SigningKey
 from ecdsa.util import PRNG
 
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
-from tests.conftest import SOFTFORK_HEIGHTS, ConsensusMode
+from tests.conftest import ConsensusMode
 from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 
 
@@ -54,7 +56,21 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
                         "set_remainder": True,
                     }
                 },
-            )
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "init": True,
+                        "set_remainder": True,
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        # "confirmed_wallet_balance": -1,
+                        "set_remainder": True,
+                    }
+                },
+            ),
         ]
     )
     await env.node.keychain_proxy.add_public_key(launcher_id.hex())
@@ -70,23 +86,17 @@ def sign_message(message: bytes) -> bytes:
 
 
 @pytest.mark.parametrize(
-    "wallet_environments,active_softfork_height",
-    [
-        (
-            {"num_environments": 2, "blocks_needed": [1, 1]},
-            SOFTFORK_HEIGHTS[2],
-        )
-    ],
-    indirect=["wallet_environments"],
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 1]}],
+    indirect=True,
 )
 @pytest.mark.parametrize("setup_function", [vault_setup])
 @pytest.mark.parametrize("with_recovery", [True, False])
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="requires secp")
 @pytest.mark.anyio
 async def test_vault_creation(
-    setup_function: Callable[[WalletTestFramework, bool], Awaitable[None]],
     wallet_environments: WalletTestFramework,
-    active_softfork_height: uint32,
+    setup_function: Callable[[WalletTestFramework, bool], Awaitable[None]],
     with_recovery: bool,
 ) -> None:
     await setup_function(wallet_environments, with_recovery)
@@ -133,11 +143,11 @@ async def test_vault_creation(
                 },
                 post_block_balance_updates={
                     1: {
-                        # "confirmed_wallet_balance": -funding_amount,
+                        "confirmed_wallet_balance": funding_amount * 2,
                         "set_remainder": True,
                     }
                 },
-            )
+            ),
         ],
     )
 
@@ -150,27 +160,32 @@ async def test_vault_creation(
         Payment(p2_ph, uint64(500000000)),
         Payment(p2_ph, uint64(510000000)),
     ]
-
+    total_spend = 1010000000
     fee = uint64(100)
 
     p2_spends = await wallet.generate_p2_singleton_spends(payments, DEFAULT_TX_CONFIG, fee)
-    message, delegated_puz, delegated_sol = await wallet.generate_unsigned_vault_spend(payments, p2_spends)
+    message, delegated_puz, delegated_sol = await wallet.generate_unsigned_vault_spend(payments, p2_spends, fee=fee)
     sig = sign_message(message)
 
     tx_records = await wallet.generate_signed_vault_spend(sig, delegated_puz, delegated_sol, p2_spends, payments, fee)
     assert len(tx_records) == 1
+
+    # Farm a block so the vault balance includes farmed coins from the test setup.
+    # Do this after generating the tx so we can be sure to spend the funding coins
+    await wallet_environments.full_node.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
                 pre_block_balance_updates={
                     1: {
+                        ">=#confirmed_wallet_balance": 2 * funding_amount,
                         "set_remainder": True,
                     }
                 },
                 post_block_balance_updates={
                     1: {
-                        # "confirmed_wallet_balance": 0,
+                        "confirmed_wallet_balance": -total_spend - fee,
                         "set_remainder": True,
                     }
                 },
@@ -183,7 +198,7 @@ async def test_vault_creation(
                 },
                 post_block_balance_updates={
                     1: {
-                        # "confirmed_wallet_balance": +funding_amount,
+                        "confirmed_wallet_balance": total_spend,
                         "set_remainder": True,
                     }
                 },
