@@ -78,7 +78,7 @@ async def test_failure_output_with_traceback(
     recording_web_server: RecordingWebServer,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    expected_response = {"success": False, "traceback": sample_traceback_json}
+    expected_response = {"success": False, "traceback": sample_traceback}
 
     async with get_any_service_client(
         client_type=RpcClient,

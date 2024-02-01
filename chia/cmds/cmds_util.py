@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import json
 import logging
 import traceback
 from contextlib import asynccontextmanager
@@ -124,14 +123,14 @@ async def get_any_service_client(
     except ResponseFailureError as e:
         if not consume_errors:
             raise
+
         response = dict(e.response)
+        tb = response.pop("traceback", None)
+
         f = ResponseFailureError(response=response)
         print(f"{f}")
 
-        # TGDO: why is this json encoded?
-        tb_json = response.pop("traceback", None)
-        if tb_json is not None:
-            tb = json.loads(tb_json)
+        if tb is not None:
             print(f"Traceback:\n{tb}")
     except Exception as e:  # this is only here to make the errors more user-friendly.
         if not consume_errors or isinstance(e, CliRpcConnectionError) or isinstance(e, click.Abort):
