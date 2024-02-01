@@ -2213,7 +2213,9 @@ class WalletStateManager:
 
         await self.create_more_puzzle_hashes()
 
-    async def add_pending_transactions(self, tx_records: List[TransactionRecord], merge_spends: bool = True) -> None:
+    async def add_pending_transactions(
+        self, tx_records: List[TransactionRecord], merge_spends: bool = True
+    ) -> List[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
         Aggregates the `spend_bundle` property for each transaction onto the first transaction in the list.
@@ -2225,7 +2227,9 @@ class WalletStateManager:
         if merge_spends and actual_spend_involved:
             tx_records = [
                 dataclasses.replace(
-                    tx, spend_bundle=agg_spend if i == 0 else None, name=agg_spend.name() if i == 0 else tx.name
+                    tx,
+                    spend_bundle=agg_spend if i == 0 else None,
+                    name=agg_spend.name() if i == 0 else tx.name,
                 )
                 for i, tx in enumerate(tx_records)
             ]
@@ -2244,6 +2248,8 @@ class WalletStateManager:
         for wallet_id in {tx.wallet_id for tx in tx_records}:
             self.state_changed("pending_transaction", wallet_id)
         await self.wallet_node.update_ui()
+
+        return tx_records
 
     async def add_transaction(self, tx_record: TransactionRecord) -> None:
         """

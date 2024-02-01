@@ -4235,7 +4235,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
             if push:
-                await self.service.wallet_state_manager.add_pending_transactions(records)
+                records = await self.service.wallet_state_manager.add_pending_transactions(records)
             return {
                 "tx_record": records[0].to_json_dict_convenience(self.service.config),
                 "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in records],
