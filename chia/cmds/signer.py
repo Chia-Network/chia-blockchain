@@ -32,7 +32,7 @@ def _clear_screen() -> None:
 
 @wallet_cmd.group("signer", help="Get information for an external signer")
 def signer_cmd() -> None:
-    pass
+    pass  # pragma: no cover
 
 
 @command_helper
@@ -243,7 +243,7 @@ class ApplySignaturesCMD:
             signed_spends: List[Spend] = [spend for tx in signed_transactions for spend in tx.transaction_info.spends]
             final_signature: G2Element = G2Element()
             for signature in [sig for tx in signed_transactions for sig in tx.signatures]:
-                if signature.type != "bls_12381_aug_scheme":
+                if signature.type != "bls_12381_aug_scheme":  # pragma: no cover
                     print("No external spot for non BLS signatures in a spend")
                     return
                 final_signature = AugSchemeMPL.aggregate([final_signature, G2Element.from_bytes(signature.signature)])

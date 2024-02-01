@@ -151,6 +151,16 @@ def test_context_requirement() -> None:
     )
     assert result.output == ""
 
+    # Test that other variables named context are disallowed
+    with pytest.raises(ValueError, match="context"):
+
+        @chia_command(cmd, "shouldnt_work", "blah")
+        class BadCMD:
+            context: int
+
+            def run(self) -> None:
+                pass
+
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="doesn't matter")
 @pytest.mark.parametrize(
