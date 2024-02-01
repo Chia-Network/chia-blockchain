@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +20,12 @@ from chia.util.ints import uint16
 _T_RpcClient = TypeVar("_T_RpcClient", bound="RpcClient")
 
 
+class ResponseFailureError(Exception):
+    def __init__(self, response: Dict[str, Any]):
+        self.response = response
+        super().__init__(f"RPC response failure: {json.dumps(response)}")
+
+
 @dataclass
 class RpcClient:
     """
@@ -31,7 +38,7 @@ class RpcClient:
 
     url: str
     session: aiohttp.ClientSession
-    ssl_context: SSLContext
+    ssl_context: Optional[SSLContext]
     hostname: str
     port: uint16
     closing_task: Optional[asyncio.Task] = None
@@ -41,19 +48,34 @@ class RpcClient:
         cls: Type[_T_RpcClient],
         self_hostname: str,
         port: uint16,
-        root_path: Path,
-        net_config: Dict[str, Any],
+        root_path: Optional[Path],
+        net_config: Optional[Dict[str, Any]],
+        # TODO: duplicative of above being None or not
+        use_ssl: bool = True,
     ) -> _T_RpcClient:
-        ca_crt_path, ca_key_path = private_ssl_ca_paths(root_path, net_config)
-        crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
-        key_path = root_path / net_config["daemon_ssl"]["private_key"]
-        timeout = net_config.get("rpc_timeout", 300)
+        ssl_context: Optional[SSLContext]
+        if not use_ssl:
+            scheme = "http"
+            ssl_context = None
+        else:
+            assert root_path is not None
+            assert net_config is not None
+            scheme = "https"
+            ca_crt_path, ca_key_path = private_ssl_ca_paths(root_path, net_config)
+            crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
+            key_path = root_path / net_config["daemon_ssl"]["private_key"]
+            ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
+
+        timeout = 300
+        if net_config is not None:
+            timeout = net_config.get("rpc_timeout", timeout)
+
         self = cls(
             hostname=self_hostname,
             port=port,
-            url=f"https://{self_hostname}:{str(port)}/",
+            url=f"{scheme}://{self_hostname}:{str(port)}/",
             session=aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)),
-            ssl_context=ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path),
+            ssl_context=ssl_context,
         )
 
         return self
@@ -64,14 +86,17 @@ class RpcClient:
         cls: Type[_T_RpcClient],
         self_hostname: str,
         port: uint16,
-        root_path: Path,
-        net_config: Dict[str, Any],
+        root_path: Optional[Path] = None,
+        # TODO: now that we have use_ssl can we drop the optional here?
+        net_config: Optional[Dict[str, Any]] = None,
+        use_ssl: bool = True,
     ) -> AsyncIterator[_T_RpcClient]:
         self = await cls.create(
             self_hostname=self_hostname,
             port=port,
             root_path=root_path,
             net_config=net_config,
+            use_ssl=use_ssl,
         )
         try:
             yield self
@@ -84,7 +109,7 @@ class RpcClient:
             response.raise_for_status()
             res_json = await response.json()
             if not res_json["success"]:
-                raise ValueError(res_json)
+                raise ResponseFailureError(res_json)
             return res_json
 
     async def get_connections(self, node_type: Optional[NodeType] = None) -> List[Dict]:
