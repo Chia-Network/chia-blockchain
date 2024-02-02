@@ -151,7 +151,6 @@ async def test_dao_creation(self_hostname: str, two_wallet_nodes: OldSimulatorsA
         fee=fee,
         fee_for_cat=fee_for_cat,
     )
-    assert dao_wallet_0 is not None
 
     for tx in tx_queue:
         await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
@@ -190,11 +189,8 @@ async def test_dao_creation(self_hostname: str, two_wallet_nodes: OldSimulatorsA
 
     # Create the other user's wallet from the treasury id
     dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-        wallet_node_1.wallet_state_manager,
-        wallet_1,
-        treasury_id,
+        wallet_node_1.wallet_state_manager, wallet_1, treasury_id
     )
-    assert dao_wallet_1 is not None
     assert dao_wallet_0.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
 
     # Get the cat wallets for wallet_1
@@ -315,13 +311,8 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: OldSimulators
     )
 
     dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
-        wallet_node_0.wallet_state_manager,
-        wallet_0,
-        uint64(cat_amt),
-        dao_rules,
-        DEFAULT_TX_CONFIG,
+        wallet_node_0.wallet_state_manager, wallet_0, uint64(cat_amt), dao_rules, DEFAULT_TX_CONFIG
     )
-    assert dao_wallet_0 is not None
 
     treasury_id = dao_wallet_0.dao_info.treasury_id
 
@@ -400,11 +391,8 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: OldSimulators
 
     # Create the other user's wallet from the treasury id
     dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-        wallet_node_1.wallet_state_manager,
-        wallet_1,
-        treasury_id,
+        wallet_node_1.wallet_state_manager, wallet_1, treasury_id
     )
-    assert dao_wallet_1 is not None
     assert dao_wallet_1.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
 
     # Get the cat wallets for wallet_1
@@ -503,13 +491,8 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: OldSimulato
     # This takes two steps: create the treasury singleton, wait for oracle_spend_delay and
     # then complete the eve spend
     dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
-        wallet_node_0.wallet_state_manager,
-        wallet_0,
-        uint64(cat_issuance),
-        dao_rules,
-        DEFAULT_TX_CONFIG,
+        wallet_node_0.wallet_state_manager, wallet_0, uint64(cat_issuance), dao_rules, DEFAULT_TX_CONFIG
     )
-    assert dao_wallet_0 is not None
 
     for tx in tx_queue:
         await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
@@ -526,11 +509,8 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: OldSimulato
 
     # Create dao_wallet_1 from the treasury id
     dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-        wallet_node_1.wallet_state_manager,
-        wallet_1,
-        treasury_id,
+        wallet_node_1.wallet_state_manager, wallet_1, treasury_id
     )
-    assert dao_wallet_1 is not None
     assert dao_wallet_1.dao_info.treasury_id == treasury_id
     cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.cat_wallet_id]
     dao_cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.dao_cat_wallet_id]
@@ -539,11 +519,8 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: OldSimulato
 
     # Create dao_wallet_2 from the treasury id
     dao_wallet_2 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-        wallet_node_2.wallet_state_manager,
-        wallet_2,
-        treasury_id,
+        wallet_node_2.wallet_state_manager, wallet_2, treasury_id
     )
-    assert dao_wallet_2 is not None
     assert dao_wallet_2.dao_info.treasury_id == treasury_id
     cat_wallet_2 = dao_wallet_2.wallet_state_manager.wallets[dao_wallet_2.dao_info.cat_wallet_id]
     dao_cat_wallet_2 = dao_wallet_2.wallet_state_manager.wallets[dao_wallet_2.dao_info.dao_cat_wallet_id]
@@ -947,13 +924,8 @@ async def test_dao_proposal_partial_vote(
     )
 
     dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
-        wallet_node_0.wallet_state_manager,
-        wallet_0,
-        uint64(cat_amt),
-        dao_rules,
-        DEFAULT_TX_CONFIG,
+        wallet_node_0.wallet_state_manager, wallet_0, uint64(cat_amt), dao_rules, DEFAULT_TX_CONFIG
     )
-    assert dao_wallet_0 is not None
 
     # Get the full node sim to process the wallet creation spend
     for tx in tx_queue:
@@ -980,11 +952,8 @@ async def test_dao_proposal_partial_vote(
     )
     # Create the other user's wallet from the treasury id
     dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-        wallet_node_1.wallet_state_manager,
-        wallet_1,
-        treasury_id,
+        wallet_node_1.wallet_state_manager, wallet_1, treasury_id
     )
-    assert dao_wallet_1 is not None
     assert dao_wallet_1.dao_info.treasury_id == treasury_id
 
     # Create funding spends for xch
@@ -2496,13 +2465,8 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: OldSimula
     )
 
     dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
-        wallet_node_0.wallet_state_manager,
-        wallet_0,
-        uint64(cat_amt),
-        dao_rules,
-        DEFAULT_TX_CONFIG,
+        wallet_node_0.wallet_state_manager, wallet_0, uint64(cat_amt), dao_rules, DEFAULT_TX_CONFIG
     )
-    assert dao_wallet_0 is not None
 
     # Get the full node sim to process the wallet creation spend
     for tx in tx_queue:
@@ -2522,11 +2486,8 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: OldSimula
 
     # Create the other user's wallet from the treasury id
     dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-        wallet_node_1.wallet_state_manager,
-        wallet_1,
-        treasury_id,
+        wallet_node_1.wallet_state_manager, wallet_1, treasury_id
     )
-    assert dao_wallet_1 is not None
     assert dao_wallet_1.dao_info.treasury_id == treasury_id
 
     # Create funding spends for xch
@@ -2549,11 +2510,8 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: OldSimula
 
     # Add a third wallet and check they can find proposal with accurate vote counts
     dao_wallet_2 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-        wallet_node_2.wallet_state_manager,
-        wallet_2,
-        treasury_id,
+        wallet_node_2.wallet_state_manager, wallet_2, treasury_id
     )
-    assert dao_wallet_2 is not None
     assert dao_wallet_2.dao_info.treasury_id == treasury_id
 
     dao_cat_wallet_2 = dao_wallet_2.wallet_state_manager.wallets[dao_wallet_2.dao_info.dao_cat_wallet_id]
@@ -2904,13 +2862,8 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: OldSimulatorsAnd
     )
 
     dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
-        wallet_node_0.wallet_state_manager,
-        wallet_0,
-        uint64(cat_amt),
-        dao_rules,
-        DEFAULT_TX_CONFIG,
+        wallet_node_0.wallet_state_manager, wallet_0, uint64(cat_amt), dao_rules, DEFAULT_TX_CONFIG
     )
-    assert dao_wallet_0 is not None
 
     # Get the full node sim to process the wallet creation spend
     for tx in tx_queue:
@@ -2942,11 +2895,8 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: OldSimulatorsAnd
 
     # Create the other user's wallet from the treasury id
     dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-        wallet_node_1.wallet_state_manager,
-        wallet_1,
-        treasury_id,
+        wallet_node_1.wallet_state_manager, wallet_1, treasury_id
     )
-    assert dao_wallet_1 is not None
     assert dao_wallet_1.dao_info.treasury_id == treasury_id
 
     # Create funding spends for xch
@@ -3169,13 +3119,8 @@ async def test_dao_votes(self_hostname: str, three_wallet_nodes: OldSimulatorsAn
     )
 
     dao_wallet_0, tx_queue = await DAOWallet.create_new_dao_and_wallet(
-        wallet_node_0.wallet_state_manager,
-        wallet_0,
-        uint64(cat_issuance),
-        dao_rules,
-        DEFAULT_TX_CONFIG,
+        wallet_node_0.wallet_state_manager, wallet_0, uint64(cat_issuance), dao_rules, DEFAULT_TX_CONFIG
     )
-    assert dao_wallet_0 is not None
 
     for tx in tx_queue:
         await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
@@ -3395,7 +3340,6 @@ async def test_dao_resync(self_hostname: str, two_wallet_nodes: OldSimulatorsAnd
         fee=fee,
         fee_for_cat=fee_for_cat,
     )
-    assert dao_wallet_0 is not None
 
     for tx in tx_queue:
         await wallet_0.wallet_state_manager.add_pending_transaction(tx)
@@ -3411,11 +3355,8 @@ async def test_dao_resync(self_hostname: str, two_wallet_nodes: OldSimulatorsAnd
 
     # Create the other user's wallet from the treasury id
     dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-        wallet_node_1.wallet_state_manager,
-        wallet_1,
-        treasury_id,
+        wallet_node_1.wallet_state_manager, wallet_1, treasury_id
     )
-    assert dao_wallet_1 is not None
     assert dao_wallet_0.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
 
     # Get the cat wallets for wallet_1
