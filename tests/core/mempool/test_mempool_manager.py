@@ -992,8 +992,8 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
             assert result[1] == MempoolInclusionStatus.SUCCESS
 
     mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(2000000000, 2000002200)))
-    high_rate_spends = await make_coin_spends(coins[0:2000])
-    low_rate_spends = await make_coin_spends(coins[2000:2100], high_fees=False)
+    high_rate_spends = await make_coin_spends(coins[0:2200])
+    low_rate_spends = await make_coin_spends(coins[2200:2400], high_fees=False)
     spends = low_rate_spends + high_rate_spends if reverse_tx_order else high_rate_spends + low_rate_spends
     await send_spends_to_mempool(spends)
     assert mempool_manager.peak is not None
