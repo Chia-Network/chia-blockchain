@@ -107,3 +107,10 @@ def test_set_response(bt: BlockTools) -> None:
     # Test invalid message-type
     sender._response = new_expected_response(3, 0, ProtocolMessageTypes.plot_sync_start)
     assert not sender.set_response(new_response_message(3, 0, ProtocolMessageTypes.plot_sync_loaded))
+
+
+def test_sync_done_with_negative_duration_does_not_crash(bt: BlockTools) -> None:
+    sender = Sender(bt.plot_manager, HarvestingMode.CPU)
+    sender.sync_start(0, True)
+
+    sender.sync_done([], -1)
