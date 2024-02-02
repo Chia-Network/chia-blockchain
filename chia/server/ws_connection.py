@@ -620,7 +620,7 @@ class WSChiaConnection:
 
     async def _read_one_message(self) -> Optional[Message]:
         try:
-            message: WSMessage = await self.ws.receive(30)
+            message: WSMessage = await self.ws.receive()
         except asyncio.TimeoutError:
             # self.ws._closed if we didn't receive a ping / pong
             if self.ws.closed:
