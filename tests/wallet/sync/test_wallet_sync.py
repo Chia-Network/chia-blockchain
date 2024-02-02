@@ -35,6 +35,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.misc import to_batches
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos
@@ -1334,18 +1335,17 @@ async def test_bad_peak_mismatch(
     blockchain_constants: ConsensusConstants,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    wallet_node, wallet_server = wallets[0]
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], [(wallet_node, wallet_server), _], _ = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
     blocks = default_1000_blocks
     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks, blockchain_constants)
     wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for block in blocks:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
