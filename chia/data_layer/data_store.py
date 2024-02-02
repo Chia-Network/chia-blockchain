@@ -802,9 +802,9 @@ class DataStore:
         old_pairs = await self.get_keys_values_compressed(tree_id, hash1)
         new_pairs = await self.get_keys_values_compressed(tree_id, hash2)
         if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
-            return KVDiffPaginationData(1, 0, set())
+            return KVDiffPaginationData(1, 0, [])
         if len(new_pairs.keys_values_hashed) == 0 and hash2 != bytes32([0] * 32):
-            return KVDiffPaginationData(1, 0, set())
+            return KVDiffPaginationData(1, 0, [])
 
         old_pairs_leaf_hashes = {v for v in old_pairs.keys_values_hashed.values()}
         new_pairs_leaf_hashes = {v for v in new_pairs.keys_values_hashed.values()}
