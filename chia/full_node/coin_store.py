@@ -418,6 +418,7 @@ class CoinStore:
         puzzle_hashes: List[bytes32],
         *,
         min_height: uint32 = uint32(0),
+        max_height: uint32 = uint32.MAXIMUM,
         include_spent: bool = True,
         include_unspent: bool = True,
         include_hinted: bool = True,
@@ -466,10 +467,13 @@ class CoinStore:
                     f'WHERE (cr.puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
                     f'OR h.hint in ({"?," * (puzzle_hash_count - 1)}?)) '
                     f"AND (cr.confirmed_index>=? OR cr.spent_index>=?) "
+                    f"AND (cr.confirmed_index<=? OR cr.spent_index<=?) "
                     f"{height_filter} "
                     f"ORDER BY MAX(cr.confirmed_index, cr.spent_index) ASC "
                     f"LIMIT ?",
-                    puzzle_hashes_db + puzzle_hashes_db + (min_height, min_height, max_items + 1),
+                    puzzle_hashes_db
+                    + puzzle_hashes_db
+                    + (min_height, min_height, max_height, max_height, max_items + 1),
                 )
             else:
                 cursor = await conn.execute(
@@ -477,10 +481,11 @@ class CoinStore:
                     f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
                     f'WHERE puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
                     f"AND (confirmed_index>=? OR spent_index>=?) "
+                    f"AND (confirmed_index<=? OR spent_index<=?) "
                     f"{height_filter} "
                     f"ORDER BY MAX(confirmed_index, spent_index) ASC "
                     f"LIMIT ?",
-                    puzzle_hashes_db + (min_height, min_height, max_items + 1),
+                    puzzle_hashes_db + (min_height, min_height, max_height, max_height, max_items + 1),
                 )
 
             for row in await cursor.fetchall():

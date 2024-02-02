@@ -696,11 +696,15 @@ hashes = [
 
 request_add_puzzle_subscriptions = wallet_protocol.RequestAddPuzzleSubscriptions(hashes)
 
-respond_add_puzzle_subscriptions = wallet_protocol.RespondAddPuzzleSubscriptions(hashes)
+respond_add_puzzle_subscriptions = wallet_protocol.RespondAddPuzzleSubscriptions(
+    hashes, uint32(164324), bytes32(bytes.fromhex("dfa10e11f1e2f99dbe9087815b10fa12f3826a56ec5af7bb46e7a4794ee6d015"))
+)
 
 request_add_coin_subscriptions = wallet_protocol.RequestAddCoinSubscriptions(hashes)
 
-respond_add_coin_subscriptions = wallet_protocol.RespondAddCoinSubscriptions(hashes)
+respond_add_coin_subscriptions = wallet_protocol.RespondAddCoinSubscriptions(
+    hashes, uint32(481956), bytes32(bytes.fromhex("df6c4b2f5cf738990b3811bc343428474e1513c1c66533f8803594a7d7d4d83f"))
+)
 
 
 request_remove_puzzle_subscriptions = wallet_protocol.RequestRemovePuzzleSubscriptions(hashes)
@@ -714,6 +718,7 @@ respond_remove_coin_subscriptions = wallet_protocol.RespondRemoveCoinSubscriptio
 request_puzzle_state = wallet_protocol.RequestPuzzleState(
     hashes,
     uint32(0),
+    None,
     bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
     coin_state_filters,
     True,
@@ -726,7 +731,11 @@ reject_puzzle_state = wallet_protocol.RejectPuzzleState(
 )
 
 request_coin_state = wallet_protocol.RequestCoinState(
-    hashes, uint32(0), bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")), False
+    hashes,
+    uint32(0),
+    uint32(10000000),
+    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
+    False,
 )
 
 respond_coin_state = wallet_protocol.RespondCoinState(hashes, [coin_state])

@@ -1727,10 +1727,16 @@ class FullNodeAPI:
         max_subscriptions = self.max_subscriptions(peer)
         subs = self.full_node.subscriptions
 
+        peak_height = self.full_node.blockchain.get_peak_height()
+        assert peak_height is not None
+
+        header_hash = self.full_node.blockchain.height_to_hash(peak_height)
+        assert header_hash is not None
+
         new_subscriptions = set(request.puzzle_hashes) - subs.puzzle_subscriptions(peer_id)
         added = subs.add_puzzle_subscriptions(peer_id, list(new_subscriptions), max_subscriptions)
 
-        response = wallet_protocol.RespondAddPuzzleSubscriptions(list(added))
+        response = wallet_protocol.RespondAddPuzzleSubscriptions(list(added), peak_height, header_hash)
         msg = make_msg(ProtocolMessageTypes.respond_add_puzzle_subscriptions, response)
         return msg
 
@@ -1745,10 +1751,16 @@ class FullNodeAPI:
         max_subscriptions = self.max_subscriptions(peer)
         subs = self.full_node.subscriptions
 
+        peak_height = self.full_node.blockchain.get_peak_height()
+        assert peak_height is not None
+
+        header_hash = self.full_node.blockchain.height_to_hash(peak_height)
+        assert header_hash is not None
+
         new_subscriptions = set(request.coin_ids) - subs.coin_subscriptions(peer_id)
         added = subs.add_coin_subscriptions(peer_id, list(new_subscriptions), max_subscriptions)
 
-        response = wallet_protocol.RespondAddCoinSubscriptions(list(added))
+        response = wallet_protocol.RespondAddCoinSubscriptions(list(added), peak_height, header_hash)
         msg = make_msg(ProtocolMessageTypes.respond_add_coin_subscriptions, response)
         return msg
 
@@ -1814,6 +1826,7 @@ class FullNodeAPI:
         (coin_states, next_height) = await self.full_node.coin_store.batch_coin_states_by_puzzle_hashes(
             puzzle_hashes,
             min_height=request.min_height,
+            max_height=request.max_height or uint32.MAXIMUM,
             include_spent=request.filters.include_spent,
             include_unspent=request.filters.include_unspent,
             include_hinted=request.filters.include_hinted,
@@ -1847,7 +1860,11 @@ class FullNodeAPI:
             return msg
 
         coin_states = await self.full_node.coin_store.get_coin_states_by_ids(
-            True, set(request.coin_ids), min_height=request.min_height, max_items=max_items
+            True,
+            set(request.coin_ids),
+            min_height=request.min_height,
+            max_height=request.max_height or uint32.MAXIMUM,
+            max_items=max_items,
         )
 
         peer_id = peer.peer_node_id
