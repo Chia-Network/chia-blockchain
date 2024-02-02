@@ -73,7 +73,7 @@ from tests import ether
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
-from tests.util.misc import BenchmarkRunner, GcMode, TestId, _AssertRuntime, measure_overhead
+from tests.util.misc import BenchmarkRunner, GcMode, RecordingWebServer, TestId, _AssertRuntime, measure_overhead
 from tests.util.setup_nodes import (
     OldSimulatorsAndWallets,
     SimulatorsAndWallets,
@@ -1212,3 +1212,15 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
         )
 
         yield farmer_service, harvester_service, simulators[0], simulators[1], bt
+
+
+@pytest.fixture(name="recording_web_server")
+async def recording_web_server_fixture(self_hostname: str) -> AsyncIterator[RecordingWebServer]:
+    server = await RecordingWebServer.create(
+        hostname=self_hostname,
+        port=uint16(0),
+    )
+    try:
+        yield server
+    finally:
+        await server.await_closed()

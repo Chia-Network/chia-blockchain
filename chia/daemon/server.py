@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import logging
 import os
@@ -144,6 +145,18 @@ def _get_keys_by_fingerprints(fingerprints: Optional[List[uint32]]) -> Tuple[Lis
     return keys, missing_fingerprints
 
 
+@dataclasses.dataclass(frozen=True)
+class StatusMessage:
+    service: str
+    command: str
+    destination: str
+    origin: str
+    data: Dict[str, Any]
+
+    def create_payload(self) -> str:
+        return create_payload(command=self.command, data=self.data, origin=self.origin, destination=self.destination)
+
+
 class WebSocketServer:
     def __init__(
         self,
@@ -170,6 +183,8 @@ class WebSocketServer:
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
         self.shutdown_event = asyncio.Event()
+        self.state_changed_msg_queue: asyncio.Queue[StatusMessage] = asyncio.Queue()
+        self.state_changed_task: Optional[asyncio.Task] = None
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
@@ -194,6 +209,7 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
 
+        self.state_changed_task = asyncio.create_task(self._process_state_changed_queue())
         self.webserver = await WebServer.create(
             hostname=self.self_hostname,
             port=self.daemon_port,
@@ -234,6 +250,7 @@ class WebSocketServer:
 
     async def stop(self) -> Dict[str, Any]:
         self.cancel_task_safe(self.ping_job)
+        self.cancel_task_safe(self.state_changed_task)
         service_names = list(self.services.keys())
         stop_service_jobs = [
             asyncio.create_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
@@ -675,33 +692,6 @@ class WebSocketServer:
         }
         return response
 
-    async def _keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
-        """
-        Attempt to communicate with the GUI to inform it of any keyring status changes
-        (e.g. keyring becomes unlocked)
-        """
-        websockets = self.connections.get("wallet_ui", None)
-
-        if websockets is None:
-            return None
-
-        if keyring_status is None:
-            return None
-
-        response = create_payload("keyring_status_changed", keyring_status, "daemon", destination)
-
-        for websocket in websockets.copy():
-            try:
-                await websocket.send_str(response)
-            except Exception as e:
-                tb = traceback.format_exc()
-                self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
-                websockets.remove(websocket)
-                await websocket.close()
-
-    def keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
-        asyncio.create_task(self._keyring_status_changed(keyring_status, destination))
-
     def plot_queue_to_payload(self, plot_queue_item, send_full_log: bool) -> Dict[str, Any]:
         error = plot_queue_item.get("error")
         has_error = error is not None
@@ -737,29 +727,56 @@ class WebSocketServer:
                 data.append(self.plot_queue_to_payload(item, send_full_log))
         return data
 
-    async def _state_changed(self, service: str, message: Dict[str, Any]):
+    async def _process_state_changed_queue(self) -> None:
+        with log_exceptions(
+            log=self.log,
+            consume=True,
+            message="State changed task received Cancel",
+            level=logging.DEBUG,
+            show_traceback=False,
+            exceptions_to_process=asyncio.CancelledError,
+        ):
+            while True:
+                with log_exceptions(
+                    log=self.log,
+                    consume=True,
+                    message="Unexpected exception, continuing:",
+                ):
+                    message = await self.state_changed_msg_queue.get()
+                    await self._state_changed(message)
+
+    async def _state_changed(self, message: StatusMessage) -> None:
         """If id is None, send the whole state queue"""
-        if service not in self.connections:
+        if message.service not in self.connections:
             return None
 
-        websockets = self.connections[service]
-
-        if message is None:
-            return None
-
-        response = create_payload("state_changed", message, service, "wallet_ui")
-
+        websockets = self.connections[message.service]
         for websocket in websockets.copy():
             try:
-                await websocket.send_str(response)
+                await websocket.send_str(message.create_payload())
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
                 websockets.remove(websocket)
                 await websocket.close()
 
-    def state_changed(self, service: str, message: Dict[str, Any]):
-        asyncio.create_task(self._state_changed(service, message))
+    def state_changed(self, service: str, message: Dict[str, Any]) -> None:
+        self.state_changed_msg_queue.put_nowait(
+            StatusMessage(
+                service=service, command="state_changed", destination="wallet_ui", origin=service, data=message
+            )
+        )
+
+    def keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str) -> None:
+        self.state_changed_msg_queue.put_nowait(
+            StatusMessage(
+                service="wallet_ui",
+                command="keyring_status_changed",
+                destination=destination,
+                origin="daemon",
+                data=keyring_status,
+            )
+        )
 
     async def _watch_file_changes(self, config, fp: TextIO, loop: asyncio.AbstractEventLoop):
         id: str = config["id"]
