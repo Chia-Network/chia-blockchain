@@ -2536,6 +2536,7 @@ async def test_pagination_rpcs(
 
         new_value = b"\x02\x02"
         changelist = [{"action": "upsert", "key": key6.hex(), "value": new_value.hex()}]
+        new_leaf_hash = leaf_hash(key6, new_value)
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec3 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec3, wallet_rpc_api)
@@ -2553,6 +2554,7 @@ async def test_pagination_rpcs(
                 "max_page_size": 100,
             }
         )
+        assert leaf_hash6 < new_leaf_hash
         diff_reference = {
             "total_pages": 1,
             "total_bytes": 8,
@@ -2561,9 +2563,7 @@ async def test_pagination_rpcs(
                 {"type": "INSERT", "key": key6.hex(), "value": new_value.hex()},
             ],
         }
-        assert diff_res["total_pages"] == diff_reference["total_pages"]
-        assert diff_res["total_bytes"] == diff_reference["total_bytes"]
-        assert sorted(diff_res["diff"], key=lambda x: x["type"]) == diff_reference["diff"]
+        assert diff_res == diff_reference
 
         with pytest.raises(Exception, match="Can't find keys"):
             await data_rpc_api.get_keys(

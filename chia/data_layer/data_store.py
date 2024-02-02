@@ -817,15 +817,15 @@ class DataStore:
             lengths[hash] = old_pairs.leaf_hash_to_length[hash]
 
         pagination_data = get_hashes_for_page(page, lengths, max_page_size)
-        kv_diff: Set[DiffData] = set()
+        kv_diff: List[DiffData] = []
 
         for hash in pagination_data.hashes:
             node = await self.get_node(hash)
             assert isinstance(node, TerminalNode)
             if hash in insertions:
-                kv_diff.add(DiffData(OperationType.INSERT, node.key, node.value))
+                kv_diff.append(DiffData(OperationType.INSERT, node.key, node.value))
             else:
-                kv_diff.add(DiffData(OperationType.DELETE, node.key, node.value))
+                kv_diff.append(DiffData(OperationType.DELETE, node.key, node.value))
 
         return KVDiffPaginationData(
             pagination_data.total_pages,

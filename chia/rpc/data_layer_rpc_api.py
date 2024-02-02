@@ -403,7 +403,8 @@ class DataLayerRpcApi:
         res: List[Dict[str, Any]] = []
 
         if page is None:
-            records = await self.service.get_kv_diff(id_bytes, hash_1_bytes, hash_2_bytes)
+            records_dict = await self.service.get_kv_diff(id_bytes, hash_1_bytes, hash_2_bytes)
+            records = list(records_dict)
         else:
             kv_diff_paginated = await self.service.get_kv_diff_paginated(
                 id_bytes, hash_1_bytes, hash_2_bytes, page, max_page_size
@@ -411,7 +412,7 @@ class DataLayerRpcApi:
             records = kv_diff_paginated.kv_diff
 
         for rec in records:
-            res.insert(0, {"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
+            res.append({"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
 
         response: EndpointResult = {"diff": res}
         if page is not None:

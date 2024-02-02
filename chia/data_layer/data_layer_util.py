@@ -794,4 +794,4 @@ class KeysValuesPaginationData:
 class KVDiffPaginationData:
     total_pages: int
     total_bytes: int
-    kv_diff: Set[DiffData]
+    kv_diff: List[DiffData]
