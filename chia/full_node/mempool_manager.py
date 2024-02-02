@@ -179,6 +179,7 @@ class MempoolManager:
         multiprocessing_context: Optional[BaseContext] = None,
         *,
         single_threaded: bool = False,
+        max_tx_clvm_cost: Optional[uint64] = None,
     ):
         self.constants: ConsensusConstants = consensus_constants
 
@@ -194,7 +195,9 @@ class MempoolManager:
 
         BLOCK_SIZE_LIMIT_FACTOR = 0.6
         self.max_block_clvm_cost = uint64(self.constants.MAX_BLOCK_COST_CLVM * BLOCK_SIZE_LIMIT_FACTOR)
-        self.max_tx_clvm_cost = uint64(self.constants.MAX_BLOCK_COST_CLVM // 2)
+        self.max_tx_clvm_cost = (
+            max_tx_clvm_cost if max_tx_clvm_cost is not None else uint64(self.constants.MAX_BLOCK_COST_CLVM // 2)
+        )
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
