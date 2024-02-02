@@ -639,14 +639,12 @@ class DataLayer:
         parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
         await self.wallet_rpc.dl_track_new(subscription.tree_id)
-        async with self.subscription_lock:
-            await self.data_store.subscribe(subscription)
+        await self.data_store.subscribe(subscription)
         self.log.info(f"Done adding subscription: {subscription.tree_id}")
 
     async def remove_subscriptions(self, store_id: bytes32, urls: List[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
-        async with self.subscription_lock:
-            await self.data_store.remove_subscriptions(store_id, parsed_urls)
+        await self.data_store.remove_subscriptions(store_id, parsed_urls)
 
     async def unsubscribe(self, tree_id: bytes32, retain_data: bool) -> None:
         async with self.subscription_lock:
@@ -681,8 +679,7 @@ class DataLayer:
                 pass
 
     async def get_subscriptions(self) -> List[Subscription]:
-        async with self.subscription_lock:
-            return await self.data_store.get_subscriptions()
+        return await self.data_store.get_subscriptions()
 
     async def add_mirror(self, store_id: bytes32, urls: List[str], amount: uint64, fee: uint64) -> None:
         if not urls:
@@ -714,16 +711,15 @@ class DataLayer:
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
         while not self._shut_down:
-            async with self.subscription_lock:
-                try:
-                    subscriptions = await self.data_store.get_subscriptions()
-                    for subscription in subscriptions:
-                        await self.wallet_rpc.dl_track_new(subscription.tree_id)
-                    break
-                except aiohttp.client_exceptions.ClientConnectorError:
-                    pass
-                except Exception as e:
-                    self.log.error(f"Exception while requesting wallet track subscription: {type(e)} {e}")
+            try:
+                subscriptions = await self.data_store.get_subscriptions()
+                for subscription in subscriptions:
+                    await self.wallet_rpc.dl_track_new(subscription.tree_id)
+                break
+            except aiohttp.client_exceptions.ClientConnectorError:
+                pass
+            except Exception as e:
+                self.log.error(f"Exception while requesting wallet track subscription: {type(e)} {e}")
 
             self.log.warning("Cannot connect to the wallet. Retrying in 3s.")
 
@@ -734,8 +730,7 @@ class DataLayer:
                 await asyncio.sleep(0.1)
 
         while not self._shut_down:
-            async with self.subscription_lock:
-                subscriptions = await self.data_store.get_subscriptions()
+            subscriptions = await self.data_store.get_subscriptions()
 
             # Subscribe to all local tree_ids that we can find on chain.
             local_tree_ids = await self.data_store.get_tree_ids()
