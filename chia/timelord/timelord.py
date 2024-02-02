@@ -430,6 +430,7 @@ class Timelord:
                 for iteration in self.iters_to_submit[chain]:
                     if iteration in self.iters_submitted[chain]:
                         continue
+                    self.iters_submitted[chain].append(iteration)
                     log.debug(f"Submitting iterations to {chain}: {iteration}")
                     assert iteration > 0
                     prefix = str(len(str(iteration)))
@@ -438,7 +439,6 @@ class Timelord:
                     iter_str = prefix + str(iteration)
                     writer.write(iter_str.encode())
                     await writer.drain()
-                    self.iters_submitted[chain].append(iteration)
 
     def _clear_proof_list(self, iters: uint64) -> List[Tuple[Chain, VDFInfo, VDFProof, int]]:
         return [
