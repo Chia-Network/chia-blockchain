@@ -55,6 +55,8 @@ async def test_puzzle_subscriptions(one_node: OneNode, self_hostname: str) -> No
     ph2 = bytes32(b"\x02" * 32)
     ph3 = bytes32(b"\x03" * 32)
 
+    await simulator.farm_blocks_to_puzzlehash(1)
+
     # Add puzzle subscriptions, ignore duplicates
     resp = await simulator.request_add_puzzle_subscriptions(
         wallet_protocol.RequestAddPuzzleSubscriptions([ph1, ph2, ph2]), peer
@@ -171,7 +173,12 @@ async def sync_puzzle_hashes(
         while next_height is not None:
             resp = await simulator.request_puzzle_state(
                 wallet_protocol.RequestPuzzleState(
-                    remaining[:max_hashes_in_request], next_height, next_header_hash, filters, subscribe_when_finished
+                    remaining[:max_hashes_in_request],
+                    next_height,
+                    None,
+                    next_header_hash,
+                    filters,
+                    subscribe_when_finished,
                 ),
                 peer,
             )
@@ -337,7 +344,7 @@ async def test_coin_state(one_node: OneNode, self_hostname: str) -> None:
     # Fetch the coin records using the wallet protocol,
     # only after height 10000, so that the limit of 100000 isn't exceeded
     resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(10000), None, subscribe=False), peer
+        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(10000), None, None, subscribe=False), peer
     )
     assert resp is not None
 
@@ -353,7 +360,7 @@ async def test_coin_state(one_node: OneNode, self_hostname: str) -> None:
 
     # The expected behavior when the limit is exceeded, is to skip the rest
     resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(0), None, subscribe=False), peer
+        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(0), None, None, subscribe=False), peer
     )
     assert resp is not None
 
