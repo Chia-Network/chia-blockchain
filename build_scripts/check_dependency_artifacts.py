@@ -9,6 +9,9 @@ import tempfile
 
 excepted_packages = {
     "dnslib",  # pure python
+    "chialisp_loader",
+    "chialisp_puzzles",
+    "chia_base",
 }
 
 
