@@ -37,19 +37,17 @@ async def select_coins(
 
     for coin_record in spendable_coins:  # remove all the unconfirmed coins, excluded coins and dust.
         coin_name: bytes32 = coin_record.coin.name()
+        coin_amount = coin_record.coin.amount
         if coin_name in unconfirmed_removals:
             continue
         if coin_name in coin_selection_config.excluded_coin_ids:
             continue
-        if (
-            coin_record.coin.amount < coin_selection_config.min_coin_amount
-            or coin_record.coin.amount > coin_selection_config.max_coin_amount
-        ):
+        if coin_amount < coin_selection_config.min_coin_amount or coin_amount > coin_selection_config.max_coin_amount:
             continue
-        if coin_record.coin.amount in coin_selection_config.excluded_coin_amounts:
+        if coin_amount in coin_selection_config.excluded_coin_amounts:
             continue
         valid_spendable_coins.append(coin_record.coin)
-        sum_spendable_coins += coin_record.coin.amount
+        sum_spendable_coins += coin_amount
 
     # This happens when we couldn't use one of the coins because it's already used
     # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
@@ -78,8 +76,9 @@ async def select_coins(
     smaller_coin_sum = 0  # coins smaller than target.
     smaller_coins: List[Coin] = []
     for coin in valid_spendable_coins:
-        if coin.amount < amount:
-            smaller_coin_sum += coin.amount
+        c_amount = coin.amount
+        if c_amount < amount:
+            smaller_coin_sum += c_amount
             smaller_coins.append(coin)
     if smaller_coin_sum == amount and len(smaller_coins) < max_num_coins and amount != 0:
         log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
@@ -160,7 +159,8 @@ def knapsack_coin_algorithm(
                 if (n_pass == 0 and bool(ran.getrandbits(1))) or (n_pass == 1 and coin not in selected_coins):
                     if len(selected_coins) > max_num_coins:
                         break
-                    selected_coins_sum += coin.amount
+                    amount = coin.amount
+                    selected_coins_sum += amount
                     selected_coins.add(coin)
                     if selected_coins_sum == target:
                         return selected_coins
@@ -169,7 +169,7 @@ def knapsack_coin_algorithm(
                         if selected_coins_sum < best_set_sum:
                             best_set_of_coins = selected_coins.copy()
                             best_set_sum = selected_coins_sum
-                            selected_coins_sum -= coin.amount
+                            selected_coins_sum -= amount
                             selected_coins.remove(coin)
             n_pass += 1
     return best_set_of_coins
