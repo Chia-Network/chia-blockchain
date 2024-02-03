@@ -2382,7 +2382,7 @@ async def test_unpublished_batch_update(
 
         key = b"e"
         value = b"\x00\x05"
-        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex(), "publish_on_chain": False}]
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.batch_update(
             {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
         )
@@ -2398,8 +2398,8 @@ async def test_unpublished_batch_update(
         to_insert.append((key, value))
 
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
-        update_tx_rec0 = res["tx_id"]
-        await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
+        update_tx_rec1 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
 
         keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
         assert len(keys_values["keys_values"]) == len(to_insert)
