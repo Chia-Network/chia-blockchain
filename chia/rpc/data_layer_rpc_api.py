@@ -195,7 +195,7 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
+        transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee), publish_on_chain)
         if publish_on_chain:
             if transaction_record is None:
                 raise Exception(f"Batch update failed for: {store_id}")

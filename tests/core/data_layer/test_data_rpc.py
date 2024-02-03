@@ -2329,3 +2329,80 @@ async def test_mirrors(
 
         with pytest.raises(RuntimeError, match="URL list can't be empty"):
             res = await data_rpc_api.add_mirror({"id": store_id.hex(), "urls": [], "amount": 1, "fee": 1})
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_unpublished_batch_update(
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        res = await data_rpc_api.create_data_store({})
+        assert res is not None
+
+        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+
+        to_insert = [(b"a", b"\x00\x01"), (b"b", b"\x00\x02"), (b"c", b"\x00\x03")]
+        for repetition in range(3):
+            key, value = to_insert[repetition]
+            changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+
+            res = await data_rpc_api.batch_update(
+                {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
+            )
+            assert res == {}
+
+            for _ in range(10):
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
+            assert keys_values == {"keys_values": []}
+            pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+            assert pending_root is not None
+            assert pending_root.status == Status.PENDING_BATCH
+
+        key = b"d"
+        value = b"\x00\x04"
+        to_insert.append((key, value))
+
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
+
+        keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
+        assert len(keys_values["keys_values"]) == len(to_insert)
+        kv_dict = {item["key"]: item["value"] for item in keys_values["keys_values"]}
+        for key, value in to_insert:
+            assert kv_dict["0x" + key.hex()] == "0x" + value.hex()
+
+        key = b"e"
+        value = b"\x00\x05"
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex(), "publish_on_chain": False}]
+        res = await data_rpc_api.batch_update(
+            {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
+        )
+        assert res == {}
+
+        await data_rpc_api.clear_pending_roots({"store_id": store_id.hex()})
+        pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+        assert pending_root is None
+
+        key = b"f"
+        value = b"\x00\x06"
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        to_insert.append((key, value))
+
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
+
+        keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
+        assert len(keys_values["keys_values"]) == len(to_insert)
+        kv_dict = {item["key"]: item["value"] for item in keys_values["keys_values"]}
+        for key, value in to_insert:
+            assert kv_dict["0x" + key.hex()] == "0x" + value.hex()
