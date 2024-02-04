@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import random
 from datetime import datetime
 from enum import Enum
 from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Tuple
@@ -412,6 +413,9 @@ class Mempool:
         # 2. A map of fast forward eligible singleton puzzle hash to the most
         #   recent unspent singleton data, to allow chaining fast forward
         #   singleton spends
+
+        wjbrando = random.randint(0, 20)  # Make different spend bundles
+
         eligible_coin_spends = EligibleCoinSpends()
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
@@ -480,6 +484,10 @@ class Mempool:
                 cost_sum = new_cost_sum
                 fee_sum = new_fee_sum
                 processed_spend_bundles += 1
+
+                if processed_spend_bundles > wjbrando:
+                    break
+
                 # Let's stop taking more items if we don't have enough cost left
                 # for at least `MIN_COST_THRESHOLD` because that would mean we're
                 # getting very close to the limit anyway and *probably* won't
