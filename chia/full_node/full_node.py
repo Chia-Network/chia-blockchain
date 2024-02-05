@@ -77,6 +77,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
@@ -1566,16 +1567,7 @@ class FullNode:
             self.log.debug(f"Added transaction to mempool: {spend_name}")
             mempool_item = self.mempool_manager.get_mempool_item(spend_name)
             assert mempool_item is not None
-            fees = mempool_item.fee
-            assert fees >= 0
-            assert mempool_item.cost is not None
-            new_tx = full_node_protocol.NewTransaction(
-                spend_name,
-                mempool_item.cost,
-                fees,
-            )
-            msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
-            await self.server.send_to_all([msg], NodeType.FULL_NODE)
+            await self.notify_peers_of_mempool_item(mempool_item)
 
         # If there were pending end of slots that happen after this peak, broadcast them if they are added
         if ppp_result.fns_peak_result.added_eos is not None:
@@ -2350,25 +2342,70 @@ class FullNode:
                 # vector.
                 mempool_item = self.mempool_manager.get_mempool_item(spend_name)
                 assert mempool_item is not None
-                fees = mempool_item.fee
-                assert fees >= 0
-                assert cost is not None
-                new_tx = full_node_protocol.NewTransaction(
-                    spend_name,
-                    cost,
-                    fees,
-                )
-                msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
-                if peer is None:
-                    await self.server.send_to_all([msg], NodeType.FULL_NODE)
-                else:
-                    await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
+
+                await self.notify_peers_of_mempool_item(mempool_item, peer)
+
                 if self.simulator_transaction_callback is not None:  # callback
                     await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
+
             else:
                 self.mempool_manager.remove_seen(spend_name)
                 self.log.debug(f"Wasn't able to add transaction with id {spend_name}, status {status} error: {error}")
         return status, error
+
+    async def notify_peers_of_mempool_item(
+        self, mempool_item: MempoolItem, peer: Optional[WSChiaConnection] = None
+    ) -> None:
+        new_tx = full_node_protocol.NewTransaction(
+            mempool_item.spend_bundle_name,
+            mempool_item.cost,
+            mempool_item.fee,
+        )
+        new_tx_msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
+
+        await self.server.send_to_all([new_tx_msg], NodeType.FULL_NODE, None if peer is None else peer.peer_node_id)
+
+        wallet_update = wallet_protocol.TransactionAddedUpdate(
+            mempool_item.spend_bundle_name,
+            mempool_item.height_added_to_mempool,
+            mempool_item.cost,
+            mempool_item.additions,
+            mempool_item.removals,
+        )
+        wallet_update_msg = make_msg(ProtocolMessageTypes.transaction_added_update, wallet_update)
+
+        peers = await self.peers_for_mempool_item(mempool_item)
+
+        def new_clients(conn: WSChiaConnection) -> bool:
+            return conn.peer_node_id in peers and conn.protocol_version > Version("0.0.36")
+
+        await self.server.send_to_all_if(
+            [wallet_update_msg], NodeType.WALLET, new_clients, None if peer is None else peer.peer_node_id
+        )
+
+    async def peers_for_mempool_item(self, mempool_item: MempoolItem) -> Set[bytes32]:
+        all_coins = mempool_item.additions + mempool_item.removals
+
+        peers: Set[bytes32] = set()
+        coin_ids: List[bytes32] = []
+
+        for coin in all_coins:
+            peers_for_ph = self.subscriptions.peers_for_puzzle_hash(coin.puzzle_hash)
+            peers.update(peers_for_ph)
+
+            coin_id = coin.name()
+            peers_for_coin = self.subscriptions.peers_for_coin_id(coin_id)
+            peers.update(peers_for_coin)
+
+            coin_ids.append(coin_id)
+
+        hints = [bytes32(hint) for hint in await self.hint_store.get_hints_for_coins(coin_ids) if len(hint) == 32]
+
+        for hint in hints:
+            peers_for_hint = self.subscriptions.peers_for_puzzle_hash(hint)
+            peers.update(peers_for_hint)
+
+        return peers
 
     async def _needs_compact_proof(
         self, vdf_info: VDFInfo, header_block: HeaderBlock, field_vdf: CompressibleVDFField

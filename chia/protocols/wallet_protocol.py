@@ -385,3 +385,13 @@ class RespondCoinState(Streamable):
 @dataclass(frozen=True)
 class RejectCoinState(Streamable):
     header_hash: Optional[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class TransactionAddedUpdate(Streamable):
+    transaction_id: bytes32
+    height_added: uint32
+    cost: uint64
+    additions: List[Coin]
+    removals: List[Coin]
