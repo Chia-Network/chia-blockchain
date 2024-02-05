@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Any, Dict, TypeVar
+from typing import Any, Dict, List, Optional, Sequence
 
 import click
 import pytest
 from click.testing import CliRunner
 
 from chia.cmds.cmd_classes import ChiaCommand, Context, NeedsWalletRPC, chia_command, option
+from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.conftest import ConsensusMode
 from tests.environments.wallet import WalletTestFramework
 from tests.wallet.conftest import *  # noqa
-
-_T_Command = TypeVar("_T_Command", bound=ChiaCommand)
 
 
 def check_click_parsing(cmd: ChiaCommand, *args: str) -> None:
@@ -159,7 +158,149 @@ def test_context_requirement() -> None:
             context: int
 
             def run(self) -> None:
-                pass
+                ...
+
+
+def test_typing() -> None:
+    @click.group()
+    def cmd() -> None:
+        pass
+
+    @chia_command(cmd, "temp_cmd", "blah")
+    class TempCMD:
+        integer: int = option("--integer", default=1, required=False)
+        text: str = option("--text", default="1", required=False)
+        boolean: bool = option("--boolean", default=True, required=False)
+        floating_point: float = option("--floating-point", default=1.1, required=False)
+        blob: bytes = option("--blob", default=b"foo", required=False)
+        blob32: bytes32 = option("--blob32", default=bytes32([1] * 32), required=False)
+        choice: str = option("--choice", default="a", type=click.Choice(["a", "b"]), required=False)
+
+        def run(self) -> None:
+            ...
+
+    check_click_parsing(TempCMD())
+    check_click_parsing(
+        TempCMD(),
+        "--integer",
+        "1",
+        "--text",
+        "1",
+        "--boolean",
+        "true",
+        "--floating-point",
+        "1.1",
+        "--blob",
+        "0x666f6f",
+        "--blob32",
+        "0x0101010101010101010101010101010101010101010101010101010101010101",
+        "--choice",
+        "a",
+    )
+
+    # Test optional
+    @chia_command(cmd, "temp_cmd_optional", "blah")
+    class TempCMDOptional:
+        optional: Optional[int] = option("--optional", required=False)
+
+        def run(self) -> None:
+            ...
+
+    check_click_parsing(TempCMDOptional(optional=None))
+    check_click_parsing(TempCMDOptional(optional=1), "--optional", "1")
+
+    # Test optional failure
+    with pytest.raises(TypeError):
+
+        @chia_command(cmd, "temp_cmd_optional_bad", "blah")
+        class TempCMDOptionalBad:
+            optional: Optional[int] = option("--optional")
+
+            def run(self) -> None:
+                ...
+
+    with pytest.raises(TypeError):
+
+        @chia_command(cmd, "temp_cmd_optional_bad", "blah")
+        class TempCMDOptionalBad2:
+            optional: Optional[int] = option("--optional", required=True)
+
+            def run(self) -> None:
+                ...
+
+    with pytest.raises(TypeError):
+
+        @chia_command(cmd, "temp_cmd_optional_bad", "blah")
+        class TempCMDOptionalBad3:
+            optional: Optional[int] = option("--optional", default="string")
+
+            def run(self) -> None:
+                ...
+
+    @chia_command(cmd, "temp_cmd_optional_fine", "blah")
+    class TempCMDOptionalBad4:
+        optional: Optional[int] = option("--optional", default=None, required=False)
+
+        def run(self) -> None:
+            ...
+
+    # Test multiple
+    @chia_command(cmd, "temp_cmd_sequence", "blah")
+    class TempCMDSequence:
+        sequence: Sequence[int] = option("--sequence", multiple=True)
+
+        def run(self) -> None:
+            ...
+
+    check_click_parsing(TempCMDSequence(sequence=tuple()))
+    check_click_parsing(TempCMDSequence(sequence=(1, 2)), "--sequence", "1", "--sequence", "2")
+
+    # Test sequence failure
+    with pytest.raises(TypeError):
+
+        @chia_command(cmd, "temp_cmd_sequence_bad", "blah")
+        class TempCMDSequenceBad:
+            sequence: Sequence[int] = option("--sequence")
+
+            def run(self) -> None:
+                ...
+
+    with pytest.raises(TypeError):
+
+        @chia_command(cmd, "temp_cmd_sequence_bad", "blah")
+        class TempCMDSequenceBad2:
+            sequence: int = option("--sequence", multiple=True)
+
+            def run(self) -> None:
+                ...
+
+    with pytest.raises(ValueError):
+
+        @chia_command(cmd, "temp_cmd_sequence_bad", "blah")
+        class TempCMDSequenceBad3:
+            sequence: Sequence[int] = option("--sequence", default=[1, 2, 3], multiple=True)
+
+            def run(self) -> None:
+                ...
+
+    with pytest.raises(TypeError):
+
+        @chia_command(cmd, "temp_cmd_sequence_bad", "blah")
+        class TempCMDSequenceBad4:
+            sequence: Sequence[int] = option("--sequence", default=(1, 2, "3"), multiple=True)
+
+            def run(self) -> None:
+                ...
+
+    # Test invalid type
+    with pytest.raises(TypeError):
+
+        @chia_command(cmd, "temp_cmd_bad_type", "blah")
+        class TempCMDBadType:
+            sequence: List[int] = option("--sequence")
+
+            def run(self) -> None:
+                ...
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="doesn't matter")

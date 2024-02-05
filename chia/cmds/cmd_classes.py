@@ -1,17 +1,34 @@
 from __future__ import annotations
 
 import asyncio
+import collections
 import inspect
 import sys
 from contextlib import asynccontextmanager
 from dataclasses import MISSING, dataclass, field, fields
-from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Protocol, Type, Union, get_type_hints
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Protocol,
+    Type,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 import click
 from typing_extensions import dataclass_transform
 
 from chia.cmds.cmds_util import get_wallet_client
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.streamable import is_type_SpecificOptional
 
 SyncCmd = Callable[..., None]
 
@@ -44,6 +61,30 @@ def option(*param_decls: str, **kwargs: Any) -> Any:
         ),
         default=kwargs["default"] if "default" in kwargs else default_default,
     )
+
+
+class HexString(click.ParamType):
+    name = "hexstring"
+
+    def convert(self, value: str, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> bytes:
+        if isinstance(value, bytes):  # This if is due to some poor handling on click's part
+            return value
+        try:
+            return hexstr_to_bytes(value)
+        except ValueError:
+            self.fail(f"{value} is not a valid hex string", param, ctx)
+
+
+class HexString32(click.ParamType):
+    name = "hexstring32"
+
+    def convert(self, value: str, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> bytes32:
+        if isinstance(value, bytes32):  # This if is due to some poor handling on click's part
+            return value
+        try:
+            return bytes32.from_hexstr(value)
+        except ValueError:
+            self.fail(f"{value} is not a valid 32-byte hex string", param, ctx)
 
 
 @dataclass(frozen=True)
@@ -119,11 +160,55 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
             elif "is_command_option" not in _field.metadata or not _field.metadata["is_command_option"]:
                 continue
 
+            if "type" not in _field.metadata:
+                origin = get_origin(hints[field_name])
+                if origin == collections.abc.Sequence:
+                    if "multiple" not in _field.metadata or not _field.metadata["multiple"]:
+                        raise TypeError("Can only use Sequence with multiple=True")
+                    else:
+                        type_arg = get_args(hints[field_name])[0]
+                        if "default" in _field.metadata and (
+                            not isinstance(_field.metadata["default"], tuple)
+                            or any(not isinstance(item, type_arg) for item in _field.metadata["default"])
+                        ):
+                            raise TypeError(
+                                f"Default {_field.metadata['default']} is not a tuple "
+                                f"or all of its elements are not of type {type_arg}"
+                            )
+                elif "multiple" in _field.metadata:
+                    raise TypeError("Options with multiple=True must be Sequence[T]")
+                elif is_type_SpecificOptional(hints[field_name]):
+                    if "required" not in _field.metadata or _field.metadata["required"]:
+                        raise TypeError("Optional only allowed for options with required=False")
+                    type_arg = get_args(hints[field_name])[0]
+                    if "default" in _field.metadata and (
+                        not isinstance(_field.metadata["default"], type_arg) and _field.metadata["default"] is not None
+                    ):
+                        raise TypeError(f"Default {_field.metadata['default']} is not type {type_arg} or None")
+                elif origin is not None:
+                    raise TypeError(f"Type {origin} invalid as a click type")
+                else:
+                    if hints[field_name] == bytes:
+                        type_arg = HexString()
+                    elif hints[field_name] == bytes32:
+                        type_arg = HexString32()
+                    else:
+                        type_arg = hints[field_name]
+                    if "default" in _field.metadata and not isinstance(_field.metadata["default"], hints[field_name]):
+                        raise TypeError(f"Default {_field.metadata['default']} is not type {type_arg}")
+            else:
+                type_arg = _field.metadata["type"]
+
             kwarg_names.append(field_name)
             option_decorators.append(
                 click.option(
                     *_field.metadata["param_decls"],
-                    **{k: v for k, v in _field.metadata.items() if k not in ("param_decls", "is_command_option")},
+                    type=type_arg,
+                    **{
+                        k: v
+                        for k, v in _field.metadata.items()
+                        if k not in ("param_decls", "is_command_option", "type")
+                    },
                 )
             )
 
