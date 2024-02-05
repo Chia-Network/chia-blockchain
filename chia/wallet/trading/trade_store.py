@@ -174,14 +174,25 @@ class TradeStore:
                 )
                 if existing_trades_with_same_offer:
                     raise ValueError("Trade for this offer already exists.")
+            trade_record_old = TradeRecordOld(
+                confirmed_at_index=record.confirmed_at_index,
+                accepted_at_time=record.accepted_at_time,
+                created_at_time=record.created_at_time,
+                is_my_offer=record.is_my_offer,
+                sent=record.sent,
+                offer=record.offer,
+                taken_offer=record.taken_offer,
+                coins_of_interest=record.coins_of_interest,
+                trade_id=record.trade_id,
+                status=record.status,
+                sent_to=record.sent_to,
+            )
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO trade_records "
                 "(trade_record, trade_id, status, confirmed_at_index, created_at_time, sent, offer_name, is_my_offer) "
                 "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    bytes(
-                        TradeRecordOld(**{k: v for k, v in dataclasses.asdict(record).items() if k != "valid_times"})
-                    ),
+                    bytes(trade_record_old),
                     record.trade_id.hex(),
                     record.status,
                     record.confirmed_at_index,
