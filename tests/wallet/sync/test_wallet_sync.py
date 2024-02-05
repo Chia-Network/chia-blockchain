@@ -66,15 +66,16 @@ log = getLogger(__name__)
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_request_block_headers(
-    simulator_and_wallet: OldSimulatorsAndWallets, default_1000_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock]
 ) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
     [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
     wallet = wallet_node.wallet_state_manager.main_wallet
     ph = await wallet.get_new_puzzlehash()
-    for block in default_1000_blocks[:100]:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks[:100], 64):
+        await full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(10), uint32(15), False))
     assert msg is not None
@@ -82,18 +83,14 @@ async def test_request_block_headers(
     res_block_headers = RespondBlockHeaders.from_bytes(msg.data)
     bh = res_block_headers.header_blocks
     assert len(bh) == 6
-    assert [x.reward_chain_block.height for x in default_1000_blocks[10:16]] == [
-        x.reward_chain_block.height for x in bh
-    ]
-
-    assert [x.foliage for x in default_1000_blocks[10:16]] == [x.foliage for x in bh]
-
+    assert [x.reward_chain_block.height for x in default_400_blocks[10:16]] == [x.reward_chain_block.height for x in bh]
+    assert [x.foliage for x in default_400_blocks[10:16]] == [x.foliage for x in bh]
     assert [x.transactions_filter for x in bh] == [b"\x00"] * 6
 
     num_blocks = 20
-    new_blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks, pool_reward_puzzle_hash=ph)
-    for i in range(len(new_blocks)):
-        await full_node_api.full_node.add_block(new_blocks[i])
+    new_blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks, pool_reward_puzzle_hash=ph)
+    for block_batch in to_batches(new_blocks, 64):
+        await full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(110), uint32(115), True))
     assert msg is not None
