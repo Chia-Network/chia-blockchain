@@ -562,7 +562,6 @@ async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
 async def test_subscribe_for_hint_long_sync(
     wallet_two_node_simulator: OldSimulatorsAndWallets, self_hostname: str
 ) -> None:
-    num_blocks = 4
     full_nodes, wallets, bt = wallet_two_node_simulator
     full_node_api = full_nodes[0]
     full_node_api_1 = full_nodes[1]
@@ -576,10 +575,9 @@ async def test_subscribe_for_hint_long_sync(
 
     wt = bt.get_pool_wallet_tool()
     ph = wt.get_new_puzzlehash()
-    for _ in range(num_blocks):
+    for _ in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    await asyncio.sleep(6)
     coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
     coin_spent = coins[0].coin
     hint_puzzle_hash = 32 * b"\2"
@@ -610,7 +608,8 @@ async def test_subscribe_for_hint_long_sync(
     await full_node_api.process_spend_bundles(bundles=[tx])
 
     # Create more blocks than recent "short_sync_blocks_behind_threshold" so that node enters batch
-    for _ in range(100):
+    blocks_to_farm = full_node_api.full_node.config.get("short_sync_blocks_behind_threshold", 100)
+    for _ in range(blocks_to_farm):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     node1_height = full_node_api_1.full_node.blockchain.get_peak_height()
