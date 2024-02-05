@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from typing import Any, Callable, Dict, Set, Tuple
+from typing import Any, Callable, Dict, Optional, Set, Tuple
 
 from chia_rs import ALLOW_BACKREFS, run_chia_program, tree_hash
 from clvm import SExp
@@ -24,7 +24,7 @@ class Program(SExp):
     """
 
     @classmethod
-    def parse(cls, f) -> "Program":
+    def parse(cls, f) -> Program:
         return sexp_from_stream(f, cls.to)
 
     def stream(self, f):
@@ -45,7 +45,7 @@ class Program(SExp):
         return Program.to(ret)
 
     @classmethod
-    def fromhex(cls, hexstr: str) -> "Program":
+    def fromhex(cls, hexstr: str) -> Program:
         return cls.from_bytes(hexstr_to_bytes(hexstr))
 
     def __bytes__(self) -> bytes:
@@ -56,7 +56,7 @@ class Program(SExp):
     def __str__(self) -> str:
         return bytes(self).hex()
 
-    def at(self, position: str) -> "Program":
+    def at(self, position: str) -> Program:
         """
         Take a string of only `f` and `r` characters and follow the corresponding path.
 
@@ -75,7 +75,7 @@ class Program(SExp):
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
 
-    def replace(self, **kwargs) -> "Program":
+    def replace(self, **kwargs) -> Program:
         """
         Create a new program replacing the given paths (using `at` syntax).
         Example:
@@ -108,12 +108,15 @@ class Program(SExp):
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(bytes(self)))
 
-    def run_with_cost(self, max_cost: int, args) -> Tuple[int, "Program"]:
+    def _run(self, max_cost: int, flags: int, args: object) -> Tuple[int, Program]:
         prog_args = Program.to(args)
-        cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, 0)
+        cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, flags)
         return cost, Program.to(r)
 
-    def run(self, args) -> "Program":
+    def run_with_cost(self, max_cost: int, args: object) -> Tuple[int, Program]:
+        return self._run(max_cost, 0, args)
+
+    def run(self, args: object) -> Program:
         cost, r = self.run_with_cost(INFINITE_COST, args)
         return r
 
@@ -133,7 +136,7 @@ class Program(SExp):
     #
     # Resulting in a function which places its own arguments after those
     # curried in in the form of a proper list.
-    def curry(self, *args) -> "Program":
+    def curry(self, *args) -> Program:
         fixed_args: Any = 1
         for arg in reversed(args):
             fixed_args = [4, (1, arg), fixed_args]
@@ -173,6 +176,12 @@ class Program(SExp):
 
     def as_int(self) -> int:
         return int_from_bytes(self.as_atom())
+
+    def as_atom(self) -> bytes:
+        ret: Optional[bytes] = self.atom
+        if ret is None:
+            raise ValueError("expected atom")
+        return ret
 
     def __deepcopy__(self, memo):
         return type(self).from_bytes(bytes(self))

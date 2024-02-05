@@ -10,8 +10,13 @@ from chia.util.ints import uint64
 
 
 class DataLayerRpcClient(RpcClient):
-    async def create_data_store(self, fee: Optional[uint64]) -> Dict[str, Any]:
-        response = await self.fetch("create_data_store", {"fee": fee})
+    async def create_data_store(self, fee: Optional[uint64], verbose: bool) -> Dict[str, Any]:
+        response = await self.fetch("create_data_store", {"fee": fee, "verbose": verbose})
+        return response
+
+    async def wallet_log_in(self, fingerprint: int) -> Dict[str, Any]:
+        request: Dict[str, Any] = {"fingerprint": fingerprint}
+        response = await self.fetch("wallet_log_in", request)
         return response
 
     async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32]) -> Dict[str, Any]:
@@ -65,8 +70,8 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("remove_subscriptions", {"id": store_id.hex(), "urls": urls})
         return response
 
-    async def unsubscribe(self, store_id: bytes32) -> Dict[str, Any]:
-        response = await self.fetch("unsubscribe", {"id": store_id.hex()})
+    async def unsubscribe(self, store_id: bytes32, retain: bool) -> Dict[str, Any]:
+        response = await self.fetch("unsubscribe", {"id": store_id.hex(), "retain": retain})
         return response
 
     async def add_missing_files(

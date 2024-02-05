@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Generator, KeysView
+from typing import Generator, Iterable, KeysView
 
 SERVICES_FOR_GROUP = {
     "all": [
@@ -37,10 +37,9 @@ def all_groups() -> KeysView[str]:
     return SERVICES_FOR_GROUP.keys()
 
 
-def services_for_groups(groups) -> Generator[str, None, None]:
+def services_for_groups(groups: Iterable[str]) -> Generator[str, None, None]:
     for group in groups:
-        for service in SERVICES_FOR_GROUP[group]:
-            yield service
+        yield from SERVICES_FOR_GROUP[group]
 
 
 def validate_service(service: str) -> bool:

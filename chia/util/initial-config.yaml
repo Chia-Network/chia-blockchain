@@ -4,9 +4,11 @@ min_mainnet_k_size: 32
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
 prefer_ipv6: False
+rpc_timeout: 300
 daemon_port: 55400
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
 daemon_heartbeat: 300 # sets the heartbeat for ping/ping interval and timeouts
+daemon_allow_tls_1_2: False # if True, allow TLS 1.2 for daemon connections
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
 
@@ -71,17 +73,36 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
-      SOFT_FORK3_HEIGHT: 2997292
-      SOFT_FORK4_HEIGHT: 2997292
+      SOFT_FORK2_HEIGHT: 3000000
       # planned 2.0 release is July 26, height 2965036 on testnet
       # 1 week later
       HARD_FORK_HEIGHT: 2997292
+      # November 2023
+      HARD_FORK_FIX_HEIGHT: 3426000
       # another 2 weeks later
       PLOT_FILTER_128_HEIGHT: 3061804
       # 3 years later
       PLOT_FILTER_64_HEIGHT: 8010796
       # 3 years later
       PLOT_FILTER_32_HEIGHT: 13056556
+    testnet11:
+      AGG_SIG_ME_ADDITIONAL_DATA: 37a90eb5185a9c4439a91ddc98bbadce7b4feba060d50116a067de66bf236615
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
+      DIFFICULTY_STARTING: 30
+      EPOCH_BLOCKS: 768
+      GENESIS_CHALLENGE: 37a90eb5185a9c4439a91ddc98bbadce7b4feba060d50116a067de66bf236615
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: 3ef7c233fc0785f3c0cae5992c1d35e7c955ca37a423571c1607ba392a9d12f7
+      MEMPOOL_BLOCK_BUFFER: 10
+      MIN_PLOT_SIZE: 18
+      NETWORK_TYPE: 1
+      SUB_SLOT_ITERS_STARTING: 67108864
+      # Forks activated from the beginning on this network
+      HARD_FORK_HEIGHT: 0
+      HARD_FORK_FIX_HEIGHT: 0
+      PLOT_FILTER_128_HEIGHT: 6029568
+      PLOT_FILTER_64_HEIGHT: 11075328
+      PLOT_FILTER_32_HEIGHT: 16121088
   config:
     mainnet:
       address_prefix: "xch"
@@ -101,6 +122,9 @@ network_overrides: &network_overrides
       address_prefix: "txch"
       default_full_node_port: 58444
     testnet10:
+      address_prefix: "txch"
+      default_full_node_port: 58444
+    testnet11:
       address_prefix: "txch"
       default_full_node_port: 58444
 
@@ -139,6 +163,8 @@ seeder:
   port: 8444
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
+  # What port to run the DNS server on, (this is useful if you are already using port 53 for DNS).
+  dns_port: 53
   # This will override the default full_node.peer_connect_timeout for the crawler full node
   peer_connect_timeout: 2
   # Path to crawler DB. Defaults to $CHIA_ROOT/crawler.db
@@ -154,7 +180,7 @@ seeder:
   nameserver: "example.com."
   ttl: 300
   soa:
-    rname: "hostmaster.example.com."
+    rname: "hostmaster.example.com" # all @ symbols need to be replaced with . in dns records.
     serial_number: 1619105223
     refresh: 10800
     retry: 10800
@@ -172,11 +198,9 @@ seeder:
       private_key: "config/ssl/crawler/private_crawler.key"
 
 harvester:
-  # The harvester server (if run) will run on this port
-  port: 8448
-  farmer_peer:
-    host: *self_hostname
-    port: 8447
+  farmer_peers:
+    - host: *self_hostname
+      port: 8447
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -222,6 +246,8 @@ harvester:
   use_gpu_harvesting: False
   gpu_index: 0
   enforce_gpu_index: False
+  # If no decompressor is available after `decompressor_timeout` seconds, abort the current operation.
+  decompressor_timeout: 20
 
 pool:
   # Replace this with a real receive address
@@ -233,13 +259,10 @@ pool:
 farmer:
   # The farmer server (if run) will run on this port
   port: 8447
-  # The farmer will attempt to connect to this full node and harvester
-  full_node_peer:
-    host: *self_hostname
-    port: 8444
-  harvester_peer:
-    host: *self_hostname
-    port: 8448
+  # The farmer will attempt to connect to these full nodes
+  full_node_peers:
+    - host: *self_hostname
+      port: 8444
 
   pool_public_keys: []
 
@@ -272,8 +295,6 @@ timelord_launcher:
   logging: *logging
 
 timelord:
-  # The timelord server (if run) will run on this port
-  port: 8446
   # Provides a list of VDF clients expected to connect to this timelord.
   # For each client, an IP is provided, together with the estimated iterations per second.
   vdf_clients:
@@ -283,9 +304,9 @@ timelord:
       - 127.0.0.1
     ips_estimate:
       - 150000
-  full_node_peer:
-    host: *self_hostname
-    port: 8444
+  full_node_peers:
+    - host: *self_hostname
+      port: 8444
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
@@ -332,6 +353,8 @@ timelord:
 full_node:
   # The full node server (if run) will run on this port
   port: 8444
+  # The full node will attempt to connect to these full nodes
+  full_node_peers: []
 
   # controls the sync-to-disk behavior of the database connection. Can be one of:
   # "on"    enables syncing to disk, minimizes risk of corrupting the DB in
@@ -358,6 +381,14 @@ full_node:
 
   multiprocessing_start_method: default
 
+  # The maximum number of UnfinishedBlocks we accept (and forward) with the
+  # same reward hash (but different foliage hashes). Traditionally this was
+  # effectively 1, meaning whichever UnfinishedBlock we saw first was the only
+  # one we forwarded. In 2.2.0 we relaxed the protocol to allow some
+  # duplicates be forwarded, in order to allow the timelords to,
+  # deterministically, pick which one to infuse
+  max_duplicate_unfinished_blocks: 3
+
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8555
@@ -370,6 +401,8 @@ full_node:
 
   # If node is more than these blocks behind, will do a short batch-sync, if it's less, will do a backtrack sync
   short_sync_blocks_behind_threshold: 20
+
+  bad_peak_cache_size: 100
 
   # When creating process pools the process count will generally be the CPU count minus
   # this reserved core count.
@@ -385,7 +418,7 @@ full_node:
   # How long to wait for a peer connection
   peer_connect_timeout: 30
   # Accept peers until this number of connections
-  target_peer_count: 80
+  target_peer_count: 40
   # Initiate outbound connections until this number is hit.
   target_outbound_peer_count: 8
   # IPv4/IPv6 network addresses and CIDR blocks allowed to connect even when target_peer_count has been hit.
@@ -409,9 +442,18 @@ full_node:
   # timeout for weight proof request
   weight_proof_timeout: &weight_proof_timeout 360
 
+  # when the full node enters sync-mode, we wait until we have collected peaks
+  # from at least 3 peers, or until we've waitied this many seconds
+  max_sync_wait: 30
+
   # when enabled, the full node will print a pstats profile to the root_dir/profile every second
   # analyze with chia/utils/profiler.py
   enable_profiler: False
+
+  # when enabled, each time a block is validated, the python profiler is
+  # engaged. If the validation takes more than 2 seconds, the profile is saved
+  # to disk, in the chia root/block-validation-profile
+  profile_block_validation: False
 
   enable_memory_profiler: False
 
@@ -442,19 +484,10 @@ full_node:
     - "chia-seeder.h9.com"
     - "chia.hoffmang.com"
     - "seeder.xchpool.org"
-  farmer_peer:
-    host: *self_hostname
-    port: 8447
-  timelord_peer:
-    host: *self_hostname
-    port: 8446
   introducer_peer:
     host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
     port: 8444
     enable_private_networks: False
-  wallet_peer:
-    host: *self_hostname
-    port: 8449
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -471,9 +504,6 @@ full_node:
   use_chia_loop_policy: True
 
 ui:
-  # The ui node server (if run) will run on this port
-  port: 8222
-
   # Which port to use to communicate with the full node
   rpc_port: 8555
 
@@ -507,7 +537,6 @@ introducer:
     public_key: "config/ssl/full_node/public_full_node.key"
 
 wallet:
-  port: 8449
   rpc_port: 9256
 
   enable_profiler: False
@@ -531,9 +560,9 @@ wallet:
 
   dns_servers: *dns_servers
 
-  full_node_peer:
-    host: *self_hostname
-    port: 8444
+  full_node_peers:
+    - host: *self_hostname
+      port: 8444
   # The path of NFT off-chain metadata cache
   nft_metadata_cache_path: "nft_cache"
   # The length of NFT ID prefix will be used as hash index
@@ -625,9 +654,6 @@ wallet:
 data_layer:
   # TODO: consider name
   # TODO: organize consistently with other sections
-
-  # TODO: shouldn't we not need this since we have no actual public interface (yet)?
-  port: 8561
   wallet_peer:
     host: localhost
     port: 9256
@@ -667,8 +693,11 @@ data_layer:
     public_crt: "config/ssl/data_layer/public_data_layer.crt"
     public_key: "config/ssl/data_layer/public_data_layer.key"
 
-  uploaders: []
-  downloaders: []
+  plugins:
+    uploaders: []
+    downloaders: []
+  maximum_full_file_count: 1
+
 simulator:
   # Should the simulator farm a block whenever a transaction is in mempool
   auto_farm: True

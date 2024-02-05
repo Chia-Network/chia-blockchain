@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import random
 import tempfile
 from pathlib import Path
-from secrets import token_bytes
 from typing import Any
 
 import pytest
@@ -10,24 +10,24 @@ import pytest
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.notification_store import NotificationStore
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
 # For testing backwards compatibility with a DB change to add height
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_notification_store_backwards_compat() -> None:
     # First create the DB the way it would have otheriwse been created
     db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
     db_name.parent.mkdir(parents=True, exist_ok=True)
-    db_wrapper = await DBWrapper2.create(
+    async with DBWrapper2.managed(
         database=db_name,
-    )
-    try:
+    ) as db_wrapper:
         async with db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY,msg blob,amount blob)"
@@ -44,16 +44,16 @@ async def test_notification_store_backwards_compat() -> None:
 
         await NotificationStore.create(db_wrapper)
         await NotificationStore.create(db_wrapper)
-    finally:
-        await db_wrapper.close()
 
 
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
-async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+@pytest.mark.anyio
+async def test_notifications(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -66,7 +66,7 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
 
     ph_1 = await wallet_1.get_new_puzzlehash()
     ph_2 = await wallet_2.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_1.config["trusted_peers"] = {
@@ -79,8 +79,8 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
         wallet_node_1.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     for i in range(0, 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
@@ -134,8 +134,8 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
             allow_height = peak.height + 1
         if case == "allow_larger":
             allow_larger_height = peak.height + 1
-        tx = await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, fee=FEE)
-        await wsm_1.add_pending_transaction(tx)
+        tx = await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, DEFAULT_TX_CONFIG, fee=FEE)
+        await wsm_1.add_pending_transactions([tx])
         await time_out_assert_not_none(
             5,
             full_node_api.full_node.mempool_manager.get_spendbundle,
@@ -166,7 +166,7 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     assert len(notifications) == 1
     assert notifications[0].message == b"allow_larger"
     assert (
-        await notification_manager_2.notification_store.get_notifications([n.coin_id for n in notifications])
+        await notification_manager_2.notification_store.get_notifications([n.id for n in notifications])
         == notifications
     )
 
@@ -176,7 +176,7 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     await notification_manager_2.notification_store.delete_all_notifications()
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
     await notification_manager_2.notification_store.add_notification(notifications[0])
-    await notification_manager_2.notification_store.delete_notifications([n.coin_id for n in notifications])
+    await notification_manager_2.notification_store.delete_notifications([n.id for n in notifications])
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
 
     assert not await func(*notification_manager_2.most_recent_args)

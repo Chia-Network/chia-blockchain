@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Generic, List, Optional, TypeVar
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final
@@ -30,6 +31,7 @@ max_message_size = 50 * 1024 * 1024  # 50MB
 
 EndpointResult = Dict[str, Any]
 Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
+_T_RpcApiProtocol = TypeVar("_T_RpcApiProtocol", bound="RpcApiProtocol")
 
 
 class StateChangedProtocol(Protocol):
@@ -64,29 +66,13 @@ class RpcServiceProtocol(Protocol):
         """Called when a new connection is established to the server."""
         ...
 
-    def _close(self) -> None:
-        """Request that the service shuts down.
-
-        Initiate the shutdown procedure such that multiple activities are triggered
-        in preparation.  Follow by awaiting `._await_closed()` to wait for all tasks
-        to complete.
-        """
-        ...
-
-    async def _await_closed(self) -> None:
-        """Wait for all tasks to terminate.
-
-        To be called only after `._close()` is called to initiate the shutdown.
-        """
-        ...
-
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         """Register the callable that will process state change events."""
         ...
 
-    async def _start(self) -> None:
-        """Launch all necessary tasks and do any setup needed to be fully running."""
-        ...
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        yield  # pragma: no cover
 
 
 class RpcApiProtocol(Protocol):
@@ -136,12 +122,12 @@ def default_get_connections(server: ChiaServer, request_node_type: Optional[Node
 
 @final
 @dataclass
-class RpcServer:
+class RpcServer(Generic[_T_RpcApiProtocol]):
     """
     Implementation of RPC server.
     """
 
-    rpc_api: RpcApiProtocol
+    rpc_api: _T_RpcApiProtocol
     stop_cb: Callable[[], None]
     service_name: str
     ssl_context: SSLContext
@@ -157,13 +143,13 @@ class RpcServer:
     @classmethod
     def create(
         cls,
-        rpc_api: RpcApiProtocol,
+        rpc_api: _T_RpcApiProtocol,
         service_name: str,
         stop_cb: Callable[[], None],
         root_path: Path,
         net_config: Dict[str, Any],
         prefer_ipv6: bool,
-    ) -> RpcServer:
+    ) -> RpcServer[_T_RpcApiProtocol]:
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
         key_path = root_path / net_config["daemon_ssl"]["private_key"]
         ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
@@ -188,7 +174,7 @@ class RpcServer:
             hostname=self_hostname,
             port=rpc_port,
             max_request_body_size=max_request_body_size,
-            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()],
+            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self._get_routes().items()],
             ssl_context=self.ssl_context,
             prefer_ipv6=self.prefer_ipv6,
         )
@@ -246,21 +232,21 @@ class RpcServer:
             raise RuntimeError("RpcServer is not started")
         return self.webserver.listen_port
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def _get_routes(self) -> Dict[str, Endpoint]:
         return {
             **self.rpc_api.get_routes(),
             "/get_connections": self.get_connections,
             "/open_connection": self.open_connection,
             "/close_connection": self.close_connection,
             "/stop_node": self.stop_node,
-            "/get_routes": self._get_routes,
+            "/get_routes": self.get_routes,
             "/healthz": self.healthz,
         }
 
-    async def _get_routes(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_routes(self, request: Dict[str, Any]) -> EndpointResult:
         return {
             "success": True,
-            "routes": list(self.get_routes().keys()),
+            "routes": list(self._get_routes().keys()),
         }
 
     async def get_connections(self, request: Dict[str, Any]) -> EndpointResult:
@@ -390,7 +376,7 @@ class RpcServer:
                         autoclose=True,
                         autoping=True,
                         heartbeat=self.daemon_heartbeat,
-                        ssl_context=self.ssl_client_context,
+                        ssl=self.ssl_client_context,
                         max_msg_size=max_message_size,
                     )
                     await self.connection(self.websocket)
@@ -411,7 +397,7 @@ class RpcServer:
 
 
 async def start_rpc_server(
-    rpc_api: RpcApiProtocol,
+    rpc_api: _T_RpcApiProtocol,
     self_hostname: str,
     daemon_port: uint16,
     rpc_port: uint16,
@@ -420,7 +406,7 @@ async def start_rpc_server(
     net_config: Dict[str, object],
     connect_to_daemon: bool = True,
     max_request_body_size: Optional[int] = None,
-) -> RpcServer:
+) -> RpcServer[_T_RpcApiProtocol]:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.

@@ -1,87 +1,64 @@
-# flake8: noqa: F811, F401
-
 from __future__ import annotations
 
-import logging
+from typing import List
 
 import pytest
 
-from chia.protocols import full_node_protocol
-from chia.simulator.time_out_assert import time_out_assert
+from chia.types.full_block import FullBlock
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16
-from chia.wallet.transaction_record import TransactionRecord
+from chia.util.ints import uint64, uint128
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
-from tests.conftest import Mode
-from tests.connection_utils import connect_and_get_peer
-from tests.util.misc import assert_runtime
+from tests.util.misc import BenchmarkRunner, wallet_height_at_least
+from tests.util.setup_nodes import OldSimulatorsAndWallets
+from tests.util.time_out_assert import time_out_assert
 
 
-async def wallet_height_at_least(wallet_node, h):
-    height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
-    if height == h:
-        return True
-    return False
-
-
-async def wallet_balance_at_least(wallet_node: WalletNode, balance):
+async def wallet_balance_at_least(wallet_node: WalletNode, balance: uint128) -> bool:
     b = await wallet_node.wallet_state_manager.get_confirmed_balance_for_wallet(1)
-    if b >= balance:
-        return True
-    return False
+    return b >= balance
 
 
-log = logging.getLogger(__name__)
+@pytest.mark.limit_consensus_modes(reason="benchmark")
+@pytest.mark.anyio
+async def test_mempool_update_performance(
+    wallet_nodes_mempool_perf: OldSimulatorsAndWallets,
+    default_400_blocks: List[FullBlock],
+    self_hostname: str,
+    benchmark_runner: BenchmarkRunner,
+) -> None:
+    blocks = default_400_blocks
+    [full_node_api], [wallet_setup], bt = wallet_nodes_mempool_perf
+    full_node = full_node_api.full_node
+    wallet_node, wallet_server = wallet_setup
+    wallet = wallet_node.wallet_state_manager.main_wallet
 
+    # We need an initialized mempool as we want to add a transaction, so we use
+    # the first block to achieve that
+    await full_node.add_block(blocks[0])
+    await full_node.add_block_batch(blocks[1:], PeerInfo("0.0.0.0", 0), None)
 
-class TestMempoolPerformance:
-    @pytest.mark.asyncio
-    @pytest.mark.benchmark
-    async def test_mempool_update_performance(
-        self, request, wallet_nodes_mempool_perf, default_400_blocks, self_hostname, consensus_mode: Mode
-    ):
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("only run benchmarks in PLAIN mode")
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node.server.get_port()), None)
+    await time_out_assert(30, wallet_height_at_least, True, wallet_node, 399)
+    send_amount = uint64(40_000_000_000_000)
+    fee_amount = uint64(2213)
+    await time_out_assert(30, wallet_balance_at_least, True, wallet_node, send_amount + fee_amount)
 
-        blocks = default_400_blocks
-        full_nodes, wallets, bt = wallet_nodes_mempool_perf
-        wallet_node = wallets[0][0]
-        wallet_server = wallets[0][1]
-        full_node_api_1 = full_nodes[0]
-        full_node_api_2 = full_nodes[1]
-        server_1 = full_node_api_1.full_node.server
-        server_2 = full_node_api_2.full_node.server
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
+    ph = await wallet.get_new_puzzlehash()
+    [big_transaction] = await wallet.generate_signed_transaction(send_amount, ph, DEFAULT_TX_CONFIG, fee_amount)
+    assert big_transaction.spend_bundle is not None
+    status, err = await full_node.add_transaction(
+        big_transaction.spend_bundle, big_transaction.spend_bundle.name(), test=True
+    )
+    assert err is None
+    assert status == MempoolInclusionStatus.SUCCESS
 
-        for block in blocks:
-            await full_node_api_1.full_node.add_block(block)
+    cons = list(full_node.server.all_connections.values())
+    for con in cons:
+        await con.close()
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
-        send_amount = 40000000000000
-        fee_amount = 2213
-        await time_out_assert(60, wallet_balance_at_least, True, wallet_node, send_amount + fee_amount)
-
-        big_transaction: TransactionRecord = await wallet.generate_signed_transaction(send_amount, ph, fee_amount)
-
-        peer = await connect_and_get_peer(server_1, server_2, self_hostname)
-        assert big_transaction.spend_bundle
-        await full_node_api_1.respond_transaction(
-            full_node_protocol.RespondTransaction(big_transaction.spend_bundle), peer, test=True
-        )
-        cons = list(server_1.all_connections.values())[:]
-        for con in cons:
-            await con.close()
-
-        blocks = bt.get_consecutive_blocks(3, blocks)
-        await full_node_api_1.full_node.add_block(blocks[-3])
-
-        for idx, block in enumerate(blocks):
-            if idx >= len(blocks) - 3:
-                duration = 0.1
-            else:
-                duration = 0.001
-
-            with assert_runtime(seconds=duration, label=request.node.name):
-                await full_node_api_1.full_node.add_block(block)
+    blocks = bt.get_consecutive_blocks(3, blocks)
+    with benchmark_runner.assert_runtime(seconds=0.45):
+        for block in blocks[-3:]:
+            await full_node.add_block(block)

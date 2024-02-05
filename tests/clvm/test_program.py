@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from unittest import TestCase
-
+import pytest
 from clvm.EvalError import EvalError
 from clvm.operators import KEYWORD_TO_ATOM
 from clvm_tools.binutils import assemble, disassemble
@@ -9,41 +8,51 @@ from clvm_tools.binutils import assemble, disassemble
 from chia.types.blockchain_format.program import Program
 
 
-class TestProgram(TestCase):
-    def test_at(self):
-        p = Program.to([10, 20, 30, [15, 17], 40, 50])
+def test_at():
+    p = Program.to([10, 20, 30, [15, 17], 40, 50])
 
-        self.assertEqual(p.first(), p.at("f"))
-        self.assertEqual(Program.to(10), p.at("f"))
+    assert p.first() == p.at("f")
+    assert Program.to(10) == p.at("f")
 
-        self.assertEqual(p.rest(), p.at("r"))
-        self.assertEqual(Program.to([20, 30, [15, 17], 40, 50]), p.at("r"))
+    assert p.rest() == p.at("r")
+    assert Program.to([20, 30, [15, 17], 40, 50]) == p.at("r")
 
-        self.assertEqual(p.rest().rest().rest().first().rest().first(), p.at("rrrfrf"))
-        self.assertEqual(Program.to(17), p.at("rrrfrf"))
+    assert p.rest().rest().rest().first().rest().first() == p.at("rrrfrf")
+    assert Program.to(17) == p.at("rrrfrf")
 
-        self.assertRaises(ValueError, lambda: p.at("q"))
-        self.assertRaises(EvalError, lambda: p.at("ff"))
+    with pytest.raises(ValueError):
+        p.at("q")
 
-    def test_replace(self):
-        p1 = Program.to([100, 200, 300])
-        self.assertEqual(p1.replace(f=105), Program.to([105, 200, 300]))
-        self.assertEqual(p1.replace(rrf=[301, 302]), Program.to([100, 200, [301, 302]]))
-        self.assertEqual(p1.replace(f=105, rrf=[301, 302]), Program.to([105, 200, [301, 302]]))
-        self.assertEqual(p1.replace(f=100, r=200), Program.to((100, 200)))
+    with pytest.raises(EvalError):
+        p.at("ff")
 
-    def test_replace_conflicts(self):
-        p1 = Program.to([100, 200, 300])
-        self.assertRaises(ValueError, lambda: p1.replace(rr=105, rrf=200))
 
-    def test_replace_conflicting_paths(self):
-        p1 = Program.to([100, 200, 300])
-        self.assertRaises(ValueError, lambda: p1.replace(ff=105))
+def test_replace():
+    p1 = Program.to([100, 200, 300])
+    assert p1.replace(f=105) == Program.to([105, 200, 300])
+    assert p1.replace(rrf=[301, 302]) == Program.to([100, 200, [301, 302]])
+    assert p1.replace(f=105, rrf=[301, 302]) == Program.to([105, 200, [301, 302]])
+    assert p1.replace(f=100, r=200) == Program.to((100, 200))
 
-    def test_replace_bad_path(self):
-        p1 = Program.to([100, 200, 300])
-        self.assertRaises(ValueError, lambda: p1.replace(q=105))
-        self.assertRaises(ValueError, lambda: p1.replace(rq=105))
+
+def test_replace_conflicts():
+    p1 = Program.to([100, 200, 300])
+    with pytest.raises(ValueError):
+        p1.replace(rr=105, rrf=200)
+
+
+def test_replace_conflicting_paths():
+    p1 = Program.to([100, 200, 300])
+    with pytest.raises(ValueError):
+        p1.replace(ff=105)
+
+
+def test_replace_bad_path():
+    p1 = Program.to([100, 200, 300])
+    with pytest.raises(ValueError):
+        p1.replace(q=105)
+    with pytest.raises(ValueError):
+        p1.replace(rq=105)
 
 
 def check_idempotency(f, *args):

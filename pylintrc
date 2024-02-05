@@ -1,10 +1,8 @@
 [MASTER]
-errors-only=
-
 # A comma-separated list of package or module names from where C extensions may
 # be loaded. Extensions are loading into the active Python interpreter and may
 # run arbitrary code
-extension-pkg-whitelist=
+extension-pkg-allow-list=lxml,zstd
 
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
@@ -62,7 +60,110 @@ disable=raw-checker-failed,
         suppressed-message,
         useless-suppression,
         deprecated-pragma,
-        import-error
+        import-error,
+        abstract-method,
+        arguments-differ,
+        arguments-renamed,
+        attribute-defined-outside-init,
+        bare-except,
+        broad-exception-caught,
+        broad-exception-raised,
+        cell-var-from-loop,
+        chained-comparison,
+        comparison-with-callable,
+        consider-iterating-dictionary,
+        consider-merging-isinstance,
+        consider-using-enumerate,
+        consider-using-f-string,
+        consider-using-generator,
+        consider-using-in,
+        consider-using-max-builtin,
+        consider-using-min-builtin,
+        consider-using-sys-exit,
+        consider-using-with,
+        cyclic-import,
+        dangerous-default-value,
+        duplicate-code,
+        duplicate-key,
+        expression-not-assigned,
+        fixme,
+        global-statement,
+        global-variable-not-assigned,
+        implicit-str-concat,
+        import-outside-toplevel,
+        inconsistent-return-statements,
+        invalid-name,
+        keyword-arg-before-vararg,
+        line-too-long,
+        logging-fstring-interpolation,
+        logging-not-lazy,
+        lost-exception,
+        missing-class-docstring,
+        missing-function-docstring,
+        missing-module-docstring,
+        no-else-break,
+        no-else-continue,
+        no-else-raise,
+        no-else-return,
+        pointless-statement,
+        pointless-string-statement,
+        protected-access,
+        raise-missing-from,
+        raising-format-tuple,
+        redefined-argument-from-local,
+        redefined-builtin,
+        redefined-outer-name,
+        reimported,
+        return-in-finally,
+        simplifiable-condition,
+        simplifiable-if-expression,
+        simplifiable-if-statement,
+        singleton-comparison,
+        subprocess-run-check,
+        superfluous-parens,
+        too-few-public-methods,
+        too-many-ancestors,
+        too-many-arguments,
+        too-many-boolean-expressions,
+        too-many-branches,
+        too-many-instance-attributes,
+        too-many-lines,
+        too-many-locals,
+        too-many-nested-blocks,
+        too-many-public-methods,
+        too-many-return-statements,
+        too-many-statements,
+        try-except-raise,
+        typevar-name-incorrect-variance,
+        unbalanced-tuple-unpacking,
+        undefined-loop-variable,
+        ungrouped-imports,
+        unidiomatic-typecheck,
+        unknown-option-value,
+        unnecessary-comprehension,
+        unnecessary-dict-index-lookup,
+        unnecessary-dunder-call,
+        unnecessary-ellipsis,
+        unnecessary-lambda,
+        unnecessary-lambda-assignment,
+        unnecessary-negation,
+        unnecessary-pass,
+        unspecified-encoding,
+        unused-argument,
+        unused-import,
+        unused-variable,
+        unused-wildcard-import,
+        use-a-generator,
+        use-dict-literal,
+        use-implicit-booleaness-not-comparison,
+        use-implicit-booleaness-not-len,
+        useless-else-on-loop,
+        useless-import-alias,
+        useless-return,
+        use-list-literal,
+        wildcard-import,
+        wrong-import-order,
+        wrong-import-position,
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -178,8 +279,7 @@ ignored-classes=optparse.Values,thread._local,_thread._local
 # (useful for modules/projects where namespaces are manipulated during runtime
 # and thus existing member attributes cannot be deduced by static analysis. It
 # supports qualified module names, as well as Unix pattern matching.
-ignored-modules=blspy,
-                chiabip158,
+ignored-modules=chiabip158,
                 chiapos,
                 chiavdf,
                 chia_rs,
@@ -364,7 +464,7 @@ indent-after-paren=4
 indent-string='    '
 
 # Maximum number of characters on a single line.
-max-line-length=100
+max-line-length=120
 
 # Maximum number of lines in a module
 max-module-lines=1000
@@ -488,4 +588,4 @@ valid-metaclass-classmethod-first-arg=mcs
 
 # Exceptions that will emit a warning when being caught. Defaults to
 # "Exception"
-overgeneral-exceptions=Exception
+overgeneral-exceptions=builtins.Exception

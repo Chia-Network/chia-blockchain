@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 import traceback
 from contextlib import asynccontextmanager
+from decimal import Decimal
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
+import click
 from aiohttp import ClientConnectorCertificateError, ClientConnectorError
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -21,9 +25,11 @@ from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint64
 from chia.util.keychain import KeyData
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig, TXConfigLoader
 
 NODE_TYPES: Dict[str, Type[RpcClient]] = {
     "farmer": FarmerRpcClient,
@@ -84,7 +90,7 @@ async def validate_client_connection(
 async def get_any_service_client(
     client_type: Type[_T_RpcClient],
     rpc_port: Optional[int] = None,
-    root_path: Path = DEFAULT_ROOT_PATH,
+    root_path: Optional[Path] = None,
     consume_errors: bool = True,
 ) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
     """
@@ -92,6 +98,9 @@ async def get_any_service_client(
     and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
     the RpcClient.
     """
+
+    if root_path is None:
+        root_path = DEFAULT_ROOT_PATH
 
     node_type = node_config_section_names.get(client_type)
     if node_type is None:
@@ -109,7 +118,7 @@ async def get_any_service_client(
         await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
         yield node_client, config
     except Exception as e:  # this is only here to make the errors more user-friendly.
-        if not consume_errors or isinstance(e, CliRpcConnectionError):
+        if not consume_errors or isinstance(e, CliRpcConnectionError) or isinstance(e, click.Abort):
             # CliRpcConnectionError will be handled by click.
             raise
         print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
@@ -224,3 +233,112 @@ async def get_wallet_client(
     ):
         new_fp = await get_wallet(root_path, wallet_client, fingerprint)
         yield wallet_client, new_fp, config
+
+
+def cli_confirm(input_message: str, abort_message: str = "Did not confirm. Aborting.") -> None:
+    """
+    Raise a click.Abort if the user does not respond with 'y' or 'yes'
+    """
+    response = input(input_message).lower()
+    if response not in ["y", "yes"]:
+        print(abort_message)
+        raise click.Abort()
+
+
+def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:
+    return click.option(
+        "-ma",
+        "--min-coin-amount",
+        "--min-amount",
+        help="Ignore coins worth less then this much XCH or CAT units",
+        type=str,
+        required=False,
+        default=None,
+    )(
+        click.option(
+            "-l",
+            "--max-coin-amount",
+            "--max-amount",
+            help="Ignore coins worth more then this much XCH or CAT units",
+            type=str,
+            required=False,
+            default=None,
+        )(
+            click.option(
+                "--exclude-coin",
+                "coins_to_exclude",
+                multiple=True,
+                help="Exclude this coin from being spent.",
+            )(
+                click.option(
+                    "--exclude-amount",
+                    "amounts_to_exclude",
+                    multiple=True,
+                    help="Exclude any coins with this XCH or CAT amount from being included.",
+                )(func)
+            )
+        )
+    )
+
+
+def tx_config_args(func: Callable[..., None]) -> Callable[..., None]:
+    return click.option(
+        "--reuse/--new-address",
+        "--reuse-puzhash/--generate-new-puzhash",
+        help="Reuse existing address for the change.",
+        is_flag=True,
+        default=None,
+    )(coin_selection_args(func))
+
+
+def timelock_args(func: Callable[..., None]) -> Callable[..., None]:
+    return click.option(
+        "--valid-at",
+        help="UNIX timestamp at which the associated transactions become valid",
+        type=int,
+        required=False,
+        default=None,
+    )(
+        click.option(
+            "--expires-at",
+            help="UNIX timestamp at which the associated transactions expire",
+            type=int,
+            required=False,
+            default=None,
+        )(func)
+    )
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class CMDCoinSelectionConfigLoader(Streamable):
+    min_coin_amount: Optional[str] = None
+    max_coin_amount: Optional[str] = None
+    excluded_coin_amounts: Optional[List[str]] = None
+    excluded_coin_ids: Optional[List[str]] = None
+
+    def to_coin_selection_config(self, mojo_per_unit: int) -> CoinSelectionConfig:
+        return CoinSelectionConfigLoader(
+            uint64(int(Decimal(self.min_coin_amount) * mojo_per_unit)) if self.min_coin_amount is not None else None,
+            uint64(int(Decimal(self.max_coin_amount) * mojo_per_unit)) if self.max_coin_amount is not None else None,
+            [uint64(int(Decimal(a) * mojo_per_unit)) for a in self.excluded_coin_amounts]
+            if self.excluded_coin_amounts is not None
+            else None,
+            [bytes32.from_hexstr(id) for id in self.excluded_coin_ids] if self.excluded_coin_ids is not None else None,
+        ).autofill(constants=DEFAULT_CONSTANTS)
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class CMDTXConfigLoader(CMDCoinSelectionConfigLoader):
+    reuse_puzhash: Optional[bool] = None
+
+    def to_tx_config(self, mojo_per_unit: int, config: Dict[str, Any], fingerprint: int) -> TXConfig:
+        cs_config = self.to_coin_selection_config(mojo_per_unit)
+        return TXConfigLoader(
+            cs_config.min_coin_amount,
+            cs_config.max_coin_amount,
+            cs_config.excluded_coin_amounts,
+            cs_config.excluded_coin_ids,
+            self.reuse_puzhash,
+        ).autofill(constants=DEFAULT_CONSTANTS, config=config, logged_in_fingerprint=fingerprint)

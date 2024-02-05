@@ -3,14 +3,13 @@ from __future__ import annotations
 from typing import Dict, Optional, Tuple
 
 import pytest
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
@@ -39,6 +38,7 @@ from chia.wallet.util.wallet_types import RemarkDataType
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 from tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from tests.util.key_tool import KeyTool
+from tests.util.time_out_assert import time_out_assert
 
 ACS = Program.to(1)
 ACS_PH = ACS.get_tree_hash()
@@ -84,16 +84,16 @@ class TestClawbackLifecycle:
             signatures.append(signature)
         return AugSchemeMPL.aggregate(signatures)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.anyio
     async def test_clawback_spends(self, cost_logger: CostLogger) -> None:
         async with sim_and_client() as (sim, sim_client):
-            key_lookup = KeyTool()  # type: ignore[no-untyped-call]
+            key_lookup = KeyTool()
             sender_index = 1
-            sender_pk = G1Element(public_key_for_index(sender_index, key_lookup))
+            sender_pk = G1Element.from_bytes(public_key_for_index(sender_index, key_lookup))
             sender_puz = puzzle_for_pk(sender_pk)
             sender_ph = sender_puz.get_tree_hash()
             recipient_index = 2
-            recipient_pk = G1Element(public_key_for_index(recipient_index, key_lookup))
+            recipient_pk = G1Element.from_bytes(public_key_for_index(recipient_index, key_lookup))
             recipient_puz = puzzle_for_pk(recipient_pk)
             recipient_ph = recipient_puz.get_tree_hash()
 
@@ -125,7 +125,7 @@ class TestClawbackLifecycle:
                     ],
                 ]
             )
-            coin_spend = CoinSpend(starting_coin, sender_puz, sender_sol)
+            coin_spend = make_spend(starting_coin, sender_puz, sender_sol)
             sig = self.sign_coin_spend(coin_spend, sender_index)
             spend_bundle = SpendBundle([coin_spend], sig)
 
@@ -152,7 +152,7 @@ class TestClawbackLifecycle:
             # Fail an early claim spend
             recipient_sol = solution_for_conditions([[ConditionOpcode.CREATE_COIN, recipient_ph, amount]])
             claim_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, recipient_puz, recipient_sol)
-            coin_spend = CoinSpend(clawback_coin, cb_puzzle, claim_sol)
+            coin_spend = make_spend(clawback_coin, cb_puzzle, claim_sol)
             sig = self.sign_coin_spend(coin_spend, recipient_index)
             spend_bundle = SpendBundle([coin_spend], sig)
 
@@ -184,7 +184,7 @@ class TestClawbackLifecycle:
             # create another clawback coin and claw it back to a "cold wallet"
             cold_ph = bytes32([1] * 32)
             new_coin = (await sim_client.get_coin_records_by_puzzle_hash(sender_ph, include_spent_coins=False))[0].coin
-            coin_spend = CoinSpend(new_coin, sender_puz, sender_sol)
+            coin_spend = make_spend(new_coin, sender_puz, sender_sol)
             sig = self.sign_coin_spend(coin_spend, sender_index)
             spend_bundle = SpendBundle([coin_spend], sig)
 
@@ -203,7 +203,7 @@ class TestClawbackLifecycle:
 
             sender_claw_sol = solution_for_conditions([[ConditionOpcode.CREATE_COIN, cold_ph, amount]])
             claw_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, sender_puz, sender_claw_sol)
-            coin_spend = CoinSpend(new_cb_coin, cb_puzzle, claw_sol)
+            coin_spend = make_spend(new_cb_coin, cb_puzzle, claw_sol)
             sig = self.sign_coin_spend(coin_spend, sender_index)
             spend_bundle = SpendBundle([coin_spend], sig)
 

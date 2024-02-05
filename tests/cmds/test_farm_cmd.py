@@ -8,26 +8,20 @@ from _pytest.capture import CaptureFixture
 
 from chia.cmds.farm_funcs import summary
 from chia.farmer.farmer import Farmer
-from chia.farmer.farmer_api import FarmerAPI
-from chia.full_node.full_node import FullNode
 from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
-from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.time_out_assert import time_out_assert
-from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_node_api import WalletNodeAPI
+from chia.types.aliases import FarmerService, HarvesterService, SimulatorFullNodeService, WalletService
+from tests.util.time_out_assert import time_out_assert
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farm_summary_command(
     capsys: CaptureFixture[str],
     farmer_one_harvester_simulator_wallet: Tuple[
-        Service[Harvester, HarvesterAPI],
-        Service[Farmer, FarmerAPI],
-        Service[FullNode, FullNodeSimulator],
-        Service[WalletNode, WalletNodeAPI],
+        HarvesterService,
+        FarmerService,
+        SimulatorFullNodeService,
+        WalletService,
         BlockTools,
     ],
 ) -> None:

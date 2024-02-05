@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import functools
 import logging
+import random
 import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, AsyncIterator, Dict, List, Optional, Set, Tuple
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.farmer.farmer import Farmer
-from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants
@@ -25,14 +24,14 @@ from chia.plotting.util import PlotInfo
 from chia.protocols.harvester_protocol import PlotSyncError, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import make_msg
-from chia.server.start_service import Service
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
-from chia.simulator.time_out_assert import time_out_assert
+from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import int16, uint8, uint64
 from chia.util.misc import to_batches
 from tests.plot_sync.util import start_harvester_service
+from tests.util.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
@@ -78,8 +77,8 @@ class TestData:
 
         removed_paths: List[Path] = [p.prover.get_filename() for p in removed] if removed is not None else []
         invalid_dict: Dict[Path, int] = {p.prover.get_filename(): 0 for p in self.invalid}
-        keys_missing_set: Set[Path] = set([p.prover.get_filename() for p in self.keys_missing])
-        duplicates_set: Set[str] = set([p.prover.get_filename() for p in self.duplicates])
+        keys_missing_set: Set[Path] = {p.prover.get_filename() for p in self.keys_missing}
+        duplicates_set: Set[str] = {p.prover.get_filename() for p in self.duplicates}
 
         # Inject invalid plots into `PlotManager` of the harvester so that the callback calls below can use them
         # to sync them to the farmer.
@@ -240,26 +239,30 @@ async def _testable_process(
     await self.original_process(peer, message_type, message)
 
 
+@contextlib.asynccontextmanager
 async def create_test_runner(
-    harvester_services: List[Service[Harvester, HarvesterAPI]],
-    farmer_service: Service[Farmer, FarmerAPI],
+    harvester_services: List[HarvesterService],
+    farmer_service: FarmerService,
     event_loop: asyncio.events.AbstractEventLoop,
-) -> TestRunner:
-    await farmer_service.start()
-    farmer: Farmer = farmer_service._node
-    assert len(farmer.plot_sync_receivers) == 0
-    harvesters: List[Harvester] = [
-        await start_harvester_service(service, farmer_service) for service in harvester_services
-    ]
-    for receiver in farmer.plot_sync_receivers.values():
-        receiver.simulate_error = 0  # type: ignore[attr-defined]
-        receiver.message_counter = 0  # type: ignore[attr-defined]
-        receiver.original_process = receiver._process  # type: ignore[attr-defined]
-        receiver._process = functools.partial(_testable_process, receiver)  # type: ignore[method-assign]
-    return TestRunner(harvesters, farmer, event_loop)
+) -> AsyncIterator[TestRunner]:
+    async with farmer_service.manage():
+        farmer: Farmer = farmer_service._node
+        assert len(farmer.plot_sync_receivers) == 0
+        async with contextlib.AsyncExitStack() as async_exit_stack:
+            split_harvester_managers = [
+                await async_exit_stack.enter_async_context(start_harvester_service(service, farmer_service))
+                for service in harvester_services
+            ]
+            harvesters = [manager.object for manager in split_harvester_managers]
+            for receiver in farmer.plot_sync_receivers.values():
+                receiver.simulate_error = 0  # type: ignore[attr-defined]
+                receiver.message_counter = 0  # type: ignore[attr-defined]
+                receiver.original_process = receiver._process  # type: ignore[attr-defined]
+                receiver._process = functools.partial(_testable_process, receiver)  # type: ignore[method-assign]
+            yield TestRunner(harvesters, farmer, event_loop)
 
 
-def create_example_plots(count: int) -> List[PlotInfo]:
+def create_example_plots(count: int, seeded_random: random.Random) -> List[PlotInfo]:
     @dataclass
     class DiskProver:
         file_name: str
@@ -280,7 +283,7 @@ def create_example_plots(count: int) -> List[PlotInfo]:
 
     return [
         PlotInfo(
-            prover=DiskProver(f"{x}", bytes32(token_bytes(32)), 25 + x % 26),
+            prover=DiskProver(f"{x}", bytes32.random(seeded_random), 25 + x % 26),
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=G1Element(),
@@ -291,76 +294,75 @@ def create_example_plots(count: int) -> List[PlotInfo]:
     ]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sync_simulated(
-    farmer_three_harvester_not_started: Tuple[
-        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
-    ],
+    farmer_three_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
+    seeded_random: random.Random,
 ) -> None:
     harvester_services, farmer_service, _ = farmer_three_harvester_not_started
     farmer: Farmer = farmer_service._node
-    test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
-    plots = create_example_plots(31000)
+    async with create_test_runner(harvester_services, farmer_service, event_loop) as test_runner:
+        plots = create_example_plots(31000, seeded_random=seeded_random)
 
-    await test_runner.run(
-        0, loaded=plots[0:10000], removed=[], invalid=[], keys_missing=[], duplicates=plots[0:1000], initial=True
-    )
-    await test_runner.run(
-        1,
-        loaded=plots[10000:20000],
-        removed=[],
-        invalid=plots[30000:30100],
-        keys_missing=[],
-        duplicates=[],
-        initial=True,
-    )
-    await test_runner.run(
-        2,
-        loaded=plots[20000:30000],
-        removed=[],
-        invalid=[],
-        keys_missing=plots[30100:30200],
-        duplicates=[],
-        initial=True,
-    )
-    await test_runner.run(
-        0,
-        loaded=[],
-        removed=[],
-        invalid=plots[30300:30400],
-        keys_missing=plots[30400:30453],
-        duplicates=[],
-        initial=False,
-    )
-    await test_runner.run(0, loaded=[], removed=[], invalid=[], keys_missing=[], duplicates=[], initial=False)
-    await test_runner.run(
-        0, loaded=[], removed=plots[5000:10000], invalid=[], keys_missing=[], duplicates=[], initial=False
-    )
-    await test_runner.run(
-        1, loaded=[], removed=plots[10000:20000], invalid=[], keys_missing=[], duplicates=[], initial=False
-    )
-    await test_runner.run(
-        2, loaded=[], removed=plots[20000:29000], invalid=[], keys_missing=[], duplicates=[], initial=False
-    )
-    await test_runner.run(
-        0, loaded=[], removed=plots[0:5000], invalid=[], keys_missing=[], duplicates=[], initial=False
-    )
-    await test_runner.run(
-        2,
-        loaded=plots[5000:10000],
-        removed=plots[29000:30000],
-        invalid=plots[30000:30500],
-        keys_missing=plots[30500:31000],
-        duplicates=plots[5000:6000],
-        initial=False,
-    )
-    await test_runner.run(
-        2, loaded=[], removed=plots[5000:10000], invalid=[], keys_missing=[], duplicates=[], initial=False
-    )
-    assert len(farmer.plot_sync_receivers) == 3
-    for plot_sync in farmer.plot_sync_receivers.values():
-        assert len(plot_sync.plots()) == 0
+        await test_runner.run(
+            0, loaded=plots[0:10000], removed=[], invalid=[], keys_missing=[], duplicates=plots[0:1000], initial=True
+        )
+        await test_runner.run(
+            1,
+            loaded=plots[10000:20000],
+            removed=[],
+            invalid=plots[30000:30100],
+            keys_missing=[],
+            duplicates=[],
+            initial=True,
+        )
+        await test_runner.run(
+            2,
+            loaded=plots[20000:30000],
+            removed=[],
+            invalid=[],
+            keys_missing=plots[30100:30200],
+            duplicates=[],
+            initial=True,
+        )
+        await test_runner.run(
+            0,
+            loaded=[],
+            removed=[],
+            invalid=plots[30300:30400],
+            keys_missing=plots[30400:30453],
+            duplicates=[],
+            initial=False,
+        )
+        await test_runner.run(0, loaded=[], removed=[], invalid=[], keys_missing=[], duplicates=[], initial=False)
+        await test_runner.run(
+            0, loaded=[], removed=plots[5000:10000], invalid=[], keys_missing=[], duplicates=[], initial=False
+        )
+        await test_runner.run(
+            1, loaded=[], removed=plots[10000:20000], invalid=[], keys_missing=[], duplicates=[], initial=False
+        )
+        await test_runner.run(
+            2, loaded=[], removed=plots[20000:29000], invalid=[], keys_missing=[], duplicates=[], initial=False
+        )
+        await test_runner.run(
+            0, loaded=[], removed=plots[0:5000], invalid=[], keys_missing=[], duplicates=[], initial=False
+        )
+        await test_runner.run(
+            2,
+            loaded=plots[5000:10000],
+            removed=plots[29000:30000],
+            invalid=plots[30000:30500],
+            keys_missing=plots[30500:31000],
+            duplicates=plots[5000:6000],
+            initial=False,
+        )
+        await test_runner.run(
+            2, loaded=[], removed=plots[5000:10000], invalid=[], keys_missing=[], duplicates=[], initial=False
+        )
+        assert len(farmer.plot_sync_receivers) == 3
+        for plot_sync in farmer.plot_sync_receivers.values():
+            assert len(plot_sync.plots()) == 0
 
 
 @pytest.mark.parametrize(
@@ -372,79 +374,77 @@ async def test_sync_simulated(
         ErrorSimulation.RespondTwice,
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_error_simulation(
-    farmer_one_harvester_not_started: Tuple[
-        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
-    ],
+    farmer_one_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
+    seeded_random: random.Random,
 ) -> None:
     Constants.message_timeout = 5
     harvester_services, farmer_service, _ = farmer_one_harvester_not_started
-    test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
-    batch_size = test_runner.test_data[0].harvester.plot_manager.refresh_parameter.batch_size
-    plots = create_example_plots(batch_size + 3)
-    receiver = test_runner.test_data[0].plot_sync_receiver
-    receiver.simulate_error = simulate_error  # type: ignore[attr-defined]
-    await test_runner.run(
-        0,
-        loaded=plots[0 : batch_size + 1],
-        removed=[],
-        invalid=[plots[batch_size + 1]],
-        keys_missing=[plots[batch_size + 2]],
-        duplicates=[],
-        initial=True,
-    )
+    async with create_test_runner(harvester_services, farmer_service, event_loop) as test_runner:
+        batch_size = test_runner.test_data[0].harvester.plot_manager.refresh_parameter.batch_size
+        plots = create_example_plots(batch_size + 3, seeded_random=seeded_random)
+        receiver = test_runner.test_data[0].plot_sync_receiver
+        receiver.simulate_error = simulate_error  # type: ignore[attr-defined]
+        await test_runner.run(
+            0,
+            loaded=plots[0 : batch_size + 1],
+            removed=[],
+            invalid=[plots[batch_size + 1]],
+            keys_missing=[plots[batch_size + 2]],
+            duplicates=[],
+            initial=True,
+        )
 
 
 @pytest.mark.parametrize("simulate_error", [ErrorSimulation.NonRecoverableError, ErrorSimulation.NotConnected])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sync_reset_cases(
-    farmer_one_harvester_not_started: Tuple[
-        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
-    ],
+    farmer_one_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
+    seeded_random: random.Random,
 ) -> None:
     harvester_services, farmer_service, _ = farmer_one_harvester_not_started
-    test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
-    test_data: TestData = test_runner.test_data[0]
-    plot_manager: PlotManager = test_data.harvester.plot_manager
-    plots = create_example_plots(30)
-    # Inject some data into `PlotManager` of the harvester so that we can validate the reset worked and triggered a
-    # fresh sync of all available data of the plot manager
-    for plot_info in plots[0:10]:
-        test_data.plots[plot_info.prover.get_filename()] = plot_info
-        plot_manager.plots = test_data.plots
-    test_data.invalid = plots[10:20]
-    test_data.keys_missing = plots[20:30]
-    test_data.plot_sync_receiver.simulate_error = simulate_error  # type: ignore[attr-defined]
-    sender: Sender = test_runner.test_data[0].plot_sync_sender
-    started_sync_id: uint64 = uint64(0)
+    async with create_test_runner(harvester_services, farmer_service, event_loop) as test_runner:
+        test_data: TestData = test_runner.test_data[0]
+        plot_manager: PlotManager = test_data.harvester.plot_manager
+        plots = create_example_plots(30, seeded_random=seeded_random)
+        # Inject some data into `PlotManager` of the harvester so that we can validate the reset worked and triggered a
+        # fresh sync of all available data of the plot manager
+        for plot_info in plots[0:10]:
+            test_data.plots[plot_info.prover.get_filename()] = plot_info
+            plot_manager.plots = test_data.plots
+        test_data.invalid = plots[10:20]
+        test_data.keys_missing = plots[20:30]
+        test_data.plot_sync_receiver.simulate_error = simulate_error  # type: ignore[attr-defined]
+        sender: Sender = test_runner.test_data[0].plot_sync_sender
+        started_sync_id: uint64 = uint64(0)
 
-    plot_manager.failed_to_open_filenames = {p.prover.get_filename(): 0 for p in test_data.invalid}
-    plot_manager.no_key_filenames = set([p.prover.get_filename() for p in test_data.keys_missing])
+        plot_manager.failed_to_open_filenames = {p.prover.get_filename(): 0 for p in test_data.invalid}
+        plot_manager.no_key_filenames = {p.prover.get_filename() for p in test_data.keys_missing}
 
-    async def wait_for_reset() -> bool:
-        assert started_sync_id != 0
-        return sender._sync_id != started_sync_id != 0
+        async def wait_for_reset() -> bool:
+            assert started_sync_id != 0
+            return sender._sync_id != started_sync_id != 0
 
-    async def sync_done() -> bool:
-        assert started_sync_id != 0
-        return test_data.plot_sync_receiver.last_sync().sync_id == sender._last_sync_id == started_sync_id
+        async def sync_done() -> bool:
+            assert started_sync_id != 0
+            return test_data.plot_sync_receiver.last_sync().sync_id == sender._last_sync_id == started_sync_id
 
-    # Send start and capture the sync_id
-    sender.sync_start(len(plots), True)
-    started_sync_id = sender._sync_id
-    # Sleep 2 seconds to make sure we have a different sync_id after the reset which gets triggered
-    await asyncio.sleep(2)
-    saved_connection = sender._connection
-    if simulate_error == ErrorSimulation.NotConnected:
-        sender._connection = None
-    sender.process_batch(plots, 0)
-    await time_out_assert(60, wait_for_reset)
-    started_sync_id = sender._sync_id
-    sender._connection = saved_connection
-    await time_out_assert(60, sync_done)
-    test_runner.test_data[0].validate_plot_sync()
+        # Send start and capture the sync_id
+        sender.sync_start(len(plots), True)
+        started_sync_id = sender._sync_id
+        # Sleep 2 seconds to make sure we have a different sync_id after the reset which gets triggered
+        await asyncio.sleep(2)
+        saved_connection = sender._connection
+        if simulate_error == ErrorSimulation.NotConnected:
+            sender._connection = None
+        sender.process_batch(plots, 0)
+        await time_out_assert(60, wait_for_reset)
+        started_sync_id = sender._sync_id
+        sender._connection = saved_connection
+        await time_out_assert(60, sync_done)
+        test_runner.test_data[0].validate_plot_sync()

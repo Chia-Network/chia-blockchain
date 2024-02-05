@@ -6,7 +6,6 @@ import math
 import time
 import traceback
 from dataclasses import dataclass, field
-from secrets import token_bytes
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from aiohttp import ClientSession, WSCloseCode, WSMessage, WSMsgType
@@ -18,7 +17,11 @@ from typing_extensions import Protocol, final
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
-from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
+from chia.protocols.protocol_timing import (
+    API_EXCEPTION_BAN_SECONDS,
+    CONSENSUS_ERROR_BAN_SECONDS,
+    INTERNAL_PROTOCOL_ERROR_BAN_SECONDS,
+)
 from chia.protocols.shared_protocol import Capability, Error, Handshake
 from chia.server.api_protocol import ApiProtocol
 from chia.server.capabilities import known_active_capabilities
@@ -27,7 +30,7 @@ from chia.server.rate_limits import RateLimiter
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
-from chia.util.errors import ApiError, Err, ProtocolError
+from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
 from chia.util.ints import int16, uint8, uint16
 from chia.util.log_exceptions import log_exceptions
 
@@ -49,7 +52,7 @@ def create_default_last_message_time_dict() -> Dict[ProtocolMessageTypes, float]
 
 
 class ConnectionClosedCallbackProtocol(Protocol):
-    def __call__(
+    async def __call__(
         self,
         connection: WSChiaConnection,
         ban_time: int,
@@ -70,7 +73,7 @@ class WSChiaConnection:
     ws: WebSocket = field(repr=False)
     api: ApiProtocol = field(repr=False)
     local_type: NodeType
-    local_port: int
+    local_port: Optional[int]
     local_capabilities_for_handshake: List[Tuple[uint16, str]] = field(repr=False)
     local_capabilities: List[Capability]
     peer_info: PeerInfo
@@ -126,7 +129,7 @@ class WSChiaConnection:
         local_type: NodeType,
         ws: WebSocket,
         api: ApiProtocol,
-        server_port: int,
+        server_port: Optional[int],
         log: logging.Logger,
         is_outbound: bool,
         received_message_callback: Optional[ConnectionCallback],
@@ -274,7 +277,7 @@ class WSChiaConnection:
             with log_exceptions(self.log, consume=True):
                 self.log.debug(f"Closing already closed connection for {self.peer_info.host}")
                 if self.close_callback is not None:
-                    self.close_callback(self, ban_time, closed_connection=True)
+                    await self.close_callback(self, ban_time, closed_connection=True)
             self._close_event.set()
             return None
         self.closed = True
@@ -304,7 +307,7 @@ class WSChiaConnection:
         finally:
             with log_exceptions(self.log, consume=True):
                 if self.close_callback is not None:
-                    self.close_callback(self, ban_time, closed_connection=False)
+                    await self.close_callback(self, ban_time, closed_connection=False)
             self._close_event.set()
 
     async def wait_until_closed(self) -> None:
@@ -411,6 +414,8 @@ class WSChiaConnection:
                         )
                     else:
                         return None
+                except TimestampError:
+                    raise
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Exception: {e}, {self.get_peer_logging()}. {tb}")
@@ -436,14 +441,20 @@ class WSChiaConnection:
             #     await self.send_message(response_message)
         except TimeoutError:
             self.log.error(f"Timeout error for: {message_type}")
+        except TimestampError:
+            self.log.info("Received block with timestamp too far into the future")
         except Exception as e:
             if not self.closed:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception: {e} {type(e)}, closing connection {self.get_peer_logging()}. {tb}")
             else:
                 self.log.debug(f"Exception: {e} while closing connection")
+            if isinstance(e, ConsensusError):
+                ban_time = CONSENSUS_ERROR_BAN_SECONDS
+            else:
+                ban_time = API_EXCEPTION_BAN_SECONDS
             # TODO: actually throw one of the errors from errors.py and pass this to close
-            await self.close(API_EXCEPTION_BAN_SECONDS, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
+            await self.close(ban_time, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
         finally:
             if task_id in self.api_tasks:
                 self.api_tasks.pop(task_id)
@@ -453,7 +464,7 @@ class WSChiaConnection:
     async def incoming_message_handler(self) -> None:
         while True:
             message = await self.incoming_queue.get()
-            task_id: bytes32 = bytes32(token_bytes(32))
+            task_id: bytes32 = bytes32.secret()
             api_task = asyncio.create_task(self._api_call(message, task_id))
             self.api_tasks[task_id] = api_task
 
@@ -565,12 +576,6 @@ class WSChiaConnection:
             self.request_results.pop(message.id)
 
         return result
-
-    async def send_messages(self, messages: List[Message]) -> None:
-        if self.closed:
-            return None
-        for message in messages:
-            await self.outgoing_queue.put(message)
 
     async def _wait_and_retry(self, msg: Message) -> None:
         try:

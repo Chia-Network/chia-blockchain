@@ -4,16 +4,16 @@ import itertools
 from typing import List
 
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
+from chia.wallet.conditions import AssertPuzzleAnnouncement
 from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_METADATA_UPDATER,
     NFT_TRANSFER_PROGRAM_DEFAULT,
@@ -26,7 +26,7 @@ ACS = Program.to(1)
 ACS_PH = ACS.get_tree_hash()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio
 @pytest.mark.parametrize("metadata_updater", ["default"])
 async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> None:
     async with sim_and_client() as (sim, sim_client):
@@ -54,7 +54,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
             await sim_client.get_coin_records_by_puzzle_hash(state_layer_ph, include_spent_coins=False)
         )[0].coin
 
-        generic_spend = CoinSpend(
+        generic_spend = make_spend(
             state_layer_coin,
             state_layer_puzzle,
             Program.to([[[51, ACS_PH, 1]]]),
@@ -115,7 +115,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
             state_layer_coin = (
                 await sim_client.get_coin_records_by_parent_ids([state_layer_coin.name()], include_spent_coins=False)
             )[0].coin
-            update_spend = CoinSpend(
+            update_spend = make_spend(
                 state_layer_coin,
                 state_layer_puzzle,
                 Program.to(
@@ -136,7 +136,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
             state_layer_puzzle = create_nft_layer_puzzle_with_curry_params(metadata, METADATA_UPDATER_PUZZLE_HASH, ACS)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio
 async def test_ownership_layer(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         TARGET_OWNER = bytes32([0] * 32)
@@ -156,7 +156,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
             0
         ].coin
 
-        generic_spend = CoinSpend(
+        generic_spend = make_spend(
             ownership_coin,
             ownership_puzzle,
             Program.to([[[51, ACS_PH, 1], [-10, [], []]]]),
@@ -171,7 +171,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
             0
         ].coin
 
-        skip_tp_spend = CoinSpend(
+        skip_tp_spend = make_spend(
             ownership_coin,
             ownership_puzzle,
             Program.to([[[51, ACS_PH, 1]]]),
@@ -183,7 +183,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         with pytest.raises(ValueError, match="clvm raise"):
             skip_tp_spend.puzzle_reveal.to_program().run(skip_tp_spend.solution.to_program())
 
-        make_bad_announcement_spend = CoinSpend(
+        make_bad_announcement_spend = make_spend(
             ownership_coin,
             ownership_puzzle,
             Program.to(
@@ -205,15 +205,15 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
                 make_bad_announcement_spend.solution.to_program()
             )
 
-        expected_announcement = Announcement(
-            ownership_puzzle.get_tree_hash(),
-            b"\xad\x4c" + Program.to([TARGET_OWNER, TARGET_TP]).get_tree_hash(),
+        expected_announcement = AssertPuzzleAnnouncement(
+            asserted_ph=ownership_puzzle.get_tree_hash(),
+            asserted_msg=b"\xad\x4c" + Program.to([TARGET_OWNER, TARGET_TP]).get_tree_hash(),
         )
-        harmless_announcement = Announcement(
-            ownership_puzzle.get_tree_hash(),
-            b"oy",
+        harmless_announcement = AssertPuzzleAnnouncement(
+            asserted_ph=ownership_puzzle.get_tree_hash(),
+            asserted_msg=b"oy",
         )
-        update_everything_spend = CoinSpend(
+        update_everything_spend = make_spend(
             ownership_coin,
             ownership_puzzle,
             Program.to(
@@ -221,9 +221,10 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
                     [
                         [51, ACS_PH, 1],
                         [-10, TARGET_OWNER, TARGET_TP],
-                        [62, harmless_announcement.message],  # create a harmless puzzle announcement
-                        [63, expected_announcement.name()],
-                        [63, harmless_announcement.name()],
+                        expected_announcement.to_program(),
+                        # create and assert a harmless puzzle announcement
+                        harmless_announcement.corresponding_creation().to_program(),
+                        harmless_announcement.to_program(),
                     ]
                 ]
             ),
@@ -244,7 +245,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         ).get_tree_hash()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.anyio
 async def test_default_transfer_program(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         # Now make the ownership coin
@@ -277,7 +278,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         BLOCK_HEIGHT = sim.block_height
 
         # Try a spend, no royalties, no owner update
-        generic_spend = CoinSpend(
+        generic_spend = make_spend(
             ownership_coin,
             ownership_puzzle,
             Program.to([[[51, ACS_PH, 1]]]),
@@ -303,7 +304,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         )[0].coin
         xch_coin = (await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False))[0].coin
 
-        ownership_spend = CoinSpend(
+        ownership_spend = make_spend(
             ownership_coin,
             ownership_puzzle,
             Program.to(
@@ -311,7 +312,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
             ),
         )
 
-        did_announcement_spend = CoinSpend(
+        did_announcement_spend = make_spend(
             singleton_coin,
             FAKE_SINGLETON,
             Program.to([[[62, FAKE_LAUNCHER_ID]]]),
@@ -320,13 +321,13 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         expected_announcement_data = Program.to(
             (FAKE_LAUNCHER_ID, [[ROYALTY_ADDRESS, 50, [ROYALTY_ADDRESS]]])
         ).get_tree_hash()
-        xch_announcement_spend = CoinSpend(
+        xch_announcement_spend = make_spend(
             xch_coin,
             ACS,
             Program.to([[62, expected_announcement_data]]),
         )
 
-        cat_announcement_spend = CoinSpend(cat_coin, FAKE_CAT, Program.to([[[62, expected_announcement_data]]]))
+        cat_announcement_spend = make_spend(cat_coin, FAKE_CAT, Program.to([[[62, expected_announcement_data]]]))
 
         # Make sure every combo except all of them fail
         for i in range(1, 3):
@@ -358,7 +359,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
             await sim_client.get_coin_records_by_puzzle_hash(new_ownership_ph, include_spent_coins=False)
         )[0].coin
 
-        empty_spend = CoinSpend(
+        empty_spend = make_spend(
             new_ownership_coin,
             new_ownership_puzzle,
             Program.to([[[51, ACS_PH, 1], [-10, [], [], []]]]),

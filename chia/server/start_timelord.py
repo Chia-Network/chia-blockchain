@@ -12,10 +12,11 @@ from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
-from chia.types.peer_info import UnresolvedPeerInfo
+from chia.types.aliases import TimelordService
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.misc import SignalHandlers
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -31,12 +32,8 @@ def create_timelord_service(
     config: Dict[str, Any],
     constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-) -> Service[Timelord, TimelordAPI]:
+) -> TimelordService:
     service_config = config[SERVICE_NAME]
-
-    connect_peers = {
-        UnresolvedPeerInfo(service_config["full_node_peer"]["host"], service_config["full_node_peer"]["port"])
-    }
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = constants.replace_str_to_bytes(**overrides)
 
@@ -44,7 +41,7 @@ def create_timelord_service(
     peer_api = TimelordAPI(node)
     network_id = service_config["selected_network"]
 
-    rpc_info: Optional[RpcInfo] = None
+    rpc_info: Optional[RpcInfo[TimelordRpcApi]] = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (TimelordRpcApi, service_config.get("rpc_port", 8557))
 
@@ -54,13 +51,12 @@ def create_timelord_service(
         peer_api=peer_api,
         node=node,
         node_type=NodeType.TIMELORD,
-        advertised_port=service_config["port"],
+        advertised_port=None,
         service_name=SERVICE_NAME,
-        connect_peers=connect_peers,
+        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
-        listen=False,
     )
 
 
@@ -71,8 +67,9 @@ async def async_main() -> int:
     config[SERVICE_NAME] = service_config
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_timelord_service(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
-    await service.setup_process_global_state()
-    await service.run()
+    async with SignalHandlers.manage() as signal_handlers:
+        await service.setup_process_global_state(signal_handlers=signal_handlers)
+        await service.run()
 
     return 0
 

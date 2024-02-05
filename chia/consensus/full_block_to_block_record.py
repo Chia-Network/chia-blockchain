@@ -39,7 +39,7 @@ def block_to_block_record(
         sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
             constants, len(block.finished_sub_slots) > 0, prev_b, blocks
         )
-    overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+    overflow = is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index))
     deficit = calculate_deficit(
         constants,
         block.height,
@@ -62,8 +62,8 @@ def block_to_block_record(
             blocks,
             block.height,
             blocks.block_record(prev_b.prev_hash),
-            block.finished_sub_slots[0].challenge_chain.new_difficulty,
-            block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+            uint64.construct_optional(block.finished_sub_slots[0].challenge_chain.new_difficulty),
+            uint64.construct_optional(block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters),
         )
         if ses.get_hash() != found_ses_hash:
             raise ValueError(Err.INVALID_SUB_EPOCH_SUMMARY)
@@ -142,19 +142,13 @@ def header_block_to_sub_block_record(
     timestamp = block.foliage_transaction_block.timestamp if block.foliage_transaction_block is not None else None
     fees = block.transactions_info.fees if block.transactions_info is not None else None
 
-    if block.reward_chain_block.challenge_chain_sp_vdf is None:
-        # Edge case of first sp (start of slot), where sp_iters == 0
-        cc_sp_hash: bytes32 = block.reward_chain_block.pos_ss_cc_challenge_hash
-    else:
-        cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-
     return BlockRecord(
         block.header_hash,
         block.prev_header_hash,
         block.height,
         block.weight,
         block.total_iters,
-        block.reward_chain_block.signage_point_index,
+        uint8(block.reward_chain_block.signage_point_index),
         block.reward_chain_block.challenge_chain_ip_vdf.output,
         icc_output,
         block.reward_chain_block.get_hash(),
@@ -166,11 +160,9 @@ def header_block_to_sub_block_record(
         deficit,
         overflow,
         prev_transaction_block_height,
-        block.reward_chain_block.pos_ss_cc_challenge_hash,
-        cc_sp_hash,
-        timestamp,
+        uint64.construct_optional(timestamp),
         prev_transaction_block_hash,
-        fees,
+        uint64.construct_optional(fees),
         reward_claims_incorporated,
         finished_challenge_slot_hashes,
         finished_infused_challenge_slot_hashes,

@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
-import multiprocessing
 from collections import Counter
 from pathlib import Path
 from threading import Lock
 from time import sleep, time
 from typing import List, Optional
 
-from blspy import G1Element
+from chia_rs import G1Element
 from chiapos import Verifier
 
 from chia.plotting.manager import PlotManager
@@ -27,6 +26,7 @@ from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain
+from chia.util.misc import available_logical_cores
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
@@ -57,13 +57,15 @@ def check_plots(
 
     context_count = config["harvester"].get("parallel_decompressor_count", 5)
     thread_count = config["harvester"].get("decompressor_thread_count", 0)
+    cpu_count = available_logical_cores()
     if thread_count == 0:
-        thread_count = multiprocessing.cpu_count() // 2
+        thread_count = cpu_count // 2
     disable_cpu_affinity = config["harvester"].get("disable_cpu_affinity", False)
     max_compression_level_allowed = config["harvester"].get("max_compression_level_allowed", 7)
     use_gpu_harvesting = config["harvester"].get("use_gpu_harvesting", False)
     gpu_index = config["harvester"].get("gpu_index", 0)
     enforce_gpu_index = config["harvester"].get("enforce_gpu_index", False)
+    decompressor_timeout = config["harvester"].get("decompressor_timeout", 20)
 
     plot_manager.configure_decompressor(
         context_count,
@@ -73,6 +75,7 @@ def check_plots(
         use_gpu_harvesting,
         gpu_index,
         enforce_gpu_index,
+        decompressor_timeout,
     )
 
     if num is not None:
@@ -170,9 +173,9 @@ def check_plots(
                     quality_start_time = int(round(time() * 1000))
                     for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
                         quality_spent_time = int(round(time() * 1000)) - quality_start_time
-                        if quality_spent_time > 5000:
+                        if quality_spent_time > 8000:
                             log.warning(
-                                f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 5 seconds "
+                                f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 8 seconds "
                                 f"to minimize risk of losing rewards. Filepath: {plot_path}"
                             )
                         else:
@@ -238,7 +241,7 @@ def check_plots(
                 )
                 bad_plots_list.append(plot_path)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=context_count) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, context_count)) as executor:
             logger_lock = Lock()
             futures = []
             for plot_path, plot_info in plot_manager.plots.items():

@@ -8,7 +8,7 @@ from math import ceil
 from pathlib import Path
 from typing import Dict, ItemsView, KeysView, List, Optional, Tuple, ValuesView
 
-from blspy import G1Element
+from chia_rs import G1Element
 from chiapos import DiskProver
 
 from chia.plotting.util import parse_plot_info
@@ -51,7 +51,7 @@ class CacheEntry:
     last_use: float
 
     @classmethod
-    def from_disk_prover(cls, prover: DiskProver) -> "CacheEntry":
+    def from_disk_prover(cls, prover: DiskProver) -> CacheEntry:
         (
             pool_public_key_or_puzzle_hash,
             farmer_public_key,
@@ -138,6 +138,16 @@ class Cache:
                 cache_data: CacheDataV1 = CacheDataV1.from_bytes(stored_cache.blob)
                 self._data = {}
                 estimated_c2_sizes: Dict[int, int] = {}
+                measured_sizes: Dict[int, int] = {
+                    32: 738,
+                    33: 1083,
+                    34: 1771,
+                    35: 3147,
+                    36: 5899,
+                    37: 11395,
+                    38: 22395,
+                    39: 44367,
+                }
                 for path, cache_entry in cache_data.entries:
                     new_entry = CacheEntry(
                         DiskProver.from_bytes(cache_entry.prover_data),
@@ -160,7 +170,14 @@ class Cache:
                     # static data: version(2) + table pointers (<=96) + id(32) + k(1) => ~130
                     # path: up to ~1870, all above will lead to false positive.
                     # See https://github.com/Chia-Network/chiapos/blob/3ee062b86315823dd775453ad320b8be892c7df3/src/prover_disk.hpp#L282-L287  # noqa: E501
-                    if prover_size > (estimated_c2_sizes[k] + memo_size + 2000):
+
+                    # Use experimental measurements if more than estimates
+                    # https://github.com/Chia-Network/chia-blockchain/issues/16063
+                    check_size = estimated_c2_sizes[k] + memo_size + 2000
+                    if k in measured_sizes:
+                        check_size = max(check_size, measured_sizes[k])
+
+                    if prover_size > check_size:
                         log.warning(
                             "Suspicious cache entry dropped. Recommended: stop the harvester, remove "
                             f"{self._path}, restart. Entry: size {prover_size}, path {path}"

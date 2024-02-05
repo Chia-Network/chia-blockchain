@@ -6,7 +6,7 @@ from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from blspy import G1Element, PrivateKey
+from chia_rs import G1Element, PrivateKey
 from chiapos import DiskProver
 from typing_extensions import final
 
@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_PARALLEL_DECOMPRESSOR_COUNT = 0
 DEFAULT_DECOMPRESSOR_THREAD_COUNT = 0
+DEFAULT_DECOMPRESSOR_TIMEOUT = 20
 DEFAULT_DISABLE_CPU_AFFINITY = False
 DEFAULT_MAX_COMPRESSION_LEVEL_ALLOWED = 7
 DEFAULT_USE_GPU_HARVESTING = False

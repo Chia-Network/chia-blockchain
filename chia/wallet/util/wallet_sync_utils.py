@@ -3,11 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, List, Optional, Set, Tuple, Union
 
 from chia_rs import compute_merkle_set_root
 
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
@@ -34,8 +33,7 @@ from chia.protocols.wallet_protocol import (
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.types.full_block import FullBlock
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
@@ -46,24 +44,6 @@ log = logging.getLogger(__name__)
 
 class PeerRequestException(Exception):
     pass
-
-
-async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Optional[HeaderBlock]:
-    request_height: int = height
-    while True:
-        if request_height == -1:
-            return None
-        response: Optional[List[HeaderBlock]] = await request_header_blocks(
-            peer, uint32(request_height), uint32(request_height)
-        )
-        if response is not None and len(response) > 0:
-            if response[0].is_transaction_block:
-                return response[0]
-        elif request_height < height:
-            # The peer might be slightly behind others but still synced, so we should allow fetching one more TX block
-            break
-        request_height = request_height - 1
-    return None
 
 
 async def subscribe_to_phs(
@@ -251,63 +231,6 @@ async def request_and_validate_additions(
     return result
 
 
-def get_block_challenge(
-    constants: ConsensusConstants,
-    header_block: FullBlock,
-    all_blocks: Dict[bytes32, FullBlock],
-    genesis_block: bool,
-    overflow: bool,
-    skip_overflow_last_ss_validation: bool,
-) -> Optional[bytes32]:
-    if len(header_block.finished_sub_slots) > 0:
-        if overflow:
-            # New sub-slot with overflow block
-            if skip_overflow_last_ss_validation:
-                # In this case, we are missing the final sub-slot bundle (it's not finished yet), however
-                # There is a whole empty slot before this block is infused
-                challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
-            else:
-                challenge = header_block.finished_sub_slots[
-                    -1
-                ].challenge_chain.challenge_chain_end_of_slot_vdf.challenge
-        else:
-            # No overflow, new slot with a new challenge
-            challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
-    else:
-        if genesis_block:
-            challenge = constants.GENESIS_CHALLENGE
-        else:
-            if overflow:
-                if skip_overflow_last_ss_validation:
-                    # Overflow infusion without the new slot, so get the last challenge
-                    challenges_to_look_for = 1
-                else:
-                    # Overflow infusion, so get the second to last challenge. skip_overflow_last_ss_validation is False,
-                    # Which means no sub slots are omitted
-                    challenges_to_look_for = 2
-            else:
-                challenges_to_look_for = 1
-            reversed_challenge_hashes: List[bytes32] = []
-            if header_block.height == 0:
-                return constants.GENESIS_CHALLENGE
-            if header_block.prev_header_hash not in all_blocks:
-                return None
-            curr: Optional[FullBlock] = all_blocks[header_block.prev_header_hash]
-            while len(reversed_challenge_hashes) < challenges_to_look_for:
-                if curr is None:
-                    return None
-                if len(curr.finished_sub_slots) > 0:
-                    reversed_challenge_hashes += reversed(
-                        [slot.challenge_chain.get_hash() for slot in curr.finished_sub_slots]
-                    )
-                if curr.height == 0:
-                    return constants.GENESIS_CHALLENGE
-
-                curr = all_blocks.get(curr.prev_header_hash, None)
-            challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
-    return challenge
-
-
 def last_change_height_cs(cs: CoinState) -> uint32:
     if cs.spent_height is not None:
         return uint32(cs.spent_height)
@@ -326,22 +249,6 @@ def sort_coin_states(coin_states: Set[CoinState]) -> List[CoinState]:
             0 if coin_state.created_height is None else coin_state.created_height,
             0 if coin_state.spent_height is None else coin_state.spent_height,
         ),
-    )
-
-
-def get_block_header(block: FullBlock) -> HeaderBlock:
-    return HeaderBlock(
-        block.finished_sub_slots,
-        block.reward_chain_block,
-        block.challenge_chain_sp_proof,
-        block.challenge_chain_ip_proof,
-        block.reward_chain_sp_proof,
-        block.reward_chain_ip_proof,
-        block.infused_challenge_chain_ip_proof,
-        block.foliage,
-        block.foliage_transaction_block,
-        b"",  # we don't need the filter
-        block.transactions_info,
     )
 
 
@@ -434,7 +341,7 @@ async def fetch_coin_spend(height: uint32, coin: Coin, peer: WSChiaConnection) -
     assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
     assert solution_response.response.coin_name == coin.name()
 
-    return CoinSpend(
+    return make_spend(
         coin,
         solution_response.response.puzzle,
         solution_response.response.solution,

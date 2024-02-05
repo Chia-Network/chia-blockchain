@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 from typing import Callable, List, Optional, Tuple
 
 import pytest
-from blspy import G2Element
-from chia_rs import Coin
+from chia_rs import Coin, G2Element
 
 from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.consensus.constants import ConsensusConstants
@@ -13,7 +13,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.spend_bundle import SpendBundle
 
 log = logging.getLogger(__name__)
@@ -22,8 +22,10 @@ the_puzzle_hash = bytes32(
     bytes.fromhex("9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2")
 )  # Program.to(1)
 
-NEW_DEFAULT_CONSTANTS: ConsensusConstants = DEFAULT_CONSTANTS.replace(
-    MAX_BLOCK_COST_CLVM=300000000, MEMPOOL_BLOCK_BUFFER=1
+NEW_DEFAULT_CONSTANTS: ConsensusConstants = dataclasses.replace(
+    DEFAULT_CONSTANTS,
+    MAX_BLOCK_COST_CLVM=300000000,
+    MEMPOOL_BLOCK_BUFFER=1,
 )
 
 
@@ -39,7 +41,7 @@ async def farm(
 
 
 def make_tx_sb(from_coin: Coin) -> SpendBundle:
-    coin_spend = CoinSpend(
+    coin_spend = make_spend(
         from_coin,
         Program.to(1),
         Program.to([[51, from_coin.puzzle_hash, from_coin.amount]]),
@@ -75,7 +77,7 @@ async def init_test(
     return estimator, spend_coins, fee_coins  # new_reward_coins
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mempool_inclusion_filter_basic() -> None:
     async with sim_and_client(defaults=NEW_DEFAULT_CONSTANTS, pass_prefarm=False) as (sim, cli):
         estimator, spend_coins, fee_coins = await init_test(sim, cli, the_puzzle_hash, 1)
@@ -105,7 +107,7 @@ async def test_mempool_inclusion_filter_basic() -> None:
         assert mempool_item.name not in removal_ids
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mempoolitem_height_added(db_version: int) -> None:
     async with sim_and_client(defaults=NEW_DEFAULT_CONSTANTS, pass_prefarm=False) as (sim, cli):
         estimator, spend_coins, fee_coins = await init_test(sim, cli, the_puzzle_hash, 1)

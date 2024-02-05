@@ -6,7 +6,7 @@ from dataclasses import dataclass, field, fields
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, get_type_hints
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 from clvm_tools import binutils
 from typing_extensions import Literal, get_args
 
@@ -35,7 +35,6 @@ from chia.util.streamable import (
     parse_bytes,
     parse_list,
     parse_optional,
-    parse_size_hints,
     parse_str,
     parse_tuple,
     parse_uint32,
@@ -202,21 +201,21 @@ class ConvertUnhashableTypeFailures(Streamable):
 
 
 @pytest.mark.parametrize(
-    "input_dict, error",
+    "input_dict, error, error_msg",
     [
-        pytest.param({"a": 0}, InvalidTypeError, id="a: no string and no bytes"),
-        pytest.param({"a": []}, InvalidTypeError, id="a: no string and no bytes"),
-        pytest.param({"a": {}}, InvalidTypeError, id="a: no string and no bytes"),
-        pytest.param({"a": "invalid"}, ConversionError, id="a: invalid hex string"),
-        pytest.param({"a": "00" * (G1Element.SIZE - 1)}, ConversionError, id="a: hex string too short"),
-        pytest.param({"a": "00" * (G1Element.SIZE + 1)}, ConversionError, id="a: hex string too long"),
-        pytest.param({"a": b"\00" * (G1Element.SIZE - 1)}, ConversionError, id="a: bytes too short"),
-        pytest.param({"a": b"\00" * (G1Element.SIZE + 1)}, ConversionError, id="a: bytes too long"),
-        pytest.param({"a": b"\00" * G1Element.SIZE}, ConversionError, id="a: invalid g1 element"),
+        pytest.param({"a": 0}, TypeError, "invalid input type for PublicKey"),
+        pytest.param({"a": []}, ValueError, "PublicKey, invalid length 0 expected 48"),
+        pytest.param({"a": {}}, TypeError, "invalid input type for PublicKey"),
+        pytest.param({"a": "invalid"}, ValueError, "invalid hex"),
+        pytest.param({"a": "00" * (G1Element.SIZE - 1)}, ValueError, "PublicKey, invalid length 47 expected 48"),
+        pytest.param({"a": "00" * (G1Element.SIZE + 1)}, ValueError, "PublicKey, invalid length 49 expected 48"),
+        pytest.param({"a": b"\00" * (G1Element.SIZE - 1)}, ValueError, "PublicKey, invalid length 47 expected 48"),
+        pytest.param({"a": b"\00" * (G1Element.SIZE + 1)}, ValueError, "PublicKey, invalid length 49 expected 48"),
+        pytest.param({"a": b"\00" * G1Element.SIZE}, ValueError, "BLS Error G1InfinityInvalidBits"),
     ],
 )
-def test_convert_unhashable_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
-    with pytest.raises(error):
+def test_convert_unhashable_type_failures(input_dict: Dict[str, Any], error: Any, error_msg: str) -> None:
+    with pytest.raises(error, match=re.escape(error_msg)):
         streamable_from_dict(ConvertUnhashableTypeFailures, input_dict)
 
 
@@ -262,16 +261,14 @@ def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> N
         [
             StreamableFromDict1,
             {"a": 1, "b": "2", "c": "asd"},
-            ConversionError,
-            "Failed to convert 'asd' from type str to bytes: ValueError: non-hexadecimal number found in fromhex() arg "
-            "at position 1",
+            ValueError,
+            "invalid hex",
         ],
         [
             StreamableFromDict1,
             {"a": 1, "b": "2", "c": "00" * G1Element.SIZE},
-            ConversionError,
-            f"Failed to convert {bytes.fromhex('00' * G1Element.SIZE)!r} from type bytes to G1Element: ValueError: "
-            "Given G1 non-infinity element must start with 0b10",
+            ValueError,
+            "BLS Error G1InfinityInvalidBits",
         ],
         [
             StreamableFromDict1,
@@ -301,7 +298,7 @@ def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> N
             StreamableFromDict2,
             {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}},
             ParameterMissingError,
-            "1 field missing for StreamableFromDict1: c",
+            "1 field missing for StreamableFromDict2: c",
         ],
         [
             StreamableFromDict2,
@@ -558,7 +555,7 @@ def test_recursive_types() -> None:
 
 
 def test_ambiguous_deserialization_optionals() -> None:
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="unexpected end of buffer"):
         SubEpochChallengeSegment.from_bytes(b"\x00\x00\x00\x03\xff\xff\xff\xff")
 
     @streamable
@@ -806,18 +803,6 @@ class FailFromBytes:
     @classmethod
     def from_bytes(cls, b: bytes) -> FailFromBytes:
         raise ValueError()
-
-
-def test_parse_size_hints() -> None:
-    assert parse_size_hints(io.BytesIO(b"1337"), TestFromBytes, 4, False).b == b"1337"
-
-    # EOF
-    with pytest.raises(AssertionError):
-        parse_size_hints(io.BytesIO(b"133"), TestFromBytes, 4, False)
-
-    # error in underlying type
-    with pytest.raises(ValueError):
-        parse_size_hints(io.BytesIO(b"1337"), FailFromBytes, 4, False)
 
 
 def test_parse_str() -> None:

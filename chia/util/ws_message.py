@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from secrets import token_bytes
 from typing import Any, Dict, Optional
 
 from typing_extensions import TypedDict
 
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.json_util import dict_to_json_str
 
 # Messages must follow this format
@@ -55,7 +55,7 @@ def create_payload_dict(command: str, data: Optional[Dict[str, Any]], origin: st
         command=command,
         ack=False,
         data=data,
-        request_id=token_bytes().hex(),
+        request_id=bytes32.secret().hex(),
         destination=destination,
         origin=origin,
     )

@@ -29,7 +29,7 @@ from chia.util.ints import uint32, uint64
 from tests.core.mempool.test_mempool_manager import (
     create_test_block_record,
     instantiate_mempool_manager,
-    zero_calls_get_coin_record,
+    zero_calls_get_coin_records,
 )
 
 
@@ -47,7 +47,7 @@ def make_mempoolitem() -> MempoolItem:
     mempool_item = MempoolItem(
         spend_bundle,
         fee,
-        NPCResult(None, conds, cost),
+        NPCResult(None, conds),
         spend_bundle.name(),
         uint32(block_height),
     )
@@ -215,17 +215,17 @@ def test_current_block_height_new_block_then_new_height() -> None:
     assert mempool.fee_estimator.current_block_height == height + 1  # type: ignore[attr-defined]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mm_new_peak_changes_fee_estimator_block_height() -> None:
-    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_records)
     block2 = create_test_block_record(height=uint32(2))
     await mempool_manager.new_peak(block2, None)
     assert mempool_manager.mempool.fee_estimator.block_height == uint32(2)  # type: ignore[attr-defined]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_mm_calls_new_block_height() -> None:
-    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_records)
     new_block_height_called = False
 
     def test_new_block_height_called(self: FeeEstimatorInterface, height: uint32) -> None:

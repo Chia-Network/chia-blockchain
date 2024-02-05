@@ -26,7 +26,7 @@ async def begin_task(coro: Coroutine[Any, Any, T]) -> Task[T]:
     return task
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_ignores_concurrent_duplicate_signage_points(
     farmer_one_harvester: FarmerOneHarvester, self_hostname: str
 ) -> None:
@@ -54,7 +54,7 @@ async def test_farmer_ignores_concurrent_duplicate_signage_points(
     assert ProtocolMessageTypes(response).name == "new_signage_point_harvester"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_responds_with_signed_values(farmer_one_harvester: FarmerOneHarvester, self_hostname: str) -> None:
     _, farmer_service, _ = farmer_one_harvester
     farmer_api: FarmerAPI = farmer_service._api

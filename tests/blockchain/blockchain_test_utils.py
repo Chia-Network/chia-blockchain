@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
@@ -44,7 +45,7 @@ async def _validate_and_add_block(
     expected_result: Optional[AddBlockResult] = None,
     expected_error: Optional[Err] = None,
     skip_prevalidation: bool = False,
-    fork_point_with_peak: Optional[uint32] = None,
+    fork_info: Optional[ForkInfo] = None,
 ) -> None:
     # Tries to validate and add the block, and checks that there are no errors in the process and that the
     # block is added to the peak.
@@ -55,7 +56,7 @@ async def _validate_and_add_block(
 
     await check_block_store_invariant(blockchain)
     if skip_prevalidation:
-        results = PreValidationResult(None, uint64(1), None, False)
+        results = PreValidationResult(None, uint64(1), None, False, uint32(0))
     else:
         # Do not change this, validate_signatures must be False
         pre_validation_results: List[PreValidationResult] = await blockchain.pre_validate_blocks_multiprocessing(
@@ -81,7 +82,7 @@ async def _validate_and_add_block(
         result,
         err,
         _,
-    ) = await blockchain.add_block(block, results, fork_point_with_peak=fork_point_with_peak)
+    ) = await blockchain.add_block(block, results, fork_info=fork_info)
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != AddBlockResult.INVALID_BLOCK:
@@ -107,11 +108,15 @@ async def _validate_and_add_block(
 
 
 async def _validate_and_add_block_multi_error(
-    blockchain: Blockchain, block: FullBlock, expected_errors: List[Err], skip_prevalidation: bool = False
+    blockchain: Blockchain,
+    block: FullBlock,
+    expected_errors: List[Err],
+    skip_prevalidation: bool = False,
+    fork_info: Optional[ForkInfo] = None,
 ) -> None:
     # Checks that the blockchain returns one of the expected errors
     try:
-        await _validate_and_add_block(blockchain, block, skip_prevalidation=skip_prevalidation)
+        await _validate_and_add_block(blockchain, block, skip_prevalidation=skip_prevalidation, fork_info=fork_info)
     except Exception as e:
         assert isinstance(e, AssertionError)
         assert e.args[0] in expected_errors
@@ -120,27 +125,20 @@ async def _validate_and_add_block_multi_error(
     raise AssertionError("Did not return an error")
 
 
-async def _validate_and_add_block_multi_error_or_pass(
-    blockchain: Blockchain, block: FullBlock, expected_errors: List[Err], skip_prevalidation: bool = False
-) -> None:
-    # Checks that the blockchain returns one of the expected errors, also allows block to be added.
-    try:
-        await _validate_and_add_block(blockchain, block, skip_prevalidation=skip_prevalidation)
-    except AssertionError as e:
-        assert e.args[0] in expected_errors
-
-
 async def _validate_and_add_block_multi_result(
     blockchain: Blockchain,
     block: FullBlock,
     expected_result: List[AddBlockResult],
-    skip_prevalidation: Optional[bool] = None,
+    skip_prevalidation: bool = False,
+    fork_info: Optional[ForkInfo] = None,
 ) -> None:
     try:
-        if skip_prevalidation is not None:
-            await _validate_and_add_block(blockchain, block, skip_prevalidation=skip_prevalidation)
-        else:
-            await _validate_and_add_block(blockchain, block)
+        await _validate_and_add_block(
+            blockchain,
+            block,
+            skip_prevalidation=skip_prevalidation,
+            fork_info=fork_info,
+        )
     except Exception as e:
         assert isinstance(e, AssertionError)
         assert "Block was not added" in e.args[0]
@@ -150,7 +148,10 @@ async def _validate_and_add_block_multi_result(
 
 
 async def _validate_and_add_block_no_error(
-    blockchain: Blockchain, block: FullBlock, skip_prevalidation: Optional[bool] = None
+    blockchain: Blockchain,
+    block: FullBlock,
+    skip_prevalidation: bool = False,
+    fork_info: Optional[ForkInfo] = None,
 ) -> None:
     # adds a block and ensures that there is no error. However, does not ensure that block extended the peak of
     # the blockchain
@@ -163,4 +164,5 @@ async def _validate_and_add_block_no_error(
             AddBlockResult.ADDED_AS_ORPHAN,
         ],
         skip_prevalidation=skip_prevalidation,
+        fork_info=fork_info,
     )

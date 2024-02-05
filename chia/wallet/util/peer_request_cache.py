@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -19,6 +19,9 @@ class PeerRequestCache:
     _blocks_validated: LRUCache[bytes32, uint32]  # header_hash -> height
     _block_signatures_validated: LRUCache[bytes32, uint32]  # sig_hash -> height
     _additions_in_block: LRUCache[Tuple[bytes32, bytes32], uint32]  # header_hash, puzzle_hash -> height
+    # The wallet gets the state update before receiving the block. In untrusted mode the block is required for the
+    # coin state validation, so we cache them before we apply them once we received the block.
+    _race_cache: Dict[uint32, Set[CoinState]]
 
     def __init__(self) -> None:
         self._blocks = LRUCache(100)
@@ -28,6 +31,7 @@ class PeerRequestCache:
         self._blocks_validated = LRUCache(1000)
         self._block_signatures_validated = LRUCache(1000)
         self._additions_in_block = LRUCache(200)
+        self._race_cache = {}
 
     def get_block(self, height: uint32) -> Optional[HeaderBlock]:
         return self._blocks.get(height)
@@ -37,7 +41,7 @@ class PeerRequestCache:
         if header_block.is_transaction_block:
             assert header_block.foliage_transaction_block is not None
             if self._timestamps.get(header_block.height) is None:
-                self._timestamps.put(header_block.height, header_block.foliage_transaction_block.timestamp)
+                self._timestamps.put(header_block.height, uint64(header_block.foliage_transaction_block.timestamp))
 
     def get_block_request(self, start: uint32, end: uint32) -> Optional[asyncio.Task[Any]]:
         return self._block_requests.get((start, end))
@@ -86,6 +90,27 @@ class PeerRequestCache:
 
     def in_additions_in_block(self, header_hash: bytes32, addition_ph: bytes32) -> bool:
         return self._additions_in_block.get((header_hash, addition_ph)) is not None
+
+    def add_states_to_race_cache(self, coin_states: List[CoinState]) -> None:
+        for coin_state in coin_states:
+            created_height = 0 if coin_state.created_height is None else coin_state.created_height
+            spent_height = 0 if coin_state.spent_height is None else coin_state.spent_height
+            max_height = uint32(max(created_height, spent_height))
+            race_cache = self._race_cache.setdefault(max_height, set())
+            race_cache.add(coin_state)
+
+    def get_race_cache(self, height: int) -> Set[CoinState]:
+        return self._race_cache[uint32(height)]
+
+    def rollback_race_cache(self, *, fork_height: int) -> None:
+        self._race_cache = {
+            height: coin_states for height, coin_states in self._race_cache.items() if height <= fork_height
+        }
+
+    def cleanup_race_cache(self, *, min_height: int) -> None:
+        self._race_cache = {
+            height: coin_states for height, coin_states in self._race_cache.items() if height >= min_height
+        }
 
     def clear_after_height(self, height: int) -> None:
         # Remove any cached item which relates to an event that happened at a height above height.

@@ -7,30 +7,21 @@ from typing import Dict, List, Optional, Set
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64, uint128
+from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
 async def select_coins(
     spendable_amount: uint128,
-    max_coin_amount: uint64,
+    coin_selection_config: CoinSelectionConfig,
     spendable_coins: List[WalletCoinRecord],
     unconfirmed_removals: Dict[bytes32, Coin],
     log: logging.Logger,
     amount: uint128,
-    exclude: Optional[List[Coin]] = None,
-    min_coin_amount: Optional[uint64] = None,
-    excluded_coin_amounts: Optional[List[uint64]] = None,
 ) -> Set[Coin]:
     """
     Returns a set of coins that can be used for generating a new transaction.
     """
-    if exclude is None:
-        exclude = []
-    if min_coin_amount is None:
-        min_coin_amount = uint64(0)
-    if excluded_coin_amounts is None:
-        excluded_coin_amounts = []
-
     if amount > spendable_amount:
         error_msg = (
             f"Can't select amount higher than our spendable balance.  Amount: {amount}, spendable: {spendable_amount}"
@@ -45,13 +36,17 @@ async def select_coins(
     valid_spendable_coins: List[Coin] = []
 
     for coin_record in spendable_coins:  # remove all the unconfirmed coins, excluded coins and dust.
-        if coin_record.coin.name() in unconfirmed_removals:
+        coin_name: bytes32 = coin_record.coin.name()
+        if coin_name in unconfirmed_removals:
             continue
-        if coin_record.coin in exclude:
+        if coin_name in coin_selection_config.excluded_coin_ids:
             continue
-        if coin_record.coin.amount < min_coin_amount or coin_record.coin.amount > max_coin_amount:
+        if (
+            coin_record.coin.amount < coin_selection_config.min_coin_amount
+            or coin_record.coin.amount > coin_selection_config.max_coin_amount
+        ):
             continue
-        if coin_record.coin.amount in excluded_coin_amounts:
+        if coin_record.coin.amount in coin_selection_config.excluded_coin_amounts:
             continue
         valid_spendable_coins.append(coin_record.coin)
         sum_spendable_coins += coin_record.coin.amount
@@ -60,7 +55,7 @@ async def select_coins(
     # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
     if sum_spendable_coins < amount:
         raise ValueError(
-            f"Transaction for {amount} is greater than spendable balance of {sum_spendable_coins}. "
+            f"Transaction for {amount} is greater than max spendable balance in a block of {sum_spendable_coins}. "
             "There may be other transactions pending or our minimum coin amount is too high."
         )
     if amount == 0 and sum_spendable_coins == 0:
@@ -95,7 +90,9 @@ async def select_coins(
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
     elif smaller_coin_sum > amount:
-        coin_set: Optional[Set[Coin]] = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount, max_num_coins)
+        coin_set: Optional[Set[Coin]] = knapsack_coin_algorithm(
+            smaller_coins, amount, coin_selection_config.max_coin_amount, max_num_coins
+        )
         log.debug(f"Selected coins from knapsack algorithm: {coin_set}")
         if coin_set is None:
             coin_set = sum_largest_coins(amount, smaller_coins)

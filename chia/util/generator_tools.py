@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Collection, List, Optional, Tuple
 
 from chiabip158 import PyBIP158
 
@@ -13,12 +13,15 @@ from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.ints import uint64
 
 
-def get_block_header(block: FullBlock, tx_addition_coins: List[Coin], removals_names: List[bytes32]) -> HeaderBlock:
+def get_block_header(
+    block: FullBlock, tx_addition_coins: Collection[Coin], removals_names: Collection[bytes32]
+) -> HeaderBlock:
     # Create filter
     byte_array_tx: List[bytearray] = []
-    addition_coins = tx_addition_coins + list(block.get_included_reward_coins())
     if block.is_transaction_block():
-        for coin in addition_coins:
+        for coin in tx_addition_coins:
+            byte_array_tx.append(bytearray(coin.puzzle_hash))
+        for coin in block.get_included_reward_coins():
             byte_array_tx.append(bytearray(coin.puzzle_hash))
         for name in removals_names:
             byte_array_tx.append(bytearray(name))

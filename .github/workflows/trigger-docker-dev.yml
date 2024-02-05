@@ -16,6 +16,10 @@ concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   trigger:
     name: Trigger building a new dev tag for the chia-docker image
@@ -27,13 +31,16 @@ jobs:
         run: |
           unset HAS_SECRET
 
-          if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_SECRET='true' ; fi
+          if [ -n "$GLUE_API_URL" ]; then HAS_SECRET='true' ; fi
           echo HAS_SECRET=${HAS_SECRET} >> "$GITHUB_OUTPUT"
         env:
-          GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
+          GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
+
+      - uses: Chia-Network/actions/github/jwt@main
+        if: steps.check_secrets.outputs.HAS_SECRET
 
       - name: Trigger docker dev workflow via github-glue
         if: steps.check_secrets.outputs.HAS_SECRET
         run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"sha":"${{ github.sha }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-dev/${{ github.sha }}/start
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"sha":"${{ github.sha }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-dev/${{ github.sha }}/success/build-dev
+          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"sha":"${{ github.sha }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-dev/${{ github.sha }}/start
+          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"sha":"${{ github.sha }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-dev/${{ github.sha }}/success/build-dev

@@ -1,7 +1,6 @@
 # flake8: noqa: F811, F401
 from __future__ import annotations
 
-import cProfile
 import dataclasses
 import logging
 import random
@@ -14,7 +13,6 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol as fnp
-from chia.simulator.time_out_assert import time_out_assert
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
@@ -22,7 +20,8 @@ from chia.util.ints import uint64
 from tests.connection_utils import add_dummy_connection
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
-from tests.util.misc import assert_runtime
+from tests.util.misc import BenchmarkRunner
+from tests.util.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
@@ -38,9 +37,10 @@ async def get_block_path(full_node: FullNodeAPI):
 
 
 class TestPerformance:
-    @pytest.mark.asyncio
-    @pytest.mark.benchmark
-    async def test_full_block_performance(self, request: pytest.FixtureRequest, wallet_nodes_perf, self_hostname):
+    @pytest.mark.anyio
+    async def test_full_block_performance(
+        self, request: pytest.FixtureRequest, wallet_nodes_perf, self_hostname, benchmark_runner: BenchmarkRunner
+    ):
         full_node_1, server_1, wallet_a, wallet_receiver, bt = wallet_nodes_perf
         blocks = await full_node_1.get_all_full_blocks()
         full_node_1.full_node.mempool_manager.limit_factor = 1
@@ -115,10 +115,7 @@ class TestPerformance:
             spend_bundles.append(spend_bundle)
             spend_bundle_ids.append(spend_bundle.get_hash())
 
-        pr = cProfile.Profile()
-        pr.enable()
-
-        with assert_runtime(seconds=0.001, label=f"{request.node.name} - mempool"):
+        with benchmark_runner.assert_runtime(seconds=0.0055, label="mempool"):
             num_tx: int = 0
             for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
                 num_tx += 1
@@ -133,8 +130,6 @@ class TestPerformance:
                     break
 
         log.warning(f"Num Tx: {num_tx}")
-        pr.create_stats()
-        pr.dump_stats("./mempool-benchmark.pstats")
 
         # Create an unfinished block
         peak = full_node_1.full_node.blockchain.get_peak()
@@ -142,7 +137,9 @@ class TestPerformance:
         curr: BlockRecord = peak
         while not curr.is_transaction_block:
             curr = full_node_1.full_node.blockchain.block_record(curr.prev_hash)
-        mempool_bundle = full_node_1.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
+        mempool_bundle = await full_node_1.full_node.mempool_manager.create_bundle_from_mempool(
+            curr.header_hash, full_node_1.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
+        )
         if mempool_bundle is None:
             spend_bundle = None
         else:
@@ -172,26 +169,14 @@ class TestPerformance:
             [],
         )
 
-        pr = cProfile.Profile()
-        pr.enable()
-
-        with assert_runtime(seconds=0.1, label=f"{request.node.name} - unfinished"):
+        with benchmark_runner.assert_runtime(seconds=0.1, label="unfinished"):
             res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
 
         log.warning(f"Res: {res}")
 
-        pr.create_stats()
-        pr.dump_stats("./unfinished-benchmark.pstats")
-
-        pr = cProfile.Profile()
-        pr.enable()
-
-        with assert_runtime(seconds=0.1, label=f"{request.node.name} - full block"):
+        with benchmark_runner.assert_runtime(seconds=0.1, label="full block"):
             # No transactions generator, the full node already cached it from the unfinished block
             block_small = dataclasses.replace(block, transactions_generator=None)
             res = await full_node_1.full_node.add_block(block_small)
 
         log.warning(f"Res: {res}")
-
-        pr.create_stats()
-        pr.dump_stats("./full-block-benchmark.pstats")

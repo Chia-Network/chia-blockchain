@@ -1,31 +1,33 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 from typing import List
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from tools.run_block import run_json_block
+from chia.util.ints import uint32, uint64, uint128
+from tests.util.run_block import run_json_block
 
-testnet10 = {
-    "AGG_SIG_ME_ADDITIONAL_DATA": bytes.fromhex("ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2"),
-    "DIFFICULTY_CONSTANT_FACTOR": 10052721566054,
-    "DIFFICULTY_STARTING": 30,
-    "EPOCH_BLOCKS": 768,
-    "GENESIS_CHALLENGE": bytes.fromhex("ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2"),
-    "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bytes.fromhex(
+constants = dataclasses.replace(
+    DEFAULT_CONSTANTS,
+    AGG_SIG_ME_ADDITIONAL_DATA=bytes.fromhex("ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2"),
+    DIFFICULTY_CONSTANT_FACTOR=uint128(10052721566054),
+    DIFFICULTY_STARTING=uint64(30),
+    EPOCH_BLOCKS=uint32(768),
+    GENESIS_CHALLENGE=bytes32.fromhex("ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2"),
+    GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bytes32.fromhex(
         "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
     ),
-    "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
+    GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bytes32.fromhex(
         "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
     ),
-    "MEMPOOL_BLOCK_BUFFER": 10,
-    "MIN_PLOT_SIZE": 18,
-}
-
-constants = DEFAULT_CONSTANTS.replace(**testnet10)
+    MEMPOOL_BLOCK_BUFFER=10,
+    MIN_PLOT_SIZE=18,
+)
 retire_bytes = (
     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"

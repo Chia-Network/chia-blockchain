@@ -29,14 +29,14 @@ class KeyValStore:
         """
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from key_val_store WHERE key=?", (key,))
+            cursor = await conn.execute("SELECT value from key_val_store WHERE key=?", (key,))
             row = await cursor.fetchone()
             await cursor.close()
 
         if row is None:
             return None
 
-        return object_type.from_bytes(row[1])
+        return object_type.from_bytes(row[0])
 
     async def set_object(self, key: str, obj: Any):
         """
@@ -45,7 +45,7 @@ class KeyValStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)",
-                (key, bytes(obj)),
+                (key, obj.stream_to_bytes()),
             )
             await cursor.close()
 

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import concurrent
+import contextlib
 import dataclasses
 import logging
-import multiprocessing
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Tuple, cast
 
 from typing_extensions import Literal
 
@@ -16,6 +16,7 @@ from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
     DEFAULT_DECOMPRESSOR_THREAD_COUNT,
+    DEFAULT_DECOMPRESSOR_TIMEOUT,
     DEFAULT_DISABLE_CPU_AFFINITY,
     DEFAULT_ENFORCE_GPU_INDEX,
     DEFAULT_GPU_INDEX,
@@ -38,11 +39,17 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.ints import uint32
+from chia.util.misc import available_logical_cores
 
 log = logging.getLogger(__name__)
 
 
 class Harvester:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Harvester", None)
+
     plot_manager: PlotManager
     plot_sync_sender: Sender
     root_path: Path
@@ -94,8 +101,9 @@ class Harvester:
 
         context_count = config.get("parallel_decompressor_count", DEFAULT_PARALLEL_DECOMPRESSOR_COUNT)
         thread_count = config.get("decompressor_thread_count", DEFAULT_DECOMPRESSOR_THREAD_COUNT)
+        cpu_count = available_logical_cores()
         if thread_count == 0:
-            thread_count = multiprocessing.cpu_count() // 2
+            thread_count = cpu_count // 2
         disable_cpu_affinity = config.get("disable_cpu_affinity", DEFAULT_DISABLE_CPU_AFFINITY)
         max_compression_level_allowed = config.get(
             "max_compression_level_allowed", DEFAULT_MAX_COMPRESSION_LEVEL_ALLOWED
@@ -103,6 +111,7 @@ class Harvester:
         use_gpu_harvesting = config.get("use_gpu_harvesting", DEFAULT_USE_GPU_HARVESTING)
         gpu_index = config.get("gpu_index", DEFAULT_GPU_INDEX)
         enforce_gpu_index = config.get("enforce_gpu_index", DEFAULT_ENFORCE_GPU_INDEX)
+        decompressor_timeout = config.get("decompressor_timeout", DEFAULT_DECOMPRESSOR_TIMEOUT)
 
         try:
             self._mode = self.plot_manager.configure_decompressor(
@@ -113,6 +122,7 @@ class Harvester:
                 use_gpu_harvesting,
                 gpu_index,
                 enforce_gpu_index,
+                decompressor_timeout,
             )
         except Exception as e:
             self.log.error(f"{type(e)} {e} while configuring decompressor.")
@@ -120,19 +130,20 @@ class Harvester:
 
         self.plot_sync_sender = Sender(self.plot_manager, self._mode)
 
-    async def _start(self) -> None:
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
         self._refresh_lock = asyncio.Lock()
         self.event_loop = asyncio.get_running_loop()
+        try:
+            yield
+        finally:
+            self._shut_down = True
+            self.executor.shutdown(wait=True)
+            self.plot_manager.stop_refreshing()
+            self.plot_manager.reset()
+            self.plot_sync_sender.stop()
 
-    def _close(self) -> None:
-        self._shut_down = True
-        self.executor.shutdown(wait=True)
-        self.plot_manager.stop_refreshing()
-        self.plot_manager.reset()
-        self.plot_sync_sender.stop()
-
-    async def _await_closed(self) -> None:
-        await self.plot_sync_sender.await_closed()
+            await self.plot_sync_sender.await_closed()
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
@@ -163,7 +174,7 @@ class Harvester:
         if event == PlotRefreshEvents.done:
             self.plot_sync_sender.sync_done(update_result.removed, update_result.duration)
 
-    def on_disconnect(self, connection: WSChiaConnection) -> None:
+    async def on_disconnect(self, connection: WSChiaConnection) -> None:
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection")
         self.plot_sync_sender.stop()

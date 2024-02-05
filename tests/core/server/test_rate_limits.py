@@ -14,7 +14,6 @@ from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16
 from tests.conftest import node_with_params
 
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]
@@ -24,13 +23,13 @@ test_different_versions_results: List[int] = []
 
 
 class TestRateLimits:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_get_rate_limits_to_use(self):
         assert get_rate_limits_to_use(rl_v2, rl_v2) != get_rate_limits_to_use(rl_v2, rl_v1)
         assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v2, rl_v1)
         assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v1, rl_v2)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_too_many_messages(self):
         # Too many messages
         r = RateLimiter(incoming=True)
@@ -58,7 +57,7 @@ class TestRateLimits:
                 saw_disconnect = True
         assert saw_disconnect
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_large_message(self):
         # Large tx
         small_tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
@@ -75,7 +74,7 @@ class TestRateLimits:
         assert r.process_msg_and_check(small_vdf_message, rl_v2, rl_v2)
         assert not r.process_msg_and_check(large_vdf_message, rl_v2, rl_v2)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_too_much_data(self):
         # Too much data
         r = RateLimiter(incoming=True)
@@ -102,7 +101,7 @@ class TestRateLimits:
                 saw_disconnect = True
         assert saw_disconnect
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_non_tx_aggregate_limits(self):
         # Frequency limits
         r = RateLimiter(incoming=True)
@@ -138,7 +137,7 @@ class TestRateLimits:
                 saw_disconnect = True
         assert saw_disconnect
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_periodic_reset(self):
         r = RateLimiter(True, 5)
         tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
@@ -170,7 +169,7 @@ class TestRateLimits:
         await asyncio.sleep(6)
         assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_percentage_limits(self):
         r = RateLimiter(True, 60, 40)
         new_peak_message = make_msg(ProtocolMessageTypes.new_peak, bytes([1] * 40))
@@ -229,7 +228,7 @@ class TestRateLimits:
                 saw_disconnect = True
         assert saw_disconnect
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_too_many_outgoing_messages(self):
         # Too many messages
         r = RateLimiter(incoming=False)
@@ -252,7 +251,7 @@ class TestRateLimits:
         new_signatures_message = make_msg(ProtocolMessageTypes.respond_signatures, bytes([1]))
         assert r.process_msg_and_check(new_signatures_message, rl_v2, rl_v2)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_too_many_incoming_messages(self):
         # Too many messages
         r = RateLimiter(incoming=True)
@@ -278,11 +277,17 @@ class TestRateLimits:
     @pytest.mark.parametrize(
         "node_with_params",
         [
-            dict(
-                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+            pytest.param(
+                dict(
+                    disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+                ),
+                id="V1",
             ),
-            dict(
-                disable_capabilities=[],
+            pytest.param(
+                dict(
+                    disable_capabilities=[],
+                ),
+                id="V2",
             ),
         ],
         indirect=True,
@@ -290,16 +295,23 @@ class TestRateLimits:
     @pytest.mark.parametrize(
         "node_with_params_b",
         [
-            dict(
-                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+            pytest.param(
+                dict(
+                    disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+                ),
+                id="V1",
             ),
-            dict(
-                disable_capabilities=[],
+            pytest.param(
+                dict(
+                    disable_capabilities=[],
+                ),
+                id="V2",
             ),
         ],
         indirect=True,
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(reason="save time")
     async def test_different_versions(self, node_with_params, node_with_params_b, self_hostname):
         node_a = node_with_params
         node_b = node_with_params_b
@@ -307,7 +319,7 @@ class TestRateLimits:
         full_node_server_a: ChiaServer = node_a.full_node.server
         full_node_server_b: ChiaServer = node_b.full_node.server
 
-        await full_node_server_b.start_client(PeerInfo(self_hostname, uint16(full_node_server_a._port)), None)
+        await full_node_server_b.start_client(PeerInfo(self_hostname, full_node_server_a.get_port()), None)
 
         assert len(full_node_server_b.get_connections()) == 1
         assert len(full_node_server_a.get_connections()) == 1
@@ -329,11 +341,12 @@ class TestRateLimits:
         total_tx_msg_count = len(
             get_rate_limits_to_use(a_con.local_capabilities, a_con.peer_capabilities)["rate_limits_tx"]
         )
+
         test_different_versions_results.append(total_tx_msg_count)
         if len(test_different_versions_results) >= 4:
             assert len(set(test_different_versions_results)) >= 2
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_compose(self):
         rl_1 = rl_numbers[1]
         rl_2 = rl_numbers[2]

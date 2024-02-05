@@ -28,7 +28,6 @@ from chia.rpc.farmer_rpc_api import (
 )
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.simulator.block_tools import get_plot_dir
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -40,6 +39,7 @@ from tests.conftest import HarvesterFarmerEnvironment
 from tests.plot_sync.test_delta import dummy_plot
 from tests.util.misc import assert_rpc_error
 from tests.util.rpc import validate_get_routes
+from tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ async def wait_for_synced_receiver(farmer: Farmer, harvester_id: bytes32) -> Non
     await time_out_assert(30, wait)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_routes(harvester_farmer_environment: HarvesterFarmerEnvironment) -> None:
     farmer_service, farmer_rpc_client, harvester_service, harvester_rpc_client, _ = harvester_farmer_environment
     assert farmer_service.rpc_server is not None
@@ -71,7 +71,7 @@ async def test_get_routes(harvester_farmer_environment: HarvesterFarmerEnvironme
 
 
 @pytest.mark.parametrize("endpoint", ["get_harvesters", "get_harvesters_summary"])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_get_harvesters_and_summary(
     harvester_farmer_environment: HarvesterFarmerEnvironment, endpoint: str
 ) -> None:
@@ -119,7 +119,7 @@ async def test_farmer_get_harvesters_and_summary(
     await time_out_assert_custom_interval(30, 1, test_get_harvesters)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_signage_point_endpoints(harvester_farmer_environment: HarvesterFarmerEnvironment) -> None:
     farmer_service, farmer_rpc_client, _, _, _ = harvester_farmer_environment
     farmer_api = farmer_service._api
@@ -139,7 +139,7 @@ async def test_farmer_signage_point_endpoints(harvester_farmer_environment: Harv
     assert (await farmer_rpc_client.get_signage_point(std_hash(b"2"))) is not None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_reward_target_endpoints(harvester_farmer_environment: HarvesterFarmerEnvironment) -> None:
     farmer_service, farmer_rpc_client, _, _, bt = harvester_farmer_environment
     farmer_api = farmer_service._api
@@ -193,7 +193,7 @@ async def test_farmer_reward_target_endpoints(harvester_farmer_environment: Harv
         await farmer_rpc_client.set_reward_targets(None, replaced_char)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_get_pool_state(
     harvester_farmer_environment: HarvesterFarmerEnvironment, self_hostname: str
 ) -> None:
@@ -250,7 +250,7 @@ async def test_farmer_get_pool_state(
             assert pool_dict[key][0] == list(since_24h)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_get_pool_state_plot_count(
     harvester_farmer_environment: HarvesterFarmerEnvironment, self_hostname: str
 ) -> None:
@@ -355,7 +355,7 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
         (FarmerRpcClient.get_harvester_plots_duplicates, ["duplicates_0"], None, False, 3),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.skipif(sys.platform == "win32", reason="avoiding crashes on windows until we fix this (crashing workers)")
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
@@ -458,7 +458,7 @@ async def test_farmer_get_harvester_plots_endpoints(
             }
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.skip("This test causes hangs occasionally. TODO: fix this.")
 async def test_harvester_add_plot_directory(harvester_farmer_environment: HarvesterFarmerEnvironment) -> None:
     _, _, harvester_service, harvester_rpc_client, _ = harvester_farmer_environment

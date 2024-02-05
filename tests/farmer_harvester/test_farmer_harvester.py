@@ -6,28 +6,26 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.farmer.farmer import Farmer
-from chia.farmer.farmer_api import FarmerAPI
-from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
 from chia.plotting.util import PlotsRefreshParameter
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.server.outbound_message import NodeType, make_msg
-from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
-from chia.simulator.time_out_assert import time_out_assert
+from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import generate_mnemonic
+from chia.util.misc import split_async_manager
 from tests.conftest import HarvesterFarmerEnvironment
+from tests.util.time_out_assert import time_out_assert
 
 
 def farmer_is_started(farmer: Farmer) -> bool:
@@ -44,11 +42,9 @@ async def update_harvester_config(harvester_rpc_port: Optional[int], root_path: 
         return await harvester_client.update_harvester_config(config)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_start_with_empty_keychain(
-    farmer_one_harvester_not_started: Tuple[
-        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
-    ]
+    farmer_one_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools]
 ) -> None:
     _, farmer_service, bt = farmer_one_harvester_not_started
     farmer: Farmer = farmer_service._node
@@ -59,23 +55,19 @@ async def test_start_with_empty_keychain(
     # Make sure the farmer service is not initialized yet
     assert not farmer.started
     # Start it, wait 5 seconds and make sure it still isn't initialized (since the keychain is empty)
-    await farmer_service.start()
-    await asyncio.sleep(5)
-    assert not farmer.started
-    # Add a key to the keychain, this should lead to the start task passing `setup_keys` and set `Farmer.initialized`
-    bt.local_keychain.add_private_key(generate_mnemonic())
-    await time_out_assert(5, farmer_is_started, True, farmer)
-    # Stop it and wait for `Farmer.initialized` to become reset
-    farmer_service.stop()
-    await farmer_service.wait_closed()
+    async with farmer_service.manage():
+        await asyncio.sleep(5)
+        assert not farmer.started
+        # Add a key to the keychain, this should lead to the start task passing
+        # `setup_keys` and set `Farmer.initialized`
+        bt.local_keychain.add_private_key(generate_mnemonic())
+        await time_out_assert(5, farmer_is_started, True, farmer)
     assert not farmer.started
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_harvester_handshake(
-    farmer_one_harvester_not_started: Tuple[
-        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
-    ]
+    farmer_one_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools]
 ) -> None:
     harvesters, farmer_service, bt = farmer_one_harvester_not_started
     harvester_service = harvesters[0]
@@ -101,43 +93,47 @@ async def test_harvester_handshake(
     # Handshake task and plot manager thread should not be running yet
     assert farmer.harvester_handshake_task is None
     assert harvester.plot_manager._refresh_thread is None
-    # Start both services and wait a bit
-    await farmer_service.start()
-    await harvester_service.start()
-    harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
-    # Handshake task should be started but the handshake should not be done
-    await time_out_assert(5, handshake_task_active, True)
-    assert not await handshake_done()
-    # Stop the harvester service and wait for the farmer to lose the connection
-    harvester_service.stop()
-    await harvester_service.wait_closed()
-    await time_out_assert(10, farmer_has_connections, False)
-    assert not await handshake_done()
-    # Handshake task should be stopped again
-    await time_out_assert(5, handshake_task_active, False)
-    await asyncio.sleep(1)
-    assert harvester.plot_manager._refresh_thread is None
-    assert len(harvester.plot_manager.farmer_public_keys) == 0
-    # Re-start the harvester and make sure the handshake task gets started but the handshake still doesn't go through
-    await harvester_service.start()
-    harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
-    await time_out_assert(5, handshake_task_active, True)
-    assert not await handshake_done()
-    # Stop the farmer and make sure the handshake_task doesn't block the shutdown
-    farmer_service.stop()
-    await farmer_service.wait_closed()
-    await time_out_assert(5, handshake_task_active, False)
-    # Re-start the farmer and make sure the handshake task succeeds if a key get added to the keychain
-    await farmer_service.start()
-    await time_out_assert(5, handshake_task_active, True)
-    assert not await handshake_done()
-    bt.local_keychain.add_private_key(generate_mnemonic())
-    await time_out_assert(5, farmer_is_started, True, farmer)
-    await time_out_assert(5, handshake_task_active, False)
-    await time_out_assert(5, handshake_done, True)
+    async with split_async_manager(
+        manager=harvester_service.manage(), object=harvester_service
+    ) as split_harvester_manager:
+        # Start both services and wait a bit
+        async with farmer_service.manage():
+            async with harvester_service.manage():
+                harvester_service.add_peer(
+                    UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port())
+                )
+                # Handshake task should be started but the handshake should not be done
+                await time_out_assert(5, handshake_task_active, True)
+                assert not await handshake_done()
+            # wait for the farmer to lose the connection
+            await time_out_assert(10, farmer_has_connections, False)
+            assert not await handshake_done()
+            # Handshake task should be stopped again
+            await time_out_assert(5, handshake_task_active, False)
+            await asyncio.sleep(1)
+            assert harvester.plot_manager._refresh_thread is None
+            assert len(harvester.plot_manager.farmer_public_keys) == 0
+            # Re-start the harvester and make sure the handshake task gets started but
+            # the handshake still doesn't go through
+            await split_harvester_manager.enter()
+            harvester_service.add_peer(
+                UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port())
+            )
+            await time_out_assert(5, handshake_task_active, True)
+            assert not await handshake_done()
+        # make sure the handshake_task doesn't block the shutdown
+        await time_out_assert(5, handshake_task_active, False)
+        # Re-start the farmer and make sure the handshake task succeeds if a key get added to the keychain
+        async with farmer_service.manage():
+            await time_out_assert(5, handshake_task_active, True)
+            assert not await handshake_done()
+            bt.local_keychain.add_private_key(generate_mnemonic())
+            await time_out_assert(5, farmer_is_started, True, farmer)
+            await time_out_assert(5, handshake_task_active, False)
+            await time_out_assert(5, handshake_done, True)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_farmer_respond_signatures(
     caplog: pytest.LogCaptureFixture, harvester_farmer_environment: HarvesterFarmerEnvironment
 ) -> None:
@@ -161,6 +157,8 @@ async def test_farmer_respond_signatures(
         local_pk=G1Element(),
         farmer_pk=G1Element(),
         message_signatures=[],
+        include_source_signature_data=False,
+        farmer_reward_address_override=None,
     )
     msg = make_msg(ProtocolMessageTypes.respond_signatures, response)
     await harvester_service._node.server.send_to_all([msg], NodeType.FARMER)
@@ -170,10 +168,8 @@ async def test_farmer_respond_signatures(
     assert expected_error in caplog.text
 
 
-@pytest.mark.asyncio
-async def test_harvester_config(
-    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]
-) -> None:
+@pytest.mark.anyio
+async def test_harvester_config(farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools]) -> None:
     harvester_services, farmer_service, bt = farmer_one_harvester
     harvester_service = harvester_services[0]
 
@@ -214,9 +210,9 @@ async def test_harvester_config(
     check_config_match(new_config, harvester_config)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_missing_signage_point(
-    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]
+    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools]
 ) -> None:
     _, farmer_service, bt = farmer_one_harvester
     farmer_api = farmer_service._api
@@ -284,3 +280,13 @@ async def test_missing_signage_point(
     _, sp_for_farmer_api = create_sp(index=2, challenge_hash=std_hash(b"4"))
     await farmer_api.new_signage_point(sp_for_farmer_api)
     assert number_of_missing_sps == uint32(1)
+
+
+@pytest.mark.anyio
+async def test_harvester_has_no_server(
+    farmer_one_harvester: Tuple[List[FarmerService], HarvesterService, BlockTools],
+) -> None:
+    harvesters, _, bt = farmer_one_harvester
+    harvester_server = harvesters[0]._server
+
+    assert harvester_server.webserver is None

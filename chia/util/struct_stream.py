@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import BinaryIO, ClassVar, SupportsInt, Type, TypeVar, Union
+from typing import BinaryIO, ClassVar, Optional, SupportsIndex, SupportsInt, Type, TypeVar, Union
 
-from typing_extensions import Protocol, SupportsIndex
+from typing_extensions import Protocol
 
 _T_StructStream = TypeVar("_T_StructStream", bound="StructStream")
 
@@ -14,8 +14,6 @@ class SupportsTrunc(Protocol):
 
 
 def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream]:
-    # TODO: turn this around to calculate the PACK from the size and signedness
-
     name_signedness, _, name_bit_size = cls.__name__.partition("int")
     cls.SIGNED = False if name_signedness == "u" else True
     try:
@@ -73,12 +71,19 @@ class StructStream(int):
             raise ValueError(f"Value {self} does not fit into {type(self).__name__}")
 
     @classmethod
+    def construct_optional(cls: Type[_T_StructStream], val: Optional[int]) -> Optional[_T_StructStream]:
+        if val is None:
+            return None
+        else:
+            return cls(val)
+
+    @classmethod
     def parse(cls: Type[_T_StructStream], f: BinaryIO) -> _T_StructStream:
         read_bytes = f.read(cls.SIZE)
         return cls.from_bytes(read_bytes)
 
     def stream(self, f: BinaryIO) -> None:
-        f.write(bytes(self))
+        f.write(self.stream_to_bytes())
 
     @classmethod
     def from_bytes(cls: Type[_T_StructStream], blob: bytes) -> _T_StructStream:  # type: ignore[override]
@@ -86,5 +91,8 @@ class StructStream(int):
             raise ValueError(f"{cls.__name__}.from_bytes() requires {cls.SIZE} bytes but got: {len(blob)}")
         return cls(int.from_bytes(blob, "big", signed=cls.SIGNED))
 
-    def __bytes__(self) -> bytes:
+    def stream_to_bytes(self) -> bytes:
         return super().to_bytes(length=self.SIZE, byteorder="big", signed=self.SIGNED)
+
+    def __bytes__(self) -> bytes:
+        return self.stream_to_bytes()

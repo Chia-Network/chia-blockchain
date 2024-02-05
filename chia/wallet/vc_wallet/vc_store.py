@@ -121,28 +121,26 @@ class VCStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS vc_records("
-                    # VerifiedCredential.launcher_id
-                    " launcher_id text PRIMARY KEY,"
-                    # VerifiedCredential.coin
-                    " coin_id text,"
-                    " parent_coin_info text,"
-                    " puzzle_hash text,"
-                    " amount blob,"
-                    # VerifiedCredential.singleton_lineage_proof
-                    " singleton_lineage_proof blob,"
-                    # VerifiedCredential.ownership_lineage_proof
-                    " ownership_lineage_proof blob,"
-                    # VerifiedCredential.inner_puzzle_hash
-                    " inner_puzzle_hash text,"
-                    # VerifiedCredential.proof_provider
-                    " proof_provider text,"
-                    # VerifiedCredential.proof_hash
-                    " proof_hash text,"
-                    # VCRecord.confirmed_height
-                    " confirmed_height int)"
-                )
+                "CREATE TABLE IF NOT EXISTS vc_records("
+                # VerifiedCredential.launcher_id
+                " launcher_id text PRIMARY KEY,"
+                # VerifiedCredential.coin
+                " coin_id text,"
+                " parent_coin_info text,"
+                " puzzle_hash text,"
+                " amount blob,"
+                # VerifiedCredential.singleton_lineage_proof
+                " singleton_lineage_proof blob,"
+                # VerifiedCredential.ownership_lineage_proof
+                " ownership_lineage_proof blob,"
+                # VerifiedCredential.inner_puzzle_hash
+                " inner_puzzle_hash text,"
+                # VerifiedCredential.proof_provider
+                " proof_provider text,"
+                # VerifiedCredential.proof_hash
+                " proof_hash text,"
+                # VCRecord.confirmed_height
+                " confirmed_height int)"
             )
 
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_id_index ON vc_records(coin_id)")
@@ -171,7 +169,7 @@ class VCStore:
                     record.vc.coin.name().hex(),
                     record.vc.coin.parent_coin_info.hex(),
                     record.vc.coin.puzzle_hash.hex(),
-                    bytes(uint64(record.vc.coin.amount)),
+                    uint64(record.vc.coin.amount).stream_to_bytes(),
                     bytes(record.vc.singleton_lineage_proof),
                     bytes(record.vc.eml_lineage_proof),
                     record.vc.inner_puzzle_hash.hex(),
@@ -251,7 +249,7 @@ class VCStore:
     async def add_vc_proofs(self, vc_proofs: VCProofs) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "INSERT INTO vc_proofs VALUES(?, ?)", (vc_proofs.root().hex(), bytes(vc_proofs.as_program()))
+                "INSERT OR IGNORE INTO vc_proofs VALUES(?, ?)", (vc_proofs.root().hex(), bytes(vc_proofs.as_program()))
             )
 
     async def get_proofs_for_root(self, root: bytes32) -> Optional[VCProofs]:

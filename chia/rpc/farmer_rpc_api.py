@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import operator
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, ClassVar, Dict, List, Optional, Tuple
 
 from typing_extensions import Protocol
 
@@ -18,19 +18,13 @@ from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class PaginatedRequestData(Protocol):
-    @property
-    def node_id(self) -> bytes32:
-        pass
+    node_id: bytes32
+    page: uint32
+    page_size: uint32
 
-    @property
-    def page(self) -> uint32:
-        pass
-
-    @property
-    def page_size(self) -> uint32:
-        pass
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
 
 
 @streamable
@@ -50,6 +44,8 @@ class PlotInfoRequestData(Streamable):
     sort_key: str = "filename"
     reverse: bool = False
 
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
+
 
 @streamable
 @dataclasses.dataclass(frozen=True)
@@ -59,6 +55,8 @@ class PlotPathRequestData(Streamable):
     page_size: uint32
     filter: List[str] = dataclasses.field(default_factory=list)
     reverse: bool = False
+
+    __match_args__: ClassVar[Tuple[str, ...]] = ()
 
 
 def paginated_plot_request(source: List[Any], request: PaginatedRequestData) -> Dict[str, object]:
@@ -237,23 +235,24 @@ class FarmerRpcApi:
         return payloads
 
     async def get_signage_point(self, request: Dict[str, Any]) -> EndpointResult:
-        sp_hash = hexstr_to_bytes(request["sp_hash"])
-        for _, sps in self.service.sps.items():
-            for sp in sps:
-                if sp.challenge_chain_sp == sp_hash:
-                    pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
-                    return {
-                        "signage_point": {
-                            "challenge_hash": sp.challenge_hash,
-                            "challenge_chain_sp": sp.challenge_chain_sp,
-                            "reward_chain_sp": sp.reward_chain_sp,
-                            "difficulty": sp.difficulty,
-                            "sub_slot_iters": sp.sub_slot_iters,
-                            "signage_point_index": sp.signage_point_index,
-                        },
-                        "proofs": pospaces,
-                    }
-        raise ValueError(f"Signage point {sp_hash.hex()} not found")
+        sp_hash = bytes32.from_hexstr(request["sp_hash"])
+        sps = self.service.sps.get(sp_hash)
+        if sps is None or len(sps) < 1:
+            raise ValueError(f"Signage point {sp_hash.hex()} not found")
+        sp = sps[0]
+        assert sp_hash == sp.challenge_chain_sp
+        pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
+        return {
+            "signage_point": {
+                "challenge_hash": sp.challenge_hash,
+                "challenge_chain_sp": sp.challenge_chain_sp,
+                "reward_chain_sp": sp.reward_chain_sp,
+                "difficulty": sp.difficulty,
+                "sub_slot_iters": sp.sub_slot_iters,
+                "signage_point_index": sp.signage_point_index,
+            },
+            "proofs": pospaces,
+        }
 
     async def get_signage_points(self, _: Dict[str, Any]) -> EndpointResult:
         result: List[Dict[str, Any]] = []

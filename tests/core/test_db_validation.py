@@ -18,7 +18,7 @@ from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from tests.util.temp_file import TempFile
 
 
@@ -129,8 +129,7 @@ def test_db_validate_in_main_chain(invalid_in_chain: bool) -> None:
 
 
 async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
-    db_wrapper = await DBWrapper2.create(database=db_file, reader_count=1, db_version=2)
-    try:
+    async with DBWrapper2.managed(database=db_file, reader_count=1, db_version=2) as db_wrapper:
         async with db_wrapper.writer_maybe_transaction() as conn:
             # this is done by chia init normally
             await conn.execute("CREATE TABLE database_version(version int)")
@@ -142,14 +141,12 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
         bc = await Blockchain.create(coin_store, block_store, test_constants, Path("."), reserved_cores=0)
 
         for block in blocks:
-            results = PreValidationResult(None, uint64(1), None, False)
+            results = PreValidationResult(None, uint64(1), None, False, uint32(0))
             result, err, _ = await bc.add_block(block, results)
             assert err is None
-    finally:
-        await db_wrapper.close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_db_validate_default_1000_blocks(default_1000_blocks: List[FullBlock]) -> None:
     with TempFile() as db_file:
         await make_db(db_file, default_1000_blocks)

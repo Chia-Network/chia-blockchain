@@ -1,31 +1,35 @@
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
 import pytest
-import pytest_asyncio
 
 from chia.farmer.farmer_api import FarmerAPI
-from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.server.start_service import Service
 from chia.simulator.block_tools import create_block_tools_async, test_constants
-from chia.simulator.setup_nodes import setup_farmer_multi_harvester
-from chia.simulator.time_out_assert import time_out_assert
+from chia.types.aliases import HarvesterService
 from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
+from tests.conftest import ConsensusMode
 from tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
+from tests.util.setup_nodes import setup_farmer_multi_harvester
+from tests.util.time_out_assert import time_out_assert
 
 
+# these numbers are only valid for chains farmed with the fixed original plot
+# filter. The HARD_FORK_2_0 consensus mode uses a chain where blocks are farmed
+# with wider filters. i.e. some valid blocks may still not pass the filter in
+# this test
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
 @pytest.mark.parametrize(
-    argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, 33), (8, 66), (7, 138), (6, 265), (5, 607)]
+    argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, 34), (8, 89), (7, 162), (6, 295), (5, 579)]
 )
 def test_filter_prefix_bits_on_blocks(
     default_10000_blocks: List[FullBlock], filter_prefix_bits: uint8, should_pass: int
@@ -44,21 +48,21 @@ def test_filter_prefix_bits_on_blocks(
     assert passed == should_pass
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def farmer_harvester_with_filter_size_9(
     get_temp_keyring: Keychain, tmp_path: Path, self_hostname: str
-) -> AsyncIterator[Tuple[Service[Harvester, HarvesterAPI], FarmerAPI]]:
+) -> AsyncIterator[Tuple[HarvesterService, FarmerAPI]]:
     async def have_connections() -> bool:
         return len(await farmer_rpc_cl.get_connections()) > 0
 
     local_b_tools = await create_block_tools_async(
-        constants=test_constants.replace(NUMBER_ZERO_BITS_PLOT_FILTER=9), keychain=get_temp_keyring
+        constants=dataclasses.replace(test_constants, NUMBER_ZERO_BITS_PLOT_FILTER=9), keychain=get_temp_keyring
     )
     new_config = local_b_tools._config
     local_b_tools.change_config(new_config)
-    async for harvesters, farmer_service, _ in setup_farmer_multi_harvester(
+    async with setup_farmer_multi_harvester(
         local_b_tools, 1, tmp_path, local_b_tools.constants, start_services=True
-    ):
+    ) as (harvesters, farmer_service, _):
         harvester_service = harvesters[0]
         assert farmer_service.rpc_server is not None
         farmer_rpc_cl = await FarmerRpcClient.create(
@@ -81,9 +85,9 @@ async def farmer_harvester_with_filter_size_9(
 
 
 @pytest.mark.parametrize(argnames=["peak_height", "eligible_plots"], argvalues=[(5495999, 0), (5496000, 1)])
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_filter_prefix_bits_with_farmer_harvester(
-    farmer_harvester_with_filter_size_9: Tuple[Service[Harvester, HarvesterAPI], FarmerAPI],
+    farmer_harvester_with_filter_size_9: Tuple[HarvesterService, FarmerAPI],
     peak_height: uint32,
     eligible_plots: int,
 ) -> None:

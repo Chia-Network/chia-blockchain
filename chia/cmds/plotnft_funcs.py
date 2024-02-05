@@ -126,6 +126,7 @@ async def pprint_pool_wallet_state(
     address_prefix: str,
     pool_state_dict: Optional[Dict[str, Any]],
 ) -> None:
+    print(f"Wallet ID: {wallet_id}")
     if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL.value and pool_wallet_info.target is None:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
         print(f"Current state: INVALID_STATE. Please leave/join again after block height {expected_leave_height}")

@@ -5,7 +5,7 @@ from typing import List
 from unittest import TestCase
 
 import pytest
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.pools.pool_puzzles import (
@@ -16,7 +16,6 @@ from chia.pools.pool_puzzles import (
     create_travel_spend,
     create_waiting_room_inner_puzzle,
     get_delayed_puz_info_from_launcher_spend,
-    get_most_recent_singleton_coin_from_coin_spend,
     get_pubkey_from_member_inner_puzzle,
     get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle,
     is_pool_singleton_inner_puzzle,
@@ -28,7 +27,7 @@ from chia.pools.pool_wallet_info import PoolState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import singleton_top_layer
@@ -39,6 +38,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
+from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
 from tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
 from tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from tests.util.key_tool import KeyTool
@@ -145,7 +145,7 @@ class TestPoolPuzzles(TestCase):
         # Creating solution for standard transaction
         delegated_puzzle: Program = puzzle_for_conditions(conditions)
         full_solution: Program = solution_for_conditions(conditions)
-        starting_coinsol = CoinSpend(
+        starting_coinsol = make_spend(
             starting_coin,
             starting_puzzle,
             full_solution,
@@ -252,7 +252,7 @@ class TestPoolPuzzles(TestCase):
         )
         coin_db._add_coin_entry(non_reward_p2_singleton, time)
         # construct coin solution for the p2_singleton coin
-        bad_coinsol = CoinSpend(
+        bad_coinsol = make_spend(
             non_reward_p2_singleton,
             p2_singleton_puz,
             Program.to(

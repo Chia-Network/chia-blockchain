@@ -16,7 +16,7 @@ from tests.core.consensus.test_pot_iterations import test_constants
 from tests.util.db_connection import DBConnection
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_basics() -> None:
     fee_store = FeeStore()
     fee_tracker = FeeTracker(fee_store)
@@ -59,11 +59,11 @@ async def test_basics() -> None:
     assert long.median != -1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_fee_increase() -> None:
     async with DBConnection(db_version=2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
-        mempool_manager = MempoolManager(coin_store.get_coin_record, test_constants)
+        mempool_manager = MempoolManager(coin_store.get_coin_records, test_constants)
         assert test_constants.MAX_BLOCK_COST_CLVM == mempool_manager.constants.MAX_BLOCK_COST_CLVM
         btc_fee_estimator: BitcoinFeeEstimator = mempool_manager.mempool.fee_estimator  # type: ignore
         fee_tracker = btc_fee_estimator.get_tracker()

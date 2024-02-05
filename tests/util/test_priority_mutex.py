@@ -13,9 +13,10 @@ from typing import Callable, List, Optional
 import anyio
 import pytest
 
-from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert_custom_interval
 from chia.util.priority_mutex import NestedLockUnsupportedError, PriorityMutex
+from chia.util.timing import adjusted_timeout
 from tests.util.misc import Marks, datacases
+from tests.util.time_out_assert import time_out_assert_custom_interval
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ class RequestNotCompleteError(Exception):
 
 
 class TestPriorityMutex:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_priority_mutex(self) -> None:
         mutex = PriorityMutex.create(priority_type=MutexPriority)
 
@@ -194,7 +195,7 @@ def test_comparisons_fail_for_incomplete_requests(
         method(case.self, case.other)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_reacquisition_fails() -> None:
     mutex = PriorityMutex.create(priority_type=MutexPriority)
     request = Request(id="again!", priority=MutexPriority.low)
@@ -251,7 +252,7 @@ async def test_reacquisition_fails() -> None:
         ),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_order(case: OrderCase) -> None:
     mutex = PriorityMutex.create(priority_type=MutexPriority)
 
@@ -275,7 +276,7 @@ def expected_acquisition_order(requests: List[Request]) -> List[Request]:
     ]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_sequential_acquisitions() -> None:
     mutex = PriorityMutex.create(priority_type=MutexPriority)
 
@@ -290,7 +291,7 @@ async def test_sequential_acquisitions() -> None:
     # just testing that we can get through a bunch of miscellaneous acquisitions
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nested_acquisition_raises() -> None:
     mutex = PriorityMutex.create(priority_type=MutexPriority)
 
@@ -306,7 +307,7 @@ async def to_be_cancelled(mutex: PriorityMutex[MutexPriority]) -> None:
         assert False
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_to_be_cancelled_fails_if_not_cancelled() -> None:
     mutex = PriorityMutex.create(priority_type=MutexPriority)
 
@@ -314,7 +315,7 @@ async def test_to_be_cancelled_fails_if_not_cancelled() -> None:
         await to_be_cancelled(mutex=mutex)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_cancellation_while_waiting() -> None:
     mutex = PriorityMutex.create(priority_type=MutexPriority)
 
@@ -356,7 +357,7 @@ async def test_cancellation_while_waiting() -> None:
 
 # testing many repeatable randomization cases
 @pytest.mark.parametrize(argnames="seed", argvalues=range(100), ids=lambda seed: f"random seed {seed}")
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_retains_request_order_for_matching_priority(seed: int) -> None:
     mutex = PriorityMutex.create(priority_type=MutexPriority)
 
@@ -449,7 +450,7 @@ async def create_acquire_tasks_in_controlled_order(
     return tasks
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_multiple_tasks_track_active_task_accurately() -> None:
     mutex = PriorityMutex.create(priority_type=MutexPriority)
 
@@ -474,7 +475,7 @@ async def test_multiple_tasks_track_active_task_accurately() -> None:
     await other_task
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_no_task_fails_as_expected(monkeypatch: pytest.MonkeyPatch) -> None:
     """Note that this case is not expected to be possible in reality"""
     mutex = PriorityMutex.create(priority_type=MutexPriority)

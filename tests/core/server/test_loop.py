@@ -2,20 +2,23 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 import pathlib
 import random
 import subprocess
 import sys
 import threading
-import time
 from dataclasses import dataclass, field
 from typing import AsyncIterator, List, Optional
 
 import anyio
 import pytest
 
+import tests
 from chia.server import chia_policy
+from chia.util.timing import adjusted_timeout
 from tests.core.server import serve
+from tests.util.misc import create_logger
 
 here = pathlib.Path(__file__).parent
 
@@ -26,8 +29,10 @@ NUM_CLIENTS = 500
 
 
 @contextlib.asynccontextmanager
-async def serve_in_thread(ip: str, port: int, connection_limit: int) -> AsyncIterator[ServeInThread]:
-    server = ServeInThread(ip=ip, requested_port=port, connection_limit=connection_limit)
+async def serve_in_thread(
+    out_path: pathlib.Path, ip: str, port: int, connection_limit: int
+) -> AsyncIterator[ServeInThread]:
+    server = ServeInThread(out_path=out_path, ip=ip, requested_port=port, connection_limit=connection_limit)
     server.start()
     # TODO: can we check when it has really started?  just make a connection?
     await asyncio.sleep(1)
@@ -87,6 +92,7 @@ class Client:
 class ServeInThread:
     ip: str
     requested_port: int
+    out_path: pathlib.Path
     connection_limit: int = 25
     original_connection_limit: Optional[int] = None
     loop: Optional[asyncio.AbstractEventLoop] = None
@@ -119,6 +125,7 @@ class ServeInThread:
     async def main(self) -> None:
         self.server_task = asyncio.create_task(
             serve.async_main(
+                out_path=self.out_path,
                 ip=self.ip,
                 port=self.requested_port,
                 thread_end_event=self.thread_end_event,
@@ -143,61 +150,90 @@ class ServeInThread:
             chia_policy.global_max_concurrent_connections = self.original_connection_limit
 
 
-@pytest.mark.asyncio
-async def test_loop() -> None:
+@pytest.mark.anyio
+async def test_loop(tmp_path: pathlib.Path) -> None:
+    logger = create_logger()
+
     allowed_over_connections = 0 if sys.platform == "win32" else 100
 
-    print(" ==== launching serve.py")
-    with subprocess.Popen(
-        [sys.executable, "-m", "tests.core.server.serve"],
-        encoding="utf-8",
-        stderr=subprocess.STDOUT,
-        stdout=subprocess.PIPE,
-    ) as serving_process:
-        print(" ====           serve.py running")
-        time.sleep(5)
-        print(" ==== launching flood.py")
-        with subprocess.Popen(
-            [sys.executable, "-m", "tests.core.server.flood"],
-            encoding="utf-8",
-            stderr=subprocess.STDOUT,
-            stdout=subprocess.PIPE,
-        ) as flooding_process:
-            print(" ====           flood.py running")
-            time.sleep(5)
-            print(" ====   killing flood.py")
-            flooding_process.kill()
-        print(" ====           flood.py done")
+    serve_file = tmp_path.joinpath("serve")
+    serve_file.touch()
+    flood_file = tmp_path.joinpath("flood")
+    flood_file.touch()
 
-        time.sleep(5)
+    env = {**os.environ, "PYTHONPATH": pathlib.Path(tests.__file__).parent.parent.as_posix()}
+
+    logger.info(" ==== launching serve.py")
+    with subprocess.Popen(
+        [sys.executable, "-m", "tests.core.server.serve", os.fspath(serve_file)],
+        env=env,
+    ):
+        logger.info(" ====           serve.py running")
+
+        await asyncio.sleep(adjusted_timeout(5))
+
+        logger.info(" ==== launching flood.py")
+        with subprocess.Popen(
+            [sys.executable, "-m", "tests.core.server.flood", os.fspath(flood_file)],
+            env=env,
+        ):
+            logger.info(" ====           flood.py running")
+
+            await asyncio.sleep(adjusted_timeout(10))
+
+            logger.info(" ====   killing flood.py")
+            flood_file.unlink()
+
+        flood_output = flood_file.with_suffix(".out").read_text()
+        logger.info(" ====           flood.py done")
+
+        await asyncio.sleep(adjusted_timeout(5))
 
         writer = None
+        post_connection_error: Optional[str] = None
         try:
-            with anyio.fail_after(delay=1):
-                print(" ==== attempting a single new connection")
+            logger.info(" ==== attempting a single new connection")
+            with anyio.fail_after(delay=adjusted_timeout(1)):
                 reader, writer = await asyncio.open_connection(IP, PORT)
-                print(" ==== connection succeeded")
-                post_connection_succeeded = True
-        except (TimeoutError, ConnectionRefusedError):
+            logger.info(" ==== connection succeeded")
+            post_connection_succeeded = True
+        except (TimeoutError, ConnectionRefusedError) as e:
+            logger.info(" ==== connection failed")
             post_connection_succeeded = False
+            post_connection_error = f"{type(e).__name__}: {e}"
         finally:
             if writer is not None:
                 writer.close()
                 await writer.wait_closed()
 
-        print(" ====   killing serve.py")
-        # serving_process.send_signal(signal.CTRL_C_EVENT)
-        # serving_process.terminate()
-        output, _ = serving_process.communicate()
-    print(" ====           serve.py done")
+        logger.info(" ====   killing serve.py")
 
-    print("\n\n ==== output:")
-    print(output)
+        serve_file.unlink()
+
+    serve_output = serve_file.with_suffix(".out").read_text()
+
+    logger.info(" ====           serve.py done")
+
+    logger.info(f"\n\n ==== serve output:\n{serve_output}")
+    logger.info(f"\n\n ==== flood output:\n{flood_output}")
 
     over = []
     connection_limit = 25
     accept_loop_count_over: List[int] = []
-    for line in output.splitlines():
+    server_output_lines = serve_output.splitlines()
+    found_shutdown = False
+    shutdown_lines: List[str] = []
+    for line in server_output_lines:
+        if not found_shutdown:
+            if not line.casefold().endswith("shutting down"):
+                continue
+
+            found_shutdown = True
+        shutdown_lines.append(line)
+
+    assert len(shutdown_lines) > 0, "shutdown message is missing from log, unable to verify timing of connections"
+
+    for line in server_output_lines:
         mark = "Total connections:"
         if mark in line:
             _, _, rest = line.partition(mark)
@@ -205,20 +241,16 @@ async def test_loop() -> None:
             if count > connection_limit + allowed_over_connections:
                 over.append(count)
 
-        # mark = "ChiaProactor._chia_accept_loop() entering count="
-        # if mark in line:
-        #     _, _, rest = line.partition(mark)
-        #     count = int(rest)
-        #     if count > 1:
-        #         accept_loop_count_over.append(count)
-
     assert over == [], over
     assert accept_loop_count_over == [], accept_loop_count_over
-    assert "Traceback" not in output
-    assert "paused accepting connections" in output
-    assert post_connection_succeeded
+    assert "Traceback" not in serve_output
+    assert "paused accepting connections" in serve_output
+    assert post_connection_succeeded, post_connection_error
+    assert all(
+        "new connection" not in line.casefold() for line in shutdown_lines
+    ), "new connection found during shut down"
 
-    print(" ==== all checks passed")
+    logger.info(" ==== all checks passed")
 
 
 @pytest.mark.parametrize(
@@ -233,13 +265,15 @@ async def test_loop() -> None:
     argvalues=[1, 3],
     ids=lambda cycles: f"{cycles} cycle{'s' if cycles != 1 else ''}",
 )
-@pytest.mark.asyncio
-async def test_limits_connections(repetition: int, cycles: int) -> None:
+@pytest.mark.anyio
+async def test_limits_connections(repetition: int, cycles: int, tmp_path: pathlib.Path) -> None:
     ip = "127.0.0.1"
     connection_limit = 10
     connection_attempts = connection_limit + 10
 
-    async with serve_in_thread(ip=ip, port=0, connection_limit=connection_limit) as server:
+    async with serve_in_thread(
+        out_path=tmp_path.joinpath("serve.out"), ip=ip, port=0, connection_limit=connection_limit
+    ) as server:
         for cycle in range(cycles):
             if cycle > 0:
                 await asyncio.sleep(1)

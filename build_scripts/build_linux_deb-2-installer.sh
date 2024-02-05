@@ -28,7 +28,6 @@ export CHIA_INSTALLER_VERSION
 echo "Installing npm and electron packagers"
 cd npm_linux || exit 1
 npm ci
-PATH=$(npm bin):$PATH
 cd .. || exit 1
 
 echo "Create dist/"
@@ -36,7 +35,7 @@ rm -rf dist
 mkdir dist
 
 echo "Create executables with pyinstaller"
-SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
+SPEC_FILE=$(python -c 'import sys; from pathlib import Path; path = Path(sys.argv[1]); print(path.absolute().as_posix())' "pyinstaller.spec")
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
@@ -57,7 +56,9 @@ CLI_DEB_BASE="chia-blockchain-cli_$CHIA_INSTALLER_VERSION-1_$PLATFORM"
 mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
 mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
 mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
+mkdir -p "dist/$CLI_DEB_BASE/etc/systemd/system"
 j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" assets/deb/control.j2
+cp assets/systemd/*.service "dist/$CLI_DEB_BASE/etc/systemd/system/"
 cp -r dist/daemon/* "dist/$CLI_DEB_BASE/opt/chia/"
 
 ln -s ../../opt/chia/chia "dist/$CLI_DEB_BASE/usr/bin/chia"
@@ -89,24 +90,28 @@ if [ "$PLATFORM" = "arm64" ]; then
   # @TODO Once ruby 2.6 can be installed on `apt install ruby`, installing public_suffix below should be removed.
   sudo gem install public_suffix -v 4.0.7
   sudo gem install fpm
-  echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 \
+  echo USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
-  USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 \
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
+  USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
 else
   echo electron-builder build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
-  electron-builder build --linux deb --x64 \
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
+  npx electron-builder build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
 fi
 ls -l dist/linux*-unpacked/resources

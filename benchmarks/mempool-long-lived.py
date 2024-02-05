@@ -3,12 +3,11 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from time import monotonic
-from typing import Dict, Optional
+from typing import Collection, Dict, List, Optional
 
-from blspy import G2Element
+from chia_rs import G2Element
 from clvm.casts import int_to_bytes
 
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
@@ -18,7 +17,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
-from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.ints import uint32, uint64
 
 # this is one week worth of blocks
@@ -83,8 +81,13 @@ def fake_block_record(block_height: uint32, timestamp: uint64) -> BenchBlockReco
 async def run_mempool_benchmark() -> None:
     coin_records: Dict[bytes32, CoinRecord] = {}
 
-    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-        return coin_records.get(coin_id)
+    async def get_coin_record(coin_ids: Collection[bytes32]) -> List[CoinRecord]:
+        ret: List[CoinRecord] = []
+        for name in coin_ids:
+            r = coin_records.get(name)
+            if r is not None:
+                ret.append(r)
+        return ret
 
     timestamp = uint64(1631794488)
 
@@ -99,45 +102,7 @@ async def run_mempool_benchmark() -> None:
         rec = fake_block_record(uint32(height), timestamp)
         # the new block spends on coind, the most recently added one
         # most_recent_coin_id
-        npc_result = NPCResult(
-            None,
-            SpendBundleConditions(
-                [
-                    Spend(
-                        most_recent_coin_id,
-                        bytes32(b" " * 32),
-                        bytes32(b" " * 32),
-                        123,
-                        None,
-                        0,
-                        None,
-                        None,
-                        None,
-                        None,
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        0,
-                    )
-                ],
-                0,
-                0,
-                0,
-                None,
-                None,
-                [],
-                0,
-                0,
-                0,
-            ),
-            uint64(1000000000),
-        )
-        await mempool.new_peak(rec, npc_result)
+        await mempool.new_peak(rec, [most_recent_coin_id])
 
         # add 10 transactions to the mempool
         for i in range(10):

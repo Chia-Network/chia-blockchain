@@ -5,26 +5,36 @@ import dataclasses
 import enum
 import functools
 import gc
-import math
+import logging
 import os
+import pathlib
+import ssl
 import subprocess
+import sys
 from concurrent.futures import Future
+from dataclasses import dataclass, field
 from inspect import getframeinfo, stack
 from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Any, Callable, Collection, Iterator, List, Optional, Type, Union
+from typing import Any, Awaitable, Callable, Collection, Dict, Iterator, List, Optional, TextIO, Tuple, Type, Union
 
+import aiohttp
 import pytest
+from aiohttp import web
 from chia_rs import Coin
 from typing_extensions import Protocol, final
 
+import chia
+from chia.full_node.mempool import Mempool
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
+from chia.util.ints import uint16, uint32, uint64
+from chia.util.network import WebServer
 from chia.wallet.util.compute_hints import HintedCoin
+from chia.wallet.wallet_node import WalletNode
 from tests.core.data_layer.util import ChiaRoot
 
 
@@ -37,7 +47,9 @@ class GcMode(enum.Enum):
 
 @contextlib.contextmanager
 def manage_gc(mode: GcMode) -> Iterator[None]:
-    if mode == GcMode.precollect:
+    if mode == GcMode.nothing:
+        yield
+    elif mode == GcMode.precollect:
         gc.collect()
         yield
     elif mode == GcMode.disable:
@@ -58,9 +70,9 @@ def manage_gc(mode: GcMode) -> Iterator[None]:
                 gc.disable()
 
 
-def caller_file_and_line(distance: int = 1) -> str:
+def caller_file_and_line(distance: int = 1) -> Tuple[str, int]:
     caller = getframeinfo(stack()[distance + 1][0])
-    return f"{caller.filename}:{caller.lineno}"
+    return caller.filename, caller.lineno
 
 
 @dataclasses.dataclass(frozen=True)
@@ -68,8 +80,9 @@ class RuntimeResults:
     start: float
     end: float
     duration: float
-    entry_line: str
-    overhead: float
+    entry_file: str
+    entry_line: int
+    overhead: Optional[float]
 
     def block(self, label: str = "") -> str:
         # The entry line is reported starting at the beginning of the line to trigger
@@ -80,7 +93,7 @@ class RuntimeResults:
             Measuring runtime: {label}
             {self.entry_line}
                 run time: {self.duration}
-                overhead: {self.overhead}
+                overhead: {self.overhead if self.overhead is not None else "not measured"}
             """
         )
 
@@ -91,14 +104,15 @@ class AssertRuntimeResults:
     start: float
     end: float
     duration: float
-    entry_line: str
-    overhead: float
+    entry_file: str
+    entry_line: int
+    overhead: Optional[float]
     limit: float
     ratio: float
 
     @classmethod
     def from_runtime_results(
-        cls, results: RuntimeResults, limit: float, entry_line: str, overhead: float
+        cls, results: RuntimeResults, limit: float, entry_file: str, entry_line: int, overhead: Optional[float]
     ) -> AssertRuntimeResults:
         return cls(
             start=results.start,
@@ -106,6 +120,7 @@ class AssertRuntimeResults:
             duration=results.duration,
             limit=limit,
             ratio=results.duration / limit,
+            entry_file=entry_file,
             entry_line=entry_line,
             overhead=overhead,
         )
@@ -117,9 +132,9 @@ class AssertRuntimeResults:
         return dedent(
             f"""\
             Asserting maximum duration: {label}
-            {self.entry_line}
+            {self.entry_file}:{self.entry_line}
                 run time: {self.duration}
-                overhead: {self.overhead}
+                overhead: {self.overhead if self.overhead is not None else "not measured"}
                  allowed: {self.limit}
                  percent: {self.percent_str()}
             """
@@ -162,18 +177,10 @@ def measure_runtime(
     label: str = "",
     clock: Callable[[], float] = thread_time,
     gc_mode: GcMode = GcMode.disable,
-    calibrate: bool = True,
+    overhead: Optional[float] = None,
     print_results: bool = True,
 ) -> Iterator[Future[RuntimeResults]]:
-    entry_line = caller_file_and_line()
-
-    def manager_maker() -> contextlib.AbstractContextManager[Future[RuntimeResults]]:
-        return measure_runtime(clock=clock, gc_mode=gc_mode, calibrate=False, print_results=False)
-
-    if calibrate:
-        overhead = measure_overhead(manager_maker=manager_maker)
-    else:
-        overhead = 0
+    entry_file, entry_line = caller_file_and_line()
 
     results_future: Future[RuntimeResults] = Future()
 
@@ -186,12 +193,14 @@ def measure_runtime(
             end = clock()
 
             duration = end - start
-            duration -= overhead
+            if overhead is not None:
+                duration -= overhead
 
             results = RuntimeResults(
                 start=start,
                 end=end,
                 duration=duration,
+                entry_file=entry_file,
                 entry_line=entry_line,
                 overhead=overhead,
             )
@@ -230,25 +239,21 @@ class _AssertRuntime:
     label: str = ""
     clock: Callable[[], float] = thread_time
     gc_mode: GcMode = GcMode.disable
-    calibrate: bool = True
     print: bool = True
-    overhead: float = 0
-    entry_line: Optional[str] = None
+    overhead: Optional[float] = None
+    entry_file: Optional[str] = None
+    entry_line: Optional[int] = None
     _results: Optional[AssertRuntimeResults] = None
     runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
     runtime_results_callable: Optional[Future[RuntimeResults]] = None
+    enable_assertion: bool = True
+    record_property: Optional[Callable[[str, object], None]] = None
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
-        self.entry_line = caller_file_and_line()
-        if self.calibrate:
-
-            def manager_maker() -> contextlib.AbstractContextManager[Future[AssertRuntimeResults]]:
-                return dataclasses.replace(self, seconds=math.inf, calibrate=False, print=False)
-
-            self.overhead = measure_overhead(manager_maker=manager_maker)
+        self.entry_file, self.entry_line = caller_file_and_line()
 
         self.runtime_manager = measure_runtime(
-            clock=self.clock, gc_mode=self.gc_mode, calibrate=False, print_results=False
+            clock=self.clock, gc_mode=self.gc_mode, overhead=self.overhead, print_results=False
         )
         self.runtime_results_callable = self.runtime_manager.__enter__()
         self.results_callable: Future[AssertRuntimeResults] = Future()
@@ -261,7 +266,12 @@ class _AssertRuntime:
         exc: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
-        if self.entry_line is None or self.runtime_manager is None or self.runtime_results_callable is None:
+        if (
+            self.entry_file is None
+            or self.entry_line is None
+            or self.runtime_manager is None
+            or self.runtime_results_callable is None
+        ):
             raise Exception("Context manager must be entered before exiting")
 
         self.runtime_manager.__exit__(exc_type, exc, traceback)
@@ -270,6 +280,7 @@ class _AssertRuntime:
         results = AssertRuntimeResults.from_runtime_results(
             results=runtime,
             limit=self.seconds,
+            entry_file=self.entry_file,
             entry_line=self.entry_line,
             overhead=self.overhead,
         )
@@ -279,15 +290,36 @@ class _AssertRuntime:
         if self.print:
             print(results.block(label=self.label))
 
-        if exc_type is None:
+        if self.record_property is not None:
+            self.record_property(f"duration:{self.label}", results.duration)
+
+            relative_path_str = (
+                pathlib.Path(results.entry_file).relative_to(pathlib.Path(chia.__file__).parent.parent).as_posix()
+            )
+
+            self.record_property(f"path:{self.label}", relative_path_str)
+            self.record_property(f"line:{self.label}", results.entry_line)
+            self.record_property(f"limit:{self.label}", self.seconds)
+
+        if exc_type is None and self.enable_assertion:
             __tracebackhide__ = True
             assert runtime.duration < self.seconds, results.message()
 
 
-# Related to the comment above about needing a class vs. using the context manager
-# decorator, this is just here to retain the function-style naming as the public
-# interface.  Hopefully we can switch away from the class at some point.
-assert_runtime = _AssertRuntime
+@final
+@dataclasses.dataclass
+class BenchmarkRunner:
+    enable_assertion: bool = True
+    label: Optional[str] = None
+    overhead: Optional[float] = None
+    record_property: Optional[Callable[[str, object], None]] = None
+
+    @functools.wraps(_AssertRuntime)
+    def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
+        kwargs.setdefault("enable_assertion", self.enable_assertion)
+        kwargs.setdefault("overhead", self.overhead)
+        kwargs.setdefault("record_property", self.record_property)
+        return _AssertRuntime(*args, **kwargs)
 
 
 @contextlib.contextmanager
@@ -346,7 +378,7 @@ class CoinGenerator:
 
     def _get_hash(self) -> bytes32:
         self._seed += 1
-        return std_hash(self._seed)
+        return std_hash(self._seed.to_bytes(length=32, byteorder="big"))
 
     def _get_amount(self) -> uint64:
         self._seed += 1
@@ -367,3 +399,88 @@ def coin_creation_args(hinted_coin: HintedCoin) -> List[Any]:
     else:
         memos = []
     return [ConditionOpcode.CREATE_COIN, hinted_coin.coin.puzzle_hash, hinted_coin.coin.amount, memos]
+
+
+def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
+    logger = logging.getLogger()
+    logger.setLevel(level=logging.DEBUG)
+    stream_handler = logging.StreamHandler(stream=file)
+    log_date_format = "%Y-%m-%dT%H:%M:%S"
+    file_log_formatter = logging.Formatter(
+        fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        datefmt=log_date_format,
+    )
+    stream_handler.setFormatter(file_log_formatter)
+    logger.addHandler(hdlr=stream_handler)
+
+    return logger
+
+
+def invariant_check_mempool(mempool: Mempool) -> None:
+    with mempool._db_conn:
+        cursor = mempool._db_conn.execute("SELECT SUM(cost) FROM tx")
+        val = cursor.fetchone()[0]
+        if val is None:
+            val = 0
+    assert mempool._total_cost == val
+
+    with mempool._db_conn:
+        cursor = mempool._db_conn.execute("SELECT SUM(fee) FROM tx")
+        val = cursor.fetchone()[0]
+        if val is None:
+            val = 0
+    assert mempool._total_fee == val
+
+
+async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
+    height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
+    return height == h
+
+
+@final
+@dataclass
+class RecordingWebServer:
+    web_server: WebServer
+    requests: List[web.Request] = field(default_factory=list)
+
+    @classmethod
+    async def create(
+        cls,
+        hostname: str,
+        port: uint16,
+        max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
+        ssl_context: Optional[ssl.SSLContext] = None,
+        prefer_ipv6: bool = False,
+    ) -> RecordingWebServer:
+        web_server = await WebServer.create(
+            hostname=hostname,
+            port=port,
+            max_request_body_size=max_request_body_size,
+            ssl_context=ssl_context,
+            prefer_ipv6=prefer_ipv6,
+            start=False,
+        )
+
+        self = cls(web_server=web_server)
+        routes = [web.route(method="*", path=route, handler=func) for (route, func) in self.get_routes().items()]
+        web_server.add_routes(routes=routes)
+        await web_server.start()
+        return self
+
+    def get_routes(self) -> Dict[str, Callable[[web.Request], Awaitable[web.Response]]]:
+        return {"/{path:.*}": self.handler}
+
+    async def handler(self, request: web.Request) -> web.Response:
+        self.requests.append(request)
+
+        request_json = await request.json()
+        if isinstance(request_json, dict) and "response" in request_json:
+            response = request_json["response"]
+        else:
+            response = {"success": True}
+
+        return aiohttp.web.json_response(data=response)
+
+    async def await_closed(self) -> None:
+        self.web_server.close()
+        await self.web_server.await_closed()
