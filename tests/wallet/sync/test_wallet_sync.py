@@ -276,9 +276,9 @@ async def test_backtrack_sync_wallet(
 async def test_short_batch_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
 ) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, _ = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -286,8 +286,8 @@ async def test_short_batch_sync_wallet(
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
 
-    for block in default_400_blocks[:200]:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(default_400_blocks[:200], 64):
+        await full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     for wallet_node, wallet_server in wallets:
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
