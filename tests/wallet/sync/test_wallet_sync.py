@@ -107,7 +107,7 @@ async def test_request_block_headers(
 # )
 @pytest.mark.anyio
 async def test_request_block_headers_rejected(
-    simulator_and_wallet: OldSimulatorsAndWallets, default_1000_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock]
 ) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
     [full_node_api], _, _ = simulator_and_wallet
@@ -120,8 +120,8 @@ async def test_request_block_headers_rejected(
     assert msg is not None
     assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
-    for block in default_1000_blocks[:150]:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(default_400_blocks[:150], 64):
+        await full_node_api.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(80), uint32(99), False))
     assert msg is not None
