@@ -1395,10 +1395,8 @@ async def test_long_sync_untrusted_break(
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    full_nodes, [(wallet_node, wallet_server)], _ = setup_two_nodes_and_wallet
-    trusted_full_node_api = full_nodes[0]
+    [trusted_full_node_api, untrusted_full_node_api], [(wallet_node, wallet_server)], _ = setup_two_nodes_and_wallet
     trusted_full_node_server = trusted_full_node_api.full_node.server
-    untrusted_full_node_api = full_nodes[1]
     untrusted_full_node_server = untrusted_full_node_api.full_node.server
     wallet_node.config["trusted_peers"] = {trusted_full_node_server.node_id.hex(): None}
 
@@ -1427,10 +1425,12 @@ async def test_long_sync_untrusted_break(
         untrusted_peers = sum([not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
         return trusted_peers == 1 and untrusted_peers == 0
 
-    for block in default_400_blocks:
-        await trusted_full_node_api.full_node.add_block(block)
-    for block in default_1000_blocks[:400]:
-        await untrusted_full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await trusted_full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
+
+    for block_batch in to_batches(default_1000_blocks[:400], 64):
+        await untrusted_full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     with monkeypatch.context() as m:
         m.setattr(
