@@ -12,6 +12,7 @@ from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
+from chia.data_layer.data_layer_util import dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
@@ -273,6 +274,7 @@ class WalletRpcApi:
             "/dl_get_mirrors": self.dl_get_mirrors,
             "/dl_new_mirror": self.dl_new_mirror,
             "/dl_delete_mirror": self.dl_delete_mirror,
+            "/dl_verify_proof": self.dl_verify_proof,
             # Verified Credential
             "/vc_mint": self.vc_mint,
             "/vc_get": self.vc_get,
@@ -4398,6 +4400,19 @@ class WalletRpcApi:
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
+
+    async def dl_verify_proof(
+        self,
+        request: Dict[str, Any],
+    ) -> EndpointResult:
+        """Verify a proof of inclusion for a DL singleton"""
+        res = await dl_verify_proof(
+            request,
+            peer=self.service.get_full_node_peer(),
+            wallet_node=self.service.wallet_state_manager.wallet_node,
+        )
+
+        return res
 
     ##########################################################################################
     # Verified Credential
