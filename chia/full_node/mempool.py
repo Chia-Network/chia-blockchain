@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 # Maximum number of mempool items that can be skipped (not considered) during
 # the creation of a block bundle. An item is skipped if it won't fit in the
 # block we're trying to create.
-MAX_SKIPPED_ITEMS = 20
+MAX_SKIPPED_ITEMS = 10
 
 # Threshold after which we stop including mempool items with eligible spends
 # during the creation of a block bundle. We do that to avoid spending too much
