@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 from time import perf_counter
 from typing import Dict, List, Optional, Set, Tuple
