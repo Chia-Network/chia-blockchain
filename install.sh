@@ -5,12 +5,12 @@ set -o errexit
 USAGE_TEXT="\
 Usage: $0 [-adilpsh]
 
-  -a                          automated install, no questions
+  -a                          ignored for compatibility with earlier versions
   -d                          install development dependencies
   -i                          install non-editable
   -l                          install legacy keyring dependencies (linux only)
   -p                          additional plotters installation
-  -s                          skip python package installation and just do pip install
+  -s                          ignored for compatibility with earlier versions
   -h                          display this help and exit
 "
 
@@ -18,9 +18,7 @@ usage() {
   echo "${USAGE_TEXT}"
 }
 
-PACMAN_AUTOMATED=
 EXTRAS=
-SKIP_PACKAGE_INSTALL=
 PLOTTER_INSTALL=
 EDITABLE='-e'
 
@@ -28,7 +26,7 @@ while getopts adilpsh flag
 do
   case "${flag}" in
     # automated
-    a) PACMAN_AUTOMATED=--noconfirm;;
+    a) :;;
     # development
     d) EXTRAS=${EXTRAS}dev,;;
     # non-editable
@@ -37,7 +35,7 @@ do
     l) EXTRAS=${EXTRAS}legacy_keyring,;;
     p) PLOTTER_INSTALL=1;;
     # simple install
-    s) SKIP_PACKAGE_INSTALL=1;;
+    s) :;;
     h) usage; exit 0;;
     *) echo; usage; exit 1;;
   esac
