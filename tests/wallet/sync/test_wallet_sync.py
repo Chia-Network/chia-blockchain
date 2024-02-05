@@ -413,9 +413,9 @@ async def test_wallet_reorg_sync(
 async def test_wallet_reorg_get_coinbase(
     two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
 ) -> None:
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -427,15 +427,17 @@ async def test_wallet_reorg_get_coinbase(
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # Insert 400 blocks
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     # Reorg blocks that carry reward
     num_blocks_reorg = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks_reorg, block_list_input=default_400_blocks[:-5])
 
-    for block in blocks_reorg[:-5]:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(blocks_reorg[:-6], 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
+    await full_node.add_block(blocks_reorg[-6])
 
     for wallet_node, wallet_server in wallets:
         await time_out_assert(30, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
@@ -451,8 +453,7 @@ async def test_wallet_reorg_get_coinbase(
         )
     blocks_reorg_2 = bt.get_consecutive_blocks(num_blocks_reorg_1, block_list_input=all_blocks_reorg_2)
 
-    for block in blocks_reorg_2[-44:]:
-        await full_node_api.full_node.add_block(block)
+    await full_node.add_block_batch(blocks_reorg_2[-44:], dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
