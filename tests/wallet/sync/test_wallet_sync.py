@@ -1118,8 +1118,8 @@ async def test_dusted_wallet(
         [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
     txs = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
+    await farm_nft_wallet.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await farm_nft_wallet.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             assert len(compute_memos(tx.spend_bundle)) > 0
             await time_out_assert_not_none(
@@ -1147,7 +1147,7 @@ async def test_dusted_wallet(
     )
     assert len(txs) == 1
     assert txs[0].spend_bundle is not None
-    await farm_wallet_node.wallet_state_manager.add_pending_transaction(txs[0])
+    await farm_wallet_node.wallet_state_manager.add_pending_transactions(txs)
     assert len(compute_memos(txs[0].spend_bundle)) > 0
 
     # Farm a new block.
@@ -1310,7 +1310,7 @@ async def test_retry_store(
             [tx] = await wallet.generate_signed_transaction(
                 uint64(1_000_000_000_000), bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
             )
-            await wallet_node.wallet_state_manager.add_pending_transaction(tx)
+            await wallet_node.wallet_state_manager.add_pending_transactions([tx])
 
             async def tx_in_mempool() -> bool:
                 return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None

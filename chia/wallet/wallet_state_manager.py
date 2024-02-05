@@ -909,8 +909,7 @@ class WalletStateManager:
         if len(clawback_coins) > 0:
             all_txs.extend(await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config))
 
-        for tx in all_txs:
-            await self.add_pending_transaction(tx)
+        await self.add_pending_transactions(all_txs)
 
     async def spend_clawback_coins(
         self,
@@ -2214,20 +2213,43 @@ class WalletStateManager:
 
         await self.create_more_puzzle_hashes()
 
-    async def add_pending_transaction(self, tx_record: TransactionRecord) -> None:
+    async def add_pending_transactions(
+        self, tx_records: List[TransactionRecord], merge_spends: bool = True
+    ) -> List[TransactionRecord]:
         """
-        Called from wallet before new transaction is sent to the full_node
+        Add a list of transactions to be submitted to the full node.
+        Aggregates the `spend_bundle` property for each transaction onto the first transaction in the list.
         """
-        # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-        await self.tx_store.add_transaction_record(tx_record)
+        agg_spend: SpendBundle = SpendBundle.aggregate(
+            [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
+        )
+        actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
+        if merge_spends and actual_spend_involved:
+            tx_records = [
+                dataclasses.replace(
+                    tx,
+                    spend_bundle=agg_spend if i == 0 else None,
+                    name=agg_spend.name() if i == 0 else bytes32.secret(),
+                )
+                for i, tx in enumerate(tx_records)
+            ]
         all_coins_names = []
-        all_coins_names.extend([coin.name() for coin in tx_record.additions])
-        all_coins_names.extend([coin.name() for coin in tx_record.removals])
+        async with self.db_wrapper.writer_maybe_transaction():
+            for tx_record in tx_records:
+                # Wallet node will use this queue to retry sending this transaction until full nodes receives it
+                await self.tx_store.add_transaction_record(tx_record)
+                all_coins_names.extend([coin.name() for coin in tx_record.additions])
+                all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
         await self.add_interested_coin_ids(all_coins_names)
-        if tx_record.spend_bundle is not None:
+
+        if actual_spend_involved:
             self.tx_pending_changed()
-        self.state_changed("pending_transaction", tx_record.wallet_id)
+        for wallet_id in {tx.wallet_id for tx in tx_records}:
+            self.state_changed("pending_transaction", wallet_id)
+        await self.wallet_node.update_ui()
+
+        return tx_records
 
     async def add_transaction(self, tx_record: TransactionRecord) -> None:
         """
