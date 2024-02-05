@@ -9,6 +9,7 @@ import os
 import random
 import sys
 import time
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
@@ -16,11 +17,11 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
 import anyio
 import pytest
 
-from chia.cmds.data_funcs import clear_pending_roots, wallet_log_in_cmd
+from chia.cmds.data_funcs import clear_pending_roots, get_proof_cmd, verify_proof_cmd, wallet_log_in_cmd
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_errors import OfferIntegrityError
-from chia.data_layer.data_layer_util import OfferStore, Status, StoreProofs
+from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
+from chia.data_layer.data_layer_util import HashOnlyProof, OfferStore, ProofLayer, Status, StoreProofs
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
@@ -35,7 +36,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.hash import std_hash
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer
@@ -759,6 +761,7 @@ class StoreSetup:
     id: bytes32
     original_hash: bytes32
     data_layer: DataLayer
+    data_rpc_client: DataLayerRpcClient
 
 
 @dataclass(frozen=True)
@@ -792,12 +795,20 @@ async def offer_setup_fixture(
         for wallet_service in wallet_services:
             assert wallet_service.rpc_server is not None
             port = wallet_service.rpc_server.listen_port
-            data_layer = await exit_stack.enter_async_context(
-                init_data_layer(
+            data_layer_service = await exit_stack.enter_async_context(
+                init_data_layer_service(
                     wallet_rpc_port=port, wallet_service=wallet_service, bt=bt, db_path=tmp_path.joinpath(str(port))
                 )
             )
+            data_layer = data_layer_service._api.data_layer
             data_rpc_api = DataLayerRpcApi(data_layer)
+            assert data_layer_service.rpc_server is not None
+            data_rpc_client = await DataLayerRpcClient.create(
+                self_hostname,
+                port=data_layer_service.rpc_server.listen_port,
+                root_path=bt.root_path,
+                net_config=bt.config,
+            )
 
             create_response = await data_rpc_api.create_data_store({"verbose": True})
             await full_node_api.process_transaction_records(records=create_response["txs"], timeout=60)
@@ -808,6 +819,7 @@ async def offer_setup_fixture(
                     id=bytes32.from_hexstr(create_response["id"]),
                     original_hash=bytes32([0] * 32),
                     data_layer=data_layer,
+                    data_rpc_client=data_rpc_client,
                 )
             )
 
@@ -847,15 +859,22 @@ async def offer_setup_fixture(
                 id=maker.id,
                 original_hash=maker_original_root_hash,
                 data_layer=maker.data_layer,
+                data_rpc_client=maker.data_rpc_client,
             ),
             taker=StoreSetup(
                 api=taker.api,
                 id=taker.id,
                 original_hash=taker_original_root_hash,
                 data_layer=taker.data_layer,
+                data_rpc_client=taker.data_rpc_client,
             ),
             full_node_api=full_node_api,
         )
+
+        maker.data_rpc_client.close()
+        await maker.data_rpc_client.await_closed()
+        taker.data_rpc_client.close()
+        await taker.data_rpc_client.await_closed()
 
 
 async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetup:
@@ -906,12 +925,14 @@ async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
             id=offer_setup.maker.id,
             original_hash=maker_original_root_hash,
             data_layer=offer_setup.maker.data_layer,
+            data_rpc_client=offer_setup.maker.data_rpc_client,
         ),
         taker=StoreSetup(
             api=offer_setup.taker.api,
             id=offer_setup.taker.id,
             original_hash=taker_original_root_hash,
             data_layer=offer_setup.taker.data_layer,
+            data_rpc_client=offer_setup.taker.data_rpc_client,
         ),
         full_node_api=offer_setup.full_node_api,
     )
@@ -2328,3 +2349,292 @@ async def test_mirrors(
 
         with pytest.raises(RuntimeError, match="URL list can't be empty"):
             res = await data_rpc_api.add_mirror({"id": store_id.hex(), "urls": [], "amount": 1, "fee": 1})
+
+
+@dataclass(frozen=True)
+class ProofReference:
+    entries_to_insert: int
+    keys_to_prove: List[str]
+    verify_proof_response: Dict[str, Any]
+
+
+def populate_reference(count: int, keys_to_prove: int) -> ProofReference:
+    ret = ProofReference(
+        entries_to_insert=count,
+        keys_to_prove=[value.to_bytes(length=1, byteorder="big").hex() for value in range(keys_to_prove)],
+        verify_proof_response={
+            "current_root": True,
+            "success": True,
+            "verified_clvm_hashes": {
+                "store_id": "",
+                "inclusions": [
+                    {
+                        "key_clvm_hash": "0x" + std_hash(b"\1" + value.to_bytes(length=1, byteorder="big")).hex(),
+                        "value_clvm_hash": "0x"
+                        + std_hash(b"\1" + b"\x01" + value.to_bytes(length=1, byteorder="big")).hex(),
+                    }
+                    for value in range(keys_to_prove)
+                ],
+            },
+        },
+    )
+    return ret
+
+
+async def populate_proof_setup(offer_setup: OfferSetup, count: int) -> OfferSetup:
+    if count > 0:
+        # Only need data in the maker for proofs
+        value_prefix = b"\x01"
+        store_setup = offer_setup.maker
+        await store_setup.api.batch_update(
+            {
+                "id": store_setup.id.hex(),
+                "changelist": [
+                    {
+                        "action": "insert",
+                        "key": value.to_bytes(length=1, byteorder="big").hex(),
+                        "value": (value_prefix + value.to_bytes(length=1, byteorder="big")).hex(),
+                    }
+                    for value in range(count)
+                ],
+            }
+        )
+
+        await process_for_data_layer_keys(
+            expected_key=b"\x00",
+            full_node_api=offer_setup.full_node_api,
+            data_layer=offer_setup.maker.data_layer,
+            store_id=offer_setup.maker.id,
+        )
+
+    maker_original_singleton = await offer_setup.maker.data_layer.get_root(store_id=offer_setup.maker.id)
+    assert maker_original_singleton is not None
+    maker_original_root_hash = maker_original_singleton.root
+
+    return OfferSetup(
+        maker=StoreSetup(
+            api=offer_setup.maker.api,
+            id=offer_setup.maker.id,
+            original_hash=maker_original_root_hash,
+            data_layer=offer_setup.maker.data_layer,
+            data_rpc_client=offer_setup.maker.data_rpc_client,
+        ),
+        taker=StoreSetup(
+            api=offer_setup.taker.api,
+            id=offer_setup.taker.id,
+            original_hash=bytes32([0] * 32),
+            data_layer=offer_setup.taker.data_layer,
+            data_rpc_client=offer_setup.taker.data_rpc_client,
+        ),
+        full_node_api=offer_setup.full_node_api,
+    )
+
+
+@pytest.mark.parametrize(
+    argnames="reference",
+    argvalues=[
+        pytest.param(populate_reference(count=5, keys_to_prove=1), id="one key"),
+        pytest.param(populate_reference(count=5, keys_to_prove=2), id="two keys"),
+        pytest.param(populate_reference(count=5, keys_to_prove=5), id="five keys"),
+    ],
+)
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> None:
+    offer_setup = await populate_proof_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
+    reference.verify_proof_response["verified_clvm_hashes"]["store_id"] = f"0x{offer_setup.maker.id.hex()}"
+
+    #
+    # Ideally this would use the InterfaceLayer as a parameterized list, however, all the fixtures
+    # are function scoped, which makes it very long to run this but this doesn't change any of the
+    # data, so rerunning all the setup for each test is not needed - module scope would be perfect
+    # but it requires all the supporting fixtures (wallet/nodes/etc) to have the same scope
+    #
+
+    # random tests for HashOnlyProof root()
+    fakeproof = HashOnlyProof(
+        key_clvm_hash=bytes32([1] * 32), value_clvm_hash=bytes32([1] * 32), node_hash=bytes32([3] * 32), layers=[]
+    )
+    assert fakeproof.root() == fakeproof.node_hash
+
+    fakeproof = HashOnlyProof(
+        key_clvm_hash=bytes32([1] * 32),
+        value_clvm_hash=bytes32([1] * 32),
+        node_hash=bytes32([3] * 32),
+        layers=[
+            ProofLayer(other_hash_side=uint8(0), other_hash=bytes32([1] * 32), combined_hash=bytes32([5] * 32)),
+            ProofLayer(other_hash_side=uint8(0), other_hash=bytes32([1] * 32), combined_hash=bytes32([7] * 32)),
+        ],
+    )
+    assert fakeproof.root() == bytes32([7] * 32)
+
+    # Test InterfaceLayer.direct
+    proof = await offer_setup.maker.api.get_proof(
+        request={"store_id": offer_setup.maker.id.hex(), "keys": reference.keys_to_prove}
+    )
+    assert proof["success"] is True
+    verify = await offer_setup.taker.api.verify_proof(request=proof["proof"])
+    assert verify == reference.verify_proof_response
+
+    # test InterfaceLayer.client
+    proof = dict()
+    verify = dict()
+    proof = await offer_setup.maker.data_rpc_client.get_proof(
+        store_id=offer_setup.maker.id, keys=[hexstr_to_bytes(key) for key in reference.keys_to_prove]
+    )
+    assert proof["success"] is True
+    verify = await offer_setup.taker.data_rpc_client.verify_proof(proof=proof["proof"])
+    assert verify == reference.verify_proof_response
+
+    # test InterfaceLayer.func
+    proof = dict()
+    verify = dict()
+    proof = await get_proof_cmd(
+        store_id=offer_setup.maker.id,
+        key_strings=reference.keys_to_prove,
+        rpc_port=offer_setup.maker.data_rpc_client.port,
+        root_path=offer_setup.maker.data_layer.root_path,
+    )
+    assert proof["success"] is True
+    verify = await verify_proof_cmd(
+        proof=proof["proof"],
+        rpc_port=offer_setup.taker.data_rpc_client.port,
+        root_path=offer_setup.taker.data_layer.root_path,
+    )
+    assert verify == reference.verify_proof_response
+
+    # test InterfaceLayer.cli
+    key_args: List[str] = []
+    for key in reference.keys_to_prove:
+        key_args.append("--key")
+        key_args.append(key)
+
+    process = await run_cli_cmd(
+        "data",
+        "get_proof",
+        "--id",
+        offer_setup.maker.id.hex(),
+        *key_args,
+        "--data-rpc-port",
+        str(offer_setup.maker.data_rpc_client.port),
+        root_path=offer_setup.maker.data_layer.root_path,
+    )
+    assert process.stdout is not None
+    raw_output = await process.stdout.read()
+    proof = json.loads(raw_output)
+    assert proof["success"] is True
+
+    process = await run_cli_cmd(
+        "data",
+        "verify_proof",
+        "-p",
+        json.dumps(proof["proof"]),
+        "--data-rpc-port",
+        str(offer_setup.taker.data_rpc_client.port),
+        root_path=offer_setup.taker.data_layer.root_path,
+    )
+    assert process.stdout is not None
+    raw_output = await process.stdout.read()
+    verify = json.loads(raw_output)
+    assert verify == reference.verify_proof_response
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_dl_proof_errors(
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        fakeroot = bytes32([4] * 32)
+        res = await data_rpc_api.create_data_store({})
+        assert res is not None
+        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+
+        with pytest.raises(ValueError, match="no root"):
+            await data_rpc_api.get_proof(request={"store_id": fakeroot.hex(), "keys": []})
+
+        with pytest.raises(KeyNotFoundError, match="Key not found"):
+            await data_rpc_api.get_proof(request={"store_id": store_id.hex(), "keys": [b"4".hex()]})
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_dl_proof_verify_errors(offer_setup: OfferSetup, seeded_random: random.Random) -> None:
+    two_key_proof = populate_reference(count=5, keys_to_prove=2)
+    offer_setup = await populate_proof_setup(offer_setup=offer_setup, count=two_key_proof.entries_to_insert)
+    two_key_proof.verify_proof_response["verified_clvm_hashes"]["store_id"] = f"0x{offer_setup.maker.id.hex()}"
+
+    proof = await offer_setup.maker.api.get_proof(
+        request={"store_id": offer_setup.maker.id.hex(), "keys": two_key_proof.keys_to_prove}
+    )
+    assert proof["success"] is True
+
+    verify = await offer_setup.taker.api.verify_proof(request=proof["proof"])
+    assert verify == two_key_proof.verify_proof_response
+
+    # test bad coin id
+    badproof = deepcopy(proof["proof"])
+    badproof["coin_id"] = bytes32.random(seeded_random).hex()
+    with pytest.raises(ValueError, match="Invalid Proof: No DL singleton found at coin id"):
+        await offer_setup.taker.api.verify_proof(request=badproof)
+
+    # test bad innerpuz
+    badproof = deepcopy(proof["proof"])
+    badproof["inner_puzzle_hash"] = bytes32.random(seeded_random).hex()
+    with pytest.raises(ValueError, match="Invalid Proof: incorrect puzzle hash"):
+        await offer_setup.taker.api.verify_proof(request=badproof)
+
+    # test bad key
+    badproof = deepcopy(proof["proof"])
+    badproof["store_proofs"]["proofs"][0]["key_clvm_hash"] = bytes32.random(seeded_random).hex()
+    with pytest.raises(ValueError, match="Invalid Proof: node hash does not match key and value"):
+        await offer_setup.taker.api.verify_proof(request=badproof)
+
+    # test bad value
+    badproof = deepcopy(proof["proof"])
+    badproof["store_proofs"]["proofs"][0]["value_clvm_hash"] = bytes32.random(seeded_random).hex()
+    with pytest.raises(ValueError, match="Invalid Proof: node hash does not match key and value"):
+        await offer_setup.taker.api.verify_proof(request=badproof)
+
+    # test bad layer hash
+    badproof = deepcopy(proof["proof"])
+    badproof["store_proofs"]["proofs"][0]["layers"][1]["other_hash"] = bytes32.random(seeded_random).hex()
+    with pytest.raises(ValueError, match="Invalid Proof: invalid proof of inclusion found"):
+        await offer_setup.taker.api.verify_proof(request=badproof)
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: random.Random) -> None:
+    two_key_proof = populate_reference(count=5, keys_to_prove=2)
+    offer_setup = await populate_proof_setup(offer_setup=offer_setup, count=two_key_proof.entries_to_insert)
+    two_key_proof.verify_proof_response["verified_clvm_hashes"]["store_id"] = f"0x{offer_setup.maker.id.hex()}"
+
+    proof = await offer_setup.maker.api.get_proof(
+        request={"store_id": offer_setup.maker.id.hex(), "keys": two_key_proof.keys_to_prove}
+    )
+    assert proof["success"] is True
+
+    verify = await offer_setup.taker.api.verify_proof(request=proof["proof"])
+    assert verify == two_key_proof.verify_proof_response
+
+    key = b"a"
+    value = b"\x00\x01"
+    changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+    await offer_setup.maker.api.batch_update({"id": offer_setup.maker.id.hex(), "changelist": changelist})
+
+    await process_for_data_layer_keys(
+        expected_key=key,
+        expected_value=value,
+        full_node_api=offer_setup.full_node_api,
+        data_layer=offer_setup.maker.data_layer,
+        store_id=offer_setup.maker.id,
+    )
+
+    root_changed = await offer_setup.taker.api.verify_proof(request=proof["proof"])
+    assert root_changed == {**verify, "current_root": False}
