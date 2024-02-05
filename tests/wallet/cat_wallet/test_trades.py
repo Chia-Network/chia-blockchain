@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Tuple, Union
 
 import pytest
 from chia_rs import G2Element
 
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
@@ -21,16 +21,18 @@ from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
+from chia.wallet.wallet_node import WalletNode
 from tests.conftest import SOFTFORK_HEIGHTS, ConsensusMode
-from tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
+from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from tests.util.time_out_assert import time_out_assert
 from tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
+
+OfferSummary = Dict[Union[int, bytes32], int]
 
 
 async def get_trade_and_status(trade_manager: TradeManager, trade: TradeRecord) -> TradeStatus:
@@ -93,13 +95,11 @@ async def get_trade_and_status(trade_manager: TradeManager, trade: TradeRecord) 
     indirect=["wallet_environments"],
 )
 async def test_cat_trades(
-    wallet_environments: WalletTestFramework,
-    credential_restricted: bool,
-    active_softfork_height: uint32,
-):
+    wallet_environments: WalletTestFramework, credential_restricted: bool, active_softfork_height: uint32
+) -> None:
     # Setup
-    env_maker: WalletEnvironment = wallet_environments.environments[0]
-    env_taker: WalletEnvironment = wallet_environments.environments[1]
+    env_maker = wallet_environments.environments[0]
+    env_taker = wallet_environments.environments[1]
     wallet_node_maker = env_maker.node
     wallet_node_taker = env_taker.node
     client_maker = env_maker.rpc_client
@@ -134,21 +134,21 @@ async def test_cat_trades(
         }
 
         # Mint some DIDs
-        did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
+        did_wallet_maker = await DIDWallet.create_new_did_wallet(
             wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
         )
-        did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
+        did_wallet_taker = await DIDWallet.create_new_did_wallet(
             wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1)
         )
         did_id_maker = bytes32.from_hexstr(did_wallet_maker.get_my_DID())
         did_id_taker = bytes32.from_hexstr(did_wallet_taker.get_my_DID())
 
         # Mint some CR-CATs
-        tail_maker: Program = Program.to([3, (1, "maker"), None, None])
-        tail_taker: Program = Program.to([3, (1, "taker"), None, None])
-        proofs_checker_maker: ProofsChecker = ProofsChecker(["foo", "bar"])
-        proofs_checker_taker: ProofsChecker = ProofsChecker(["bar", "zap"])
-        authorized_providers: List[bytes32] = [did_id_maker, did_id_taker]
+        tail_maker = Program.to([3, (1, "maker"), None, None])
+        tail_taker = Program.to([3, (1, "taker"), None, None])
+        proofs_checker_maker = ProofsChecker(["foo", "bar"])
+        proofs_checker_taker = ProofsChecker(["bar", "zap"])
+        authorized_providers = [did_id_maker, did_id_taker]
         cat_wallet_maker: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
@@ -231,61 +231,39 @@ async def test_cat_trades(
                         "xch": {"set_remainder": True},
                         "vc": {"init": True, "set_remainder": True},
                     },
-                    post_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
+                    post_block_balance_updates={"xch": {"set_remainder": True}, "vc": {"set_remainder": True}},
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={
                         "xch": {"set_remainder": True},
                         "vc": {"init": True, "set_remainder": True},
                     },
-                    post_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
+                    post_block_balance_updates={"xch": {"set_remainder": True}, "vc": {"set_remainder": True}},
                 ),
             ]
         )
 
-        proofs_maker: VCProofs = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
-        proof_root_maker: bytes32 = proofs_maker.root()
+        proofs_maker = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
+        proof_root_maker = proofs_maker.root()
         await client_maker.vc_spend(
-            vc_record_maker.vc.launcher_id,
-            wallet_environments.tx_config,
-            new_proof_hash=proof_root_maker,
+            vc_record_maker.vc.launcher_id, wallet_environments.tx_config, new_proof_hash=proof_root_maker
         )
 
-        proofs_taker: VCProofs = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
-        proof_root_taker: bytes32 = proofs_taker.root()
+        proofs_taker = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
+        proof_root_taker = proofs_taker.root()
         await client_taker.vc_spend(
-            vc_record_taker.vc.launcher_id,
-            wallet_environments.tx_config,
-            new_proof_hash=proof_root_taker,
+            vc_record_taker.vc.launcher_id, wallet_environments.tx_config, new_proof_hash=proof_root_taker
         )
         await wallet_environments.process_pending_states(
             [
                 # Balance checking for this scenario is covered in tests/wallet/vc_wallet/test_vc_lifecycle
                 WalletStateTransition(
-                    pre_block_balance_updates={
-                        "did": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
-                    post_block_balance_updates={
-                        "did": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
+                    pre_block_balance_updates={"did": {"set_remainder": True}, "vc": {"set_remainder": True}},
+                    post_block_balance_updates={"did": {"set_remainder": True}, "vc": {"set_remainder": True}},
                 ),
                 WalletStateTransition(
-                    pre_block_balance_updates={
-                        "did": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
-                    post_block_balance_updates={
-                        "did": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
+                    pre_block_balance_updates={"did": {"set_remainder": True}, "vc": {"set_remainder": True}},
+                    post_block_balance_updates={"did": {"set_remainder": True}, "vc": {"set_remainder": True}},
                 ),
             ]
         )
@@ -329,20 +307,14 @@ async def test_cat_trades(
                         "xch": {"set_remainder": True},
                         "cat": {"init": True, "set_remainder": True},
                     },
-                    post_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "cat": {"set_remainder": True},
-                    },
+                    post_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={
                         "xch": {"set_remainder": True},
                         "new cat": {"init": True, "set_remainder": True},
                     },
-                    post_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "new cat": {"set_remainder": True},
-                    },
+                    post_block_balance_updates={"xch": {"set_remainder": True}, "new cat": {"set_remainder": True}},
                 ),
             ]
         )
@@ -391,7 +363,6 @@ async def test_cat_trades(
     await env_maker.check_balances()
 
     # Create the trade parameters
-    OfferSummary = Dict[Union[int, bytes32], int]
     chia_for_cat: OfferSummary = {
         wallet_maker.id(): -1,
         bytes32.from_hexstr(new_cat_wallet_maker.get_asset_id()): 2,  # This is the CAT that the taker made
@@ -423,10 +394,7 @@ async def test_cat_trades(
     driver_dict: Dict[bytes32, PuzzleInfo] = {}
     for wallet in (cat_wallet_maker, new_cat_wallet_maker):
         asset_id: str = wallet.get_asset_id()
-        driver_item: Dict[str, Any] = {
-            "type": AssetType.CAT.value,
-            "tail": "0x" + asset_id,
-        }
+        driver_item: Dict[str, Any] = {"type": AssetType.CAT.value, "tail": "0x" + asset_id}
         if credential_restricted:
             driver_item["also"] = {
                 "type": AssetType.CR.value,
@@ -460,10 +428,7 @@ async def test_cat_trades(
 
     peer = wallet_node_taker.get_full_node_peer()
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
-        peer,
-        wallet_environments.tx_config,
-        fee=uint64(1),
+        Offer.from_bytes(trade_make.offer), peer, wallet_environments.tx_config, fee=uint64(1)
     )
     for tx in tx_records:
         await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
@@ -510,11 +475,7 @@ async def test_cat_trades(
                         "unspent_coin_count": 1,
                     },
                 },
-                post_block_additional_balance_info={
-                    "new cat": {
-                        "pending_approval_balance": 2,
-                    }
-                }
+                post_block_additional_balance_info={"new cat": {"pending_approval_balance": 2}}
                 if credential_restricted
                 else {},
             ),
@@ -533,15 +494,7 @@ async def test_cat_trades(
                         "<=#spendable_balance": -2,
                         "<=#max_send_amount": -2,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -558,44 +511,23 @@ async def test_cat_trades(
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
     )
 
     if credential_restricted:
-        await client_maker.crcat_approve_pending(
-            new_cat_wallet_maker.id(),
-            uint64(2),
-            DEFAULT_TX_CONFIG,
-        )
+        await client_maker.crcat_approve_pending(new_cat_wallet_maker.id(), uint64(2), DEFAULT_TX_CONFIG)
 
         await wallet_environments.process_pending_states(
             [
                 WalletStateTransition(
                     pre_block_balance_updates={
-                        "new cat": {
-                            "unconfirmed_wallet_balance": 2,
-                            "pending_coin_removal_count": 1,
-                        },
-                        "vc": {
-                            "pending_coin_removal_count": 1,
-                        },
+                        "new cat": {"unconfirmed_wallet_balance": 2, "pending_coin_removal_count": 1},
+                        "vc": {"pending_coin_removal_count": 1},
                     },
-                    pre_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 2,
-                        }
-                    },
+                    pre_block_additional_balance_info={"new cat": {"pending_approval_balance": 2}},
                     post_block_balance_updates={
                         "new cat": {
                             "confirmed_wallet_balance": 2,
@@ -604,15 +536,9 @@ async def test_cat_trades(
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
-                        "vc": {
-                            "pending_coin_removal_count": -1,
-                        },
+                        "vc": {"pending_coin_removal_count": -1},
                     },
-                    post_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 0,
-                        }
-                    },
+                    post_block_additional_balance_info={"new cat": {"pending_approval_balance": 0}},
                 ),
                 WalletStateTransition(),
             ]
@@ -645,7 +571,7 @@ async def test_cat_trades(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
-    async def assert_trade_tx_number(wallet_node, trade_id, number):
+    async def assert_trade_tx_number(wallet_node: WalletNode, trade_id: bytes32, number: int) -> bool:
         txs = await wallet_node.wallet_state_manager.tx_store.get_transactions_by_trade_id(trade_id)
         return len(txs) == number
 
@@ -664,10 +590,7 @@ async def test_cat_trades(
     assert trade_make is not None
 
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
-        peer,
-        wallet_environments.tx_config,
-        fee=uint64(1),
+        Offer.from_bytes(trade_make.offer), peer, wallet_environments.tx_config, fee=uint64(1)
     )
     for tx in tx_records:
         await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
@@ -675,7 +598,7 @@ async def test_cat_trades(
     assert tx_records is not None
 
     # Testing a precious display bug real quick
-    xch_tx: TransactionRecord = next(tx for tx in tx_records if tx.wallet_id == 1)
+    xch_tx = next(tx for tx in tx_records if tx.wallet_id == 1)
     assert xch_tx.amount == 3
     assert xch_tx.fee_amount == 1
 
@@ -726,15 +649,7 @@ async def test_cat_trades(
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 0,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -749,15 +664,7 @@ async def test_cat_trades(
                         "max_send_amount": 4,
                         "confirmed_wallet_balance": 4,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
@@ -838,34 +745,20 @@ async def test_cat_trades(
                         "pending_coin_removal_count": -1,
                     },
                 },
-                post_block_additional_balance_info={
-                    "new cat": {
-                        "pending_approval_balance": 6,
-                    }
-                }
+                post_block_additional_balance_info={"new cat": {"pending_approval_balance": 6}}
                 if credential_restricted
                 else {},
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "cat": {
-                        "unconfirmed_wallet_balance": 5,
-                    },
+                    "cat": {"unconfirmed_wallet_balance": 5},
                     "new cat": {
                         "unconfirmed_wallet_balance": -6,
                         "<=#spendable_balance": -6,
                         "<=#max_send_amount": -6,
                         "pending_coin_removal_count": 1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -880,15 +773,7 @@ async def test_cat_trades(
                         ">#max_send_amount": 0,
                         "pending_coin_removal_count": -1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
@@ -898,29 +783,16 @@ async def test_cat_trades(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
     if credential_restricted:
-        await client_maker.crcat_approve_pending(
-            new_cat_wallet_maker.id(),
-            uint64(6),
-            DEFAULT_TX_CONFIG,
-        )
+        await client_maker.crcat_approve_pending(new_cat_wallet_maker.id(), uint64(6), DEFAULT_TX_CONFIG)
 
         await wallet_environments.process_pending_states(
             [
                 WalletStateTransition(
                     pre_block_balance_updates={
-                        "new cat": {
-                            "unconfirmed_wallet_balance": 6,
-                            "pending_coin_removal_count": 1,
-                        },
-                        "vc": {
-                            "pending_coin_removal_count": 1,
-                        },
+                        "new cat": {"unconfirmed_wallet_balance": 6, "pending_coin_removal_count": 1},
+                        "vc": {"pending_coin_removal_count": 1},
                     },
-                    pre_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 6,
-                        }
-                    },
+                    pre_block_additional_balance_info={"new cat": {"pending_approval_balance": 6}},
                     post_block_balance_updates={
                         "new cat": {
                             "confirmed_wallet_balance": 6,
@@ -929,15 +801,9 @@ async def test_cat_trades(
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
-                        "vc": {
-                            "pending_coin_removal_count": -1,
-                        },
+                        "vc": {"pending_coin_removal_count": -1},
                     },
-                    post_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 0,
-                        }
-                    },
+                    post_block_additional_balance_info={"new cat": {"pending_approval_balance": 0}},
                 ),
                 WalletStateTransition(),
             ]
@@ -969,18 +835,14 @@ async def test_cat_trades(
 
     # chia_for_multiple_cat
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        chia_for_multiple_cat,
-        wallet_environments.tx_config,
-        driver_dict=driver_dict,
+        chia_for_multiple_cat, wallet_environments.tx_config, driver_dict=driver_dict
     )
     assert error is None
     assert success is True
     assert trade_make is not None
 
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
-        peer,
-        wallet_environments.tx_config,
+        Offer.from_bytes(trade_make.offer), peer, wallet_environments.tx_config
     )
     for tx in tx_records:
         await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
@@ -1045,21 +907,15 @@ async def test_cat_trades(
                     },
                 },
                 post_block_additional_balance_info={
-                    "cat": {
-                        "pending_approval_balance": 8,
-                    },
-                    "new cat": {
-                        "pending_approval_balance": 9,
-                    },
+                    "cat": {"pending_approval_balance": 8},
+                    "new cat": {"pending_approval_balance": 9},
                 }
                 if credential_restricted
                 else {},
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "unconfirmed_wallet_balance": 7,
-                    },
+                    "xch": {"unconfirmed_wallet_balance": 7},
                     "cat": {
                         "unconfirmed_wallet_balance": -8,
                         "<=#spendable_balance": -8,
@@ -1072,15 +928,7 @@ async def test_cat_trades(
                         "<=#max_send_amount": -9,
                         "pending_coin_removal_count": 1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1102,15 +950,7 @@ async def test_cat_trades(
                         ">#max_send_amount": 0,
                         "pending_coin_removal_count": -1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
@@ -1120,28 +960,17 @@ async def test_cat_trades(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
     if credential_restricted:
-        await client_maker.crcat_approve_pending(
-            cat_wallet_maker.id(),
-            uint64(8),
-            DEFAULT_TX_CONFIG,
-        )
+        await client_maker.crcat_approve_pending(cat_wallet_maker.id(), uint64(8), DEFAULT_TX_CONFIG)
 
         await wallet_environments.process_pending_states(
             [
                 WalletStateTransition(
                     pre_block_balance_updates={
-                        "cat": {
-                            "unconfirmed_wallet_balance": 8,
-                            "pending_coin_removal_count": 1,
-                        },
-                        "vc": {
-                            "pending_coin_removal_count": 1,
-                        },
+                        "cat": {"unconfirmed_wallet_balance": 8, "pending_coin_removal_count": 1},
+                        "vc": {"pending_coin_removal_count": 1},
                     },
                     pre_block_additional_balance_info={
-                        "cat": {
-                            "pending_approval_balance": 8,
-                        },
+                        "cat": {"pending_approval_balance": 8},
                     },
                     post_block_balance_updates={
                         "cat": {
@@ -1151,43 +980,26 @@ async def test_cat_trades(
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
-                        "vc": {
-                            "pending_coin_removal_count": -1,
-                        },
+                        "vc": {"pending_coin_removal_count": -1},
                     },
                     post_block_additional_balance_info={
-                        "cat": {
-                            "pending_approval_balance": 0,
-                        },
+                        "cat": {"pending_approval_balance": 0},
                     },
                 ),
                 WalletStateTransition(),
             ]
         )
 
-        await client_maker.crcat_approve_pending(
-            new_cat_wallet_maker.id(),
-            uint64(9),
-            DEFAULT_TX_CONFIG,
-        )
+        await client_maker.crcat_approve_pending(new_cat_wallet_maker.id(), uint64(9), DEFAULT_TX_CONFIG)
 
         await wallet_environments.process_pending_states(
             [
                 WalletStateTransition(
                     pre_block_balance_updates={
-                        "new cat": {
-                            "unconfirmed_wallet_balance": 9,
-                            "pending_coin_removal_count": 1,
-                        },
-                        "vc": {
-                            "pending_coin_removal_count": 1,
-                        },
+                        "new cat": {"unconfirmed_wallet_balance": 9, "pending_coin_removal_count": 1},
+                        "vc": {"pending_coin_removal_count": 1},
                     },
-                    pre_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 9,
-                        }
-                    },
+                    pre_block_additional_balance_info={"new cat": {"pending_approval_balance": 9}},
                     post_block_balance_updates={
                         "new cat": {
                             "confirmed_wallet_balance": 9,
@@ -1196,15 +1008,9 @@ async def test_cat_trades(
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
-                        "vc": {
-                            "pending_coin_removal_count": -1,
-                        },
+                        "vc": {"pending_coin_removal_count": -1},
                     },
-                    post_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 0,
-                        }
-                    },
+                    post_block_additional_balance_info={"new cat": {"pending_approval_balance": 0}},
                 ),
                 WalletStateTransition(),
             ]
@@ -1212,16 +1018,13 @@ async def test_cat_trades(
 
     # multiple_cat_for_chia
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        multiple_cat_for_chia,
-        wallet_environments.tx_config,
+        multiple_cat_for_chia, wallet_environments.tx_config
     )
     assert error is None
     assert success is True
     assert trade_make is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
-        peer,
-        wallet_environments.tx_config,
+        Offer.from_bytes(trade_make.offer), peer, wallet_environments.tx_config
     )
     for tx in tx_records:
         await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
@@ -1284,21 +1087,9 @@ async def test_cat_trades(
                         "<=#max_send_amount": -10,
                         "pending_coin_removal_count": 1,
                     },
-                    "cat": {
-                        "unconfirmed_wallet_balance": 11,
-                    },
-                    "new cat": {
-                        "unconfirmed_wallet_balance": 12,
-                    },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    "cat": {"unconfirmed_wallet_balance": 11},
+                    "new cat": {"unconfirmed_wallet_balance": 12},
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1319,15 +1110,7 @@ async def test_cat_trades(
                         "max_send_amount": 12,
                         "unspent_coin_count": 1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
@@ -1338,17 +1121,14 @@ async def test_cat_trades(
 
     # chia_and_cat_for_cat
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        chia_and_cat_for_cat,
-        wallet_environments.tx_config,
+        chia_and_cat_for_cat, wallet_environments.tx_config
     )
     assert error is None
     assert success is True
     assert trade_make is not None
 
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
-        peer,
-        wallet_environments.tx_config,
+        Offer.from_bytes(trade_make.offer), peer, wallet_environments.tx_config
     )
     for tx in tx_records:
         await wallet_taker.wallet_state_manager.add_pending_transaction(tx)
@@ -1413,27 +1193,15 @@ async def test_cat_trades(
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "unconfirmed_wallet_balance": 13,
-                    },
-                    "cat": {
-                        "unconfirmed_wallet_balance": 14,
-                    },
+                    "xch": {"unconfirmed_wallet_balance": 13},
+                    "cat": {"unconfirmed_wallet_balance": 14},
                     "new cat": {
                         "unconfirmed_wallet_balance": -15,
                         "<=#spendable_balance": -15,
                         "<=#max_send_amount": -15,
                         "pending_coin_removal_count": 1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1454,15 +1222,7 @@ async def test_cat_trades(
                         ">#max_send_amount": 0,
                         "pending_coin_removal_count": -1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
@@ -1472,29 +1232,16 @@ async def test_cat_trades(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
     if credential_restricted:
-        await client_maker.crcat_approve_pending(
-            new_cat_wallet_maker.id(),
-            uint64(15),
-            DEFAULT_TX_CONFIG,
-        )
+        await client_maker.crcat_approve_pending(new_cat_wallet_maker.id(), uint64(15), DEFAULT_TX_CONFIG)
 
         await wallet_environments.process_pending_states(
             [
                 WalletStateTransition(
                     pre_block_balance_updates={
-                        "new cat": {
-                            "unconfirmed_wallet_balance": 15,
-                            "pending_coin_removal_count": 1,
-                        },
-                        "vc": {
-                            "pending_coin_removal_count": 1,
-                        },
+                        "new cat": {"unconfirmed_wallet_balance": 15, "pending_coin_removal_count": 1},
+                        "vc": {"pending_coin_removal_count": 1},
                     },
-                    pre_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 15,
-                        }
-                    },
+                    pre_block_additional_balance_info={"new cat": {"pending_approval_balance": 15}},
                     post_block_balance_updates={
                         "new cat": {
                             "confirmed_wallet_balance": 15,
@@ -1503,15 +1250,9 @@ async def test_cat_trades(
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
-                        "vc": {
-                            "pending_coin_removal_count": -1,
-                        },
+                        "vc": {"pending_coin_removal_count": -1},
                     },
-                    post_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 0,
-                        }
-                    },
+                    post_block_additional_balance_info={"new cat": {"pending_approval_balance": 0}},
                 ),
                 WalletStateTransition(),
             ]
@@ -1522,7 +1263,7 @@ async def test_cat_trades(
         # (and therefore are solved as a complete ring)
         bundle = Offer.aggregate([first_offer, second_offer, third_offer, fourth_offer, fifth_offer]).to_valid_spend()
         program = simple_solution_generator(bundle)
-        result: NPCResult = get_name_puzzle_conditions(
+        result = get_name_puzzle_conditions(
             program, INFINITE_COST, mempool_mode=True, height=active_softfork_height, constants=DEFAULT_CONSTANTS
         )
         assert result.error is None
@@ -1530,19 +1271,17 @@ async def test_cat_trades(
 
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_trade_cancellation(wallets_prefarm):
-    (
-        [wallet_node_maker, maker_funds],
-        [wallet_node_taker, taker_funds],
-        full_node,
-    ) = wallets_prefarm
+async def test_trade_cancellation(
+    wallets_prefarm: Tuple[Tuple[WalletNode, int], Tuple[WalletNode, int], FullNodeSimulator]
+) -> None:
+    (wallet_node_maker, maker_funds), (wallet_node_taker, taker_funds), full_node = wallets_prefarm
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
     xch_to_cat_amount = uint64(100)
 
     async with wallet_node_maker.wallet_state_manager.lock:
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -1550,7 +1289,7 @@ async def test_trade_cancellation(wallets_prefarm):
             DEFAULT_TX_CONFIG,
         )
 
-        tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+        tx_records = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
 
     await full_node.process_transaction_records(records=tx_records)
 
@@ -1559,15 +1298,9 @@ async def test_trade_cancellation(wallets_prefarm):
     maker_funds -= xch_to_cat_amount
     await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
 
-    cat_for_chia = {
-        wallet_maker.id(): 1,
-        cat_wallet_maker.id(): -2,
-    }
+    cat_for_chia: OfferSummary = {wallet_maker.id(): 1, cat_wallet_maker.id(): -2}
 
-    chia_for_cat = {
-        wallet_maker.id(): -3,
-        cat_wallet_maker.id(): 4,
-    }
+    chia_for_cat: OfferSummary = {wallet_maker.id(): -3, cat_wallet_maker.id(): 4}
 
     trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
@@ -1610,6 +1343,7 @@ async def test_trade_cancellation(wallets_prefarm):
     for tx in txs:
         await trade_manager_maker.wallet_state_manager.add_pending_transaction(tx)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
+    assert txs is not None
     await full_node.process_transaction_records(records=txs)
 
     sum_of_outgoing = uint64(0)
@@ -1641,8 +1375,7 @@ async def test_trade_cancellation(wallets_prefarm):
 
     # This take should fail since we have no CATs to fulfill it with
     with pytest.raises(
-        ValueError,
-        match=f"Do not have a wallet for asset ID: {cat_wallet_maker.get_asset_id()} to fulfill offer",
+        ValueError, match=f"Do not have a wallet for asset ID: {cat_wallet_maker.get_asset_id()} to fulfill offer"
     ):
         await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG)
 
@@ -1652,6 +1385,7 @@ async def test_trade_cancellation(wallets_prefarm):
     for tx in txs:
         await trade_manager_maker.wallet_state_manager.add_pending_transaction(tx)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
+    assert txs is not None
     await full_node.process_transaction_records(records=txs)
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
@@ -1659,18 +1393,16 @@ async def test_trade_cancellation(wallets_prefarm):
 
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_trade_cancellation_balance_check(wallets_prefarm):
-    (
-        [wallet_node_maker, maker_funds],
-        [wallet_node_taker, taker_funds],
-        full_node,
-    ) = wallets_prefarm
+async def test_trade_cancellation_balance_check(
+    wallets_prefarm: Tuple[Tuple[WalletNode, int], Tuple[WalletNode, int], FullNodeSimulator]
+) -> None:
+    (wallet_node_maker, maker_funds), _, full_node = wallets_prefarm
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
 
     xch_to_cat_amount = uint64(100)
 
     async with wallet_node_maker.wallet_state_manager.lock:
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -1678,7 +1410,7 @@ async def test_trade_cancellation_balance_check(wallets_prefarm):
             DEFAULT_TX_CONFIG,
         )
 
-        tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+        tx_records = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
 
     await full_node.process_transaction_records(records=tx_records)
 
@@ -1687,7 +1419,7 @@ async def test_trade_cancellation_balance_check(wallets_prefarm):
     maker_funds -= xch_to_cat_amount
     await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
 
-    chia_for_cat = {
+    chia_for_cat: OfferSummary = {
         wallet_maker.id(): -(await wallet_maker.get_spendable_balance()),
         cat_wallet_maker.id(): 4,
     }
@@ -1705,6 +1437,7 @@ async def test_trade_cancellation_balance_check(wallets_prefarm):
     for tx in txs:
         await trade_manager_maker.wallet_state_manager.add_pending_transaction(tx)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
+    assert txs is not None
     await full_node.process_transaction_records(records=txs)
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
@@ -1713,18 +1446,22 @@ async def test_trade_cancellation_balance_check(wallets_prefarm):
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_trade_conflict(three_wallets_prefarm):
+async def test_trade_conflict(
+    three_wallets_prefarm: Tuple[
+        Tuple[WalletNode, int], Tuple[WalletNode, int], Tuple[WalletNode, int], FullNodeSimulator
+    ]
+) -> None:
     (
-        [wallet_node_maker, maker_funds],
-        [wallet_node_taker, taker_funds],
-        [wallet_node_trader, trader_funds],
+        (wallet_node_maker, maker_funds),
+        (wallet_node_taker, taker_funds),
+        (wallet_node_trader, trader_funds),
         full_node,
     ) = three_wallets_prefarm
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     xch_to_cat_amount = uint64(100)
 
     async with wallet_node_maker.wallet_state_manager.lock:
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -1732,7 +1469,7 @@ async def test_trade_conflict(three_wallets_prefarm):
             DEFAULT_TX_CONFIG,
         )
 
-        tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+        tx_records = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
 
     await full_node.process_transaction_records(records=tx_records)
 
@@ -1741,10 +1478,7 @@ async def test_trade_conflict(three_wallets_prefarm):
     maker_funds -= xch_to_cat_amount
     await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
 
-    chia_for_cat = {
-        wallet_maker.id(): 1000,
-        cat_wallet_maker.id(): -4,
-    }
+    chia_for_cat: OfferSummary = {wallet_maker.id(): 1_000, cat_wallet_maker.id(): -4}
 
     trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
@@ -1769,24 +1503,22 @@ async def test_trade_conflict(three_wallets_prefarm):
     for tx in txs2:
         await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
     assert await trade_manager_trader.get_coins_of_interest()
-    offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+    offer_tx_records = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
     await full_node.process_transaction_records(records=offer_tx_records)
     await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_trader, tr2)
 
 
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_trade_bad_spend(wallets_prefarm):
-    (
-        [wallet_node_maker, maker_funds],
-        [wallet_node_taker, taker_funds],
-        full_node,
-    ) = wallets_prefarm
+async def test_trade_bad_spend(
+    wallets_prefarm: Tuple[Tuple[WalletNode, int], Tuple[WalletNode, int], FullNodeSimulator]
+) -> None:
+    (wallet_node_maker, maker_funds), (wallet_node_taker, taker_funds), full_node = wallets_prefarm
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     xch_to_cat_amount = uint64(100)
 
     async with wallet_node_maker.wallet_state_manager.lock:
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -1794,7 +1526,7 @@ async def test_trade_bad_spend(wallets_prefarm):
             DEFAULT_TX_CONFIG,
         )
 
-        tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+        tx_records = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
 
     await full_node.process_transaction_records(records=tx_records)
 
@@ -1803,10 +1535,7 @@ async def test_trade_bad_spend(wallets_prefarm):
     maker_funds -= xch_to_cat_amount
     await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
 
-    chia_for_cat = {
-        wallet_maker.id(): 1000,
-        cat_wallet_maker.id(): -4,
-    }
+    chia_for_cat: OfferSummary = {wallet_maker.id(): 1_000, cat_wallet_maker.id(): -4}
 
     trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
@@ -1831,24 +1560,22 @@ async def test_trade_bad_spend(wallets_prefarm):
     for _ in range(10):
         await wallet_node_taker._resend_queue()
         await time_out_assert(5, check_wallet_cache_empty, True)
-    offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+    offer_tx_records = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
     await full_node.process_transaction_records(records=offer_tx_records)
     await time_out_assert(30, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
 
 
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_trade_high_fee(wallets_prefarm):
-    (
-        [wallet_node_maker, maker_funds],
-        [wallet_node_taker, taker_funds],
-        full_node,
-    ) = wallets_prefarm
+async def test_trade_high_fee(
+    wallets_prefarm: Tuple[Tuple[WalletNode, int], Tuple[WalletNode, int], FullNodeSimulator]
+) -> None:
+    (wallet_node_maker, maker_funds), (wallet_node_taker, taker_funds), full_node = wallets_prefarm
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     xch_to_cat_amount = uint64(100)
 
     async with wallet_node_maker.wallet_state_manager.lock:
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -1856,7 +1583,7 @@ async def test_trade_high_fee(wallets_prefarm):
             DEFAULT_TX_CONFIG,
         )
 
-        tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+        tx_records = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
 
     await full_node.process_transaction_records(records=tx_records)
 
@@ -1865,10 +1592,7 @@ async def test_trade_high_fee(wallets_prefarm):
     maker_funds -= xch_to_cat_amount
     await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
 
-    chia_for_cat = {
-        wallet_maker.id(): 1000,
-        cat_wallet_maker.id(): -4,
-    }
+    chia_for_cat: OfferSummary = {wallet_maker.id(): 1_000, cat_wallet_maker.id(): -4}
 
     trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
@@ -1880,7 +1604,9 @@ async def test_trade_high_fee(wallets_prefarm):
     assert trade_make is not None
     peer = wallet_node_taker.get_full_node_peer()
     offer = Offer.from_bytes(trade_make.offer)
-    tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(1000000000000))
+    tr1, txs1 = await trade_manager_taker.respond_to_offer(
+        offer, peer, DEFAULT_TX_CONFIG, fee=uint64(1_000_000_000_000)
+    )
     for tx in txs1:
         await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
     await full_node.process_transaction_records(records=txs1)
@@ -1889,17 +1615,15 @@ async def test_trade_high_fee(wallets_prefarm):
 
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_aggregated_trade_state(wallets_prefarm):
-    (
-        [wallet_node_maker, maker_funds],
-        [wallet_node_taker, taker_funds],
-        full_node,
-    ) = wallets_prefarm
+async def test_aggregated_trade_state(
+    wallets_prefarm: Tuple[Tuple[WalletNode, int], Tuple[WalletNode, int], FullNodeSimulator]
+) -> None:
+    (wallet_node_maker, maker_funds), (wallet_node_taker, taker_funds), full_node = wallets_prefarm
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     xch_to_cat_amount = uint64(100)
 
     async with wallet_node_maker.wallet_state_manager.lock:
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -1907,7 +1631,7 @@ async def test_aggregated_trade_state(wallets_prefarm):
             DEFAULT_TX_CONFIG,
         )
 
-        tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+        tx_records = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
 
     await full_node.process_transaction_records(records=tx_records)
 
@@ -1916,14 +1640,8 @@ async def test_aggregated_trade_state(wallets_prefarm):
     maker_funds -= xch_to_cat_amount
     await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
 
-    chia_for_cat = {
-        wallet_maker.id(): 2,
-        cat_wallet_maker.id(): -2,
-    }
-    cat_for_chia = {
-        wallet_maker.id(): -1,
-        cat_wallet_maker.id(): 1,
-    }
+    chia_for_cat: OfferSummary = {wallet_maker.id(): 2, cat_wallet_maker.id(): -2}
+    cat_for_chia: OfferSummary = {wallet_maker.id(): -1, cat_wallet_maker.id(): 1}
 
     trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
@@ -1942,11 +1660,7 @@ async def test_aggregated_trade_state(wallets_prefarm):
     agg_offer = Offer.aggregate([Offer.from_bytes(trade_make_1.offer), Offer.from_bytes(trade_make_2.offer)])
 
     peer = wallet_node_taker.get_full_node_peer()
-    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        agg_offer,
-        peer,
-        DEFAULT_TX_CONFIG,
-    )
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(agg_offer, peer, DEFAULT_TX_CONFIG)
     assert trade_take is not None
     assert tx_records is not None
 
