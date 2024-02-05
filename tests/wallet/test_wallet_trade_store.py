@@ -175,25 +175,44 @@ async def test_valid_times_migration() -> None:
 async def test_large_trade_record_query() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await TradeStore.create(db_wrapper)
-
-        for _ in range(0, db_wrapper.host_parameter_limit + 1):
-            offer_name = bytes32.secret()
-            await store.add_trade_record(
-                TradeRecord(
-                    confirmed_at_index=uint32(0),
-                    accepted_at_time=None,
-                    created_at_time=uint64(1000000),
-                    is_my_offer=True,
-                    sent=uint32(0),
-                    offer=b"",
-                    taken_offer=None,
-                    coins_of_interest=[],
-                    trade_id=offer_name,
-                    status=uint32(TradeStatus.PENDING_ACCEPT.value),
-                    sent_to=[],
-                    valid_times=ConditionValidTimes(),
-                ),
-                offer_name,
+        trade_records_to_insert = []
+        for _ in range(db_wrapper.host_parameter_limit + 1):
+            offer_name = bytes32.random()
+            trade_record_old = TradeRecordOld(
+                confirmed_at_index=uint32(0),
+                accepted_at_time=None,
+                created_at_time=uint64(1000000),
+                is_my_offer=True,
+                sent=uint32(0),
+                offer=b"",
+                taken_offer=None,
+                coins_of_interest=[],
+                trade_id=offer_name,
+                status=uint32(TradeStatus.PENDING_ACCEPT.value),
+                sent_to=[],
             )
-
-        assert len(await store.get_all_trades()) == db_wrapper.host_parameter_limit + 1
+            trade_records_to_insert.append(
+                (
+                    bytes(trade_record_old),
+                    trade_record_old.trade_id.hex(),
+                    trade_record_old.status,
+                    trade_record_old.confirmed_at_index,
+                    trade_record_old.created_at_time,
+                    trade_record_old.sent,
+                    trade_record_old.trade_id,
+                    trade_record_old.is_my_offer,
+                )
+            )
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            await conn.executemany("INSERT INTO trade_records VALUES(?, ?, ?, ?, ?, ?, ?, ?)", trade_records_to_insert)
+            # Insert a specific trade_record_times item for the last trade_records item
+            await conn.execute(
+                "INSERT INTO trade_record_times VALUES(?, ?)",
+                (offer_name, bytes(ConditionValidTimes(min_height=uint32(42)))),
+            )
+        all_trades = await store.get_all_trades()
+        assert len(all_trades) == db_wrapper.host_parameter_limit + 1
+        # Check that all trade_record items have correct valid_times
+        empty = ConditionValidTimes()
+        assert all(trade.valid_times == empty for trade in all_trades[:-1])
+        assert all_trades[-1].valid_times.min_height == uint32(42)
