@@ -713,23 +713,30 @@ class MempoolManager:
             # find the same transaction multiple times. We put them in a set
             # to deduplicate
             spendbundle_ids_to_remove: Set[bytes32] = set()
-            # Gather also the singleton fast forward puzzle hashes to be removed
-            # from the unspent lineage info map
-            ff_puzzle_hashes_to_remove: Set[bytes32] = set()
+            # Gather also the singleton fast forward puzzle hashes to update
+            # the unspent lineage info map for
+            ff_puzzle_hashes_to_update: Set[bytes32] = set()
             for spend in spent_coins:
                 items: List[MempoolItem] = self.mempool.get_items_by_coin_id(spend)
                 for item in items:
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
                     self.remove_seen(item.name)
                     spendbundle_ids_to_remove.add(item.name)
-                    ff_puzzle_hashes_to_remove = {
+                    ff_puzzle_hashes_to_update = {
                         spend_data.coin_spend.coin.puzzle_hash
                         for spend_data in item.bundle_coin_spends.values()
                         if spend_data.eligible_for_fast_forward
                     }
-            self.puzzle_hash_to_unspent_lineage_info = {
-                k: v for k, v in self.puzzle_hash_to_unspent_lineage_info.items() if k not in ff_puzzle_hashes_to_remove
-            }
+            for puzzle_hash in ff_puzzle_hashes_to_update:
+                if puzzle_hash not in self.puzzle_hash_to_unspent_lineage_info:
+                    continue
+                unspent_lineage_info = await self.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
+                if unspent_lineage_info is not None:
+                    # Update the map
+                    self.puzzle_hash_to_unspent_lineage_info[puzzle_hash] = unspent_lineage_info
+                else:
+                    # Remove the singleton fast forward puzzle hash from the map
+                    del self.puzzle_hash_to_unspent_lineage_info[puzzle_hash]
             self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
         else:
             log.warning(
