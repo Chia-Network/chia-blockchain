@@ -19,11 +19,14 @@ from chia.cmds.cmds_util import (
 )
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
+from chia.rpc.wallet_request_types import GetNotifications
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.conditions import CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -987,9 +990,11 @@ async def did_message_spend(
         try:
             response = await wallet_client.did_message_spend(
                 did_wallet_id,
-                puzzle_announcements,
-                coin_announcements,
                 CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
+                extra_conditions=(
+                    *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in coin_announcements),
+                    *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in puzzle_announcements),
+                ),
             )
             print(f"Message Spend Bundle: {response['spend_bundle']}")
         except Exception as e:
@@ -1000,11 +1005,13 @@ async def transfer_did(
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     did_wallet_id: int,
-    fee: int,
+    d_fee: Decimal,
     target_address: str,
     with_recovery: bool,
     reuse_puzhash: Optional[bool],
 ) -> None:
+    fee: int = int(d_fee * units["chia"])
+
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.did_transfer_did(
@@ -1382,10 +1389,12 @@ async def get_notifications(
         if ids is not None and len(ids) == 0:
             ids = None
 
-        notifications = await wallet_client.get_notifications(ids=ids, pagination=(start, end))
-        for notification in notifications:
+        response = await wallet_client.get_notifications(
+            GetNotifications(ids=ids, start=uint32.construct_optional(start), end=uint32.construct_optional(end))
+        )
+        for notification in response.notifications:
             print("")
-            print(f"ID: {notification.coin_id.hex()}")
+            print(f"ID: {notification.id.hex()}")
             print(f"message: {notification.message.decode('utf-8')}")
             print(f"amount: {notification.amount}")
 

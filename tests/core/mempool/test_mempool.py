@@ -26,7 +26,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.wallet_tools import WalletTool
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -35,7 +34,7 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.eligible_coin_spends import run_for_cost
+from chia.types.eligible_coin_spends import UnspentLineageInfo, run_for_cost
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -47,6 +46,7 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.util.recursive_replace import recursive_replace
+from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.mempool.test_mempool_manager import (
@@ -461,8 +461,8 @@ class TestMempoolManager:
     @pytest.mark.anyio
     async def test_coin_announcement_duplicate_consumed(self, one_node_one_block, wallet_a):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
-            announce = Announcement(coin_2.name(), b"test")
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
+            announce = AssertCoinAnnouncement(asserted_id=coin_2.name(), asserted_msg=b"test")
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.msg_calc])
             dic = {cvp.opcode: [cvp] * 100}
 
             cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [b"test"])
@@ -485,8 +485,8 @@ class TestMempoolManager:
     @pytest.mark.anyio
     async def test_coin_duplicate_announcement_consumed(self, one_node_one_block, wallet_a):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
-            announce = Announcement(coin_2.name(), b"test")
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
+            announce = AssertCoinAnnouncement(asserted_id=coin_2.name(), asserted_msg=b"test")
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.msg_calc])
             dic = {cvp.opcode: [cvp]}
 
             cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [b"test"])
@@ -1116,8 +1116,8 @@ class TestMempoolManager:
     @pytest.mark.anyio
     async def test_correct_coin_announcement_consumed(self, one_node_one_block, wallet_a):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
-            announce = Announcement(coin_2.name(), b"test")
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
+            announce = AssertCoinAnnouncement(asserted_id=coin_2.name(), asserted_msg=b"test")
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.msg_calc])
             dic = {cvp.opcode: [cvp]}
 
             cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [b"test"])
@@ -1150,12 +1150,12 @@ class TestMempoolManager:
         self, assert_garbage, announce_garbage, expected, expected_included, one_node_one_block, wallet_a
     ):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
-            announce = Announcement(coin_2.name(), b"test")
+            announce = AssertCoinAnnouncement(asserted_id=coin_2.name(), asserted_msg=b"test")
             # garbage at the end is ignored in consensus mode, but not in
             # mempool mode
             cvp = ConditionWithArgs(
                 ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
-                [bytes(announce.name())] + ([b"garbage"] if announce_garbage else []),
+                [bytes(announce.msg_calc)] + ([b"garbage"] if announce_garbage else []),
             )
             dic = {cvp.opcode: [cvp]}
 
@@ -1205,8 +1205,8 @@ class TestMempoolManager:
         full_node_1, server_1, bt = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
-            announce = Announcement(coin_2.name(), b"test")
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
+            announce = AssertCoinAnnouncement(asserted_id=coin_2.name(), asserted_msg=b"test")
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.msg_calc])
             dic = {cvp.opcode: [cvp]}
             # missing arg here
             cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
@@ -1227,9 +1227,9 @@ class TestMempoolManager:
         full_node_1, server_1, bt = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
-            announce = Announcement(coin_2.name(), bytes([1] * 10000))
+            announce = AssertCoinAnnouncement(asserted_id=coin_2.name(), asserted_msg=bytes([1] * 10000))
 
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.msg_calc])
 
             dic = {cvp.opcode: [cvp]}
 
@@ -1262,9 +1262,9 @@ class TestMempoolManager:
         full_node_1, server_1, bt = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
-            announce = Announcement(coin_2.name(), b"test")
+            announce = AssertCoinAnnouncement(asserted_id=coin_2.name(), asserted_msg=b"test")
 
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.msg_calc])
 
             dic = {cvp.opcode: [cvp]}
             # mismatching message
@@ -1291,9 +1291,9 @@ class TestMempoolManager:
         full_node_1, server_1, bt = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
-            announce = Announcement(coin_1.name(), b"test")
+            announce = AssertCoinAnnouncement(asserted_id=coin_1.name(), asserted_msg=b"test")
 
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.msg_calc])
 
             dic = {cvp.opcode: [cvp]}
 
@@ -1317,9 +1317,9 @@ class TestMempoolManager:
         full_node_1, server_1, bt = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
-            announce = Announcement(coin_2.puzzle_hash, bytes(0x80))
+            announce = AssertPuzzleAnnouncement(asserted_ph=coin_2.puzzle_hash, asserted_msg=bytes(0x80))
 
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [announce.name()])
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [announce.msg_calc])
 
             dic = {cvp.opcode: [cvp]}
 
@@ -1353,13 +1353,13 @@ class TestMempoolManager:
         full_node_1, server_1, bt = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
-            announce = Announcement(coin_2.puzzle_hash, bytes(0x80))
+            announce = AssertPuzzleAnnouncement(asserted_ph=coin_2.puzzle_hash, asserted_msg=bytes(0x80))
 
             # garbage at the end is ignored in consensus mode, but not in
             # mempool mode
             cvp = ConditionWithArgs(
                 ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT,
-                [bytes(announce.name())] + ([b"garbage"] if assert_garbage else []),
+                [bytes(announce.msg_calc)] + ([b"garbage"] if assert_garbage else []),
             )
             dic = {cvp.opcode: [cvp]}
             # garbage at the end is ignored in consensus mode, but not in
@@ -1412,9 +1412,9 @@ class TestMempoolManager:
         full_node_1, server_1, bt = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
-            announce = Announcement(coin_2.puzzle_hash, b"test")
+            announce = AssertPuzzleAnnouncement(asserted_ph=coin_2.puzzle_hash, asserted_msg=b"test")
 
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [announce.name()])
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [announce.msg_calc])
             dic = {cvp.opcode: [cvp]}
             # missing arg here
             cvp2 = ConditionWithArgs(
@@ -1440,9 +1440,9 @@ class TestMempoolManager:
         full_node_1, server_1, bt = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
-            announce = Announcement(coin_2.puzzle_hash, bytes("test", "utf-8"))
+            announce = AssertPuzzleAnnouncement(asserted_ph=coin_2.puzzle_hash, asserted_msg=bytes("test", "utf-8"))
 
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [announce.name()])
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [announce.msg_calc])
 
             dic = {cvp.opcode: [cvp]}
 
@@ -1469,9 +1469,9 @@ class TestMempoolManager:
         full_node_1, server_1, bt = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
-            announce = Announcement(coin_2.puzzle_hash, b"test")
+            announce = AssertPuzzleAnnouncement(asserted_ph=coin_2.puzzle_hash, asserted_msg=bytes(0x80))
 
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [announce.name()])
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [announce.msg_calc])
 
             dic = {cvp.opcode: [cvp]}
             # Wrong type of Create_announcement
@@ -2908,9 +2908,13 @@ def test_get_items_by_coin_ids(items: List[MempoolItem], coin_ids: List[bytes32]
     assert set(result) == set(expected)
 
 
-def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None:
+@pytest.mark.anyio
+async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None:
     def always(_: bytes32) -> bool:
         return True
+
+    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
+        assert False  # pragma: no cover
 
     def make_test_spendbundle(coin: Coin, *, fee: int = 0, with_higher_cost: bool = False) -> SpendBundle:
         conditions = []
@@ -2940,7 +2944,7 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
     )
     mempool = Mempool(mempool_info, fee_estimator)
     coins = [
-        Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(amount)) for amount in range(2000000000, 2000000010)
+        Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(amount)) for amount in range(2000000000, 2000000020, 2)
     ]
     # Create a ~10 FPC item that spends the eligible coin[0]
     sb_A = make_test_spendbundle(coins[0])
@@ -2952,7 +2956,9 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
     sb_low_rate = make_test_spendbundle(coins[2], fee=highest_fee // 5)
     saved_cost_on_solution_A = agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
     invariant_check_mempool(mempool)
-    result = mempool.create_bundle_from_mempool_items(always)
+    result = await mempool.create_bundle_from_mempool_items(
+        always, get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
+    )
     assert result is not None
     agg, _ = result
     # Make sure both items would be processed
@@ -2971,7 +2977,9 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
     # If we process everything now, the 3 x ~3 FPC items get skipped because
     # sb_A1 gets picked before them (~10 FPC), so from then on only sb_A2 (~2 FPC)
     # would get picked
-    result = mempool.create_bundle_from_mempool_items(always)
+    result = await mempool.create_bundle_from_mempool_items(
+        always, get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
+    )
     assert result is not None
     agg, _ = result
     # The 3 items got skipped here

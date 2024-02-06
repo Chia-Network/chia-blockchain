@@ -11,11 +11,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes
 
-import chia.wallet.singleton
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.wallet_protocol import CoinState, RequestBlockHeader, RespondBlockHeader
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -30,7 +28,7 @@ from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import Condition, parse_timelock_info
+from chia.wallet.conditions import AssertCoinAnnouncement, Condition, parse_timelock_info
 from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo, ProposalType
 from chia.wallet.dao_wallet.dao_utils import (
     DAO_FINISHED_STATE,
@@ -126,7 +124,7 @@ class DAOWallet:
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
-    ) -> DAOWallet:
+    ) -> Tuple[DAOWallet, List[TransactionRecord]]:
         """
         Create a brand new DAO wallet
         This must be called under the wallet state manager lock
@@ -175,7 +173,7 @@ class DAOWallet:
         std_wallet_id = self.standard_wallet.wallet_id
 
         try:
-            await self.generate_new_dao(
+            txs = await self.generate_new_dao(
                 amount_of_cats,
                 tx_config,
                 fee=fee,
@@ -200,7 +198,7 @@ class DAOWallet:
         )
         await self.save_info(dao_info)
 
-        return self
+        return self, txs
 
     @staticmethod
     async def create_new_dao_wallet_for_existing_dao(
@@ -509,9 +507,7 @@ class DAOWallet:
         assert children_state.created_height
         parent_spend = await fetch_coin_spend(children_state.created_height, parent_parent_coin, peer)
         assert parent_spend is not None
-        parent_inner_puz = chia.wallet.singleton.get_inner_puzzle_from_singleton(
-            parent_spend.puzzle_reveal.to_program()
-        )
+        parent_inner_puz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal)
         if parent_inner_puz is None:  # pragma: no cover
             raise ValueError("get_innerpuzzle_from_puzzle failed")
 
@@ -613,7 +609,7 @@ class DAOWallet:
         fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Optional[SpendBundle]:
+    ) -> List[TransactionRecord]:
         """
         Create a new DAO treasury using the dao_rules object. This does the first spend to create the launcher
         and eve coins.
@@ -729,9 +725,7 @@ class DAOWallet:
         full_treasury_puzzle = curry_singleton(launcher_coin.name(), dao_treasury_puzzle)
         full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
 
-        announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
         tx_records: List[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             uint64(1),
             genesis_launcher_puz.get_tree_hash(),
@@ -739,8 +733,10 @@ class DAOWallet:
             fee,
             origin_id=origin.name(),
             coins=set(coins),
-            coin_announcements_to_consume=announcement_set,
             memos=[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name()],
+            extra_conditions=(
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
         )
         tx_record: TransactionRecord = tx_records[0]
 
@@ -756,8 +752,7 @@ class DAOWallet:
         )
         await self.add_parent(launcher_coin.name(), launcher_proof)
 
-        if tx_record is None or tx_record.spend_bundle is None:  # pragma: no cover
-            return None
+        assert tx_record.spend_bundle is not None
 
         eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
         dao_info = DAOInfo(
@@ -798,8 +793,6 @@ class DAOWallet:
             valid_times=parse_timelock_info(extra_conditions),
         )
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
-        await self.wallet_state_manager.add_pending_transaction(regular_record)
-        await self.wallet_state_manager.add_pending_transaction(treasury_record)
 
         funding_inner_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
         await self.wallet_state_manager.add_interested_puzzle_hashes([funding_inner_puzhash], [self.id()])
@@ -807,7 +800,7 @@ class DAOWallet:
         await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()], [self.wallet_id])
 
         await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
-        return full_spend
+        return [treasury_record, regular_record]
 
     async def generate_treasury_eve_spend(
         self, inner_puz: Program, eve_coin: Coin, fee: uint64 = uint64(0)
@@ -889,11 +882,9 @@ class DAOWallet:
         full_proposal_puzzle = curry_singleton(launcher_coin.name(), dao_proposal_puzzle)
         full_proposal_puzzle_hash = full_proposal_puzzle.get_tree_hash()
 
-        announcement_set: Set[Announcement] = set()
         announcement_message = Program.to(
             [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
         ).get_tree_hash()
-        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_records: List[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             uint64(dao_rules.proposal_minimum_amount),
@@ -902,7 +893,9 @@ class DAOWallet:
             fee,
             origin_id=origin.name(),
             coins=coins,
-            coin_announcements_to_consume=announcement_set,
+            extra_conditions=(
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
         )
         tx_record: TransactionRecord = tx_records[0]
 
@@ -1588,7 +1581,7 @@ class DAOWallet:
         assert state is not None
         # CoinState contains Coin, spent_height, and created_height,
         parent_spend = await fetch_coin_spend(state[0].spent_height, state[0].coin, peer)
-        parent_inner_puz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
+        parent_inner_puz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal)
         assert isinstance(parent_inner_puz, Program)
         return LineageProof(state[0].coin.parent_coin_info, parent_inner_puz.get_tree_hash(), state[0].coin.amount)
 

@@ -15,7 +15,7 @@ from chia.full_node.hint_store import HintStore
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from tests.util.temp_file import TempFile
 
 
@@ -74,7 +74,7 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
 
             for block in blocks:
                 # await _validate_and_add_block(bc, block)
-                results = PreValidationResult(None, uint64(1), None, False)
+                results = PreValidationResult(None, uint64(1), None, False, uint32(0))
                 result, err, _ = await bc.add_block(block, results)
                 assert err is None
 
