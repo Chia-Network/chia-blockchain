@@ -41,78 +41,42 @@ async def connect_to_simulator(
     return full_node_api, incoming_queue, peer
 
 
-ph0 = bytes32(b"\x00" * 32)
-ph1 = bytes32(b"\x01" * 32)
-ph2 = bytes32(b"\x02" * 32)
-ph3 = bytes32(b"\x03" * 32)
-
-
 @pytest.mark.anyio
 async def test_puzzle_subscriptions(one_node: OneNode, self_hostname: str) -> None:
-    simulator, incoming_queue, peer = await connect_to_simulator(one_node, self_hostname)
+    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
     subs = simulator.full_node.subscriptions
 
-    ph0 = bytes32(b"\x00" * 32)
+    await simulator.farm_blocks_to_puzzlehash(1)
+
     ph1 = bytes32(b"\x01" * 32)
     ph2 = bytes32(b"\x02" * 32)
     ph3 = bytes32(b"\x03" * 32)
 
-    await simulator.farm_blocks_to_puzzlehash(1)
-
     # Add puzzle subscriptions, ignore duplicates
+    # Response can be in any order
     resp = await simulator.request_add_puzzle_subscriptions(
         wallet_protocol.RequestAddPuzzleSubscriptions([ph1, ph2, ph2]), peer
     )
     assert resp is not None
 
-    assert subs.puzzle_subscriptions(peer.peer_node_id) == {ph1, ph2}
-
-    # Puzzle hashes can be returned in any order, due to implementation details
     add_response = wallet_protocol.RespondAddPuzzleSubscriptions.from_bytes(resp.data)
     assert set(add_response.puzzle_hashes) == {ph1, ph2}
 
-    # Add the other puzzle hash, as well as existing ones
+    assert subs.puzzle_subscriptions(peer.peer_node_id) == {ph1, ph2}
+
+    # Add another puzzle hash and existing ones
     resp = await simulator.request_add_puzzle_subscriptions(
         wallet_protocol.RequestAddPuzzleSubscriptions([ph1, ph2, ph3]), peer
     )
     assert resp is not None
 
     add_response = wallet_protocol.RespondAddPuzzleSubscriptions.from_bytes(resp.data)
-    assert add_response.puzzle_hashes == [ph3]
+    assert set(add_response.puzzle_hashes) == {ph3}
 
     assert subs.puzzle_subscriptions(peer.peer_node_id) == {ph1, ph2, ph3}
 
-    # Farm blocks and get coin state updates
-    await simulator.farm_blocks_to_puzzlehash(5, farm_to=ph1, guarantee_transaction_blocks=True)
-    await simulator.farm_blocks_to_puzzlehash(4, farm_to=ph2, guarantee_transaction_blocks=True)
-    await simulator.farm_blocks_to_puzzlehash(3, farm_to=ph3, guarantee_transaction_blocks=True)
-
-    # Generate update for the previous block.
-    await simulator.farm_blocks_to_puzzlehash(3, farm_to=ph0, guarantee_transaction_blocks=True)
-
-    all_messages = await get_all_messages_in_queue(incoming_queue)
-    coin_state_updates = [
-        wallet_protocol.CoinStateUpdate.from_bytes(message.data)
-        for message in all_messages
-        if ProtocolMessageTypes(message.type).name == "coin_state_update"
-    ]
-
-    for update in coin_state_updates:
-        assert len(update.items) == 2
-
-    for update in coin_state_updates[0:5]:
-        for item in update.items:
-            assert item.coin.puzzle_hash == ph1
-
-    for update in coin_state_updates[5:9]:
-        for item in update.items:
-            assert item.coin.puzzle_hash == ph2
-
-    for update in coin_state_updates[9:12]:
-        for item in update.items:
-            assert item.coin.puzzle_hash == ph3
-
-    # Remove puzzle subscriptions, ignore duplicates or missing subscriptions
+    # Remove puzzle subscriptions
+    # Ignore duplicates or missing subscriptions
     resp = await simulator.request_remove_puzzle_subscriptions(
         wallet_protocol.RequestRemovePuzzleSubscriptions([ph1, ph1, ph2]), peer
     )
@@ -122,17 +86,6 @@ async def test_puzzle_subscriptions(one_node: OneNode, self_hostname: str) -> No
     assert set(remove_response.puzzle_hashes) == {ph1, ph2}
 
     assert subs.puzzle_subscriptions(peer.peer_node_id) == {ph3}
-
-    # There should be no puzzle subscriptions now, so no more coin state updates
-    await simulator.farm_blocks_to_puzzlehash(5, farm_to=ph1, guarantee_transaction_blocks=True)
-
-    all_messages = await get_all_messages_in_queue(incoming_queue)
-    coin_state_updates = [
-        wallet_protocol.CoinStateUpdate.from_bytes(message.data)
-        for message in all_messages
-        if ProtocolMessageTypes(message.type).name == "coin_state_update"
-    ]
-    assert len(coin_state_updates) == 0
 
     # Clear all puzzle subscriptions.
     resp = await simulator.request_remove_puzzle_subscriptions(
@@ -144,6 +97,107 @@ async def test_puzzle_subscriptions(one_node: OneNode, self_hostname: str) -> No
     assert set(remove_response.puzzle_hashes) == {ph3}
 
     assert len(subs.puzzle_subscriptions(peer.peer_node_id)) == 0
+
+
+@pytest.mark.anyio
+async def test_coin_subscriptions(one_node: OneNode, self_hostname: str) -> None:
+    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
+    subs = simulator.full_node.subscriptions
+
+    await simulator.farm_blocks_to_puzzlehash(1)
+
+    coin1 = bytes32(b"\x01" * 32)
+    coin2 = bytes32(b"\x02" * 32)
+    coin3 = bytes32(b"\x03" * 32)
+
+    # Add coin subscriptions, ignore duplicates
+    # Response can be in any order
+    resp = await simulator.request_add_coin_subscriptions(
+        wallet_protocol.RequestAddCoinSubscriptions([coin1, coin2, coin2]), peer
+    )
+    assert resp is not None
+
+    add_response = wallet_protocol.RespondAddCoinSubscriptions.from_bytes(resp.data)
+    assert set(add_response.coin_ids) == {coin1, coin2}
+
+    assert subs.coin_subscriptions(peer.peer_node_id) == {coin1, coin2}
+
+    # Add another puzzle hash and existing ones
+    resp = await simulator.request_add_coin_subscriptions(
+        wallet_protocol.RequestAddCoinSubscriptions([coin1, coin2, coin3]), peer
+    )
+    assert resp is not None
+
+    add_response = wallet_protocol.RespondAddCoinSubscriptions.from_bytes(resp.data)
+    assert set(add_response.coin_ids) == {coin3}
+
+    assert subs.coin_subscriptions(peer.peer_node_id) == {coin1, coin2, coin3}
+
+    # Remove coin subscriptions
+    # Ignore duplicates or missing subscriptions
+    resp = await simulator.request_remove_coin_subscriptions(
+        wallet_protocol.RequestRemoveCoinSubscriptions([coin1, coin1, coin2]), peer
+    )
+    assert resp is not None
+
+    remove_response = wallet_protocol.RespondRemoveCoinSubscriptions.from_bytes(resp.data)
+    assert set(remove_response.coin_ids) == {coin1, coin2}
+
+    assert subs.coin_subscriptions(peer.peer_node_id) == {coin3}
+
+    # Clear all coin subscriptions.
+    resp = await simulator.request_remove_coin_subscriptions(wallet_protocol.RequestRemoveCoinSubscriptions(None), peer)
+    assert resp is not None
+
+    remove_response = wallet_protocol.RespondRemoveCoinSubscriptions.from_bytes(resp.data)
+    assert set(remove_response.coin_ids) == {coin3}
+
+    assert len(subs.coin_subscriptions(peer.peer_node_id)) == 0
+
+
+@pytest.mark.anyio
+async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> None:
+    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
+    subs = simulator.full_node.subscriptions
+
+    await simulator.farm_blocks_to_puzzlehash(1)
+
+    max_subs = simulator.max_subscriptions(peer)
+    puzzle_hashes = [std_hash(i.to_bytes(4, byteorder="big", signed=False)) for i in range(max_subs + 100)]
+
+    # Add puzzle subscriptions to the limit
+    first_batch = puzzle_hashes[:max_subs]
+    first_batch_set = set(first_batch)
+
+    resp = await simulator.request_add_puzzle_subscriptions(
+        wallet_protocol.RequestAddPuzzleSubscriptions(first_batch), peer
+    )
+    assert resp is not None
+
+    add_ph_response = wallet_protocol.RespondAddPuzzleSubscriptions.from_bytes(resp.data)
+    assert set(add_ph_response.puzzle_hashes) == first_batch_set
+
+    assert subs.puzzle_subscriptions(peer.peer_node_id) == first_batch_set
+
+    # Try to add the remaining subscriptions
+    resp = await simulator.request_add_puzzle_subscriptions(
+        wallet_protocol.RequestAddPuzzleSubscriptions(puzzle_hashes[max_subs:]), peer
+    )
+    assert resp is not None
+
+    overflow_ph_response = wallet_protocol.RespondAddPuzzleSubscriptions.from_bytes(resp.data)
+    assert len(overflow_ph_response.puzzle_hashes) == 0
+
+    assert subs.puzzle_subscriptions(peer.peer_node_id) == first_batch_set
+
+    # Try to overflow with coin subscriptions
+    resp = await simulator.request_add_coin_subscriptions(
+        wallet_protocol.RequestAddCoinSubscriptions([bytes32(b"coin" * 8)]), peer
+    )
+    assert resp is not None
+
+    overflow_coin_response = wallet_protocol.RespondAddCoinSubscriptions.from_bytes(resp.data)
+    assert len(overflow_coin_response.coin_ids) == 0
 
 
 @dataclass(frozen=True)
@@ -333,7 +387,7 @@ async def test_coin_state(one_node: OneNode, self_hostname: str) -> None:
     coin_records: OrderedDict[bytes32, CoinRecord] = OrderedDict()
     for i in range(110000):
         coin_record = CoinRecord(
-            coin=Coin(bytes32(b"\0" * 32), ph1, i),
+            coin=Coin(bytes32(b"\0" * 32), bytes32(b"1" * 32), i),
             confirmed_block_index=uint32(i),
             spent_block_index=uint32(0),
             coinbase=False,
@@ -370,7 +424,7 @@ async def test_coin_state(one_node: OneNode, self_hostname: str) -> None:
 
 
 @pytest.mark.anyio
-async def test_transaction_added_update(one_node: OneNode, self_hostname: str) -> None:
+async def test_wallet_sync(one_node: OneNode, self_hostname: str) -> None:
     simulator, incoming_queue, peer = await connect_to_simulator(one_node, self_hostname)
     peer_id = peer.peer_node_id
 
