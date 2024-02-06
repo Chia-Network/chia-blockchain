@@ -260,7 +260,7 @@ class DataLayer:
     async def publish_pending_root(
         self,
         tree_id: bytes32,
-        fee: uint16,
+        fee: uint64,
     ) -> TransactionRecord:
         await self._update_confirmation_status(tree_id=tree_id)
 
