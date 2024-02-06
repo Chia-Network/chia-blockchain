@@ -7,6 +7,8 @@ hash along with its solution.
 
 from __future__ import annotations
 
+from typing import cast
+
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -25,4 +27,5 @@ def puzzle_for_inner_puzzle(inner_puzzle: Program) -> Program:
 
 
 def solution_for_inner_puzzle_and_inner_solution(inner_puzzle: Program, inner_puzzle_solution: Program) -> Program:
-    return Program.to([inner_puzzle, inner_puzzle_solution])
+    # TODO: Remove cast when we improve typing
+    return cast(Program, Program.to([inner_puzzle, inner_puzzle_solution]))
