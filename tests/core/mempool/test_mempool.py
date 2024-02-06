@@ -2714,7 +2714,8 @@ coins = make_test_coins()
         ),
     ],
 )
-def test_items_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> None:
+@pytest.mark.anyio
+async def test_items_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
 
     mempool_info = MempoolInfo(
@@ -2724,7 +2725,7 @@ def test_items_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> Non
     )
     mempool = Mempool(mempool_info, fee_estimator)
     for i in items:
-        mempool.add_to_pool(i)
+        await mempool.add_to_pool(i)
 
     ordered_items = list(mempool.items_by_feerate())
 
@@ -2767,7 +2768,8 @@ def item_cost(cost: int, fee_rate: float) -> MempoolItem:
         ([75, 15, 9], 10, [10, 75, 15]),
     ],
 )
-def test_full_mempool(items: List[int], add: int, expected: List[int]) -> None:
+@pytest.mark.anyio
+async def test_full_mempool(items: List[int], add: int, expected: List[int]) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
 
     mempool_info = MempoolInfo(
@@ -2779,12 +2781,12 @@ def test_full_mempool(items: List[int], add: int, expected: List[int]) -> None:
     invariant_check_mempool(mempool)
     fee_rate: float = 3.0
     for i in items:
-        mempool.add_to_pool(item_cost(i, fee_rate))
+        await mempool.add_to_pool(item_cost(i, fee_rate))
         fee_rate -= 0.1
         invariant_check_mempool(mempool)
 
     # now, add the item we're testing
-    mempool.add_to_pool(item_cost(add, 3.1))
+    await mempool.add_to_pool(item_cost(add, 3.1))
     invariant_check_mempool(mempool)
 
     ordered_items = list(mempool.items_by_feerate())
@@ -2814,7 +2816,10 @@ def test_full_mempool(items: List[int], add: int, expected: List[int]) -> None:
         ([10, 11, 12, 13, 50], [10, 11, 12, 13], False),
     ],
 )
-def test_limit_expiring_transactions(height: bool, items: List[int], expected: List[int], increase_fee: bool) -> None:
+@pytest.mark.anyio
+async def test_limit_expiring_transactions(
+    height: bool, items: List[int], expected: List[int], increase_fee: bool
+) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
 
     mempool_info = MempoolInfo(
@@ -2823,13 +2828,13 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
         CLVMCost(uint64(50)),
     )
     mempool = Mempool(mempool_info, fee_estimator)
-    mempool.new_tx_block(uint32(10), uint64(100000))
+    await mempool.new_tx_block(uint32(10), uint64(100000))
     invariant_check_mempool(mempool)
 
     # fill the mempool with regular transactions (without expiration)
     fee_rate: float = 3.0
     for i in range(1, 20):
-        mempool.add_to_pool(item_cost(i, fee_rate))
+        await mempool.add_to_pool(item_cost(i, fee_rate))
         fee_rate -= 0.1
         invariant_check_mempool(mempool)
 
@@ -2840,9 +2845,13 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
         amount = int(fee + 100)
         coin = Coin(rand_hash(), rand_hash(), amount)
         if height:
-            ret = mempool.add_to_pool(mk_item([coin], cost=cost, fee=int(cost * fee_rate), assert_before_height=15))
+            ret = await mempool.add_to_pool(
+                mk_item([coin], cost=cost, fee=int(cost * fee_rate), assert_before_height=15)
+            )
         else:
-            ret = mempool.add_to_pool(mk_item([coin], cost=cost, fee=int(cost * fee_rate), assert_before_seconds=10400))
+            ret = await mempool.add_to_pool(
+                mk_item([coin], cost=cost, fee=int(cost * fee_rate), assert_before_seconds=10400)
+            )
         invariant_check_mempool(mempool)
         if increase_fee:
             fee_rate += 0.1
@@ -2893,7 +2902,10 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
         ),
     ],
 )
-def test_get_items_by_coin_ids(items: List[MempoolItem], coin_ids: List[bytes32], expected: List[MempoolItem]) -> None:
+@pytest.mark.anyio
+async def test_get_items_by_coin_ids(
+    items: List[MempoolItem], coin_ids: List[bytes32], expected: List[MempoolItem]
+) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
     mempool_info = MempoolInfo(
         CLVMCost(uint64(11000000000 * 3)),
@@ -2902,7 +2914,7 @@ def test_get_items_by_coin_ids(items: List[MempoolItem], coin_ids: List[bytes32]
     )
     mempool = Mempool(mempool_info, fee_estimator)
     for i in items:
-        mempool.add_to_pool(i)
+        await mempool.add_to_pool(i)
         invariant_check_mempool(mempool)
     result = mempool.get_items_by_coin_ids(coin_ids)
     assert set(result) == set(expected)
@@ -2923,10 +2935,10 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
         sb = spend_bundle_from_conditions(conditions, coin)
         return sb
 
-    def agg_and_add_sb_returning_cost_info(mempool: Mempool, spend_bundles: List[SpendBundle]) -> uint64:
+    async def agg_and_add_sb_returning_cost_info(mempool: Mempool, spend_bundles: List[SpendBundle]) -> uint64:
         sb = SpendBundle.aggregate(spend_bundles)
         mi = mempool_item_from_spendbundle(sb)
-        mempool.add_to_pool(mi)
+        await mempool.add_to_pool(mi)
         invariant_check_mempool(mempool)
         saved_cost = run_for_cost(
             sb.coin_spends[0].puzzle_reveal, sb.coin_spends[0].solution, len(mi.additions), mi.cost
@@ -2947,13 +2959,13 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
     sb_A = make_test_spendbundle(coins[0])
     highest_fee = 58282830
     sb_high_rate = make_test_spendbundle(coins[1], fee=highest_fee)
-    agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_high_rate])
+    await agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_high_rate])
     invariant_check_mempool(mempool)
     # Create a ~2 FPC item that spends the eligible coin using the same solution A
     sb_low_rate = make_test_spendbundle(coins[2], fee=highest_fee // 5)
-    saved_cost_on_solution_A = agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
+    saved_cost_on_solution_A = await agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
     invariant_check_mempool(mempool)
-    result = mempool.create_bundle_from_mempool_items(always, {}, test_constants, uint32(0))
+    result = mempool.create_bundle_from_mempool_items(always, test_constants, uint32(0))
     assert result is not None
     agg, _ = result
     # Make sure both items would be processed
@@ -2965,14 +2977,14 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
         # We're picking this fee to get a ~3 FPC, and get picked after sb_A1
         # (which has ~10 FPC) but before sb_A2 (which has ~2 FPC)
         sb_mid_rate = make_test_spendbundle(coins[i], fee=38004852 - i)
-        saved_cost_on_solution_B = agg_and_add_sb_returning_cost_info(mempool, [sb_B, sb_mid_rate])
+        saved_cost_on_solution_B = await agg_and_add_sb_returning_cost_info(mempool, [sb_B, sb_mid_rate])
         invariant_check_mempool(mempool)
     # We'd save more cost if we went with solution B instead of A
     assert saved_cost_on_solution_B > saved_cost_on_solution_A
     # If we process everything now, the 3 x ~3 FPC items get skipped because
     # sb_A1 gets picked before them (~10 FPC), so from then on only sb_A2 (~2 FPC)
     # would get picked
-    result = mempool.create_bundle_from_mempool_items(always, {}, test_constants, uint32(0))
+    result = mempool.create_bundle_from_mempool_items(always, test_constants, uint32(0))
     assert result is not None
     agg, _ = result
     # The 3 items got skipped here

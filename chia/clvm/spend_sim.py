@@ -311,7 +311,9 @@ class SpendSim:
         self.blocks = new_block_list
         await self.coin_store.rollback_to_block(block_height)
         old_pool = self.mempool_manager.mempool
-        self.mempool_manager.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
+        self.mempool_manager.mempool = Mempool(
+            old_pool.mempool_info, old_pool.fee_estimator, self.coin_store.get_unspent_lineage_info_for_puzzle_hash
+        )
         self.block_height = block_height
         if new_br_list:
             self.timestamp = new_br_list[-1].timestamp

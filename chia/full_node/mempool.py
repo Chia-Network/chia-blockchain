@@ -4,7 +4,7 @@ import logging
 import sqlite3
 from datetime import datetime
 from enum import Enum
-from typing import Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Tuple
 
 from chia_rs import AugSchemeMPL, Coin, G2Element
 
@@ -59,6 +59,13 @@ class Mempool:
     # this separate dictionary
     _items: Dict[bytes32, InternalMempoolItem]
 
+    # Map of puzzle hash to unspent lineage info (and a refcount), used for singleton fast forward
+    _puzzle_hash_to_unspent_lineage_info: Dict[bytes32, Tuple[UnspentLineageInfo, int]]
+
+    get_unspent_lineage_info_for_puzzle_hash_from_db: Optional[
+        Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]]
+    ]
+
     # the most recent block height and timestamp that we know of
     _block_height: uint32
     _timestamp: uint64
@@ -66,9 +73,18 @@ class Mempool:
     _total_fee: int
     _total_cost: int
 
-    def __init__(self, mempool_info: MempoolInfo, fee_estimator: FeeEstimatorInterface):
+    def __init__(
+        self,
+        mempool_info: MempoolInfo,
+        fee_estimator: FeeEstimatorInterface,
+        get_unspent_lineage_info_for_puzzle_hash_from_db: Optional[
+            Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]]
+        ] = None,
+    ):
         self._db_conn = sqlite3.connect(":memory:")
         self._items = {}
+        self._puzzle_hash_to_unspent_lineage_info = {}
+        self.get_unspent_lineage_info_for_puzzle_hash_from_db = get_unspent_lineage_info_for_puzzle_hash_from_db
         self._block_height = uint32(0)
         self._timestamp = uint64(0)
         self._total_fee = 0
@@ -224,7 +240,7 @@ class Mempool:
             )
             return None
 
-    def new_tx_block(self, block_height: uint32, timestamp: uint64) -> None:
+    async def new_tx_block(self, block_height: uint32, timestamp: uint64) -> None:
         """
         Remove all items that became invalid because of this new height and
         timestamp. (we don't know about which coins were spent in this new block
@@ -237,11 +253,11 @@ class Mempool:
             )
             to_remove = [bytes32(row[0]) for row in cursor]
 
-        self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
+        await self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
         self._block_height = block_height
         self._timestamp = timestamp
 
-    def remove_from_pool(self, items: List[bytes32], reason: MempoolRemoveReason) -> None:
+    async def remove_from_pool(self, items: List[bytes32], reason: MempoolRemoveReason) -> None:
         """
         Removes an item from the mempool.
         """
@@ -262,8 +278,47 @@ class Mempool:
                         item = MempoolItemInfo(int(row[1]), int(row[2]), internal_item.height_added_to_mempool)
                         removed_items.append(item)
 
+        # This is a map of mempool item and puzzle hash to the number of
+        # references to reduce
+        ff_puzzle_hashes_to_reduction_count: Dict[bytes32, int] = {}
         for name in items:
+            # Update the fast forward unspent lineage info map
+            internal_item = self._items[name]
+            # Get all the fast forward puzzle hashes for this item
+            ff_puzzle_hashes_to_update = {
+                spend_data.coin_spend.coin.puzzle_hash
+                for spend_data in internal_item.bundle_coin_spends.values()
+                if spend_data.eligible_for_fast_forward
+            }
+            # Update the map of puzzle hash to the number of refs to reduce
+            for puzzle_hash in ff_puzzle_hashes_to_update:
+                ff_puzzle_hashes_to_reduction_count[puzzle_hash] = (
+                    ff_puzzle_hashes_to_reduction_count.setdefault(puzzle_hash, 0) + 1
+                )
+            # Remove the internal mempool item
             self._items.pop(name)
+        for puzzle_hash, count_to_reduce in ff_puzzle_hashes_to_reduction_count.items():
+            info_and_refcount = self.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
+            # If we don't have this in the map, there is nothing to do
+            if info_and_refcount is None:
+                continue
+            _, refcount = info_and_refcount
+            new_refcount = refcount - count_to_reduce
+            # If we still hold at least one reference, keep this and update it
+            if new_refcount >= 1:
+                if self.get_unspent_lineage_info_for_puzzle_hash_from_db is None:
+                    # We have this as None in tests that don't need it
+                    raise ValueError("We need get_unspent_lineage_info_for_puzzle_hash_from_db for this step")
+                new_unspent_lineage_info = await self.get_unspent_lineage_info_for_puzzle_hash_from_db(puzzle_hash)
+                if new_unspent_lineage_info is not None:
+                    self.set_unspent_lineage_info_for_puzzle_hash(
+                        puzzle_hash=puzzle_hash,
+                        unspent_lineage_info=new_unspent_lineage_info,
+                        ref_count=new_refcount,
+                    )
+            else:
+                # No item refers to it anymore, let's remove it
+                self.remove_from_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
 
         for batch in to_batches(items, SQLITE_MAX_VARIABLE_NUMBER):
             args = ",".join(["?"] * len(batch.entries))
@@ -288,7 +343,7 @@ class Mempool:
             for iteminfo in removed_items:
                 self.fee_estimator.remove_mempool_item(info, iteminfo)
 
-    def add_to_pool(self, item: MempoolItem) -> Optional[Err]:
+    async def add_to_pool(self, item: MempoolItem) -> Optional[Err]:
         """
         Adds an item to the mempool by kicking out transactions (if it doesn't fit), in order of increasing fee per cost
         """
@@ -334,7 +389,7 @@ class Mempool:
                         return Err.INVALID_FEE_LOW_FEE
                     to_remove.append(name)
 
-                self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
+                await self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
 
                 # if we don't find any entries, it's OK to add this entry
 
@@ -353,7 +408,7 @@ class Mempool:
                 )
                 to_remove = [bytes32(row[0]) for row in cursor]
 
-                self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL)
+                await self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL)
 
             # TODO: In the future, for the "fee_per_cost" field, opt for
             # "GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
@@ -393,12 +448,24 @@ class Mempool:
 
         return self._total_cost + cost > self.mempool_info.max_size_in_cost
 
+    def get_unspent_lineage_info_for_puzzle_hash(
+        self, puzzle_hash: bytes32
+    ) -> Optional[Tuple[UnspentLineageInfo, int]]:
+        return self._puzzle_hash_to_unspent_lineage_info.get(puzzle_hash)
+
+    def set_unspent_lineage_info_for_puzzle_hash(
+        self, puzzle_hash: bytes32, unspent_lineage_info: UnspentLineageInfo, ref_count: int
+    ) -> None:
+        self._puzzle_hash_to_unspent_lineage_info[puzzle_hash] = (unspent_lineage_info, ref_count)
+
+    def remove_from_unspent_lineage_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> None:
+        del self._puzzle_hash_to_unspent_lineage_info[puzzle_hash]
+
+    def reset_unspent_lineage_info_for_puzzle_hash(self) -> None:
+        self._puzzle_hash_to_unspent_lineage_info = {}
+
     def create_bundle_from_mempool_items(
-        self,
-        item_inclusion_filter: Callable[[bytes32], bool],
-        puzzle_hash_to_unspent_lineage_info: Dict[bytes32, Tuple[UnspentLineageInfo, int]],
-        constants: ConsensusConstants,
-        height: uint32,
+        self, item_inclusion_filter: Callable[[bytes32], bool], constants: ConsensusConstants, height: uint32
     ) -> Optional[Tuple[SpendBundle, List[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -445,7 +512,7 @@ class Mempool:
                 else:
                     eligible_coin_spends.process_fast_forward_spends(
                         mempool_item=item,
-                        puzzle_hash_to_unspent_lineage_info=puzzle_hash_to_unspent_lineage_info,
+                        puzzle_hash_to_unspent_lineage_info=self._puzzle_hash_to_unspent_lineage_info,
                         height=height,
                         constants=constants,
                     )

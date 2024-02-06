@@ -172,7 +172,6 @@ class MempoolManager:
     _worker_queue_size: int
     max_block_clvm_cost: uint64
     max_tx_clvm_cost: uint64
-    puzzle_hash_to_unspent_lineage_info: Dict[bytes32, Tuple[UnspentLineageInfo, int]]
 
     def __init__(
         self,
@@ -205,9 +204,6 @@ class MempoolManager:
         )
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
 
-        # Map of puzzle hash to unspent lineage info (and a refcount), used for singleton fast forward
-        self.puzzle_hash_to_unspent_lineage_info: Dict[bytes32, Tuple[UnspentLineageInfo, int]] = {}
-
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self._conflict_cache = ConflictTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
         self._pending_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
@@ -231,7 +227,7 @@ class MempoolManager:
             FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
             CLVMCost(uint64(self.max_block_clvm_cost)),
         )
-        self.mempool: Mempool = Mempool(mempool_info, self.fee_estimator)
+        self.mempool: Mempool = Mempool(mempool_info, self.fee_estimator, self.get_unspent_lineage_info_for_puzzle_hash)
 
     def shut_down(self) -> None:
         self.pool.shutdown(wait=True)
@@ -252,9 +248,7 @@ class MempoolManager:
                 return True
 
             item_inclusion_filter = always
-        return self.mempool.create_bundle_from_mempool_items(
-            item_inclusion_filter, self.puzzle_hash_to_unspent_lineage_info, self.constants, self.peak.height
-        )
+        return self.mempool.create_bundle_from_mempool_items(item_inclusion_filter, self.constants, self.peak.height)
 
     def get_filter(self) -> bytes:
         all_transactions: Set[bytes32] = set()
@@ -378,8 +372,8 @@ class MempoolManager:
         if err is None:
             # No error, immediately add to mempool, after removing conflicting TXs.
             assert item is not None
-            self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT)
-            err = self.mempool.add_to_pool(item)
+            await self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT)
+            err = await self.mempool.add_to_pool(item)
             if err is not None:
                 return item.cost, MempoolInclusionStatus.FAILED, err
             return item.cost, MempoolInclusionStatus.SUCCESS, None
@@ -612,17 +606,21 @@ class MempoolManager:
         # Check that each singleton fast forward has one and only one unspent
         # and update the puzzle hash to unspent lineage info map accordingly
         for puzzle_hash in fast_forward_puzzle_hashes:
-            info_and_refcount = self.puzzle_hash_to_unspent_lineage_info.get(puzzle_hash)
+            info_and_refcount = self.mempool.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
             if info_and_refcount is not None:
                 # Update the refcount
                 current_unspent_lineage_info, refcount = info_and_refcount
-                self.puzzle_hash_to_unspent_lineage_info[puzzle_hash] = (current_unspent_lineage_info, refcount + 1)
+                self.mempool.set_unspent_lineage_info_for_puzzle_hash(
+                    puzzle_hash=puzzle_hash, unspent_lineage_info=current_unspent_lineage_info, ref_count=refcount + 1
+                )
             else:
                 # Add a new item to the map
                 unspent_lineage_info = await self.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
                 if unspent_lineage_info is None:
                     return Err.DOUBLE_SPEND, None, []
-                self.puzzle_hash_to_unspent_lineage_info[puzzle_hash] = (unspent_lineage_info, 1)
+                self.mempool.set_unspent_lineage_info_for_puzzle_hash(
+                    puzzle_hash=puzzle_hash, unspent_lineage_info=unspent_lineage_info, ref_count=1
+                )
 
         duration = time.time() - start_time
 
@@ -706,7 +704,7 @@ class MempoolManager:
         self.fee_estimator.new_block_height(new_peak.height)
         included_items: List[MempoolItemInfo] = []
 
-        self.mempool.new_tx_block(new_peak.height, new_peak.timestamp)
+        await self.mempool.new_tx_block(new_peak.height, new_peak.timestamp)
 
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
@@ -718,51 +716,13 @@ class MempoolManager:
             # find the same transaction multiple times. We put them in a set
             # to deduplicate
             spendbundle_ids_to_remove: Set[bytes32] = set()
-            # This is a map of mempool item and puzzle hash to the number of
-            # references to reduce
-            ff_puzzle_hashes_to_reduction_count: Dict[bytes32, int] = {}
-            # Mempool items that we visited for puzzle hash refcount reduction
-            items_visited_in_ff_ph_refcount: Set[bytes32] = set()
             for spend in spent_coins:
                 items: List[MempoolItem] = self.mempool.get_items_by_coin_id(spend)
                 for item in items:
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
                     self.remove_seen(item.name)
                     spendbundle_ids_to_remove.add(item.name)
-                    # Don't alter the refcount reduction again
-                    if item.name in items_visited_in_ff_ph_refcount:
-                        continue
-                    # Get all the fast forward puzzle hashes for this item
-                    ff_puzzle_hashes_to_update = {
-                        spend_data.coin_spend.coin.puzzle_hash
-                        for spend_data in item.bundle_coin_spends.values()
-                        if spend_data.eligible_for_fast_forward
-                    }
-                    # Update the map of puzzle hash to the number of refs to reduce
-                    for puzzle_hash in ff_puzzle_hashes_to_update:
-                        refs_to_reduce = ff_puzzle_hashes_to_reduction_count.get(puzzle_hash)
-                        if refs_to_reduce is None:
-                            ff_puzzle_hashes_to_reduction_count[puzzle_hash] = 1
-                        else:
-                            ff_puzzle_hashes_to_reduction_count[puzzle_hash] = refs_to_reduce + 1
-                    # Mark this item as visited for this purpose
-                    items_visited_in_ff_ph_refcount.add(item.name)
-            for puzzle_hash, count_to_reduce in ff_puzzle_hashes_to_reduction_count.items():
-                info_and_refcount = self.puzzle_hash_to_unspent_lineage_info.get(puzzle_hash)
-                # If we don't have this in the map, there is nothing to do
-                if info_and_refcount is None:
-                    continue
-                _, refcount = info_and_refcount
-                new_refcount = refcount - count_to_reduce
-                # If we still hold at least one reference, keep this and update it
-                if new_refcount >= 1:
-                    new_unspent_lineage_info = await self.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
-                    if new_unspent_lineage_info is not None:
-                        self.puzzle_hash_to_unspent_lineage_info[puzzle_hash] = (new_unspent_lineage_info, new_refcount)
-                else:
-                    # No item refers to it anymore, let's remove it
-                    del self.puzzle_hash_to_unspent_lineage_info[puzzle_hash]
-            self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
+            await self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
         else:
             log.warning(
                 "updating the mempool using the slow-path. "
@@ -771,11 +731,13 @@ class MempoolManager:
                 f"coins: {'not set' if spent_coins is None else 'set'}"
             )
             old_pool = self.mempool
-            self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
+            self.mempool = Mempool(
+                old_pool.mempool_info, old_pool.fee_estimator, self.get_unspent_lineage_info_for_puzzle_hash
+            )
             self.seen_bundle_hashes = {}
 
             # Reset the singleton fast forward puzzle hash to unspent lineage info map
-            self.puzzle_hash_to_unspent_lineage_info = {}
+            self.mempool.reset_unspent_lineage_info_for_puzzle_hash()
 
             # in order to make this a bit quicker, we look-up all the spends in
             # a single query, rather than one at a time.

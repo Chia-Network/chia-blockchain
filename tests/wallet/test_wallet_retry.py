@@ -36,10 +36,10 @@ def assert_sb_not_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
     assert not node.full_node.mempool_manager.seen(sb.name())
 
 
-def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
+async def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
     mempool_item = node.full_node.mempool_manager.mempool.get_item_by_id(sb.name())
     assert mempool_item is not None
-    node.full_node.mempool_manager.mempool.remove_from_pool([mempool_item.name], MempoolRemoveReason.CONFLICT)
+    await node.full_node.mempool_manager.mempool.remove_from_pool([mempool_item.name], MempoolRemoveReason.CONFLICT)
     node.full_node.mempool_manager.remove_seen(sb.name())
 
 
@@ -75,7 +75,7 @@ async def test_wallet_tx_retry(
     await time_out_assert(wait_secs, sb_in_mempool)
 
     # Evict SpendBundle from peer
-    evict_from_pool(full_node_1, sb1)
+    await evict_from_pool(full_node_1, sb1)
     assert_sb_not_in_pool(full_node_1, sb1)
 
     # Wait some time so wallet will retry
