@@ -396,7 +396,7 @@ class Mempool:
     def create_bundle_from_mempool_items(
         self,
         item_inclusion_filter: Callable[[bytes32], bool],
-        puzzle_hash_to_unspent_lineage_info: Dict[bytes32, UnspentLineageInfo],
+        puzzle_hash_to_unspent_lineage_info: Dict[bytes32, Tuple[UnspentLineageInfo, int]],
         constants: ConsensusConstants,
         height: uint32,
     ) -> Optional[Tuple[SpendBundle, List[Coin]]]:

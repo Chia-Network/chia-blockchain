@@ -172,7 +172,7 @@ class MempoolManager:
     _worker_queue_size: int
     max_block_clvm_cost: uint64
     max_tx_clvm_cost: uint64
-    puzzle_hash_to_unspent_lineage_info: Dict[bytes32, UnspentLineageInfo]
+    puzzle_hash_to_unspent_lineage_info: Dict[bytes32, Tuple[UnspentLineageInfo, int]]
 
     def __init__(
         self,
@@ -205,8 +205,8 @@ class MempoolManager:
         )
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
 
-        # Map of puzzle hash to unspent lineage info, used for singleton fast forward
-        self.puzzle_hash_to_unspent_lineage_info: Dict[bytes32, UnspentLineageInfo] = {}
+        # Map of puzzle hash to unspent lineage info (and a refcount), used for singleton fast forward
+        self.puzzle_hash_to_unspent_lineage_info: Dict[bytes32, Tuple[UnspentLineageInfo, int]] = {}
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self._conflict_cache = ConflictTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
@@ -612,12 +612,17 @@ class MempoolManager:
         # Check that each singleton fast forward has one and only one unspent
         # and update the puzzle hash to unspent lineage info map accordingly
         for puzzle_hash in fast_forward_puzzle_hashes:
-            if puzzle_hash in self.puzzle_hash_to_unspent_lineage_info:
-                continue
-            unspent_lineage_info = await self.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
-            if unspent_lineage_info is None:
-                return Err.DOUBLE_SPEND, None, []
-            self.puzzle_hash_to_unspent_lineage_info[puzzle_hash] = unspent_lineage_info
+            info_and_refcount = self.puzzle_hash_to_unspent_lineage_info.get(puzzle_hash)
+            if info_and_refcount is not None:
+                # Update the refcount
+                current_unspent_lineage_info, refcount = info_and_refcount
+                self.puzzle_hash_to_unspent_lineage_info[puzzle_hash] = (current_unspent_lineage_info, refcount + 1)
+            else:
+                # Add a new item to the map
+                unspent_lineage_info = await self.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
+                if unspent_lineage_info is None:
+                    return Err.DOUBLE_SPEND, None, []
+                self.puzzle_hash_to_unspent_lineage_info[puzzle_hash] = (unspent_lineage_info, 1)
 
         duration = time.time() - start_time
 
@@ -713,29 +718,49 @@ class MempoolManager:
             # find the same transaction multiple times. We put them in a set
             # to deduplicate
             spendbundle_ids_to_remove: Set[bytes32] = set()
-            # Gather also the singleton fast forward puzzle hashes to update
-            # the unspent lineage info map for
-            ff_puzzle_hashes_to_update: Set[bytes32] = set()
+            # This is a map of mempool item and puzzle hash to the number of
+            # references to reduce
+            ff_puzzle_hashes_to_reduction_count: Dict[bytes32, int] = {}
+            # Mempool items that we visited for puzzle hash refcount reduction
+            items_visited_in_ff_ph_refcount: Set[bytes32] = set()
             for spend in spent_coins:
                 items: List[MempoolItem] = self.mempool.get_items_by_coin_id(spend)
                 for item in items:
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
                     self.remove_seen(item.name)
                     spendbundle_ids_to_remove.add(item.name)
+                    # Don't alter the refcount reduction again
+                    if item.name in items_visited_in_ff_ph_refcount:
+                        continue
+                    # Get all the fast forward puzzle hashes for this item
                     ff_puzzle_hashes_to_update = {
                         spend_data.coin_spend.coin.puzzle_hash
                         for spend_data in item.bundle_coin_spends.values()
                         if spend_data.eligible_for_fast_forward
                     }
-            for puzzle_hash in ff_puzzle_hashes_to_update:
-                if puzzle_hash not in self.puzzle_hash_to_unspent_lineage_info:
+                    # Update the map of puzzle hash to the number of refs to reduce
+                    for puzzle_hash in ff_puzzle_hashes_to_update:
+                        refs_to_reduce = ff_puzzle_hashes_to_reduction_count.get(puzzle_hash)
+                        if refs_to_reduce is None:
+                            ff_puzzle_hashes_to_reduction_count[puzzle_hash] = 1
+                        else:
+                            ff_puzzle_hashes_to_reduction_count[puzzle_hash] = refs_to_reduce + 1
+                    # Mark this item as visited for this purpose
+                    items_visited_in_ff_ph_refcount.add(item.name)
+            for puzzle_hash, count_to_reduce in ff_puzzle_hashes_to_reduction_count.items():
+                info_and_refcount = self.puzzle_hash_to_unspent_lineage_info.get(puzzle_hash)
+                # If we don't have this in the map, there is nothing to do
+                if info_and_refcount is None:
                     continue
-                unspent_lineage_info = await self.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
-                if unspent_lineage_info is not None:
-                    # Update the map
-                    self.puzzle_hash_to_unspent_lineage_info[puzzle_hash] = unspent_lineage_info
+                _, refcount = info_and_refcount
+                new_refcount = refcount - count_to_reduce
+                # If we still hold at least one reference, keep this and update it
+                if new_refcount >= 1:
+                    new_unspent_lineage_info = await self.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
+                    if new_unspent_lineage_info is not None:
+                        self.puzzle_hash_to_unspent_lineage_info[puzzle_hash] = (new_unspent_lineage_info, new_refcount)
                 else:
-                    # Remove the singleton fast forward puzzle hash from the map
+                    # No item refers to it anymore, let's remove it
                     del self.puzzle_hash_to_unspent_lineage_info[puzzle_hash]
             self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
         else:

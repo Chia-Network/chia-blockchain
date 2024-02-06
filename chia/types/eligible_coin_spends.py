@@ -237,7 +237,7 @@ class EligibleCoinSpends:
         self,
         *,
         mempool_item: InternalMempoolItem,
-        puzzle_hash_to_unspent_lineage_info: Dict[bytes32, UnspentLineageInfo],
+        puzzle_hash_to_unspent_lineage_info: Dict[bytes32, Tuple[UnspentLineageInfo, int]],
         height: uint32,
         constants: ConsensusConstants,
     ) -> None:
@@ -273,10 +273,11 @@ class EligibleCoinSpends:
             unspent_lineage_info = self.fast_forward_spends.get(spend_data.coin_spend.coin.puzzle_hash)
             if unspent_lineage_info is None:
                 # We didn't, so let's lookup the mempool's most recent version
-                unspent_lineage_info = puzzle_hash_to_unspent_lineage_info.get(spend_data.coin_spend.coin.puzzle_hash)
-                if unspent_lineage_info is None:
+                info_and_refcount = puzzle_hash_to_unspent_lineage_info.get(spend_data.coin_spend.coin.puzzle_hash)
+                if info_and_refcount is None:
                     raise ValueError("Cannot proceed with singleton spend fast forward.")
                 # See if we're the most recent version
+                unspent_lineage_info, _ = info_and_refcount
                 if unspent_lineage_info.coin_id == coin_id:
                     # We are, so we don't need to fast forward, we just need to
                     # set the next version from our additions to chain ff spends

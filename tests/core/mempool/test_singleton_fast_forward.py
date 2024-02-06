@@ -121,7 +121,7 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     eligible_coin_spends = EligibleCoinSpends()
     eligible_coin_spends.process_fast_forward_spends(
         mempool_item=internal_mempool_item,
-        puzzle_hash_to_unspent_lineage_info={IDENTITY_PUZZLE_HASH: test_unspent_lineage_info},
+        puzzle_hash_to_unspent_lineage_info={IDENTITY_PUZZLE_HASH: (test_unspent_lineage_info, 1)},
         height=TEST_HEIGHT,
         constants=DEFAULT_CONSTANTS,
     )
