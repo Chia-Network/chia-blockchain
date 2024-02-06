@@ -169,6 +169,8 @@ class MempoolManager:
     peak: Optional[BlockRecordProtocol]
     mempool: Mempool
     _worker_queue_size: int
+    max_block_clvm_cost: uint64
+    max_tx_clvm_cost: uint64
 
     def __init__(
         self,
@@ -177,6 +179,7 @@ class MempoolManager:
         multiprocessing_context: Optional[BaseContext] = None,
         *,
         single_threaded: bool = False,
+        max_tx_clvm_cost: Optional[uint64] = None,
     ):
         self.constants: ConsensusConstants = consensus_constants
 
@@ -190,8 +193,11 @@ class MempoolManager:
         # spends.
         self.nonzero_fee_minimum_fpc = 5
 
-        BLOCK_SIZE_LIMIT_FACTOR = 0.5
+        BLOCK_SIZE_LIMIT_FACTOR = 0.6
         self.max_block_clvm_cost = uint64(self.constants.MAX_BLOCK_COST_CLVM * BLOCK_SIZE_LIMIT_FACTOR)
+        self.max_tx_clvm_cost = (
+            max_tx_clvm_cost if max_tx_clvm_cost is not None else uint64(self.constants.MAX_BLOCK_COST_CLVM // 2)
+        )
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
@@ -306,7 +312,7 @@ class MempoolManager:
                 self.pool,
                 validate_clvm_and_signature,
                 new_spend_bytes,
-                self.max_block_clvm_cost,
+                self.max_tx_clvm_cost,
                 self.constants,
                 self.peak.height,
             )
@@ -513,7 +519,7 @@ class MempoolManager:
         if cost == 0:
             return Err.UNKNOWN, None, []
 
-        if cost > self.max_block_clvm_cost:
+        if cost > self.max_tx_clvm_cost:
             return Err.BLOCK_COST_EXCEEDS_MAX, None, []
 
         # this is not very likely to happen, but it's here to ensure SQLite
