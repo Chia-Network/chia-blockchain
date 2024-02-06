@@ -12,6 +12,7 @@ from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
+from chia.data_layer.data_layer_util import dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
@@ -273,6 +274,7 @@ class WalletRpcApi:
             "/dl_get_mirrors": self.dl_get_mirrors,
             "/dl_new_mirror": self.dl_new_mirror,
             "/dl_delete_mirror": self.dl_delete_mirror,
+            "/dl_verify_proof": self.dl_verify_proof,
             # Verified Credential
             "/vc_mint": self.vc_mint,
             "/vc_get": self.vc_get,
@@ -588,8 +590,6 @@ class WalletRpcApi:
         return {}
 
     async def push_transactions(self, request: Dict[str, Any]) -> EndpointResult:
-        wallet = self.service.wallet_state_manager.main_wallet
-
         txs: List[TransactionRecord] = []
         for transaction_hexstr_or_json in request["transactions"]:
             if isinstance(transaction_hexstr_or_json, str):
@@ -603,8 +603,7 @@ class WalletRpcApi:
                 txs.append(tx)
 
         async with self.service.wallet_state_manager.lock:
-            for tx in txs:
-                await wallet.push_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions(txs)
 
         return {}
 
@@ -820,8 +819,7 @@ class WalletRpcApi:
                         uint64(request.get("fee_for_cat", 0)),
                     )
                     if push:
-                        for tx in txs:
-                            await self.service.wallet_state_manager.add_pending_transaction(tx)
+                        await self.service.wallet_state_manager.add_pending_transactions(txs)
             elif mode == "existing":
                 # async with self.service.wallet_state_manager.lock:
                 dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
@@ -838,6 +836,9 @@ class WalletRpcApi:
                 "treasury_id": dao_wallet.dao_info.treasury_id,
                 "cat_wallet_id": dao_wallet.dao_info.cat_wallet_id,
                 "dao_cat_wallet_id": dao_wallet.dao_info.dao_cat_wallet_id,
+                "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs]
+                if mode == "new"
+                else [],
             }
         elif request["wallet_type"] == "nft_wallet":
             for wallet in self.service.wallet_state_manager.wallets.values():
@@ -915,7 +916,7 @@ class WalletRpcApi:
                             extra_conditions=extra_conditions,
                         )
                         if push:
-                            await self.service.wallet_state_manager.add_pending_transaction(tr)
+                            await self.service.wallet_state_manager.add_pending_transactions([tr])
                     except Exception as e:
                         raise ValueError(str(e))
                     return {
@@ -1147,7 +1148,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
             if push:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions([tx])
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         json_tx = tx.to_json_dict_convenience(self.service.config)
@@ -1242,8 +1243,7 @@ class WalletRpcApi:
             )
 
         if push:
-            for tx in tx_list:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions(tx_list, merge_spends=False)
 
         return {
             "success": True,
@@ -1499,7 +1499,7 @@ class WalletRpcApi:
             extra_conditions=extra_conditions,
         )
         if push:
-            await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions([tx])
 
         json_tx = tx.to_json_dict_convenience(self.service.config)
         return {"tx": json_tx, "transactions": [json_tx]}
@@ -1753,8 +1753,7 @@ class WalletRpcApi:
                     extra_conditions=extra_conditions,
                 )
                 if push:
-                    for tx in txs:
-                        await wallet.standard_wallet.push_transaction(tx)
+                    await self.service.wallet_state_manager.add_pending_transactions(txs)
         else:
             txs = await wallet.generate_signed_transaction(
                 amounts,
@@ -1767,8 +1766,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
             if push:
-                for tx in txs:
-                    await wallet.standard_wallet.push_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions(txs)
 
         # Return the first transaction, which is expected to be the CAT spend. If a fee is
         # included, it is currently ordered after the CAT spend.
@@ -2013,8 +2011,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
             if push:
-                for tx in tx_records:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions(tx_records)
 
         return {
             "trade_record": trade_record.to_json_dict_convenience(),
@@ -2089,8 +2086,7 @@ class WalletRpcApi:
                 [bytes32(trade_id)], tx_config, fee=fee, secure=secure, extra_conditions=extra_conditions
             )
             if push:
-                for tx in txs:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions(txs)
 
         return {"transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs]}
 
@@ -2147,6 +2143,7 @@ class WalletRpcApi:
                         list(records.keys()), tx_config, batch_fee, secure, records, extra_conditions=extra_conditions
                     )
                 )
+
             log.info(f"Cancelled offers {start} to {end} ...")
             # If fewer records were returned than requested, we're done
             if len(trades) < batch_size:
@@ -2155,8 +2152,7 @@ class WalletRpcApi:
             end += batch_size
 
         if push:
-            for tx in all_txs:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions(all_txs, merge_spends=False)
 
         return {"success": True, "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in all_txs]}
 
@@ -2201,8 +2197,7 @@ class WalletRpcApi:
                     tx_config, fee=uint64(request.get("fee", 0)), extra_conditions=extra_conditions
                 )
                 if push:
-                    for tx in txs:
-                        await self.service.wallet_state_manager.add_pending_transaction(tx)
+                    await self.service.wallet_state_manager.add_pending_transactions(txs)
                 return {
                     "success": True,
                     "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
@@ -2230,7 +2225,7 @@ class WalletRpcApi:
             ),
         )
         if push:
-            await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions([tx])
         return {
             "success": True,
             "spend_bundle": tx.spend_bundle,
@@ -2497,8 +2492,7 @@ class WalletRpcApi:
                     tx_config, uint64(request.get("fee", 0)), extra_conditions=extra_conditions
                 )
                 if push:
-                    for tx in txs:
-                        await self.service.wallet_state_manager.add_pending_transaction(tx)
+                    await self.service.wallet_state_manager.add_pending_transactions(txs)
                 return {
                     "wallet_id": wallet_id,
                     "success": True,
@@ -2582,7 +2576,7 @@ class WalletRpcApi:
                 )
             )[0]
             if request.get("push", True):
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions([tx])
         if spend_bundle:
             return {
                 "success": True,
@@ -2696,8 +2690,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
             if push:
-                for tx in txs:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions(txs)
 
         return {
             "success": True,
@@ -2743,7 +2736,7 @@ class WalletRpcApi:
             extra_conditions=extra_conditions,
         )
         if push:
-            await self.service.wallet_state_manager.add_pending_transaction(funding_tx)
+            await self.service.wallet_state_manager.add_pending_transactions([funding_tx])
         return {
             "success": True,
             "tx_id": funding_tx.name,
@@ -2801,8 +2794,7 @@ class WalletRpcApi:
             extra_conditions=extra_conditions,
         )
         if push:
-            for tx in txs:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions(txs)
         return {
             "success": True,
             "tx_id": txs[0].name,
@@ -2869,7 +2861,7 @@ class WalletRpcApi:
             extra_conditions=extra_conditions,
         )
         if push:
-            await self.service.wallet_state_manager.add_pending_transaction(exit_tx)
+            await self.service.wallet_state_manager.add_pending_transactions([exit_tx])
         return {
             "success": True,
             "tx_id": exit_tx.name,
@@ -2957,7 +2949,7 @@ class WalletRpcApi:
             extra_conditions=extra_conditions,
         )
         assert proposal_tx is not None
-        await self.service.wallet_state_manager.add_pending_transaction(proposal_tx)
+        await self.service.wallet_state_manager.add_pending_transactions([proposal_tx])
         assert isinstance(proposal_tx.removals, List)
         for coin in proposal_tx.removals:
             if coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
@@ -2998,7 +2990,7 @@ class WalletRpcApi:
         )
         assert vote_tx is not None
         if push:
-            await self.service.wallet_state_manager.add_pending_transaction(vote_tx)
+            await self.service.wallet_state_manager.add_pending_transactions([vote_tx])
         return {
             "success": True,
             "tx_id": vote_tx.name,
@@ -3042,7 +3034,7 @@ class WalletRpcApi:
         )
         assert tx is not None
         if push:
-            await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions([tx])
         return {
             "success": True,
             "tx_id": tx.name,
@@ -3069,7 +3061,7 @@ class WalletRpcApi:
         )
         assert tx is not None
         if push:
-            await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions([tx])
 
         return {
             "success": True,
@@ -3155,8 +3147,7 @@ class WalletRpcApi:
             if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
                 nft_id = encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config))
         if push:
-            for tx in txs:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions(txs)
         return {
             "wallet_id": wallet_id,
             "success": True,
@@ -3320,8 +3311,7 @@ class WalletRpcApi:
             refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
 
             if push:
-                for tx in refined_tx_list:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions(refined_tx_list)
             for id in coin_ids:
                 await nft_wallet.update_coin_status(id, True)
             for wallet_id in nft_dict.keys():
@@ -3414,8 +3404,7 @@ class WalletRpcApi:
             # Add all spend bundles to the first tx
             refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
             if push:
-                for tx in refined_tx_list:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions(refined_tx_list)
             for id in coin_ids:
                 await nft_wallet.update_coin_status(id, True)
             for wallet_id in nft_dict.keys():
@@ -3526,8 +3515,7 @@ class WalletRpcApi:
                 if tx.spend_bundle is not None:
                     spend_bundle = tx.spend_bundle
             if push:
-                for tx in txs:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions(txs)
             await nft_wallet.update_coin_status(nft_coin_info.coin.name(), True)
             return {
                 "wallet_id": wallet_id,
@@ -3631,8 +3619,7 @@ class WalletRpcApi:
             nft_coin_info, key, uri, tx_config, fee=fee, extra_conditions=extra_conditions
         )
         if push:
-            for tx in txs:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions(txs)
         return {
             "wallet_id": wallet_id,
             "success": True,
@@ -3947,7 +3934,7 @@ class WalletRpcApi:
                 )
                 signed_tx = tx.to_json_dict_convenience(self.service.config)
                 if push:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
+                    await self.service.wallet_state_manager.add_pending_transactions([tx])
 
                 return {"signed_txs": [signed_tx], "signed_tx": signed_tx, "transactions": [signed_tx]}
 
@@ -3985,8 +3972,7 @@ class WalletRpcApi:
                 )
                 signed_txs = [tx.to_json_dict_convenience(self.service.config) for tx in txs]
                 if push:
-                    for tx in txs:
-                        await self.service.wallet_state_manager.add_pending_transaction(tx)
+                    await self.service.wallet_state_manager.add_pending_transactions(txs)
 
                 return {"signed_txs": signed_txs, "signed_tx": signed_txs[0], "transactions": signed_txs}
 
@@ -4032,9 +4018,10 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             total_fee, tx, fee_tx = await wallet.join_pool(new_target_state, fee, tx_config)
             if push:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+                txs = [tx]
                 if fee_tx is not None:
-                    await self.service.wallet_state_manager.add_pending_transaction(fee_tx)
+                    txs.append(fee_tx)
+                await self.service.wallet_state_manager.add_pending_transactions(txs)
             return {
                 "total_fee": total_fee,
                 "transaction": tx,
@@ -4067,9 +4054,10 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             total_fee, tx, fee_tx = await wallet.self_pool(fee, tx_config)
             if push:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+                txs = [tx]
                 if fee_tx is not None:
-                    await self.service.wallet_state_manager.add_pending_transaction(fee_tx)
+                    txs.append(fee_tx)
+                await self.service.wallet_state_manager.add_pending_transactions(txs)
             return {
                 "total_fee": total_fee,
                 "transaction": tx,
@@ -4102,9 +4090,10 @@ class WalletRpcApi:
             transaction, fee_tx = await wallet.claim_pool_rewards(fee, max_spends_in_tx, tx_config)
             state: PoolWalletInfo = await wallet.get_current_state()
             if push:
-                await self.service.wallet_state_manager.add_pending_transaction(transaction)
+                txs = [transaction]
                 if fee_tx is not None:
-                    await self.service.wallet_state_manager.add_pending_transaction(fee_tx)
+                    txs.append(fee_tx)
+                await self.service.wallet_state_manager.add_pending_transactions(txs)
             return {
                 "state": state.to_json_dict(),
                 "transaction": transaction,
@@ -4157,8 +4146,7 @@ class WalletRpcApi:
                     extra_conditions=extra_conditions,
                 )
                 if push:
-                    await self.service.wallet_state_manager.add_pending_transaction(dl_tx)
-                    await self.service.wallet_state_manager.add_pending_transaction(std_tx)
+                    await self.service.wallet_state_manager.add_pending_transactions([dl_tx, std_tx])
         except ValueError as e:
             log.error(f"Error while generating new reporter {e}")
             return {"success": False, "error": str(e)}
@@ -4249,8 +4237,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
             if push:
-                for record in records:
-                    await self.service.wallet_state_manager.add_pending_transaction(record)
+                records = await self.service.wallet_state_manager.add_pending_transactions(records)
             return {
                 "tx_record": records[0].to_json_dict_convenience(self.service.config),
                 "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in records],
@@ -4290,8 +4277,7 @@ class WalletRpcApi:
                     modified_txs.append(dataclasses.replace(tx, spend_bundle=None))
             modified_txs[0] = dataclasses.replace(modified_txs[0], spend_bundle=aggregate_spend)
             if push:
-                for tx in modified_txs:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions(modified_txs)
             return {
                 "tx_records": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs],
                 "transactions": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs],
@@ -4362,8 +4348,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
             if push:
-                for tx in txs:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions(txs)
 
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
@@ -4392,12 +4377,24 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
             if push:
-                for tx in txs:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
+                await self.service.wallet_state_manager.add_pending_transactions(txs)
 
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
+
+    async def dl_verify_proof(
+        self,
+        request: Dict[str, Any],
+    ) -> EndpointResult:
+        """Verify a proof of inclusion for a DL singleton"""
+        res = await dl_verify_proof(
+            request,
+            peer=self.service.get_full_node_peer(),
+            wallet_node=self.service.wallet_state_manager.wallet_node,
+        )
+
+        return res
 
     ##########################################################################################
     # Verified Credential
@@ -4437,8 +4434,7 @@ class WalletRpcApi:
             did_id, tx_config, puzhash, parsed_request.fee, extra_conditions=extra_conditions
         )
         if push:
-            for tx in tx_list:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions(tx_list)
         return {
             "vc_record": vc_record.to_json_dict(),
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in tx_list],
@@ -4530,8 +4526,7 @@ class WalletRpcApi:
             extra_conditions=extra_conditions,
         )
         if push:
-            for tx in txs:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions(txs)
 
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
@@ -4601,8 +4596,7 @@ class WalletRpcApi:
             extra_conditions=extra_conditions,
         )
         if push:
-            for tx in txs:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions(txs)
 
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
@@ -4642,8 +4636,7 @@ class WalletRpcApi:
             extra_conditions=extra_conditions,
         )
         if push:
-            for tx in txs:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await self.service.wallet_state_manager.add_pending_transactions(txs)
 
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],

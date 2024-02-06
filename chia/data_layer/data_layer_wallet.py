@@ -1018,8 +1018,7 @@ class DataLayerWallet:
                                     fee=fee,
                                 )
                             )
-                for tx in all_txs:
-                    await self.wallet_state_manager.add_pending_transaction(tx)
+                await self.wallet_state_manager.add_pending_transactions(all_txs)
             except Exception as e:
                 self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
                 # Something went wrong so let's delete anything pending that was created

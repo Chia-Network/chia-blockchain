@@ -10,22 +10,30 @@ from chia.data_layer.data_layer_util import (
     CancelOfferResponse,
     ClearPendingRootsRequest,
     ClearPendingRootsResponse,
+    DLProof,
+    GetProofRequest,
+    GetProofResponse,
+    HashOnlyProof,
     MakeOfferRequest,
     MakeOfferResponse,
+    ProofLayer,
     Side,
+    StoreProofsHashes,
     Subscription,
     TakeOfferRequest,
     TakeOfferResponse,
     VerifyOfferResponse,
+    VerifyProofResponse,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
 from chia.rpc.data_layer_rpc_util import marshal
 from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.util import marshal as streamable_marshal
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
-from chia.util.ints import uint64
+from chia.util.ints import uint8, uint64
 from chia.util.streamable import recurse_jsonify
 from chia.util.ws_message import WsRpcMessage
 from chia.wallet.trading.offer import Offer as TradingOffer
@@ -104,6 +112,8 @@ class DataLayerRpcApi:
             "/get_sync_status": self.get_sync_status,
             "/check_plugins": self.check_plugins,
             "/clear_pending_roots": self.clear_pending_roots,
+            "/get_proof": self.get_proof,
+            "/verify_proof": self.verify_proof,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
@@ -458,3 +468,44 @@ class DataLayerRpcApi:
         root = await self.service.data_store.clear_pending_roots(tree_id=request.store_id)
 
         return ClearPendingRootsResponse(success=root is not None, root=root)
+
+    @streamable_marshal
+    async def get_proof(self, request: GetProofRequest) -> GetProofResponse:
+        root = await self.service.get_root(store_id=request.store_id)
+        if root is None:
+            raise ValueError("no root")
+
+        all_proofs: List[HashOnlyProof] = []
+        for key in request.keys:
+            key_value = await self.service.get_value(store_id=request.store_id, key=key)
+            pi = await self.service.data_store.get_proof_of_inclusion_by_key(tree_id=request.store_id, key=key)
+
+            proof = HashOnlyProof.from_key_value(
+                key=key,
+                value=key_value,
+                node_hash=pi.node_hash,
+                layers=[
+                    ProofLayer(
+                        other_hash_side=uint8(layer.other_hash_side),
+                        other_hash=layer.other_hash,
+                        combined_hash=layer.combined_hash,
+                    )
+                    for layer in pi.layers
+                ],
+            )
+            all_proofs.append(proof)
+
+        store_proof = StoreProofsHashes(store_id=request.store_id, proofs=all_proofs)
+        return GetProofResponse(
+            proof=DLProof(
+                store_proofs=store_proof,
+                coin_id=root.coin_id,
+                inner_puzzle_hash=root.inner_puzzle_hash,
+            ),
+            success=True,
+        )
+
+    @streamable_marshal
+    async def verify_proof(self, request: DLProof) -> VerifyProofResponse:
+        response = await self.service.wallet_rpc.dl_verify_proof(request)
+        return response
