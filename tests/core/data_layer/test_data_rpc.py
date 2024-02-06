@@ -21,7 +21,15 @@ from chia.cmds.data_funcs import clear_pending_roots, get_proof_cmd, verify_proo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
-from chia.data_layer.data_layer_util import HashOnlyProof, OfferStore, ProofLayer, Status, StoreProofs, key_hash, leaf_hash
+from chia.data_layer.data_layer_util import (
+    HashOnlyProof,
+    OfferStore,
+    ProofLayer,
+    Status,
+    StoreProofs,
+    key_hash,
+    leaf_hash,
+)
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
@@ -2643,7 +2651,7 @@ async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: ran
 
     root_changed = await offer_setup.taker.api.verify_proof(request=proof["proof"])
     assert root_changed == {**verify, "current_root": False}
-    
+
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
