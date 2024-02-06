@@ -2419,6 +2419,8 @@ async def test_unpublished_batch_update(
             res = await data_rpc_api.batch_update(
                 {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
             )
+        with pytest.raises(Exception, match="Pending root is already published"):
+            res = await data_rpc_api.publish_pending_root({"id": store_id.hex()})
 
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
 
