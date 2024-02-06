@@ -2397,8 +2397,29 @@ async def test_unpublished_batch_update(
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         to_insert.append((key, value))
 
-        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        res = await data_rpc_api.batch_update(
+            {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
+        )
+        assert res == {}
+
+        pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+        assert pending_root is not None
+        assert pending_root.status == Status.PENDING_BATCH
+
+        res = await data_rpc_api.publish_pending_root({"id": store_id.hex()})
+        pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+        assert pending_root is not None
+        assert pending_root.status == Status.PENDING
         update_tx_rec1 = res["tx_id"]
+
+        key = b"g"
+        value = b"\x00\x07"
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        with pytest.raises(Exception, match="Already have a pending root waiting for confirmation"):
+            res = await data_rpc_api.batch_update(
+                {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
+            )
+
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
 
         keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})

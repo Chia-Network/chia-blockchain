@@ -257,6 +257,22 @@ class DataLayer:
         else:
             return None
 
+    async def publish_pending_root(
+        self,
+        tree_id: bytes32,
+        fee: uint16,
+    ) -> TransactionRecord:
+        await self._update_confirmation_status(tree_id=tree_id)
+
+        pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
+        if pending_root is None:
+            raise Exception("Latest root is already confirmed.")
+        if pending_root.status == Status.PENDING:
+            raise Exception("Pending root is already published.")
+
+        await self.data_store.change_root_status(pending_root, Status.PENDING)
+        return await self.publish_update(tree_id, fee)
+
     async def batch_insert(
         self,
         tree_id: bytes32,

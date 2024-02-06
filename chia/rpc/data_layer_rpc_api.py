@@ -78,6 +78,7 @@ class DataLayerRpcApi:
             "/create_data_store": self.create_data_store,
             "/get_owned_stores": self.get_owned_stores,
             "/batch_update": self.batch_update,
+            "/publish_pending_root": self.publish_pending_root,
             "/get_value": self.get_value,
             "/get_keys": self.get_keys,
             "/get_keys_values": self.get_keys_values,
@@ -204,6 +205,12 @@ class DataLayerRpcApi:
             if transaction_record is not None:
                 raise Exception("Transaction published on chain, but publish_on_chain set to False")
             return {}
+
+    async def publish_pending_root(self, request: Dict[str, Any]) -> EndpointResult:
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        fee = get_fee(self.service.config, request)
+        transaction_record = await self.service.publish_pending_root(store_id, uint64(fee))
+        return {"tx_id": transaction_record.name}
 
     async def insert(self, request: Dict[str, Any]) -> EndpointResult:
         """

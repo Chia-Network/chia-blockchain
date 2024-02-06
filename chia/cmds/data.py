@@ -169,6 +169,29 @@ def update_data_store(
     )
 
 
+@data_cmd.command("publish_pending_root", help="Publish on chain a locally stored batch")
+@create_data_store_id_option()
+@create_rpc_port_option()
+@create_fee_option()
+@options.create_fingerprint()
+def publish_pending_root(
+    id: str,
+    data_rpc_port: int,
+    fee: str,
+    fingerprint: Optional[int],
+) -> None:
+    from chia.cmds.data_funcs import publish_pending_root_cmd
+
+    run(
+        update_data_store_cmd(
+            rpc_port=data_rpc_port,
+            store_id=id,
+            fee=fee,
+            fingerprint=fingerprint,
+        )
+    )
+
+
 @data_cmd.command("get_keys", help="Get all keys for a given store")
 @create_data_store_id_option()
 @click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)

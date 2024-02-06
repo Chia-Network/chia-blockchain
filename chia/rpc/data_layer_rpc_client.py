@@ -40,6 +40,10 @@ class DataLayerRpcClient(RpcClient):
         )
         return response
 
+    async def publish_pending_root(self, store_id: bytes32, fee: Optional[uint64]) -> Dict[str, Any]:
+        response = await self.fetch("publish_pending_root", {"id": store_id.hex(), "fee": fee})
+        return response
+
     async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> Dict[str, Any]:
         request: Dict[str, Any] = {"id": store_id.hex()}
         if root_hash is not None:

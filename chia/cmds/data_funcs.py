@@ -84,6 +84,22 @@ async def update_data_store_cmd(
         print(json.dumps(res, indent=4, sort_keys=True))
 
 
+async def publish_pending_root(
+    rpc_port: Optional[int],
+    store_id: str,
+    fee: Optional[str],
+    fingerprint: Optional[int],
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.update_data_store(
+            store_id=store_id_bytes,
+            fee=final_fee,
+        )
+        print(json.dumps(res, indent=4, sort_keys=True))
+
+
 async def get_keys_cmd(
     rpc_port: Optional[int],
     store_id: str,
