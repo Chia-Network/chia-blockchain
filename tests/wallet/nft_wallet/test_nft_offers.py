@@ -135,7 +135,7 @@ async def test_nft_offer_with_fee(
         await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
     ).index
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_nft_for_xch, tx_config, driver_dict, fee=maker_fee
     )
     assert success is True
@@ -207,7 +207,7 @@ async def test_nft_offer_with_fee(
     maker_fee = uint64(10)
     offer_xch_for_nft = {wallet_maker.id(): -xch_offered, nft_to_buy_asset_id: 1}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_xch_for_nft, tx_config, driver_dict_to_buy, fee=maker_fee
     )
     assert success is True
@@ -325,7 +325,7 @@ async def test_nft_offer_cancellations(
     maker_fee = uint64(10)
     offer_nft_for_xch = {wallet_maker.id(): xch_request, nft_asset_id: -1}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_nft_for_xch, DEFAULT_TX_CONFIG, driver_dict, fee=maker_fee
     )
     assert success is True
@@ -469,7 +469,7 @@ async def test_nft_offer_with_metadata_update(
     maker_fee = uint64(10)
     offer_nft_for_xch = {wallet_maker.id(): xch_request, nft_asset_id: -1}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_nft_for_xch, DEFAULT_TX_CONFIG, driver_dict, fee=maker_fee
     )
     assert success is True
@@ -585,7 +585,7 @@ async def test_nft_offer_nft_for_cat(
     # Create two new CATs and wallets for maker and taker
     cats_to_mint = 10000
     async with wallet_node_0.wallet_state_manager.lock:
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
             wallet_node_0.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -597,7 +597,7 @@ async def test_nft_offer_nft_for_cat(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
     async with wallet_node_1.wallet_state_manager.lock:
-        cat_wallet_taker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_taker, _ = await CATWallet.create_new_cat_wallet(
             wallet_node_1.wallet_state_manager,
             wallet_taker,
             {"identifier": "genesis_by_id"},
@@ -644,7 +644,7 @@ async def test_nft_offer_nft_for_cat(
         await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
     ).index
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_nft_for_cat, tx_config, driver_dict, fee=maker_fee
     )
     assert success is True
@@ -728,7 +728,7 @@ async def test_nft_offer_nft_for_cat(
         cat_wallet_maker.id(): -maker_cat_amount,
     }
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_multi_cats_for_nft, tx_config, driver_dict_to_buy, fee=maker_fee
     )
     assert success is True
@@ -878,7 +878,7 @@ async def test_nft_offer_nft_for_nft(
     maker_fee = uint64(10)
     offer_nft_for_nft = {nft_to_take_asset_id: 1, nft_to_offer_asset_id: -1}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_nft_for_nft, DEFAULT_TX_CONFIG, driver_dict, fee=maker_fee
     )
     assert success is True
@@ -994,7 +994,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     # Create two new CATs and wallets for maker and taker
     cats_to_mint = 10000
     async with wallet_node_0.wallet_state_manager.lock:
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
             wallet_node_0.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -1006,7 +1006,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
     async with wallet_node_1.wallet_state_manager.lock:
-        cat_wallet_taker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_taker, _ = await CATWallet.create_new_cat_wallet(
             wallet_node_1.wallet_state_manager,
             wallet_taker,
             {"identifier": "genesis_by_id"},
@@ -1059,7 +1059,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
         await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
     ).index
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_nft_for_cat, tx_config, driver_dict, fee=maker_fee
     )
     assert success is True
@@ -1150,7 +1150,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
         cat_wallet_maker.id(): -maker_cat_amount,
     }
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_multi_cats_for_nft, tx_config, driver_dict_to_buy, fee=maker_fee
     )
     assert success is True
