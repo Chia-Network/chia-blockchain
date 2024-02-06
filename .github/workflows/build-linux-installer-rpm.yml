@@ -162,7 +162,7 @@ jobs:
         rm -rf ./chia-blockchain-gui
 
     - name: Cache GUI
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-gui
       with:
         path: ./chia-blockchain-gui

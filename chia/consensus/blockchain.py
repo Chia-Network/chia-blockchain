@@ -4,7 +4,6 @@ import asyncio
 import dataclasses
 import enum
 import logging
-import os
 import time
 import traceback
 from concurrent.futures import Executor
@@ -51,6 +50,7 @@ from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.util.misc import available_logical_cores
 from chia.util.priority_mutex import PriorityMutex
 from chia.util.setproctitle import getproctitle, setproctitle
 
@@ -141,10 +141,7 @@ class Blockchain(BlockchainInterface):
         if single_threaded:
             self.pool = InlineExecutor()
         else:
-            cpu_count = os.cpu_count()
-            assert cpu_count is not None
-            if cpu_count > 61:
-                cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
+            cpu_count = available_logical_cores()
             num_workers = max(cpu_count - reserved_cores, 1)
             self.pool = ProcessPoolExecutor(
                 max_workers=num_workers,

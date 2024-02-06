@@ -10,8 +10,10 @@ from chia.protocols import full_node_protocol
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
+from chia.types.peer_info import PeerInfo
 from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint8, uint32
+from chia.util.misc import to_batches
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from tests.conftest import ConsensusMode
@@ -26,8 +28,8 @@ async def test_wallet_blockchain(
 ) -> None:
     [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
-    for block in default_1000_blocks[:600]:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(default_1000_blocks[:600], 64):
+        await full_node_api.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     resp = await full_node_api.request_proof_of_weight(
         full_node_protocol.RequestProofOfWeight(

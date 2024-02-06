@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
-from typing import List, Optional, Set
+from dataclasses import dataclass
+from typing import Awaitable, Callable, List, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -12,29 +13,40 @@ from colorlog import getLogger
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.consensus.constants import ConsensusConstants
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
-from chia.protocols.wallet_protocol import RequestAdditions, RespondAdditions, RespondBlockHeaders, SendTransaction
+from chia.protocols.wallet_protocol import (
+    CoinState,
+    RequestAdditions,
+    RespondAdditions,
+    RespondBlockHeaders,
+    SendTransaction,
+)
 from chia.server.outbound_message import Message, make_msg
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64, uint128
+from chia.util.misc import to_batches
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
-from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from tests.util.misc import wallet_height_at_least
+from tests.util.setup_nodes import OldSimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
 
@@ -53,34 +65,35 @@ log = getLogger(__name__)
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def test_request_block_headers(simulator_and_wallet, default_1000_blocks):
+async def test_request_block_headers(
+    simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock]
+) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
     [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
     wallet = wallet_node.wallet_state_manager.main_wallet
     ph = await wallet.get_new_puzzlehash()
-    for block in default_1000_blocks[:100]:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks[:100], 64):
+        await full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(10), uint32(15), False))
+    assert msg is not None
     assert msg.type == ProtocolMessageTypes.respond_block_headers.value
     res_block_headers = RespondBlockHeaders.from_bytes(msg.data)
     bh = res_block_headers.header_blocks
     assert len(bh) == 6
-    assert [x.reward_chain_block.height for x in default_1000_blocks[10:16]] == [
-        x.reward_chain_block.height for x in bh
-    ]
-
-    assert [x.foliage for x in default_1000_blocks[10:16]] == [x.foliage for x in bh]
-
+    assert [x.reward_chain_block.height for x in default_400_blocks[10:16]] == [x.reward_chain_block.height for x in bh]
+    assert [x.foliage for x in default_400_blocks[10:16]] == [x.foliage for x in bh]
     assert [x.transactions_filter for x in bh] == [b"\x00"] * 6
 
     num_blocks = 20
-    new_blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks, pool_reward_puzzle_hash=ph)
-    for i in range(0, len(new_blocks)):
-        await full_node_api.full_node.add_block(new_blocks[i])
+    new_blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks, pool_reward_puzzle_hash=ph)
+    for block_batch in to_batches(new_blocks, 64):
+        await full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(110), uint32(115), True))
+    assert msg is not None
     res_block_headers = RespondBlockHeaders.from_bytes(msg.data)
     bh = res_block_headers.header_blocks
     assert len(bh) == 6
@@ -88,61 +101,65 @@ async def test_request_block_headers(simulator_and_wallet, default_1000_blocks):
 
 # @pytest.mark.parametrize(
 #     "test_case",
-#     [(1000000, 10000010, False, ProtocolMessageTypes.reject_block_headers)],
+#     [(1_000_000, 10_000_010, False, ProtocolMessageTypes.reject_block_headers)],
 #     [(80, 99, False, ProtocolMessageTypes.respond_block_headers)],
 #     [(10, 8, False, None)],
 # )
 @pytest.mark.anyio
-async def test_request_block_headers_rejected(simulator_and_wallet, default_1000_blocks):
+async def test_request_block_headers_rejected(
+    simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock]
+) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
-    [full_node_api], _, bt = simulator_and_wallet
+    [full_node_api], _, _ = simulator_and_wallet
 
     # start_height, end_height, return_filter, expected_res = test_case
 
     msg = await full_node_api.request_block_headers(
-        wallet_protocol.RequestBlockHeaders(uint32(1000000), uint32(1000010), False)
+        wallet_protocol.RequestBlockHeaders(uint32(1_000_000), uint32(1_000_010), False)
     )
+    assert msg is not None
     assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
-    for block in default_1000_blocks[:150]:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(default_400_blocks[:150], 64):
+        await full_node_api.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(80), uint32(99), False))
+    assert msg is not None
     assert msg.type == ProtocolMessageTypes.respond_block_headers.value
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(10), uint32(8), False))
+    assert msg is not None
     assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(10), uint32(8), True))
+    assert msg is not None
     assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
     # test for 128 blocks to fetch at once limit
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(10), uint32(140), True))
+    assert msg is not None
     assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(90), uint32(160), False))
+    assert msg is not None
     assert msg.type == ProtocolMessageTypes.reject_block_headers.value
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(90), uint32(160), True))
+    assert msg is not None
     assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
 
 @pytest.mark.parametrize(
     "two_wallet_nodes",
-    [
-        dict(
-            disable_capabilities=[Capability.BLOCK_HEADERS],
-        ),
-        dict(
-            disable_capabilities=[Capability.BASE],
-        ),
-    ],
+    [dict(disable_capabilities=[Capability.BLOCK_HEADERS]), dict(disable_capabilities=[Capability.BASE])],
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def test_basic_sync_wallet(two_wallet_nodes, default_400_blocks, self_hostname):
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+async def test_basic_sync_wallet(
+    two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
+) -> None:
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -150,8 +167,9 @@ async def test_basic_sync_wallet(two_wallet_nodes, default_400_blocks, self_host
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
 
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
@@ -163,8 +181,8 @@ async def test_basic_sync_wallet(two_wallet_nodes, default_400_blocks, self_host
     num_blocks = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks - 1, block_list_input=default_400_blocks[:-5])
     blocks_reorg = bt.get_consecutive_blocks(1, blocks_reorg, guarantee_transaction_block=True, current_time=True)
-    for i in range(1, len(blocks_reorg)):
-        await full_node_api.full_node.add_block(blocks_reorg[i])
+    for block_batch in to_batches(blocks_reorg[1:], 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
@@ -180,23 +198,21 @@ async def test_basic_sync_wallet(two_wallet_nodes, default_400_blocks, self_host
 
 @pytest.mark.parametrize(
     "two_wallet_nodes",
-    [
-        dict(
-            disable_capabilities=[Capability.BLOCK_HEADERS],
-        ),
-        dict(
-            disable_capabilities=[Capability.BASE],
-        ),
-    ],
+    [dict(disable_capabilities=[Capability.BLOCK_HEADERS]), dict(disable_capabilities=[Capability.BASE])],
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def test_almost_recent(two_wallet_nodes, default_400_blocks, self_hostname, blockchain_constants):
+async def test_almost_recent(
+    two_wallet_nodes: OldSimulatorsAndWallets,
+    default_400_blocks: List[FullBlock],
+    self_hostname: str,
+    blockchain_constants: ConsensusConstants,
+) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -205,8 +221,9 @@ async def test_almost_recent(two_wallet_nodes, default_400_blocks, self_hostname
     wallets[1][0].config["trusted_peers"] = {}
 
     base_num_blocks = 400
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
     all_blocks = default_400_blocks
     both_phs = []
     for wallet_node, wallet_server in wallets:
@@ -217,13 +234,13 @@ async def test_almost_recent(two_wallet_nodes, default_400_blocks, self_hostname
         # Tests a reorg with the wallet
         ph = both_phs[i % 2]
         all_blocks = bt.get_consecutive_blocks(1, block_list_input=all_blocks, pool_reward_puzzle_hash=ph)
-        await full_node_api.full_node.add_block(all_blocks[-1])
+        await full_node.add_block(all_blocks[-1])
 
     new_blocks = bt.get_consecutive_blocks(
         blockchain_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
     )
-    for i in range(base_num_blocks + 20, len(new_blocks)):
-        await full_node_api.full_node.add_block(new_blocks[i])
+    for block_batch in to_batches(new_blocks[base_num_blocks + 20 :], 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -232,7 +249,9 @@ async def test_almost_recent(two_wallet_nodes, default_400_blocks, self_hostname
 
 
 @pytest.mark.anyio
-async def test_backtrack_sync_wallet(two_wallet_nodes, default_400_blocks, self_hostname):
+async def test_backtrack_sync_wallet(
+    two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.full_node.server
@@ -255,10 +274,12 @@ async def test_backtrack_sync_wallet(two_wallet_nodes, default_400_blocks, self_
 
 # Tests a reorg with the wallet
 @pytest.mark.anyio
-async def test_short_batch_sync_wallet(two_wallet_nodes, default_400_blocks, self_hostname):
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+async def test_short_batch_sync_wallet(
+    two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
+) -> None:
+    [full_node_api], wallets, _ = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -266,8 +287,8 @@ async def test_short_batch_sync_wallet(two_wallet_nodes, default_400_blocks, sel
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
 
-    for block in default_400_blocks[:200]:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(default_400_blocks[:200], 64):
+        await full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     for wallet_node, wallet_server in wallets:
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
@@ -278,10 +299,15 @@ async def test_short_batch_sync_wallet(two_wallet_nodes, default_400_blocks, sel
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def test_long_sync_wallet(two_wallet_nodes, default_1000_blocks, default_400_blocks, self_hostname):
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+async def test_long_sync_wallet(
+    two_wallet_nodes: OldSimulatorsAndWallets,
+    default_1000_blocks: List[FullBlock],
+    default_400_blocks: List[FullBlock],
+    self_hostname: str,
+) -> None:
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -289,8 +315,9 @@ async def test_long_sync_wallet(two_wallet_nodes, default_1000_blocks, default_4
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
 
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
@@ -299,8 +326,8 @@ async def test_long_sync_wallet(two_wallet_nodes, default_1000_blocks, default_4
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
 
     # Tests a long reorg
-    for block in default_1000_blocks:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(default_1000_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
@@ -314,22 +341,24 @@ async def test_long_sync_wallet(two_wallet_nodes, default_1000_blocks, default_4
     num_blocks = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks[:-5])
 
-    for i in range(len(blocks_reorg) - num_blocks - 10, len(blocks_reorg)):
-        await full_node_api.full_node.add_block(blocks_reorg[i])
+    await full_node.add_block_batch(blocks_reorg[-num_blocks - 10 : -1], dummy_peer_info, None)
+    await full_node.add_block(blocks_reorg[-1])
 
     for wallet_node, wallet_server in wallets:
         await time_out_assert(
-            600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) + num_blocks - 5 - 1
+            120, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) + num_blocks - 5 - 1
         )
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def test_wallet_reorg_sync(two_wallet_nodes, default_400_blocks, self_hostname):
+async def test_wallet_reorg_sync(
+    two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
+) -> None:
     num_blocks = 5
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -344,14 +373,15 @@ async def test_wallet_reorg_sync(two_wallet_nodes, default_400_blocks, self_host
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # Insert 400 blocks
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    await full_node.add_block(default_400_blocks[0])
+    for block_batch in to_batches(default_400_blocks[1:], 64):
+        await full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     # Farm few more with reward
-    for i in range(0, num_blocks - 1):
+    for _ in range(num_blocks - 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(phs[0]))
 
-    for i in range(0, num_blocks):
+    for _ in range(num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(phs[1]))
 
     # Confirm we have the funds
@@ -369,7 +399,7 @@ async def test_wallet_reorg_sync(two_wallet_nodes, default_400_blocks, self_host
     blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
 
     for block in blocks_reorg[-30:]:
-        await full_node_api.full_node.add_block(block)
+        await full_node.add_block(block)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -379,10 +409,12 @@ async def test_wallet_reorg_sync(two_wallet_nodes, default_400_blocks, self_host
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def test_wallet_reorg_get_coinbase(two_wallet_nodes, default_400_blocks, self_hostname):
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+async def test_wallet_reorg_get_coinbase(
+    two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
+) -> None:
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -394,15 +426,17 @@ async def test_wallet_reorg_get_coinbase(two_wallet_nodes, default_400_blocks, s
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # Insert 400 blocks
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     # Reorg blocks that carry reward
     num_blocks_reorg = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks_reorg, block_list_input=default_400_blocks[:-5])
 
-    for block in blocks_reorg[:-5]:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(blocks_reorg[:-6], 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
+    await full_node.add_block(blocks_reorg[-6])
 
     for wallet_node, wallet_server in wallets:
         await time_out_assert(30, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
@@ -418,8 +452,7 @@ async def test_wallet_reorg_get_coinbase(two_wallet_nodes, default_400_blocks, s
         )
     blocks_reorg_2 = bt.get_consecutive_blocks(num_blocks_reorg_1, block_list_input=all_blocks_reorg_2)
 
-    for block in blocks_reorg_2[-44:]:
-        await full_node_api.full_node.add_block(block)
+    await full_node.add_block_batch(blocks_reorg_2[-44:], dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
@@ -438,7 +471,7 @@ async def test_wallet_reorg_get_coinbase(two_wallet_nodes, default_400_blocks, s
 
 
 @pytest.mark.anyio
-async def test_request_additions_errors(simulator_and_wallet, self_hostname):
+async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     full_nodes, wallets, _ = simulator_and_wallet
     wallet_node, wallet_server = wallets[0]
     wallet = wallet_node.wallet_state_manager.main_wallet
@@ -447,7 +480,7 @@ async def test_request_additions_errors(simulator_and_wallet, self_hostname):
     full_node_api = full_nodes[0]
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
 
-    for i in range(2):
+    for _ in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -457,20 +490,21 @@ async def test_request_additions_errors(simulator_and_wallet, self_hostname):
 
     # Invalid height
     with pytest.raises(ValueError):
-        await full_node_api.request_additions(RequestAdditions(uint64(100), last_block.header_hash, [ph]))
+        await full_node_api.request_additions(RequestAdditions(uint32(100), last_block.header_hash, [ph]))
 
     # Invalid header hash
     with pytest.raises(ValueError):
         await full_node_api.request_additions(RequestAdditions(last_block.height, std_hash(b""), [ph]))
 
     # No results
-    res1: Optional[Message] = await full_node_api.request_additions(
+    res1 = await full_node_api.request_additions(
         RequestAdditions(last_block.height, last_block.header_hash, [std_hash(b"")])
     )
     assert res1 is not None
     response = RespondAdditions.from_bytes(res1.data)
     assert response.height == last_block.height
     assert response.header_hash == last_block.header_hash
+    assert response.proofs is not None
     assert len(response.proofs) == 1
     assert len(response.coins) == 1
 
@@ -480,7 +514,7 @@ async def test_request_additions_errors(simulator_and_wallet, self_hostname):
 
 
 @pytest.mark.anyio
-async def test_request_additions_success(simulator_and_wallet, self_hostname):
+async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     full_nodes, wallets, _ = simulator_and_wallet
     wallet_node, wallet_server = wallets[0]
     wallet = wallet_node.wallet_state_manager.main_wallet
@@ -489,7 +523,7 @@ async def test_request_additions_success(simulator_and_wallet, self_hostname):
     full_node_api = full_nodes[0]
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
 
-    for i in range(2):
+    for _ in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -501,26 +535,24 @@ async def test_request_additions_success(simulator_and_wallet, self_hostname):
         payees.append(Payment(payee_ph, uint64(i + 200)))
 
     [tx] = await wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
+    last_block = full_node_api.full_node.blockchain.get_peak()
     assert last_block is not None
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    res2: Optional[Message] = await full_node_api.request_additions(
-        RequestAdditions(
-            last_block.height,
-            None,
-            [payees[0].puzzle_hash, payees[2].puzzle_hash, std_hash(b"1")],
-        )
+    res2 = await full_node_api.request_additions(
+        RequestAdditions(last_block.height, None, [payees[0].puzzle_hash, payees[2].puzzle_hash, std_hash(b"1")])
     )
 
     assert res2 is not None
     response = RespondAdditions.from_bytes(res2.data)
     assert response.height == last_block.height
     assert response.header_hash == last_block.header_hash
+    assert response.proofs is not None
     assert len(response.proofs) == 3
 
     # First two PHs are included
@@ -546,9 +578,7 @@ async def test_request_additions_success(simulator_and_wallet, self_hostname):
             assert len(coin_list) == 2
 
     # None for puzzle hashes returns all coins and no proofs
-    res3: Optional[Message] = await full_node_api.request_additions(
-        RequestAdditions(last_block.height, last_block.header_hash, None)
-    )
+    res3 = await full_node_api.request_additions(RequestAdditions(last_block.height, last_block.header_hash, None))
 
     assert res3 is not None
     response = RespondAdditions.from_bytes(res3.data)
@@ -559,9 +589,7 @@ async def test_request_additions_success(simulator_and_wallet, self_hostname):
     assert sum([len(c_list) for _, c_list in response.coins]) == 24
 
     # [] for puzzle hashes returns nothing
-    res4: Optional[Message] = await full_node_api.request_additions(
-        RequestAdditions(last_block.height, last_block.header_hash, [])
-    )
+    res4 = await full_node_api.request_additions(RequestAdditions(last_block.height, last_block.header_hash, []))
     assert res4 is not None
     response = RespondAdditions.from_bytes(res4.data)
     assert response.proofs == []
@@ -569,16 +597,24 @@ async def test_request_additions_success(simulator_and_wallet, self_hostname):
 
 
 @pytest.mark.anyio
-async def test_get_wp_fork_point(default_10000_blocks, blockchain_constants):
+async def test_get_wp_fork_point(
+    default_10000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+) -> None:
     blocks = default_10000_blocks
     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks, blockchain_constants)
     wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-    wp1 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9000)]].header_hash)
-    wp2 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9030)]].header_hash)
-    wp3 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(7500)]].header_hash)
-    wp4 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(8700)]].header_hash)
-    wp5 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9700)]].header_hash)
-    wp6 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9010)]].header_hash)
+    wp1 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9_000)]].header_hash)
+    assert wp1 is not None
+    wp2 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9_030)]].header_hash)
+    assert wp2 is not None
+    wp3 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(7_500)]].header_hash)
+    assert wp3 is not None
+    wp4 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(8_700)]].header_hash)
+    assert wp4 is not None
+    wp5 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9_700)]].header_hash)
+    assert wp5 is not None
+    wp6 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9_010)]].header_hash)
+    assert wp6 is not None
     fork12 = get_wp_fork_point(blockchain_constants, wp1, wp2)
     fork13 = get_wp_fork_point(blockchain_constants, wp3, wp1)
     fork14 = get_wp_fork_point(blockchain_constants, wp4, wp1)
@@ -648,15 +684,19 @@ It runs in seven phases:
         # In the following tests, the filter is run right away:
         (0, 1, 1),  # nothing is filtered
         # In the following tests, 1 coin will be created in part 1, and 9 in part 2:
-        (10, 10000000000, 1),  # everything is dust
-        (10, 10000000000, 10000000000),  # max dust threshold, dust is same size so not filtered
+        (10, 10_000_000_000, 1),  # everything is dust
+        (10, 10_000_000_000, 10_000_000_000),  # max dust threshold, dust is same size so not filtered
         # Test with more coins
-        (105, 1000000, 1),  # default filter level (1m mojos), default dust size (1)
+        (105, 1_000_000, 1),  # default filter level (1m mojos), default dust size (1)
     ],
 )
 async def test_dusted_wallet(
-    self_hostname, two_wallet_nodes_custom_spam_filtering, spam_filter_after_n_txs, xch_spam_amount, dust_value
-):
+    self_hostname: str,
+    two_wallet_nodes_custom_spam_filtering: OldSimulatorsAndWallets,
+    spam_filter_after_n_txs: int,
+    xch_spam_amount: int,
+    dust_value: int,
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes_custom_spam_filtering
 
     farm_wallet_node, farm_wallet_server = wallets[0]
@@ -682,16 +722,16 @@ async def test_dusted_wallet(
     assert spam_filter_after_n_txs >= 0
     assert spam_filter_after_n_txs <= 250
     assert xch_spam_amount >= 1
-    assert xch_spam_amount <= 10000000000
+    assert xch_spam_amount <= 10_000_000_000
     assert dust_value >= 1
-    assert dust_value <= 10000000000
+    assert dust_value <= 10_000_000_000
 
     # start both clients
     await farm_wallet_server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
     await dust_wallet_server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
 
     # Farm two blocks
-    for i in range(2):
+    for _ in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     # sync both nodes
@@ -704,6 +744,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
     await full_node_api.wait_transaction_records_entered_mempool([tx])
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
@@ -725,11 +766,11 @@ async def test_dusted_wallet(
         large_dust_balance = 0
 
     # Obtain and log important values
-    all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
+    all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     log.info(f"all_unspent is {all_unspent}")
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
-    balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
-    num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance, DEFAULT_COIN_SELECTION_CONFIG))
+    balance = await dust_wallet.get_confirmed_balance()
+    num_coins = len(await dust_wallet.select_coins(uint64(balance), DEFAULT_COIN_SELECTION_CONFIG))
 
     log.info(f"Small coin count is {small_unspent_count}")
     log.info(f"Wallet balance is {balance}")
@@ -760,6 +801,7 @@ async def test_dusted_wallet(
         if dust_remaining % 100 == 0 and dust_remaining != new_dust:
             # construct and send tx
             [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+            assert tx.spend_bundle is not None
             await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
             # advance the chain and sync both wallets
@@ -776,6 +818,7 @@ async def test_dusted_wallet(
     if new_dust >= 1:
         # construct and send tx
         [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+        assert tx.spend_bundle is not None
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
@@ -785,12 +828,12 @@ async def test_dusted_wallet(
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Obtain and log important values
-    all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
+    all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
-    balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
+    balance = await dust_wallet.get_confirmed_balance()
     # Selecting coins by using the wallet's coin selection algorithm won't work for large
     # numbers of coins, so we'll use the state manager for the rest of the test
-    # num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance))
+    # num_coins = len(await dust_wallet.select_coins(balance))
     spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
     num_coins = len(spendable_coins)
 
@@ -814,12 +857,13 @@ async def test_dusted_wallet(
 
     payees = []
 
-    for i in range(large_coins):
+    for _ in range(large_coins):
         payee_ph = await dust_wallet.get_new_puzzlehash()
         payees.append(Payment(payee_ph, uint64(xch_spam_amount)))
 
     # construct and send tx
     [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
     # advance the chain and sync both wallets
@@ -829,9 +873,9 @@ async def test_dusted_wallet(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Obtain and log important values
-    all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
+    all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
-    balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
+    balance = await dust_wallet.get_confirmed_balance()
     spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
     num_coins = len(spendable_coins)
 
@@ -856,6 +900,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
     # advance the chain and sync both wallets
@@ -865,9 +910,9 @@ async def test_dusted_wallet(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Obtain and log important values
-    all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
+    all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
-    balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
+    balance = await dust_wallet.get_confirmed_balance()
     spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
     num_coins = len(spendable_coins)
 
@@ -912,6 +957,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
     # advance the chain and sync both wallets
@@ -921,9 +967,9 @@ async def test_dusted_wallet(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Obtain and log important values
-    all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
+    all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
-    balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
+    balance = await dust_wallet.get_confirmed_balance()
     spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
     num_coins = len(spendable_coins)
 
@@ -945,6 +991,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await dust_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
     # advance the chain and sync both wallets
@@ -954,9 +1001,9 @@ async def test_dusted_wallet(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Obtain and log important values
-    all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
+    all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     unspent_count = len(all_unspent)
-    balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
+    balance = await dust_wallet.get_confirmed_balance()
 
     # Make sure the dust wallet is empty
     assert unspent_count == 0
@@ -986,6 +1033,7 @@ async def test_dusted_wallet(
         if coins_remaining % 100 == 0 and coins_remaining != spam_filter_after_n_txs:
             # construct and send tx
             [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+            assert tx.spend_bundle is not None
             await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
             await full_node_api.wait_transaction_records_entered_mempool([tx])
             await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
@@ -998,6 +1046,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
     # advance the chain and sync both wallets
@@ -1007,9 +1056,9 @@ async def test_dusted_wallet(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Obtain and log important values
-    all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
+    all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     unspent_count = len(all_unspent)
-    balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
+    balance = await dust_wallet.get_confirmed_balance()
 
     # Verify the number of coins and value
     if spam_filter_after_n_txs > 0:
@@ -1025,6 +1074,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await dust_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
     # advance the chain and sync both wallets
@@ -1034,9 +1084,9 @@ async def test_dusted_wallet(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Obtain and log important values
-    all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
+    all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
     unspent_count = len(all_unspent)
-    balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
+    balance = await dust_wallet.get_confirmed_balance()
 
     # Make sure the dust wallet received a change coin worth 1 mojo less than the original coin size
     if spam_filter_after_n_txs > 0:
@@ -1065,28 +1115,26 @@ async def test_dusted_wallet(
 
     # Create a new NFT and send it to the farmer's NFT wallet
     metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
-    farm_sb = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
-    assert farm_sb
-
-    # ensure hints are generated
-    assert len(compute_memos(farm_sb)) > 0
+    txs = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
+    await farm_nft_wallet.wallet_state_manager.add_pending_transactions(txs)
+    for tx in txs:
+        if tx.spend_bundle is not None:
+            assert len(compute_memos(tx.spend_bundle)) > 0
+            await time_out_assert_not_none(
+                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+            )
 
     # Farm a new block
-    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, farm_sb.name())
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(farm_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered
     # if it were a normal dust coin (and not an NFT)
-    all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-    unspent_count = len(all_unspent)
-    assert unspent_count >= spam_filter_after_n_txs
+    all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
+    assert len(all_unspent) >= spam_filter_after_n_txs
 
     # Make sure the NFT is in the farmer's NFT wallet, and the dust NFT wallet is empty
     await time_out_assert(15, get_nft_count, 1, farm_nft_wallet)
@@ -1095,14 +1143,11 @@ async def test_dusted_wallet(
     nft_coins = await farm_nft_wallet.get_current_nfts()
     # Send the NFT to the dust wallet
     txs = await farm_nft_wallet.generate_signed_transaction(
-        [uint64(nft_coins[0].coin.amount)],
-        [dust_ph],
-        DEFAULT_TX_CONFIG,
-        coins={nft_coins[0].coin},
+        [uint64(nft_coins[0].coin.amount)], [dust_ph], DEFAULT_TX_CONFIG, coins={nft_coins[0].coin}
     )
     assert len(txs) == 1
     assert txs[0].spend_bundle is not None
-    await farm_wallet_node.wallet_state_manager.add_pending_transaction(txs[0])
+    await farm_wallet_node.wallet_state_manager.add_pending_transactions(txs)
     assert len(compute_memos(txs[0].spend_bundle)) > 0
 
     # Farm a new block.
@@ -1113,9 +1158,8 @@ async def test_dusted_wallet(
 
     # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered
     # if it were a normal dust coin (and not an NFT)
-    all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-    unspent_count = len(all_unspent)
-    assert unspent_count >= spam_filter_after_n_txs
+    all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
+    assert len(all_unspent) >= spam_filter_after_n_txs
 
     # The dust wallet should now hold the NFT. It should not be filtered
     await time_out_assert(15, get_nft_count, 0, farm_nft_wallet)
@@ -1123,8 +1167,10 @@ async def test_dusted_wallet(
 
 
 @pytest.mark.anyio
-async def test_retry_store(two_wallet_nodes, self_hostname):
-    full_nodes, wallets, bt = two_wallet_nodes
+async def test_retry_store(
+    two_wallet_nodes: OldSimulatorsAndWallets, self_hostname: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.full_node.server
 
@@ -1136,21 +1182,35 @@ async def test_retry_store(two_wallet_nodes, self_hostname):
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
 
-    def flaky_get_coin_state(node, func):
-        async def new_func(*args, **kwargs):
-            if node.coin_state_flaky:
-                node.coin_state_flaky = False
+    @dataclass
+    class FlakinessInfo:
+        coin_state_flaky: bool = True
+        fetch_children_flaky: bool = True
+        get_timestamp_flaky: bool = True
+        db_flaky: bool = True
+
+    def flaky_get_coin_state(
+        flakiness_info: FlakinessInfo,
+        func: Callable[[List[bytes32], WSChiaConnection, Optional[uint32]], Awaitable[List[CoinState]]],
+    ) -> Callable[[List[bytes32], WSChiaConnection, Optional[uint32]], Awaitable[List[CoinState]]]:
+        async def new_func(
+            coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
+        ) -> List[CoinState]:
+            if flakiness_info.coin_state_flaky:
+                flakiness_info.coin_state_flaky = False
                 raise PeerRequestException()
             else:
-                return await func(*args, **kwargs)
+                return await func(coin_names, peer, fork_height)
 
         return new_func
 
     request_puzzle_solution_failure_tested = False
 
-    def flaky_request_puzzle_solution(func):
+    def flaky_request_puzzle_solution(
+        func: Callable[[wallet_protocol.RequestPuzzleSolution], Awaitable[Optional[Message]]]
+    ) -> Callable[[wallet_protocol.RequestPuzzleSolution], Awaitable[Optional[Message]]]:
         @functools.wraps(func)
-        async def new_func(*args, **kwargs):
+        async def new_func(request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
             nonlocal request_puzzle_solution_failure_tested
             if not request_puzzle_solution_failure_tested:
                 request_puzzle_solution_failure_tested = True
@@ -1158,127 +1218,149 @@ async def test_retry_store(two_wallet_nodes, self_hostname):
                 reject = wallet_protocol.RejectPuzzleSolution(bytes32([0] * 32), uint32(0))
                 return make_msg(ProtocolMessageTypes.reject_puzzle_solution, reject)
             else:
-                return await func(*args, **kwargs)
+                return await func(request)
 
         return new_func
 
-    def flaky_fetch_children(node, func):
-        async def new_func(*args, **kwargs):
-            if node.fetch_children_flaky:
-                node.fetch_children_flaky = False
+    def flaky_fetch_children(
+        flakiness_info: FlakinessInfo,
+        func: Callable[[bytes32, WSChiaConnection, Optional[uint32]], Awaitable[List[CoinState]]],
+    ) -> Callable[[bytes32, WSChiaConnection, Optional[uint32]], Awaitable[List[CoinState]]]:
+        async def new_func(
+            coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
+        ) -> List[CoinState]:
+            if flakiness_info.fetch_children_flaky:
+                flakiness_info.fetch_children_flaky = False
                 raise PeerRequestException()
             else:
-                return await func(*args, **kwargs)
+                return await func(coin_name, peer, fork_height)
 
         return new_func
 
-    def flaky_get_timestamp(node, func):
-        async def new_func(*args, **kwargs):
-            if node.get_timestamp_flaky:
-                node.get_timestamp_flaky = False
+    def flaky_get_timestamp(
+        flakiness_info: FlakinessInfo, func: Callable[[uint32], Awaitable[uint64]]
+    ) -> Callable[[uint32], Awaitable[uint64]]:
+        async def new_func(height: uint32) -> uint64:
+            if flakiness_info.get_timestamp_flaky:
+                flakiness_info.get_timestamp_flaky = False
                 raise PeerRequestException()
             else:
-                return await func(*args, **kwargs)
+                return await func(height)
 
         return new_func
 
-    def flaky_info_for_puzhash(node, func):
-        async def new_func(*args, **kwargs):
-            if node.db_flaky:
-                node.db_flaky = False
+    def flaky_info_for_puzhash(
+        flakiness_info: FlakinessInfo, func: Callable[[bytes32], Awaitable[Optional[WalletIdentifier]]]
+    ) -> Callable[[bytes32], Awaitable[Optional[WalletIdentifier]]]:
+        async def new_func(puzzle_hash: bytes32) -> Optional[WalletIdentifier]:
+            if flakiness_info.db_flaky:
+                flakiness_info.db_flaky = False
                 raise AIOSqliteError()
             else:
-                return await func(*args, **kwargs)
+                return await func(puzzle_hash)
 
         return new_func
 
-    full_node_api.request_puzzle_solution = flaky_request_puzzle_solution(full_node_api.request_puzzle_solution)
-
-    for wallet_node, wallet_server in wallets:
-        wallet_node.coin_state_retry_seconds = 1
-        request_puzzle_solution_failure_tested = False
-        wallet_node.coin_state_flaky = True
-        wallet_node.fetch_children_flaky = True
-        wallet_node.get_timestamp_flaky = True
-        wallet_node.db_flaky = True
-
-        wallet_node.get_coin_state = flaky_get_coin_state(wallet_node, wallet_node.get_coin_state)
-        wallet_node.fetch_children = flaky_fetch_children(wallet_node, wallet_node.fetch_children)
-        wallet_node.get_timestamp_for_height = flaky_get_timestamp(wallet_node, wallet_node.get_timestamp_for_height)
-        wallet_node.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash = flaky_info_for_puzhash(
-            wallet_node, wallet_node.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash
+    with monkeypatch.context() as m:
+        m.setattr(
+            full_node_api,
+            "request_puzzle_solution",
+            flaky_request_puzzle_solution(full_node_api.request_puzzle_solution),
         )
 
-        await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        for wallet_node, wallet_server in wallets:
+            wallet_node.coin_state_retry_seconds = 1
+            request_puzzle_solution_failure_tested = False
+            flakiness_info = FlakinessInfo()
+            m.setattr(wallet_node, "get_coin_state", flaky_get_coin_state(flakiness_info, wallet_node.get_coin_state))
+            m.setattr(wallet_node, "fetch_children", flaky_fetch_children(flakiness_info, wallet_node.fetch_children))
+            m.setattr(
+                wallet_node,
+                "get_timestamp_for_height",
+                flaky_get_timestamp(flakiness_info, wallet_node.get_timestamp_for_height),
+            )
+            m.setattr(
+                wallet_node.wallet_state_manager.puzzle_store,
+                "get_wallet_identifier_for_puzzle_hash",
+                flaky_info_for_puzhash(
+                    flakiness_info, wallet_node.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash
+                ),
+            )
 
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-        async def retry_store_empty() -> bool:
-            return len(await wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry()) == 0
+            wallet = wallet_node.wallet_state_manager.main_wallet
+            ph = await wallet.get_new_puzzlehash()
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
-        async def assert_coin_state_retry() -> None:
-            # Wait for retry coin states to show up
-            await time_out_assert(15, retry_store_empty, False)
-            # And become retried/removed
-            await time_out_assert(30, retry_store_empty, True)
+            async def retry_store_empty() -> bool:
+                return len(await wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry()) == 0
 
-        await assert_coin_state_retry()
+            async def assert_coin_state_retry() -> None:
+                # Wait for retry coin states to show up
+                await time_out_assert(15, retry_store_empty, False)
+                # And become retried/removed
+                await time_out_assert(30, retry_store_empty, True)
 
-        await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
+            await assert_coin_state_retry()
 
-        [tx] = await wallet.generate_signed_transaction(
-            1_000_000_000_000, bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
-        )
-        await wallet_node.wallet_state_manager.add_pending_transaction(tx)
+            await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
 
-        async def tx_in_mempool():
-            return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None
+            [tx] = await wallet.generate_signed_transaction(
+                uint64(1_000_000_000_000), bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
+            )
+            await wallet_node.wallet_state_manager.add_pending_transactions([tx])
 
-        await time_out_assert(15, tx_in_mempool)
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            async def tx_in_mempool() -> bool:
+                return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None
 
-        await assert_coin_state_retry()
+            await time_out_assert(15, tx_in_mempool)
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
-        assert not wallet_node.coin_state_flaky
-        assert request_puzzle_solution_failure_tested
-        assert not wallet_node.fetch_children_flaky
-        assert not wallet_node.get_timestamp_flaky
-        assert not wallet_node.db_flaky
-        await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
+            await assert_coin_state_retry()
+
+            assert not flakiness_info.coin_state_flaky
+            assert request_puzzle_solution_failure_tested
+            assert not flakiness_info.fetch_children_flaky
+            assert not flakiness_info.get_timestamp_flaky
+            assert not flakiness_info.db_flaky
+            await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_bad_peak_mismatch(
-    two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants, monkeypatch
-):
-    full_nodes, wallets, bt = two_wallet_nodes
-    wallet_node, wallet_server = wallets[0]
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    two_wallet_nodes: OldSimulatorsAndWallets,
+    default_1000_blocks: List[FullBlock],
+    self_hostname: str,
+    blockchain_constants: ConsensusConstants,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server), _], _ = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
     blocks = default_1000_blocks
     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks, blockchain_constants)
     wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for block in blocks:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # make wp for lower height
-    wp = await wpf.get_proof_of_weight(height_to_hash[800])
+    wp = await wpf.get_proof_of_weight(height_to_hash[uint32(800)])
+    assert wp is not None
     # create the node respond with the lighter proof
     wp_msg = make_msg(
         ProtocolMessageTypes.respond_proof_of_weight,
         full_node_protocol.RespondProofOfWeight(wp, wp.recent_chain_data[-1].header_hash),
     )
     with monkeypatch.context() as m:
-        f = asyncio.Future()
+        f: asyncio.Future[Optional[Message]] = asyncio.Future()
         f.set_result(wp_msg)
         m.setattr(full_node_api, "request_proof_of_weight", MagicMock(return_value=f))
 
@@ -1287,13 +1369,13 @@ async def test_bad_peak_mismatch(
             ProtocolMessageTypes.respond_block_header,
             wallet_protocol.RespondBlockHeader(wp.recent_chain_data[-1]),
         )
-        f2 = asyncio.Future()
+        f2: asyncio.Future[Optional[Message]] = asyncio.Future()
         f2.set_result(header_block_msg)
         m.setattr(full_node_api, "request_block_header", MagicMock(return_value=f2))
 
         # create new fake peak msg
-        fake_peak_height = uint32(11000)
-        fake_peak_weight = uint32(1000000000)
+        fake_peak_height = uint32(11_000)
+        fake_peak_weight = uint128(1_000_000_000)
         msg = wallet_protocol.NewPeakWallet(
             blocks[-1].header_hash, fake_peak_height, fake_peak_weight, uint32(max(blocks[-1].height - 1, uint32(0)))
         )
@@ -1308,18 +1390,21 @@ async def test_bad_peak_mismatch(
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_long_sync_untrusted_break(
-    setup_two_nodes_and_wallet, default_1000_blocks, default_400_blocks, self_hostname, caplog
-):
-    full_nodes, [(wallet_node, wallet_server)], bt = setup_two_nodes_and_wallet
-    trusted_full_node_api = full_nodes[0]
+    setup_two_nodes_and_wallet: OldSimulatorsAndWallets,
+    default_1000_blocks: List[FullBlock],
+    default_400_blocks: List[FullBlock],
+    self_hostname: str,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    [trusted_full_node_api, untrusted_full_node_api], [(wallet_node, wallet_server)], _ = setup_two_nodes_and_wallet
     trusted_full_node_server = trusted_full_node_api.full_node.server
-    untrusted_full_node_api = full_nodes[1]
     untrusted_full_node_server = untrusted_full_node_api.full_node.server
     wallet_node.config["trusted_peers"] = {trusted_full_node_server.node_id.hex(): None}
 
     sync_canceled = False
 
-    async def register_interest_in_puzzle_hash():
+    async def register_interest_in_puzzle_hash() -> None:
         nonlocal sync_canceled
         # Just sleep a long time here to simulate a long-running untrusted sync
         try:
@@ -1342,27 +1427,32 @@ async def test_long_sync_untrusted_break(
         untrusted_peers = sum([not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
         return trusted_peers == 1 and untrusted_peers == 0
 
-    for block in default_400_blocks:
-        await trusted_full_node_api.full_node.add_block(block)
-    for block in default_1000_blocks[:400]:
-        await untrusted_full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await trusted_full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
-    untrusted_full_node_api.register_interest_in_puzzle_hash = MagicMock(
-        return_value=register_interest_in_puzzle_hash()
-    )
+    for block_batch in to_batches(default_1000_blocks[:400], 64):
+        await untrusted_full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
-    # Connect to the untrusted peer and wait until the long sync started
-    await wallet_server.start_client(PeerInfo(self_hostname, untrusted_full_node_server.get_port()), None)
-    await time_out_assert(30, wallet_syncing)
-    with caplog.at_level(logging.INFO):
-        # Connect to the trusted peer and make sure the running untrusted long sync gets interrupted via disconnect
-        await wallet_server.start_client(PeerInfo(self_hostname, trusted_full_node_server.get_port()), None)
-        await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
-        assert time_out_assert(10, synced_to_trusted)
-        assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
-        assert "Connected to a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
+    with monkeypatch.context() as m:
+        m.setattr(
+            untrusted_full_node_api,
+            "register_interest_in_puzzle_hash",
+            MagicMock(return_value=register_interest_in_puzzle_hash()),
+        )
 
-    # Make sure the sync was interrupted
-    assert time_out_assert(30, check_sync_canceled)
-    # And that we only have a trusted peer left
-    assert time_out_assert(30, only_trusted_peer)
+        # Connect to the untrusted peer and wait until the long sync started
+        await wallet_server.start_client(PeerInfo(self_hostname, untrusted_full_node_server.get_port()), None)
+        await time_out_assert(30, wallet_syncing)
+        with caplog.at_level(logging.INFO):
+            # Connect to the trusted peer and make sure the running untrusted long sync gets interrupted via disconnect
+            await wallet_server.start_client(PeerInfo(self_hostname, trusted_full_node_server.get_port()), None)
+            await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
+            assert time_out_assert(10, synced_to_trusted)
+            assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
+            assert "Connected to a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
+
+        # Make sure the sync was interrupted
+        assert time_out_assert(30, check_sync_canceled)
+        # And that we only have a trusted peer left
+        assert time_out_assert(30, only_trusted_peer)

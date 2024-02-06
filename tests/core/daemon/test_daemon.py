@@ -52,6 +52,20 @@ class RouteCase:
 
 
 @dataclass
+class RouteStatusCase:
+    route: str
+    description: str
+    request: Dict[str, Any]
+    response: Dict[str, Any]
+    status: Dict[str, Any]
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return f"{self.route}: {self.description}"
+
+
+@dataclass
 class WalletAddressCase:
     id: str
     request: Dict[str, Any]
@@ -295,15 +309,21 @@ label_newline_or_tab_response_data = {
 
 
 def assert_response(
-    response: aiohttp.http_websocket.WSMessage, expected_response_data: Dict[str, Any], request_id: Optional[str] = None
+    response: aiohttp.http_websocket.WSMessage,
+    expected_response_data: Dict[str, Any],
+    request_id: Optional[str] = None,
+    ack: bool = True,
+    command: Optional[str] = None,
 ) -> None:
     # Expect: JSON response
     assert response.type == aiohttp.WSMsgType.TEXT
     message = json.loads(response.data.strip())
     # Expect: daemon handled the request
-    assert message["ack"] is True
+    assert message["ack"] is ack
     if request_id is not None:
         assert message["request_id"] == request_id
+    if command is not None:
+        assert message["command"] == command
     # Expect: data matches the expected data
     assert message["data"] == expected_response_data
 
@@ -1517,6 +1537,14 @@ async def test_passphrase_apis(
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
 
+    # register for keyring_status_changed messages
+    service_name = "wallet_ui"
+    data = {"service": service_name}
+    payload = create_payload("register_service", data, "wallet_ui", "daemon")
+    await ws.send_str(payload)
+    response = await ws.receive()
+    assert_response_success_only(response)
+
     keychain.set_master_passphrase(
         current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="this is a passphrase"
     )
@@ -1529,8 +1557,92 @@ async def test_passphrase_apis(
     )
     await ws.send_str(payload)
     response = await ws.receive()
-
     assert_response(response, case.response)
+
+
+@datacases(
+    RouteStatusCase(
+        route="remove_keyring_passphrase",
+        description="correct",
+        request={"current_passphrase": "this is a passphrase"},
+        response={"success": True, "error": None},
+        status={
+            "can_save_passphrase": supports_os_passphrase_storage(),
+            "can_set_passphrase_hint": True,
+            "is_keyring_locked": False,
+            "passphrase_hint": "",
+            "passphrase_requirements": {"is_optional": True, "min_length": 8},
+            "success": True,
+            "user_passphrase_is_set": False,
+        },
+    ),
+    RouteStatusCase(
+        route="unlock_keyring",
+        description="correct",
+        request={"key": "this is a passphrase"},
+        response={"success": True, "error": None},
+        status={
+            "can_save_passphrase": supports_os_passphrase_storage(),
+            "can_set_passphrase_hint": True,
+            "is_keyring_locked": False,
+            "passphrase_hint": "",
+            "passphrase_requirements": {"is_optional": True, "min_length": 8},
+            "success": True,
+            "user_passphrase_is_set": True,
+        },
+    ),
+    RouteStatusCase(
+        route="set_keyring_passphrase",
+        description="correct",
+        request={
+            "save_passphrase": False,
+            "current_passphrase": "this is a passphrase",
+            "new_passphrase": "another new passphrase",
+        },
+        response={"success": True, "error": None},
+        status={
+            "can_save_passphrase": supports_os_passphrase_storage(),
+            "can_set_passphrase_hint": True,
+            "is_keyring_locked": False,
+            "passphrase_hint": "",
+            "passphrase_requirements": {"is_optional": True, "min_length": 8},
+            "success": True,
+            "user_passphrase_is_set": True,
+        },
+    ),
+)
+@pytest.mark.anyio
+async def test_keychain_status_messages(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    case: RouteStatusCase,
+) -> None:
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    # register for keyring_status_changed messages
+    service_name = "wallet_ui"
+    data = {"service": service_name}
+    payload = create_payload("register_service", data, "wallet_ui", "daemon")
+    await ws.send_str(payload)
+    response = await ws.receive()
+    assert_response_success_only(response)
+
+    keychain.set_master_passphrase(
+        current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="this is a passphrase"
+    )
+
+    payload = create_payload(
+        case.route,
+        case.request,
+        "service_name",
+        "daemon",
+    )
+    await ws.send_str(payload)
+    response = await ws.receive()
+    assert_response(response, case.response)
+
+    # wait for the status msg
+    status_msg = await ws.receive()
+    assert_response(status_msg, case.status, ack=False, command="keyring_status_changed")
 
 
 @datacases(
