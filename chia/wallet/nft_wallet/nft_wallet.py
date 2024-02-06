@@ -461,9 +461,7 @@ class NFTWallet:
                 synthetic_pk = synthetic_secret_key.get_g1()
                 pks[bytes(synthetic_pk)] = synthetic_secret_key
             conditions = conditions_dict_for_solution(
-                spend.puzzle_reveal.to_program(),
-                spend.solution.to_program(),
-                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                spend.puzzle_reveal, spend.solution, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
             )
             for pk, msg in pkm_pairs_for_conditions_dict(
                 conditions, spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
