@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 from typing import AsyncIterator, Iterator, List, Optional, TypeVar
 
+import aiohttp
 import anyio
 import pytest
 
@@ -19,6 +20,7 @@ from chia.util.misc import (
     validate_directory_writable,
 )
 from chia.util.timing import adjusted_timeout, backoff_times
+from tests.util.misc import RecordingWebServer
 
 T = TypeVar("T")
 
@@ -411,3 +413,18 @@ async def test_valued_event_wait_raises_if_not_set() -> None:
     with pytest.raises(Exception, match="^Value not set despite event being set$"):
         with anyio.fail_after(adjusted_timeout(10)):
             await valued_event.wait()
+
+
+@pytest.mark.anyio
+async def test_recording_web_server_specified_response(
+    recording_web_server: RecordingWebServer,
+) -> None:
+    expected_response = {"success": True, "magic": "asparagus"}
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            url=recording_web_server.web_server.url(),
+            json={"response": expected_response},
+        ) as response:
+            response.raise_for_status()
+            assert await response.json() == expected_response

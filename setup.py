@@ -20,16 +20,16 @@ dependencies = [
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.1.4",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
-    "colorlog==6.8.0",  # Adds color to logs
+    "colorlog==6.8.2",  # Adds color to logs
     "concurrent-log-handler==0.9.25",  # Concurrently log and rotate logs
-    "cryptography==41.0.7",  # Python cryptography library for TLS - keyring conflict
+    "cryptography==42.0.2",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.13.1",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==24.3.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0.1",  # Used for config file format
     "setproctitle==1.3.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
-    "dnspython==2.4.2",  # Query DNS seeds
+    "dnspython==2.5.0",  # Query DNS seeds
     "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.24",  # dns lib
     "typing-extensions==4.9.0",  # typing backports like Protocol and TypedDict
@@ -44,13 +44,13 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build==1.0.3",
-    "coverage==7.4.0",
+    "coverage==7.4.1",
     "diff-cover==8.0.1",
     "pre-commit==3.5.0; python_version < '3.9'",
     "pre-commit==3.6.0; python_version >= '3.9'",
     "py3createtorrent==1.2.0",
     "pylint==3.0.3",
-    "pytest==7.4.4",
+    "pytest==8.0.0",
     "pytest-cov==4.1.0",
     "pytest-mock==3.12.0",
     "pytest-xdist==3.5.0",

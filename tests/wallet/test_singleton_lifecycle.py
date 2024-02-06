@@ -6,7 +6,6 @@ import pytest
 from chia_rs import G2Element
 from clvm_tools import binutils
 
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -14,6 +13,7 @@ from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
+from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.puzzles.load_clvm import load_clvm
 from tests.core.full_node.test_conditions import check_spend_bundle_validity, initial_blocks
 
@@ -56,11 +56,15 @@ def launcher_conditions_and_spend_bundle(
     )
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
-    expected_announcement = Announcement(launcher_id, message_program.get_tree_hash())
+    expected_announcement = AssertCoinAnnouncement(
+        asserted_id=launcher_id, asserted_msg=message_program.get_tree_hash()
+    )
     expected_conditions = []
     expected_conditions.append(
         Program.to(
-            binutils.assemble(f"(0x{ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.hex()} 0x{expected_announcement.name()})")
+            binutils.assemble(
+                f"(0x{ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.hex()} 0x{expected_announcement.msg_calc})"
+            )
         )
     )
     expected_conditions.append(

@@ -7,7 +7,6 @@ from chia_rs import G1Element, G2Element
 from clvm_tools import binutils
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -16,6 +15,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
+from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
@@ -289,9 +289,11 @@ def launcher_conditions_and_spend_bundle(
     puzzle_db.add_puzzle(singleton_full_puzzle)
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
-    expected_announcement = Announcement(launcher_id, message_program.get_tree_hash())
+    expected_announcement = AssertCoinAnnouncement(
+        asserted_id=launcher_coin.name(), asserted_msg=message_program.get_tree_hash()
+    )
     expected_conditions = []
-    clsp = f"(0x{ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.hex()} 0x{expected_announcement.name()})"
+    clsp = f"(0x{ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.hex()} 0x{expected_announcement.msg_calc})"
     expected_conditions.append(Program.to(binutils.assemble(clsp)))  # type: ignore[no-untyped-call]
     clsp = f"(0x{ConditionOpcode.CREATE_COIN.hex()} 0x{launcher_puzzle_hash} {launcher_amount})"
     expected_conditions.append(Program.to(binutils.assemble(clsp)))  # type: ignore[no-untyped-call]
@@ -365,7 +367,9 @@ def claim_p2_singleton(
     p2_singleton_coin_spend = make_spend(
         p2_singleton_coin, SerializedProgram.from_program(p2_singleton_puzzle), p2_singleton_solution
     )
-    expected_p2_singleton_announcement = Announcement(p2_singleton_coin_name, b"$").name()
+    expected_p2_singleton_announcement = AssertCoinAnnouncement(
+        asserted_id=p2_singleton_coin_name, asserted_msg=b"$"
+    ).msg_calc
     singleton_conditions = [
         Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, p2_singleton_coin_name]),
         Program.to([ConditionOpcode.CREATE_COIN, inner_puzzle_hash, 1]),

@@ -23,8 +23,10 @@ from chia.rpc.wallet_request_types import GetNotifications
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.conditions import CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -988,9 +990,11 @@ async def did_message_spend(
         try:
             response = await wallet_client.did_message_spend(
                 did_wallet_id,
-                puzzle_announcements,
-                coin_announcements,
                 CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
+                extra_conditions=(
+                    *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in coin_announcements),
+                    *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in puzzle_announcements),
+                ),
             )
             print(f"Message Spend Bundle: {response['spend_bundle']}")
         except Exception as e:
