@@ -978,7 +978,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     )
 
     txs = await nft_wallet_maker.generate_new_nft(metadata, tx_config)
-    txs = await wallet_maker.wallet_state_manager.add_pending_transactions(txs)
+    txs = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(

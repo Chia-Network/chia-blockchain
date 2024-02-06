@@ -8,17 +8,21 @@ import gc
 import logging
 import os
 import pathlib
+import ssl
 import subprocess
 import sys
 from concurrent.futures import Future
+from dataclasses import dataclass, field
 from inspect import getframeinfo, stack
 from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Any, Callable, Collection, Iterator, List, Optional, TextIO, Tuple, Type, Union
+from typing import Any, Awaitable, Callable, Collection, Dict, Iterator, List, Optional, TextIO, Tuple, Type, Union
 
+import aiohttp
 import pytest
+from aiohttp import web
 from chia_rs import Coin
 from typing_extensions import Protocol, final
 
@@ -27,7 +31,8 @@ from chia.full_node.mempool import Mempool
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
+from chia.util.network import WebServer
 from chia.wallet.util.compute_hints import HintedCoin
 from chia.wallet.wallet_node import WalletNode
 from tests.core.data_layer.util import ChiaRoot
@@ -430,3 +435,52 @@ def invariant_check_mempool(mempool: Mempool) -> None:
 async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
     height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
     return height == h
+
+
+@final
+@dataclass
+class RecordingWebServer:
+    web_server: WebServer
+    requests: List[web.Request] = field(default_factory=list)
+
+    @classmethod
+    async def create(
+        cls,
+        hostname: str,
+        port: uint16,
+        max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
+        ssl_context: Optional[ssl.SSLContext] = None,
+        prefer_ipv6: bool = False,
+    ) -> RecordingWebServer:
+        web_server = await WebServer.create(
+            hostname=hostname,
+            port=port,
+            max_request_body_size=max_request_body_size,
+            ssl_context=ssl_context,
+            prefer_ipv6=prefer_ipv6,
+            start=False,
+        )
+
+        self = cls(web_server=web_server)
+        routes = [web.route(method="*", path=route, handler=func) for (route, func) in self.get_routes().items()]
+        web_server.add_routes(routes=routes)
+        await web_server.start()
+        return self
+
+    def get_routes(self) -> Dict[str, Callable[[web.Request], Awaitable[web.Response]]]:
+        return {"/{path:.*}": self.handler}
+
+    async def handler(self, request: web.Request) -> web.Response:
+        self.requests.append(request)
+
+        request_json = await request.json()
+        if isinstance(request_json, dict) and "response" in request_json:
+            response = request_json["response"]
+        else:
+            response = {"success": True}
+
+        return aiohttp.web.json_response(data=response)
+
+    async def await_closed(self) -> None:
+        self.web_server.close()
+        await self.web_server.await_closed()

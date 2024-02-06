@@ -380,7 +380,7 @@ class DIDWallet:
                 num_verification=uint16(num_verification.as_int()),
                 singleton_struct=singleton_struct,
                 metadata=metadata,
-                inner_puzzle=get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal.to_program()),
+                inner_puzzle=get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
                 coin_state=parent_state,
             )
         if parent is None:
@@ -503,7 +503,7 @@ class DIDWallet:
                 assert children_state.created_height
                 parent_spend = await fetch_coin_spend(uint32(children_state.created_height), parent_coin, peer)
                 assert parent_spend is not None
-                parent_innerpuz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
+                parent_innerpuz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal)
                 assert parent_innerpuz is not None
                 parent_info = LineageProof(
                     parent_name=parent_coin.parent_coin_info,
@@ -1224,9 +1224,7 @@ class DIDWallet:
                 private = await self.wallet_state_manager.get_private_key(puzzle_hash)
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 conditions = conditions_dict_for_solution(
-                    spend.puzzle_reveal.to_program(),
-                    spend.solution.to_program(),
-                    self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                    spend.puzzle_reveal, spend.solution, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
                 )
                 synthetic_pk = synthetic_secret_key.get_g1()
                 for pk, msg in pkm_pairs_for_conditions_dict(
