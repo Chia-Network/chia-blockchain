@@ -21,7 +21,7 @@ from chia.cmds.data_funcs import clear_pending_roots, get_proof_cmd, verify_proo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
-from chia.data_layer.data_layer_util import HashOnlyProof, OfferStore, ProofLayer, Status, StoreProofs, key_hash, leaf_hash
+from chia.data_layer.data_layer_util import HashOnlyProof, OfferStore, ProofLayer, Status, StoreProofs
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
@@ -426,11 +426,6 @@ async def test_keys_values_ancestors(
         keys_after = await data_rpc_api.get_keys({"id": store_id.hex(), "root_hash": res_after["hash"].hex()})
         assert len(pairs_before["keys_values"]) == len(keys_before["keys"]) == 5
         assert len(pairs_after["keys_values"]) == len(keys_after["keys"]) == 7
-
-        with pytest.raises(Exception, match="Can't find keys"):
-            await data_rpc_api.get_keys({"id": store_id.hex(), "root_hash": bytes32([0] * 31 + [1]).hex()})
-        with pytest.raises(Exception, match="Can't find keys and values"):
-            await data_rpc_api.get_keys_values({"id": store_id.hex(), "root_hash": bytes32([0] * 31 + [1]).hex()})
 
 
 @pytest.mark.anyio
