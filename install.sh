@@ -41,20 +41,6 @@ do
   esac
 done
 
-UBUNTU=false
-DEBIAN=false
-if [ "$(uname)" = "Linux" ]; then
-  #LINUX=1
-  if command -v apt-get >/dev/null; then
-    OS_ID=$(lsb_release -is)
-    if [ "$OS_ID" = "Debian" ]; then
-      DEBIAN=true
-    else
-      UBUNTU=true
-    fi
-  fi
-fi
-
 # Check for non 64 bit ARM64/Raspberry Pi installs
 if [ "$(uname -m)" = "armv7l" ]; then
   echo ""
