@@ -133,7 +133,7 @@ def tx_endpoint(push: bool = False, merge_spends: bool = True) -> Callable[[RpcE
             ]
             unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(tx_records)
 
-            if request.get("jsonify_unsigned_txs", False):
+            if request.get("full_jsonify", False):
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
             else:
                 response["unsigned_transactions"] = [bytes(tx.as_program()).hex() for tx in unsigned_txs]

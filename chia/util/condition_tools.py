@@ -184,22 +184,16 @@ def created_outputs_for_conditions_dict(
 
 
 def conditions_dict_for_solution(
-    puzzle_reveal: Program,
-    solution: Program,
-    max_cost: int,
+    puzzle_reveal: Union[Program, SerializedProgram], solution: Union[Program, SerializedProgram], max_cost: int
 ) -> Dict[ConditionOpcode, List[ConditionWithArgs]]:
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]] = {}
-    puzz = SerializedProgram.from_program(puzzle_reveal)
-    sol = SerializedProgram.from_program(solution)
-    for cvp in conditions_for_solution(puzz, sol, max_cost):
+    for cvp in conditions_for_solution(puzzle_reveal, solution, max_cost):
         conditions_dict.setdefault(cvp.opcode, list()).append(cvp)
     return conditions_dict
 
 
 def conditions_for_solution(
-    puzzle_reveal: SerializedProgram,
-    solution: SerializedProgram,
-    max_cost: int,
+    puzzle_reveal: Union[Program, SerializedProgram], solution: Union[Program, SerializedProgram], max_cost: int
 ) -> List[ConditionWithArgs]:
     # get the standard script for a puzzle hash and feed in the solution
     try:

@@ -73,9 +73,7 @@ class TestClawbackLifecycle:
             DEFAULT_HIDDEN_PUZZLE_HASH,
         )
 
-        conditions_dict = conditions_dict_for_solution(
-            coin_spend.puzzle_reveal.to_program(), coin_spend.solution.to_program(), INFINITE_COST
-        )
+        conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
         signatures = []
         for pk_bytes, msg in pkm_pairs_for_conditions_dict(
             conditions_dict, coin_spend.coin, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
