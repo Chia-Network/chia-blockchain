@@ -35,7 +35,7 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.eligible_coin_spends import UnspentLineageInfo, run_for_cost
+from chia.types.eligible_coin_spends import run_for_cost
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -2913,9 +2913,6 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
     def always(_: bytes32) -> bool:
         return True
 
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
-
     def make_test_spendbundle(coin: Coin, *, fee: int = 0, with_higher_cost: bool = False) -> SpendBundle:
         conditions = []
         actual_fee = fee
@@ -2956,9 +2953,7 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
     sb_low_rate = make_test_spendbundle(coins[2], fee=highest_fee // 5)
     saved_cost_on_solution_A = agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
     invariant_check_mempool(mempool)
-    result = await mempool.create_bundle_from_mempool_items(
-        always, get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
-    )
+    result = mempool.create_bundle_from_mempool_items(always, {}, test_constants, uint32(0))
     assert result is not None
     agg, _ = result
     # Make sure both items would be processed
@@ -2977,9 +2972,7 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
     # If we process everything now, the 3 x ~3 FPC items get skipped because
     # sb_A1 gets picked before them (~10 FPC), so from then on only sb_A2 (~2 FPC)
     # would get picked
-    result = await mempool.create_bundle_from_mempool_items(
-        always, get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
-    )
+    result = mempool.create_bundle_from_mempool_items(always, {}, test_constants, uint32(0))
     assert result is not None
     agg, _ = result
     # The 3 items got skipped here

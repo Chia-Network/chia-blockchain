@@ -4,7 +4,7 @@ import logging
 import sqlite3
 from datetime import datetime
 from enum import Enum
-from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
 from chia_rs import AugSchemeMPL, Coin, G2Element
 
@@ -393,10 +393,10 @@ class Mempool:
 
         return self._total_cost + cost > self.mempool_info.max_size_in_cost
 
-    async def create_bundle_from_mempool_items(
+    def create_bundle_from_mempool_items(
         self,
         item_inclusion_filter: Callable[[bytes32], bool],
-        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
+        puzzle_hash_to_unspent_lineage_info: Dict[bytes32, UnspentLineageInfo],
         constants: ConsensusConstants,
         height: uint32,
     ) -> Optional[Tuple[SpendBundle, List[Coin]]]:
@@ -443,9 +443,9 @@ class Mempool:
                         unique_additions.extend(spend_data.additions)
                     cost_saving = 0
                 else:
-                    await eligible_coin_spends.process_fast_forward_spends(
+                    eligible_coin_spends.process_fast_forward_spends(
                         mempool_item=item,
-                        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+                        puzzle_hash_to_unspent_lineage_info=puzzle_hash_to_unspent_lineage_info,
                         height=height,
                         constants=constants,
                     )

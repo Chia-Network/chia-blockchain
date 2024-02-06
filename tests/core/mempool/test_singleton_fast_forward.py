@@ -43,10 +43,6 @@ async def test_process_fast_forward_spends_nothing_to_do() -> None:
     This tests the case when we don't have an eligible coin, so there is
     nothing to fast forward and the item remains unchanged
     """
-
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
-
     conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH]]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     item = mempool_item_from_spendbundle(sb)
@@ -57,9 +53,9 @@ async def test_process_fast_forward_spends_nothing_to_do() -> None:
     )
     original_version = dataclasses.replace(internal_mempool_item)
     eligible_coin_spends = EligibleCoinSpends()
-    await eligible_coin_spends.process_fast_forward_spends(
+    eligible_coin_spends.process_fast_forward_spends(
         mempool_item=internal_mempool_item,
-        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+        puzzle_hash_to_unspent_lineage_info={},
         height=TEST_HEIGHT,
         constants=DEFAULT_CONSTANTS,
     )
@@ -73,12 +69,6 @@ async def test_process_fast_forward_spends_unknown_ff() -> None:
     This tests the case when we process for the first time but we are unable
     to lookup the latest version from the DB
     """
-
-    async def get_unspent_lineage_info_for_puzzle_hash(puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
-        if puzzle_hash == IDENTITY_PUZZLE_HASH:
-            return None
-        assert False  # pragma: no cover
-
     test_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     sb = spend_bundle_from_conditions(conditions, test_coin)
@@ -90,11 +80,11 @@ async def test_process_fast_forward_spends_unknown_ff() -> None:
     )
     eligible_coin_spends = EligibleCoinSpends()
     # We have no fast forward records yet, so we'll process this coin for the
-    # first time here, but the DB lookup will return None
+    # first time here, but the mempool manager's map doesn't have it
     with pytest.raises(ValueError, match="Cannot proceed with singleton spend fast forward."):
-        await eligible_coin_spends.process_fast_forward_spends(
+        eligible_coin_spends.process_fast_forward_spends(
             mempool_item=internal_mempool_item,
-            get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+            puzzle_hash_to_unspent_lineage_info={},
             height=TEST_HEIGHT,
             constants=DEFAULT_CONSTANTS,
         )
@@ -117,11 +107,6 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
         parent_parent_id=TEST_COIN_ID,
     )
 
-    async def get_unspent_lineage_info_for_puzzle_hash(puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
-        if puzzle_hash == IDENTITY_PUZZLE_HASH:
-            return test_unspent_lineage_info
-        assert False  # pragma: no cover
-
     # At this point, spends are considered *potentially* eligible for singleton
     # fast forward mainly when their amount is even and they don't have conditions
     # that disqualify them
@@ -134,9 +119,9 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     )
     original_version = dataclasses.replace(internal_mempool_item)
     eligible_coin_spends = EligibleCoinSpends()
-    await eligible_coin_spends.process_fast_forward_spends(
+    eligible_coin_spends.process_fast_forward_spends(
         mempool_item=internal_mempool_item,
-        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+        puzzle_hash_to_unspent_lineage_info={IDENTITY_PUZZLE_HASH: test_unspent_lineage_info},
         height=TEST_HEIGHT,
         constants=DEFAULT_CONSTANTS,
     )
