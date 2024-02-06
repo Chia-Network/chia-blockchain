@@ -13,11 +13,9 @@ _T = TypeVar("_T")
 
 class MarshallableProtocol(Protocol):
     @classmethod
-    def unmarshal(cls: Type[_T], marshalled: Dict[str, Any]) -> _T:
-        ...
+    def unmarshal(cls: Type[_T], marshalled: Dict[str, Any]) -> _T: ...
 
-    def marshal(self) -> Dict[str, Any]:
-        ...
+    def marshal(self) -> Dict[str, Any]: ...
 
 
 class UnboundRoute(Protocol):

@@ -35,8 +35,7 @@ _T_RpcApiProtocol = TypeVar("_T_RpcApiProtocol", bound="RpcApiProtocol")
 
 
 class StateChangedProtocol(Protocol):
-    def __call__(self, change: str, change_data: Optional[Dict[str, Any]]) -> None:
-        ...
+    def __call__(self, change: str, change_data: Optional[Dict[str, Any]]) -> None: ...
 
 
 class RpcServiceProtocol(Protocol):
@@ -82,8 +81,7 @@ class RpcApiProtocol(Protocol):
     All lower case with underscores as needed.
     """
 
-    def __init__(self, node: RpcServiceProtocol) -> None:
-        ...
+    def __init__(self, node: RpcServiceProtocol) -> None: ...
 
     @property
     def service(self) -> RpcServiceProtocol:

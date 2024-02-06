@@ -714,15 +714,19 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         [51, ACS_PH, vc.coin.amount],
                         [
                             62,
-                            cr_1.expected_announcement()
-                            if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
-                            else malicious_cr_1.expected_announcement(),
+                            (
+                                cr_1.expected_announcement()
+                                if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
+                                else malicious_cr_1.expected_announcement()
+                            ),
                         ],
                         [
                             62,
-                            cr_2.expected_announcement()
-                            if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
-                            else malicious_cr_2.expected_announcement(),
+                            (
+                                cr_2.expected_announcement()
+                                if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
+                                else malicious_cr_2.expected_announcement()
+                            ),
                         ],
                         *(a.to_program() for a in expected_announcements),
                         vc.standard_magic_condition(),
@@ -779,13 +783,15 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                                     ACS,
                                 ),
                                 solution_for_singleton(
-                                    LineageProof(
-                                        parent_name=did.parent_coin_info,
-                                        inner_puzzle_hash=ACS_PH,
-                                        amount=uint64(did.amount),
-                                    )
-                                    if correct_did
-                                    else other_lineage_proof,
+                                    (
+                                        LineageProof(
+                                            parent_name=did.parent_coin_info,
+                                            inner_puzzle_hash=ACS_PH,
+                                            amount=uint64(did.amount),
+                                        )
+                                        if correct_did
+                                        else other_lineage_proof
+                                    ),
                                     uint64(new_did.amount),
                                     Program.to([[51, ACS_PH, new_did.amount], expected_announcement.to_program()]),
                                 ),

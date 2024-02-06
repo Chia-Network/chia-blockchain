@@ -197,8 +197,7 @@ class Handler(Protocol):
         signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class AsyncHandler(Protocol):
@@ -207,8 +206,7 @@ class AsyncHandler(Protocol):
         signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 @final

@@ -211,13 +211,15 @@ class NewProofOfSpaceCase:
             farmer_private_keys=[
                 PrivateKey.from_bytes(bytes.fromhex("3cb188d8b2469bb8414a3ec68857959e231a8bec836df199a896ff523b9d2f7d"))
             ],
-            authentication_keys={
-                p2_singleton_puzzle_hash: PrivateKey.from_bytes(
-                    bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786")
-                ),
-            }
-            if has_valid_authentication_keys
-            else {},
+            authentication_keys=(
+                {
+                    p2_singleton_puzzle_hash: PrivateKey.from_bytes(
+                        bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786")
+                    ),
+                }
+                if has_valid_authentication_keys
+                else {}
+            ),
             use_invalid_peer_response=use_invalid_peer_response,
             expected_pool_state=expected_pool_state,
         )

@@ -112,18 +112,15 @@ class KeyringWrapper:
 
     @overload
     @staticmethod
-    def get_shared_instance() -> KeyringWrapper:
-        ...
+    def get_shared_instance() -> KeyringWrapper: ...
 
     @overload
     @staticmethod
-    def get_shared_instance(create_if_necessary: Literal[True]) -> KeyringWrapper:
-        ...
+    def get_shared_instance(create_if_necessary: Literal[True]) -> KeyringWrapper: ...
 
     @overload
     @staticmethod
-    def get_shared_instance(create_if_necessary: bool) -> Optional[KeyringWrapper]:
-        ...
+    def get_shared_instance(create_if_necessary: bool) -> Optional[KeyringWrapper]: ...
 
     @staticmethod
     def get_shared_instance(create_if_necessary: bool = True) -> Optional[KeyringWrapper]:

@@ -1547,9 +1547,9 @@ class WalletRpcClient(RpcClient):
                 "vc_id": vc_id.hex(),
                 "new_puzhash": new_puzhash.hex() if new_puzhash is not None else new_puzhash,
                 "new_proof_hash": new_proof_hash.hex() if new_proof_hash is not None else new_proof_hash,
-                "provider_inner_puzhash": provider_inner_puzhash.hex()
-                if provider_inner_puzhash is not None
-                else provider_inner_puzhash,
+                "provider_inner_puzhash": (
+                    provider_inner_puzhash.hex() if provider_inner_puzhash is not None else provider_inner_puzhash
+                ),
                 "fee": fee,
                 "extra_conditions": conditions_to_json_dicts(extra_conditions),
                 "push": push,
