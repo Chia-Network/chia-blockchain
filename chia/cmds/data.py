@@ -184,7 +184,7 @@ def publish_pending_root(
     from chia.cmds.data_funcs import publish_pending_root_cmd
 
     run(
-        update_data_store_cmd(
+        publish_pending_root_cmd(
             rpc_port=data_rpc_port,
             store_id=id,
             fee=fee,
