@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import json
+import socket
 from io import TextIOWrapper
 from typing import Optional
 
+import aiohttp
 import click
 
 from chia import __version__
@@ -27,6 +31,7 @@ from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
+from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.keychain import Keychain, set_keys_root_path
@@ -109,6 +114,54 @@ def run_daemon_cmd(ctx: click.Context, wait_for_unlock: bool) -> None:
 
     asyncio.run(async_run_daemon(ctx.obj["root_path"], wait_for_unlock=wait_for_unlock))
 
+
+async def fetch_data(url):
+    # Create a TCPConnector instance specifying IPv4
+    connector = aiohttp.TCPConnector(family=socket.AF_INET)
+
+    async with aiohttp.ClientSession(connector=connector) as session:
+        async with session.get(url) as response:
+            response_text = await response.text()
+            # @TODO Parsing json manually for now because Content-Type is not json yet from the port check service
+            try:
+                data = json.loads(response_text)
+                return data
+            except json.JSONDecodeError:
+                raise
+
+
+@cli.command("check_ports", help="Check if the required ports for inbound connections are open")
+def check_ports_cmd():
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    check_port = config.get("full_node", {}).get('port', None)
+    if check_port is None:
+        print("Please run chia init before checking ports")
+        return
+
+    print("Checking ports...")
+    loop = asyncio.get_event_loop()
+    data = loop.run_until_complete(fetch_data(f"https://port-check.chia.net/{check_port}"))
+
+    # Process the JSON data
+    # Assuming the JSON response is a list of dictionaries with port information
+    if "success" not in data or data["success"] is False:
+        if "connecting_ip" in data and "port" in data:
+            connecting_ip = data.get("connecting_ip")
+            port = data.get("port")
+            print(f"ERROR: Required full node port is NOT open {connecting_ip}:{port}. Check your router/firewall settings.")
+        else:
+            error = data.get("error") if "error" in data else ""
+            print(f"ERROR: An error occurred when checking the port {error}")
+        return
+
+    if "connecting_ip" in data and "port" in data:
+        connecting_ip = data.get("connecting_ip")
+        port = data.get("port")
+        print(f"Required full node port is open: {connecting_ip}:{port}")
+    else:
+        print(f"ERROR: An error occurred when checking the port")
+
+    print("Port checking completed.")
 
 cli.add_command(keys_cmd)
 cli.add_command(plots_cmd)
