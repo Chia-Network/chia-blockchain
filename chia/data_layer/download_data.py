@@ -158,7 +158,8 @@ async def insert_from_delta_file(
         if downloader is None:
             # use http downloader
             if not await http_download(client_foldername, filename, proxy_url, server_info, timeout, log):
-                break
+                await data_store.server_misses_file(tree_id, server_info, timestamp)
+                return False
         else:
             log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
             async with aiohttp.ClientSession() as session:
