@@ -377,6 +377,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
         rpc_port: Optional[int] = None,
         root_path: Optional[Path] = None,
         consume_errors: bool = True,
+        use_ssl: bool = True,
     ) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
         if root_path is None:
             root_path = default_root
