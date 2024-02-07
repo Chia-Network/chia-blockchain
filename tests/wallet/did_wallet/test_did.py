@@ -23,7 +23,6 @@ from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from tests.util.setup_nodes import OldSimulatorsAndWallets
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -469,7 +468,7 @@ class TestDIDWallet:
         coin = await did_wallet.get_coin()
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # We expect a CLVM 80 error for this test
             await did_wallet.recovery_spend(coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([])))
 
     @pytest.mark.parametrize(
@@ -993,9 +992,7 @@ class TestDIDWallet:
         )
         spend = response["spend_bundle"].coin_spends[0]
         conditions = conditions_dict_for_solution(
-            spend.puzzle_reveal.to_program(),
-            spend.solution.to_program(),
-            wallet.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            spend.puzzle_reveal, spend.solution, wallet.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
         )
 
         assert len(conditions[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT]) == 1
@@ -1403,30 +1400,24 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, monkey
         ]
     )
 
-    # When transfer_did doesn't push the transactions automatically, this monkeypatching is no longer necessary
-    with monkeypatch.context() as m:
-
-        async def nothing(*args) -> None:
-            pass
-
-        m.setattr(WalletStateManager, "add_pending_transactions", nothing)
-        for _ in range(0, 2):
-            [tx] = await did_wallet.transfer_did(
-                await wallet.get_puzzle_hash(new=False), uint64(0), True, wallet_environments.tx_config
-            )
-            assert tx.spend_bundle is not None
-            await client.push_tx(tx.spend_bundle)
-            await wallet_environments.process_pending_states(
-                [
-                    WalletStateTransition(
-                        pre_block_balance_updates={},
-                        post_block_balance_updates={
-                            1: {"set_remainder": True},
-                            2: {"set_remainder": True},
-                        },
-                    ),
-                    WalletStateTransition(),
-                ]
-            )
+    for _ in range(0, 2):
+        txs = await did_wallet.transfer_did(
+            await wallet.get_puzzle_hash(new=False), uint64(0), True, wallet_environments.tx_config
+        )
+        spend_bundles = [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]
+        assert len(spend_bundles) > 0
+        await client.push_tx(SpendBundle.aggregate(spend_bundles))
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={},
+                    post_block_balance_updates={
+                        1: {"set_remainder": True},
+                        2: {"set_remainder": True},
+                    },
+                ),
+                WalletStateTransition(),
+            ]
+        )
 
     assert len(await wallet.wallet_state_manager.get_spendable_coins_for_wallet(did_wallet.id())) == 1
