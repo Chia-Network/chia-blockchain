@@ -33,14 +33,14 @@ class GetNotifications(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class GatherSigningInfo(Streamable):
-    spends: List[Spend]
+class GetNotificationsResponse(Streamable):
+    notifications: List[Notification]
 
 
 @streamable
 @dataclass(frozen=True)
-class GetNotificationsResponse(Streamable):
-    notifications: List[Notification]
+class GatherSigningInfo(Streamable):
+    spends: List[Spend]
 
 
 @streamable
