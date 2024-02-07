@@ -1663,7 +1663,8 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
 
 
 @pytest.mark.anyio
-async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStore) -> None:
+@pytest.mark.parametrize("pending_status", [Status.PENDING, Status.PENDING_BATCH])
+async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStore, pending_status: Status) -> None:
     num_stores = 5
     total_keys = 15
     tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
@@ -1679,7 +1680,7 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
         batch = [{"action": "insert", "key": key, "value": key} for key in original_keys[start_index:end_index]]
         batches.append(batch)
     for tree_id, batch in zip(tree_ids, batches):
-        await raw_data_store.insert_batch(tree_id, batch, status=Status.PENDING)
+        await raw_data_store.insert_batch(tree_id, batch, status=pending_status)
 
     tree_id = tree_ids[-1]
     batch = [{"action": "insert", "key": key, "value": key} for key in original_keys]
