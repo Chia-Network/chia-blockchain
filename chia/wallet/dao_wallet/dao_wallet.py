@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes
 
-import chia.wallet.singleton
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.wallet_protocol import CoinState, RequestBlockHeader, RespondBlockHeader
 from chia.server.ws_connection import WSChiaConnection
@@ -508,9 +507,7 @@ class DAOWallet:
         assert children_state.created_height
         parent_spend = await fetch_coin_spend(children_state.created_height, parent_parent_coin, peer)
         assert parent_spend is not None
-        parent_inner_puz = chia.wallet.singleton.get_inner_puzzle_from_singleton(
-            parent_spend.puzzle_reveal.to_program()
-        )
+        parent_inner_puz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal)
         if parent_inner_puz is None:  # pragma: no cover
             raise ValueError("get_innerpuzzle_from_puzzle failed")
 
@@ -1584,7 +1581,7 @@ class DAOWallet:
         assert state is not None
         # CoinState contains Coin, spent_height, and created_height,
         parent_spend = await fetch_coin_spend(state[0].spent_height, state[0].coin, peer)
-        parent_inner_puz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
+        parent_inner_puz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal)
         assert isinstance(parent_inner_puz, Program)
         return LineageProof(state[0].coin.parent_coin_info, parent_inner_puz.get_tree_hash(), state[0].coin.amount)
 
