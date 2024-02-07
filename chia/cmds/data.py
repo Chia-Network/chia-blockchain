@@ -147,7 +147,7 @@ def get_value(
 @create_rpc_port_option()
 @create_fee_option()
 @options.create_fingerprint()
-@click.option("-p", "--publish_on_chain", help="Publish the result on chain", type=bool, default=True)
+@click.option("--publish/--no-publish", default=True, help="Publish the result on chain")
 def update_data_store(
     id: str,
     changelist_string: str,
