@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+
+## 2.2.0 Chia blockchain 2024-02-XX
+
+* Thanks to user https://github.com/bhorvitz for major help debugging a performance issue during coin DB lookup
+
+
 ## 2.1.4 Chia blockchain 2024-01-10
 
 ### Fixed
