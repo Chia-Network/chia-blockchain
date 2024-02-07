@@ -213,11 +213,11 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
             )
 
     return _CommandParsingStage(
-        cls,
-        option_decorators,
-        subclasses,
-        kwarg_names,
-        needs_context,
+        my_dataclass=cls,
+        my_option_decorators=option_decorators,
+        my_subclasses=subclasses,
+        my_kwarg_names=kwarg_names,
+        _needs_context=needs_context,
     )
 
 
