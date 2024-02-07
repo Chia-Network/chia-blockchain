@@ -55,11 +55,12 @@ def option(*param_decls: str, **kwargs: Any) -> Any:
 
     return field(  # pylint: disable=invalid-field-call
         metadata=dict(
-            is_command_option=True,
-            param_decls=tuple(param_decls),
-            **kwargs,
+            option_args=dict(
+                param_decls=tuple(param_decls),
+                **kwargs,
+            ),
         ),
-        default=kwargs["default"] if "default" in kwargs else default_default,
+        default=kwargs.get("default", default_default),
     )
 
 
@@ -147,7 +148,11 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
 
     for _field in _fields:
         field_name = _field.name
-        if isinstance(hints[field_name], type) and issubclass(hints[field_name], _CommandHelper):
+        if (
+            isinstance(hints[field_name], type)
+            and hasattr(hints[field_name], "__command_helper__")
+            and hints[field_name].__command_helper__
+        ):
             subclasses[field_name] = _generate_command_parser(hints[field_name])
         else:
             if field_name == "context":
@@ -157,34 +162,36 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                     needs_context = True
                     kwarg_names.append(field_name)
                     continue
-            elif "is_command_option" not in _field.metadata or not _field.metadata["is_command_option"]:
-                continue
 
-            if "type" not in _field.metadata:
+            if "option_args" not in _field.metadata:
+                continue
+            option_args = _field.metadata["option_args"]
+
+            if "type" not in option_args:
                 origin = get_origin(hints[field_name])
                 if origin == collections.abc.Sequence:
-                    if "multiple" not in _field.metadata or not _field.metadata["multiple"]:
+                    if "multiple" not in option_args or not option_args["multiple"]:
                         raise TypeError("Can only use Sequence with multiple=True")
                     else:
                         type_arg = get_args(hints[field_name])[0]
-                        if "default" in _field.metadata and (
-                            not isinstance(_field.metadata["default"], tuple)
-                            or any(not isinstance(item, type_arg) for item in _field.metadata["default"])
+                        if "default" in option_args and (
+                            not isinstance(option_args["default"], tuple)
+                            or any(not isinstance(item, type_arg) for item in option_args["default"])
                         ):
                             raise TypeError(
-                                f"Default {_field.metadata['default']} is not a tuple "
+                                f"Default {option_args['default']} is not a tuple "
                                 f"or all of its elements are not of type {type_arg}"
                             )
-                elif "multiple" in _field.metadata:
+                elif "multiple" in option_args:
                     raise TypeError("Options with multiple=True must be Sequence[T]")
                 elif is_type_SpecificOptional(hints[field_name]):
-                    if "required" not in _field.metadata or _field.metadata["required"]:
+                    if "required" not in option_args or option_args["required"]:
                         raise TypeError("Optional only allowed for options with required=False")
                     type_arg = get_args(hints[field_name])[0]
-                    if "default" in _field.metadata and (
-                        not isinstance(_field.metadata["default"], type_arg) and _field.metadata["default"] is not None
+                    if "default" in option_args and (
+                        not isinstance(option_args["default"], type_arg) and option_args["default"] is not None
                     ):
-                        raise TypeError(f"Default {_field.metadata['default']} is not type {type_arg} or None")
+                        raise TypeError(f"Default {option_args['default']} is not type {type_arg} or None")
                 elif origin is not None:
                     raise TypeError(f"Type {origin} invalid as a click type")
                 else:
@@ -194,21 +201,17 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                         type_arg = HexString32()
                     else:
                         type_arg = hints[field_name]
-                    if "default" in _field.metadata and not isinstance(_field.metadata["default"], hints[field_name]):
-                        raise TypeError(f"Default {_field.metadata['default']} is not type {type_arg}")
+                    if "default" in option_args and not isinstance(option_args["default"], hints[field_name]):
+                        raise TypeError(f"Default {option_args['default']} is not type {type_arg}")
             else:
-                type_arg = _field.metadata["type"]
+                type_arg = option_args["type"]
 
             kwarg_names.append(field_name)
             option_decorators.append(
                 click.option(
-                    *_field.metadata["param_decls"],
+                    *option_args["param_decls"],
                     type=type_arg,
-                    **{
-                        k: v
-                        for k, v in _field.metadata.items()
-                        if k not in ("param_decls", "is_command_option", "type")
-                    },
+                    **{k: v for k, v in option_args.items() if k not in ("param_decls", "is_command_option", "type")},
                 )
             )
 
@@ -264,20 +267,14 @@ def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[Type[ChiaC
     return _chia_command
 
 
-class _CommandHelper:
-    pass
-
-
 @dataclass_transform()
 def command_helper(cls: Type[Any]) -> Type[Any]:
     if sys.version_info < (3, 10):  # stuff below 3.10 doesn't support kw_only
-        return dataclass(frozen=True)(
-            type(cls.__name__, (dataclass(frozen=True)(cls), _CommandHelper), {})
-        )  # pragma: no cover
+        new_cls = dataclass(frozen=True)(cls)  # pragma: no cover
     else:
-        return dataclass(frozen=True, kw_only=True)(
-            type(cls.__name__, (dataclass(frozen=True, kw_only=True)(cls), _CommandHelper), {})
-        )
+        new_cls = dataclass(frozen=True, kw_only=True)(cls)
+    setattr(new_cls, "__command_helper__", True)
+    return new_cls
 
 
 Context = Dict[str, Any]
