@@ -31,7 +31,7 @@ class RpcClient:
 
     url: str
     session: aiohttp.ClientSession
-    ssl_context: SSLContext
+    ssl_context: Optional[SSLContext]
     hostname: str
     port: uint16
     closing_task: Optional[asyncio.Task] = None
@@ -41,19 +41,35 @@ class RpcClient:
         cls: Type[_T_RpcClient],
         self_hostname: str,
         port: uint16,
-        root_path: Path,
-        net_config: Dict[str, Any],
+        root_path: Optional[Path],
+        net_config: Optional[Dict[str, Any]],
     ) -> _T_RpcClient:
-        ca_crt_path, ca_key_path = private_ssl_ca_paths(root_path, net_config)
-        crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
-        key_path = root_path / net_config["daemon_ssl"]["private_key"]
-        timeout = net_config.get("rpc_timeout", 300)
+        if (root_path is not None) != (net_config is not None):
+            raise ValueError("Either both or neither of root_path and net_config must be provided")
+
+        ssl_context: Optional[SSLContext]
+        if root_path is None:
+            scheme = "http"
+            ssl_context = None
+        else:
+            assert root_path is not None
+            assert net_config is not None
+            scheme = "https"
+            ca_crt_path, ca_key_path = private_ssl_ca_paths(root_path, net_config)
+            crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
+            key_path = root_path / net_config["daemon_ssl"]["private_key"]
+            ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
+
+        timeout = 300
+        if net_config is not None:
+            timeout = net_config.get("rpc_timeout", timeout)
+
         self = cls(
             hostname=self_hostname,
             port=port,
-            url=f"https://{self_hostname}:{str(port)}/",
+            url=f"{scheme}://{self_hostname}:{str(port)}/",
             session=aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)),
-            ssl_context=ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path),
+            ssl_context=ssl_context,
         )
 
         return self
@@ -64,8 +80,8 @@ class RpcClient:
         cls: Type[_T_RpcClient],
         self_hostname: str,
         port: uint16,
-        root_path: Path,
-        net_config: Dict[str, Any],
+        root_path: Optional[Path] = None,
+        net_config: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[_T_RpcClient]:
         self = await cls.create(
             self_hostname=self_hostname,
