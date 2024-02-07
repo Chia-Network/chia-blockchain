@@ -248,6 +248,7 @@ async def test_nft_wallet_creation_and_transfer(
     txs = await nft_wallet_0.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
         if tx.spend_bundle is not None:
+            # ensure hints are generated
             assert len(compute_memos(tx.spend_bundle)) > 0
             await time_out_assert_not_none(
                 30, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
@@ -283,9 +284,10 @@ async def test_nft_wallet_creation_and_transfer(
     txs = await nft_wallet_0.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
         if tx.spend_bundle is not None:
+            # ensure hints are generated
             assert len(compute_memos(tx.spend_bundle)) > 0
             await time_out_assert_not_none(
-                30, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
             )
 
     await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
