@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-import ssl
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, cast, final
+from typing import Any, Dict, cast
 
-import aiohttp
 import pytest
-from aiohttp import web
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_util import PluginRemote
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint16
-from chia.util.network import WebServer
+from tests.util.misc import RecordingWebServer
 
 
 async def create_sufficient_wallet_rpc_client() -> WalletRpcClient:
@@ -51,60 +46,6 @@ async def test_sql_logs(enable: bool, config: Dict[str, Any], tmp_chia_root: Pat
         assert log_path.is_file()
     else:
         assert not log_path.exists()
-
-
-@final
-@dataclass
-class RecordingWebServer:
-    web_server: WebServer
-    requests: List[web.Request] = field(default_factory=list)
-
-    @classmethod
-    async def create(
-        cls,
-        hostname: str,
-        port: uint16,
-        max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
-        ssl_context: Optional[ssl.SSLContext] = None,
-        prefer_ipv6: bool = False,
-    ) -> RecordingWebServer:
-        web_server = await WebServer.create(
-            hostname=hostname,
-            port=port,
-            max_request_body_size=max_request_body_size,
-            ssl_context=ssl_context,
-            prefer_ipv6=prefer_ipv6,
-            start=False,
-        )
-
-        self = cls(web_server=web_server)
-        routes = [web.route(method="*", path=route, handler=func) for (route, func) in self.get_routes().items()]
-        web_server.add_routes(routes=routes)
-        await web_server.start()
-        return self
-
-    def get_routes(self) -> Dict[str, Callable[[web.Request], Awaitable[web.Response]]]:
-        return {"/{path:.*}": self.handler}
-
-    async def handler(self, request: web.Request) -> web.Response:
-        self.requests.append(request)
-        return aiohttp.web.json_response(data={"success": True})
-
-    async def await_closed(self) -> None:
-        self.web_server.close()
-        await self.web_server.await_closed()
-
-
-@pytest.fixture(name="recording_web_server")
-async def recording_web_server_fixture(self_hostname: str) -> AsyncIterator[RecordingWebServer]:
-    server = await RecordingWebServer.create(
-        hostname=self_hostname,
-        port=uint16(0),
-    )
-    try:
-        yield server
-    finally:
-        await server.await_closed()
 
 
 @pytest.mark.anyio
