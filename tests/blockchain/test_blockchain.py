@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-import os
 import random
 import time
 from contextlib import asynccontextmanager
@@ -47,6 +46,7 @@ from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.merkle_set import MerkleSet
+from chia.util.misc import available_logical_cores
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -1741,7 +1741,7 @@ class TestPreValidation:
     async def test_pre_validation(self, empty_blockchain, default_1000_blocks, bt):
         blocks = default_1000_blocks[:100]
         start = time.time()
-        n_at_a_time = min(os.cpu_count(), 32)
+        n_at_a_time = min(available_logical_cores(), 32)
         times_pv = []
         times_rb = []
         for i in range(0, len(blocks), n_at_a_time):
