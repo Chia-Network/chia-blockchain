@@ -2649,6 +2649,8 @@ async def test_unpublished_batch_update(
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
+    # Number of farmed blocks to check our batch update was not published.
+    NUM_BLOCKS_WITHOUT_PUBLISH = 10
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
@@ -2658,8 +2660,7 @@ async def test_unpublished_batch_update(
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
         to_insert = [(b"a", b"\x00\x01"), (b"b", b"\x00\x02"), (b"c", b"\x00\x03")]
-        for repetition in range(3):
-            key, value = to_insert[repetition]
+        for key, value in to_insert:
             changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
 
             res = await data_rpc_api.batch_update(
@@ -2667,7 +2668,7 @@ async def test_unpublished_batch_update(
             )
             assert res == {}
 
-            for _ in range(10):
+            for _ in range(NUM_BLOCKS_WITHOUT_PUBLISH):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
             assert keys_values == {"keys_values": []}
@@ -2689,6 +2690,7 @@ async def test_unpublished_batch_update(
         kv_dict = {item["key"]: item["value"] for item in keys_values["keys_values"]}
         for key, value in to_insert:
             assert kv_dict["0x" + key.hex()] == "0x" + value.hex()
+        prev_keys_values = keys_values
 
         key = b"e"
         value = b"\x00\x05"
@@ -2697,6 +2699,9 @@ async def test_unpublished_batch_update(
             {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
         )
         assert res == {}
+
+        for _ in range(NUM_BLOCKS_WITHOUT_PUBLISH):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await data_rpc_api.clear_pending_roots({"store_id": store_id.hex()})
         pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
@@ -2711,6 +2716,11 @@ async def test_unpublished_batch_update(
             {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
         )
         assert res == {}
+
+        for _ in range(NUM_BLOCKS_WITHOUT_PUBLISH):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
+        assert keys_values == prev_keys_values
 
         pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
         assert pending_root is not None
