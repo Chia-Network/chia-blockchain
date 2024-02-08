@@ -616,6 +616,7 @@ class BlockTools:
         force_plot_id: Optional[bytes32] = None,
         dummy_block_references: bool = False,
         include_transactions: bool = False,
+        skip_overflow:bool = False
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -1088,7 +1089,8 @@ class BlockTools:
             blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
 
             # Handle overflows: No overflows on new epoch or sub-epoch
-            if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots and not pending_ses:
+
+            if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots and not pending_ses and not skip_overflow:
                 for signage_point_index in range(
                     constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA,
                     constants.NUM_SPS_SUB_SLOT,
