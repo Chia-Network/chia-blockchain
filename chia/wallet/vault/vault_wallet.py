@@ -13,7 +13,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
@@ -246,7 +246,7 @@ class Vault(Wallet):
             vault_inner_solution,
         )
 
-        vault_spend = CoinSpend(self.vault_info.coin, full_puzzle, full_solution)
+        vault_spend = make_spend(self.vault_info.coin, full_puzzle, full_solution)
         all_spends = [*p2_spends, vault_spend]
         spend_bundle = SpendBundle(all_spends, G2Element())
 
@@ -434,7 +434,7 @@ class Vault(Wallet):
         assert full_puzzle.get_tree_hash() == vault_coin.puzzle_hash
 
         full_solution = get_vault_full_solution(self.vault_info.lineage_proof, amount, inner_solution)
-        recovery_spend = SpendBundle([CoinSpend(vault_coin, full_puzzle, full_solution)], G2Element())
+        recovery_spend = SpendBundle([make_spend(vault_coin, full_puzzle, full_solution)], G2Element())
 
         # 2. Generate the Finish Recovery Spend
         recovery_finish_puzzle = get_recovery_finish_puzzle(
@@ -448,7 +448,7 @@ class Vault(Wallet):
         lineage = LineageProof(self.vault_info.coin.name(), inner_puzzle.get_tree_hash(), amount)
         full_recovery_solution = get_vault_full_solution(lineage, amount, recovery_solution)
         finish_spend = SpendBundle(
-            [CoinSpend(recovery_coin, full_recovery_puzzle, full_recovery_solution)], G2Element()
+            [make_spend(recovery_coin, full_recovery_puzzle, full_recovery_solution)], G2Element()
         )
 
         # make the tx records
