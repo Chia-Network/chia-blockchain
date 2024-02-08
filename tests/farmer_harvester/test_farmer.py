@@ -4,15 +4,17 @@ import dataclasses
 import json
 import logging
 from dataclasses import dataclass
+from time import time
 from types import TracebackType
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from pytest_mock import MockerFixture
+from yarl import URL
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.farmer.farmer import Farmer, increment_pool_stats, strip_old_entries
+from chia.farmer.farmer import UPDATE_POOL_FARMER_INFO_INTERVAL, Farmer, increment_pool_stats, strip_old_entries
 from chia.pools.pool_config import PoolWalletConfig
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
@@ -26,10 +28,11 @@ from chia.types.blockchain_format.proof_of_space import (
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from tests.conftest import HarvesterFarmerEnvironment
-from tests.util.misc import Marks, datacases
+from tests.util.misc import DataCase, Marks, datacases
 
 log = logging.getLogger(__name__)
 
@@ -916,3 +919,284 @@ async def test_farmer_pool_response(
     assert_stats_24h("stale_partials_24h")
     assert_stats_since_start("missing_partials_since_start")
     assert_stats_24h("missing_partials_24h")
+
+
+def make_pool_list_entry(overrides: Dict[str, Any]) -> Dict[str, Any]:
+    pool_list_entry = {
+        "owner_public_key": "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5",  # noqa: E501
+        "p2_singleton_puzzle_hash": "302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df",
+        "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+        "pool_url": "localhost",
+        "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",
+        "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
+    }
+    for key, value in overrides.items():
+        pool_list_entry[key] = value
+    return pool_list_entry
+
+
+def make_pool_info() -> Dict[str, Any]:
+    return {
+        "name": "Pool Name",
+        "description": "Pool Description",
+        "logo_url": "https://subdomain.pool-domain.tld/path/to/logo.svg",
+        "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
+        "fee": "0.01",
+        "protocol_version": 1,
+        "relative_lock_height": 100,
+        "minimum_difficulty": 1,
+        "authentication_token_timeout": 5,
+    }
+
+
+def make_pool_state(p2_singleton_puzzle_hash: bytes32, overrides: Dict[str, Any]) -> Dict[str, Any]:
+    pool_info = {
+        "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
+        "points_found_since_start": 0,
+        "points_found_24h": [],
+        "points_acknowledged_since_start": 0,
+        "points_acknowledged_24h": [],
+        "next_farmer_update": 0,
+        "next_pool_info_update": 0,
+        "current_points": 0,
+        "current_difficulty": None,
+        "pool_errors_24h": [],
+        "valid_partials_since_start": 0,
+        "valid_partials_24h": [],
+        "invalid_partials_since_start": 0,
+        "invalid_partials_24h": [],
+        "insufficient_partials_since_start": 0,
+        "insufficient_partials_24h": [],
+        "stale_partials_since_start": 0,
+        "stale_partials_24h": [],
+        "missing_partials_since_start": 0,
+        "missing_partials_24h": [],
+        "authentication_token_timeout": None,
+        "plot_count": 0,
+    }
+    for key, value in overrides.items():
+        pool_info[key] = value
+    return pool_info
+
+
+@dataclass
+class DummyClientResponse:
+    status: int
+
+
+@dataclass
+class DummyPoolInfoResponse:
+    ok: bool
+    status: int
+    url: URL
+    pool_info: Optional[Dict[str, Any]] = None
+    history: Tuple[DummyClientResponse, ...] = ()
+
+    async def text(self) -> str:
+        if self.pool_info is None:
+            return ""
+
+        return json.dumps(self.pool_info)
+
+    async def __aenter__(self) -> DummyPoolInfoResponse:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        pass
+
+
+@dataclass
+class PoolInfoCase(DataCase):
+    _id: str
+    initial_pool_url_in_config: str
+    pool_response: DummyPoolInfoResponse
+    expected_pool_url_in_config: str
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+
+@datacases(
+    PoolInfoCase(
+        "valid_response_without_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1.pool-domain.tld/some-path"),
+            pool_info=make_pool_info(),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "valid_response_with_301_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            pool_info=make_pool_info(),
+            history=tuple([DummyClientResponse(status=301)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1337.pool-domain.tld/some-other-path",
+    ),
+    PoolInfoCase(
+        "valid_response_with_302_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            pool_info=make_pool_info(),
+            history=tuple([DummyClientResponse(status=302)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "valid_response_with_307_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            pool_info=make_pool_info(),
+            history=tuple([DummyClientResponse(status=307)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "valid_response_with_308_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            pool_info=make_pool_info(),
+            history=tuple([DummyClientResponse(status=308)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1337.pool-domain.tld/some-other-path",
+    ),
+    PoolInfoCase(
+        "valid_response_with_multiple_308_redirects",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            pool_info=make_pool_info(),
+            history=tuple([DummyClientResponse(status=308), DummyClientResponse(status=308)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1337.pool-domain.tld/some-other-path",
+    ),
+    PoolInfoCase(
+        "valid_response_with_multiple_307_and_308_redirects",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            pool_info=make_pool_info(),
+            history=tuple([DummyClientResponse(status=307), DummyClientResponse(status=308)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "failed_request_without_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=False,
+            status=500,
+            url=URL("https://endpoint-1.pool-domain.tld/some-path"),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "failed_request_with_301_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=False,
+            status=500,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            history=tuple([DummyClientResponse(status=301)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "failed_request_with_302_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=False,
+            status=500,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            history=tuple([DummyClientResponse(status=302)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "failed_request_with_307_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=False,
+            status=500,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            history=tuple([DummyClientResponse(status=307)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+    PoolInfoCase(
+        "failed_request_with_308_redirect",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=False,
+            status=500,
+            url=URL("https://endpoint-1337.pool-domain.tld/some-other-path"),
+            history=tuple([DummyClientResponse(status=308)]),
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+    ),
+)
+@pytest.mark.anyio
+async def test_farmer_pool_info_config_update(
+    mocker: MockerFixture,
+    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools],
+    case: PoolInfoCase,
+) -> None:
+    _, farmer_service, _ = farmer_one_harvester
+    p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
+    farmer_service._node.authentication_keys = {
+        p2_singleton_puzzle_hash: PrivateKey.from_bytes(
+            bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786")
+        ),
+    }
+    farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
+        p2_singleton_puzzle_hash,
+        overrides={
+            "next_farmer_update": time() + UPDATE_POOL_FARMER_INFO_INTERVAL,
+        },
+    )
+    config = load_config(farmer_service.root_path, "config.yaml")
+    config["pool"]["pool_list"] = [
+        make_pool_list_entry(
+            overrides={
+                "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
+                "pool_url": case.initial_pool_url_in_config,
+            }
+        )
+    ]
+    save_config(farmer_service.root_path, "config.yaml", config)
+    mock_http_get = mocker.patch("aiohttp.ClientSession.get", return_value=case.pool_response)
+
+    await farmer_service._node.update_pool_state()
+
+    mock_http_get.assert_called_once()
+    config = load_config(farmer_service.root_path, "config.yaml")
+    assert len(config["pool"]["pool_list"]) == 1
+    assert config["pool"]["pool_list"][0]["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex()
+    assert config["pool"]["pool_list"][0]["pool_url"] == case.expected_pool_url_in_config

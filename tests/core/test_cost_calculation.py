@@ -287,31 +287,32 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner) -> None:
 
 @pytest.mark.anyio
 async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: BenchmarkRunner) -> None:
-    from clvm.casts import int_from_bytes
-
     from chia.full_node.mempool_check_conditions import DESERIALIZE_MOD
     from tests.core.large_block import LARGE_BLOCK
 
-    spends: List[Coin] = []
-
     assert LARGE_BLOCK.transactions_generator is not None
     # first, list all spent coins in the block
-    cost, result = LARGE_BLOCK.transactions_generator.run_with_cost(
+    _, result = LARGE_BLOCK.transactions_generator.run_with_cost(
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, [DESERIALIZE_MOD, []]
     )
 
     coin_spends = result.first()
+    spent_coins: List[Coin] = []
     for spend in coin_spends.as_iter():
-        parent, puzzle, amount, solution = spend.as_iter()
-        spends.append(Coin(bytes32(parent.atom), Program.to(puzzle).get_tree_hash(), int_from_bytes(amount.atom)))
+        parent, puzzle, amount_program, _ = spend.as_iter()
+        parent_coin_info = parent.as_atom()
+        puzzle_hash = puzzle.get_tree_hash()
+        amount = amount_program.as_int()
+        coin = Coin(parent_coin_info=parent_coin_info, puzzle_hash=puzzle_hash, amount=amount)
+        spent_coins.append(coin)
 
-    print(f"found {len(spends)} spent coins in block")
+    print(f"found {len(spent_coins)} spent coins in block")
 
     # benchmark the function to pick out the puzzle and solution for a specific
     # coin
     generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [], [])
     with benchmark_runner.assert_runtime(seconds=8.5):
-        for i in range(3):
-            for c in spends:
+        for _ in range(3):
+            for c in spent_coins:
                 spend_info = get_puzzle_and_solution_for_coin(generator, c, 0, test_constants)
                 assert spend_info.puzzle.get_tree_hash() == c.puzzle_hash

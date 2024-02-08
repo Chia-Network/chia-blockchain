@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 from time import perf_counter
 from typing import Dict, List, Optional, Set, Tuple
@@ -174,14 +173,25 @@ class TradeStore:
                 )
                 if existing_trades_with_same_offer:
                     raise ValueError("Trade for this offer already exists.")
+            trade_record_old = TradeRecordOld(
+                confirmed_at_index=record.confirmed_at_index,
+                accepted_at_time=record.accepted_at_time,
+                created_at_time=record.created_at_time,
+                is_my_offer=record.is_my_offer,
+                sent=record.sent,
+                offer=record.offer,
+                taken_offer=record.taken_offer,
+                coins_of_interest=record.coins_of_interest,
+                trade_id=record.trade_id,
+                status=record.status,
+                sent_to=record.sent_to,
+            )
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO trade_records "
                 "(trade_record, trade_id, status, confirmed_at_index, created_at_time, sent, offer_name, is_my_offer) "
                 "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    bytes(
-                        TradeRecordOld(**{k: v for k, v in dataclasses.asdict(record).items() if k != "valid_times"})
-                    ),
+                    bytes(trade_record_old),
                     record.trade_id.hex(),
                     record.status,
                     record.confirmed_at_index,
@@ -471,8 +481,9 @@ class TradeStore:
             await cursor.close()
 
     async def _get_new_trade_records_from_old(self, old_records: List[TradeRecordOld]) -> List[TradeRecord]:
+        trade_id_to_valid_times: Dict[bytes, ConditionValidTimes] = {}
+        empty_valid_times = ConditionValidTimes()
         async with self.db_wrapper.reader_no_transaction() as conn:
-            valid_times: Dict[bytes32, ConditionValidTimes] = {}
             chunked_records: List[List[TradeRecordOld]] = [
                 old_records[i : min(len(old_records), i + self.db_wrapper.host_parameter_limit)]
                 for i in range(0, len(old_records), self.db_wrapper.host_parameter_limit)
@@ -480,18 +491,30 @@ class TradeStore:
             for records_chunk in chunked_records:
                 cursor = await conn.execute(
                     "SELECT trade_id, valid_times from trade_record_times WHERE "
-                    f"trade_id IN ({','.join('?' *  len(records_chunk))})",
+                    f"trade_id IN ({','.join('?' * len(records_chunk))})",
                     tuple(trade.trade_id for trade in records_chunk),
                 )
-                valid_times = {
-                    **valid_times,
-                    **{bytes32(res[0]): ConditionValidTimes.from_bytes(res[1]) for res in await cursor.fetchall()},
-                }
+                for row in await cursor.fetchall():
+                    trade_id_to_valid_times[row[0]] = ConditionValidTimes.from_bytes(row[1])
                 await cursor.close()
         return [
             TradeRecord(
-                valid_times=valid_times[record.trade_id] if record.trade_id in valid_times else ConditionValidTimes(),
-                **dataclasses.asdict(record),
+                confirmed_at_index=record.confirmed_at_index,
+                accepted_at_time=record.accepted_at_time,
+                created_at_time=record.created_at_time,
+                is_my_offer=record.is_my_offer,
+                sent=record.sent,
+                offer=record.offer,
+                taken_offer=record.taken_offer,
+                coins_of_interest=record.coins_of_interest,
+                trade_id=record.trade_id,
+                status=record.status,
+                sent_to=record.sent_to,
+                valid_times=(
+                    trade_id_to_valid_times[record.trade_id]
+                    if record.trade_id in trade_id_to_valid_times
+                    else empty_valid_times
+                ),
             )
             for record in old_records
         ]
