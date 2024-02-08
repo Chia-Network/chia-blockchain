@@ -13,7 +13,6 @@ from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol
 from chia.rpc.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_client import ResponseFailureError
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import get_signage_point
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
@@ -654,7 +653,7 @@ async def test_coin_name_not_in_request(one_node, self_hostname):
             full_node_service.root_path,
             full_node_service.config,
         )
-        with pytest.raises(ResponseFailureError, match="No coin_name in request"):
+        with pytest.raises(ValueError, match="No coin_name in request"):
             await client.fetch("get_mempool_items_by_coin_name", {})
     finally:
         # Checks that the RPC manages to stop the node

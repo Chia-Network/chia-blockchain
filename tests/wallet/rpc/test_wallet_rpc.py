@@ -15,7 +15,6 @@ from chia_rs import G2Element
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.rpc_server import RpcServer
 from chia.rpc.wallet_request_types import GetNotifications
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -955,7 +954,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await generate_funds(full_node_api, env.wallet_2, 1)
 
     # Test a deprecated path
-    with pytest.raises(ResponseFailureError, match="dropped"):
+    with pytest.raises(ValueError, match="dropped"):
         await client.fetch(
             "create_new_wallet",
             {
