@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from chia_rs import G1Element, G2Element
 from clvm_tools import binutils
@@ -15,6 +15,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
+from chia.util.misc import satisfies_hint
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
@@ -49,12 +50,16 @@ class PuzzleDB:
         return self._db.get(puzzle_hash)
 
 
-def from_kwargs(kwargs: Dict[str, Any], key: str, type_info: Any = Any) -> Any:
+T = TypeVar("T")
+
+
+def from_kwargs(kwargs: Dict[str, Any], key: str, type_info: Type[T]) -> T:
     """Raise an exception if `kwargs[key]` is missing or the wrong type"""
-    """for now, we just check that it's present"""
     if key not in kwargs:
         raise ValueError(f"`{key}` missing in call to `solve`")
-    return kwargs[key]
+    if not satisfies_hint(kwargs[key], type_info):
+        raise TypeError(f"`{key}` must be of type {type_info} but is of type {type(kwargs[key])}")
+    return cast(T, kwargs[key])
 
 
 Solver_F = Callable[["Solver", PuzzleDB, List[Program], Any], Program]
@@ -93,9 +98,9 @@ class Solver:
 
 
 def solve_launcher(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
-    launcher_amount = from_kwargs(kwargs, "launcher_amount", int)
+    launcher_amount = from_kwargs(kwargs, "launcher_amount", uint64)
     destination_puzzle_hash = from_kwargs(kwargs, "destination_puzzle_hash", bytes32)
-    metadata = from_kwargs(kwargs, "metadata", List[Tuple[str, Program]])
+    metadata = from_kwargs(kwargs, "metadata", List[Tuple[str, str]])
     solution = Program.to([destination_puzzle_hash, launcher_amount, metadata])
     # TODO: Remove cast when we improve typing
     return cast(Program, solution)
@@ -130,24 +135,24 @@ def solve_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kw
     _, inner_puzzle = args
     inner_solution = solver.solve(puzzle_db, inner_puzzle, **kwargs)
     lineage_proof = from_kwargs(kwargs, "lineage_proof", Program)
-    coin_amount = from_kwargs(kwargs, "coin_amount", int)
+    coin_amount = from_kwargs(kwargs, "coin_amount", uint64)
     solution = inner_solution.to([lineage_proof, coin_amount, inner_solution.rest()])
     # TODO: Remove cast when we improve typing
     return cast(Program, solution)
 
 
 def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
-    pool_member_spend_type = from_kwargs(kwargs, "pool_member_spend_type")
+    pool_member_spend_type = from_kwargs(kwargs, "pool_member_spend_type", str)
     allowable = ["to-waiting-room", "claim-p2-nft"]
     if pool_member_spend_type not in allowable:
         raise ValueError("`pool_member_spend_type` must be one of %s for POOL_MEMBER puzzle" % "/".join(allowable))
     to_waiting_room = pool_member_spend_type == "to-waiting-room"
     if to_waiting_room:
-        key_value_list = from_kwargs(kwargs, "key_value_list", List[Tuple[str, Program]])
+        key_value_list = from_kwargs(kwargs, "key_value_list", Program)
         # TODO: Remove cast when we improve typing
         return cast(Program, Program.to([0, 1, 0, 0, key_value_list]))
     # it's an "absorb_pool_reward" type
-    pool_reward_amount = from_kwargs(kwargs, "pool_reward_amount", int)
+    pool_reward_amount = from_kwargs(kwargs, "pool_reward_amount", uint64)
     pool_reward_height = from_kwargs(kwargs, "pool_reward_height", int)
     solution = Program.to([0, pool_reward_amount, pool_reward_height])
     # TODO: Remove cast when we improve typing
@@ -157,18 +162,18 @@ def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], 
 def solve_pool_waiting_room(
     solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]
 ) -> Program:
-    pool_leaving_spend_type = from_kwargs(kwargs, "pool_leaving_spend_type")
+    pool_leaving_spend_type = from_kwargs(kwargs, "pool_leaving_spend_type", str)
     allowable = ["exit-waiting-room", "claim-p2-nft"]
     if pool_leaving_spend_type not in allowable:
         raise ValueError("`pool_leaving_spend_type` must be one of %s for POOL_MEMBER puzzle" % "/".join(allowable))
     exit_waiting_room = pool_leaving_spend_type == "exit-waiting-room"
     if exit_waiting_room:
-        key_value_list = from_kwargs(kwargs, "key_value_list", List[Tuple[str, Program]])
-        destination_puzzle_hash = from_kwargs(kwargs, "destination_puzzle_hash", int)
+        key_value_list = from_kwargs(kwargs, "key_value_list", List[Tuple[str, str]])
+        destination_puzzle_hash = from_kwargs(kwargs, "destination_puzzle_hash", bytes32)
         # TODO: Remove cast when we improve typing
         return cast(Program, Program.to([0, 1, key_value_list, destination_puzzle_hash]))
     # it's an "absorb_pool_reward" type
-    pool_reward_amount = from_kwargs(kwargs, "pool_reward_amount", int)
+    pool_reward_amount = from_kwargs(kwargs, "pool_reward_amount", uint64)
     pool_reward_height = from_kwargs(kwargs, "pool_reward_height", int)
     solution = Program.to([0, 0, pool_reward_amount, pool_reward_height])
     # TODO: Remove cast when we improve typing
@@ -176,14 +181,14 @@ def solve_pool_waiting_room(
 
 
 def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
-    p2_singleton_spend_type = from_kwargs(kwargs, "p2_singleton_spend_type")
+    p2_singleton_spend_type = from_kwargs(kwargs, "p2_singleton_spend_type", str)
     allowable = ["claim-p2-nft", "delayed-spend"]
     if p2_singleton_spend_type not in allowable:
         raise ValueError("`p2_singleton_spend_type` must be one of %s for P2_SINGLETON puzzle" % "/".join(allowable))
     claim_p2_nft = p2_singleton_spend_type == "claim-p2-nft"
     if claim_p2_nft:
-        singleton_inner_puzzle_hash = from_kwargs(kwargs, "singleton_inner_puzzle_hash")
-        p2_singleton_coin_name = from_kwargs(kwargs, "p2_singleton_coin_name")
+        singleton_inner_puzzle_hash = from_kwargs(kwargs, "singleton_inner_puzzle_hash", bytes32)
+        p2_singleton_coin_name = from_kwargs(kwargs, "p2_singleton_coin_name", bytes)
         solution = Program.to([singleton_inner_puzzle_hash, p2_singleton_coin_name])
         # TODO: Remove cast when we improve typing
         return cast(Program, solution)
@@ -737,7 +742,7 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     # now spend to oblivion with the `-113` hack
 
     coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(
-        PUZZLE_DB, conditions=[[ConditionOpcode.CREATE_COIN, 0, -113]]
+        PUZZLE_DB, conditions=[Program.to([ConditionOpcode.CREATE_COIN, 0, -113])]
     )
     spend_bundle = SpendBundle([coin_spend], G2Element())
     debug_spend_bundle(spend_bundle)
