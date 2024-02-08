@@ -118,6 +118,13 @@ class ForkInfo:
             assert coin.name() not in self.additions_since_fork
             self.additions_since_fork[coin.name()] = ForkAdd(coin, uint32(block.height), uint64(timestamp), None, True)
 
+    def rollback(self, header_hash: bytes32, height: int) -> None:
+        assert height <= self.peak_height
+        self.peak_height = height
+        self.peak_hash = header_hash
+        self.additions_since_fork = {k: v for k, v in self.additions_since_fork.items() if v.confirmed_height <= height}
+        self.removals_since_fork = {k: v for k, v in self.removals_since_fork.items() if v.height <= height}
+
 
 async def validate_block_body(
     constants: ConsensusConstants,
@@ -401,6 +408,7 @@ async def validate_block_body(
             # and coins created after fork (additions_since_fork)
             if rem in fork_info.removals_since_fork:
                 # This coin was spent in the fork
+                log.error(f"Err.DOUBLE_SPEND_IN_FORK {fork_info.removals_since_fork[rem]}")
                 return Err.DOUBLE_SPEND_IN_FORK, None
             removals_from_db.append(rem)
 
@@ -433,7 +441,7 @@ async def validate_block_body(
         # This coin is not in the current heaviest chain, so it must be in the fork
         if rem not in fork_info.additions_since_fork:
             # Check for spending a coin that does not exist in this fork
-            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
+            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} fork_info: {fork_info}")
             return Err.UNKNOWN_UNSPENT, None
         addition: ForkAdd = fork_info.additions_since_fork[rem]
         new_coin_record: CoinRecord = CoinRecord(
