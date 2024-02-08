@@ -8,7 +8,6 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from chia.consensus.pot_iterations import is_overflow_block
 from chia.protocols import timelord_protocol
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
