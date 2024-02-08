@@ -24,6 +24,7 @@ from chia.util.config import load_config
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
+from chia.util.misc import to_batches
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import Balance, WalletNode
 from tests.conftest import ConsensusMode
@@ -413,8 +414,8 @@ async def test_get_balance(
     #       with that to a KeyError when applying the race cache if there are less than WEIGHT_PROOF_RECENT_BLOCKS
     #       blocks but we still have a peak stored in the DB. So we need to add enough blocks for a weight proof here to
     #       be able to restart the wallet in this test.
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await full_node_api.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     # Initially there should be no sync and no balance
     assert not wallet_synced()
@@ -540,7 +541,7 @@ async def test_transaction_send_cache(
 
     # Generate the transaction
     [tx] = await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), DEFAULT_TX_CONFIG)
-    await wallet.wallet_state_manager.add_pending_transaction(tx)
+    await wallet.wallet_state_manager.add_pending_transactions([tx])
 
     # Make sure it is sent to the peer
     await wallet_node._resend_queue()

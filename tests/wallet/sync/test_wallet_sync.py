@@ -66,15 +66,16 @@ log = getLogger(__name__)
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_request_block_headers(
-    simulator_and_wallet: OldSimulatorsAndWallets, default_1000_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock]
 ) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
     [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
     wallet = wallet_node.wallet_state_manager.main_wallet
     ph = await wallet.get_new_puzzlehash()
-    for block in default_1000_blocks[:100]:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks[:100], 64):
+        await full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(10), uint32(15), False))
     assert msg is not None
@@ -82,18 +83,14 @@ async def test_request_block_headers(
     res_block_headers = RespondBlockHeaders.from_bytes(msg.data)
     bh = res_block_headers.header_blocks
     assert len(bh) == 6
-    assert [x.reward_chain_block.height for x in default_1000_blocks[10:16]] == [
-        x.reward_chain_block.height for x in bh
-    ]
-
-    assert [x.foliage for x in default_1000_blocks[10:16]] == [x.foliage for x in bh]
-
+    assert [x.reward_chain_block.height for x in default_400_blocks[10:16]] == [x.reward_chain_block.height for x in bh]
+    assert [x.foliage for x in default_400_blocks[10:16]] == [x.foliage for x in bh]
     assert [x.transactions_filter for x in bh] == [b"\x00"] * 6
 
     num_blocks = 20
-    new_blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks, pool_reward_puzzle_hash=ph)
-    for i in range(len(new_blocks)):
-        await full_node_api.full_node.add_block(new_blocks[i])
+    new_blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks, pool_reward_puzzle_hash=ph)
+    for block_batch in to_batches(new_blocks, 64):
+        await full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(110), uint32(115), True))
     assert msg is not None
@@ -110,7 +107,7 @@ async def test_request_block_headers(
 # )
 @pytest.mark.anyio
 async def test_request_block_headers_rejected(
-    simulator_and_wallet: OldSimulatorsAndWallets, default_1000_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock]
 ) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
     [full_node_api], _, _ = simulator_and_wallet
@@ -123,8 +120,8 @@ async def test_request_block_headers_rejected(
     assert msg is not None
     assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
-    for block in default_1000_blocks[:150]:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(default_400_blocks[:150], 64):
+        await full_node_api.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(80), uint32(99), False))
     assert msg is not None
@@ -213,9 +210,9 @@ async def test_almost_recent(
     blockchain_constants: ConsensusConstants,
 ) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -224,8 +221,9 @@ async def test_almost_recent(
     wallets[1][0].config["trusted_peers"] = {}
 
     base_num_blocks = 400
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
     all_blocks = default_400_blocks
     both_phs = []
     for wallet_node, wallet_server in wallets:
@@ -236,13 +234,13 @@ async def test_almost_recent(
         # Tests a reorg with the wallet
         ph = both_phs[i % 2]
         all_blocks = bt.get_consecutive_blocks(1, block_list_input=all_blocks, pool_reward_puzzle_hash=ph)
-        await full_node_api.full_node.add_block(all_blocks[-1])
+        await full_node.add_block(all_blocks[-1])
 
     new_blocks = bt.get_consecutive_blocks(
         blockchain_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
     )
-    for i in range(base_num_blocks + 20, len(new_blocks)):
-        await full_node_api.full_node.add_block(new_blocks[i])
+    for block_batch in to_batches(new_blocks[base_num_blocks + 20 :], 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -279,9 +277,9 @@ async def test_backtrack_sync_wallet(
 async def test_short_batch_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
 ) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, _ = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -289,8 +287,8 @@ async def test_short_batch_sync_wallet(
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
 
-    for block in default_400_blocks[:200]:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(default_400_blocks[:200], 64):
+        await full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     for wallet_node, wallet_server in wallets:
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
@@ -358,9 +356,9 @@ async def test_wallet_reorg_sync(
     two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
 ) -> None:
     num_blocks = 5
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -375,8 +373,9 @@ async def test_wallet_reorg_sync(
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # Insert 400 blocks
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    await full_node.add_block(default_400_blocks[0])
+    for block_batch in to_batches(default_400_blocks[1:], 64):
+        await full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
 
     # Farm few more with reward
     for _ in range(num_blocks - 1):
@@ -400,7 +399,7 @@ async def test_wallet_reorg_sync(
     blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
 
     for block in blocks_reorg[-30:]:
-        await full_node_api.full_node.add_block(block)
+        await full_node.add_block(block)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -413,9 +412,9 @@ async def test_wallet_reorg_sync(
 async def test_wallet_reorg_get_coinbase(
     two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
 ) -> None:
-    full_nodes, wallets, bt = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.full_node.server
+    [full_node_api], wallets, bt = two_wallet_nodes
+    full_node = full_node_api.full_node
+    full_node_server = full_node.server
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -427,15 +426,17 @@ async def test_wallet_reorg_get_coinbase(
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # Insert 400 blocks
-    for block in default_400_blocks:
-        await full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     # Reorg blocks that carry reward
     num_blocks_reorg = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks_reorg, block_list_input=default_400_blocks[:-5])
 
-    for block in blocks_reorg[:-5]:
-        await full_node_api.full_node.add_block(block)
+    for block_batch in to_batches(blocks_reorg[:-6], 64):
+        await full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
+    await full_node.add_block(blocks_reorg[-6])
 
     for wallet_node, wallet_server in wallets:
         await time_out_assert(30, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
@@ -451,8 +452,7 @@ async def test_wallet_reorg_get_coinbase(
         )
     blocks_reorg_2 = bt.get_consecutive_blocks(num_blocks_reorg_1, block_list_input=all_blocks_reorg_2)
 
-    for block in blocks_reorg_2[-44:]:
-        await full_node_api.full_node.add_block(block)
+    await full_node.add_block_batch(blocks_reorg_2[-44:], dummy_peer_info, None)
 
     for wallet_node, wallet_server in wallets:
         await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
@@ -1118,8 +1118,8 @@ async def test_dusted_wallet(
         [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
     txs = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
+    await farm_nft_wallet.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await farm_nft_wallet.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             assert len(compute_memos(tx.spend_bundle)) > 0
             await time_out_assert_not_none(
@@ -1147,7 +1147,7 @@ async def test_dusted_wallet(
     )
     assert len(txs) == 1
     assert txs[0].spend_bundle is not None
-    await farm_wallet_node.wallet_state_manager.add_pending_transaction(txs[0])
+    await farm_wallet_node.wallet_state_manager.add_pending_transactions(txs)
     assert len(compute_memos(txs[0].spend_bundle)) > 0
 
     # Farm a new block.
@@ -1310,7 +1310,7 @@ async def test_retry_store(
             [tx] = await wallet.generate_signed_transaction(
                 uint64(1_000_000_000_000), bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
             )
-            await wallet_node.wallet_state_manager.add_pending_transaction(tx)
+            await wallet_node.wallet_state_manager.add_pending_transactions([tx])
 
             async def tx_in_mempool() -> bool:
                 return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None
@@ -1397,10 +1397,8 @@ async def test_long_sync_untrusted_break(
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    full_nodes, [(wallet_node, wallet_server)], _ = setup_two_nodes_and_wallet
-    trusted_full_node_api = full_nodes[0]
+    [trusted_full_node_api, untrusted_full_node_api], [(wallet_node, wallet_server)], _ = setup_two_nodes_and_wallet
     trusted_full_node_server = trusted_full_node_api.full_node.server
-    untrusted_full_node_api = full_nodes[1]
     untrusted_full_node_server = untrusted_full_node_api.full_node.server
     wallet_node.config["trusted_peers"] = {trusted_full_node_server.node_id.hex(): None}
 
@@ -1429,10 +1427,12 @@ async def test_long_sync_untrusted_break(
         untrusted_peers = sum([not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
         return trusted_peers == 1 and untrusted_peers == 0
 
-    for block in default_400_blocks:
-        await trusted_full_node_api.full_node.add_block(block)
-    for block in default_1000_blocks[:400]:
-        await untrusted_full_node_api.full_node.add_block(block)
+    dummy_peer_info = PeerInfo("0.0.0.0", 0)
+    for block_batch in to_batches(default_400_blocks, 64):
+        await trusted_full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
+
+    for block_batch in to_batches(default_1000_blocks[:400], 64):
+        await untrusted_full_node_api.full_node.add_block_batch(block_batch.entries, dummy_peer_info, None)
 
     with monkeypatch.context() as m:
         m.setattr(

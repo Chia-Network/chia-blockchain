@@ -8,6 +8,7 @@ import os
 import signal
 import sys
 from dataclasses import dataclass
+from inspect import getframeinfo, stack
 from pathlib import Path
 from types import FrameType
 from typing import (
@@ -19,10 +20,12 @@ from typing import (
     ContextManager,
     Dict,
     Generic,
+    Iterable,
     Iterator,
     List,
     Optional,
     Sequence,
+    Tuple,
     TypeVar,
     Union,
     final,
@@ -421,3 +424,17 @@ def available_logical_cores() -> int:
         return count
 
     return len(psutil.Process().cpu_affinity())
+
+
+def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:
+    caller = getframeinfo(stack()[distance + 1][0])
+
+    caller_path = Path(caller.filename)
+    options: List[str] = [caller_path.as_posix()]
+    for path in relative_to:
+        try:
+            options.append(caller_path.relative_to(path).as_posix())
+        except ValueError:
+            pass
+
+    return min(options, key=len), caller.lineno

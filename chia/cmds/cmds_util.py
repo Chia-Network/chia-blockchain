@@ -116,7 +116,7 @@ async def get_any_service_client(
         rpc_port = config[node_type]["rpc_port"]
     # select node client type based on string
     if use_ssl:
-        node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path, config)
+        node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path=root_path, net_config=config)
     else:
         node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path=None, net_config=None)
 

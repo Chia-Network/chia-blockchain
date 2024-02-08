@@ -889,6 +889,7 @@ class PoolWallet:
             )
             assert fee_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
+            fee_tx = dataclasses.replace(fee_tx, spend_bundle=None)
 
         assert estimate_fees(full_spend) == fee
         current_time = uint64(int(time.time()))
@@ -960,9 +961,10 @@ class PoolWallet:
                 travel_tx, fee_tx = await self.generate_travel_transactions(
                     self.next_transaction_fee, self.next_tx_config
                 )
-                await self.wallet_state_manager.add_pending_transaction(travel_tx)
+                txs = [travel_tx]
                 if fee_tx is not None:
-                    await self.wallet_state_manager.add_pending_transaction(fee_tx)
+                    txs.append(fee_tx)
+                await self.wallet_state_manager.add_pending_transactions(txs)
 
     async def have_unconfirmed_transaction(self) -> bool:
         unconfirmed: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(

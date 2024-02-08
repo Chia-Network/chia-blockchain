@@ -131,3 +131,12 @@ class DataLayerRpcClient(RpcClient):
         request = ClearPendingRootsRequest(store_id=store_id)
         response = await self.fetch("clear_pending_roots", request.marshal())
         return response
+
+    async def get_proof(self, store_id: bytes32, keys: List[bytes]) -> Dict[str, Any]:
+        request: Dict[str, Any] = {"store_id": store_id.hex(), "keys": [key.hex() for key in keys]}
+        response = await self.fetch("get_proof", request)
+        return response
+
+    async def verify_proof(self, proof: Dict[str, Any]) -> Dict[str, Any]:
+        response = await self.fetch("verify_proof", proof)
+        return response
