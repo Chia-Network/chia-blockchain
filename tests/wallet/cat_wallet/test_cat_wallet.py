@@ -686,7 +686,7 @@ async def test_cat_max_amount_send(
             spendable_name_set.add(record.coin.name())
         puzzle_hash = construct_cat_puzzle(CAT_MOD, cat_wallet.cat_info.limitations_program_hash, cat_2).get_tree_hash()
         for i in range(1, 50):
-            coin = Coin(spent_coint.name(), puzzle_hash, i)
+            coin = Coin(spent_coint.name(), puzzle_hash, uint64(i))
             if coin.name() not in spendable_name_set:
                 return False
         return True
