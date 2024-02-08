@@ -131,8 +131,7 @@ async def get_any_service_client(
         response = dict(e.response)
         tb = response.pop("traceback", None)
 
-        f = ResponseFailureError(response=response)
-        print(f"{f}")
+        print(f"{ResponseFailureError(response=response)}")
 
         if tb is not None:
             print(f"Traceback:\n{tb}")
