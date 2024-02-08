@@ -131,3 +131,26 @@ async def test_failure_output_with_traceback(
     out, err = capsys.readouterr()
     assert sample_traceback_json not in out
     assert sample_traceback in out
+
+
+@pytest.mark.anyio
+async def test_failure_output_no_consumption(
+    root_path_populated_with_config: Path,
+    recording_web_server: RecordingWebServer,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    expected_response = {"success": False, "magic": "xylophone"}
+
+    with pytest.raises(ResponseFailureError) as exception_info:
+        async with get_any_service_client(
+            client_type=RpcClient,
+            rpc_port=recording_web_server.web_server.listen_port,
+            root_path=root_path_populated_with_config,
+            use_ssl=False,
+            consume_errors=False,
+        ) as (client, _):
+            await client.fetch(path="/table", request_json={"response": expected_response})
+
+    assert exception_info.value.response == expected_response
+
+    assert capsys.readouterr() == ("", "")
