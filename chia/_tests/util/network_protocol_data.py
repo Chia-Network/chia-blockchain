@@ -718,31 +718,33 @@ respond_remove_coin_subscriptions = wallet_protocol.RespondRemoveCoinSubscriptio
 request_puzzle_state = wallet_protocol.RequestPuzzleState(
     hashes,
     uint32(0),
-    None,
     bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
+    uint32(10000000),
     coin_state_filters,
     True,
 )
 
-respond_puzzle_state = wallet_protocol.RespondPuzzleState(hashes, None, None, [coin_state])
-
-reject_puzzle_state = wallet_protocol.RejectPuzzleState(
-    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411"))
+respond_puzzle_state = wallet_protocol.RespondPuzzleState(
+    hashes,
+    uint32(432487),
+    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
+    True,
+    [coin_state],
 )
+
+reject_puzzle_state = wallet_protocol.RejectPuzzleState()
 
 request_coin_state = wallet_protocol.RequestCoinState(
     hashes,
     uint32(0),
-    uint32(10000000),
     bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
+    uint32(10000000),
     False,
 )
 
 respond_coin_state = wallet_protocol.RespondCoinState(hashes, [coin_state])
 
-reject_coin_state = wallet_protocol.RejectCoinState(
-    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411"))
-)
+reject_coin_state = wallet_protocol.RejectCoinState()
 
 
 ### HARVESTER PROTOCOL

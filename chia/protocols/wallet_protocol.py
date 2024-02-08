@@ -342,9 +342,9 @@ class CoinStateFilters(Streamable):
 @dataclass(frozen=True)
 class RequestPuzzleState(Streamable):
     puzzle_hashes: List[bytes32]
-    min_height: uint32
+    previous_height: uint32
+    header_hash: bytes32
     max_height: Optional[uint32]
-    header_hash: Optional[bytes32]
     filters: CoinStateFilters
     subscribe_when_finished: bool
 
@@ -353,24 +353,25 @@ class RequestPuzzleState(Streamable):
 @dataclass(frozen=True)
 class RespondPuzzleState(Streamable):
     puzzle_hashes: List[bytes32]
-    next_height: Optional[uint32]
-    next_header_hash: Optional[bytes32]
+    height: uint32
+    header_hash: bytes32
+    is_finished: bool
     coin_states: List[CoinState]
 
 
 @streamable
 @dataclass(frozen=True)
 class RejectPuzzleState(Streamable):
-    header_hash: Optional[bytes32]
+    pass
 
 
 @streamable
 @dataclass(frozen=True)
 class RequestCoinState(Streamable):
     coin_ids: List[bytes32]
-    min_height: uint32
+    previous_height: uint32
+    header_hash: bytes32
     max_height: Optional[uint32]
-    header_hash: Optional[bytes32]
     subscribe: bool
 
 
@@ -384,7 +385,7 @@ class RespondCoinState(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RejectCoinState(Streamable):
-    header_hash: Optional[bytes32]
+    pass
 
 
 @streamable

@@ -1810,12 +1810,16 @@ class FullNodeAPI:
     ) -> Message:
         max_items = self.max_subscribe_response_items(peer)
         max_subscriptions = self.max_subscriptions(peer)
-        header_hash = self.full_node.blockchain.height_to_hash(request.min_height)
 
-        if request.header_hash is not None and request.header_hash != header_hash:
-            rejection = wallet_protocol.RejectPuzzleState(header_hash)
+        previous_header_hash = self.full_node.blockchain.height_to_hash(request.previous_height)
+        assert previous_header_hash is not None
+
+        if request.header_hash != previous_header_hash:
+            rejection = wallet_protocol.RejectPuzzleState()
             msg = make_msg(ProtocolMessageTypes.reject_puzzle_state, rejection)
             return msg
+
+        min_height = uint32(request.previous_height + 1)
 
         # This is a limit imposed by `batch_coin_states_by_puzzle_hashes`, due to the SQLite variable limit.
         # It can be increased in the future, and this protocol should be written and tested in a way that
@@ -1823,28 +1827,34 @@ class FullNodeAPI:
         count = 15000
         puzzle_hashes = request.puzzle_hashes[:count]
 
-        (coin_states, next_height) = await self.full_node.coin_store.batch_coin_states_by_puzzle_hashes(
+        (coin_states, next_min_height) = await self.full_node.coin_store.batch_coin_states_by_puzzle_hashes(
             puzzle_hashes,
-            min_height=request.min_height,
+            min_height=min_height,
             max_height=request.max_height or uint32.MAXIMUM,
             include_spent=request.filters.include_spent,
             include_unspent=request.filters.include_unspent,
             include_hinted=request.filters.include_hinted,
             max_items=max_items,
         )
+        is_done = next_min_height is None
 
-        if next_height is None:
-            next_header_hash = None
+        peak_height = self.full_node.blockchain.get_peak_height()
+        assert peak_height is not None
+
+        height = uint32(next_min_height - 1) if next_min_height is not None else peak_height
+        header_hash = self.full_node.blockchain.height_to_hash(height)
+        assert header_hash is not None
+
+        if is_done and request.subscribe_when_finished:
             added = list(
                 self.full_node.subscriptions.add_puzzle_subscriptions(
                     peer.peer_node_id, puzzle_hashes, max_subscriptions
                 )
             )
         else:
-            next_header_hash = self.full_node.blockchain.height_to_hash(next_height)
-            added = []
+            added = puzzle_hashes
 
-        response = wallet_protocol.RespondPuzzleState(added, next_height, next_header_hash, coin_states)
+        response = wallet_protocol.RespondPuzzleState(added, height, header_hash, is_done, coin_states)
         msg = make_msg(ProtocolMessageTypes.respond_puzzle_state, response)
         return msg
 
@@ -1852,25 +1862,36 @@ class FullNodeAPI:
     async def request_coin_state(self, request: wallet_protocol.RequestCoinState, peer: WSChiaConnection) -> Message:
         max_items = self.max_subscribe_response_items(peer)
         max_subscriptions = self.max_subscriptions(peer)
-        header_hash = self.full_node.blockchain.height_to_hash(request.min_height)
 
-        if request.header_hash is not None and request.header_hash != header_hash:
-            rejection = wallet_protocol.RejectCoinState(header_hash)
-            msg = make_msg(ProtocolMessageTypes.reject_coin_state, rejection)
-            return msg
+        if request.previous_height is not None:
+            previous_header_hash = self.full_node.blockchain.height_to_hash(request.previous_height)
+
+            if request.header_hash is None or request.header_hash != previous_header_hash:
+                rejection = wallet_protocol.RejectCoinState()
+                msg = make_msg(ProtocolMessageTypes.reject_coin_state, rejection)
+                return msg
+
+            min_height = uint32(request.previous_height + 1)
+        else:
+            min_height = uint32(0)
 
         coin_states = await self.full_node.coin_store.get_coin_states_by_ids(
             True,
             set(request.coin_ids),
-            min_height=request.min_height,
+            min_height=min_height,
             max_height=request.max_height or uint32.MAXIMUM,
             max_items=max_items,
         )
 
-        peer_id = peer.peer_node_id
-        added = self.full_node.subscriptions.add_coin_subscriptions(peer_id, request.coin_ids, max_subscriptions)
+        if request.subscribe:
+            peer_id = peer.peer_node_id
+            added = list(
+                self.full_node.subscriptions.add_coin_subscriptions(peer_id, request.coin_ids, max_subscriptions)
+            )
+        else:
+            added = request.coin_ids
 
-        response = wallet_protocol.RespondCoinState(list(added), coin_states)
+        response = wallet_protocol.RespondCoinState(added, coin_states)
         msg = make_msg(ProtocolMessageTypes.respond_coin_state, response)
         return msg
 
