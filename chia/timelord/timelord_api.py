@@ -47,7 +47,7 @@ class TimelordAPI:
                 return
 
             if self.timelord.last_state.get_weight() < new_peak.reward_chain_block.weight:
-                # if there is an unfinished block with more iterations from a diff chain, skip
+                # if there is an unfinished block with less iterations, skip so we dont orphan it
                 if (
                     new_peak.reward_chain_block.height == self.timelord.last_state.last_height + 1
                     and self.check_orphaned_unfinished_block(new_peak) is True
