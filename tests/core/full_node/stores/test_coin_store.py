@@ -1,22 +1,27 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
 import pytest
+from clvm.casts import int_to_bytes
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.protocols.wallet_protocol import CoinState
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
@@ -24,6 +29,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.db_connection import DBConnection
+from tests.util.misc import Marks, datacases
 
 constants = test_constants
 
@@ -111,7 +117,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                     assert block.foliage_transaction_block is not None
                     await coin_store.new_block(
                         block.height,
-                        block.foliage_transaction_block.timestamp,
+                        uint64(block.foliage_transaction_block.timestamp),
                         block.get_included_reward_coins(),
                         tx_additions,
                         tx_removals,
@@ -121,7 +127,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                         with pytest.raises(Exception):
                             await coin_store.new_block(
                                 block.height,
-                                block.foliage_transaction_block.timestamp,
+                                uint64(block.foliage_transaction_block.timestamp),
                                 block.get_included_reward_coins(),
                                 tx_additions,
                                 tx_removals,
@@ -179,7 +185,7 @@ async def test_set_spent(db_version: int, bt: BlockTools) -> None:
                         assert block.foliage_transaction_block is not None
                         await coin_store.new_block(
                             block.height,
-                            block.foliage_transaction_block.timestamp,
+                            uint64(block.foliage_transaction_block.timestamp),
                             block.get_included_reward_coins(),
                             additions,
                             removals,
@@ -227,7 +233,7 @@ async def test_num_unspent(bt: BlockTools, db_version: int) -> None:
                 additions: List[Coin] = []
                 await coin_store.new_block(
                     block.height,
-                    block.foliage_transaction_block.timestamp,
+                    uint64(block.foliage_transaction_block.timestamp),
                     block.get_included_reward_coins(),
                     additions,
                     removals,
@@ -259,7 +265,7 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
                 assert block.foliage_transaction_block is not None
                 await coin_store.new_block(
                     block.height,
-                    block.foliage_transaction_block.timestamp,
+                    uint64(block.foliage_transaction_block.timestamp),
                     block.get_included_reward_coins(),
                     additions,
                     removals,
@@ -493,8 +499,341 @@ async def test_get_coin_states(db_version: int) -> None:
         assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(0), max_items=10000)) == 600
 
 
+@dataclass(frozen=True)
+class RandomCoinRecords:
+    items: List[CoinRecord]
+    puzzle_hashes: List[bytes32]
+    hints: List[Tuple[bytes32, bytes]]
+
+
+@pytest.fixture(scope="session")
+def random_coin_records() -> RandomCoinRecords:
+    coin_records: List[CoinRecord] = []
+    puzzle_hashes: List[bytes32] = []
+    hints: List[Tuple[bytes32, bytes]] = []
+
+    for i in range(50000):
+        is_spent = i % 2 == 0
+        is_hinted = i % 7 == 0
+        created_height = uint32(i)
+        spent_height = uint32(created_height + 100)
+
+        puzzle_hash = std_hash(i.to_bytes(4, byteorder="big"))
+
+        coin = Coin(
+            std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
+            puzzle_hash,
+            uint64(1000),
+        )
+
+        if is_hinted:
+            hint = std_hash(b"Hinted " + puzzle_hash)
+            hints.append((coin.name(), hint))
+            puzzle_hashes.append(hint)
+        else:
+            puzzle_hashes.append(puzzle_hash)
+
+        coin_records.append(
+            CoinRecord(
+                coin=coin,
+                confirmed_block_index=created_height,
+                spent_block_index=spent_height if is_spent else uint32(0),
+                coinbase=False,
+                timestamp=uint64(0),
+            )
+        )
+
+    coin_records.sort(key=lambda cr: max(cr.confirmed_block_index, cr.spent_block_index))
+
+    return RandomCoinRecords(coin_records, puzzle_hashes, hints)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("include_spent", [True, False])
+@pytest.mark.parametrize("include_unspent", [True, False])
+@pytest.mark.parametrize("include_hinted", [True, False])
+async def test_coin_state_batches(
+    db_version: int,
+    random_coin_records: RandomCoinRecords,
+    include_spent: bool,
+    include_unspent: bool,
+    include_hinted: bool,
+) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        # Initialize coin and hint stores.
+        coin_store = await CoinStore.create(db_wrapper)
+        hint_store = await HintStore.create(db_wrapper)
+
+        await coin_store._add_coin_records(random_coin_records.items)
+        await hint_store.add_hints(random_coin_records.hints)
+
+        # Make sure all of the coin states are found when batching.
+        ph_set = set(random_coin_records.puzzle_hashes)
+        expected_crs = []
+        for cr in random_coin_records.items:
+            if cr.spent_block_index == 0 and not include_unspent:
+                continue
+            if cr.spent_block_index > 0 and not include_spent:
+                continue
+            if cr.coin.puzzle_hash not in ph_set and not include_hinted:
+                continue
+            expected_crs.append(cr)
+
+        height: Optional[uint32] = uint32(0)
+        all_coin_states: List[CoinState] = []
+        remaining_phs = random_coin_records.puzzle_hashes.copy()
+
+        def height_of(coin_state: CoinState) -> int:
+            return max(coin_state.created_height or 0, coin_state.spent_height or 0)
+
+        while height is not None:
+            (coin_states, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
+                remaining_phs[:15000],
+                min_height=height,
+                include_spent=include_spent,
+                include_unspent=include_unspent,
+                include_hinted=include_hinted,
+            )
+
+            # Ensure that all of the returned coin states are in order.
+            assert all(height_of(coin_states[i]) <= height_of(coin_states[i + 1]) for i in range(len(coin_states) - 1))
+
+            all_coin_states += coin_states
+
+            if height is None:
+                remaining_phs = remaining_phs[15000:]
+
+                if len(remaining_phs) > 0:
+                    height = uint32(0)
+
+        assert len(all_coin_states) == len(expected_crs)
+
+        all_coin_states.sort(key=height_of)
+
+        for i in range(len(expected_crs)):
+            actual = all_coin_states[i]
+            expected = expected_crs[i]
+
+            assert actual.coin == expected.coin, i
+            assert uint32(actual.created_height or 0) == expected.confirmed_block_index, i
+            assert uint32(actual.spent_height or 0) == expected.spent_block_index, i
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("cut_off_middle", [True, False])
+async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        ph = bytes32(b"0" * 32)
+
+        # Generate coin records.
+        coin_records: List[CoinRecord] = []
+        count = 50000
+
+        for i in range(count):
+            # Create coin records at either height 10 or 12.
+            created_height = uint32((i % 2) * 2 + 10)
+            coin = Coin(
+                std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
+                ph,
+                uint64(i),
+            )
+            coin_records.append(
+                CoinRecord(
+                    coin=coin,
+                    confirmed_block_index=created_height,
+                    spent_block_index=uint32(0),
+                    coinbase=False,
+                    timestamp=uint64(0),
+                )
+            )
+
+        # Initialize coin and hint stores.
+        coin_store = await CoinStore.create(db_wrapper)
+        await HintStore.create(db_wrapper)
+
+        await coin_store._add_coin_records(coin_records)
+
+        # Make sure all of the coin states are found.
+        (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
+        all_coin_states.sort(key=lambda cs: cs.coin.amount)
+
+        assert next_height is None
+        assert len(all_coin_states) == len(coin_records)
+
+        for i in range(min(len(coin_records), len(all_coin_states))):
+            assert coin_records[i].coin.name().hex() == all_coin_states[i].coin.name().hex(), i
+
+        # For the middle case, insert a coin record between the two heights 10 and 12.
+        await coin_store._add_coin_records(
+            [
+                CoinRecord(
+                    coin=Coin(std_hash(b"extra coin"), ph, 0),
+                    # Insert a coin record in the middle between heights 10 and 12.
+                    # Or after all of the other coins if testing the batch limit.
+                    confirmed_block_index=uint32(11 if cut_off_middle else 50),
+                    spent_block_index=uint32(0),
+                    coinbase=False,
+                    timestamp=uint64(0),
+                )
+            ]
+        )
+
+        (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
+
+        # Make sure that the extra coin records are not included in the results.
+        assert next_height == (12 if cut_off_middle else 50)
+        assert len(all_coin_states) == (25001 if cut_off_middle else 50000)
+
+
 @pytest.mark.anyio
 async def test_unsupported_version() -> None:
     with pytest.raises(RuntimeError, match="CoinStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:
             await CoinStore.create(db_wrapper)
+
+
+TEST_COIN_ID = b"c" * 32
+TEST_PUZZLEHASH = b"p" * 32
+TEST_AMOUNT = 1337
+TEST_PARENT_ID = Coin(b"a" * 32, TEST_PUZZLEHASH, TEST_AMOUNT).name()
+TEST_PARENT_DIFFERENT_AMOUNT = 5
+TEST_PARENT_ID_DIFFERENT_AMOUNT = Coin(b"a" * 32, TEST_PUZZLEHASH, TEST_PARENT_DIFFERENT_AMOUNT).name()
+TEST_PARENT_PARENT_ID = b"f" * 32
+
+
+@dataclass(frozen=True)
+class UnspentLineageInfoTestItem:
+    coin_id: bytes
+    puzzlehash: bytes
+    amount: int
+    parent_id: bytes
+    is_spent: bool = False
+
+
+@dataclass
+class UnspentLineageInfoCase:
+    id: str
+    items: List[UnspentLineageInfoTestItem]
+    expected_success: bool
+    parent_with_diff_amount: bool = False
+    marks: Marks = ()
+
+
+@pytest.mark.anyio
+@datacases(
+    UnspentLineageInfoCase(
+        id="Unspent with parent that has same amount but different puzzlehash",
+        items=[
+            UnspentLineageInfoTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageInfoTestItem(b"2" * 32, b"2" * 32, 2, b"1" * 32),
+            UnspentLineageInfoTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
+            UnspentLineageInfoTestItem(TEST_PARENT_ID, b"4" * 32, TEST_AMOUNT, TEST_PARENT_PARENT_ID, is_spent=True),
+        ],
+        expected_success=False,
+    ),
+    UnspentLineageInfoCase(
+        id="Unspent with parent that has same puzzlehash but different amount",
+        items=[
+            UnspentLineageInfoTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID_DIFFERENT_AMOUNT),
+            UnspentLineageInfoTestItem(b"2" * 32, b"2" * 32, 2, b"1" * 32),
+            UnspentLineageInfoTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
+            UnspentLineageInfoTestItem(
+                TEST_PARENT_ID_DIFFERENT_AMOUNT,
+                TEST_PUZZLEHASH,
+                TEST_PARENT_DIFFERENT_AMOUNT,
+                TEST_PARENT_PARENT_ID,
+                is_spent=True,
+            ),
+        ],
+        parent_with_diff_amount=True,
+        expected_success=True,
+    ),
+    UnspentLineageInfoCase(
+        id="Unspent with parent that has same puzzlehash and amount but is also unspent",
+        items=[
+            UnspentLineageInfoTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageInfoTestItem(b"2" * 32, b"2" * 32, 2, b"1" * 32),
+            UnspentLineageInfoTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
+            UnspentLineageInfoTestItem(TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID),
+        ],
+        expected_success=False,
+    ),
+    UnspentLineageInfoCase(
+        id="More than one unspent with parent that has same puzzlehash and amount",
+        items=[
+            UnspentLineageInfoTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageInfoTestItem(b"2" * 32, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageInfoTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
+            UnspentLineageInfoTestItem(
+                TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID, is_spent=True
+            ),
+        ],
+        expected_success=False,
+    ),
+    UnspentLineageInfoCase(
+        id="Unspent with parent that has same puzzlehash and amount",
+        items=[
+            UnspentLineageInfoTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageInfoTestItem(b"2" * 32, b"2" * 32, 2, b"1" * 32),
+            UnspentLineageInfoTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
+            UnspentLineageInfoTestItem(
+                TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID, is_spent=True
+            ),
+        ],
+        expected_success=True,
+    ),
+)
+async def test_get_unspent_lineage_info_for_puzzle_hash(case: UnspentLineageInfoCase) -> None:
+    CoinRecordRawData = Tuple[
+        bytes,  # coin_name (blob)
+        int,  # confirmed_index (bigint)
+        int,  # spent_index (bigint)
+        int,  # coinbase (int)
+        bytes,  # puzzle_hash (blob)
+        bytes,  # coin_parent (blob)
+        bytes,  # amount (blob)
+        int,  # timestamp (bigint)
+    ]
+
+    def make_test_data(test_items: List[UnspentLineageInfoTestItem]) -> List[CoinRecordRawData]:
+        test_data = []
+        for item in test_items:
+            test_data.append(
+                (
+                    item.coin_id,
+                    0,
+                    1 if item.is_spent else 0,
+                    0,
+                    item.puzzlehash,
+                    item.parent_id,
+                    int_to_bytes(item.amount),
+                    0,
+                )
+            )
+        return test_data
+
+    async with DBConnection(2) as db_wrapper:
+        # Prepare the coin store with the test case's data
+        coin_store = await CoinStore.create(db_wrapper)
+        async with db_wrapper.writer() as writer:
+            for item in make_test_data(case.items):
+                await writer.execute(
+                    "INSERT INTO coin_record "
+                    "(coin_name, confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    item,
+                )
+        # Run the test case
+        result = await coin_store.get_unspent_lineage_info_for_puzzle_hash(bytes32(TEST_PUZZLEHASH))
+        if case.expected_success:
+            assert result == UnspentLineageInfo(
+                coin_id=bytes32(TEST_COIN_ID),
+                coin_amount=TEST_AMOUNT,
+                parent_id=bytes32(TEST_PARENT_ID_DIFFERENT_AMOUNT)
+                if case.parent_with_diff_amount
+                else bytes32(TEST_PARENT_ID),
+                parent_amount=TEST_PARENT_DIFFERENT_AMOUNT if case.parent_with_diff_amount else TEST_AMOUNT,
+                parent_parent_id=bytes32(TEST_PARENT_PARENT_ID),
+            )
+        else:
+            assert result is None

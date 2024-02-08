@@ -4,28 +4,34 @@ import asyncio
 import contextlib
 import dataclasses
 import functools
+import os
 import signal
 import sys
 from dataclasses import dataclass
+from inspect import getframeinfo, stack
 from pathlib import Path
 from types import FrameType
 from typing import (
     Any,
     AsyncContextManager,
     AsyncIterator,
+    ClassVar,
     Collection,
     ContextManager,
     Dict,
     Generic,
+    Iterable,
     Iterator,
     List,
     Optional,
     Sequence,
+    Tuple,
     TypeVar,
     Union,
     final,
 )
 
+import psutil
 from typing_extensions import Protocol
 
 from chia.util.errors import InvalidPathError
@@ -262,8 +268,19 @@ class SignalHandlers:
         loop = asyncio.get_event_loop()
 
         if sys.platform == "win32" or sys.platform == "cygwin":
+
+            def ensure_signal_object_not_int(
+                signal_: int,
+                stack_frame: Optional[FrameType],
+                *,
+                handler: Handler = handler,
+                loop: asyncio.AbstractEventLoop = loop,
+            ) -> None:
+                signal_ = signal.Signals(signal_)
+                handler(signal_=signal_, stack_frame=stack_frame, loop=loop)
+
             for signal_ in [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]:
-                signal.signal(signal_, functools.partial(handler, loop=loop))
+                signal.signal(signal_, ensure_signal_object_not_int)
         else:
             for signal_ in [signal.SIGINT, signal.SIGTERM]:
                 loop.add_signal_handler(
@@ -374,3 +391,50 @@ async def split_async_manager(manager: AsyncContextManager[object], object: T) -
         yield split
     finally:
         await split.exit(if_needed=True)
+
+
+class ValuedEventSentinel:
+    pass
+
+
+@dataclasses.dataclass
+class ValuedEvent(Generic[T]):
+    _value_sentinel: ClassVar[ValuedEventSentinel] = ValuedEventSentinel()
+
+    _event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
+    _value: Union[ValuedEventSentinel, T] = _value_sentinel
+
+    def set(self, value: T) -> None:
+        if not isinstance(self._value, ValuedEventSentinel):
+            raise Exception("Value already set")
+        self._value = value
+        self._event.set()
+
+    async def wait(self) -> T:
+        await self._event.wait()
+        if isinstance(self._value, ValuedEventSentinel):
+            raise Exception("Value not set despite event being set")
+        return self._value
+
+
+def available_logical_cores() -> int:
+    if sys.platform == "darwin":
+        count = os.cpu_count()
+        assert count is not None
+        return count
+
+    return len(psutil.Process().cpu_affinity())
+
+
+def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:
+    caller = getframeinfo(stack()[distance + 1][0])
+
+    caller_path = Path(caller.filename)
+    options: List[str] = [caller_path.as_posix()]
+    for path in relative_to:
+        try:
+            options.append(caller_path.relative_to(path).as_posix())
+        except ValueError:
+            pass
+
+    return min(options, key=len), caller.lineno

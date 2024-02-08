@@ -5,6 +5,7 @@ from typing import Any, List, Optional, Tuple, Type, Union
 
 import pytest
 from clvm.casts import int_from_bytes
+from clvm.EvalError import EvalError
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -13,22 +14,43 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import (
     CONDITION_DRIVERS,
     CONDITION_DRIVERS_W_ABSTRACTIONS,
+    AggSig,
+    AggSigAmount,
+    AggSigMe,
+    AggSigParent,
+    AggSigParentAmount,
+    AggSigParentPuzzle,
+    AggSigPuzzle,
+    AggSigPuzzleAmount,
+    AggSigUnsafe,
     AssertAnnouncement,
     AssertBeforeHeightAbsolute,
     AssertBeforeHeightRelative,
     AssertBeforeSecondsAbsolute,
     AssertBeforeSecondsRelative,
     AssertCoinAnnouncement,
+    AssertConcurrentPuzzle,
+    AssertConcurrentSpend,
     AssertHeightAbsolute,
     AssertHeightRelative,
+    AssertMyAmount,
+    AssertMyBirthHeight,
+    AssertMyBirthSeconds,
+    AssertMyCoinID,
+    AssertMyParentID,
+    AssertMyPuzzleHash,
     AssertPuzzleAnnouncement,
     AssertSecondsAbsolute,
     AssertSecondsRelative,
     Condition,
     ConditionValidTimes,
     CreateAnnouncement,
+    CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
+    Remark,
+    ReserveFee,
+    Softfork,
     Timelock,
     UnknownCondition,
     conditions_from_json_dicts,
@@ -243,3 +265,106 @@ def test_timelock_parsing(timelock_info: TimelockInfo) -> None:
     assert timelock_info.parsed_info.to_conditions() == (
         timelock_info.conditions_after if timelock_info.conditions_after is not None else timelock_info.drivers
     )
+
+
+@pytest.mark.parametrize(
+    "cond",
+    [
+        AggSigParent,
+        AggSigPuzzle,
+        AggSigAmount,
+        AggSigPuzzleAmount,
+        AggSigParentAmount,
+        AggSigParentPuzzle,
+        AggSigUnsafe,
+        AggSigMe,
+        CreateCoin,
+        ReserveFee,
+        AssertCoinAnnouncement,
+        CreateCoinAnnouncement,
+        AssertPuzzleAnnouncement,
+        CreatePuzzleAnnouncement,
+        AssertConcurrentSpend,
+        AssertConcurrentPuzzle,
+        AssertMyCoinID,
+        AssertMyParentID,
+        AssertMyPuzzleHash,
+        AssertMyAmount,
+        AssertMyBirthSeconds,
+        AssertMyBirthHeight,
+        AssertSecondsRelative,
+        AssertSecondsAbsolute,
+        AssertHeightRelative,
+        AssertHeightAbsolute,
+        AssertBeforeSecondsRelative,
+        AssertBeforeSecondsAbsolute,
+        AssertBeforeHeightRelative,
+        AssertBeforeHeightAbsolute,
+        Softfork,
+        Remark,
+        UnknownCondition,
+        AggSig,
+        CreateAnnouncement,
+        AssertAnnouncement,
+        Timelock,
+    ],
+)
+@pytest.mark.parametrize(
+    "prg",
+    [
+        bytes([0x80]),
+        bytes([0xFF, 0x80, 0xFF, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80]),
+        bytes([0xFF, 0x80, 0xFF, 0xFF, 0x80, 0x80, 0xFF, 0x80, 0x80]),
+        bytes([0xFF, 0x80, 0xFF, 0xFF, 0x80, 0x80, 0xFF, 0x80, 0xFF, 0x80, 0x80]),
+        bytes([0xFF, 0x80, 0xFF, 0xFF, 0x80, 0x80, 0xFF, 0x80, 0xFF, 0x80, 0xFF, 0x80, 0x80]),
+    ],
+)
+def test_invalid_condition(
+    cond: Type[
+        Union[
+            AggSigParent,
+            AggSigPuzzle,
+            AggSigAmount,
+            AggSigPuzzleAmount,
+            AggSigParentAmount,
+            AggSigParentPuzzle,
+            AggSigUnsafe,
+            AggSigMe,
+            CreateCoin,
+            ReserveFee,
+            AssertCoinAnnouncement,
+            CreateCoinAnnouncement,
+            AssertPuzzleAnnouncement,
+            CreatePuzzleAnnouncement,
+            AssertConcurrentSpend,
+            AssertConcurrentPuzzle,
+            AssertMyCoinID,
+            AssertMyParentID,
+            AssertMyPuzzleHash,
+            AssertMyAmount,
+            AssertMyBirthSeconds,
+            AssertMyBirthHeight,
+            AssertSecondsRelative,
+            AssertSecondsAbsolute,
+            AssertHeightRelative,
+            AssertHeightAbsolute,
+            AssertBeforeSecondsRelative,
+            AssertBeforeSecondsAbsolute,
+            AssertBeforeHeightRelative,
+            AssertBeforeHeightAbsolute,
+            Softfork,
+            Remark,
+            UnknownCondition,
+            AggSig,
+            CreateAnnouncement,
+            AssertAnnouncement,
+            Timelock,
+        ]
+    ],
+    prg: bytes,
+) -> None:
+    if (cond == Remark or cond == UnknownCondition) and prg != b"\x80":
+        pytest.skip("condition takes arbitrary arguments")
+
+    with pytest.raises((ValueError, EvalError, KeyError)):
+        cond.from_program(Program.from_bytes(prg))

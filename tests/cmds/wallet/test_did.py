@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple, Union
 from chia.types.blockchain_format.sized_bytes import bytes48
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
+from chia.wallet.conditions import Condition, CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from tests.cmds.wallet.test_consts import FINGERPRINT_ARG, get_bytes32
@@ -244,9 +245,9 @@ def test_did_message_spend(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
     # set RPC Client
     class DidMessageSpendRpcClient(TestWalletRpcClient):
         async def did_message_spend(
-            self, wallet_id: int, puzzle_announcements: List[str], coin_announcements: List[str], tx_config: TXConfig
+            self, wallet_id: int, tx_config: TXConfig, extra_conditions: Tuple[Condition, ...]
         ) -> Dict[str, object]:
-            self.add_to_log("did_message_spend", (wallet_id, puzzle_announcements, coin_announcements, tx_config))
+            self.add_to_log("did_message_spend", (wallet_id, tx_config, extra_conditions))
             return {"spend_bundle": "spend bundle here"}
 
     inst_rpc_client = DidMessageSpendRpcClient()  # pylint: disable=no-value-for-parameter
@@ -272,9 +273,11 @@ def test_did_message_spend(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
         "did_message_spend": [
             (
                 w_id,
-                [announcement.hex() for announcement in puz_announcements],
-                [announcement.hex() for announcement in c_announcements],
                 DEFAULT_TX_CONFIG,
+                (
+                    *(CreateCoinAnnouncement(ann) for ann in c_announcements),
+                    *(CreatePuzzleAnnouncement(ann) for ann in puz_announcements),
+                ),
             )
         ],
     }
@@ -320,6 +323,6 @@ def test_did_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "did_transfer_did": [(w_id, t_address, "0.5", True, DEFAULT_TX_CONFIG.override(reuse_puzhash=True))],
+        "did_transfer_did": [(w_id, t_address, 500000000000, True, DEFAULT_TX_CONFIG.override(reuse_puzhash=True))],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)

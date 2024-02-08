@@ -112,7 +112,7 @@ jobs:
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
-      JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
+      JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.module_import_path }}${{ matrix.configuration.file_name_index }}
       BLOCKS_AND_PLOTS_VERSION: 0.38.0
 
     steps:
@@ -145,7 +145,7 @@ jobs:
 
       - name: Cache npm (Ubuntu)
         if: matrix.os.matrix == 'ubuntu'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
         with:
@@ -161,7 +161,7 @@ jobs:
           echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pip
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
         with:
@@ -173,7 +173,7 @@ jobs:
 
       - name: Cache test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
         id: test-blocks-plots
@@ -221,16 +221,16 @@ jobs:
         env:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
         run: |
-          pytest --cov=chia --cov=tests --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml=junit-data/junit.${{ env.JOB_FILE_NAME }}.xml --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+          pytest --cov=chia --cov=tests --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml='junit-data/junit.${{ env.JOB_FILE_NAME }}.xml' --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
 
       - name: Move back to chia/ for coverage
         run: |
           mv notchia/ chia/
 
       - name: Publish JUnit results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: junit-data
+          name: junit-data-${{ env.JOB_FILE_NAME }}
           path: junit-data/*
           if-no-files-found: error
 
@@ -243,9 +243,9 @@ jobs:
           coverage report --rcfile=.coveragerc --show-missing
 
       - name: Publish coverage data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage-data
+          name: coverage-data-${{ env.JOB_FILE_NAME }}
           path: coverage-data/*
           if-no-files-found: error
 

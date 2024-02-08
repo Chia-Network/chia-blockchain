@@ -86,10 +86,15 @@ async def valid_node_values_fixture(
     node_type: NodeType,
 ) -> Dict[str, Any]:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
-    node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
-    node_b = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
 
-    return create_valid_node_values(node_type=node_type, left_hash=node_a.hash, right_hash=node_b.hash)
+    if node_type == NodeType.INTERNAL:
+        node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
+        node_b = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+        return create_valid_node_values(node_type=node_type, left_hash=node_a.hash, right_hash=node_b.hash)
+    elif node_type == NodeType.TERMINAL:
+        return create_valid_node_values(node_type=node_type)
+    else:
+        raise Exception(f"invalid node type: {node_type!r}")
 
 
 @pytest.fixture(name="bad_node_type", params=range(2 * len(NodeType)))

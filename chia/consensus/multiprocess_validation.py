@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 import traceback
 from concurrent.futures import Executor
 from dataclasses import dataclass
@@ -32,7 +33,7 @@ from chia.util.block_cache import BlockCache
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ class PreValidationResult(Streamable):
     required_iters: Optional[uint64]  # Iff error is None
     npc_result: Optional[NPCResult]  # Iff error is None and block is a transaction block
     validated_signature: bool
+    timing: uint32  # the time (in milliseconds) it took to pre-validate the block
 
 
 def batch_pre_validate_blocks(
@@ -70,6 +72,7 @@ def batch_pre_validate_blocks(
     if full_blocks_pickled is not None:
         for i in range(len(full_blocks_pickled)):
             try:
+                validation_start = time.monotonic()
                 block: FullBlock = FullBlock.from_bytes(full_blocks_pickled[i])
                 tx_additions: List[Coin] = []
                 removals: List[bytes32] = []
@@ -97,7 +100,12 @@ def batch_pre_validate_blocks(
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                 if npc_result is not None and npc_result.error is not None:
-                    results.append(PreValidationResult(uint16(npc_result.error), None, npc_result, False))
+                    validation_time = time.monotonic() - validation_start
+                    results.append(
+                        PreValidationResult(
+                            uint16(npc_result.error), None, npc_result, False, uint32(validation_time * 1000)
+                        )
+                    )
                     continue
 
                 header_block = get_block_header(block, tx_additions, removals)
@@ -132,17 +140,28 @@ def batch_pre_validate_blocks(
                             else:
                                 successfully_validated_signatures = True
 
+                validation_time = time.monotonic() - validation_start
                 results.append(
-                    PreValidationResult(error_int, required_iters, npc_result, successfully_validated_signatures)
+                    PreValidationResult(
+                        error_int,
+                        required_iters,
+                        npc_result,
+                        successfully_validated_signatures,
+                        uint32(validation_time * 1000),
+                    )
                 )
             except Exception:
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
-                results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False))
+                validation_time = time.monotonic() - validation_start
+                results.append(
+                    PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False, uint32(validation_time * 1000))
+                )
     # In this case, we are validating header blocks
     elif header_blocks_pickled is not None:
         for i in range(len(header_blocks_pickled)):
             try:
+                validation_start = time.monotonic()
                 header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
                 required_iters, error = validate_finished_header_block(
                     constants,
@@ -155,11 +174,17 @@ def batch_pre_validate_blocks(
                 error_int = None
                 if error is not None:
                     error_int = uint16(error.code.value)
-                results.append(PreValidationResult(error_int, required_iters, None, False))
+                validation_time = time.monotonic() - validation_start
+                results.append(
+                    PreValidationResult(error_int, required_iters, None, False, uint32(validation_time * 1000))
+                )
             except Exception:
+                validation_time = time.monotonic() - validation_start
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
-                results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False))
+                results.append(
+                    PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False, uint32(validation_time * 1000))
+                )
     return [bytes(r) for r in results]
 
 
@@ -199,7 +224,7 @@ async def pre_validate_blocks_multiprocessing(
     if blocks[0].height > 0:
         curr = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
         if curr is None:
-            return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)]
+            return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False, uint32(0))]
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
         header_hash = curr.header_hash
         while (
@@ -257,7 +282,7 @@ async def pre_validate_blocks_multiprocessing(
             constants, len(block.finished_sub_slots) > 0, prev_b, block_records
         )
 
-        overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+        overflow = is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index))
         challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             cc_sp_hash: bytes32 = challenge
@@ -270,7 +295,7 @@ async def pre_validate_blocks_multiprocessing(
             for i, block_i in enumerate(blocks):
                 if not block_record_was_present[i] and block_records.contains_block(block_hashes[i]):
                     block_records.remove_block_record(block_hashes[i])
-            return [PreValidationResult(uint16(Err.INVALID_POSPACE.value), None, None, False)]
+            return [PreValidationResult(uint16(Err.INVALID_POSPACE.value), None, None, False, uint32(0))]
 
         required_iters: uint64 = calculate_iterations_quality(
             constants.DIFFICULTY_CONSTANT_FACTOR,
@@ -289,14 +314,14 @@ async def pre_validate_blocks_multiprocessing(
                 None,
             )
         except ValueError:
-            return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False)]
+            return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
 
         if block_rec.sub_epoch_summary_included is not None and wp_summaries is not None:
             idx = int(block.height / constants.SUB_EPOCH_BLOCKS) - 1
             next_ses = wp_summaries[idx]
             if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
                 log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
-                return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False)]
+                return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
         # Makes sure to not override the valid blocks already in block_records
         if not block_records.contains_block(block_rec.header_hash):
             block_records.add_block_record(block_rec)  # Temporarily add block to dict
@@ -346,7 +371,7 @@ async def pre_validate_blocks_multiprocessing(
                 except ValueError:
                     return [
                         PreValidationResult(
-                            uint16(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING.value), None, None, False
+                            uint16(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING.value), None, None, False, uint32(0)
                         )
                     ]
                 if block_generator is not None:
@@ -406,6 +431,6 @@ def _run_generator(
         )
         return bytes(npc_result)
     except ValidationError as e:
-        return bytes(NPCResult(uint16(e.code.value), None, uint64(0)))
+        return bytes(NPCResult(uint16(e.code.value), None))
     except Exception:
-        return bytes(NPCResult(uint16(Err.UNKNOWN.value), None, uint64(0)))
+        return bytes(NPCResult(uint16(Err.UNKNOWN.value), None))

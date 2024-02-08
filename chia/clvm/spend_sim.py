@@ -71,11 +71,12 @@ class CostLogger:
             height=DEFAULT_CONSTANTS.HARD_FORK_HEIGHT,
             constants=DEFAULT_CONSTANTS,
         )
-        self.cost_dict[descriptor] = npc_result.cost
+        cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
+        self.cost_dict[descriptor] = cost
         cost_to_subtract: int = 0
         for cs in spend_bundle.coin_spends:
             cost_to_subtract += len(bytes(cs.puzzle_reveal)) * DEFAULT_CONSTANTS.COST_PER_BYTE
-        self.cost_dict_no_puzs[descriptor] = npc_result.cost - cost_to_subtract
+        self.cost_dict_no_puzs[descriptor] = cost - cost_to_subtract
         return spend_bundle
 
     def log_cost_statistics(self) -> str:
@@ -156,7 +157,7 @@ class SpendSim:
 
         async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
             self.coin_store = await CoinStore.create(self.db_wrapper)
-            self.mempool_manager = MempoolManager(self.coin_store.get_coin_record, defaults)
+            self.mempool_manager = MempoolManager(self.coin_store.get_coin_records, defaults)
             self.defaults = defaults
 
             # Load the next data if there is any
@@ -258,7 +259,11 @@ class SpendSim:
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
             if peak is not None:
-                result = self.mempool_manager.create_bundle_from_mempool(peak.header_hash, item_inclusion_filter)
+                result = await self.mempool_manager.create_bundle_from_mempool(
+                    last_tb_header_hash=peak.header_hash,
+                    get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                    item_inclusion_filter=item_inclusion_filter,
+                )
 
                 if result is not None:
                     bundle, additions = result
@@ -326,7 +331,7 @@ class SimClient:
             )
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
-        assert self.service.mempool_manager.peak
+        assert self.service.mempool_manager.peak is not None
         cost, status, error = await self.service.mempool_manager.add_spend_bundle(
             spend_bundle, cost_result, spend_bundle_id, self.service.mempool_manager.peak.height
         )

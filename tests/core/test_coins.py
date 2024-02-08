@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from itertools import permutations
 
-from benchmarks.utils import rand_hash
 from chia.types.blockchain_format.coin import hash_coin_ids
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
+from tests.util.benchmarks import rand_hash
 
 
 def test_hash_coin_ids_empty() -> None:

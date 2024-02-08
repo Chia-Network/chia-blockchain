@@ -6,6 +6,7 @@ import json
 import logging
 import time
 import traceback
+from dataclasses import dataclass
 from math import floor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
@@ -17,7 +18,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
-from chia.pools.pool_config import PoolWalletConfig, add_auth_key, load_pool_config
+from chia.pools.pool_config import PoolWalletConfig, add_auth_key, load_pool_config, update_pool_url
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
     AuthenticationPayload,
@@ -38,7 +39,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import decode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.errors import KeychainProxyConnectionFailure
@@ -62,6 +63,12 @@ log = logging.getLogger(__name__)
 UPDATE_POOL_INFO_INTERVAL: int = 3600
 UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL: int = 120
 UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
+
+
+@dataclass(frozen=True)
+class GetPoolInfoResult:
+    pool_info: Dict[str, Any]
+    new_pool_url: Optional[str]
 
 
 def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tuple[float, Any]]:
@@ -313,7 +320,7 @@ class Farmer:
             value=ErrorResponse(uint16(PoolErrorCode.REQUEST_FAILED.value), error_message).to_json_dict(),
         )
 
-    def on_disconnect(self, connection: WSChiaConnection) -> None:
+    async def on_disconnect(self, connection: WSChiaConnection) -> None:
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection", {})
         if connection.connection_type is NodeType.HARVESTER:
@@ -327,16 +334,19 @@ class Farmer:
         if receiver.initial_sync() or harvester_updated:
             self.state_changed("harvester_update", receiver.to_dict(True))
 
-    async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[Dict[str, Any]]:
+    async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[GetPoolInfoResult]:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
-                async with session.get(
-                    f"{pool_config.pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)
-                ) as resp:
+                url = f"{pool_config.pool_url}/pool_info"
+                async with session.get(url, ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)) as resp:
                     if resp.ok:
                         response: Dict[str, Any] = json.loads(await resp.text())
                         self.log.info(f"GET /pool_info response: {response}")
-                        return response
+                        new_pool_url: Optional[str] = None
+                        if resp.url != url and all(r.status in {301, 308} for r in resp.history):
+                            new_pool_url = f"{resp.url}".replace("/pool_info", "")
+
+                        return GetPoolInfoResult(pool_info=response, new_pool_url=new_pool_url)
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
@@ -560,14 +570,18 @@ class Farmer:
                 if time.time() >= pool_state["next_pool_info_update"]:
                     pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
                     # Makes a GET request to the pool to get the updated information
-                    pool_info = await self._pool_get_pool_info(pool_config)
-                    if pool_info is not None and "error_code" not in pool_info:
+                    pool_info_result = await self._pool_get_pool_info(pool_config)
+                    if pool_info_result is not None and "error_code" not in pool_info_result.pool_info:
+                        pool_info = pool_info_result.pool_info
                         pool_state["authentication_token_timeout"] = pool_info["authentication_token_timeout"]
                         # Only update the first time from GET /pool_info, gets updated from GET /farmer later
                         if pool_state["current_difficulty"] is None:
                             pool_state["current_difficulty"] = pool_info["minimum_difficulty"]
                     else:
                         pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL
+
+                    if pool_info_result is not None and pool_info_result.new_pool_url is not None:
+                        update_pool_url(self._root_path, pool_config, pool_info_result.new_pool_url)
 
                 if time.time() >= pool_state["next_farmer_update"]:
                     pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
@@ -835,3 +849,59 @@ class Farmer:
                 log.error(f"_periodically_clear_cache_and_refresh_task failed: {traceback.format_exc()}")
 
             await asyncio.sleep(1)
+
+    def notify_farmer_reward_taken_by_harvester_as_fee(
+        self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace
+    ) -> None:
+        """
+        Apply a fee quality convention (see CHIP-22: https://github.com/Chia-Network/chips/pull/88)
+        given the proof and signage point. This will be tested against the fee threshold reported
+        by the harvester (if any), and logged.
+        """
+        assert proof_of_space.farmer_reward_address_override is not None
+
+        challenge_str = str(sp.challenge_hash)
+
+        ph_prefix = self.config["network_overrides"]["config"][self.config["selected_network"]]["address_prefix"]
+        farmer_reward_puzzle_hash = encode_puzzle_hash(proof_of_space.farmer_reward_address_override, ph_prefix)
+
+        self.log.info(
+            f"Farmer reward for challenge '{challenge_str}' "
+            + f"taken by harvester for reward address '{farmer_reward_puzzle_hash}'"
+        )
+
+        fee_quality = calculate_harvester_fee_quality(proof_of_space.proof.proof, sp.challenge_hash)
+        fee_quality_rate = float(fee_quality) / float(0xFFFFFFFF) * 100.0
+
+        if proof_of_space.fee_info is not None:
+            fee_threshold = proof_of_space.fee_info.applied_fee_threshold
+            fee_threshold_rate = float(fee_threshold) / float(0xFFFFFFFF) * 100.0
+
+            if fee_quality <= fee_threshold:
+                self.log.info(
+                    f"Fee threshold passed for challenge '{challenge_str}': "
+                    + f"{fee_quality_rate:.3f}%/{fee_threshold_rate:.3f}% ({fee_quality}/{fee_threshold})"
+                )
+            else:
+                self.log.warning(
+                    f"Invalid fee threshold for challenge '{challenge_str}': "
+                    + f"{fee_quality_rate:.3f}%/{fee_threshold_rate:.3f}% ({fee_quality}/{fee_threshold})"
+                )
+                self.log.warning(
+                    "Harvester illegitimately took a fee reward that "
+                    + "did not belong to it or it incorrectly applied the fee convention."
+                )
+        else:
+            self.log.warning(
+                "Harvester illegitimately took reward by failing to provide its fee rate "
+                + f"for challenge '{challenge_str}'. "
+                + f"Fee quality was {fee_quality_rate:.3f}% ({fee_quality} or 0x{fee_quality:08x})"
+            )
+
+
+def calculate_harvester_fee_quality(proof: bytes, challenge: bytes32) -> uint32:
+    """
+    This calculates the 'fee quality' given a convention between farmers and third party harvesters.
+    See CHIP-22: https://github.com/Chia-Network/chips/pull/88
+    """
+    return uint32(int.from_bytes(std_hash(proof + challenge)[32 - 4 :], byteorder="big", signed=False))

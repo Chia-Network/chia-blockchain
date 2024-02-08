@@ -33,7 +33,7 @@ from chia.protocols.wallet_protocol import (
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
@@ -341,7 +341,7 @@ async def fetch_coin_spend(height: uint32, coin: Coin, peer: WSChiaConnection) -
     assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
     assert solution_response.response.coin_name == coin.name()
 
-    return CoinSpend(
+    return make_spend(
         coin,
         solution_response.response.puzzle,
         solution_response.response.solution,

@@ -6,12 +6,13 @@ import logging
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, StoreProofsHashes
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from tests.conftest import ConsensusMode
 from tests.util.rpc import validate_get_routes
@@ -222,3 +223,57 @@ class TestWalletRpc:
             client_2.close()
             await client.await_closed()
             await client_2.await_closed()
+
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.parametrize("trusted", [True, False])
+    @pytest.mark.anyio
+    async def test_wallet_dl_verify_proof(
+        self, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
+    ) -> None:
+        [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator_services
+        full_node_api = full_node_service._api
+        full_node_server = full_node_api.full_node.server
+        wallet_node = wallet_service._node
+
+        # Create fake proof
+        # Specifically
+        fakeproof = HashOnlyProof.from_key_value(
+            key=b"key",
+            value=b"value",
+            node_hash=bytes32([1] * 32),
+            layers=[
+                ProofLayer(
+                    other_hash_side=uint8(0),
+                    other_hash=bytes32([1] * 32),
+                    combined_hash=bytes32([1] * 32),
+                ),
+            ],
+        )
+        fake_coin_id = bytes32([5] * 32)
+        fake_gpr = DLProof(
+            store_proofs=StoreProofsHashes(store_id=bytes32([1] * 32), proofs=[fakeproof]),
+            coin_id=fake_coin_id,
+            inner_puzzle_hash=bytes32([1] * 32),
+        )
+
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+
+        assert wallet_service.rpc_server is not None
+        client = await WalletRpcClient.create(
+            self_hostname,
+            wallet_service.rpc_server.listen_port,
+            wallet_service.root_path,
+            wallet_service.config,
+        )
+
+        with pytest.raises(ValueError, match="No peer connected"):
+            await wallet_service.rpc_server.rpc_api.dl_verify_proof(fake_gpr.to_json_dict())
+
+        await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await validate_get_routes(client, wallet_service.rpc_server.rpc_api)
+
+        with pytest.raises(ValueError, match=f"Invalid Proof: No DL singleton found at coin id: {fake_coin_id}"):
+            await client.dl_verify_proof(fake_gpr)
