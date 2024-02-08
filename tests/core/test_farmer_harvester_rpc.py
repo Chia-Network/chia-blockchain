@@ -27,6 +27,7 @@ from chia.rpc.farmer_rpc_api import (
     plot_matches_filter,
 )
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
+from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.block_tools import get_plot_dir
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -469,7 +470,7 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment: Harves
             assert str(path) in config["harvester"]["plot_directories"]
 
     # Test without the required parameter: dirname
-    with pytest.raises(ValueError, match="dirname"):
+    with pytest.raises(ResponseFailureError, match="dirname"):
         await harvester_rpc_client.fetch("add_plot_directory", {})
 
     root_path = harvester_service._node.root_path
