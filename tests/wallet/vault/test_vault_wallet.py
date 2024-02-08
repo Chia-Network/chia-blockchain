@@ -170,8 +170,8 @@ async def test_vault_creation(
     tx_records = await wallet.generate_signed_vault_spend(sig, delegated_puz, delegated_sol, p2_spends, payments, fee)
     assert len(tx_records) == 1
 
-    # Farm a block so the vault balance includes farmed coins from the test setup.
-    # Do this after generating the tx so we can be sure to spend the funding coins
+    # Farm a block so the vault balance includes farmed coins from the test setup in pre-block update.
+    # Do this after generating the tx so we can be sure to spend the right funding coins
     await wallet_environments.full_node.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
     await wallet_environments.process_pending_states(

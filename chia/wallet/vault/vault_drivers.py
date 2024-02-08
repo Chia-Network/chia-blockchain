@@ -12,6 +12,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import DEFAULT_HIDDEN_PUZZLE, puzzle_hash_for_pk
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER_HASH,
+    SINGLETON_MOD,
     SINGLETON_MOD_HASH,
     puzzle_for_singleton,
     puzzle_hash_for_singleton,
@@ -116,6 +117,17 @@ def get_p2_singleton_puzzle(launcher_id: bytes32) -> Program:
 
 def get_p2_singleton_puzzle_hash(launcher_id: bytes32) -> bytes32:
     return get_p2_singleton_puzzle(launcher_id).get_tree_hash()
+
+
+def match_vault_puzzle(mod: Program, curried_args: Program) -> bool:
+    try:
+        if mod == SINGLETON_MOD:
+            if curried_args.at("rf").uncurry()[0] == P2_1_OF_N_MOD:
+                return True
+    except ValueError:
+        # We just pass here to prevent spamming logs with error messages when WSM checks incoming coins
+        pass
+    return False
 
 
 # SOLUTIONS

@@ -32,6 +32,7 @@ from chia.wallet.signer_protocol import (
     SumHint,
 )
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
@@ -76,8 +77,13 @@ class Vault(Wallet):
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        puzzle = construct_p2_delegated_secp(
-            dr.pubkey, self.wallet_state_manager.constants.GENESIS_CHALLENGE, dr.puzzle_hash
+        hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(dr.index).get_tree_hash()
+        puzzle = get_vault_inner_puzzle(
+            self.vault_info.pubkey,
+            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+            hidden_puzzle_hash,
+            self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
+            self.recovery_info.timelock if self.vault_info.is_recoverable else None,
         )
         return puzzle
 
@@ -169,18 +175,12 @@ class Vault(Wallet):
         if change > 0:
             change_puzzle_hash: bytes32 = get_p2_singleton_puzzle_hash(self.vault_info.launcher_coin_id)
             primaries.append(Payment(change_puzzle_hash, uint64(change)))
-        # Create the vault spend
-        vault_inner_puzzle = get_vault_inner_puzzle(
-            self.vault_info.pubkey,
-            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
-            self.vault_info.hidden_puzzle_hash,
-            self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
-            self.recovery_info.timelock if self.vault_info.is_recoverable else None,
-        )
 
         conditions = [primary.as_condition() for primary in primaries]
+        next_puzzle_hash = await self.get_new_puzzlehash()
+        # TODO: should the vault inner puz create this condition?
         recreate_vault_condition = CreateCoin(
-            vault_inner_puzzle.get_tree_hash(), uint64(self.vault_info.coin.amount), memos=[self.vault_info.launcher_id]
+            next_puzzle_hash, uint64(self.vault_info.coin.amount), memos=[next_puzzle_hash]
         ).to_program()
         conditions.append(recreate_vault_condition)
         announcements = [CreatePuzzleAnnouncement(spend.coin.name()).to_program() for spend in p2_spends]
@@ -544,11 +544,63 @@ class Vault(Wallet):
         p2_puzzle_hash = self.get_p2_singleton_puzzle_hash()
         await self.wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [self.id()])
 
+        # add the singleton record to store
+        await self.wallet_state_manager.singleton_store.add_eve_record(
+            self.id(),
+            coin_state.coin,
+            launcher_spend,
+            inner_puzzle_hash,
+            lineage_proof,
+            uint32(coin_state.spent_height) if coin_state.spent_height else uint32(0),
+            pending=False,
+            custom_data=bytes(json.dumps(vault_info.to_json_dict()), "utf-8"),
+        )
+
+    async def update_vault_singleton(
+        self, next_inner_puzzle: Program, coin_spend: CoinSpend, coin_state: CoinState
+    ) -> None:
+        hints, _ = compute_spend_hints_and_additions(coin_spend)
+        inner_puzzle_hash = hints[coin_state.coin.name()].hint
+        assert inner_puzzle_hash
+        dr = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(inner_puzzle_hash)
+        assert dr is not None
+        hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(dr.index).get_tree_hash()
+        next_inner_puzzle = get_vault_inner_puzzle(
+            self.vault_info.pubkey,
+            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+            hidden_puzzle_hash,
+            self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
+            self.recovery_info.timelock if self.vault_info.is_recoverable else None,
+        )
+
+        # get the parent state to create lineage proof
+        wallet_node: Any = self.wallet_state_manager.wallet_node
+        peer = wallet_node.get_full_node_peer()
+        assert peer is not None
+        parent_state = (await wallet_node.get_coin_state([coin_state.coin.parent_coin_info], peer))[0]
+        parent_spend = await fetch_coin_spend(uint32(parent_state.spent_height), parent_state.coin, peer)
+        parent_puzzle = parent_spend.puzzle_reveal.to_program()
+        parent_inner_puzzle_hash = parent_puzzle.uncurry()[1].at("rf").get_tree_hash()
+        lineage_proof = LineageProof(
+            parent_state.coin.parent_coin_info, parent_inner_puzzle_hash, parent_state.coin.amount
+        )
+        new_vault_info = VaultInfo(
+            coin_state.coin,
+            self.vault_info.launcher_id,
+            self.vault_info.pubkey,
+            hidden_puzzle_hash,
+            next_inner_puzzle.get_tree_hash(),
+            self.vault_info.is_recoverable,
+            self.vault_info.launcher_coin_id,
+            lineage_proof,
+        )
+
+        await self.wallet_state_manager.singleton_store.add_spend(self.id(), coin_spend)
+        await self.save_info(new_vault_info)
+
     async def save_info(self, vault_info: VaultInfo) -> None:
         self.vault_info = vault_info
         current_info = self.wallet_info
         data_str = json.dumps(vault_info.to_json_dict())
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
-        # TODO: push new info to user store
-        # await self.wallet_state_manager.user_store.update_wallet(wallet_info)

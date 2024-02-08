@@ -81,6 +81,39 @@ class WalletSingletonStore:
                 ),
             )
 
+    async def add_eve_record(
+        self,
+        wallet_id: uint32,
+        eve_coin: Coin,
+        parent_coin_spend: CoinSpend,
+        inner_puzzle_hash: bytes32,
+        lineage_proof: LineageProof,
+        removed_height: uint32 = uint32(0),
+        pending: bool = False,
+        custom_data: Optional[bytes] = None,
+    ) -> None:
+        pending_int = 1 if pending else False
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            columns = (
+                "coin_id, coin, singleton_id, wallet_id, parent_coin_spend, inner_puzzle_hash, "
+                "pending, removed_height, lineage_proof, custom_data"
+            )
+            await conn.execute(
+                f"INSERT or REPLACE INTO singletons ({columns}) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    eve_coin.name().hex(),
+                    json.dumps(eve_coin.to_json_dict()),
+                    eve_coin.name().hex(),
+                    wallet_id,
+                    bytes(parent_coin_spend),
+                    inner_puzzle_hash,
+                    pending_int,
+                    removed_height,
+                    bytes(lineage_proof),
+                    custom_data,
+                ),
+            )
+
     async def add_spend(
         self,
         wallet_id: uint32,

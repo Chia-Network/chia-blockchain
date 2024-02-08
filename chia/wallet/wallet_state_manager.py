@@ -145,6 +145,7 @@ from chia.wallet.util.wallet_sync_utils import (
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
 from chia.wallet.vault.vault_drivers import get_vault_full_puzzle_hash, get_vault_inner_puzzle_hash
+from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
@@ -804,6 +805,14 @@ class WalletStateManager:
 
         uncurried = uncurry_puzzle(puzzle)
 
+        from chia.wallet.vault.vault_drivers import match_vault_puzzle
+
+        vault_check = match_vault_puzzle(uncurried.mod, uncurried.args)
+        if vault_check:
+            await self.handle_vault(puzzle, coin_spend, coin_state)
+            # Return None since we don't want to add the vault singleton to the normal wallet coin store
+            return None, None
+
         dao_ids = []
         wallets = self.wallets.values()
         for wallet in wallets:
@@ -1077,6 +1086,21 @@ class WalletStateManager:
     async def is_standard_wallet_tx(self, coin_state: CoinState) -> bool:
         wallet_identifier = await self.get_wallet_identifier_for_puzzle_hash(coin_state.coin.puzzle_hash)
         return wallet_identifier is not None and wallet_identifier.type == WalletType.STANDARD_WALLET
+
+    async def handle_vault(
+        self,
+        puzzle: Program,
+        coin_spend: CoinSpend,
+        coin_state: CoinState,
+    ) -> None:
+        if isinstance(self.observation_root, VaultRoot):
+            for wallet in self.wallets.values():
+                if wallet.type() == WalletType.STANDARD_WALLET:
+                    assert isinstance(wallet, Vault)
+                    # make sure we've got the singleton coin
+                    if coin_state.coin.amount % 2 == 1:
+                        # Update the vault singleton record
+                        await wallet.update_vault_singleton(puzzle, coin_spend, coin_state)
 
     async def handle_dao_cat(
         self,
@@ -1723,6 +1747,7 @@ class WalletStateManager:
                         wallet_identifier = WalletIdentifier(uint32(local_record.wallet_id), local_record.wallet_type)
                     elif coin_state.created_height is not None:
                         wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height)
+
                         try:
                             dl_wallet = self.get_dl_wallet()
                         except ValueError:
@@ -2161,7 +2186,6 @@ class WalletStateManager:
             coin_record = await self.coin_store.get_coin_record(coin.name())
             if coin_record is not None:
                 wallet_identifier = WalletIdentifier(uint32(coin_record.wallet_id), coin_record.wallet_type)
-
         return wallet_identifier
 
     async def get_wallet_identifier_for_hinted_coin(self, coin: Coin, hint: bytes32) -> Optional[WalletIdentifier]:
