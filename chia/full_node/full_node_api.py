@@ -951,9 +951,9 @@ class FullNodeAPI:
                 sub_slot_iters = peak.sub_slot_iters
                 for sub_slot in finished_sub_slots:
                     if sub_slot.challenge_chain.new_difficulty is not None:
-                        difficulty = uint64(sub_slot.challenge_chain.new_difficulty)
+                        difficulty = sub_slot.challenge_chain.new_difficulty
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
-                        sub_slot_iters = uint64(sub_slot.challenge_chain.new_sub_slot_iters)
+                        sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
             required_iters: uint64 = calculate_iterations_quality(
                 self.full_node.constants.DIFFICULTY_CONSTANT_FACTOR,

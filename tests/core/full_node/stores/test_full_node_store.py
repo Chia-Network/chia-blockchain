@@ -677,7 +677,7 @@ async def test_basic_store(
         blocks[1].reward_chain_sp_proof,
     )
     assert not store.new_signage_point(
-        uint8(blocks[1].reward_chain_block.signage_point_index),
+        blocks[1].reward_chain_block.signage_point_index,
         blockchain,
         peak,
         uint64(blockchain.block_record(blocks[1].header_hash).sp_sub_slot_total_iters(custom_block_tools.constants)),
@@ -979,9 +979,9 @@ async def test_basic_store(
 
         blocks = custom_block_tools.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
 
-        i3 = uint8(blocks[-3].reward_chain_block.signage_point_index)
-        i2 = uint8(blocks[-2].reward_chain_block.signage_point_index)
-        i1 = uint8(blocks[-1].reward_chain_block.signage_point_index)
+        i3 = blocks[-3].reward_chain_block.signage_point_index
+        i2 = blocks[-2].reward_chain_block.signage_point_index
+        i1 = blocks[-1].reward_chain_block.signage_point_index
         if (
             len(blocks[-2].finished_sub_slots) == len(blocks[-1].finished_sub_slots) == 0
             and not is_overflow_block(custom_block_tools.constants, signage_point_index=i2)
