@@ -1610,7 +1610,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     }
 
 
-async def test_check_delete_key(
+async def _check_delete_key(
     client: WalletRpcClient, wallet_node: WalletNode, farmer_fp: int, pool_fp: int, observer: bool = False
 ) -> None:
     # Add in reward addresses into farmer and pool for testing delete key checks
@@ -1698,12 +1698,10 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     assert sk_dict["fingerprint"] == pks[1]
 
     # test hardened keys
-    await test_check_delete_key(
-        client=client, wallet_node=wallet_node, farmer_fp=pks[0], pool_fp=pks[1], observer=False
-    )
+    await _check_delete_key(client=client, wallet_node=wallet_node, farmer_fp=pks[0], pool_fp=pks[1], observer=False)
 
     # test observer keys
-    await test_check_delete_key(client=client, wallet_node=wallet_node, farmer_fp=pks[0], pool_fp=pks[1], observer=True)
+    await _check_delete_key(client=client, wallet_node=wallet_node, farmer_fp=pks[0], pool_fp=pks[1], observer=True)
 
     # set farmer to empty string
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
@@ -1935,9 +1933,7 @@ async def test_get_coin_records_rpc_limits(
     max_coins = api.max_get_coin_records_limit * 10
     coin_records = [
         WalletCoinRecord(
-            Coin(
-                bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(seeded_random.randrange(2**64))
-            ),
+            Coin(bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(seeded_random.randrange(2**64))),
             uint32(seeded_random.randrange(2**32)),
             uint32(0),
             False,
