@@ -748,7 +748,7 @@ async def test_subscriptions(
         # We can't unsubscribe our own stores, bypass that by directly appending to queue.
         with pytest.raises(Exception, match="Cannot unsubscribe to owned store"):
             await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
-        data_layer.data_store.unsubscribe_data_queue.append(UnsubscribeData(store_id, False))
+        data_layer.unsubscribe_data_queue.append(UnsubscribeData(store_id, False))
         # wait for unsubscribe to be processed
         await asyncio.sleep(interval * 5)
 
@@ -2242,7 +2242,7 @@ async def test_unsubscribe_removes_files(
             assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
 
         # We can't unsubscribe our own stores, bypass that by directly appending to queue.
-        data_layer.data_store.unsubscribe_data_queue.append(UnsubscribeData(store_id, retain))
+        data_layer.unsubscribe_data_queue.append(UnsubscribeData(store_id, retain))
 
         # wait for unsubscribe to be processed
         await asyncio.sleep(manage_data_interval * 3)
