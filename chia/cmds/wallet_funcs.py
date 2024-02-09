@@ -413,7 +413,7 @@ async def make_offer(
     d_fee: Decimal,
     offers: Sequence[str],
     requests: Sequence[str],
-    filepath: str,
+    filepath: pathlib.Path,
     reuse_puzhash: Optional[bool],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
@@ -550,23 +550,24 @@ async def make_offer(
 
                 cli_confirm("Confirm (y/n): ", "Not creating offer...")
 
-                offer, trade_record = await wallet_client.create_offer_for_ids(
-                    offer_dict,
-                    driver_dict=driver_dict,
-                    fee=fee,
-                    tx_config=CMDTXConfigLoader(
-                        reuse_puzhash=reuse_puzhash,
-                    ).to_tx_config(units["chia"], config, fingerprint),
-                )
-                if offer is not None:
-                    with open(pathlib.Path(filepath), "w") as file:
-                        file.write(offer.to_bech32())
-                    print(f"Created offer with ID {trade_record.trade_id}")
-                    print(
-                        f"Use chia wallet get_offers --id " f"{trade_record.trade_id} -f {fingerprint} to view status"
+                with filepath.open(mode="w") as file:
+                    offer, trade_record = await wallet_client.create_offer_for_ids(
+                        offer_dict,
+                        driver_dict=driver_dict,
+                        fee=fee,
+                        tx_config=CMDTXConfigLoader(
+                            reuse_puzhash=reuse_puzhash,
+                        ).to_tx_config(units["chia"], config, fingerprint),
                     )
-                else:
-                    print("Error creating offer")
+                    if offer is not None:
+                        file.write(offer.to_bech32())
+                        print(f"Created offer with ID {trade_record.trade_id}")
+                        print(
+                            f"Use chia wallet get_offers --id "
+                            f"{trade_record.trade_id} -f {fingerprint} to view status"
+                        )
+                    else:
+                        print("Error creating offer")
 
 
 def timestamp_to_time(timestamp: int) -> str:
