@@ -21,7 +21,7 @@ from chia.cmds.data_funcs import clear_pending_roots, get_proof_cmd, verify_proo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
-from chia.data_layer.data_layer_util import HashOnlyProof, OfferStore, ProofLayer, Status, StoreProofs
+from chia.data_layer.data_layer_util import HashOnlyProof, OfferStore, ProofLayer, Status, StoreProofs, UnsubscribeData
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
@@ -745,9 +745,10 @@ async def test_subscriptions(
         assert store_id.hex() in response.get("store_ids", [])
 
         # test unsubscribe
-        response = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
-        assert response is not None
-
+        # We can't unsubscribe our own stores, bypass that by directly appending to queue.
+        with pytest.raises(Exception, match="Cannot unsubscribe to owned store"):
+            await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
+        data_layer.data_store.unsubscribe_data_queue.append(UnsubscribeData(store_id, False))
         # wait for unsubscribe to be processed
         await asyncio.sleep(interval * 5)
 
@@ -2240,7 +2241,8 @@ async def test_unsubscribe_removes_files(
             assert get_delta_filename(store_id, hash, generation + 1) in filenames
             assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
 
-        res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})
+        # We can't unsubscribe our own stores, bypass that by directly appending to queue.
+        data_layer.data_store.unsubscribe_data_queue.append(UnsubscribeData(store_id, retain))
 
         # wait for unsubscribe to be processed
         await asyncio.sleep(manage_data_interval * 3)
