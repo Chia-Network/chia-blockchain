@@ -118,7 +118,7 @@ class DataLayer:
     periodically_update_confirmation_status_task: Optional[asyncio.Task[None]] = None
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
-    files_lock = asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
+    files_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
 
     @property
     def server(self) -> ChiaServer:
