@@ -68,6 +68,7 @@ async def init_data_layer_service(
     db_path: Optional[Path] = None,
     wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
+    check_confirmation_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
 ) -> AsyncIterator[DataLayerService]:
     config = bt.config
@@ -77,6 +78,7 @@ async def init_data_layer_service(
     config["data_layer"]["port"] = 0
     config["data_layer"]["rpc_port"] = 0
     config["data_layer"]["manage_data_interval"] = 5
+    config["data_layer"]["check_confirmation_interval"] = 5
     if maximum_full_file_count is not None:
         config["data_layer"]["maximum_full_file_count"] = maximum_full_file_count
     if db_path is not None:
@@ -2145,22 +2147,32 @@ async def test_issue_15955_deadlock(
 
 
 @pytest.mark.parametrize(argnames="maximum_full_file_count", argvalues=[1, 5, 100])
+@pytest.mark.parametrize(argnames="use_manage_data_task", argvalues=[True, False])
 @pytest.mark.anyio
 async def test_maximum_full_file_count(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
     maximum_full_file_count: int,
+    use_manage_data_task: bool,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
-    manage_data_interval = 5
+    if use_manage_data_task:
+        manage_data_interval = 5
+        check_confirmation_interval = 1000
+        await asyncio.sleep(manage_data_interval * 3)
+    else:
+        manage_data_interval = 1000
+        check_confirmation_interval = 5
+        await asyncio.sleep(check_confirmation_interval * 3)
     async with init_data_layer(
         wallet_rpc_port=wallet_rpc_port,
         bt=bt,
         db_path=tmp_path,
         manage_data_interval=manage_data_interval,
+        check_confirmation_interval=check_confirmation_interval,
         maximum_full_file_count=maximum_full_file_count,
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
