@@ -1,3 +1,5 @@
+# Package: supported_wallets
+
 from __future__ import annotations
 
 import functools

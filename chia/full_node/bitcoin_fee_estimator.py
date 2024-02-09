@@ -1,3 +1,5 @@
+# Package: obsolete
+
 from __future__ import annotations
 
 from chia.full_node.fee_estimate_store import FeeStore

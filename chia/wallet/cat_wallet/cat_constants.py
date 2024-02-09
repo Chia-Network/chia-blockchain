@@ -1,3 +1,6 @@
+# Package: supported_wallets
+# Mock: True
+
 from __future__ import annotations
 
 SPACEBUCKS = {

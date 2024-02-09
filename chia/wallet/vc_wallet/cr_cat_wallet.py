@@ -1,3 +1,5 @@
+# Package: supported_wallet
+
 from __future__ import annotations
 
 import dataclasses

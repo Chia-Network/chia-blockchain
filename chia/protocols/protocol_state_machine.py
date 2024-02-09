@@ -1,3 +1,6 @@
+# Package: protocol
+# Mock: False
+
 from __future__ import annotations
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes

@@ -1,3 +1,5 @@
+# Package: obsolete
+
 from __future__ import annotations
 
 from clvm.casts import int_from_bytes

@@ -1,3 +1,6 @@
+# Package: service
+# Mock: False
+
 """
 Code taken from Stack Overflow Eryk Sun.
 https://stackoverflow.com/questions/35772001/how-to-handle-the-signal-in-python-on-windows-machine

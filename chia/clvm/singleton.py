@@ -1,3 +1,5 @@
+# Package: obsolete
+
 from __future__ import annotations
 
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile

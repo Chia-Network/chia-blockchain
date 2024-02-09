@@ -1,3 +1,5 @@
+# Package: streamable
+
 from __future__ import annotations
 
 from typing import BinaryIO, ClassVar, Optional, SupportsIndex, SupportsInt, Type, TypeVar, Union

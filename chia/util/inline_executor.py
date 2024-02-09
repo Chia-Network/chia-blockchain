@@ -1,3 +1,6 @@
+# Package: concurrency
+# Mock: False
+
 from __future__ import annotations
 
 from concurrent.futures import Executor, Future

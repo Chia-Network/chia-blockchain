@@ -1,3 +1,5 @@
+# Package: wallet
+
 from __future__ import annotations
 
 from chia.types.blockchain_format.program import Program

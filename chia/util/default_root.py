@@ -1,3 +1,6 @@
+# Package: machine_state
+# Mock: False
+
 from __future__ import annotations
 
 import os

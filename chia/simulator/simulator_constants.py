@@ -1,3 +1,5 @@
+# Package: simulation
+
 from __future__ import annotations
 
 if __name__ == "__main__":

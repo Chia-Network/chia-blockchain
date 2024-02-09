@@ -1,3 +1,6 @@
+# Package: consensus
+# Mock: True
+
 from __future__ import annotations
 
 from typing import List, Optional, Tuple

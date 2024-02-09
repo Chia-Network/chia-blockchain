@@ -1,3 +1,5 @@
+# Package: chialisp_puzzles
+
 """
 Pay to delegated puzzle or hidden puzzle
 

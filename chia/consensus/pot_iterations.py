@@ -1,3 +1,5 @@
+# Package: consensus
+
 from __future__ import annotations
 
 from chia.consensus.constants import ConsensusConstants

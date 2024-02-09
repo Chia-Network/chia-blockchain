@@ -1,3 +1,6 @@
+# Package: full_node
+# Mock: True
+
 from __future__ import annotations
 
 import asyncio
