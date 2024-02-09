@@ -72,8 +72,6 @@ class WalletTransactionStore:
 
             await conn.execute("CREATE INDEX IF NOT EXISTS tx_sent on transaction_record(sent)")
 
-            await conn.execute("CREATE INDEX IF NOT EXISTS tx_created_time on transaction_record(created_at_time)")
-
             await conn.execute("CREATE INDEX IF NOT EXISTS tx_type on transaction_record(type)")
 
             await conn.execute("CREATE INDEX IF NOT EXISTS tx_to_puzzle_hash on transaction_record(to_puzzle_hash)")
@@ -81,6 +79,8 @@ class WalletTransactionStore:
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS transaction_record_wallet_id on transaction_record(wallet_id)"
             )
+
+            await conn.execute("DROP INDEX IF EXISTS tx_created_time")  # Drop duplicate index on created_at_time
 
             try:
                 await conn.execute("CREATE TABLE tx_times(txid blob PRIMARY KEY, valid_times blob)")
