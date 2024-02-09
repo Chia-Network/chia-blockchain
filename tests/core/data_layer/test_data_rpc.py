@@ -77,13 +77,12 @@ async def init_data_layer_service(
     config["data_layer"]["run_server"] = False
     config["data_layer"]["port"] = 0
     config["data_layer"]["rpc_port"] = 0
-    config["data_layer"]["manage_data_interval"] = 5
-    config["data_layer"]["check_confirmation_interval"] = 5
     if maximum_full_file_count is not None:
         config["data_layer"]["maximum_full_file_count"] = maximum_full_file_count
     if db_path is not None:
         config["data_layer"]["database_path"] = str(db_path.joinpath("db.sqlite"))
     config["data_layer"]["manage_data_interval"] = manage_data_interval
+    config["data_layer"]["check_confirmation_interval"] = check_confirmation_interval
     save_config(bt.root_path, "config.yaml", config)
     service = create_data_layer_service(
         root_path=bt.root_path, config=config, wallet_service=wallet_service, downloaders=[], uploaders=[]
@@ -99,10 +98,17 @@ async def init_data_layer(
     db_path: Path,
     wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
+    check_confirmation_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
 ) -> AsyncIterator[DataLayer]:
     async with init_data_layer_service(
-        wallet_rpc_port, bt, db_path, wallet_service, manage_data_interval, maximum_full_file_count
+        wallet_rpc_port,
+        bt,
+        db_path,
+        wallet_service,
+        manage_data_interval,
+        check_confirmation_interval,
+        maximum_full_file_count,
     ) as data_layer_service:
         yield data_layer_service._api.data_layer
 
