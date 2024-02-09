@@ -115,8 +115,10 @@ class DataLayer:
     state_changed_callback: Optional[StateChangedProtocol] = None
     _shut_down: bool = False
     periodically_manage_data_task: Optional[asyncio.Task[None]] = None
+    periodically_update_confirmation_status: Optional[asyncio.Task[None]] = None
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
+    files_lock = asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
 
     @property
     def server(self) -> ChiaServer:
@@ -195,6 +197,9 @@ class DataLayer:
             self._wallet_rpc = await self.wallet_rpc_init
 
             self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
+            self.periodically_update_confirmation_status_task = asyncio.create_task(
+                self.periodically_update_confirmation_status()
+            )
             try:
                 yield
             finally:
@@ -206,6 +211,11 @@ class DataLayer:
                 if self.periodically_manage_data_task is not None:
                     try:
                         self.periodically_manage_data_task.cancel()
+                    except asyncio.CancelledError:
+                        pass
+                if self.periodically_update_confirmation_status_task is not None:
+                    try:
+                        self.periodically_update_confirmation_status_task.cancel()
                     except asyncio.CancelledError:
                         pass
                 if self._wallet_rpc is not None:
@@ -369,7 +379,7 @@ class DataLayer:
                 prev = record
         return root_history
 
-    async def _update_confirmation_status(self, tree_id: bytes32) -> None:
+    async def _update_confirmation_status(self, tree_id: bytes32) -> bool:
         async with self.data_store.transaction():
             try:
                 root = await self.data_store.get_tree_root(tree_id=tree_id)
@@ -377,27 +387,27 @@ class DataLayer:
                 root = None
             singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
             if singleton_record is None:
-                return
+                return False
             if root is None:
                 pending_root = await self.data_store.get_pending_root(tree_id=tree_id)
                 if pending_root is not None:
                     if pending_root.generation == 0 and pending_root.node_hash is None:
                         await self.data_store.change_root_status(pending_root, Status.COMMITTED)
                         await self.data_store.clear_pending_roots(tree_id=tree_id)
-                        return
+                        return True
                     else:
                         root = None
             if root is None:
                 self.log.info(f"Don't have pending root for {tree_id}.")
-                return
+                return False
             if root.generation == singleton_record.generation:
-                return
+                return False
             if root.generation > singleton_record.generation:
                 self.log.info(
                     f"Local root ahead of chain root: {root.generation} {singleton_record.generation}. "
                     "Maybe we're doing a batch update."
                 )
-                return
+                return False
             wallet_history = await self.wallet_rpc.dl_history(
                 launcher_id=tree_id,
                 min_generation=uint32(root.generation + 1),
@@ -406,6 +416,7 @@ class DataLayer:
             new_hashes = [record.root for record in reversed(wallet_history)]
             root_hash = self.none_bytes if root.node_hash is None else root.node_hash
             generation_shift = 0
+            confirmed = False
             while len(new_hashes) > 0 and new_hashes[0] == root_hash:
                 generation_shift += 1
                 new_hashes.pop(0)
@@ -422,7 +433,9 @@ class DataLayer:
                 ):
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED)
                     await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
+                    confirmed = True
             await self.data_store.clear_pending_roots(tree_id=tree_id)
+            return confirmed
 
     async def fetch_and_validate(self, tree_id: bytes32) -> None:
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
@@ -647,6 +660,9 @@ class DataLayer:
             await self.data_store.remove_subscriptions(store_id, parsed_urls)
 
     async def unsubscribe(self, tree_id: bytes32, retain_data: bool) -> None:
+        owned_stores = await self.get_owned_stores()
+        if tree_id in [subscription.launcher_id for subscription in owned_stores]:
+            raise Exception(f"Cannot unsubscribe to owned store {tree_id}")
         async with self.subscription_lock:
             # Unsubscribe is processed later, after all fetching of data is done, to avoid races.
             self.unsubscribe_data_queue.append(UnsubscribeData(tree_id, retain_data))
@@ -709,6 +725,23 @@ class DataLayer:
     async def get_kv_diff(self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Set[DiffData]:
         return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
 
+    async def periodically_update_confirmation_status(self) -> None:
+        check_confirmation_interval = self.config.get("check_confirmation_interval", 10)
+        while not self._shut_down:
+            try:
+                owned_stores = await self.get_owned_stores()
+                for singleton in owned_stores:
+                    confirmed = await self._update_confirmation_status(tree_id=singleton.launcher_id)
+                    if confirmed:
+                        async with self.files_lock:
+                            await self.upload_files(singleton.launcher_id)
+                            await self.clean_old_full_tree_files(singleton.launcher_id)
+            except Exception as e:
+                self.log.error(
+                    f"Exception while checking owned data confirmation: {type(e)} {e} {traceback.format_exc()}"
+                )
+            await asyncio.sleep(check_confirmation_interval)
+
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
         while not self._shut_down:
@@ -751,8 +784,9 @@ class DataLayer:
                 try:
                     await self.update_subscriptions_from_wallet(subscription.tree_id)
                     await self.fetch_and_validate(subscription.tree_id)
-                    await self.upload_files(subscription.tree_id)
-                    await self.clean_old_full_tree_files(subscription.tree_id)
+                    async with self.files_lock:
+                        await self.upload_files(subscription.tree_id)
+                        await self.clean_old_full_tree_files(subscription.tree_id)
                 except Exception as e:
                     self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
 
