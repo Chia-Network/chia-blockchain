@@ -80,7 +80,7 @@ def make_aggsig_final_message(
     if isinstance(spend, Coin):
         coin = spend
     elif isinstance(spend, Spend):
-        coin = Coin(spend.parent_id, spend.puzzle_hash, spend.coin_amount)
+        coin = Coin(spend.parent_id, spend.puzzle_hash, uint64(spend.coin_amount))
     else:
         raise ValueError(f"Expected Coin or Spend, got {type(spend)}")  # pragma: no cover
 
@@ -184,9 +184,7 @@ def created_outputs_for_conditions_dict(
 
 
 def conditions_dict_for_solution(
-    puzzle_reveal: SerializedProgram,
-    solution: SerializedProgram,
-    max_cost: int,
+    puzzle_reveal: Union[Program, SerializedProgram], solution: Union[Program, SerializedProgram], max_cost: int
 ) -> Dict[ConditionOpcode, List[ConditionWithArgs]]:
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]] = {}
     for cvp in conditions_for_solution(puzzle_reveal, solution, max_cost):
@@ -195,9 +193,7 @@ def conditions_dict_for_solution(
 
 
 def conditions_for_solution(
-    puzzle_reveal: SerializedProgram,
-    solution: SerializedProgram,
-    max_cost: int,
+    puzzle_reveal: Union[Program, SerializedProgram], solution: Union[Program, SerializedProgram], max_cost: int
 ) -> List[ConditionWithArgs]:
     # get the standard script for a puzzle hash and feed in the solution
     try:

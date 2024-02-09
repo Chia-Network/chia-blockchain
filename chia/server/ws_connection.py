@@ -53,7 +53,7 @@ def create_default_last_message_time_dict() -> Dict[ProtocolMessageTypes, float]
 
 
 class ConnectionClosedCallbackProtocol(Protocol):
-    def __call__(
+    async def __call__(
         self,
         connection: WSChiaConnection,
         ban_time: int,
@@ -279,7 +279,7 @@ class WSChiaConnection:
                 with log_exceptions(self.log, consume=True):
                     self.log.debug(f"Closing already closed connection for {self.peer_info.host}")
                     if self.close_callback is not None:
-                        self.close_callback(self, ban_time, closed_connection=True)
+                        await self.close_callback(self, ban_time, closed_connection=True)
                 self._close_event.set()
                 return None
             self.closed = True
@@ -309,7 +309,7 @@ class WSChiaConnection:
             finally:
                 with log_exceptions(self.log, consume=True):
                     if self.close_callback is not None:
-                        self.close_callback(self, ban_time, closed_connection=False)
+                        await self.close_callback(self, ban_time, closed_connection=False)
                 self._close_event.set()
 
     async def wait_until_closed(self) -> None:

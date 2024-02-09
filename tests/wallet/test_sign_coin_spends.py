@@ -10,10 +10,10 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.db_wrapper import DBWrapper2, manage_connection
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -44,7 +44,7 @@ msg2: bytes = b"msg2"
 
 additional_data: bytes32 = bytes32(DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
 
-coin: Coin = Coin(bytes32([0] * 32), bytes32([0] * 32), 0)
+coin: Coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
 puzzle = SerializedProgram.from_bytes(b"\x01")
 solution_h = SerializedProgram.from_program(
     Program.to([[ConditionOpcode.AGG_SIG_UNSAFE, pk1_h, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_h, msg2]])
@@ -52,12 +52,12 @@ solution_h = SerializedProgram.from_program(
 solution_u = SerializedProgram.from_program(
     Program.to([[ConditionOpcode.AGG_SIG_UNSAFE, pk1_u, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_u, msg2]])
 )
-spend_h: CoinSpend = CoinSpend(
+spend_h: CoinSpend = make_spend(
     coin,
     puzzle,
     solution_h,
 )
-spend_u: CoinSpend = CoinSpend(
+spend_u: CoinSpend = make_spend(
     coin,
     puzzle,
     solution_u,

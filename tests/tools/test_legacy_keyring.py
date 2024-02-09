@@ -12,7 +12,7 @@ except ImportError:
     if sys.platform == "linux":
         raise
 
-from tools.legacy_keyring import create_legacy_keyring, generate_and_add, get_keys, legacy_keyring
+from chia.legacy.keyring import create_legacy_keyring, generate_and_add, get_keys, legacy_keyring
 
 
 def show() -> Result:

@@ -85,7 +85,7 @@ jobs:
         echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
 
     - name: Cache npm
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.npm-cache.outputs.dir }}
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -99,7 +99,7 @@ jobs:
         echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
 
     - name: Cache pip
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
@@ -150,7 +150,7 @@ jobs:
       if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
       shell: cmd
       run: |
-        curl -X GET  https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:%SM_API_KEY%" -o smtools-windows-x64.msi
+        curl -X GET https://download.chia.net/dc/smtools-windows-x64.msi -o smtools-windows-x64.msi
         msiexec /i smtools-windows-x64.msi /quiet /qn
         smksp_registrar.exe list
         smctl.exe keypair ls
@@ -234,7 +234,7 @@ jobs:
         rm -rf ./chia-blockchain-gui
 
     - name: Cache GUI
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-gui
       with:
         path: .\chia-blockchain-gui
@@ -258,7 +258,7 @@ jobs:
         .\build_windows-2-installer.ps1
 
     - name: Upload Installer to artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: chia-installers-windows-exe-intel
         path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\
@@ -302,7 +302,7 @@ jobs:
         directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
 
     - name: Download constraints file
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: constraints-file-intel
         path: venv
@@ -312,7 +312,7 @@ jobs:
         pip install --constraint venv/constraints.txt py3createtorrent
 
     - name: Download packages
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: chia-installers-windows-exe-intel
         path: chia-blockchain-gui/release-builds/
@@ -374,7 +374,7 @@ jobs:
       run: |
         py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe -o "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent --webseed https://download.chia.net/install/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
         ls
-        gh release upload $env:RELEASE_TAG "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent
+        gh release upload --repo ${{ github.repository }} $RELEASE_TAG "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent
 
     - name: Upload Dev Installer
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
@@ -394,7 +394,7 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        gh release upload $env:RELEASE_TAG "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
+        gh release upload --repo ${{ github.repository }} $RELEASE_TAG "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
 
     - uses: Chia-Network/actions/github/jwt@main
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET
@@ -434,7 +434,7 @@ jobs:
     - uses: Chia-Network/actions/clean-workspace@main
 
     - name: Download packages
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: chia-installers-windows-exe-intel
         path: packages

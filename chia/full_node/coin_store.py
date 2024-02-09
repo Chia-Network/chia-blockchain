@@ -8,11 +8,13 @@ from typing import Any, Collection, Dict, List, Optional, Set, Tuple
 
 import typing_extensions
 from aiosqlite import Cursor
+from clvm.casts import int_from_bytes
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
@@ -146,7 +148,7 @@ class CoinStore:
                     return CoinRecord(coin, row[0], row[1], row[2], row[6])
         return None
 
-    async def get_coin_records(self, names: List[bytes32]) -> List[CoinRecord]:
+    async def get_coin_records(self, names: Collection[bytes32]) -> List[CoinRecord]:
         if len(names) == 0:
             return []
 
@@ -411,6 +413,97 @@ class CoinStore:
 
         return coins
 
+    async def batch_coin_states_by_puzzle_hashes(
+        self,
+        puzzle_hashes: List[bytes32],
+        *,
+        min_height: uint32 = uint32(0),
+        include_spent: bool = True,
+        include_unspent: bool = True,
+        include_hinted: bool = True,
+        max_items: int = 50000,
+    ) -> Tuple[List[CoinState], Optional[uint32]]:
+        """
+        Returns the coin states, as well as the next block height (or `None` if finished).
+        Note that the maximum number of puzzle hashes is currently set to 15000.
+        """
+
+        # This number is chosen such that it's below half of the Python 3.8+ SQLite variable limit.
+        # It can be changed later without breaking the protocol, but this is a practical limit for now.
+        assert len(puzzle_hashes) <= 15000
+
+        coin_states: List[CoinState] = []
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            puzzle_hashes_db = tuple(puzzle_hashes)
+            puzzle_hash_count = len(puzzle_hashes_db)
+
+            if include_hinted:
+                require_spent = "cr.spent_index>0"
+                require_unspent = "cr.spent_index=0"
+            else:
+                require_spent = "spent_index>0"
+                require_unspent = "spent_index=0"
+
+            if include_spent and include_unspent:
+                height_filter = ""
+            elif include_spent:
+                height_filter = f"AND {require_spent}"
+            elif include_unspent:
+                height_filter = f"AND {require_unspent}"
+            else:
+                # There are no coins which are both spent and unspent, so we're finished.
+                return [], None
+
+            if include_hinted:
+                cursor = await conn.execute(
+                    f"SELECT cr.confirmed_index, cr.spent_index, cr.coinbase, cr.puzzle_hash, "
+                    f"cr.coin_parent, cr.amount, cr.timestamp FROM coin_record cr "
+                    f"LEFT JOIN hints h ON cr.coin_name = h.coin_id "
+                    f'WHERE (cr.puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
+                    f'OR h.hint in ({"?," * (puzzle_hash_count - 1)}?)) '
+                    f"AND (cr.confirmed_index>=? OR cr.spent_index>=?) "
+                    f"{height_filter} "
+                    f"ORDER BY MAX(cr.confirmed_index, cr.spent_index) ASC "
+                    f"LIMIT ?",
+                    puzzle_hashes_db + puzzle_hashes_db + (min_height, min_height, max_items + 1),
+                )
+            else:
+                cursor = await conn.execute(
+                    f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                    f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
+                    f'WHERE puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
+                    f"AND (confirmed_index>=? OR spent_index>=?) "
+                    f"{height_filter} "
+                    f"ORDER BY MAX(confirmed_index, spent_index) ASC "
+                    f"LIMIT ?",
+                    puzzle_hashes_db + (min_height, min_height, max_items + 1),
+                )
+
+            for row in await cursor.fetchall():
+                coin_states.append(self.row_to_coin_state(row))
+
+        # If there aren't too many coin states, we've finished syncing these hashes.
+        # There is no next height to start from, so return `None`.
+        if len(coin_states) <= max_items:
+            return coin_states, None
+
+        # The last item is the start of the next batch of coin states.
+        next_coin_state = coin_states.pop()
+        next_height = uint32(max(next_coin_state.created_height or 0, next_coin_state.spent_height or 0))
+
+        # In order to prevent blocks from being split up between batches, remove
+        # all coin states whose max height is the same as the last coin state's height.
+        while len(coin_states) > 0:
+            last_coin_state = coin_states[-1]
+            height = uint32(max(last_coin_state.created_height or 0, last_coin_state.spent_height or 0))
+            if height != next_height:
+                break
+
+            coin_states.pop()
+
+        return coin_states, next_height
+
     async def rollback_to_block(self, block_index: int) -> List[CoinRecord]:
         """
         Note that block_index can be negative, in which case everything is rolled back
@@ -494,4 +587,34 @@ class CoinStore:
             if rows_updated != len(coin_names):
                 raise ValueError(
                     f"Invalid operation to set spent, total updates {rows_updated} expected {len(coin_names)}"
+                )
+
+    # Lookup the most recent unspent lineage that matches a puzzle hash
+    async def get_unspent_lineage_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT unspent.coin_name, "
+                "unspent.amount, "
+                "unspent.coin_parent, "
+                "parent.amount, "
+                "parent.coin_parent "
+                "FROM coin_record AS unspent "
+                "LEFT JOIN coin_record AS parent ON unspent.coin_parent = parent.coin_name "
+                "WHERE unspent.spent_index = 0 "
+                "AND parent.spent_index > 0 "
+                "AND unspent.puzzle_hash = ? "
+                "AND parent.puzzle_hash = unspent.puzzle_hash",
+                (puzzle_hash,),
+            ) as cursor:
+                rows = list(await cursor.fetchall())
+                if len(rows) != 1:
+                    log.debug("Expected 1 unspent with puzzle hash %s, but found %s", puzzle_hash.hex(), len(rows))
+                    return None
+                coin_id, coin_amount, parent_id, parent_amount, parent_parent_id = rows[0]
+                return UnspentLineageInfo(
+                    coin_id=bytes32(coin_id),
+                    coin_amount=int_from_bytes(coin_amount),
+                    parent_id=bytes32(parent_id),
+                    parent_amount=int_from_bytes(parent_amount),
+                    parent_parent_id=bytes32(parent_parent_id),
                 )

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import ast
 import inspect
-from typing import Any, Set, cast
+from typing import Any, Dict, Set, cast
 
 from chia.protocols import (
     farmer_protocol,
@@ -11,6 +11,7 @@ from chia.protocols import (
     harvester_protocol,
     introducer_protocol,
     pool_protocol,
+    protocol_message_types,
     shared_protocol,
     timelord_protocol,
     wallet_protocol,
@@ -40,11 +41,35 @@ def test_missing_messages_state_machine() -> None:
     # to the visitor in build_network_protocol_files.py and rerun it. Then
     # update this test
     assert (
-        len(VALID_REPLY_MESSAGE_MAP) == 20
+        len(VALID_REPLY_MESSAGE_MAP) == 21
     ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
     assert (
-        len(NO_REPLY_EXPECTED) == 7
+        len(NO_REPLY_EXPECTED) == 8
     ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
+
+
+def test_message_ids() -> None:
+    parsed = ast.parse(inspect.getsource(protocol_message_types))
+    message_ids: Dict[int, str] = {}
+    for line in parsed.body:
+        if not isinstance(line, ast.ClassDef) or line.name != "ProtocolMessageTypes":
+            continue
+        for entry in line.body:
+            if not isinstance(entry, ast.Assign):  # pragma: no cover
+                continue
+            assert isinstance(entry.value, ast.Constant)
+            assert isinstance(entry.targets[0], ast.Name)
+            message_id = entry.value.value
+            message_name = entry.targets[0].id
+            if message_id in message_ids:  # pragma: no cover
+                raise AssertionError(
+                    f'protocol message ID clash between "{message_name}" and "{message_ids[message_id]}". Value {message_id}'
+                )
+            message_ids[message_id] = message_name
+            if message_id < 0 or message_id > 255:  # pragma: no cover
+                raise AssertionError(f'message ID must fit in a uint8. "{message_name}" has value {message_id}')
+        break
+    assert len(message_ids) > 0
 
 
 def test_missing_messages() -> None:
@@ -88,6 +113,9 @@ def test_missing_messages() -> None:
     farmer_msgs = {
         "DeclareProofOfSpace",
         "FarmingInfo",
+        "SPSubSlotSourceData",
+        "SPVDFSourceData",
+        "SignagePointSourceData",
         "NewSignagePoint",
         "RequestSignedValues",
         "SignedValues",
@@ -99,6 +127,7 @@ def test_missing_messages() -> None:
         "NewSignagePointOrEndOfSubSlot",
         "NewTransaction",
         "NewUnfinishedBlock",
+        "NewUnfinishedBlock2",
         "RejectBlock",
         "RejectBlocks",
         "RequestBlock",
@@ -110,6 +139,7 @@ def test_missing_messages() -> None:
         "RequestSignagePointOrEndOfSubSlot",
         "RequestTransaction",
         "RequestUnfinishedBlock",
+        "RequestUnfinishedBlock2",
         "RespondBlock",
         "RespondBlocks",
         "RespondCompactVDF",
@@ -123,6 +153,7 @@ def test_missing_messages() -> None:
 
     harvester_msgs = {
         "HarvesterHandshake",
+        "ProofOfSpaceFeeInfo",
         "NewProofOfSpace",
         "NewSignagePointHarvester",
         "Plot",
@@ -135,6 +166,8 @@ def test_missing_messages() -> None:
         "PlotSyncStart",
         "PoolDifficulty",
         "RequestPlots",
+        "SigningDataKind",
+        "SignatureRequestSourceData",
         "RequestSignatures",
         "RespondPlots",
         "RespondSignatures",

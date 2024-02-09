@@ -10,7 +10,7 @@ from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
@@ -79,12 +79,12 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                 "2x ACS spends - create one coin",
                 SpendBundle(
                     [
-                        CoinSpend(
+                        make_spend(
                             fake_acs_coin,
                             FAKE_ACS,
                             Program.to([[51, covenant_puzzle_hash, fake_acs_coin.amount]]),
                         ),
-                        CoinSpend(
+                        make_spend(
                             acs_coin,
                             ACS,
                             Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
@@ -108,7 +108,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             SpendBundle(
                 [
-                    CoinSpend(
+                    make_spend(
                         acs_cov,
                         covenant_puzzle,
                         solve_covenant_layer(
@@ -134,7 +134,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                     "Covenant layer eve spend - one create coin",
                     SpendBundle(
                         [
-                            CoinSpend(
+                            make_spend(
                                 cov,
                                 covenant_puzzle,
                                 solve_covenant_layer(
@@ -164,7 +164,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                 "Covenant layer non-eve spend - one create coin",
                 SpendBundle(
                     [
-                        CoinSpend(
+                        make_spend(
                             new_acs_cov,
                             covenant_puzzle,
                             solve_covenant_layer(
@@ -209,14 +209,14 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         provider_innerpuzhash: bytes32 = ACS_PH
         my_coin_id: bytes32 = eml_coin.name()
         new_metadata: Program = Program.to("SUCCESS")
-        new_tp_hash: Program = Program.to("NEW TP").get_tree_hash()
+        new_tp_hash = Program.to("NEW TP").get_tree_hash()
         bad_data: bytes32 = bytes32([0] * 32)
 
         # Try to update metadata and tp without any announcement
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             SpendBundle(
                 [
-                    CoinSpend(
+                    make_spend(
                         eml_coin,
                         eml_puzzle,
                         Program.to(
@@ -241,7 +241,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         did_coin: Coin = (
             await client.get_coin_records_by_puzzle_hashes([MOCK_SINGLETON.get_tree_hash()], include_spent_coins=False)
         )[0].coin
-        did_authorization_spend: CoinSpend = CoinSpend(
+        did_authorization_spend: CoinSpend = make_spend(
             did_coin,
             MOCK_SINGLETON,
             Program.to([[[62, std_hash(my_coin_id + new_metadata.get_tree_hash() + new_tp_hash)]]]),
@@ -251,7 +251,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         result = await client.push_tx(
             SpendBundle(
                 [
-                    CoinSpend(
+                    make_spend(
                         eml_coin,
                         eml_puzzle,
                         Program.to(
@@ -277,7 +277,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
             "Fake Ownership Layer - NFT DID TP",
             SpendBundle(
                 [
-                    CoinSpend(
+                    make_spend(
                         eml_coin,
                         eml_puzzle,
                         Program.to(
@@ -330,7 +330,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             SpendBundle(
                 [
-                    CoinSpend(
+                    make_spend(
                         p2_either_coin,
                         p2_either_puzzle,
                         solve_viral_backdoor(
@@ -349,7 +349,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
         result = await client.push_tx(
             SpendBundle(
                 [
-                    CoinSpend(
+                    make_spend(
                         p2_either_coin,
                         p2_either_puzzle,
                         solve_viral_backdoor(
@@ -375,7 +375,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
                 "Viral backdoor spend - one create coin",
                 SpendBundle(
                     [
-                        CoinSpend(
+                        make_spend(
                             p2_either_coin,
                             p2_either_puzzle,
                             solve_viral_backdoor(
@@ -420,7 +420,7 @@ async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
                     f"Proofs Checker only - num_proofs: {num_proofs} - permutation: {i}",
                     SpendBundle(
                         [
-                            CoinSpend(
+                            make_spend(
                                 proof_checker_coin,
                                 proofs_checker_runner,
                                 Program.to([[Program.to((flag, "1")) for flag in proof_list]]),
@@ -470,7 +470,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             await client.push_tx(
                 SpendBundle(
                     [
-                        CoinSpend(
+                        make_spend(
                             fund_coin,
                             RUN_PUZ_PUZ,
                             Program.to((1, conditions)),
@@ -511,7 +511,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 "Launch VC",
                 SpendBundle(
                     [
-                        CoinSpend(
+                        make_spend(
                             vc_fund_coin,
                             RUN_PUZ_PUZ,
                             dpuz,
@@ -539,6 +539,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             Program.to([[51, ACS_2_PH, vc.coin.amount], vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)]),
             new_proof_hash=NEW_PROOF_HASH,
         )
+        assert expected_announcement is not None
         for use_did, correct_did in ((False, None), (True, False), (True, True)):
             result = await client.push_tx(
                 cost_logger.add_cost(
@@ -547,7 +548,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         [
                             *(
                                 [
-                                    CoinSpend(
+                                    make_spend(
                                         did if correct_did else other_did,
                                         puzzle_for_singleton(
                                             launcher_id if correct_did else other_launcher_id,
@@ -559,7 +560,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                                             Program.to(
                                                 [
                                                     [51, ACS_PH, did.amount if correct_did else other_did.amount],
-                                                    [62, expected_announcement],
+                                                    expected_announcement.to_program(),
                                                 ]
                                             ),
                                         ),
@@ -631,12 +632,12 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             result = await client.push_tx(
                 SpendBundle(
                     [
-                        CoinSpend(
+                        make_spend(
                             cr_coin_1,
                             RUN_PUZ_PUZ,
                             dpuz_1,
                         ),
-                        CoinSpend(
+                        make_spend(
                             cr_coin_2,
                             RUN_PUZ_PUZ,
                             dpuz_2,
@@ -723,7 +724,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                             if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
                             else malicious_cr_2.expected_announcement(),
                         ],
-                        *([61, a.name()] for a in expected_announcements),
+                        *(a.to_program() for a in expected_announcements),
                         vc.standard_magic_condition(),
                     ]
                 ),
@@ -771,7 +772,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                     "VC yoink by DID provider",
                     SpendBundle(
                         [
-                            CoinSpend(
+                            make_spend(
                                 new_did,
                                 puzzle_for_singleton(
                                     launcher_id if correct_did else other_launcher_id,
@@ -786,7 +787,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                                     if correct_did
                                     else other_lineage_proof,
                                     uint64(new_did.amount),
-                                    Program.to([[51, ACS_PH, new_did.amount], [62, expected_announcement]]),
+                                    Program.to([[51, ACS_PH, new_did.amount], expected_announcement.to_program()]),
                                 ),
                             ),
                             yoink_spend,

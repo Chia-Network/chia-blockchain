@@ -5,14 +5,11 @@ import time
 from dataclasses import dataclass
 from typing import AsyncIterator, Optional
 
-from chia.farmer.farmer import Farmer
-from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.sender import Sender
 from chia.protocols.harvester_protocol import PlotSyncIdentifier
 from chia.server.outbound_message import Message, NodeType
-from chia.server.start_service import Service
+from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16, uint64
@@ -44,7 +41,7 @@ def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyn
 
 @contextlib.asynccontextmanager
 async def start_harvester_service(
-    harvester_service: Service[Harvester, HarvesterAPI], farmer_service: Service[Farmer, FarmerAPI]
+    harvester_service: HarvesterService, farmer_service: FarmerService
 ) -> AsyncIterator[SplitAsyncManager[Harvester]]:
     # Set the `last_refresh_time` of the plot manager to avoid initial plot loading
     harvester: Harvester = harvester_service._node

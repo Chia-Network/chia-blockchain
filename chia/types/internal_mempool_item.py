@@ -10,7 +10,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32
 
 
-@dataclass(frozen=True)
+@dataclass
 class InternalMempoolItem:
     spend_bundle: SpendBundle
     npc_result: NPCResult

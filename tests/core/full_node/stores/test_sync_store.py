@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import random
 
+import pytest
+
 from chia.full_node.sync_store import SyncStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 
 
-def test_basic_store():
+@pytest.mark.anyio
+async def test_basic_store():
     store = SyncStore()
 
     # Save/get sync
@@ -53,7 +56,8 @@ def test_basic_store():
     assert store.get_heaviest_peak().weight == 700
 
 
-def test_is_backtrack_syncing_works_when_not_present(seeded_random: random.Random) -> None:
+@pytest.mark.anyio
+async def test_is_backtrack_syncing_works_when_not_present(seeded_random: random.Random) -> None:
     store = SyncStore()
     node_id = bytes32.random(r=seeded_random)
 
@@ -63,7 +67,8 @@ def test_is_backtrack_syncing_works_when_not_present(seeded_random: random.Rando
     assert node_id not in store._backtrack_syncing
 
 
-def test_increment_backtrack_syncing_adds(seeded_random: random.Random) -> None:
+@pytest.mark.anyio
+async def test_increment_backtrack_syncing_adds(seeded_random: random.Random) -> None:
     store = SyncStore()
     node_id = bytes32.random(r=seeded_random)
 
@@ -73,7 +78,8 @@ def test_increment_backtrack_syncing_adds(seeded_random: random.Random) -> None:
     assert node_id in store._backtrack_syncing
 
 
-def test_increment_backtrack_syncing_increments(seeded_random: random.Random) -> None:
+@pytest.mark.anyio
+async def test_increment_backtrack_syncing_increments(seeded_random: random.Random) -> None:
     store = SyncStore()
     node_id = bytes32.random(r=seeded_random)
 
@@ -82,7 +88,10 @@ def test_increment_backtrack_syncing_increments(seeded_random: random.Random) ->
     assert store._backtrack_syncing[node_id] == 2
 
 
-def test_decrement_backtrack_syncing_does_nothing_when_not_present(seeded_random: random.Random) -> None:
+@pytest.mark.anyio
+async def test_decrement_backtrack_syncing_does_nothing_when_not_present(
+    seeded_random: random.Random,
+) -> None:
     store = SyncStore()
     node_id = bytes32.random(r=seeded_random)
 
@@ -92,7 +101,8 @@ def test_decrement_backtrack_syncing_does_nothing_when_not_present(seeded_random
     assert node_id not in store._backtrack_syncing
 
 
-def test_decrement_backtrack_syncing_decrements(seeded_random: random.Random) -> None:
+@pytest.mark.anyio
+async def test_decrement_backtrack_syncing_decrements(seeded_random: random.Random) -> None:
     store = SyncStore()
     node_id = bytes32.random(r=seeded_random)
 
@@ -101,7 +111,8 @@ def test_decrement_backtrack_syncing_decrements(seeded_random: random.Random) ->
     assert store._backtrack_syncing[node_id] == 1
 
 
-def test_decrement_backtrack_syncing_removes_at_0(seeded_random: random.Random) -> None:
+@pytest.mark.anyio
+async def test_decrement_backtrack_syncing_removes_at_0(seeded_random: random.Random) -> None:
     store = SyncStore()
     node_id = bytes32.random(r=seeded_random)
 
@@ -110,7 +121,8 @@ def test_decrement_backtrack_syncing_removes_at_0(seeded_random: random.Random) 
     assert node_id not in store._backtrack_syncing
 
 
-def test_backtrack_syncing_removes_on_disconnect(seeded_random: random.Random) -> None:
+@pytest.mark.anyio
+async def test_backtrack_syncing_removes_on_disconnect(seeded_random: random.Random) -> None:
     store = SyncStore()
     node_id = bytes32.random(r=seeded_random)
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import logging
 import traceback
@@ -33,6 +34,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig, TXConfigLoader
 
 NODE_TYPES: Dict[str, Type[RpcClient]] = {
+    "base": RpcClient,
     "farmer": FarmerRpcClient,
     "wallet": WalletRpcClient,
     "full_node": FullNodeRpcClient,
@@ -42,6 +44,7 @@ NODE_TYPES: Dict[str, Type[RpcClient]] = {
 }
 
 node_config_section_names: Dict[Type[RpcClient], str] = {
+    RpcClient: "base",
     FarmerRpcClient: "farmer",
     WalletRpcClient: "wallet",
     FullNodeRpcClient: "full_node",
@@ -93,6 +96,7 @@ async def get_any_service_client(
     rpc_port: Optional[int] = None,
     root_path: Optional[Path] = None,
     consume_errors: bool = True,
+    use_ssl: bool = True,
 ) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
@@ -113,7 +117,17 @@ async def get_any_service_client(
     if rpc_port is None:
         rpc_port = config[node_type]["rpc_port"]
     # select node client type based on string
-    async with client_type.create_as_context(self_hostname, uint16(rpc_port), root_path, config) as node_client:
+
+    async with contextlib.AsyncExitStack() as exit_stack:
+        if use_ssl:
+            node_client = await exit_stack.enter_async_context(
+                client_type.create_as_context(self_hostname, uint16(rpc_port), root_path=root_path, net_config=config),
+            )
+        else:
+            node_client = await exit_stack.enter_async_context(
+                client_type.create_as_context(self_hostname, uint16(rpc_port), root_path=None, net_config=None),
+            )
+
         try:
             # check if we can connect to node
             await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
