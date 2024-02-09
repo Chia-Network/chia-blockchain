@@ -115,7 +115,7 @@ class DataLayer:
     state_changed_callback: Optional[StateChangedProtocol] = None
     _shut_down: bool = False
     periodically_manage_data_task: Optional[asyncio.Task[None]] = None
-    periodically_update_confirmation_status: Optional[asyncio.Task[None]] = None
+    periodically_update_confirmation_status_task: Optional[asyncio.Task[None]] = None
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
     files_lock = asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
