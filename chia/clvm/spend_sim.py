@@ -162,7 +162,7 @@ class SpendSim:
 
             # Load the next data if there is any
             async with self.db_wrapper.writer_maybe_transaction() as conn:
-                await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY_KEY)")
+                await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY KEY)")
                 cursor = await conn.execute("SELECT * from block_data")
                 row = await cursor.fetchone()
                 await cursor.close()
