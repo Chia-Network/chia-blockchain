@@ -1051,7 +1051,7 @@ class TestDIDWallet:
         bad_metadata = {"Twitter": {"url": "http://www.twitter.com"}}
         with pytest.raises(ValueError) as e:
             await did_wallet_1.update_metadata(bad_metadata)
-            assert e.match("Metadata key value pairs must be strings.")
+        assert e.match("Metadata key value pairs must be strings.")
 
         metadata = {}
         metadata["Twitter"] = "http://www.twitter.com"
