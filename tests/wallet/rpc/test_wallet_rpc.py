@@ -377,7 +377,7 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
     async with wallet_node.wallet_state_manager.lock:
-        cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet, _ = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), DEFAULT_TX_CONFIG
         )
     await assert_get_balance(wallet_rpc_client, wallet_node, wallet)
@@ -427,7 +427,7 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
         tx_config=DEFAULT_TX_CONFIG,
         fee=uint64(fee_amount),
     )
-    await wallet.push_transaction(tx)
+    await wallet.wallet_state_manager.add_pending_transactions([tx])
 
     our_ph = await wallet.get_new_puzzlehash()
     await full_node_api.wait_transaction_records_entered_mempool(records=[tx])

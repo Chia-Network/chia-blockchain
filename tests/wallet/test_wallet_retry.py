@@ -66,7 +66,7 @@ async def test_wallet_tx_retry(
     [transaction] = await wallet_1.generate_signed_transaction(uint64(100), reward_ph, DEFAULT_TX_CONFIG)
     sb1: Optional[SpendBundle] = transaction.spend_bundle
     assert sb1 is not None
-    await wallet_1.push_transaction(transaction)
+    await wallet_1.wallet_state_manager.add_pending_transactions([transaction])
 
     async def sb_in_mempool() -> bool:
         return full_node_1.full_node.mempool_manager.get_spendbundle(transaction.name) == transaction.spend_bundle

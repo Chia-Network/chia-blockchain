@@ -646,7 +646,7 @@ class DAOWallet:
 
         genesis_launcher_puz = SINGLETON_LAUNCHER
         # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
-        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
+        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), uint64(1))
 
         if cat_tail_hash is None:
             assert amount_of_cats_to_create is not None
@@ -685,7 +685,7 @@ class DAOWallet:
                 "treasury_id": launcher_coin.name(),
                 "coins": different_coins,
             }
-            new_cat_wallet = await CATWallet.create_new_cat_wallet(
+            new_cat_wallet, _ = await CATWallet.create_new_cat_wallet(
                 self.wallet_state_manager,
                 self.standard_wallet,
                 cat_tail_info,
