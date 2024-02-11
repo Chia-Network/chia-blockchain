@@ -7,6 +7,7 @@ from chia.clvm.spend_sim import sim_and_client
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 
 
@@ -44,6 +45,22 @@ async def test_all_endpoints():
         await sim.farm_block(bytes32([1] * 32))
         for i in range(0, 5):
             await sim.farm_block()
+
+        # get_coin_records_by_hint
+        acs = Program.to(1)
+        await sim.farm_block(acs.get_tree_hash())
+        hint = bytes32([9] * 32)
+        non_existant_hint = bytes32([8] * 32)
+        acs_spend = make_spend(sim.block_records[-1].reward_claims_incorporated[0],
+                               acs, Program.to([[ConditionOpcode.CREATE_COIN,
+                                                 bytes32([7] * 32), 1, [hint]]]))
+        await sim_client.push_tx(SpendBundle([acs_spend], G2Element()))
+        await sim.farm_block()
+        coin_records = await sim_client.get_coin_records_by_hint(hint)
+        assert len(coin_records) == 1
+        coin_records = await sim_client.get_coin_records_by_hint(non_existant_hint)
+        assert len(coin_records) == 0
+
 
         # get_coin_records_by_puzzle_hash
         coin_records = await sim_client.get_coin_records_by_puzzle_hash(bytes32([0] * 32))
@@ -89,7 +106,7 @@ async def test_all_endpoints():
         # push_tx
         puzzle_hash = bytes.fromhex("9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2")  # Program.to(1)
         await sim.farm_block(puzzle_hash)
-        spendable_coin = await sim_client.get_coin_records_by_puzzle_hash(puzzle_hash)
+        spendable_coin = await sim_client.get_coin_records_by_puzzle_hash(puzzle_hash, include_spent_coins=False)
         spendable_coin = spendable_coin[0].coin
         bundle = SpendBundle(
             [
@@ -102,7 +119,7 @@ async def test_all_endpoints():
             G2Element(),
         )
         result, error = await sim_client.push_tx(bundle)
-
+        assert not error
         # get_all_mempool_tx_ids
         mempool_items = await sim_client.get_all_mempool_tx_ids()
         assert len(mempool_items) == 1

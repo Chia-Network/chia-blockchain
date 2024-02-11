@@ -277,7 +277,8 @@ class SpendSim:
                         hints: List[Tuple[bytes32, bytes]] = []
                         hint_obj: HintedCoin
                         for coin_name, hint_obj in hint_dict.items():
-                            hints.append((coin_name, hint_obj.hint))
+                            if hint_obj.hint is not None:
+                                hints.append((coin_name, bytes(hint_obj.hint)))
                         await self.hint_store.add_hints(hints)
                     return_additions = additions
                     return_removals = bundle.removals()
