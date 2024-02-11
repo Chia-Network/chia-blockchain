@@ -50,17 +50,18 @@ async def test_all_endpoints():
         acs = Program.to(1)
         await sim.farm_block(acs.get_tree_hash())
         hint = bytes32([9] * 32)
-        non_existant_hint = bytes32([8] * 32)
-        acs_spend = make_spend(sim.block_records[-1].reward_claims_incorporated[0],
-                               acs, Program.to([[ConditionOpcode.CREATE_COIN,
-                                                 bytes32([7] * 32), 1, [hint]]]))
+        non_existent_hint = bytes32([8] * 32)
+        acs_spend = make_spend(
+            sim.block_records[-1].reward_claims_incorporated[0],
+            acs,
+            Program.to([[ConditionOpcode.CREATE_COIN, bytes32([7] * 32), 1, [hint]]]),
+        )
         await sim_client.push_tx(SpendBundle([acs_spend], G2Element()))
         await sim.farm_block()
         coin_records = await sim_client.get_coin_records_by_hint(hint)
         assert len(coin_records) == 1
-        coin_records = await sim_client.get_coin_records_by_hint(non_existant_hint)
+        coin_records = await sim_client.get_coin_records_by_hint(non_existent_hint)
         assert len(coin_records) == 0
-
 
         # get_coin_records_by_puzzle_hash
         coin_records = await sim_client.get_coin_records_by_puzzle_hash(bytes32([0] * 32))
