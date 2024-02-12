@@ -672,10 +672,11 @@ class WalletRpcApi:
             response["fingerprint"] = self.service.logged_in_fingerprint
         return response
 
-    @tx_endpoint(push=True)
+    @tx_endpoint(push=True, requires_default_information=True)
     async def create_new_wallet(
         self,
         request: Dict[str, Any],
+        push: bool,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
@@ -691,6 +692,8 @@ class WalletRpcApi:
             name = request.get("name", None)
             if request["mode"] == "new":
                 if request.get("test", False):
+                    if not push:
+                        raise ValueError("Test CAT minting must be pushed automatically")  # pragma: no cover
                     async with self.service.wallet_state_manager.lock:
                         cat_wallet, txs = await CATWallet.create_new_cat_wallet(
                             wallet_state_manager,
@@ -1776,13 +1779,17 @@ class WalletRpcApi:
         else:
             return {"wallet_id": wallet.id(), "name": (wallet.get_name())}
 
-    @tx_endpoint(push=False)
+    @tx_endpoint(push=False, requires_default_information=True)
     async def create_offer_for_ids(
         self,
         request: Dict[str, Any],
+        push: bool,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
+        if push:
+            raise ValueError("Cannot push an incomplete spend")  # pragma: no cover
+
         offer: Dict[str, int] = request["offer"]
         fee: uint64 = uint64(request.get("fee", 0))
         validate_only: bool = request.get("validate_only", False)
@@ -3558,13 +3565,16 @@ class WalletRpcApi:
             {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},
         )
 
-    @tx_endpoint(push=False)
+    @tx_endpoint(push=False, requires_default_information=True)
     async def nft_mint_bulk(
         self,
         request: Dict[str, Any],
+        push: bool,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
+        if push:
+            raise ValueError("Automatic pushing of nft minting transactions not yet available")  # pragma: no cover
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
         wallet_id = uint32(request["wallet_id"])

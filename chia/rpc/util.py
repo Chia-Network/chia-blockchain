@@ -62,7 +62,12 @@ def wrap_http_handler(f) -> Callable:
     return inner
 
 
-def tx_endpoint(push: bool = False, merge_spends: bool = True) -> Callable[[RpcEndpoint], RpcEndpoint]:
+def tx_endpoint(
+    push: bool = False,
+    merge_spends: bool = True,
+    # The purpose of this is in case endpoints need to raise based on certain non default values
+    requires_default_information: bool = False,
+) -> Callable[[RpcEndpoint], RpcEndpoint]:
     def _inner(func: RpcEndpoint) -> RpcEndpoint:
         async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
             assert self.service.logged_in_fingerprint is not None
@@ -108,6 +113,7 @@ def tx_endpoint(push: bool = False, merge_spends: bool = True) -> Callable[[RpcE
                 self,
                 request,
                 *args,
+                *([push] if requires_default_information else []),
                 tx_config=tx_config,
                 extra_conditions=extra_conditions,
                 **kwargs,
