@@ -82,13 +82,6 @@ if [ "$PLATFORM" = "arm64" ]; then
   # https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499
   # @TODO Consolidates the process to amd64 if the issue of electron-builder is resolved
   sudo apt -y install ruby ruby-dev
-  # `sudo gem install public_suffix -v 4.0.7` is required to fix the error below.
-  #   ERROR:  Error installing fpm:
-  #   The last version of public_suffix (< 6.0, >= 2.0.2) to support your Ruby & RubyGems was 4.0.7. Try installing it with `gem install public_suffix -v 4.0.7` and then running the current command again
-  #   public_suffix requires Ruby version >= 2.6. The current ruby version is 2.5.0.
-  # @TODO Maybe versions of sub dependencies should be managed by gem lock file.
-  # @TODO Once ruby 2.6 can be installed on `apt install ruby`, installing public_suffix below should be removed.
-  sudo gem install public_suffix -v 4.0.7
   sudo gem install fpm
   echo USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
