@@ -20,7 +20,16 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.rpc.util import marshal, tx_endpoint
-from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
+from chia.rpc.wallet_request_types import (
+    ApplySignatures,
+    ApplySignaturesResponse,
+    GatherSigningInfo,
+    GatherSigningInfoResponse,
+    GetNotifications,
+    GetNotificationsResponse,
+    SubmitTransactions,
+    SubmitTransactionsResponse,
+)
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -90,6 +99,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles import p2_delegated_conditions
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
+from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     create_singleton_puzzle,
@@ -285,6 +295,10 @@ class WalletRpcApi:
             "/vc_revoke": self.vc_revoke,
             # CR-CATs
             "/crcat_approve_pending": self.crcat_approve_pending,
+            # Signer Protocol
+            "/gather_signing_info": self.gather_signing_info,
+            "/apply_signatures": self.apply_signatures,
+            "/submit_transactions": self.submit_transactions,
             # VAULT
             "/vault_create": self.vault_create,
         }
@@ -2008,7 +2022,9 @@ class WalletRpcApi:
 
         return {
             "trade_record": trade_record.to_json_dict_convenience(),
+            "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in tx_records],
+            "signing_responses": [SigningResponse(bytes(offer._bundle.aggregated_signature), trade_record.trade_id)],
         }
 
     async def get_offer(self, request: Dict[str, Any]) -> EndpointResult:
@@ -4545,6 +4561,31 @@ class WalletRpcApi:
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
+
+    @marshal
+    async def gather_signing_info(
+        self,
+        request: GatherSigningInfo,
+    ) -> GatherSigningInfoResponse:
+        return GatherSigningInfoResponse(await self.service.wallet_state_manager.gather_signing_info(request.spends))
+
+    @marshal
+    async def apply_signatures(
+        self,
+        request: ApplySignatures,
+    ) -> ApplySignaturesResponse:
+        return ApplySignaturesResponse(
+            [await self.service.wallet_state_manager.apply_signatures(request.spends, request.signing_responses)]
+        )
+
+    @marshal
+    async def submit_transactions(
+        self,
+        request: SubmitTransactions,
+    ) -> SubmitTransactionsResponse:
+        return SubmitTransactionsResponse(
+            await self.service.wallet_state_manager.submit_transactions(request.signed_transactions)
+        )
 
     ##########################################################################################
     # VAULT

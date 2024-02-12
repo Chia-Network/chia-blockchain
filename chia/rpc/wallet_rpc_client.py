@@ -5,7 +5,16 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
-from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
+from chia.rpc.wallet_request_types import (
+    ApplySignatures,
+    ApplySignaturesResponse,
+    GatherSigningInfo,
+    GatherSigningInfoResponse,
+    GetNotifications,
+    GetNotificationsResponse,
+    SubmitTransactions,
+    SubmitTransactionsResponse,
+)
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -1602,6 +1611,39 @@ class WalletRpcClient(RpcClient):
             },
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+
+    async def gather_signing_info(
+        self,
+        args: GatherSigningInfo,
+    ) -> GatherSigningInfoResponse:
+        return GatherSigningInfoResponse.from_json_dict(
+            await self.fetch(
+                "gather_signing_info",
+                args.to_json_dict(),
+            )
+        )
+
+    async def apply_signatures(
+        self,
+        args: ApplySignatures,
+    ) -> ApplySignaturesResponse:
+        return ApplySignaturesResponse.from_json_dict(
+            await self.fetch(
+                "apply_signatures",
+                args.to_json_dict(),
+            )
+        )
+
+    async def submit_transactions(
+        self,
+        args: SubmitTransactions,
+    ) -> SubmitTransactionsResponse:
+        return SubmitTransactionsResponse.from_json_dict(
+            await self.fetch(
+                "submit_transactions",
+                args.to_json_dict(),
+            )
+        )
 
     async def vault_create(
         self,
