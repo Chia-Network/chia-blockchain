@@ -100,19 +100,28 @@ class WalletTransactionStore:
         Store TransactionRecord in DB and Cache.
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
+            transaction_record_old = TransactionRecordOld(
+                confirmed_at_height=record.confirmed_at_height,
+                created_at_time=record.created_at_time,
+                to_puzzle_hash=record.to_puzzle_hash,
+                amount=record.amount,
+                fee_amount=record.fee_amount,
+                confirmed=record.confirmed,
+                sent=record.sent,
+                spend_bundle=record.spend_bundle,
+                additions=record.additions,
+                removals=record.removals,
+                wallet_id=record.wallet_id,
+                sent_to=record.sent_to,
+                trade_id=record.trade_id,
+                type=record.type,
+                name=record.name,
+                memos=record.memos,
+            )
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    bytes(
-                        TransactionRecordOld(
-                            spend_bundle=record.spend_bundle,
-                            **{
-                                k: v
-                                for k, v in dataclasses.asdict(record).items()
-                                if k not in ("valid_times", "spend_bundle")
-                            },
-                        )
-                    ),
+                    bytes(transaction_record_old),
                     record.name,
                     record.confirmed_at_height,
                     record.created_at_time,
@@ -127,11 +136,7 @@ class WalletTransactionStore:
                 ),
             )
             await conn.execute_insert(
-                "INSERT OR REPLACE INTO tx_times " "(txid, valid_times) " "VALUES(?, ?)",
-                (
-                    record.name,
-                    bytes(record.valid_times),
-                ),
+                "INSERT OR REPLACE INTO tx_times VALUES (?, ?)", (record.name, bytes(record.valid_times))
             )
 
     async def delete_transaction_record(self, tx_id: bytes32) -> None:
