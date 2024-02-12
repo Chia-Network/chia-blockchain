@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, get_type_hints
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional, Tuple, get_type_hints
 
 import aiohttp
 
-from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.types.blockchain_format.coin import Coin
 from chia.util.json_util import obj_to_response
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_from_json_dicts, parse_timelock_info
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
+
+if TYPE_CHECKING:
+    from chia.rpc.wallet_rpc_api import WalletRpcApi
 
 log = logging.getLogger(__name__)
 
