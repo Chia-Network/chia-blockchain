@@ -13,9 +13,6 @@ from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_fr
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
-if TYPE_CHECKING:
-    from chia.rpc.wallet_rpc_api import WalletRpcApi
-
 log = logging.getLogger(__name__)
 
 # TODO: consolidate this with chia.rpc.rpc_server.Endpoint
@@ -73,7 +70,10 @@ def tx_endpoint(
 ) -> Callable[[RpcEndpoint], RpcEndpoint]:
     def _inner(func: RpcEndpoint) -> RpcEndpoint:
         async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
-            assert isinstance(self, WalletRpcApi)
+            if TYPE_CHECKING:
+                from chia.rpc.wallet_rpc_api import WalletRpcApi
+
+                assert isinstance(self, WalletRpcApi)
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
 
