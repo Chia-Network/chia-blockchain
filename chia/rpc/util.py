@@ -6,6 +6,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, get_ty
 
 import aiohttp
 
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.types.blockchain_format.coin import Coin
 from chia.util.json_util import obj_to_response
 from chia.util.streamable import Streamable
@@ -70,6 +71,7 @@ def tx_endpoint(
 ) -> Callable[[RpcEndpoint], RpcEndpoint]:
     def _inner(func: RpcEndpoint) -> RpcEndpoint:
         async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
+            assert isinstance(self, WalletRpcApi)
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
 
