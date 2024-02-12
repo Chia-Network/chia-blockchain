@@ -245,26 +245,6 @@ class WalletPuzzleStore:
 
         return None
 
-    async def index_for_puzzle_hash_and_wallet(self, puzzle_hash: bytes32, wallet_id: uint32) -> Optional[uint32]:
-        """
-        Returns the derivation path for the puzzle_hash.
-        Returns None if not present.
-        """
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(
-                conn,
-                "SELECT derivation_index FROM derivation_paths WHERE puzzle_hash=? AND wallet_id=?;",
-                (
-                    puzzle_hash.hex(),
-                    wallet_id,
-                ),
-            )
-
-        if row is not None:
-            return uint32(row[0])
-
-        return None
-
     async def get_wallet_identifier_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[WalletIdentifier]:
         """
         Returns the derivation path for the puzzle_hash.
