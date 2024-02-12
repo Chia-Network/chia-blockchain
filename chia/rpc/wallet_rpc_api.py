@@ -676,7 +676,7 @@ class WalletRpcApi:
     async def create_new_wallet(
         self,
         request: Dict[str, Any],
-        push: bool,
+        push: bool = True,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
@@ -1783,7 +1783,7 @@ class WalletRpcApi:
     async def create_offer_for_ids(
         self,
         request: Dict[str, Any],
-        push: bool,
+        push: bool = False,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
@@ -3569,7 +3569,7 @@ class WalletRpcApi:
     async def nft_mint_bulk(
         self,
         request: Dict[str, Any],
-        push: bool,
+        push: bool = False,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
