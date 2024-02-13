@@ -754,7 +754,11 @@ class DataLayer:
             async with AsyncPool.managed(
                 # TODO: pick a name
                 name="",
-                worker_async_callable=functools.partial(self.update_subscription, work_queue=work_queue),
+                worker_async_callable=functools.partial(
+                    self.update_subscription,
+                    work_queue=work_queue,
+                    result_queue=empty_result_queue,
+                ),
                 # TODO: make configurable
                 target_worker_count=5,
                 log=self.log,
