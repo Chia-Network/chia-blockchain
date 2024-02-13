@@ -34,6 +34,7 @@ class AsyncPool:
     _workers: Dict[asyncio.Task[object], int] = dataclasses.field(init=False, default_factory=dict)
     _worker_id_counter: Iterator[int] = dataclasses.field(init=False, default_factory=itertools.count)
     _started: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
+    _single_use_used: bool = False
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -51,8 +52,12 @@ class AsyncPool:
             target_worker_count=target_worker_count,
         )
 
-        task = asyncio.create_task(self.run())
+        self.check_single_use()
+
+        task = asyncio.create_task(self.run(_check_single_use=False))
         await self._started.wait()
+
+        # TODO: should this terminate if the run task ends?
 
         try:
             yield self
@@ -62,9 +67,15 @@ class AsyncPool:
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
 
-    async def run(self) -> None:
-        if self._started.is_set():
+    def check_single_use(self) -> None:
+        if self._single_use_used:
             raise SingleUseError(self)
+        self._single_use_used = True
+
+    async def run(self, *, _check_single_use: bool = True) -> None:
+        # TODO: should this just be private?
+        if _check_single_use:
+            self.check_single_use()
 
         try:
             while True:
