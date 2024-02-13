@@ -1750,7 +1750,7 @@ async def test_trade_conflict(three_wallets_prefarm):
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_taker, tr1)
     # pushing into mempool while already in it should fail
     tr2, txs2 = await trade_manager_trader.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
-    await trade_manager_taker.wallet_state_manager.add_pending_transactions(txs2)
+    await trade_manager_trader.wallet_state_manager.add_pending_transactions(txs2)
     assert await trade_manager_trader.get_coins_of_interest()
     offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
     await full_node.process_transaction_records(records=offer_tx_records)
