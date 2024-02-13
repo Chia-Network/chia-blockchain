@@ -140,7 +140,10 @@ def tx_endpoint(
 
             response["transactions"] = [tx.to_json_dict_convenience(self.service.config) for tx in new_txs]
 
-            # Some backwards compatibility code
+            # Some backwards compatibility code here because transaction information being returned was not uniform
+            # until the "transactions" key was applied to all of them. Unfortunately, since .add_pending_transactions
+            # now applies transformations to the transactions, we have to special case edit all of the previous
+            # spots where the information was being surfaced outside of the knowledge of this wrapper.
             if "transaction" in response:
                 if (
                     func.__name__ == "create_new_wallet"
