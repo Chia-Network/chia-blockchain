@@ -129,13 +129,13 @@ def tx_endpoint(
                 # unfortunately, this API isn't solely a tx endpoint
                 return response
 
-            tx_records: List[TransactionRecord] = [
+            new_txs: List[TransactionRecord] = [
                 TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]
             ]
 
             if request.get("push", push):
                 new_txs = await self.service.wallet_state_manager.add_pending_transactions(
-                    tx_records, merge_spends=merge_spends
+                    new_txs, merge_spends=merge_spends
                 )
 
             response["transactions"] = [tx.to_json_dict_convenience(self.service.config) for tx in new_txs]
