@@ -95,9 +95,8 @@ class AsyncPool:
         finally:
             with anyio.CancelScope(shield=True):
                 # TODO: would be nice to not need a list to avoid modifying while iterating
-                for task, id in self._workers.items():
+                for task, id in list(self._workers.items()):
                     task.cancel()
-                    # TODO: don't we need to pass id?
                     await self.handle_done_worker(
                         task=task,
                         id=id,
