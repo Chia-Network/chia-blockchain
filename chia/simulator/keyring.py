@@ -11,6 +11,8 @@ from chia.util.file_keyring import FileKeyring, keyring_path_from_root
 from chia.util.keychain import Keychain
 from chia.util.keyring_wrapper import KeyringWrapper
 
+INITIAL_KERYING_DATA = "xtcxYOWtbeO9ruv4Nkwhw1pcTJCNh/fvPSdFxez/L0ysnag="
+
 
 def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, populate=False):
     if populate:
@@ -27,7 +29,7 @@ def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, popul
         ) as f:
             f.write(
                 # Encrypted using DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE. Data holds an empty keyring.
-                "data: xtcxYOWtbeO9ruv4Nkwhw1pcTJCNh/fvPSdFxez/L0ysnag=\n"
+                f"data: {INITIAL_KERYING_DATA}\n"
                 "nonce: 17ecac58deb7a392fccef49e\n"
                 "salt: b1aa32d5730288d653e82017e4a4057c\n"
                 "version: 1"

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, contextmanager
 from dataclasses import replace
-from typing import Any, AsyncIterator, Dict, List
+from typing import Any, AsyncIterator, Dict, Iterator, List
 
 import pytest
 
@@ -14,6 +14,24 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
 from tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
 from tests.util.setup_nodes import setup_simulators_and_wallets_service
+
+
+@pytest.fixture(autouse=True)
+def mock_file_keyring_functions(monkeypatch: pytest.MonkeyPatch) -> None:
+    @contextmanager
+    def lock_and_reload_if_required(self: Any) -> Iterator[None]:
+        yield
+
+    def encrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
+        return input_data
+
+    def decrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
+        return input_data
+
+    monkeypatch.setattr("chia.util.file_keyring.FileKeyring.lock_and_reload_if_required", lock_and_reload_if_required)
+    monkeypatch.setattr("chia.util.file_keyring.encrypt_data", encrypt_data)
+    monkeypatch.setattr("chia.util.file_keyring.decrypt_data", decrypt_data)
+    monkeypatch.setattr("chia.simulator.keyring.INITIAL_KERYING_DATA", "e30K")
 
 
 @pytest.fixture(scope="function", params=[True, False])
