@@ -169,6 +169,7 @@ class WalletRpcApi:
             "/get_wallet_balances": self.get_wallet_balances,
             "/get_transaction": self.get_transaction,
             "/get_transactions": self.get_transactions,
+            "/get_active_transaction_ids": self.get_active_transaction_ids,
             "/get_transaction_count": self.get_transaction_count,
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
@@ -1007,6 +1008,16 @@ class WalletRpcApi:
         for coin_id, memo_list in memos.items():
             response[coin_id.hex()] = [memo.hex() for memo in memo_list]
         return {transaction_id.hex(): response}
+
+    async def get_active_transaction_ids(self, request: Dict[str, Any]) -> EndpointResult:
+        """
+        :return: a dict with in-progress transactions IDs as the keys (as a byte32 hex string),
+            and its TransactionState as the corresponding value (as TransactionState.name)
+            format: { tx_id: TransactionState, ... }
+            eg: { "2630fa5ea966fcfad9874f3f4214a4a1bda596276dd15a211240569ecd20cb85": "TX_IN_MEMPOOL", ... }
+        """
+        active_dict = self.service.wallet_state_manager.tx_store.get_active_tx_states()
+        return {str(id): str(state) for (id, state) in active_dict.items()}
 
     async def get_transactions(self, request: Dict[str, Any]) -> EndpointResult:
         wallet_id = int(request["wallet_id"])

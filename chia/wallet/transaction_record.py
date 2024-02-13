@@ -57,6 +57,7 @@ class TransactionRecordOld(Streamable):
     memos: List[Tuple[bytes32, List[bytes]]]
 
     def is_in_mempool(self) -> bool:
+        # TODO: Need to change this function to respond to periodic TransactionState updates
         # If one of the nodes we sent it to responded with success or pending, we return True
         for _, mis, _ in self.sent_to:
             if MempoolInclusionStatus(mis) in (MempoolInclusionStatus.SUCCESS, MempoolInclusionStatus.PENDING):

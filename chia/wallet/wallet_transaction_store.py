@@ -16,6 +16,7 @@ from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord, TransactionRecordOld, minimum_send_attempts
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.query_filter import FilterMode, TransactionTypeFilter
+from chia.wallet.util.transaction_state import TransactionState, tx_state
 from chia.wallet.util.transaction_type import TransactionType
 
 log = logging.getLogger(__name__)
@@ -38,6 +39,11 @@ class WalletTransactionStore:
     db_wrapper: DBWrapper2
     tx_submitted: Dict[bytes32, Tuple[int, int]]  # tx_id: [time submitted: count]
     last_wallet_tx_resend_time: int  # Epoch time in seconds
+    # _active_transactions: States of transactions not yet confirmed or cancelled
+    #   Their state will be updated here until they are confirmed or cancelled.
+    _active_transactions: Dict[bytes32, TransactionState] = dict()
+    # TODO: Decide the behaviour we want after startup: restore_active_transactions on wallet restart?
+    # TODO: Test changing the "logged-in" wallet ID between calls to get_active_transaction_ids()
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2):
@@ -101,6 +107,8 @@ class WalletTransactionStore:
         """
         Store TransactionRecord in DB and Cache.
         """
+        if not record.confirmed:
+            self._active_transactions[record.name] = tx_state(record)
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -137,6 +145,8 @@ class WalletTransactionStore:
             )
 
     async def delete_transaction_record(self, tx_id: bytes32) -> None:
+        if tx_id in self._active_transactions:
+            del self._active_transactions[tx_id]
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM transaction_record WHERE bundle_id=?", (tx_id,))).close()
 
@@ -144,6 +154,8 @@ class WalletTransactionStore:
         """
         Updates transaction to be confirmed.
         """
+        if tx_id in self._active_transactions:
+            del self._active_transactions[tx_id]
         current: Optional[TransactionRecord] = await self.get_transaction_record(tx_id)
         if current is None:
             return None
@@ -199,6 +211,9 @@ class WalletTransactionStore:
             record, confirmed_at_height=uint32(0), confirmed=False, sent=uint32(0), sent_to=[]
         )
         await self.add_transaction_record(tx)
+        # REVIEW: Test both cases here
+        # await self.remove_missing_active_transactions()
+        await self._update_active_tx_state(record.name)
 
     async def get_transaction_record(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         """
@@ -211,14 +226,17 @@ class WalletTransactionStore:
                     "SELECT transaction_record from transaction_record WHERE bundle_id=?", (tx_id,)
                 )
             )
+        ret = None
         if len(rows) > 0:
-            return (await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(rows[0][0])]))[0]
-        return None
+            ret = (await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(rows[0][0])]))[0]
+        await self._update_active_tx_state(tx_id)
+        return ret
 
     # TODO: This should probably be split into separate function, one that
     # queries the state and one that updates it. Also, include_accepted_txs=True
     # might be a separate function too.
     # also, the current time should be passed in as a parameter
+    # TODO: Test _active_transactions against get_not_sent
     async def get_not_sent(self, *, include_accepted_txs=False) -> List[TransactionRecord]:
         """
         Returns the list of transactions that have not been received by full node yet.
@@ -267,6 +285,7 @@ class WalletTransactionStore:
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 
     async def get_all_unconfirmed(self) -> List[TransactionRecord]:
+        # TODO: Test get_all_unconfirmed against get_active_tx_states()
         """
         Returns the list of all transaction that have not yet been confirmed.
         """
@@ -411,6 +430,13 @@ class WalletTransactionStore:
         self.tx_submitted = {}
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))).close()
+        await self.remove_missing_or_complete_active_transactions()
+
+    async def remove_missing_or_complete_active_transactions(self):
+        for tx_id, status in self._active_transactions.items():
+            tx = await self.get_transaction_record(tx_id)
+            if tx is None or tx.confirmed:
+                del self._active_transactions[tx_id]
 
     async def delete_unconfirmed_transactions(self, wallet_id: int):
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -424,6 +450,7 @@ class WalletTransactionStore:
                     ),
                 )
             ).close()
+        await self.remove_missing_or_complete_active_transactions()
 
     async def _get_new_tx_records_from_old(self, old_records: List[TransactionRecordOld]) -> List[TransactionRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -450,3 +477,34 @@ class WalletTransactionStore:
             )
             for record in old_records
         ]
+
+    async def get_new_active_tx_state(self, tx_id: bytes32) -> Optional[TransactionState]:
+        tx = await self.get_transaction_record(tx_id)
+        new_state = None
+        if tx is None:
+            # raise ValueError("get_transaction_record failed for tx_id " + str(tx_id))
+            if tx_id in self._active_transactions:
+                del self._active_transactions[tx_id]
+        else:
+            new_state = tx_state(tx)
+        return new_state
+
+    async def _update_active_tx_state(self, tx_id: bytes32) -> bool:
+        """Get potentially changed transaction state, and store it in self._active_transactions
+        :return: True if transaction state changed
+        """
+        old_state = self.get_active_tx_states().get(tx_id, None)
+        new_state = await self.get_new_active_tx_state(tx_id)
+        if (new_state is None or new_state == TransactionState.TX_CONFIRMED) and tx_id in self._active_transactions:
+            del self._active_transactions[tx_id]
+        if new_state is not None:
+            self._active_transactions[tx_id] = new_state
+        state_changed = new_state != old_state
+        return state_changed
+
+    async def update_active_states(self) -> None:
+        for tx_id in self.get_active_tx_states():
+            await self._update_active_tx_state(tx_id)
+
+    def get_active_tx_states(self) -> Dict[bytes32, TransactionState]:
+        return self._active_transactions

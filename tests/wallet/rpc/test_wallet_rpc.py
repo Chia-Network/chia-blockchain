@@ -2565,3 +2565,34 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert len(bal_ids) == 2
     assert bal["2"]["confirmed_wallet_balance"] == 100
     assert bal["3"]["confirmed_wallet_balance"] == 20
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def test_get_active_transactions(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    wallet_node: WalletNode = env.wallet_1.node
+
+    full_node_api: FullNodeSimulator = env.full_node.api
+
+    await generate_funds(full_node_api, env.wallet_1, 1)
+
+    await time_out_assert(20, client.get_synced)
+    # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
+    await client.create_new_cat_and_wallet(uint64(100), test=True)
+
+    async def print_active_transactions_and_wait_for_sync(cli: WalletRpcClient) -> bool:
+        r = await client.get_active_transaction_ids()
+        print(r)
+        return await client.get_synced()
+
+    await time_out_assert(5, print_active_transactions_and_wait_for_sync, True, client)
+    res = await client.create_new_cat_and_wallet(uint64(20), test=True)
+    assert res["success"]
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
+    await farm_transaction_block(full_node_api, wallet_node)
+    await time_out_assert(20, client.get_synced)
+    bal = await client.get_wallet_balances()
+    assert bal

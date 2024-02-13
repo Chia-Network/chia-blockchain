@@ -143,6 +143,7 @@ class WalletNode:
     last_wallet_tx_resend_time: int = 0
     # Duration in seconds
     coin_state_retry_seconds: int = 10
+    active_tx_update_seconds: float = 30
     wallet_tx_resend_timeout_secs: int = 1800
     _new_peak_queue: Optional[NewPeakQueue] = None
 
@@ -527,6 +528,26 @@ class WalletNode:
             messages.append((msg, already_sent))
 
         return messages
+
+    async def _update_active_tx_states(self) -> None:
+        """
+        Refresh our view of the transaction's state in the peer network
+        """
+        while not self._shut_down:
+            try:
+                state_changes = []
+                await asyncio.sleep(self.active_tx_update_seconds)
+                if self.wallet_state_manager is None:
+                    continue
+                for tx_id in self.wallet_state_manager.tx_store.get_active_tx_states().keys():
+                    new_state = await self.wallet_state_manager.tx_store._update_active_tx_state(tx_id)
+                    state_changes.append(new_state)
+                    # TODO: write to db
+                if any(state_changes):
+                    self.wallet_state_manager.state_changed("active_transactions")
+            except asyncio.CancelledError:
+                self.log.info("_update_active_tx_states cancelled, exiting.")
+                raise
 
     async def _retry_failed_states(self) -> None:
         while not self._shut_down:

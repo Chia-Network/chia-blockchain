@@ -100,3 +100,101 @@ async def test_wallet_tx_retry(
 
     # Check that wallet resent the unconfirmed SpendBundle
     await time_out_assert_custom_interval(wait_secs, 1, check_transaction_in_mempool_or_confirmed, True, transaction)
+
+
+@pytest.mark.anyio
+async def test_wallet_active_transactions(
+    setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]], BlockTools],
+    self_hostname: str,
+) -> None:
+    wait_secs = 20
+    nodes, wallets, bt = setup_two_nodes_and_wallet_fast_retry
+    server_1 = nodes[0].full_node.server
+    full_node_1: FullNodeSimulator = nodes[0]
+    wallet_node_1: WalletNode = wallets[0][0]
+    wallet_node_1.config["tx_resend_timeout_secs"] = 5
+    wallet_server_1 = wallets[0][1]
+    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+    reward_ph = await wallet_1.get_new_puzzlehash()
+
+    await wallet_server_1.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    await farm_blocks(full_node_1, reward_ph, 2)
+    await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)
+
+    [transaction] = await wallet_1.generate_signed_transaction(uint64(100), reward_ph, DEFAULT_TX_CONFIG)
+    sb1: Optional[SpendBundle] = transaction.spend_bundle
+    assert sb1 is not None
+    active_txs = wallet_node_1.wallet_state_manager.tx_store.get_active_tx_states()
+    print(active_txs)
+
+    await wallet_1.wallet_state_manager.add_pending_transactions([transaction])
+
+    async def sb_in_mempool() -> bool:
+        return full_node_1.full_node.mempool_manager.get_spendbundle(transaction.name) == transaction.spend_bundle
+
+    # SpendBundle is accepted by peer
+    await time_out_assert(wait_secs, sb_in_mempool)
+
+    wallet_node_1.active_tx_update_seconds = 0.1
+    active_txs = wallet_node_1.wallet_state_manager.tx_store.get_active_tx_states()
+    print(active_txs)
+
+    # Evict SpendBundle from peer
+    evict_from_pool(full_node_1, sb1)
+    assert_sb_not_in_pool(full_node_1, sb1)
+
+    # active_txs = wallet_node_1.wallet_state_manager.tx_store.get_active_tx_states()
+    # print(active_txs)
+
+    # Wait some time so wallet will retry
+    await asyncio.sleep(2)
+
+    # active_txs = wallet_node_1.wallet_state_manager.tx_store.get_active_tx_states()
+    # print(active_txs)
+
+    our_ph = await wallet_1.get_new_puzzlehash()
+    await farm_blocks(full_node_1, our_ph, 2)
+
+    # Wait for wallet to catch up
+    await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)
+
+    active_txs = wallet_node_1.wallet_state_manager.tx_store.get_active_tx_states()
+    print(active_txs)
+
+    async def check_transaction_is_confirmed(transaction: TransactionRecord) -> bool:
+        await farm_blocks(full_node_1, our_ph, 2)
+        txn = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)
+        assert txn is not None
+        print(tx_id, txn.is_in_mempool(), txn.confirmed)
+        return txn.confirmed
+
+    async def check_transaction_in_mempool_or_confirmed(transaction: TransactionRecord) -> bool:
+        txn = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)
+        assert txn is not None
+        sb = txn.spend_bundle
+        assert sb is not None
+        full_node_sb = full_node_1.full_node.mempool_manager.get_spendbundle(sb.name())
+        if full_node_sb is None:
+            return False
+        in_mempool: bool = full_node_sb.name() == sb.name()
+        return txn.confirmed or in_mempool
+
+    # Check that wallet resent the unconfirmed SpendBundle
+    await time_out_assert_custom_interval(wait_secs, 1, check_transaction_in_mempool_or_confirmed, True, transaction)
+
+    await wallet_node_1.wallet_state_manager.tx_store.update_active_states()
+    active_txs = wallet_node_1.wallet_state_manager.tx_store.get_active_tx_states()
+    # print(active_txs)
+    for tx_id in active_txs:
+        tx = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_record(tx_id)
+        assert tx
+        print(tx_id, tx.is_in_mempool(), tx.confirmed)
+
+    await time_out_assert_custom_interval(wait_secs, 1, check_transaction_is_confirmed, True, transaction)
+    # for tx_id in active_txs:
+    #     tx = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_record(tx_id)
+    #     print(tx_id, tx.is_in_mempool(), tx.confirmed)
+
+
+# TODO: Test automatic re-submit after being in, and them being removed from the mempool
