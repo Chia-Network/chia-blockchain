@@ -7,10 +7,12 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional
 import aiohttp
 
 from chia.types.blockchain_format.coin import Coin
+from chia.types.spend_bundle import SpendBundle
 from chia.util.json_util import obj_to_response
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_from_json_dicts, parse_timelock_info
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
 log = logging.getLogger(__name__)
@@ -132,7 +134,51 @@ def tx_endpoint(
             ]
 
             if request.get("push", push):
-                await self.service.wallet_state_manager.add_pending_transactions(tx_records, merge_spends=merge_spends)
+                new_txs = await self.service.wallet_state_manager.add_pending_transactions(
+                    tx_records, merge_spends=merge_spends
+                )
+
+            response["transactions"] = [tx.to_json_dict_convenience(self.service.config) for tx in new_txs]
+
+            # Some backwards compatibility code
+            if "transaction" in response:
+                if (
+                    func.__name__ == "create_new_wallet"
+                    and request["wallet_type"] == "pool_wallet"
+                    or func.__name__ == "pw_join_pool"
+                    or func.__name__ == "pw_self_pool"
+                    or func.__name__ == "pw_absorb_rewards"
+                ):
+                    # Theses RPCs return not "convenience" for some reason
+                    response["transaction"] = new_txs[0].to_json_dict()
+                else:
+                    response["transaction"] = response["transactions"][0]
+            if "tx_record" in response:
+                response["tx_record"] = response["transactions"][0]
+            if "fee_transaction" in response and response["fee_transaction"] is not None:
+                # Theses RPCs return not "convenience" for some reason
+                response["fee_transaction"] = new_txs[1].to_json_dict()
+            if "transaction_id" in response:
+                response["transaction_id"] = new_txs[0].name
+            if "transaction_ids" in response:
+                response["transaction_ids"] = [
+                    tx.name.hex() for tx in new_txs if tx.type == TransactionType.OUTGOING_CLAWBACK.value
+                ]
+            if "spend_bundle" in response:
+                response["spend_bundle"] = SpendBundle.aggregate(
+                    [tx.spend_bundle for tx in new_txs if tx.spend_bundle is not None]
+                )
+            if "signed_txs" in response:
+                response["signed_txs"] = response["transactions"]
+            if "signed_tx" in response:
+                response["signed_tx"] = response["transactions"][0]
+            if "tx" in response:
+                if func.__name__ == "send_notification":
+                    response["tx"] = response["transactions"][0]
+                else:
+                    response["tx"] = new_txs[0].to_json_dict()
+            if "tx_id" in response:
+                response["tx_id"] = new_txs[0].name
 
             return response
 
