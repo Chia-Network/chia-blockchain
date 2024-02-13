@@ -11,7 +11,6 @@ from typing_extensions import Unpack
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import SigningMode
@@ -38,7 +37,6 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.vault.vault_drivers import (
     construct_p2_delegated_secp,
-    construct_secp_message,
     construct_vault_merkle_tree,
     get_p2_singleton_puzzle,
     get_p2_singleton_puzzle_hash,
@@ -104,71 +102,105 @@ class Vault(Wallet):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
-        raise NotImplementedError("vault wallet")
+        """
+        Creates Un-signed transactions to be passed into signer.
+        """
+        negative_change_allowed: bool = kwargs.get("negative_change_allowed", False)
+        if primaries is None:
+            non_change_amount: int = amount
+        else:
+            non_change_amount = amount + sum(p.amount for p in primaries)
+
+        non_change_amount += sum(c.amount for c in extra_conditions if isinstance(c, CreateCoin))
+        coin_spends = await self._generate_unsigned_transaction(
+            amount,
+            puzzle_hash,
+            tx_config,
+            fee=fee,
+            coins=coins,
+            primaries_input=primaries,
+            memos=memos,
+            negative_change_allowed=negative_change_allowed,
+            puzzle_decorator_override=puzzle_decorator_override,
+            extra_conditions=extra_conditions,
+        )
+        spend_bundle = SpendBundle(coin_spends, G2Element())
+
+        tx_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=puzzle_hash,
+            amount=uint64(non_change_amount),
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=[],
+            removals=[],
+            wallet_id=self.id(),
+            sent_to=[],
+            memos=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
+            valid_times=parse_timelock_info(tuple()),
+        )
+        return [tx_record]
 
     async def generate_p2_singleton_spends(
         self,
-        primaries: List[Payment],
+        amount: uint64,
         tx_config: TXConfig,
-        fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[CoinSpend]:
-        total_amount = (
-            sum(primary.amount for primary in primaries)
-            + fee
-            + sum(c.amount for c in extra_conditions if isinstance(c, CreateCoin))
-        )
         total_balance = await self.get_spendable_balance()
         if coins is None:
-            if total_amount > total_balance:
+            if amount > total_balance:
                 raise ValueError(
-                    f"Can't spend more than wallet balance: {total_balance} mojos, tried to spend: {total_amount} mojos"
+                    f"Can't spend more than wallet balance: {total_balance} mojos, tried to spend: {amount} mojos"
                 )
             coins = await self.select_coins(
-                uint64(total_amount),
+                uint64(amount),
                 tx_config.coin_selection_config,
             )
         assert len(coins) > 0
-        spend_value = sum([coin.amount for coin in coins])
-        change = spend_value - total_amount
-        assert change >= 0
-        if change > 0:
-            change_puzzle_hash: bytes32 = next(iter(coins)).puzzle_hash
-            primaries.append(Payment(change_puzzle_hash, uint64(change)))
-
-        spends: List[CoinSpend] = []
-
-        # Check for duplicates
-        all_primaries_list = [(p.puzzle_hash, p.amount) for p in primaries]
-        if len(set(all_primaries_list)) != len(all_primaries_list):
-            raise ValueError("Cannot create two identical coins")
 
         p2_singleton_puzzle: Program = get_p2_singleton_puzzle(self.vault_info.launcher_coin_id)
-        serialized_puzzle: SerializedProgram = SerializedProgram.from_bytes(bytes(p2_singleton_puzzle))
 
-        for coin in coins:
+        spends: List[CoinSpend] = []
+        for coin in list(coins):
             p2_singleton_solution: Program = Program.to([self.vault_info.inner_puzzle_hash, coin.name()])
-            spends.append(
-                CoinSpend(coin, serialized_puzzle, SerializedProgram.from_bytes(bytes(p2_singleton_solution)))
-            )
+            spends.append(make_spend(coin, p2_singleton_puzzle, p2_singleton_solution))
 
         return spends
 
-    async def generate_unsigned_vault_spend(
+    async def _generate_unsigned_transaction(
         self,
-        primaries: List[Payment],
-        p2_spends: List[CoinSpend],
-        memos: Optional[List[bytes]] = None,
+        amount: uint64,
+        newpuzzlehash: bytes32,
+        tx_config: TXConfig,
         fee: uint64 = uint64(0),
+        origin_id: Optional[bytes32] = None,
+        coins: Optional[Set[Coin]] = None,
+        primaries_input: Optional[List[Payment]] = None,
+        memos: Optional[List[bytes]] = None,
+        negative_change_allowed: bool = False,
+        puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[bytes, Program, Program]:
+    ) -> List[CoinSpend]:
+        primaries = []
+        if primaries_input is not None:
+            primaries.extend(primaries_input)
         total_amount = (
-            sum(primary.amount for primary in primaries)
+            amount
+            + sum(primary.amount for primary in primaries)
             + fee
             + sum(c.amount for c in extra_conditions if isinstance(c, CreateCoin))
         )
-        coins = [spend.coin for spend in p2_spends]
+
+        p2_singleton_spends = await self.generate_p2_singleton_spends(uint64(total_amount), tx_config, coins=coins)
+
+        coins = set([spend.coin for spend in p2_singleton_spends])
         spend_value = sum([coin.amount for coin in coins])
         change = spend_value - total_amount
         assert change >= 0
@@ -183,20 +215,56 @@ class Vault(Wallet):
             next_puzzle_hash, uint64(self.vault_info.coin.amount), memos=[next_puzzle_hash]
         ).to_program()
         conditions.append(recreate_vault_condition)
-        announcements = [CreatePuzzleAnnouncement(spend.coin.name()).to_program() for spend in p2_spends]
+        announcements = [CreatePuzzleAnnouncement(spend.coin.name()).to_program() for spend in p2_singleton_spends]
         conditions.extend(announcements)
 
         delegated_puzzle = puzzle_for_conditions(conditions)
         delegated_solution = solution_for_conditions(conditions)
 
-        message_to_sign = construct_secp_message(
-            delegated_puzzle.get_tree_hash(),
-            self.vault_info.coin.name(),
+        secp_puzzle = construct_p2_delegated_secp(
+            self.vault_info.pubkey,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
             self.vault_info.hidden_puzzle_hash,
         )
+        vault_inner_puzzle = get_vault_inner_puzzle(
+            self.vault_info.pubkey,
+            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+            self.vault_info.hidden_puzzle_hash,
+            self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
+            self.recovery_info.timelock if self.vault_info.is_recoverable else None,
+        )
 
-        return message_to_sign, delegated_puzzle, delegated_solution
+        secp_solution = Program.to(
+            [
+                delegated_puzzle,
+                delegated_solution,
+                None,  # Slot for signed message
+                self.vault_info.coin.name(),
+            ]
+        )
+        if self.vault_info.is_recoverable:
+            recovery_puzzle_hash = get_recovery_puzzle(
+                secp_puzzle.get_tree_hash(),
+                self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
+                self.recovery_info.timelock if self.vault_info.is_recoverable else None,
+            ).get_tree_hash()
+            merkle_tree = construct_vault_merkle_tree(secp_puzzle.get_tree_hash(), recovery_puzzle_hash)
+        else:
+            merkle_tree = construct_vault_merkle_tree(secp_puzzle.get_tree_hash())
+        proof = get_vault_proof(merkle_tree, secp_puzzle.get_tree_hash())
+        vault_inner_solution = get_vault_inner_solution(secp_puzzle, secp_solution, proof)
+
+        full_puzzle = get_vault_full_puzzle(self.vault_info.launcher_coin_id, vault_inner_puzzle)
+        full_solution = get_vault_full_solution(
+            self.vault_info.lineage_proof,
+            uint64(self.vault_info.coin.amount),
+            vault_inner_solution,
+        )
+
+        vault_spend = make_spend(self.vault_info.coin, full_puzzle, full_solution)
+        all_spends = [*p2_singleton_spends, vault_spend]
+        
+        return all_spends
 
     async def generate_signed_vault_spend(
         self,

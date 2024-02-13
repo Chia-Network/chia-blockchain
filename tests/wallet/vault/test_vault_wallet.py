@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 from hashlib import sha256
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, List
 
 import pytest
 from ecdsa import NIST256p, SigningKey
 from ecdsa.util import PRNG
 
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
@@ -154,54 +153,16 @@ async def test_vault_creation(
     recs = await wallet.select_coins(uint64(100), DEFAULT_COIN_SELECTION_CONFIG)
     coin = recs.pop()
     assert coin.amount == funding_amount
-    p2_ph = await funding_wallet.get_new_puzzlehash()
+    recipient_ph = await funding_wallet.get_new_puzzlehash()
 
-    payments = [
-        Payment(p2_ph, uint64(500000000)),
-        Payment(p2_ph, uint64(510000000)),
+    primaries = [
+        Payment(recipient_ph, uint64(500000000)),
+        Payment(recipient_ph, uint64(510000000)),
     ]
-    total_spend = 1010000000
+    amount = uint64(1000000)
     fee = uint64(100)
 
-    p2_spends = await wallet.generate_p2_singleton_spends(payments, DEFAULT_TX_CONFIG, fee)
-    message, delegated_puz, delegated_sol = await wallet.generate_unsigned_vault_spend(payments, p2_spends, fee=fee)
-    sig = sign_message(message)
-
-    tx_records = await wallet.generate_signed_vault_spend(sig, delegated_puz, delegated_sol, p2_spends, payments, fee)
-    assert len(tx_records) == 1
-
-    # Farm a block so the vault balance includes farmed coins from the test setup in pre-block update.
-    # Do this after generating the tx so we can be sure to spend the right funding coins
-    await wallet_environments.full_node.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
-
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    1: {
-                        ">=#confirmed_wallet_balance": 2 * funding_amount,
-                        "set_remainder": True,
-                    }
-                },
-                post_block_balance_updates={
-                    1: {
-                        "confirmed_wallet_balance": -total_spend - fee,
-                        "set_remainder": True,
-                    }
-                },
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    1: {
-                        "set_remainder": True,
-                    }
-                },
-                post_block_balance_updates={
-                    1: {
-                        "confirmed_wallet_balance": total_spend,
-                        "set_remainder": True,
-                    }
-                },
-            ),
-        ],
+    unsigned_txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
+        amount, recipient_ph, DEFAULT_TX_CONFIG, primaries=primaries, fee=fee
     )
+    assert len(unsigned_txs) == 1
