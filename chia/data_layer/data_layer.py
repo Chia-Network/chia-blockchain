@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import functools
 import json
 import logging
 import os
@@ -66,6 +67,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.async_pool import AsyncPool
 from chia.util.ints import uint32, uint64
 from chia.util.path import path_from_root
 from chia.wallet.trade_record import TradeRecord
@@ -747,14 +749,22 @@ class DataLayer:
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
                         )
 
-            for subscription in subscriptions:
-                try:
-                    await self.update_subscriptions_from_wallet(subscription.tree_id)
-                    await self.fetch_and_validate(subscription.tree_id)
-                    await self.upload_files(subscription.tree_id)
-                    await self.clean_old_full_tree_files(subscription.tree_id)
-                except Exception as e:
-                    self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
+            work_queue = asyncio.Queue[Subscription]()
+            empty_result_queue = asyncio.Queue[None]()
+            async with AsyncPool.managed(
+                # TODO: pick a name
+                name="",
+                worker_async_callable=functools.partial(self.update_subscription, work_queue=work_queue),
+                # TODO: make configurable
+                target_worker_count=5,
+                log=self.log,
+            ):
+                for subscription in subscriptions:
+                    await work_queue.put(subscription)
+
+                # TODO: consider better ways to make sure work is done
+                for _ in subscriptions:
+                    await empty_result_queue.get()
 
             # Do unsubscribes after the fetching of data is complete, to avoid races.
             async with self.subscription_lock:
@@ -762,6 +772,25 @@ class DataLayer:
                     await self.process_unsubscribe(unsubscribe_data.tree_id, unsubscribe_data.retain_data)
                 self.unsubscribe_data_queue.clear()
             await asyncio.sleep(manage_data_interval)
+
+    # TODO: better name
+    async def update_subscription(
+        self,
+        worker_id: int,
+        work_queue: asyncio.Queue[Subscription],
+        result_queue: asyncio.Queue[None],
+    ) -> None:
+        subscription = await work_queue.get()
+
+        try:
+            await self.update_subscriptions_from_wallet(subscription.tree_id)
+            await self.fetch_and_validate(subscription.tree_id)
+            await self.upload_files(subscription.tree_id)
+            await self.clean_old_full_tree_files(subscription.tree_id)
+        except Exception as e:
+            self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
+
+        await result_queue.put(None)
 
     async def build_offer_changelist(
         self,
