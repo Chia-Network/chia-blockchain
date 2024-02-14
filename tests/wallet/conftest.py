@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from contextlib import AsyncExitStack, contextmanager
+from contextlib import AsyncExitStack
 from dataclasses import replace
-from typing import Any, AsyncIterator, Dict, Iterator, List
+from typing import Any, AsyncIterator, Dict, List
 
 import pytest
 
@@ -10,7 +10,6 @@ from chia.consensus.constants import ConsensusConstants
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
-from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
 from tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
@@ -19,22 +18,12 @@ from tests.util.setup_nodes import setup_simulators_and_wallets_service
 
 @pytest.fixture(autouse=True)
 def mock_file_keyring_functions(monkeypatch: pytest.MonkeyPatch) -> None:
-    @contextmanager
-    def lock_and_reload_if_required(self: Any) -> Iterator[None]:
-        yield
-
     def encrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
         return input_data
 
     def decrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
         return input_data
 
-    def obtain_current_passphrase(prompt: str = "", use_passphrase_cache: bool = False) -> str:
-        return DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
-
-    monkeypatch.setattr("chia.util.file_keyring.FileKeyring.lock_and_reload_if_required", lock_and_reload_if_required)
-    monkeypatch.setattr("chia.util.file_keyring.FileKeyring.has_content", lambda _: False)
-    monkeypatch.setattr("chia.util.keyring_wrapper.KeyringWrapper.has_cached_master_passphrase", lambda _: True)
     monkeypatch.setattr("chia.util.file_keyring.encrypt_data", encrypt_data)
     monkeypatch.setattr("chia.util.file_keyring.decrypt_data", decrypt_data)
     monkeypatch.setattr("chia.simulator.keyring.INITIAL_KERYING_DATA", "e30K")
