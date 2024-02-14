@@ -123,4 +123,4 @@ class AsyncPool:
                 pass
             except Exception:
                 error_trace = traceback.format_exc()
-                self.log.debug(f"{self.name}: worker {id} raised exception: {error_trace}")
+                self.log.error(f"{self.name}: worker {id} raised exception: {error_trace}")

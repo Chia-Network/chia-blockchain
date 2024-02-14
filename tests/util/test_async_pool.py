@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import random
+import re
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import anyio
 import pytest
@@ -114,6 +115,57 @@ async def test_worker_id_counts() -> None:
                 results.append(await result_queue.get())
 
     assert results == expected_results
+
+
+@pytest.mark.anyio
+async def test_worker_exception_logged(caplog: pytest.LogCaptureFixture) -> None:
+    expected_name = "test pool"
+    expected_message = "this is the exception message"
+
+    class CustomException(Exception):
+        def __init__(self) -> None:
+            super().__init__(expected_message)
+
+    work_queue = asyncio.Queue[Optional[Exception]]()
+    result_queue = asyncio.Queue[None]()
+
+    async def worker(
+        worker_id: int,
+        work_queue: asyncio.Queue[Optional[Exception]] = work_queue,
+        result_queue: asyncio.Queue[None] = result_queue,
+    ) -> None:
+        work = await work_queue.get()
+
+        if work is None:
+            await result_queue.put(None)
+        else:
+            raise work
+
+    async with AsyncPool.managed(
+        name=expected_name,
+        worker_async_callable=worker,
+        target_worker_count=1,
+    ):
+        await work_queue.put(CustomException())
+        await work_queue.put(None)
+
+        with anyio.fail_after(adjusted_timeout(10)):
+            # wait until the second worker has processed the input to be sure the
+            # first worker has raised and the result has been processed
+            await result_queue.get()
+
+        # located inside the pool manager as leaving should not be required for
+        # logging to happen
+        log_text = caplog.text
+        match = re.search(
+            pattern=(
+                f"{re.escape(expected_name)}: .*"
+                + f"{re.escape(CustomException.__name__)}: {re.escape(expected_message)}"
+            ),
+            string=log_text,
+            flags=re.DOTALL,
+        )
+        assert match is not None, repr(log_text)
 
 
 @pytest.mark.anyio
