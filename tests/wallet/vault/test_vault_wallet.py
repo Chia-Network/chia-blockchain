@@ -7,6 +7,7 @@ import pytest
 from ecdsa import NIST256p, SigningKey
 from ecdsa.util import PRNG
 
+# from chia.rpc.wallet_request_types import GatherSigningInfo
 from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
@@ -166,3 +167,6 @@ async def test_vault_creation(
         amount, recipient_ph, DEFAULT_TX_CONFIG, primaries=primaries, fee=fee
     )
     assert len(unsigned_txs) == 1
+
+    # gather_sig_info = GatherSigningInfo(unsigned_txs[0].spend_bundle.coin_spends)
+    # await env.rpc_client.gather_signing_info(gather_sig_info)

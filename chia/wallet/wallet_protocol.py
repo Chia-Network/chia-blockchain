@@ -179,6 +179,9 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
     async def get_puzzle(self, new: bool) -> Program:
         ...
 
+    async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
+        ...
+
 
 class GSTOptionalArgs(TypedDict):
     # DataLayerWallet
