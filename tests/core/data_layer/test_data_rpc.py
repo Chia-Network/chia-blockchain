@@ -3152,5 +3152,5 @@ async def test_pagination_cmds(
                 "total_bytes": 9,
                 "total_pages": 2,
             }
-        else:
-            assert False
+        else:  # pragma: no cover
+            assert False, "unhandled parametrization"
