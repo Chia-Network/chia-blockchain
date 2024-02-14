@@ -17,7 +17,15 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
 import anyio
 import pytest
 
-from chia.cmds.data_funcs import clear_pending_roots, get_proof_cmd, verify_proof_cmd, wallet_log_in_cmd
+from chia.cmds.data_funcs import (
+    clear_pending_roots,
+    get_keys_cmd,
+    get_keys_values_cmd,
+    get_kv_diff_cmd,
+    get_proof_cmd,
+    verify_proof_cmd,
+    wallet_log_in_cmd,
+)
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
@@ -2911,3 +2919,233 @@ async def test_pagination_rpcs(
                     "max_page_size": 1,
                 }
             )
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.parametrize(argnames="layer", argvalues=[InterfaceLayer.funcs, InterfaceLayer.cli, InterfaceLayer.client])
+@pytest.mark.parametrize(argnames="max_page_size", argvalues=[5, 100, None])
+@pytest.mark.anyio
+async def test_pagination_cmds(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    layer: InterfaceLayer,
+    max_page_size: Optional[int],
+    bt: BlockTools,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
+        assert data_layer_service.rpc_server is not None
+        rpc_port = data_layer_service.rpc_server.listen_port
+        data_layer = data_layer_service._api.data_layer
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        data_store = data_layer.data_store
+
+        res = await data_rpc_api.create_data_store({})
+        assert res is not None
+        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+
+        key = b"aa"
+        value = b"aa"
+        key_2 = b"aaaa"
+        value_2 = b"a"
+
+        changelist = [
+            {"action": "insert", "key": key.hex(), "value": value.hex()},
+            {"action": "insert", "key": key_2.hex(), "value": value_2.hex()},
+        ]
+
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
+        local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
+        hash_1 = bytes32([0] * 32)
+        hash_2 = local_root["hash"]
+        # `InterfaceLayer.direct` is not tested here since test `test_pagination_rpcs` extensively use it.
+        if layer == InterfaceLayer.funcs:
+            keys = await get_keys_cmd(
+                rpc_port=rpc_port,
+                store_id="0x" + store_id.hex(),
+                root_hash=None,
+                fingerprint=None,
+                page=0,
+                max_page_size=max_page_size,
+                root_path=bt.root_path,
+            )
+            keys_values = await get_keys_values_cmd(
+                rpc_port=rpc_port,
+                store_id="0x" + store_id.hex(),
+                root_hash=None,
+                fingerprint=None,
+                page=0,
+                max_page_size=max_page_size,
+                root_path=bt.root_path,
+            )
+            kv_diff = await get_kv_diff_cmd(
+                rpc_port=rpc_port,
+                store_id="0x" + store_id.hex(),
+                hash_1="0x" + hash_1.hex(),
+                hash_2="0x" + hash_2.hex(),
+                fingerprint=None,
+                page=0,
+                max_page_size=max_page_size,
+                root_path=bt.root_path,
+            )
+        elif layer == InterfaceLayer.cli:
+            for command in ("get_keys", "get_keys_values", "get_kv_diff"):
+                if command == "get_keys" or command == "get_keys_values":
+                    args: List[str] = [
+                        sys.executable,
+                        "-m",
+                        "chia",
+                        "data",
+                        command,
+                        "--id",
+                        store_id.hex(),
+                        "--data-rpc-port",
+                        str(rpc_port),
+                        "--page",
+                        "0",
+                    ]
+                else:
+                    args = [
+                        sys.executable,
+                        "-m",
+                        "chia",
+                        "data",
+                        command,
+                        "--id",
+                        store_id.hex(),
+                        "--hash_1",
+                        "0x" + hash_1.hex(),
+                        "--hash_2",
+                        "0x" + hash_2.hex(),
+                        "--data-rpc-port",
+                        str(rpc_port),
+                        "--page",
+                        "0",
+                    ]
+                if max_page_size is not None:
+                    args.append("--max-page-size")
+                    args.append(f"{max_page_size}")
+                process = await asyncio.create_subprocess_exec(
+                    *args,
+                    env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                await process.wait()
+                assert process.stdout is not None
+                assert process.stderr is not None
+                stdout = await process.stdout.read()
+                stderr = await process.stderr.read()
+                if command == "get_keys":
+                    keys = json.loads(stdout)
+                elif command == "get_keys_values":
+                    keys_values = json.loads(stdout)
+                else:
+                    kv_diff = json.loads(stdout)
+                assert process.returncode == 0
+                if sys.version_info >= (3, 10, 6):
+                    assert stderr == b""
+                else:  # pragma: no cover
+                    # https://github.com/python/cpython/issues/92841
+                    assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+        elif layer == InterfaceLayer.client:
+            client = await DataLayerRpcClient.create(
+                self_hostname=self_hostname,
+                port=rpc_port,
+                root_path=bt.root_path,
+                net_config=bt.config,
+            )
+            try:
+                keys = await client.get_keys(
+                    store_id=store_id, root_hash=None, page=0, max_page_size=max_page_size,
+                )
+                keys_values = await client.get_keys_values(
+                    store_id=store_id, root_hash=None, page=0, max_page_size=max_page_size,
+                )
+                kv_diff = await client.get_kv_diff(
+                    store_id=store_id,
+                    hash_1=hash_1,
+                    hash_2=hash_2,
+                    page=0,
+                    max_page_size=max_page_size,
+                )
+            finally:
+                client.close()
+                await client.await_closed()
+        else:  # pragma: no cover
+            assert False, "unhandled parametrization"
+        if max_page_size is None or max_page_size == 100:
+            assert keys == {
+                "keys": ["0x61616161", "0x6161"],
+                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
+                "success": True,
+                "total_bytes": 6,
+                "total_pages": 1,
+            }
+            assert keys_values == {
+                "keys_values": [
+                    {
+                        "atom": None,
+                        "hash": "0x3c8ecfd41a1c54820f5ad687a4cbfbad0faa78445cbf31ec4f879ce553216a9d",
+                        "key": "0x61616161",
+                        "value": "0x61"
+                    },
+                    {
+                        "atom": None,
+                        "hash": "0x5a7edd8e4bc28e32ba2a2514054f3872037a4f6da52c5a662969b6b881beaa3f",
+                        "key": "0x6161",
+                        "value": "0x6161"
+                    },
+                ],
+                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
+                "success": True,
+                "total_bytes": 9,
+                "total_pages": 1,
+            }
+            assert kv_diff == {
+                "diff": [
+                    {"key": "61616161", "type": "INSERT", "value": "61"},
+                    {"key": "6161", "type": "INSERT", "value": "6161"},
+                ],
+                "success": True,
+                "total_bytes": 9,
+                "total_pages": 1,
+            }
+        elif max_page_size == 5:
+            assert keys == {
+                "keys": ["0x61616161"],
+                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
+                "success": True,
+                "total_bytes": 6,
+                "total_pages": 2,
+            }
+            assert keys_values == {
+                "keys_values": [
+                    {
+                        "atom": None,
+                        "hash": "0x3c8ecfd41a1c54820f5ad687a4cbfbad0faa78445cbf31ec4f879ce553216a9d",
+                        "key": "0x61616161",
+                        "value": "0x61",
+                    }
+                ],
+                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
+                "success": True,
+                "total_bytes": 9,
+                "total_pages": 2,
+            }
+            assert kv_diff == {
+                "diff": [
+                    {"key": "61616161", "type": "INSERT", "value": "61"},
+                ],
+                "success": True,
+                "total_bytes": 9,
+                "total_pages": 2,
+            }
+        else:
+            assert False

@@ -332,10 +332,16 @@ class DataLayer:
         return res
 
     async def get_keys_values_paginated(
-        self, store_id: bytes32, root_hash: Optional[bytes32], page: int, max_page_size: int = 40 * 1024 * 1024
+        self,
+        store_id: bytes32,
+        root_hash: Optional[bytes32],
+        page: int,
+        max_page_size: Optional[int] = None,
     ) -> KeysValuesPaginationData:
         await self._update_confirmation_status(tree_id=store_id)
 
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
         res = await self.data_store.get_keys_values_paginated(store_id, page, max_page_size, root_hash)
         return res
 
@@ -346,10 +352,16 @@ class DataLayer:
         return res
 
     async def get_keys_paginated(
-        self, store_id: bytes32, root_hash: Optional[bytes32], page: int, max_page_size: int = 40 * 1024 * 1024
+        self,
+        store_id: bytes32,
+        root_hash: Optional[bytes32],
+        page: int,
+        max_page_size: Optional[int] = None,
     ) -> KeysPaginationData:
         await self._update_confirmation_status(tree_id=store_id)
 
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
         res = await self.data_store.get_keys_paginated(store_id, page, max_page_size, root_hash)
         return res
 
@@ -729,8 +741,10 @@ class DataLayer:
         return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
 
     async def get_kv_diff_paginated(
-        self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: int, max_page_size: int = 40 * 1024 * 1024
+        self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: int, max_page_size: Optional[int] = None
     ) -> KVDiffPaginationData:
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
         return await self.data_store.get_kv_diff_paginated(tree_id, page, max_page_size, hash_1, hash_2)
 
     async def periodically_manage_data(self) -> None:
