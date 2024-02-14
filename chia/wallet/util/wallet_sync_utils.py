@@ -36,7 +36,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
-from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
+from chia.util.merkle_set import confirm_included_already_hashed, confirm_not_included_already_hashed
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 
 log = logging.getLogger(__name__)
@@ -151,12 +151,8 @@ def validate_removals(
         # we must find the ones relevant to our wallets.
 
         # Verify removals root
-        removals_merkle_set = MerkleSet()
-        for name_coin in coins:
-            _, coin = name_coin
-            if coin is not None:
-                removals_merkle_set.add_already_hashed(coin.name())
-        removals_root = removals_merkle_set.get_root()
+        removals_items = [name for name, coin in coins if coin is not None]
+        removals_root = bytes32(compute_merkle_set_root(removals_items))
         if root != removals_root:
             return False
     else:
