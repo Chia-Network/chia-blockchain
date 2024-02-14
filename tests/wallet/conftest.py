@@ -10,6 +10,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
 from tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
@@ -29,6 +30,10 @@ def mock_file_keyring_functions(monkeypatch: pytest.MonkeyPatch) -> None:
         return input_data
 
     monkeypatch.setattr("chia.util.file_keyring.FileKeyring.lock_and_reload_if_required", lock_and_reload_if_required)
+    monkeypatch.setattr(
+        "chia.util.keyring_wrapper.KeyringWrapper.get_cached_master_passphrase",
+        lambda _: (DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, True),
+    )
     monkeypatch.setattr("chia.util.file_keyring.encrypt_data", encrypt_data)
     monkeypatch.setattr("chia.util.file_keyring.decrypt_data", decrypt_data)
     monkeypatch.setattr("chia.simulator.keyring.INITIAL_KERYING_DATA", "e30K")
