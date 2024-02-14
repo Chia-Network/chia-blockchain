@@ -133,8 +133,9 @@ async def instantiate_mempool_manager(
     block_height: uint32 = TEST_HEIGHT,
     block_timestamp: uint64 = TEST_TIMESTAMP,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
+    max_tx_clvm_cost: Optional[uint64] = None,
 ) -> MempoolManager:
-    mempool_manager = MempoolManager(get_coin_records, constants)
+    mempool_manager = MempoolManager(get_coin_records, constants, max_tx_clvm_cost=max_tx_clvm_cost)
     test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
     await mempool_manager.new_peak(test_block_record, None)
     invariant_check_mempool(mempool_manager.mempool)
@@ -142,7 +143,11 @@ async def instantiate_mempool_manager(
 
 
 async def setup_mempool_with_coins(
-    *, coin_amounts: List[int], max_block_clvm_cost: Optional[int] = None
+    *,
+    coin_amounts: List[int],
+    max_block_clvm_cost: Optional[int] = None,
+    max_tx_clvm_cost: Optional[uint64] = None,
+    mempool_block_buffer: Optional[int] = None,
 ) -> Tuple[MempoolManager, List[Coin]]:
     coins = []
     test_coin_records = {}
@@ -159,11 +164,14 @@ async def setup_mempool_with_coins(
                 ret.append(r)
         return ret
 
+    constants = DEFAULT_CONSTANTS
     if max_block_clvm_cost is not None:
-        constants = dataclasses.replace(DEFAULT_CONSTANTS, MAX_BLOCK_COST_CLVM=max_block_clvm_cost)
-    else:
-        constants = DEFAULT_CONSTANTS
-    mempool_manager = await instantiate_mempool_manager(get_coin_records, constants=constants)
+        constants = dataclasses.replace(constants, MAX_BLOCK_COST_CLVM=max_block_clvm_cost)
+    if mempool_block_buffer is not None:
+        constants = dataclasses.replace(constants, MEMPOOL_BLOCK_BUFFER=mempool_block_buffer)
+    mempool_manager = await instantiate_mempool_manager(
+        get_coin_records, constants=constants, max_tx_clvm_cost=max_tx_clvm_cost
+    )
     return (mempool_manager, coins)
 
 
@@ -992,8 +1000,8 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
             assert result[1] == MempoolInclusionStatus.SUCCESS
 
     mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(2000000000, 2000002200)))
-    high_rate_spends = await make_coin_spends(coins[0:2000])
-    low_rate_spends = await make_coin_spends(coins[2000:2100], high_fees=False)
+    high_rate_spends = await make_coin_spends(coins[0:2200])
+    low_rate_spends = await make_coin_spends(coins[2200:2400], high_fees=False)
     spends = low_rate_spends + high_rate_spends if reverse_tx_order else high_rate_spends + low_rate_spends
     await send_spends_to_mempool(spends)
     assert mempool_manager.peak is not None
@@ -1022,7 +1030,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
     async def make_and_send_big_cost_sb(coin: Coin) -> None:
         conditions = []
         g1 = G1Element()
-        for _ in range(120):
+        for _ in range(144):
             conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 10_000_000])
         # Create a spend bundle with a big enough cost that gets it close to the limit
@@ -1030,7 +1038,10 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
         assert res[1] == MempoolInclusionStatus.SUCCESS
 
     mempool_manager, coins = await setup_mempool_with_coins(
-        coin_amounts=list(range(1_000_000_000, 1_000_000_030)), max_block_clvm_cost=550_000_000
+        coin_amounts=list(range(1_000_000_000, 1_000_000_030)),
+        max_block_clvm_cost=550_000_000,
+        max_tx_clvm_cost=uint64(550_000_000 * 0.6),
+        mempool_block_buffer=20,
     )
     # Create the spend bundles with a big enough cost that they get close to the limit
     for i in range(num_skipped_items):
