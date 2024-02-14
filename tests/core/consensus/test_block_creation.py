@@ -9,15 +9,15 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
 from tests.core.make_block_generator import make_block_generator
 
 
 @pytest.mark.parametrize("add_amount", [[0], [1, 2, 3], []])
 @pytest.mark.parametrize("rem_amount", [[0], [1, 2, 3], []])
 def test_compute_block_fee(add_amount: List[int], rem_amount: List[int]) -> None:
-    additions: List[Coin] = [Coin(bytes32.random(), bytes32.random(), amt) for amt in add_amount]
-    removals: List[Coin] = [Coin(bytes32.random(), bytes32.random(), amt) for amt in rem_amount]
+    additions: List[Coin] = [Coin(bytes32.random(), bytes32.random(), uint64(amt)) for amt in add_amount]
+    removals: List[Coin] = [Coin(bytes32.random(), bytes32.random(), uint64(amt)) for amt in rem_amount]
 
     # the fee is the left-overs from the removals (spent) coins after deducting
     # the newly created coins (additions)
