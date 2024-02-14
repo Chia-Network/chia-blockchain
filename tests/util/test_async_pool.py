@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import random
 from dataclasses import dataclass
 from typing import List
@@ -9,7 +8,7 @@ from typing import List
 import anyio
 import pytest
 
-from chia.util.async_pool import AsyncPool, SingleUseError
+from chia.util.async_pool import AsyncPool, InvalidTargetWorkerCountError
 from chia.util.timing import adjusted_timeout
 
 
@@ -29,34 +28,29 @@ async def test_creates_expected_worker_count_immediately(count: int) -> None:
         assert len(pool._workers) == count
 
 
+@pytest.mark.parametrize("count", [1, 2, 10, 1000])
 @pytest.mark.anyio
-async def test_raises_usefully_for_run_then_run() -> None:
-    pool = AsyncPool(
-        name="test pool",
-        worker_async_callable=forever_worker,
-        target_worker_count=1,
-        log=logging.getLogger(__name__),
-    )
-    # TODO: review for adjust timeout usage or a better batter
-    with anyio.move_on_after(0.001):
-        await pool.run()
-
-    # TODO: review for adjust timeout usage or a better batter
-    with anyio.fail_after(1):
-        with pytest.raises(SingleUseError, match=AsyncPool.__name__):
-            await pool.run()
-
-
-@pytest.mark.anyio
-async def test_raises_usefully_for_manage_then_run() -> None:
+async def test_workers_list_empty_after_management(count: int) -> None:
     async with AsyncPool.managed(
         name="test pool",
         worker_async_callable=forever_worker,
-        target_worker_count=1,
+        target_worker_count=count,
     ) as pool:
-        with anyio.fail_after(adjusted_timeout(10)):
-            with pytest.raises(SingleUseError, match=AsyncPool.__name__):
-                await pool.run()
+        assert len(pool._workers) == count
+
+    assert len(pool._workers) == 0
+
+
+@pytest.mark.parametrize(argnames="count", argvalues=[-5, 0])
+@pytest.mark.anyio
+async def test_managed_raises_usefully_for_invalid_target_count(count: int) -> None:
+    with pytest.raises(InvalidTargetWorkerCountError, match=f"{count}"):
+        async with AsyncPool.managed(
+            name="test pool",
+            worker_async_callable=forever_worker,
+            target_worker_count=count,
+        ):
+            pass
 
 
 @pytest.mark.parametrize("count", [1, 2, 10, 1000])
