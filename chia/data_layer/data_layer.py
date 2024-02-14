@@ -314,7 +314,7 @@ class DataLayer:
         if pending_root is None:
             raise Exception("Latest root is already confirmed.")
         if pending_root.status == Status.PENDING_BATCH:
-            raise Exception("Publishing on chain an unfinished batch.")
+            raise Exception("Unable to publish on chain, batch update set still open.")
 
         root_hash = self.none_bytes if pending_root.node_hash is None else pending_root.node_hash
 

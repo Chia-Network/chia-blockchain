@@ -2668,8 +2668,7 @@ async def test_unpublished_batch_update(
             )
             assert res == {}
 
-            for _ in range(NUM_BLOCKS_WITHOUT_PUBLISH):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_blocks_to_puzzlehash(count=NUM_BLOCKS_WITHOUT_PUBLISH, guarantee_transaction_blocks=True)
             keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
             assert keys_values == {"keys_values": []}
             pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
