@@ -609,7 +609,7 @@ class WeightProofHandler:
             max_workers=self._num_processes,
             mp_context=self.multiprocessing_context,
             initializer=setproctitle,
-            initargs=(f"{getproctitle()}_worker",),
+            initargs=(f"{getproctitle()}_weight_proof_worker",),
         ) as executor:
             # The shutdown file manager must be inside of the executor manager so that
             # we request the workers close prior to waiting for them to close.
@@ -707,10 +707,10 @@ def _create_sub_epoch_data(
 ) -> SubEpochData:
     reward_chain_hash: bytes32 = sub_epoch_summary.reward_chain_hash
     #  Number of subblocks overflow in previous slot
-    previous_sub_epoch_overflows: uint8 = sub_epoch_summary.num_blocks_overflow  # total in sub epoch - expected
+    previous_sub_epoch_overflows = sub_epoch_summary.num_blocks_overflow  # total in sub epoch - expected
     #  New work difficulty and iterations per sub-slot
-    sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
-    new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
+    sub_slot_iters = sub_epoch_summary.new_sub_slot_iters
+    new_difficulty = sub_epoch_summary.new_difficulty
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
 
 
@@ -1558,8 +1558,8 @@ def get_sp_total_iters(
     assert sub_slot_data.cc_ip_vdf_info is not None
     assert sub_slot_data.total_iters is not None
     assert sub_slot_data.signage_point_index is not None
-    sp_iters: uint64 = calculate_sp_iters(constants, ssi, sub_slot_data.signage_point_index)
-    ip_iters: uint64 = sub_slot_data.cc_ip_vdf_info.number_of_iterations
+    sp_iters = calculate_sp_iters(constants, ssi, sub_slot_data.signage_point_index)
+    ip_iters = sub_slot_data.cc_ip_vdf_info.number_of_iterations
     sp_sub_slot_total_iters = uint128(sub_slot_data.total_iters - ip_iters)
     if is_overflow:
         sp_sub_slot_total_iters = uint128(sp_sub_slot_total_iters - ssi)

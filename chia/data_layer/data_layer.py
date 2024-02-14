@@ -32,7 +32,10 @@ from chia.data_layer.data_layer_errors import KeyNotFoundError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
+    KeysPaginationData,
+    KeysValuesPaginationData,
     KeyValue,
+    KVDiffPaginationData,
     Layer,
     Offer,
     OfferStore,
@@ -48,6 +51,7 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     SyncStatus,
     TerminalNode,
+    UnsubscribeData,
     leaf_hash,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
@@ -106,6 +110,7 @@ class DataLayer:
     uploaders: List[PluginRemote]
     maximum_full_file_count: int
     server_files_location: Path
+    unsubscribe_data_queue: List[UnsubscribeData]
     _server: Optional[ChiaServer] = None
     none_bytes: bytes32 = bytes32([0] * 32)
     initialized: bool = False
@@ -174,6 +179,7 @@ class DataLayer:
             downloaders=downloaders,
             uploaders=uploaders,
             maximum_full_file_count=config.get("maximum_full_file_count", 1),
+            unsubscribe_data_queue=[],
         )
 
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -183,12 +189,30 @@ class DataLayer:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        await self._start()
-        try:
-            yield
-        finally:
-            self._close()
-            await self._await_closed()
+        sql_log_path: Optional[Path] = None
+        if self.config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
+            self.log.info(f"logging SQL commands to {sql_log_path}")
+
+        async with DataStore.managed(database=self.db_path, sql_log_path=sql_log_path) as self._data_store:
+            self._wallet_rpc = await self.wallet_rpc_init
+
+            self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
+            try:
+                yield
+            finally:
+                # TODO: review for anything else we need to do here
+                self._shut_down = True
+                if self._wallet_rpc is not None:
+                    self.wallet_rpc.close()
+
+                if self.periodically_manage_data_task is not None:
+                    try:
+                        self.periodically_manage_data_task.cancel()
+                    except asyncio.CancelledError:
+                        pass
+                if self._wallet_rpc is not None:
+                    await self.wallet_rpc.await_closed()
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
@@ -201,34 +225,6 @@ class DataLayer:
 
     def set_server(self, server: ChiaServer) -> None:
         self._server = server
-
-    async def _start(self) -> None:
-        sql_log_path: Optional[Path] = None
-        if self.config.get("log_sqlite_cmds", False):
-            sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
-            self.log.info(f"logging SQL commands to {sql_log_path}")
-
-        self._data_store = await DataStore.create(database=self.db_path, sql_log_path=sql_log_path)
-        self._wallet_rpc = await self.wallet_rpc_init
-
-        self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
-
-    def _close(self) -> None:
-        # TODO: review for anything else we need to do here
-        self._shut_down = True
-        if self._wallet_rpc is not None:
-            self.wallet_rpc.close()
-
-    async def _await_closed(self) -> None:
-        if self.periodically_manage_data_task is not None:
-            try:
-                self.periodically_manage_data_task.cancel()
-            except asyncio.CancelledError:
-                pass
-        if self._data_store is not None:
-            await self.data_store.close()
-        if self._wallet_rpc is not None:
-            await self.wallet_rpc.await_closed()
 
     async def wallet_log_in(self, fingerprint: int) -> int:
         result = await self.wallet_rpc.log_in(fingerprint)
@@ -319,14 +315,12 @@ class DataLayer:
             node = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash)
             return node.hash
 
-    async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None) -> Optional[bytes]:
+    async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None) -> bytes:
         await self._update_confirmation_status(tree_id=store_id)
 
         async with self.data_store.transaction():
+            # this either returns the node or raises an exception
             res = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash)
-            if res is None:
-                self.log.error("Failed to fetch key")
-                return None
             return res.value
 
     async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
@@ -337,10 +331,38 @@ class DataLayer:
             self.log.error("Failed to fetch keys values")
         return res
 
+    async def get_keys_values_paginated(
+        self,
+        store_id: bytes32,
+        root_hash: Optional[bytes32],
+        page: int,
+        max_page_size: Optional[int] = None,
+    ) -> KeysValuesPaginationData:
+        await self._update_confirmation_status(tree_id=store_id)
+
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
+        res = await self.data_store.get_keys_values_paginated(store_id, page, max_page_size, root_hash)
+        return res
+
     async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[bytes]:
         await self._update_confirmation_status(tree_id=store_id)
 
         res = await self.data_store.get_keys(store_id, root_hash)
+        return res
+
+    async def get_keys_paginated(
+        self,
+        store_id: bytes32,
+        root_hash: Optional[bytes32],
+        page: int,
+        max_page_size: Optional[int] = None,
+    ) -> KeysPaginationData:
+        await self._update_confirmation_status(tree_id=store_id)
+
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
+        res = await self.data_store.get_keys_paginated(store_id, page, max_page_size, root_hash)
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
@@ -521,9 +543,17 @@ class DataLayer:
                     self.log.error(f"get_downloader could not get response: {type(e).__name__}: {e}")
         return None
 
-    async def clean_old_full_tree_files(
-        self, foldername: Path, tree_id: bytes32, full_tree_first_publish_generation: int
-    ) -> None:
+    async def clean_old_full_tree_files(self, tree_id: bytes32) -> None:
+        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
+        if singleton_record is None:
+            return
+        await self._update_confirmation_status(tree_id=tree_id)
+
+        root = await self.data_store.get_tree_root(tree_id=tree_id)
+        latest_generation = root.generation
+        full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
+        foldername = self.server_files_location
+
         for generation in range(full_tree_first_publish_generation - 1, 0, -1):
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=generation)
             file_exists = delete_full_file_if_exists(foldername, tree_id, root)
@@ -584,11 +614,6 @@ class DataLayer:
                                     self.log.error(
                                         f"Failed to upload files to, will retry later: {uploader} : {res_json}"
                                     )
-                await self.clean_old_full_tree_files(
-                    self.server_files_location,
-                    tree_id,
-                    full_tree_first_publish_generation,
-                )
             except Exception as e:
                 self.log.error(f"Exception uploading files, will retry later: tree id {tree_id}")
                 self.log.debug(f"Failed to upload files, cleaning local files: {type(e).__name__}: {e}")
@@ -652,12 +677,18 @@ class DataLayer:
         async with self.subscription_lock:
             await self.data_store.remove_subscriptions(store_id, parsed_urls)
 
-    async def unsubscribe(self, tree_id: bytes32, retain_files: bool) -> None:
-        subscriptions = await self.get_subscriptions()
+    async def unsubscribe(self, tree_id: bytes32, retain_data: bool) -> None:
+        async with self.subscription_lock:
+            # Unsubscribe is processed later, after all fetching of data is done, to avoid races.
+            self.unsubscribe_data_queue.append(UnsubscribeData(tree_id, retain_data))
+
+    async def process_unsubscribe(self, tree_id: bytes32, retain_data: bool) -> None:
+        # This function already acquired `subscriptions_lock`.
+        subscriptions = await self.data_store.get_subscriptions()
         if tree_id not in (subscription.tree_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given tree_id.")
         filenames: List[str] = []
-        if await self.data_store.tree_id_exists(tree_id) and not retain_files:
+        if await self.data_store.tree_id_exists(tree_id) and not retain_data:
             generation = await self.data_store.get_tree_generation(tree_id)
             all_roots = await self.data_store.get_roots_between(tree_id, 1, generation + 1)
             for root in all_roots:
@@ -666,8 +697,10 @@ class DataLayer:
                 filenames.append(get_delta_filename(tree_id, root_hash, root.generation))
         # stop tracking first, then unsubscribe from the data store
         await self.wallet_rpc.dl_stop_tracking(tree_id)
-        async with self.subscription_lock:
-            await self.data_store.unsubscribe(tree_id)
+        await self.data_store.unsubscribe(tree_id)
+        if not retain_data:
+            await self.data_store.delete_store_data(tree_id)
+
         self.log.info(f"Unsubscribed to {tree_id}")
         for filename in filenames:
             file_path = self.server_files_location.joinpath(filename)
@@ -681,6 +714,8 @@ class DataLayer:
             return await self.data_store.get_subscriptions()
 
     async def add_mirror(self, store_id: bytes32, urls: List[str], amount: uint64, fee: uint64) -> None:
+        if not urls:
+            raise RuntimeError("URL list can't be empty")
         bytes_urls = [bytes(url, "utf8") for url in urls]
         await self.wallet_rpc.dl_new_mirror(store_id, amount, bytes_urls, fee)
 
@@ -688,7 +723,8 @@ class DataLayer:
         await self.wallet_rpc.dl_delete_mirror(coin_id, fee)
 
     async def get_mirrors(self, tree_id: bytes32) -> List[Mirror]:
-        return await self.wallet_rpc.dl_get_mirrors(tree_id)
+        mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(tree_id)
+        return [mirror for mirror in mirrors if mirror.urls]
 
     async def update_subscriptions_from_wallet(self, tree_id: bytes32) -> None:
         mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(tree_id)
@@ -703,6 +739,13 @@ class DataLayer:
 
     async def get_kv_diff(self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Set[DiffData]:
         return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
+
+    async def get_kv_diff_paginated(
+        self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: int, max_page_size: Optional[int] = None
+    ) -> KVDiffPaginationData:
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
+        return await self.data_store.get_kv_diff_paginated(tree_id, page, max_page_size, hash_1, hash_2)
 
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
@@ -742,15 +785,20 @@ class DataLayer:
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
                         )
 
-            async with self.subscription_lock:
-                for subscription in subscriptions:
-                    try:
-                        await self.update_subscriptions_from_wallet(subscription.tree_id)
-                        await self.fetch_and_validate(subscription.tree_id)
-                        await self.upload_files(subscription.tree_id)
-                    except Exception as e:
-                        self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
+            for subscription in subscriptions:
+                try:
+                    await self.update_subscriptions_from_wallet(subscription.tree_id)
+                    await self.fetch_and_validate(subscription.tree_id)
+                    await self.upload_files(subscription.tree_id)
+                    await self.clean_old_full_tree_files(subscription.tree_id)
+                except Exception as e:
+                    self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
 
+            # Do unsubscribes after the fetching of data is complete, to avoid races.
+            async with self.subscription_lock:
+                for unsubscribe_data in self.unsubscribe_data_queue:
+                    await self.process_unsubscribe(unsubscribe_data.tree_id, unsubscribe_data.retain_data)
+                self.unsubscribe_data_queue.clear()
             await asyncio.sleep(manage_data_interval)
 
     async def build_offer_changelist(

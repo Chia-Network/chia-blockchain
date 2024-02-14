@@ -25,10 +25,9 @@ async def test_notification_store_backwards_compat() -> None:
     # First create the DB the way it would have otheriwse been created
     db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
     db_name.parent.mkdir(parents=True, exist_ok=True)
-    db_wrapper = await DBWrapper2.create(
+    async with DBWrapper2.managed(
         database=db_name,
-    )
-    try:
+    ) as db_wrapper:
         async with db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY,msg blob,amount blob)"
@@ -45,8 +44,6 @@ async def test_notification_store_backwards_compat() -> None:
 
         await NotificationStore.create(db_wrapper)
         await NotificationStore.create(db_wrapper)
-    finally:
-        await db_wrapper.close()
 
 
 @pytest.mark.parametrize(
@@ -138,7 +135,7 @@ async def test_notifications(
         if case == "allow_larger":
             allow_larger_height = peak.height + 1
         tx = await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, DEFAULT_TX_CONFIG, fee=FEE)
-        await wsm_1.add_pending_transaction(tx)
+        await wsm_1.add_pending_transactions([tx])
         await time_out_assert_not_none(
             5,
             full_node_api.full_node.mempool_manager.get_spendbundle,
@@ -169,7 +166,7 @@ async def test_notifications(
     assert len(notifications) == 1
     assert notifications[0].message == b"allow_larger"
     assert (
-        await notification_manager_2.notification_store.get_notifications([n.coin_id for n in notifications])
+        await notification_manager_2.notification_store.get_notifications([n.id for n in notifications])
         == notifications
     )
 
@@ -179,7 +176,7 @@ async def test_notifications(
     await notification_manager_2.notification_store.delete_all_notifications()
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
     await notification_manager_2.notification_store.add_notification(notifications[0])
-    await notification_manager_2.notification_store.delete_notifications([n.coin_id for n in notifications])
+    await notification_manager_2.notification_store.delete_notifications([n.id for n in notifications])
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
 
     assert not await func(*notification_manager_2.most_recent_args)

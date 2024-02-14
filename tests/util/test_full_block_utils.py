@@ -6,7 +6,6 @@ from typing import Generator, Iterator, List, Optional
 import pytest
 from chia_rs import G1Element, G2Element
 
-from benchmarks.utils import rand_bytes, rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
@@ -26,6 +25,7 @@ from chia.types.header_block import HeaderBlock
 from chia.util.full_block_utils import block_info_from_block, generator_from_block, header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint8, uint32, uint64, uint128
+from tests.util.benchmarks import rand_bytes, rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
 
 test_g2s: List[G2Element] = [rand_g2() for _ in range(10)]
 test_g1s: List[G1Element] = [rand_g1() for _ in range(10)]

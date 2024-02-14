@@ -19,11 +19,14 @@ from chia.cmds.cmds_util import (
 )
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
+from chia.rpc.wallet_request_types import GetNotifications
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.conditions import CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -410,7 +413,7 @@ async def make_offer(
     d_fee: Decimal,
     offers: Sequence[str],
     requests: Sequence[str],
-    filepath: str,
+    filepath: pathlib.Path,
     reuse_puzhash: Optional[bool],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
@@ -547,23 +550,24 @@ async def make_offer(
 
                 cli_confirm("Confirm (y/n): ", "Not creating offer...")
 
-                offer, trade_record = await wallet_client.create_offer_for_ids(
-                    offer_dict,
-                    driver_dict=driver_dict,
-                    fee=fee,
-                    tx_config=CMDTXConfigLoader(
-                        reuse_puzhash=reuse_puzhash,
-                    ).to_tx_config(units["chia"], config, fingerprint),
-                )
-                if offer is not None:
-                    with open(pathlib.Path(filepath), "w") as file:
-                        file.write(offer.to_bech32())
-                    print(f"Created offer with ID {trade_record.trade_id}")
-                    print(
-                        f"Use chia wallet get_offers --id " f"{trade_record.trade_id} -f {fingerprint} to view status"
+                with filepath.open(mode="w") as file:
+                    offer, trade_record = await wallet_client.create_offer_for_ids(
+                        offer_dict,
+                        driver_dict=driver_dict,
+                        fee=fee,
+                        tx_config=CMDTXConfigLoader(
+                            reuse_puzhash=reuse_puzhash,
+                        ).to_tx_config(units["chia"], config, fingerprint),
                     )
-                else:
-                    print("Error creating offer")
+                    if offer is not None:
+                        file.write(offer.to_bech32())
+                        print(f"Created offer with ID {trade_record.trade_id}")
+                        print(
+                            f"Use chia wallet get_offers --id "
+                            f"{trade_record.trade_id} -f {fingerprint} to view status"
+                        )
+                    else:
+                        print("Error creating offer")
 
 
 def timestamp_to_time(timestamp: int) -> str:
@@ -884,6 +888,9 @@ async def print_balances(
                     get_id_response = await wallet_client.dao_get_treasury_id(wallet_id)
                     treasury_id = get_id_response["treasury_id"][2:]
                     print(f"{indent}{'-Treasury ID:'.ljust(ljust)} {treasury_id}")
+                elif typ == WalletType.DAO_CAT:
+                    cat_asset_id = summary["data"][32:96]
+                    print(f"{indent}{'-Asset ID:'.ljust(ljust)} {cat_asset_id}")
                 elif len(asset_id) > 0:
                     print(f"{indent}{'-Asset ID:'.ljust(ljust)} {asset_id}")
                 print(f"{indent}{'-Wallet ID:'.ljust(ljust)} {wallet_id}")
@@ -984,9 +991,11 @@ async def did_message_spend(
         try:
             response = await wallet_client.did_message_spend(
                 did_wallet_id,
-                puzzle_announcements,
-                coin_announcements,
                 CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
+                extra_conditions=(
+                    *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in coin_announcements),
+                    *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in puzzle_announcements),
+                ),
             )
             print(f"Message Spend Bundle: {response['spend_bundle']}")
         except Exception as e:
@@ -997,11 +1006,13 @@ async def transfer_did(
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     did_wallet_id: int,
-    fee: int,
+    d_fee: Decimal,
     target_address: str,
     with_recovery: bool,
     reuse_puzhash: Optional[bool],
 ) -> None:
+    fee: int = int(d_fee * units["chia"])
+
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.did_transfer_did(
@@ -1379,10 +1390,12 @@ async def get_notifications(
         if ids is not None and len(ids) == 0:
             ids = None
 
-        notifications = await wallet_client.get_notifications(ids=ids, pagination=(start, end))
-        for notification in notifications:
+        response = await wallet_client.get_notifications(
+            GetNotifications(ids=ids, start=uint32.construct_optional(start), end=uint32.construct_optional(end))
+        )
+        for notification in response.notifications:
             print("")
-            print(f"ID: {notification.coin_id.hex()}")
+            print(f"ID: {notification.id.hex()}")
             print(f"message: {notification.message.decode('utf-8')}")
             print(f"amount: {notification.amount}")
 

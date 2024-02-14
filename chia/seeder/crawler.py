@@ -83,12 +83,29 @@ class Crawler:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        await self._start()
+        # We override the default peer_connect_timeout when running from the crawler
+        crawler_peer_timeout = self.config.get("peer_connect_timeout", 2)
+        self.server.config["peer_connect_timeout"] = crawler_peer_timeout
+
+        # Connect to the DB
+        self.crawl_store: CrawlStore = await CrawlStore.create(await aiosqlite.connect(self.db_path))
+        # Bootstrap the initial peers
+        await self.load_bootstrap_peers()
+        self.crawl_task = asyncio.create_task(self.crawl())
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
+            self._shut_down = True
+
+            if self.crawl_task is not None:
+                try:
+                    await asyncio.wait_for(self.crawl_task, timeout=10)  # wait 10 seconds before giving up
+                except asyncio.TimeoutError:
+                    self.log.error("Crawl task did not exit in time, killing task.")
+                    self.crawl_task.cancel()
+            if self.crawl_store is not None:
+                self.log.info("Closing connection to DB.")
+                await self.crawl_store.crawl_db.close()
 
     def __post_init__(self) -> None:
         # get db path
@@ -156,17 +173,6 @@ class Crawler:
         except Exception as e:
             self.log.warning(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
             await self.crawl_store.peer_failed_to_connect(peer)
-
-    async def _start(self) -> None:
-        # We override the default peer_connect_timeout when running from the crawler
-        crawler_peer_timeout = self.config.get("peer_connect_timeout", 2)
-        self.server.config["peer_connect_timeout"] = crawler_peer_timeout
-
-        # Connect to the DB
-        self.crawl_store: CrawlStore = await CrawlStore.create(await aiosqlite.connect(self.db_path))
-        # Bootstrap the initial peers
-        await self.load_bootstrap_peers()
-        self.crawl_task = asyncio.create_task(self.crawl())
 
     async def load_bootstrap_peers(self) -> None:
         assert self.crawl_store is not None
@@ -348,20 +354,6 @@ class Crawler:
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
         pass
-
-    def _close(self) -> None:
-        self._shut_down = True
-
-    async def _await_closed(self) -> None:
-        if self.crawl_task is not None:
-            try:
-                await asyncio.wait_for(self.crawl_task, timeout=10)  # wait 10 seconds before giving up
-            except asyncio.TimeoutError:
-                self.log.error("Crawl task did not exit in time, killing task.")
-                self.crawl_task.cancel()
-        if self.crawl_store is not None:
-            self.log.info("Closing connection to DB.")
-            await self.crawl_store.crawl_db.close()
 
     async def print_summary(self, t_start: float, total_nodes: int, tried_nodes: Set[str]) -> None:
         assert self.crawl_store is not None  # this is only ever called from the crawl task

@@ -14,16 +14,16 @@ from clvm_tools.binutils import assemble
 
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
+from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 from tests.conftest import ConsensusMode
 
 from ...blockchain.blockchain_test_utils import _validate_and_add_block
@@ -68,8 +68,7 @@ async def check_spend_bundle_validity(
     or fails with the correct error code.
     """
 
-    db_wrapper, blockchain = await create_ram_blockchain(bt.constants)
-    try:
+    async with create_ram_blockchain(bt.constants) as (db_wrapper, blockchain):
         for block in blocks:
             await _validate_and_add_block(blockchain, block)
 
@@ -94,13 +93,6 @@ async def check_spend_bundle_validity(
 
         return coins_added, coins_removed, newest_block
 
-    finally:
-        # if we don't close the db_wrapper, the test process doesn't exit cleanly
-        await db_wrapper.close()
-
-        # we must call `shut_down` or the executor in `Blockchain` doesn't stop
-        blockchain.shut_down()
-
 
 async def check_conditions(
     bt: BlockTools,
@@ -109,9 +101,9 @@ async def check_conditions(
     spend_reward_index: int = -2,
 ) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
     blocks = await initial_blocks(bt)
-    coin = list(blocks[spend_reward_index].get_included_reward_coins())[0]
+    coin = blocks[spend_reward_index].get_included_reward_coins()[0]
 
-    coin_spend = CoinSpend(coin, EASY_PUZZLE, SerializedProgram.from_program(condition_solution))
+    coin_spend = make_spend(coin, EASY_PUZZLE, SerializedProgram.from_program(condition_solution))
     spend_bundle = SpendBundle([coin_spend], G2Element())
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate
@@ -281,7 +273,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_invalid_my_id(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         wrong_name = bytearray(coin.name())
         wrong_name[-1] ^= 1
         conditions = Program.to(
@@ -294,7 +286,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_valid_my_id(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin = blocks[-2].get_included_reward_coins()[0]
         conditions = Program.to(
             assemble(
                 f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{coin.name().hex()}))"
@@ -305,48 +297,48 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_invalid_coin_announcement(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
-        announce = Announcement(coin.name(), b"test_bad")
+        coin = blocks[-2].get_included_reward_coins()[0]
+        announce = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=b"test_bad")
         conditions = Program.to(
-            assemble(
+            assemble(  # type: ignore[no-untyped-call]
                 f"(({ConditionOpcode.CREATE_COIN_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
-            )  # type: ignore[no-untyped-call]
+                f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
+            )
         )
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
     @pytest.mark.anyio
     async def test_valid_coin_announcement(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
-        announce = Announcement(coin.name(), b"test")
+        coin = blocks[-2].get_included_reward_coins()[0]
+        announce = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=b"test")
         conditions = Program.to(
-            assemble(
+            assemble(  # type: ignore[no-untyped-call]
                 f"(({ConditionOpcode.CREATE_COIN_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
-            )  # type: ignore[no-untyped-call]
+                f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
+            )
         )
         await check_conditions(bt, conditions)
 
     @pytest.mark.anyio
     async def test_invalid_puzzle_announcement(self, bt: BlockTools) -> None:
-        announce = Announcement(EASY_PUZZLE_HASH, b"test_bad")
+        announce = AssertPuzzleAnnouncement(asserted_ph=EASY_PUZZLE_HASH, asserted_msg=b"test_bad")
         conditions = Program.to(
-            assemble(
+            assemble(  # type: ignore[no-untyped-call]
                 f"(({ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
-            )  # type: ignore[no-untyped-call]
+                f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
+            )
         )
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
     @pytest.mark.anyio
     async def test_valid_puzzle_announcement(self, bt: BlockTools) -> None:
-        announce = Announcement(EASY_PUZZLE_HASH, b"test")
+        announce = AssertPuzzleAnnouncement(asserted_ph=EASY_PUZZLE_HASH, asserted_msg=b"test")
         conditions = Program.to(
-            assemble(
+            assemble(  # type: ignore[no-untyped-call]
                 f"(({ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
-            )  # type: ignore[no-untyped-call]
+                f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
+            )
         )
         await check_conditions(bt, conditions)
 
@@ -388,15 +380,10 @@ class TestConditions:
         pre-v2-softfork, and rejects more than the announcement limit afterward.
         """
 
-        if consensus_mode.value < ConsensusMode.SOFT_FORK3.value:
-            # before softfork 3, there was no limit on the number of
-            # announcements
-            expect_err = None
-
         blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
-        coin_announcement = Announcement(coin.name(), b"test")
-        puzzle_announcement = Announcement(EASY_PUZZLE_HASH, b"test")
+        coin = blocks[-2].get_included_reward_coins()[0]
+        coin_announcement = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=b"test")
+        puzzle_announcement = AssertPuzzleAnnouncement(asserted_ph=EASY_PUZZLE_HASH, asserted_msg=b"test")
 
         conditions = b""
         if prefix != "":
@@ -405,8 +392,8 @@ class TestConditions:
         cond = condition.format(
             coin="0x" + coin.name().hex(),
             ph="0x" + EASY_PUZZLE_HASH.hex(),
-            cann="0x" + coin_announcement.name().hex(),
-            pann="0x" + puzzle_announcement.name().hex(),
+            cann="0x" + coin_announcement.msg_calc.hex(),
+            pann="0x" + puzzle_announcement.msg_calc.hex(),
         )
 
         conditions += (b"\xff" + assemble(cond).as_bin()) * num  # type: ignore[no-untyped-call]

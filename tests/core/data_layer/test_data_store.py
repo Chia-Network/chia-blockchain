@@ -8,7 +8,7 @@ import statistics
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, cast
 
 import aiosqlite
 import pytest
@@ -82,23 +82,17 @@ async def test_create_creates_tables_and_columns(
     # allow you to parametrize the query.
     query = f"pragma table_info({table_name});"
 
-    db_wrapper = await DBWrapper2.create(database=database_uri, uri=True, reader_count=1)
-    try:
+    async with DBWrapper2.managed(database=database_uri, uri=True, reader_count=1) as db_wrapper:
         async with db_wrapper.reader() as reader:
             cursor = await reader.execute(query)
             columns = await cursor.fetchall()
             assert columns == []
 
-        store = await DataStore.create(database=database_uri, uri=True)
-        try:
+        async with DataStore.managed(database=database_uri, uri=True):
             async with db_wrapper.reader() as reader:
                 cursor = await reader.execute(query)
                 columns = await cursor.fetchall()
                 assert [column[1] for column in columns] == expected_columns
-        finally:
-            await store.close()
-    finally:
-        await db_wrapper.close()
 
 
 @pytest.mark.anyio
@@ -314,7 +308,8 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
         if i > 25 and i <= 200 and random.randint(0, 4):
             is_insert = True
         if i > 200:
-            hint_keys_values = await data_store.get_keys_values_dict(tree_id)
+            kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+            hint_keys_values = kv_compressed.keys_values_hashed
             if not deleted_all:
                 while node_count > 0:
                     node_count -= 1
@@ -382,52 +377,78 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
     saved_batches: List[List[Dict[str, Any]]] = []
 
     db_uri = generate_in_memory_db_uri()
-    single_op_data_store = await DataStore.create(database=db_uri, uri=True)
-    try:
+    async with DataStore.managed(database=db_uri, uri=True) as single_op_data_store:
         await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
 
         batch: List[Dict[str, Any]] = []
-        keys: List[bytes] = []
-        hint_keys_values: Dict[bytes, bytes] = {}
+        keys_values: Dict[bytes, bytes] = {}
+        hint_keys_values: Optional[Dict[bytes32, bytes32]] = {} if use_optimized else None
         for operation in range(num_batches * num_ops_per_batch):
-            if random.randint(0, 4) > 0 or len(keys) == 0:
+            [op_type] = random.choices(
+                ["insert", "upsert-insert", "upsert-update", "delete"],
+                [0.4, 0.2, 0.2, 0.2],
+                k=1,
+            )
+            if op_type == "insert" or op_type == "upsert-insert" or len(keys_values) == 0:
+                if len(keys_values) == 0:
+                    op_type = "insert"
                 key = operation.to_bytes(4, byteorder="big")
                 value = (2 * operation).to_bytes(4, byteorder="big")
-                if use_optimized:
+                if op_type == "insert":
                     await single_op_data_store.autoinsert(
                         key=key,
                         value=value,
                         tree_id=tree_id,
                         hint_keys_values=hint_keys_values,
+                        use_optimized=use_optimized,
                         status=Status.COMMITTED,
                     )
                 else:
-                    await single_op_data_store.autoinsert(
-                        key=key, value=value, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
+                    await single_op_data_store.upsert(
+                        key=key,
+                        new_value=value,
+                        tree_id=tree_id,
+                        hint_keys_values=hint_keys_values,
+                        use_optimized=use_optimized,
+                        status=Status.COMMITTED,
                     )
-                batch.append({"action": "insert", "key": key, "value": value})
-                keys.append(key)
-            else:
-                key = random.choice(keys)
-                keys.remove(key)
-                if use_optimized:
-                    await single_op_data_store.delete(
-                        key=key, tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-                    )
-                else:
-                    await single_op_data_store.delete(
-                        key=key, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
-                    )
+                action = "insert" if op_type == "insert" else "upsert"
+                batch.append({"action": action, "key": key, "value": value})
+                keys_values[key] = value
+            elif op_type == "delete":
+                key = random.choice(list(keys_values.keys()))
+                del keys_values[key]
+                await single_op_data_store.delete(
+                    key=key,
+                    tree_id=tree_id,
+                    hint_keys_values=hint_keys_values,
+                    use_optimized=use_optimized,
+                    status=Status.COMMITTED,
+                )
                 batch.append({"action": "delete", "key": key})
+            else:
+                assert op_type == "upsert-update"
+                key = random.choice(list(keys_values.keys()))
+                old_value = keys_values[key]
+                new_value_int = int.from_bytes(old_value, byteorder="big") + 1
+                new_value = new_value_int.to_bytes(4, byteorder="big")
+                await single_op_data_store.upsert(
+                    key=key,
+                    new_value=new_value,
+                    tree_id=tree_id,
+                    hint_keys_values=hint_keys_values,
+                    use_optimized=use_optimized,
+                    status=Status.COMMITTED,
+                )
+                keys_values[key] = new_value
+                batch.append({"action": "upsert", "key": key, "value": new_value})
             if (operation + 1) % num_ops_per_batch == 0:
                 saved_batches.append(batch)
                 batch = []
                 root = await single_op_data_store.get_tree_root(tree_id=tree_id)
                 saved_roots.append(root)
-    finally:
-        await single_op_data_store.close()
 
     for batch_number, batch in enumerate(saved_batches):
         assert len(batch) == num_ops_per_batch
@@ -453,6 +474,70 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 queue.append(node.right_hash)
                 ancestors[node.left_hash] = node_hash
                 ancestors[node.right_hash] = node_hash
+
+    all_kv = await data_store.get_keys_values(tree_id)
+    assert {node.key: node.value for node in all_kv} == keys_values
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "use_optimized",
+    [True, False],
+)
+async def test_upsert_ignores_existing_arguments(
+    data_store: DataStore,
+    tree_id: bytes32,
+    use_optimized: bool,
+) -> None:
+    key = b"key"
+    value = b"value1"
+    hint_keys_values: Optional[Dict[bytes32, bytes32]] = {} if use_optimized else None
+
+    await data_store.autoinsert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key, tree_id)
+    assert node.value == value
+
+    new_value = b"value2"
+    await data_store.upsert(
+        key=key,
+        new_value=new_value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key, tree_id)
+    assert node.value == new_value
+
+    await data_store.upsert(
+        key=key,
+        new_value=new_value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key, tree_id)
+    assert node.value == new_value
+
+    key2 = b"key2"
+    await data_store.upsert(
+        key=key2,
+        new_value=value,
+        tree_id=tree_id,
+        hint_keys_values=hint_keys_values,
+        use_optimized=use_optimized,
+        status=Status.COMMITTED,
+    )
+    node = await data_store.get_node_by_key(key2, tree_id)
+    assert node.value == value
 
 
 @pytest.mark.parametrize(argnames="side", argvalues=list(Side))
@@ -559,7 +644,8 @@ async def test_inserting_duplicate_key_fails(
             side=Side.RIGHT,
         )
 
-    hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+    kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+    hint_keys_values = kv_compressed.keys_values_hashed
     # TODO: more specific exception
     with pytest.raises(Exception):
         await data_store.insert(
@@ -607,7 +693,7 @@ async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
 async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: bytes32) -> None:
     random = Random()
     random.seed(100, version=2)
-    hint_keys_values: Dict[bytes, bytes] = {}
+    hint_keys_values: Dict[bytes32, bytes32] = {}
     hashes = []
 
     for i in range(2000):
@@ -626,7 +712,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
 async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32) -> None:
     random = Random()
     random.seed(101, version=2)
-    hint_keys_values: Dict[bytes, bytes] = {}
+    hint_keys_values: Dict[bytes32, bytes32] = {}
     hashes = []
 
     for i in range(2000):
@@ -665,7 +751,8 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (
@@ -689,9 +776,7 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
         ),
     )
 
-    await data_store.delete(
-        key=Program.to(b"\x04"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
+    await data_store.delete(key=b"\x04", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -707,7 +792,8 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (
@@ -728,12 +814,8 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
         ),
     )
 
-    await data_store.delete(
-        key=Program.to(b"\x04"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
-    await data_store.delete(
-        key=Program.to(b"\x05"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
+    await data_store.delete(key=b"\x04", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
+    await data_store.delete(key=b"\x05", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -749,7 +831,8 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (
@@ -773,9 +856,7 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
         ),
     )
 
-    await data_store.delete(
-        key=Program.to(b"\x03"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
+    await data_store.delete(key=b"\x03", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -791,7 +872,8 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (
@@ -812,12 +894,8 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
         ),
     )
 
-    await data_store.delete(
-        key=Program.to(b"\x03"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
-    await data_store.delete(
-        key=Program.to(b"\x02"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-    )
+    await data_store.delete(key=b"\x03", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
+    await data_store.delete(key=b"\x02", tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -1137,6 +1215,33 @@ async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
 
 
 @pytest.mark.anyio
+async def test_kv_diff_3(data_store: DataStore, tree_id: bytes32) -> None:
+    insert_result = await data_store.autoinsert(
+        key=b"000",
+        value=b"000",
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+    await data_store.delete(tree_id=tree_id, key=b"000", status=Status.COMMITTED)
+    insert_result_2 = await data_store.autoinsert(
+        key=b"000",
+        value=b"001",
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+    diff_1 = await data_store.get_kv_diff(tree_id, insert_result.node_hash, insert_result_2.node_hash)
+    assert diff_1 == {DiffData(OperationType.DELETE, b"000", b"000"), DiffData(OperationType.INSERT, b"000", b"001")}
+    insert_result_3 = await data_store.upsert(
+        key=b"000",
+        new_value=b"002",
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+    diff_2 = await data_store.get_kv_diff(tree_id, insert_result_2.node_hash, insert_result_3.node_hash)
+    assert diff_2 == {DiffData(OperationType.DELETE, b"000", b"001"), DiffData(OperationType.INSERT, b"000", b"002")}
+
+
+@pytest.mark.anyio
 async def test_rollback_to_generation(data_store: DataStore, tree_id: bytes32) -> None:
     await add_0123_example(data_store, tree_id)
     expected_hashes = []
@@ -1246,7 +1351,7 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
     assert servers_info[0].url == "http://127.0.0.1/8000"
     await data_store.received_correct_file(tree_id=tree_id, server_info=servers_info[0])
 
-    ban_times = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60] * 10
+    ban_times = [5 * 60] * 3 + [15 * 60] * 3 + [30 * 60] * 2 + [60 * 60] * 10
     for ban_time in ban_times:
         servers_info = await data_store.get_available_servers_for_store(tree_id=tree_id, timestamp=current_timestamp)
         assert len(servers_info) == 1
@@ -1268,8 +1373,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
     num_ops_per_batch = 100
 
     db_uri = generate_in_memory_db_uri()
-    data_store_server = await DataStore.create(database=db_uri, uri=True)
-    try:
+    async with DataStore.managed(database=db_uri, uri=True) as data_store_server:
         await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
@@ -1294,8 +1398,6 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
             root = await data_store_server.get_tree_root(tree_id)
             await write_files_for_root(data_store_server, tree_id, root, tmp_path, 0)
             roots.append(root)
-    finally:
-        await data_store_server.close()
 
     generation = 1
     assert len(roots) == num_batches
@@ -1431,3 +1533,185 @@ async def test_benchmark_batch_insert_speed(
             tree_id=tree_id,
             changelist=batch,
         )
+
+
+@pytest.mark.anyio
+async def test_delete_store_data(raw_data_store: DataStore) -> None:
+    tree_id = bytes32(b"\0" * 32)
+    tree_id_2 = bytes32(b"\0" * 31 + b"\1")
+    await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+    await raw_data_store.create_tree(tree_id=tree_id_2, status=Status.COMMITTED)
+    total_keys = 4
+    keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
+    batch1 = [
+        {"action": "insert", "key": keys[0], "value": keys[0]},
+        {"action": "insert", "key": keys[1], "value": keys[1]},
+    ]
+    batch2 = batch1.copy()
+    batch1.append({"action": "insert", "key": keys[2], "value": keys[2]})
+    batch2.append({"action": "insert", "key": keys[3], "value": keys[3]})
+    assert batch1 != batch2
+    await raw_data_store.insert_batch(tree_id, batch1, status=Status.COMMITTED)
+    await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
+    keys_values_before = await raw_data_store.get_keys_values(tree_id_2)
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+        kv_nodes_before = {}
+        for node in nodes:
+            if node["key"] is not None:
+                kv_nodes_before[node["key"]] = node["value"]
+    assert [kv_nodes_before[key] for key in keys] == keys
+    await raw_data_store.delete_store_data(tree_id)
+    # Deleting from `node` table doesn't alter other stores.
+    keys_values_after = await raw_data_store.get_keys_values(tree_id_2)
+    assert keys_values_before == keys_values_after
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+        kv_nodes_after = {}
+        for node in nodes:
+            if node["key"] is not None:
+                kv_nodes_after[node["key"]] = node["value"]
+    for i in range(total_keys):
+        if i != 2:
+            assert kv_nodes_after[keys[i]] == keys[i]
+        else:
+            # `keys[2]` was only present in the first store.
+            assert keys[i] not in kv_nodes_after
+    assert not await raw_data_store.tree_id_exists(tree_id)
+    await raw_data_store.delete_store_data(tree_id_2)
+    async with raw_data_store.db_wrapper.reader() as reader:
+        async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
+            row_count = await cursor.fetchone()
+            assert row_count is not None
+            assert row_count[0] == 0
+    assert not await raw_data_store.tree_id_exists(tree_id_2)
+
+
+@pytest.mark.anyio
+async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> None:
+    # Make sure inserting and deleting the same data works
+    for repetition in range(2):
+        num_stores = 50
+        total_keys = 150
+        keys_deleted_per_store = 3
+        tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
+        for tree_id in tree_ids:
+            await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+        original_keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
+        batches = []
+        for i in range(num_stores):
+            batch = [
+                {"action": "insert", "key": key, "value": key} for key in original_keys[i * keys_deleted_per_store :]
+            ]
+            batches.append(batch)
+
+        for tree_id, batch in zip(tree_ids, batches):
+            await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
+
+        for tree_index in range(num_stores):
+            async with raw_data_store.db_wrapper.reader() as reader:
+                result = await reader.execute("SELECT * FROM node")
+                nodes = await result.fetchall()
+
+            keys = {node["key"] for node in nodes if node["key"] is not None}
+            assert len(keys) == total_keys - tree_index * keys_deleted_per_store
+            keys_after_index = set(original_keys[tree_index * keys_deleted_per_store :])
+            keys_before_index = set(original_keys[: tree_index * keys_deleted_per_store])
+            assert keys_after_index.issubset(keys)
+            assert keys.isdisjoint(keys_before_index)
+            await raw_data_store.delete_store_data(tree_ids[tree_index])
+
+        async with raw_data_store.db_wrapper.reader() as reader:
+            async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
+                row_count = await cursor.fetchone()
+                assert row_count is not None
+                assert row_count[0] == 0
+
+
+@pytest.mark.parametrize("common_keys_count", [1, 250, 499])
+@pytest.mark.anyio
+async def test_delete_store_data_with_common_values(raw_data_store: DataStore, common_keys_count: int) -> None:
+    tree_id_1 = bytes32(b"\x00" * 31 + b"\x01")
+    tree_id_2 = bytes32(b"\x00" * 31 + b"\x02")
+
+    await raw_data_store.create_tree(tree_id=tree_id_1, status=Status.COMMITTED)
+    await raw_data_store.create_tree(tree_id=tree_id_2, status=Status.COMMITTED)
+
+    key_offset = 1000
+    total_keys_per_store = 500
+    assert common_keys_count < key_offset
+    common_keys = {key.to_bytes(4, byteorder="big") for key in range(common_keys_count)}
+    unique_keys_1 = {
+        (key + key_offset).to_bytes(4, byteorder="big") for key in range(total_keys_per_store - common_keys_count)
+    }
+    unique_keys_2 = {
+        (key + (2 * key_offset)).to_bytes(4, byteorder="big") for key in range(total_keys_per_store - common_keys_count)
+    }
+
+    batch1 = [{"action": "insert", "key": key, "value": key} for key in common_keys.union(unique_keys_1)]
+    batch2 = [{"action": "insert", "key": key, "value": key} for key in common_keys.union(unique_keys_2)]
+
+    await raw_data_store.insert_batch(tree_id_1, batch1, status=Status.COMMITTED)
+    await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
+
+    await raw_data_store.delete_store_data(tree_id_1)
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+
+    keys = {node["key"] for node in nodes if node["key"] is not None}
+    # Since one store got all its keys deleted, we're left only with the keys of the other store.
+    assert len(keys) == total_keys_per_store
+    assert keys.intersection(unique_keys_1) == set()
+    assert keys.symmetric_difference(common_keys.union(unique_keys_2)) == set()
+
+
+@pytest.mark.anyio
+async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStore) -> None:
+    num_stores = 5
+    total_keys = 15
+    tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
+    for tree_id in tree_ids:
+        await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+    original_keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
+    batches = []
+    keys_per_pending_root = 2
+
+    for i in range(num_stores - 1):
+        start_index = i * keys_per_pending_root
+        end_index = (i + 1) * keys_per_pending_root
+        batch = [{"action": "insert", "key": key, "value": key} for key in original_keys[start_index:end_index]]
+        batches.append(batch)
+    for tree_id, batch in zip(tree_ids, batches):
+        await raw_data_store.insert_batch(tree_id, batch, status=Status.PENDING)
+
+    tree_id = tree_ids[-1]
+    batch = [{"action": "insert", "key": key, "value": key} for key in original_keys]
+    await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
+
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+
+    keys = {node["key"] for node in nodes if node["key"] is not None}
+    assert keys == set(original_keys)
+
+    await raw_data_store.delete_store_data(tree_id)
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+
+    keys = {node["key"] for node in nodes if node["key"] is not None}
+    assert keys == set(original_keys[: (num_stores - 1) * keys_per_pending_root])
+
+    for index in range(num_stores - 1):
+        tree_id = tree_ids[index]
+        root = await raw_data_store.get_pending_root(tree_id)
+        assert root is not None
+        await raw_data_store.change_root_status(root, Status.COMMITTED)
+        kv = await raw_data_store.get_keys_values(tree_id=tree_id)
+        start_index = index * keys_per_pending_root
+        end_index = (index + 1) * keys_per_pending_root
+        assert {pair.key for pair in kv} == set(original_keys[start_index:end_index])

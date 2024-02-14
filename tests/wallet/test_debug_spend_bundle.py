@@ -8,10 +8,11 @@ from chia_rs import AugSchemeMPL, PrivateKey
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
+from chia.util.ints import uint64
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 
@@ -22,9 +23,9 @@ def test_debug_spend_bundle() -> None:
     sig = AugSchemeMPL.sign(sk, msg)
     ACS = Program.to(15).curry(Program.to("hey").curry("now")).curry("brown", "cow")
     ACS_PH = ACS.get_tree_hash()
-    coin: Coin = Coin(bytes32([0] * 32), ACS_PH, 3)
-    child_coin: Coin = Coin(coin.name(), ACS_PH, 0)
-    coin_bad_reveal: Coin = Coin(bytes32([0] * 32), bytes32([0] * 32), 0)
+    coin: Coin = Coin(bytes32([0] * 32), ACS_PH, uint64(3))
+    child_coin: Coin = Coin(coin.name(), ACS_PH, uint64(0))
+    coin_bad_reveal: Coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
     solution = Program.to(
         [
             [ConditionOpcode.AGG_SIG_UNSAFE, pk, msg],
@@ -49,17 +50,17 @@ def test_debug_spend_bundle() -> None:
     debug_spend_bundle(
         SpendBundle(
             [
-                CoinSpend(
+                make_spend(
                     coin_bad_reveal,
                     ACS,
                     Program.to(None),
                 ),
-                CoinSpend(
+                make_spend(
                     coin,
                     ACS,
                     solution,
                 ),
-                CoinSpend(
+                make_spend(
                     child_coin,
                     ACS,
                     Program.to(None),

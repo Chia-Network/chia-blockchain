@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from itertools import chain
-from typing import Any, Iterator, List, Optional, Tuple
+from typing import Any, Iterator, List, Optional, Tuple, Union
 
 from clvm.EvalError import EvalError
 
@@ -164,20 +164,18 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
         oracle_spend_delay,
     ) = curried_args.as_iter()
     dao_rules = DAORules(
-        proposal_timelock.as_int(),
-        soft_close_length.as_int(),
-        attendance_required.as_int(),
-        pass_percentage.as_int(),
-        self_destruct_length.as_int(),
-        oracle_spend_delay.as_int(),
-        proposal_minimum_amount.as_int(),
+        uint64(proposal_timelock.as_int()),
+        uint64(soft_close_length.as_int()),
+        uint64(attendance_required.as_int()),
+        uint64(pass_percentage.as_int()),
+        uint64(self_destruct_length.as_int()),
+        uint64(oracle_spend_delay.as_int()),
+        uint64(proposal_minimum_amount.as_int()),
     )
     return dao_rules
 
 
-def get_spend_p2_singleton_puzzle(
-    treasury_id: bytes32, xch_conditions: Optional[List], asset_conditions: Optional[List[Tuple]]  # type: ignore
-) -> Program:
+def get_spend_p2_singleton_puzzle(treasury_id: bytes32, xch_conditions: Program, asset_conditions: Program) -> Program:
     # TODO: typecheck get_spend_p2_singleton_puzzle arguments
     # TODO: add tests for get_spend_p2_singleton_puzzle: pass xch_conditions as Puzzle, List and ConditionWithArgs
     #
@@ -218,7 +216,9 @@ def get_p2_singleton_puzhash(treasury_id: bytes32, asset_id: Optional[bytes32] =
 
 
 def get_lockup_puzzle(
-    cat_tail_hash: bytes32, previous_votes_list: List[Optional[bytes32]], innerpuz: Optional[Program]
+    cat_tail_hash: Union[bytes32, Program],
+    previous_votes_list: Union[List[Optional[bytes32]], Program],
+    innerpuz: Optional[Program],
 ) -> Program:
     self_hash: Program = DAO_LOCKUP_MOD.curry(
         SINGLETON_MOD_HASH,
@@ -392,13 +392,13 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
         self_destruct_length,
         oracle_spend_delay,
     ) = curried_args
-    curried_args = uncurry_proposal_validator(proposal_validator)
+    curried_args_prg = uncurry_proposal_validator(proposal_validator)
     (
         SINGLETON_STRUCT,
         PROPOSAL_SELF_HASH,
         PROPOSAL_MINIMUM_AMOUNT,
         PAYOUT_PUZHASH,
-    ) = curried_args.as_iter()
+    ) = curried_args_prg.as_iter()
     return DAORules(
         uint64(proposal_timelock.as_int()),
         uint64(soft_close_length.as_int()),
@@ -494,12 +494,12 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             # Vote Type: YES
             new_yes_votes = yes_votes.as_int() + added_votes
         return get_proposal_puzzle(
-            proposal_id=proposal_id.as_atom(),
-            cat_tail_hash=cat_tail_hash.as_atom(),
-            treasury_id=treasury_id.as_atom(),
-            votes_sum=new_yes_votes,
-            total_votes=new_total_votes,
-            proposed_puzzle_hash=proposed_puzzle_hash.as_atom(),
+            proposal_id=bytes32(proposal_id.as_atom()),
+            cat_tail_hash=bytes32(cat_tail_hash.as_atom()),
+            treasury_id=bytes32(treasury_id.as_atom()),
+            votes_sum=uint64(new_yes_votes),
+            total_votes=uint64(new_total_votes),
+            proposed_puzzle_hash=bytes32(proposed_puzzle_hash.as_atom()),
         )
     else:
         # we are in the finished state, puzzle is the same as ever
@@ -806,5 +806,5 @@ async def generate_mint_proposal_innerpuz(
             Program.to([ProposalType.MINT.value, full_puz.get_tree_hash()]).get_tree_hash(),
         ],  # make an announcement for the launcher to assert
     ]
-    puzzle = get_spend_p2_singleton_puzzle(treasury_id, Program.to(xch_conditions), [])
+    puzzle = get_spend_p2_singleton_puzzle(treasury_id, Program.to(xch_conditions), Program.to([]))
     return puzzle

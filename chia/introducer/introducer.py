@@ -38,23 +38,13 @@ class Introducer:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        await self._start()
+        self._vetting_task = asyncio.create_task(self._vetting_loop())
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
-
-    async def _start(self):
-        self._vetting_task = asyncio.create_task(self._vetting_loop())
-
-    def _close(self):
-        self._shut_down = True
-        self._vetting_task.cancel()
-
-    async def _await_closed(self):
-        pass
-        # await self._vetting_task
+            self._shut_down = True
+            self._vetting_task.cancel()
+            # await self._vetting_task
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
         pass

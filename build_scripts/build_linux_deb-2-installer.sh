@@ -56,7 +56,9 @@ CLI_DEB_BASE="chia-blockchain-cli_$CHIA_INSTALLER_VERSION-1_$PLATFORM"
 mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
 mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
 mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
+mkdir -p "dist/$CLI_DEB_BASE/etc/systemd/system"
 j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" assets/deb/control.j2
+cp assets/systemd/*.service "dist/$CLI_DEB_BASE/etc/systemd/system/"
 cp -r dist/daemon/* "dist/$CLI_DEB_BASE/opt/chia/"
 
 ln -s ../../opt/chia/chia "dist/$CLI_DEB_BASE/usr/bin/chia"
@@ -87,25 +89,34 @@ if [ "$PLATFORM" = "arm64" ]; then
   # @TODO Maybe versions of sub dependencies should be managed by gem lock file.
   # @TODO Once ruby 2.6 can be installed on `apt install ruby`, installing public_suffix below should be removed.
   sudo gem install public_suffix -v 4.0.7
+  # ERROR:  Error installing fpm:
+  #     The last version of dotenv (>= 0) to support your Ruby & RubyGems was 2.8.1. Try installing it with `gem install dotenv -v 2.8.1` and then running the current command again
+  #     dotenv requires Ruby version >= 3.0. The current ruby version is 2.7.0.0.
+  # @TODO Once ruby 3.0 can be installed on `apt install ruby`, installing dotenv below should be removed.
+  sudo gem install dotenv -v 2.8.1
   sudo gem install fpm
   echo USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
   USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
 else
   echo electron-builder build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
   npx electron-builder build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
-    --config.deb.packageName="chia-blockchain"
+    --config.deb.packageName="chia-blockchain" \
+    --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
 fi
 ls -l dist/linux*-unpacked/resources

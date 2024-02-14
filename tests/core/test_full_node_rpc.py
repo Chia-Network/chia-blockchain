@@ -97,19 +97,20 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
 
         assert (await client.get_block_record_by_height(100)) is None
 
-        ph = list(blocks[-1].get_included_reward_coins())[0].puzzle_hash
+        # TODO: Understand why the list(set()) is required to make this work and address it.  This shouldn't be needed.
+        ph = list(set(blocks[-1].get_included_reward_coins()))[0].puzzle_hash
         coins = await client.get_coin_records_by_puzzle_hash(ph)
         print(coins)
         assert len(coins) >= 1
 
-        pid = list(blocks[-1].get_included_reward_coins())[0].parent_coin_info
-        pid_2 = list(blocks[-1].get_included_reward_coins())[1].parent_coin_info
+        pid = list(set(blocks[-1].get_included_reward_coins()))[0].parent_coin_info
+        pid_2 = list(set(blocks[-1].get_included_reward_coins()))[1].parent_coin_info
         coins = await client.get_coin_records_by_parent_ids([pid, pid_2])
         print(coins)
         assert len(coins) == 2
 
-        name = list(blocks[-1].get_included_reward_coins())[0].name()
-        name_2 = list(blocks[-1].get_included_reward_coins())[1].name()
+        name = list(set(blocks[-1].get_included_reward_coins()))[0].name()
+        name_2 = list(set(blocks[-1].get_included_reward_coins()))[1].name()
         coins = await client.get_coin_records_by_names([name, name_2])
         print(coins)
         assert len(coins) == 2
@@ -137,7 +138,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert len(await client.get_coin_records_by_puzzle_hash(ph)) == 2
         assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 0
 
-        coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
+        coin_to_spend = list(set(blocks[-1].get_included_reward_coins()))[0]
 
         spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
 
@@ -163,7 +164,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert (await client.get_coin_record_by_name(coin.name())) is None
 
         # Verify that the include_pending arg to get_mempool_item_by_tx_id works
-        coin_to_spend_pending = list(blocks[-1].get_included_reward_coins())[1]
+        coin_to_spend_pending = list(set(blocks[-1].get_included_reward_coins()))[1]
         ahr = ConditionOpcode.ASSERT_HEIGHT_RELATIVE  # to force pending/potential
         condition_dic = {ahr: [ConditionWithArgs(ahr, [int_to_bytes(100)])]}
         spend_bundle_pending = wallet.generate_signed_transaction(
@@ -236,7 +237,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
 
         block_spends_with_conditions = sorted(block_spends_with_conditions, key=lambda x: str(x.coin_spend))
 
-        coin_spend_with_conditions = block_spends_with_conditions[0]
+        coin_spend_with_conditions = block_spends_with_conditions[1]
 
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb9240000000000000000000000000000000a"),
@@ -274,7 +275,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             ),
         ]
 
-        coin_spend_with_conditions = block_spends_with_conditions[1]
+        coin_spend_with_conditions = block_spends_with_conditions[2]
 
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb9240000000000000000000000000000000b"),
@@ -312,7 +313,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             ),
         ]
 
-        coin_spend_with_conditions = block_spends_with_conditions[2]
+        coin_spend_with_conditions = block_spends_with_conditions[0]
 
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("27ae41e4649b934ca495991b7852b8550000000000000000000000000000000b"),
@@ -358,7 +359,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             state = await client.get_blockchain_state()
             block = await client.get_block(state["peak"].header_hash)
 
-            coin_to_spend = list(block.get_included_reward_coins())[0]
+            coin_to_spend = list(set(block.get_included_reward_coins()))[0]
 
             spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_2, coin_to_spend, memo=memo)
             await client.push_tx(spend_bundle)
@@ -630,6 +631,10 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         # When supplying genesis block, there are no older blocks so `None` should be returned
         assert await get_average_block_time(full_node_api_1.full_node.blockchain, block_records[0], 4608) is None
         assert await get_average_block_time(full_node_api_1.full_node.blockchain, block_records[-1], 4608) is not None
+        # Test that get_aggsig_additional_data() returns correctly
+        assert (
+            full_node_api_1.full_node.constants.AGG_SIG_ME_ADDITIONAL_DATA == await client.get_aggsig_additional_data()
+        )
 
     finally:
         # Checks that the RPC manages to stop the node
@@ -727,7 +732,7 @@ async def test_coin_name_found_in_mempool(one_node, self_hostname):
         # empty mempool
         assert len(await client.get_all_mempool_items()) == 0
 
-        coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
+        coin_to_spend = list(set(blocks[-1].get_included_reward_coins()))[0]
         spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
         await client.push_tx(spend_bundle)
 

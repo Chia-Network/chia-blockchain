@@ -217,7 +217,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
     def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:  # pragma: no cover
         if uncurried_mod == GENESIS_BY_ID_OR_SINGLETON_MOD:
             genesis_id = curried_args.first()
-            return True, [genesis_id.as_atom()]
+            return True, [genesis_id]
         else:
             return False, []
 

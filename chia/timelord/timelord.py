@@ -147,14 +147,6 @@ class Timelord:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        await self._start()
-        try:
-            yield
-        finally:
-            self._close()
-            await self._await_closed()
-
-    async def _start(self) -> None:
         self.lock: asyncio.Lock = asyncio.Lock()
         self.vdf_server = await asyncio.start_server(
             self._handle_client,
@@ -181,6 +173,16 @@ class Timelord:
             else:
                 self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
         log.info(f"Started timelord, listening on port {self.get_vdf_server_port()}")
+        try:
+            yield
+        finally:
+            self._shut_down = True
+            for task in self.process_communication_tasks:
+                task.cancel()
+            if self.main_loop is not None:
+                self.main_loop.cancel()
+            if self.bluebox_pool is not None:
+                self.bluebox_pool.shutdown()
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
@@ -192,18 +194,6 @@ class Timelord:
         if self.vdf_server is not None:
             return uint16(self.vdf_server.sockets[0].getsockname()[1])
         return None
-
-    def _close(self) -> None:
-        self._shut_down = True
-        for task in self.process_communication_tasks:
-            task.cancel()
-        if self.main_loop is not None:
-            self.main_loop.cancel()
-        if self.bluebox_pool is not None:
-            self.bluebox_pool.shutdown()
-
-    async def _await_closed(self) -> None:
-        pass
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
@@ -495,13 +485,13 @@ class Timelord:
                 rc_challenge = self.last_state.get_challenge(Chain.REWARD_CHAIN)
                 if rc_info.challenge != rc_challenge:
                     assert rc_challenge is not None
-                    log.warning(f"SP: Do not have correct challenge {rc_challenge.hex()} has {rc_info.challenge}")
+                    log.warning(f"SP: Do not have correct challenge {rc_challenge.hex()} has {rc_info.challenge.hex()}")
                     # This proof is on an outdated challenge, so don't use it
                     continue
                 iters_from_sub_slot_start = uint64(cc_info.number_of_iterations + self.last_state.get_last_ip())
                 response = timelord_protocol.NewSignagePointVDF(
                     signage_point_index,
-                    dataclasses.replace(cc_info, number_of_iterations=iters_from_sub_slot_start),
+                    cc_info.replace(number_of_iterations=iters_from_sub_slot_start),
                     cc_proof,
                     rc_info,
                     rc_proof,
@@ -594,7 +584,7 @@ class Timelord:
                         assert rc_challenge is not None
                         log.warning(
                             f"Do not have correct challenge {rc_challenge.hex()} "
-                            f"has {rc_info.challenge}, partial hash {block.reward_chain_block.get_hash()}"
+                            f"has {rc_info.challenge.hex()}, partial hash {block.reward_chain_block.get_hash()}"
                         )
                         # This proof is on an outdated challenge, so don't use it
                         continue
@@ -609,7 +599,7 @@ class Timelord:
                         log.warning("Too many blocks, or overflow in new epoch, cannot infuse, discarding")
                         return
 
-                    cc_info = dataclasses.replace(cc_info, number_of_iterations=ip_iters)
+                    cc_info = cc_info.replace(number_of_iterations=ip_iters)
                     response = timelord_protocol.NewInfusionPointVDF(
                         challenge,
                         cc_info,
@@ -765,14 +755,14 @@ class Timelord:
             rc_challenge = self.last_state.get_challenge(Chain.REWARD_CHAIN)
             if rc_vdf.challenge != rc_challenge:
                 assert rc_challenge is not None
-                log.warning(f"Do not have correct challenge {rc_challenge.hex()} has {rc_vdf.challenge}")
+                log.warning(f"Do not have correct challenge {rc_challenge.hex()} has {rc_vdf.challenge.hex()}")
                 # This proof is on an outdated challenge, so don't use it
                 return
             log.debug("Collected end of subslot vdfs.")
             self.iters_finished.add(iter_to_look_for)
             self.last_active_time = time.time()
             iters_from_sub_slot_start = uint64(cc_vdf.number_of_iterations + self.last_state.get_last_ip())
-            cc_vdf = dataclasses.replace(cc_vdf, number_of_iterations=iters_from_sub_slot_start)
+            cc_vdf = cc_vdf.replace(number_of_iterations=iters_from_sub_slot_start)
             if icc_ip_vdf is not None:
                 if self.last_state.peak is not None:
                     total_iters = (
@@ -788,7 +778,7 @@ class Timelord:
                     log.error(f"{self.last_state.subslot_end}")
                     assert False
                 assert iters_from_cb <= self.last_state.sub_slot_iters
-                icc_ip_vdf = dataclasses.replace(icc_ip_vdf, number_of_iterations=iters_from_cb)
+                icc_ip_vdf = icc_ip_vdf.replace(number_of_iterations=iters_from_cb)
 
             icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = (
                 None if icc_ip_vdf is None else InfusedChallengeChainSubSlot(icc_ip_vdf)
