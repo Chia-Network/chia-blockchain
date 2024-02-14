@@ -33,7 +33,8 @@ def mock_file_keyring_functions(monkeypatch: pytest.MonkeyPatch) -> None:
         return DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 
     monkeypatch.setattr("chia.util.file_keyring.FileKeyring.lock_and_reload_if_required", lock_and_reload_if_required)
-    monkeypatch.setattr("chia.cmds.passphrase_funcs.obtain_current_passphrase", obtain_current_passphrase)
+    monkeypatch.setattr("chia.util.file_keyring.FileKeyring.has_content", lambda _: False)
+    monkeypatch.setattr("chia.util.keyring_wrapper.KeyringWrapper.has_cached_master_passphrase", lambda _: True)
     monkeypatch.setattr("chia.util.file_keyring.encrypt_data", encrypt_data)
     monkeypatch.setattr("chia.util.file_keyring.decrypt_data", decrypt_data)
     monkeypatch.setattr("chia.simulator.keyring.INITIAL_KERYING_DATA", "e30K")
