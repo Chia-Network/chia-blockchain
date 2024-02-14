@@ -49,16 +49,17 @@ class WalletPuzzleStore:
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS derivation_index_index on derivation_paths(derivation_index)"
             )
-
-            await conn.execute("CREATE INDEX IF NOT EXISTS ph on derivation_paths(puzzle_hash)")
-
             await conn.execute("CREATE INDEX IF NOT EXISTS pubkey on derivation_paths(pubkey)")
-
+            await conn.execute("CREATE INDEX IF NOT EXISTS ph on derivation_paths(puzzle_hash)")
             await conn.execute("CREATE INDEX IF NOT EXISTS wallet_type on derivation_paths(wallet_type)")
-
+            # Remove an old, misnamed, redundant index on `wallet_type`
+            # See https://github.com/Chia-Network/chia-blockchain/issues/10276
+            await conn.execute("DROP INDEX IF EXISTS used")
             await conn.execute("CREATE INDEX IF NOT EXISTS derivation_paths_wallet_id on derivation_paths(wallet_id)")
-
-            await conn.execute("CREATE INDEX IF NOT EXISTS used on derivation_paths(wallet_type)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS derivation_paths_used_index on derivation_paths(used)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS derivation_paths_hardened_index on derivation_paths(hardened)"
+            )
 
         # the lock is locked by the users of this class
         self.lock = asyncio.Lock()
