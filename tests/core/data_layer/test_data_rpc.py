@@ -2941,7 +2941,6 @@ async def test_pagination_cmds(
         rpc_port = data_layer_service.rpc_server.listen_port
         data_layer = data_layer_service._api.data_layer
         data_rpc_api = DataLayerRpcApi(data_layer)
-        data_store = data_layer.data_store
 
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -3063,10 +3062,16 @@ async def test_pagination_cmds(
             )
             try:
                 keys = await client.get_keys(
-                    store_id=store_id, root_hash=None, page=0, max_page_size=max_page_size,
+                    store_id=store_id,
+                    root_hash=None,
+                    page=0,
+                    max_page_size=max_page_size,
                 )
                 keys_values = await client.get_keys_values(
-                    store_id=store_id, root_hash=None, page=0, max_page_size=max_page_size,
+                    store_id=store_id,
+                    root_hash=None,
+                    page=0,
+                    max_page_size=max_page_size,
                 )
                 kv_diff = await client.get_kv_diff(
                     store_id=store_id,
@@ -3094,13 +3099,13 @@ async def test_pagination_cmds(
                         "atom": None,
                         "hash": "0x3c8ecfd41a1c54820f5ad687a4cbfbad0faa78445cbf31ec4f879ce553216a9d",
                         "key": "0x61616161",
-                        "value": "0x61"
+                        "value": "0x61",
                     },
                     {
                         "atom": None,
                         "hash": "0x5a7edd8e4bc28e32ba2a2514054f3872037a4f6da52c5a662969b6b881beaa3f",
                         "key": "0x6161",
-                        "value": "0x6161"
+                        "value": "0x6161",
                     },
                 ],
                 "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
