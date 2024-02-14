@@ -51,7 +51,9 @@ async def test_managed_raises_usefully_for_invalid_target_count(count: int) -> N
             worker_async_callable=forever_worker,
             target_worker_count=count,
         ):
-            pass
+            # testing that the context manager raises on entry so we should never
+            # cover below
+            pass  # pragma: no cover
 
 
 @pytest.mark.parametrize("count", [1, 2, 10, 1000])
