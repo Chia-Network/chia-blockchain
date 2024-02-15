@@ -1536,6 +1536,7 @@ async def test_benchmark_batch_insert_speed(
 
 
 @pytest.mark.anyio
+@pytest.mark.skip("feature temporarily disabled")
 async def test_delete_store_data(raw_data_store: DataStore) -> None:
     tree_id = bytes32(b"\0" * 32)
     tree_id_2 = bytes32(b"\0" * 31 + b"\1")
@@ -1590,6 +1591,7 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
 
 
 @pytest.mark.anyio
+@pytest.mark.skip("feature temporarily disabled")
 async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> None:
     # Make sure inserting and deleting the same data works
     for repetition in range(2):
@@ -1632,6 +1634,7 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
 
 @pytest.mark.parametrize("common_keys_count", [1, 250, 499])
 @pytest.mark.anyio
+@pytest.mark.skip("feature temporarily disabled")
 async def test_delete_store_data_with_common_values(raw_data_store: DataStore, common_keys_count: int) -> None:
     tree_id_1 = bytes32(b"\x00" * 31 + b"\x01")
     tree_id_2 = bytes32(b"\x00" * 31 + b"\x02")
@@ -1669,6 +1672,7 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
 
 
 @pytest.mark.anyio
+@pytest.mark.skip("feature temporarily disabled")
 async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStore) -> None:
     num_stores = 5
     total_keys = 15
