@@ -3159,14 +3159,14 @@ async def test_pagination_cmds(
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
-async def test_unpublished_batch_update(
+async def test_unsubmitted_batch_update(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
-    # Number of farmed blocks to check our batch update was not published.
-    NUM_BLOCKS_WITHOUT_PUBLISH = 10
+    # Number of farmed blocks to check our batch update was not submitted.
+    NUM_BLOCKS_WITHOUT_SUBMIT = 10
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
@@ -3185,7 +3185,7 @@ async def test_unpublished_batch_update(
             assert res == {}
 
             await full_node_api.farm_blocks_to_puzzlehash(
-                count=NUM_BLOCKS_WITHOUT_PUBLISH, guarantee_transaction_blocks=True
+                count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
             )
             keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
             assert keys_values == {"keys_values": []}
@@ -3219,7 +3219,7 @@ async def test_unpublished_batch_update(
         assert res == {}
 
         await full_node_api.farm_blocks_to_puzzlehash(
-            count=NUM_BLOCKS_WITHOUT_PUBLISH, guarantee_transaction_blocks=True
+            count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
         )
         root = await data_layer.data_store.get_tree_root(tree_id=store_id)
         assert root == old_root
@@ -3233,7 +3233,7 @@ async def test_unpublished_batch_update(
         assert res == {}
 
         await full_node_api.farm_blocks_to_puzzlehash(
-            count=NUM_BLOCKS_WITHOUT_PUBLISH, guarantee_transaction_blocks=True
+            count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
         )
 
         await data_rpc_api.clear_pending_roots({"store_id": store_id.hex()})
@@ -3253,7 +3253,7 @@ async def test_unpublished_batch_update(
         assert res == {}
 
         await full_node_api.farm_blocks_to_puzzlehash(
-            count=NUM_BLOCKS_WITHOUT_PUBLISH, guarantee_transaction_blocks=True
+            count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
         )
         keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
         assert keys_values == prev_keys_values
@@ -3262,7 +3262,7 @@ async def test_unpublished_batch_update(
         assert pending_root is not None
         assert pending_root.status == Status.PENDING_BATCH
 
-        res = await data_rpc_api.publish_pending_root({"id": store_id.hex()})
+        res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
         pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
         assert pending_root is not None
         assert pending_root.status == Status.PENDING
@@ -3275,8 +3275,8 @@ async def test_unpublished_batch_update(
             res = await data_rpc_api.batch_update(
                 {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
             )
-        with pytest.raises(Exception, match="Pending root is already published"):
-            res = await data_rpc_api.publish_pending_root({"id": store_id.hex()})
+        with pytest.raises(Exception, match="Pending root is already submitted"):
+            res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
 
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
 
