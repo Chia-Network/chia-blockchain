@@ -131,12 +131,16 @@ class FullNodeAPI:
         """
         # this semaphore limits the number of tasks that can call new_peak() at
         # the same time, since it can be expensive
+
+        # TODO: relocate class to avoid this
+        from chia.full_node.full_node import NewPeakWork
+
+        work = NewPeakWork(request=request, peer=peer)
+
         try:
-            async with self.full_node.new_peak_sem.acquire():
-                await self.full_node.new_peak(request, peer)
-        except LimitedSemaphoreFullError:
-            self.log.debug("Ignoring NewPeak, limited semaphore full: %s %s", peer.get_peer_logging(), request)
-            return None
+            self.full_node.new_peak_queue.put_nowait(work)
+        except asyncio.QueueFull:
+            self.log.debug("Ignoring NewPeak, queue full: %s %s", peer.get_peer_logging(), request)
 
         return None
 
