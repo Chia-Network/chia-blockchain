@@ -1355,7 +1355,7 @@ class DataStore:
             old_root = await self.get_tree_root(tree_id)
             pending_root = await self.get_pending_root(tree_id=tree_id)
             if pending_root is None:
-                intermediate_root: Optional[Root] = old_root
+                latest_local_root: Optional[Root] = old_root
             else:
                 if pending_root.status == Status.PENDING_BATCH:
                     # We have an unfinished batch, continue the current batch on top of it.
@@ -1363,13 +1363,13 @@ class DataStore:
                         raise Exception("Internal error")
                     await self.change_root_status(pending_root, Status.COMMITTED)
                     await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
-                    intermediate_root = pending_root
+                    latest_local_root = pending_root
                 else:
                     raise Exception("Internal error")
 
-            assert intermediate_root is not None
-            root_hash = intermediate_root.node_hash
-            if intermediate_root.node_hash is None:
+            assert latest_local_root is not None
+            root_hash = latest_local_root.node_hash
+            if latest_local_root.node_hash is None:
                 hint_keys_values = {}
             else:
                 kv_compressed = await self.get_keys_values_compressed(tree_id, root_hash=root_hash)
@@ -1383,9 +1383,9 @@ class DataStore:
                     side = change.get("side", None)
                     if reference_node_hash is None and side is None:
                         insert_result = await self.autoinsert(
-                            key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
+                            key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=latest_local_root
                         )
-                        intermediate_root = insert_result.root
+                        latest_local_root = insert_result.root
                     else:
                         if reference_node_hash is None or side is None:
                             raise Exception("Provide both reference_node_hash and side or neither.")
@@ -1398,21 +1398,21 @@ class DataStore:
                             hint_keys_values,
                             True,
                             Status.COMMITTED,
-                            root=intermediate_root,
+                            root=latest_local_root,
                         )
-                        intermediate_root = insert_result.root
+                        latest_local_root = insert_result.root
                 elif change["action"] == "delete":
                     key = change["key"]
-                    intermediate_root = await self.delete(
-                        key, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
+                    latest_local_root = await self.delete(
+                        key, tree_id, hint_keys_values, True, Status.COMMITTED, root=latest_local_root
                     )
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
                     insert_result = await self.upsert(
-                        key, new_value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
+                        key, new_value, tree_id, hint_keys_values, True, Status.COMMITTED, root=latest_local_root
                     )
-                    intermediate_root = insert_result.root
+                    latest_local_root = insert_result.root
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
