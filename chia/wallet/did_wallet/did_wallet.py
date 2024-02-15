@@ -1410,6 +1410,9 @@ class DIDWallet:
         return True
 
     async def update_metadata(self, metadata: Dict[str, str]) -> bool:
+        # validate metadata
+        if not all(isinstance(k, str) and isinstance(v, str) for k, v in metadata.items()):
+            raise ValueError("Metadata key value pairs must be strings.")
         did_info = DIDInfo(
             origin_coin=self.did_info.origin_coin,
             backup_ids=self.did_info.backup_ids,
