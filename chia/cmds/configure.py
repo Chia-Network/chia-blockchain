@@ -113,12 +113,15 @@ def configure(
                     print("Testnet11 constants missing. Adding to config...")
                     initial_config_str: str = initial_config_file("config.yaml")
                     initial_config = yaml.safe_load(initial_config_str)
-                    config["network_overrides"]["constants"]["testnet11"] = initial_config["network_overrides"][
-                        "constants"
-                    ]["testnet11"]
-                    config["network_overrides"]["config"]["testnet11"] = initial_config["network_overrides"]["config"][
-                        "testnet11"
-                    ]
+                    if "testnet11" not in config["network_overrides"]["constants"]:
+                        config["network_overrides"]["constants"]["testnet11"] = initial_config["network_overrides"][
+                            "constants"
+                        ]["testnet11"]
+
+                    if "testnet11" not in config["network_overrides"]["config"]:
+                        config["network_overrides"]["config"]["testnet11"] = initial_config["network_overrides"]["config"][
+                            "testnet11"
+                        ]
 
                 testnet_port = "58444"
                 testnet_introducer = "introducer-testnet11.chia.net"
