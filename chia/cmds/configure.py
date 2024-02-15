@@ -8,12 +8,12 @@ import yaml
 
 from chia.server.outbound_message import NodeType
 from chia.util.config import (
+    initial_config_file,
     load_defaults_for_missing_services,
     lock_and_load_config,
     save_config,
     set_peer_info,
     str2bool,
-    initial_config_file,
 )
 
 
