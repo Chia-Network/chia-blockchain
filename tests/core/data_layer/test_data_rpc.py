@@ -3208,9 +3208,24 @@ async def test_unpublished_batch_update(
         for key, value in to_insert:
             assert kv_dict["0x" + key.hex()] == "0x" + value.hex()
         prev_keys_values = keys_values
+        old_root = await data_layer.data_store.get_tree_root(tree_id=store_id)
 
         key = b"e"
         value = b"\x00\x05"
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        res = await data_rpc_api.batch_update(
+            {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
+        )
+        assert res == {}
+
+        await full_node_api.farm_blocks_to_puzzlehash(
+            count=NUM_BLOCKS_WITHOUT_PUBLISH, guarantee_transaction_blocks=True
+        )
+        root = await data_layer.data_store.get_tree_root(tree_id=store_id)
+        assert root == old_root
+
+        key = b"f"
+        value = b"\x00\x06"
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.batch_update(
             {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
@@ -3224,9 +3239,11 @@ async def test_unpublished_batch_update(
         await data_rpc_api.clear_pending_roots({"store_id": store_id.hex()})
         pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
         assert pending_root is None
+        root = await data_layer.data_store.get_tree_root(tree_id=store_id)
+        assert root == old_root
 
-        key = b"f"
-        value = b"\x00\x06"
+        key = b"g"
+        value = b"\x00\x07"
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         to_insert.append((key, value))
 
@@ -3251,8 +3268,8 @@ async def test_unpublished_batch_update(
         assert pending_root.status == Status.PENDING
         update_tx_rec1 = res["tx_id"]
 
-        key = b"g"
-        value = b"\x00\x07"
+        key = b"h"
+        value = b"\x00\x08"
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         with pytest.raises(Exception, match="Already have a pending root waiting for confirmation"):
             res = await data_rpc_api.batch_update(
