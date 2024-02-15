@@ -182,6 +182,9 @@ async def async_combine(
         if is_xch and total_amount - final_fee <= 0:
             print("Total amount is less than 0 after fee, exiting.")
             return
+        if final_fee < 1:
+            print("You are about to submit a transaction without fees.")
+            cli_confirm("Are you sure? (y/n): ")
         target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, False))
         additions = [{"amount": (total_amount - final_fee) if is_xch else total_amount, "puzzle_hash": target_ph}]
         transaction: TransactionRecord = await wallet_client.send_transaction_multi(
