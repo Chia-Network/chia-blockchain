@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
+import yaml
 
 from chia.server.outbound_message import NodeType
 from chia.util.config import (
@@ -12,6 +13,7 @@ from chia.util.config import (
     save_config,
     set_peer_info,
     str2bool,
+    initial_config_file,
 )
 
 
@@ -103,6 +105,21 @@ def configure(
         if testnet:
             if testnet == "true" or testnet == "t":
                 print("Setting Testnet")
+                # check if network_overrides.constants.testnet11 exists
+                if (
+                    "testnet11" not in config["network_overrides"]["constants"]
+                    or "testnet11" not in config["network_overrides"]["config"]
+                ):
+                    print("Testnet11 constants missing. Adding to config...")
+                    initial_config_str: str = initial_config_file("config.yaml")
+                    initial_config = yaml.safe_load(initial_config_str)
+                    config["network_overrides"]["constants"]["testnet11"] = initial_config["network_overrides"][
+                        "constants"
+                    ]["testnet11"]
+                    config["network_overrides"]["config"]["testnet11"] = initial_config["network_overrides"]["config"][
+                        "testnet11"
+                    ]
+
                 testnet_port = "58444"
                 testnet_introducer = "introducer-testnet11.chia.net"
                 testnet_dns_introducer = "dns-introducer-testnet11.chia.net"
