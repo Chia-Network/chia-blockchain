@@ -4,14 +4,19 @@ import itertools
 import random
 from hashlib import sha256
 from itertools import permutations
-from typing import List
+from random import Random
+from typing import List, Optional, Tuple
 
 import pytest
-from chia_rs import compute_merkle_set_root
+from chia_rs import Coin, compute_merkle_set_root
 
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.hash import std_hash
+from chia.util.ints import uint64
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed
+from chia.util.misc import to_batches
+from chia.wallet.util.wallet_sync_utils import validate_additions, validate_removals
 
 
 @pytest.mark.anyio
@@ -324,3 +329,44 @@ async def test_merkle_set_random_regression() -> None:
             python_root = merkle_set.get_root()
             rust_root = bytes32(compute_merkle_set_root(values))
             assert rust_root == python_root
+
+
+def make_test_coins(n: int, rng: Random) -> List[Coin]:
+    return [Coin(bytes32.random(rng), bytes32.random(rng), uint64(rng.randint(0, 10000000))) for i in range(n)]
+
+
+@pytest.mark.parametrize("num_coins", [0, 1, 2, 100, 1337])
+def test_validate_removals_full_list(num_coins: int, seeded_random: Random) -> None:
+    # when we have all the removals, we don't need to include a proof, because
+    # the root can be computed by all the removals
+    coins = make_test_coins(num_coins, seeded_random)
+
+    removals_merkle_set = MerkleSet()
+    coin_map: List[Tuple[bytes32, Optional[Coin]]] = []
+    for coin in coins:
+        removals_merkle_set.add_already_hashed(coin.name())
+        coin_map.append((coin.name(), coin))
+    removals_root = removals_merkle_set.get_root()
+
+    assert validate_removals(coin_map, None, removals_root) is True
+
+
+@pytest.mark.parametrize("num_coins", [0, 1, 2, 100, 1337])
+@pytest.mark.parametrize("batch_size", [1, 2, 10])
+def test_validate_additions_full_list(num_coins: int, batch_size: int, seeded_random: Random) -> None:
+    # when we have all the removals, we don't need to include a proof, because
+    # the root can be computed by all the removals
+    coins = make_test_coins(num_coins, seeded_random)
+
+    additions_merkle_set = MerkleSet()
+    additions: List[Tuple[bytes32, List[Coin]]] = []
+    for coin_batch in to_batches(coins, batch_size):
+        puzzle_hash = bytes32.random(seeded_random)
+        additions.append((puzzle_hash, coin_batch.entries))
+        additions_merkle_set.add_already_hashed(puzzle_hash)
+        additions_merkle_set.add_already_hashed(
+            std_hash(b"".join(sorted([coin.name() for coin in coin_batch.entries], reverse=True)))
+        )
+    additions_root = additions_merkle_set.get_root()
+
+    assert validate_additions(additions, None, additions_root) is True

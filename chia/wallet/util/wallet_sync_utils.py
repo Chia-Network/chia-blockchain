@@ -198,7 +198,6 @@ async def request_and_validate_removals(
     )
     if removals_res is None or isinstance(removals_res, RejectRemovalsRequest):
         return False
-    assert removals_res.proofs is not None
     return validate_removals(removals_res.coins, removals_res.proofs, removals_root)
 
 
