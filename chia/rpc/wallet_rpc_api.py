@@ -483,14 +483,31 @@ class WalletRpcApi:
             return False, False
 
         config: Dict[str, Any] = load_config(new_root, "config.yaml")
-        farmer_target = config["farmer"].get("xch_target_address")
-        pool_target = config["pool"].get("xch_target_address")
-        address_to_check: List[bytes32] = [decode_puzzle_hash(farmer_target), decode_puzzle_hash(pool_target)]
+        farmer_target = config["farmer"].get("xch_target_address", "")
+        pool_target = config["pool"].get("xch_target_address", "")
+        address_to_check: List[bytes32] = []
+
+        try:
+            farmer_decoded = decode_puzzle_hash(farmer_target)
+            address_to_check.append(farmer_decoded)
+        except ValueError:
+            farmer_decoded = None
+
+        try:
+            pool_decoded = decode_puzzle_hash(pool_target)
+            address_to_check.append(pool_decoded)
+        except ValueError:
+            pool_decoded = None
 
         found_addresses: Set[bytes32] = match_address_to_sk(sk, address_to_check, max_ph_to_search)
+        found_farmer = False
+        found_pool = False
 
-        found_farmer = address_to_check[0] in found_addresses
-        found_pool = address_to_check[1] in found_addresses
+        if farmer_decoded is not None:
+            found_farmer = farmer_decoded in found_addresses
+
+        if pool_decoded is not None:
+            found_pool = pool_decoded in found_addresses
 
         return found_farmer, found_pool
 
