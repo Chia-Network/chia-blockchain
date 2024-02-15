@@ -81,11 +81,6 @@ class ConversionError(StreamableError):
         )
 
 
-unhashable_types = [
-    "Program",
-    "SerializedProgram",
-]
-
 _T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
 ParseFunctionType = Callable[[BinaryIO], object]
@@ -183,20 +178,6 @@ def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
         raise ConversionError(item, f_type, e) from e
 
 
-def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:
-    if isinstance(item, f_type):
-        return item
-    if not isinstance(item, bytes):
-        item = convert_hex_string(item)
-    try:
-        if hasattr(f_type, "from_bytes_unchecked"):
-            return f_type.from_bytes_unchecked(item)
-        else:
-            return f_type.from_bytes(item)
-    except Exception as e:
-        raise ConversionError(item, f_type, e) from e
-
-
 def convert_primitive(f_type: Type[Any], item: Any) -> Any:
     if isinstance(item, f_type):
         return item
@@ -242,9 +223,6 @@ def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
         convert_inner_func = function_to_convert_one_item(inner_type)
         # Ignoring for now as the proper solution isn't obvious
         return lambda items: convert_list(convert_inner_func, items)  # type: ignore[arg-type]
-    elif f_type.__name__ in unhashable_types:
-        # Type is unhashable (bls type), so cast from hex string
-        return lambda item: convert_unhashable_type(f_type, item)
     elif hasattr(f_type, "from_json_dict"):
         return lambda item: f_type.from_json_dict(item)
     elif issubclass(f_type, bytes):
@@ -292,8 +270,7 @@ def function_to_post_init_process_one_item(f_type: Type[object]) -> ConvertFunct
 
 def recurse_jsonify(d: Any) -> Any:
     """
-    Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
-    strings.
+    Makes bytes objects into strings with 0x, and makes large ints into strings.
     """
     if dataclasses.is_dataclass(d):
         new_dict = {}
@@ -313,7 +290,7 @@ def recurse_jsonify(d: Any) -> Any:
             new_dict[name] = recurse_jsonify(val)
         return new_dict
 
-    elif type(d).__name__ in unhashable_types or issubclass(type(d), bytes):
+    elif issubclass(type(d), bytes):
         return f"0x{bytes(d).hex()}"
     elif isinstance(d, Enum):
         return d.name
