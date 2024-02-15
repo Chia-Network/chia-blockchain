@@ -3180,7 +3180,7 @@ async def test_unpublished_batch_update(
             changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
 
             res = await data_rpc_api.batch_update(
-                {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
+                {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
             )
             assert res == {}
 
@@ -3214,7 +3214,7 @@ async def test_unpublished_batch_update(
         value = b"\x00\x05"
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.batch_update(
-            {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
+            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
         )
         assert res == {}
 
@@ -3228,7 +3228,7 @@ async def test_unpublished_batch_update(
         value = b"\x00\x06"
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.batch_update(
-            {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
+            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
         )
         assert res == {}
 
@@ -3248,7 +3248,7 @@ async def test_unpublished_batch_update(
         to_insert.append((key, value))
 
         res = await data_rpc_api.batch_update(
-            {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
+            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
         )
         assert res == {}
 
@@ -3273,7 +3273,7 @@ async def test_unpublished_batch_update(
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         with pytest.raises(Exception, match="Already have a pending root waiting for confirmation"):
             res = await data_rpc_api.batch_update(
-                {"id": store_id.hex(), "changelist": changelist, "publish_on_chain": False}
+                {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
             )
         with pytest.raises(Exception, match="Pending root is already published"):
             res = await data_rpc_api.publish_pending_root({"id": store_id.hex()})

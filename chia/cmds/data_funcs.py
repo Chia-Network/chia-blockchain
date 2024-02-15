@@ -70,7 +70,7 @@ async def update_data_store_cmd(
     changelist: List[Dict[str, str]],
     fee: Optional[str],
     fingerprint: Optional[int],
-    publish_on_chain: bool,
+    submit_on_chain: bool,
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
@@ -79,12 +79,12 @@ async def update_data_store_cmd(
             store_id=store_id_bytes,
             changelist=changelist,
             fee=final_fee,
-            publish_on_chain=publish_on_chain,
+            submit_on_chain=submit_on_chain,
         )
         print(json.dumps(res, indent=4, sort_keys=True))
 
 
-async def publish_pending_root_cmd(
+async def submit_pending_root_cmd(
     rpc_port: Optional[int],
     store_id: str,
     fee: Optional[str],
@@ -93,7 +93,7 @@ async def publish_pending_root_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.publish_pending_root(
+        res = await client.submit_pending_root(
             store_id=store_id_bytes,
             fee=final_fee,
         )

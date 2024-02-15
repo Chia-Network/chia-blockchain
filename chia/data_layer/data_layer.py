@@ -250,17 +250,17 @@ class DataLayer:
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
         fee: uint64,
-        publish_on_chain: bool = True,
+        submit_on_chain: bool = True,
     ) -> Optional[TransactionRecord]:
-        status = Status.PENDING if publish_on_chain else Status.PENDING_BATCH
+        status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
         await self.batch_insert(tree_id=tree_id, changelist=changelist, status=status)
 
-        if publish_on_chain:
+        if submit_on_chain:
             return await self.publish_update(tree_id=tree_id, fee=fee)
         else:
             return None
 
-    async def publish_pending_root(
+    async def submit_pending_root(
         self,
         tree_id: bytes32,
         fee: uint64,
@@ -271,7 +271,7 @@ class DataLayer:
         if pending_root is None:
             raise Exception("Latest root is already confirmed.")
         if pending_root.status == Status.PENDING:
-            raise Exception("Pending root is already published.")
+            raise Exception("Pending root is already submitted.")
 
         await self.data_store.change_root_status(pending_root, Status.PENDING)
         return await self.publish_update(tree_id, fee)
