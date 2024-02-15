@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 
@@ -415,11 +415,15 @@ class WalletTransactionStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))).close()
 
-    async def delete_unconfirmed_transactions(self, wallet_id: int):
+    async def delete_unconfirmed_transactions(self, wallet_id: int, tx_ids: Optional[Set[bytes32]] = None):
+        tx_id_qualifier = ""
+        if tx_ids is not None:
+            tx_id_qualifier = f"AND txid IN ({','.join(tx_ids)})"
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (
                 await conn.execute(
-                    "DELETE FROM transaction_record WHERE confirmed=0 AND wallet_id=? AND type not in (?,?)",
+                    f"DELETE FROM transaction_record WHERE confirmed=0 AND wallet_id=? AND type not in (?,?)"
+                    f" {tx_id_qualifier}",
                     (
                         wallet_id,
                         TransactionType.INCOMING_CLAWBACK_SEND.value,

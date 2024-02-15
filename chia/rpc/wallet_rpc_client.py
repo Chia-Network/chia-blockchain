@@ -274,7 +274,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("spend_clawback_coins", request)
         return response
 
-    async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
+    async def delete_unconfirmed_transactions(self, wallet_id: int, tx_ids: Optional[List[bytes32]] = None) -> None:
         await self.fetch("delete_unconfirmed_transactions", {"wallet_id": wallet_id})
 
     async def get_current_derivation_index(self) -> str:
