@@ -119,9 +119,9 @@ def configure(
                         ]["testnet11"]
 
                     if "testnet11" not in config["network_overrides"]["config"]:
-                        config["network_overrides"]["config"]["testnet11"] = initial_config["network_overrides"]["config"][
-                            "testnet11"
-                        ]
+                        config["network_overrides"]["config"]["testnet11"] = initial_config["network_overrides"][
+                            "config"
+                        ]["testnet11"]
 
                 testnet_port = "58444"
                 testnet_introducer = "introducer-testnet11.chia.net"
