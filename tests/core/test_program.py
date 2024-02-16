@@ -34,7 +34,7 @@ def test_serialized_program_to() -> None:
         Program.to([1, 2, 3]),
         SerializedProgram.to([1, 2, 3]),
         b"123",
-        binutils.assemble(prg),  # type: ignore[no-untyped-call]
+        binutils.assemble(prg),
         [b"1", b"2", b"3"],
         (b"1", (b"2", b"3")),
         None,

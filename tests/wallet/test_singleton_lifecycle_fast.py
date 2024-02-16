@@ -32,7 +32,7 @@ SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 P2_SINGLETON_MOD_HASH = P2_SINGLETON_MOD.get_tree_hash()
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)
-ANYONE_CAN_SPEND_WITH_PADDING_PUZZLE_HASH = Program.to(binutils.assemble("(a (q . 1) 3)")).get_tree_hash()  # type: ignore[no-untyped-call] # noqa: E501
+ANYONE_CAN_SPEND_WITH_PADDING_PUZZLE_HASH = Program.to(binutils.assemble("(a (q . 1) 3)")).get_tree_hash()
 
 POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
@@ -273,7 +273,7 @@ def adaptor_for_singleton_inner_puzzle(puzzle: Program) -> Program:
     puzzle to work as a singleton inner puzzle.
     """
     # this is pretty slow and lame
-    program = binutils.assemble("(a (q . %s) 3)" % binutils.disassemble(puzzle))  # type: ignore[no-untyped-call]
+    program = binutils.assemble("(a (q . %s) 3)" % binutils.disassemble(puzzle))
     # TODO: Remove cast when we improve typing
     return cast(Program, Program.to(program))
 
@@ -299,9 +299,9 @@ def launcher_conditions_and_spend_bundle(
     )
     expected_conditions = []
     clsp = f"(0x{ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.hex()} 0x{expected_announcement.msg_calc})"
-    expected_conditions.append(Program.to(binutils.assemble(clsp)))  # type: ignore[no-untyped-call]
+    expected_conditions.append(Program.to(binutils.assemble(clsp)))
     clsp = f"(0x{ConditionOpcode.CREATE_COIN.hex()} 0x{launcher_puzzle_hash} {launcher_amount})"
-    expected_conditions.append(Program.to(binutils.assemble(clsp)))  # type: ignore[no-untyped-call]
+    expected_conditions.append(Program.to(binutils.assemble(clsp)))
     solution = solve_puzzle(
         puzzle_db,
         launcher_puzzle,

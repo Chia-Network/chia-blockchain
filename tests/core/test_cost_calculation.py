@@ -146,7 +146,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
         binutils.assemble(
             f"(q ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa {disassembly} 300"
             f"  (() (q . (({unknown_opcode} '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
-        ).as_bin()  # type: ignore[no-untyped-call]
+        ).as_bin()
     )
     generator = BlockGenerator(program, [], [])
     npc_result: NPCResult = get_name_puzzle_conditions(
@@ -183,9 +183,7 @@ async def test_clvm_mempool_mode(softfork_height: int) -> None:
     # if-condition, that depends on executing an unknown operator
     # ("0xfe"). In mempool mode, this should fail, but in non-mempool
     # mode, the unknown operator should be treated as if it returns ().
-    program = SerializedProgram.from_bytes(
-        binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin()  # type: ignore[no-untyped-call]
-    )
+    program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
     generator = BlockGenerator(program, [], [])
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator,
@@ -236,9 +234,7 @@ async def test_clvm_max_cost(softfork_height: int) -> None:
     # mode, the unknown operator should be treated as if it returns ().
     # the CLVM program has a cost of 391969
     program = SerializedProgram.from_bytes(
-        binutils.assemble(
-            f"(i (softfork (q . 10000000)) (q . ()) {disassembly})"
-        ).as_bin()  # type: ignore[no-untyped-call]
+        binutils.assemble(f"(i (softfork (q . 10000000)) (q . ()) {disassembly})").as_bin()
     )
 
     # ensure we fail if the program exceeds the cost
@@ -273,7 +269,7 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner) -> None:
     conditions = binutils.assemble(
         "((51 0x699eca24f2b6f4b25b16f7a418d0dc4fc5fce3b9145aecdda184158927738e3e 10)"
         " (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))"
-    )  # type: ignore[no-untyped-call]
+    )
     solution_program = SerializedProgram.from_bytes(
         bytes(p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions))
     )
