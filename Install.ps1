@@ -103,7 +103,20 @@ if ($openSSLVersion -lt 269488367)
 if ($extras.length -gt 0)
 {
     $extras_cli = $extras -join ","
-    $pip_parameters += ".[$extras_cli]"
+    $extras_cli = "[$extras_cli]"
+}
+else
+{
+    $extras_cli = ""
+}
+
+if ($editable)
+{
+    $pip_parameters += ".$extras_cli"
+}
+else
+{
+    $pip_parameters += "chia-blockchain$extras_cli @ ."
 }
 
 py -$pythonVersion -m venv venv
