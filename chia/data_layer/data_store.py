@@ -1310,7 +1310,6 @@ class DataStore:
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def clean_node_table(self, writer: aiosqlite.Connection) -> None:
-        return
         await writer.execute(
             """
             WITH RECURSIVE pending_nodes AS (
@@ -1414,7 +1413,7 @@ class DataStore:
                     f"Expected: {old_root.generation + 1}. Got: {new_root.generation}"
                 )
 
-            await self.clean_node_table(writer)
+            # await self.clean_node_table(writer)
             return root.node_hash
 
     async def _get_one_ancestor(
@@ -1713,7 +1712,6 @@ class DataStore:
                 )
 
     async def delete_store_data(self, tree_id: bytes32) -> None:
-        return
         async with self.db_wrapper.writer() as writer:
             await self.clean_node_table(writer)
             cursor = await writer.execute(
