@@ -108,9 +108,9 @@ if ($extras.length -gt 0)
 
 py -$pythonVersion -m venv venv
 
-venv\scripts\python -m pip install --upgrade pip setuptools wheel
-venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-& venv\scripts\pip install @pip_parameters --extra-index-url https://pypi.chia.net/simple/
+venv\scripts\python -m pip install --upgrade pip setuptools wheel uv
+venv\scripts\uv pip install --index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
+& venv\scripts\uv pip install @pip_parameters --extra-index-url https://pypi.chia.net/simple/
 
 if ($p)
 {
