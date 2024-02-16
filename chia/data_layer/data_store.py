@@ -1711,6 +1711,11 @@ class DataStore:
                     },
                 )
 
+    async def delete_store_tables(self, tree_id: bytes32) -> None:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute("DELETE FROM ancestors WHERE tree_id == ?", (tree_id,))
+            await writer.execute("DELETE FROM root WHERE tree_id == ?", (tree_id,))
+
     async def delete_store_data(self, tree_id: bytes32) -> None:
         async with self.db_wrapper.writer() as writer:
             await self.clean_node_table(writer)
