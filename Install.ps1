@@ -110,7 +110,7 @@ else
     $extras_cli = ""
 }
 
-if ($editable -ne "")
+if (-not $i)
 {
     $pip_parameters += ".$extras_cli"
 }
