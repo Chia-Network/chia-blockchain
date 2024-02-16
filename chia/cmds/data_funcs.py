@@ -89,15 +89,19 @@ async def submit_pending_root_cmd(
     store_id: str,
     fee: Optional[str],
     fingerprint: Optional[int],
-) -> None:
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     store_id_bytes = bytes32.from_hexstr(store_id)
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
-    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+    res = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
         res = await client.submit_pending_root(
             store_id=store_id_bytes,
             fee=final_fee,
         )
         print(json.dumps(res, indent=4, sort_keys=True))
+
+    return res
 
 
 async def get_keys_cmd(

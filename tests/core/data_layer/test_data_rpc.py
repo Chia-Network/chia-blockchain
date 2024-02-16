@@ -23,6 +23,7 @@ from chia.cmds.data_funcs import (
     get_keys_values_cmd,
     get_kv_diff_cmd,
     get_proof_cmd,
+    submit_pending_root_cmd,
     verify_proof_cmd,
     wallet_log_in_cmd,
 )
@@ -3158,17 +3159,25 @@ async def test_pagination_cmds(
 
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
 @pytest.mark.anyio
 async def test_unsubmitted_batch_update(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    layer: InterfaceLayer,
+    bt: BlockTools,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
     # Number of farmed blocks to check our batch update was not submitted.
     NUM_BLOCKS_WITHOUT_SUBMIT = 10
-    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+    async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
+        rpc_port = data_layer_service.rpc_server.listen_port
+        data_layer = data_layer_service._api.data_layer
         data_rpc_api = DataLayerRpcApi(data_layer)
+
         res = await data_rpc_api.create_data_store({})
         assert res is not None
 
@@ -3262,11 +3271,69 @@ async def test_unsubmitted_batch_update(
         assert pending_root is not None
         assert pending_root.status == Status.PENDING_BATCH
 
-        res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
+        # submit pending root
+        if layer == InterfaceLayer.direct:
+            res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
+            update_tx_rec1 = res["tx_id"]
+        elif layer == InterfaceLayer.funcs:
+            res = await submit_pending_root_cmd(
+                store_id="0x" + store_id.hex(),
+                fee=None,
+                fingerprint=None,
+                rpc_port=rpc_port,
+                root_path=bt.root_path,
+            )
+            update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
+        elif layer == InterfaceLayer.cli:
+            args: List[str] = [
+                sys.executable,
+                "-m",
+                "chia",
+                "data",
+                "submit_pending_root",
+                "--id",
+                store_id.hex(),
+                "--data-rpc-port",
+                str(rpc_port),
+            ]
+            process = await asyncio.create_subprocess_exec(
+                *args,
+                env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await process.wait()
+            assert process.stdout is not None
+            assert process.stderr is not None
+            stdout = await process.stdout.read()
+            res = json.loads(stdout)
+            stderr = await process.stderr.read()
+            assert process.returncode == 0
+            if sys.version_info >= (3, 10, 6):
+                assert stderr == b""
+            else:  # pragma: no cover
+                # https://github.com/python/cpython/issues/92841
+                assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+            update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
+        elif layer == InterfaceLayer.client:
+            client = await DataLayerRpcClient.create(
+                self_hostname=self_hostname,
+                port=rpc_port,
+                root_path=bt.root_path,
+                net_config=bt.config,
+            )
+            try:
+                res = await client.submit_pending_root(store_id=store_id, fee=None)
+                update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
+            finally:
+                client.close()
+                await client.await_closed()
+        else:  # pragma: no cover
+            assert False, "unhandled parametrization"
+
         pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
         assert pending_root is not None
         assert pending_root.status == Status.PENDING
-        update_tx_rec1 = res["tx_id"]
 
         key = b"h"
         value = b"\x00\x08"
