@@ -3174,6 +3174,7 @@ async def test_unsubmitted_batch_update(
     # Number of farmed blocks to check our batch update was not submitted.
     NUM_BLOCKS_WITHOUT_SUBMIT = 10
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
+        assert data_layer_service.rpc_server is not None
         rpc_port = data_layer_service.rpc_server.listen_port
         data_layer = data_layer_service._api.data_layer
         data_rpc_api = DataLayerRpcApi(data_layer)
