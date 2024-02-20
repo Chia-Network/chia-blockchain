@@ -118,6 +118,11 @@ jobs:
           matrix: arm
         - name: Intel
           matrix: intel
+        exclude:
+          - distribution:
+              type: arch
+            arch:
+              matrix: arm
 
     steps:
     - name: Prepare Amazon Linux
