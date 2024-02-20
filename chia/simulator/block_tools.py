@@ -602,6 +602,7 @@ class BlockTools:
         dummy_block_references: bool = False,
         include_transactions: bool = False,
         skip_overflow: bool = False,
+        min_signage_point: uint64 = 0,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -732,6 +733,10 @@ class BlockTools:
                         if signage_point_index < latest_block.signage_point_index:
                             # Ignore this signage_point because it's in the past
                             continue
+
+                    if signage_point_index <= min_signage_point:
+                        # start farming blocks after min_signage_point
+                        continue
 
                     signage_point: SignagePoint = get_signage_point(
                         constants,
