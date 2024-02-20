@@ -255,7 +255,7 @@ async def test_cat_spend(self_hostname: str, two_wallet_nodes: OldSimulatorsAndW
     assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
     cat_hash = await cat_wallet.get_new_inner_hash()
     tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
 
     await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records)
 
@@ -330,7 +330,7 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
     tx_records = await cat_wallet.generate_signed_transaction(
         [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG.override(reuse_puzhash=True), fee=uint64(1)
     )
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
     for tx_record in tx_records:
         if tx_record.wallet_id is cat_wallet.id():
             assert tx_record.to_puzzle_hash == cat_2_hash
@@ -359,7 +359,7 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
 
     cat_hash = await cat_wallet.get_new_inner_hash()
     tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
 
     await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records)
 
@@ -488,7 +488,7 @@ async def test_cat_doesnt_see_eve(self_hostname: str, two_wallet_nodes: OldSimul
     tx_records = await cat_wallet.generate_signed_transaction(
         [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, fee=uint64(1)
     )
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
     await full_node_api.process_transaction_records(records=tx_records)
 
     await time_out_assert(30, wallet.get_confirmed_balance, funds - 101)
@@ -504,7 +504,7 @@ async def test_cat_doesnt_see_eve(self_hostname: str, two_wallet_nodes: OldSimul
     [tx_record] = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
         uint64(10), cc2_ph, DEFAULT_TX_CONFIG
     )
-    await wallet.wallet_state_manager.add_pending_transactions([tx_record])
+    [tx_record] = await wallet.wallet_state_manager.add_pending_transactions([tx_record])
     await full_node_api.process_transaction_records(records=[tx_record])
 
     id = cat_wallet_2.id()
@@ -588,7 +588,7 @@ async def test_cat_spend_multiple(
     tx_records = await cat_wallet_0.generate_signed_transaction(
         [uint64(60), uint64(20)], [cat_1_hash, cat_2_hash], DEFAULT_TX_CONFIG
     )
-    await wallet_0.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet_0.wallet_state_manager.add_pending_transactions(tx_records)
     await full_node_api.process_transaction_records(records=tx_records)
 
     await time_out_assert(20, cat_wallet_0.get_confirmed_balance, 20)
@@ -603,10 +603,10 @@ async def test_cat_spend_multiple(
     cat_hash = await cat_wallet_0.get_new_inner_hash()
 
     tx_records = await cat_wallet_1.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-    await wallet_1.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet_1.wallet_state_manager.add_pending_transactions(tx_records)
 
     tx_records_2 = await cat_wallet_2.generate_signed_transaction([uint64(20)], [cat_hash], DEFAULT_TX_CONFIG)
-    await wallet_2.wallet_state_manager.add_pending_transactions(tx_records_2)
+    tx_records_2 = await wallet_2.wallet_state_manager.add_pending_transactions(tx_records_2)
 
     await full_node_api.process_transaction_records(records=[*tx_records, *tx_records_2])
 
@@ -629,7 +629,7 @@ async def test_cat_spend_multiple(
             [uint64(30)], [cat_hash], DEFAULT_TX_CONFIG, memos=[[b"too"], [b"many"], [b"memos"]]
         )
 
-    await wallet_1.wallet_state_manager.add_pending_transactions(tx_records_3)
+    tx_records_3 = await wallet_1.wallet_state_manager.add_pending_transactions(tx_records_3)
     await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records_3)
     txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
     for tx in txs:
@@ -702,7 +702,7 @@ async def test_cat_max_amount_send(
     tx_records = await cat_wallet.generate_signed_transaction(
         amounts, puzzle_hashes, DEFAULT_TX_CONFIG, coins={spent_coint}
     )
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
     await full_node_api.process_transaction_records(records=tx_records)
 
     await asyncio.sleep(2)
@@ -798,7 +798,7 @@ async def test_cat_hint(
         [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, memos=[[cat_2_hash]]
     )
 
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
 
     await full_node_api.process_transaction_records(records=tx_records)
 
@@ -826,7 +826,7 @@ async def test_cat_hint(
         [uint64(10)], [cat_2_hash], DEFAULT_TX_CONFIG, memos=[[cat_2_hash]]
     )
 
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
 
     await full_node_api.process_transaction_records(records=tx_records)
 
@@ -844,7 +844,7 @@ async def test_cat_hint(
 
     cat_hash = await cat_wallet.get_new_inner_hash()
     tx_records = await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash], DEFAULT_TX_CONFIG)
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
 
     await full_node_api.process_transaction_records(records=tx_records)
 
@@ -924,7 +924,7 @@ async def test_cat_change_detection(
         construct_cat_puzzle(CAT_MOD, Program.to(None).get_tree_hash(), our_puzzle).get_tree_hash(),
         cat_amount_0,
     )
-    eve_spend = await wallet_node_0.wallet_state_manager.sign_transaction(
+    eve_spend, _ = await wallet_node_0.wallet_state_manager.sign_bundle(
         [
             make_spend(
                 cat_coin,

@@ -86,7 +86,7 @@ class TestTransactions:
         [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, ph1, DEFAULT_TX_CONFIG, 0
         )
-        await wallet_0.wallet_state_manager.add_pending_transactions([tx])
+        [tx] = await wallet_0.wallet_state_manager.add_pending_transactions([tx])
 
         await time_out_assert(
             10,
@@ -160,7 +160,7 @@ class TestTransactions:
         [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, bytes32.random(seeded_random), DEFAULT_TX_CONFIG, 0
         )
-        await wallet_0.wallet_state_manager.add_pending_transactions([tx])
+        [tx] = await wallet_0.wallet_state_manager.add_pending_transactions([tx])
 
         await time_out_assert(
             10,
