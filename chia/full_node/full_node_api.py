@@ -146,6 +146,8 @@ class FullNodeAPI:
         self.log.debug(f"fuddy waiting for work to finish {work}")
         await work.done.wait()
         self.log.debug(f"fuddy finished waiting for work {work}")
+        if work.exception is not None:
+            raise work.exception
 
         return None
 

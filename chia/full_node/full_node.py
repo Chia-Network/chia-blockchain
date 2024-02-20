@@ -118,11 +118,12 @@ class WalletUpdate:
     hints: Dict[bytes32, bytes32]
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=False)
 class NewPeakWork:
     request: full_node_protocol.NewPeak
     peer: WSChiaConnection
     done: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
+    exception: Optional[Exception] = None
 
 
 @final
@@ -494,8 +495,9 @@ class FullNode:
 
         try:
             await self.new_peak(request=work.request, peer=work.peer)
-        except Exception:
+        except Exception as e:
             self.log.exception("fuddy worker finished new peak - except")
+            work.exception = e
             raise
         finally:
             self.log.debug("fuddy worker finished new peak - finally")
