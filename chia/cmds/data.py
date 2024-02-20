@@ -51,14 +51,15 @@ def create_changelist_option() -> Callable[[FC], FC]:
     )
 
 
-def create_key_option() -> Callable[[FC], FC]:
+def create_key_option(multiple: bool = False) -> Callable[[FC], FC]:
     return click.option(
         "-k",
         "--key",
-        "key_string",
+        "key_strings" if multiple else "key_string",
         help="str representing the key",
         type=str,
         required=True,
+        multiple=multiple,
     )
 
 
@@ -102,6 +103,25 @@ def create_fee_option() -> Callable[[FC], FC]:
         type=str,
         default=None,
         show_default=True,
+        required=False,
+    )
+
+
+def create_page_option() -> Callable[[FC], FC]:
+    return click.option(
+        "-p",
+        "--page",
+        help="Enables pagination of the output and requests a specific page.",
+        type=int,
+        required=False,
+    )
+
+
+def create_max_page_size_option() -> Callable[[FC], FC]:
+    return click.option(
+        "--max-page-size",
+        help="Set how many bytes to be included in a page, if pagination is enabled.",
+        type=int,
         required=False,
     )
 
@@ -171,15 +191,19 @@ def update_data_store(
 @click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
 @create_rpc_port_option()
 @options.create_fingerprint()
+@create_page_option()
+@create_max_page_size_option()
 def get_keys(
     id: str,
     root_hash: Optional[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import get_keys_cmd
 
-    run(get_keys_cmd(data_rpc_port, id, root_hash, fingerprint=fingerprint))
+    run(get_keys_cmd(data_rpc_port, id, root_hash, fingerprint=fingerprint, page=page, max_page_size=max_page_size))
 
 
 @data_cmd.command("get_keys_values", help="Get all keys and values for a given store")
@@ -187,15 +211,23 @@ def get_keys(
 @click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
 @create_rpc_port_option()
 @options.create_fingerprint()
+@create_page_option()
+@create_max_page_size_option()
 def get_keys_values(
     id: str,
     root_hash: Optional[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import get_keys_values_cmd
 
-    run(get_keys_values_cmd(data_rpc_port, id, root_hash, fingerprint=fingerprint))
+    run(
+        get_keys_values_cmd(
+            data_rpc_port, id, root_hash, fingerprint=fingerprint, page=page, max_page_size=max_page_size
+        )
+    )
 
 
 @data_cmd.command("get_root", help="Get the published root hash value for a given store")
@@ -275,16 +307,30 @@ def unsubscribe(
 @click.option("-hash_2", "--hash_2", help="Final hash", type=str)
 @create_rpc_port_option()
 @options.create_fingerprint()
+@create_page_option()
+@create_max_page_size_option()
 def get_kv_diff(
     id: str,
     hash_1: str,
     hash_2: str,
     data_rpc_port: int,
     fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import get_kv_diff_cmd
 
-    run(get_kv_diff_cmd(rpc_port=data_rpc_port, store_id=id, hash_1=hash_1, hash_2=hash_2, fingerprint=fingerprint))
+    run(
+        get_kv_diff_cmd(
+            rpc_port=data_rpc_port,
+            store_id=id,
+            hash_1=hash_1,
+            hash_2=hash_2,
+            fingerprint=fingerprint,
+            page=page,
+            max_page_size=max_page_size,
+        )
+    )
 
 
 @data_cmd.command("get_root_history", help="Get all changes of a singleton")
@@ -530,3 +576,48 @@ def wallet_log_in(
             fingerprint=fingerprint,
         )
     )
+
+
+@data_cmd.command(
+    "get_proof",
+    help="Obtains a merkle proof of inclusion for a given key",
+)
+@create_data_store_id_option()
+@create_rpc_port_option()
+@create_key_option(multiple=True)
+@options.create_fingerprint()
+def get_proof(
+    id: str,
+    key_strings: List[str],
+    data_rpc_port: int,
+    fingerprint: Optional[int],
+) -> None:
+    from chia.cmds.data_funcs import get_proof_cmd
+
+    store_id = bytes32.from_hexstr(id)
+
+    run(get_proof_cmd(rpc_port=data_rpc_port, store_id=store_id, fingerprint=fingerprint, key_strings=key_strings))
+
+
+@data_cmd.command(
+    "verify_proof",
+    help="Verifies a merkle proof of inclusion",
+)
+@click.option(
+    "-p",
+    "--proof",
+    "proof_string",
+    help="Proof to validate in JSON format.",
+    type=str,
+)
+@create_rpc_port_option()
+@options.create_fingerprint()
+def verify_proof(
+    proof_string: str,
+    data_rpc_port: int,
+    fingerprint: Optional[int],
+) -> None:
+    from chia.cmds.data_funcs import verify_proof_cmd
+
+    proof_dict = json.loads(proof_string)
+    run(verify_proof_cmd(rpc_port=data_rpc_port, fingerprint=fingerprint, proof=proof_dict))

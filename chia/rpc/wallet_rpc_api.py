@@ -13,6 +13,7 @@ from clvm_tools.binutils import assemble
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
+from chia.data_layer.data_layer_util import dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
@@ -285,6 +286,7 @@ class WalletRpcApi:
             "/dl_get_mirrors": self.dl_get_mirrors,
             "/dl_new_mirror": self.dl_new_mirror,
             "/dl_delete_mirror": self.dl_delete_mirror,
+            "/dl_verify_proof": self.dl_verify_proof,
             # Verified Credential
             "/vc_mint": self.vc_mint,
             "/vc_get": self.vc_get,
@@ -499,14 +501,31 @@ class WalletRpcApi:
             return False, False
 
         config: Dict[str, Any] = load_config(new_root, "config.yaml")
-        farmer_target = config["farmer"].get("xch_target_address")
-        pool_target = config["pool"].get("xch_target_address")
-        address_to_check: List[bytes32] = [decode_puzzle_hash(farmer_target), decode_puzzle_hash(pool_target)]
+        farmer_target = config["farmer"].get("xch_target_address", "")
+        pool_target = config["pool"].get("xch_target_address", "")
+        address_to_check: List[bytes32] = []
+
+        try:
+            farmer_decoded = decode_puzzle_hash(farmer_target)
+            address_to_check.append(farmer_decoded)
+        except ValueError:
+            farmer_decoded = None
+
+        try:
+            pool_decoded = decode_puzzle_hash(pool_target)
+            address_to_check.append(pool_decoded)
+        except ValueError:
+            pool_decoded = None
 
         found_addresses: Set[bytes32] = match_address_to_sk(sk, address_to_check, max_ph_to_search)
+        found_farmer = False
+        found_pool = False
 
-        found_farmer = address_to_check[0] in found_addresses
-        found_pool = address_to_check[1] in found_addresses
+        if farmer_decoded is not None:
+            found_farmer = farmer_decoded in found_addresses
+
+        if pool_decoded is not None:
+            found_pool = pool_decoded in found_addresses
 
         return found_farmer, found_pool
 
@@ -1929,9 +1948,7 @@ class WalletRpcApi:
                         "also": {
                             **info["also"],
                             "flags": ProofsChecker.from_program(
-                                uncurry_puzzle(
-                                    Program(assemble(info["also"]["proofs_checker"]))  # type: ignore[no-untyped-call]
-                                )
+                                uncurry_puzzle(Program(assemble(info["also"]["proofs_checker"])))
                             ).flags,
                         },
                     }
@@ -4327,6 +4344,19 @@ class WalletRpcApi:
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
+
+    async def dl_verify_proof(
+        self,
+        request: Dict[str, Any],
+    ) -> EndpointResult:
+        """Verify a proof of inclusion for a DL singleton"""
+        res = await dl_verify_proof(
+            request,
+            peer=self.service.get_full_node_peer(),
+            wallet_node=self.service.wallet_state_manager.wallet_node,
+        )
+
+        return res
 
     ##########################################################################################
     # Verified Credential
