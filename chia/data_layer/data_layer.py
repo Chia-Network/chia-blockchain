@@ -199,7 +199,7 @@ class DataLayer:
             database=self.db_path, sql_log_path=sql_log_path, foreign_keys=False
         ) as data_store_cleanup:
             try:
-                async with self.data_store.transaction() as writer:
+                async with data_store_cleanup.db_wrapper.writer() as writer:
                     await data_store_cleanup.clean_node_table(writer)
             except asyncio.CancelledError:
                 return
