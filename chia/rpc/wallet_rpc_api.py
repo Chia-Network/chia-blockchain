@@ -1943,9 +1943,7 @@ class WalletRpcApi:
                         "also": {
                             **info["also"],
                             "flags": ProofsChecker.from_program(
-                                uncurry_puzzle(
-                                    Program(assemble(info["also"]["proofs_checker"]))  # type: ignore[no-untyped-call]
-                                )
+                                uncurry_puzzle(Program(assemble(info["also"]["proofs_checker"])))
                             ).flags,
                         },
                     }
