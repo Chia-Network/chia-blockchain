@@ -1049,6 +1049,11 @@ class TestDIDWallet:
         puzhash = did_wallet_1.did_info.current_inner.get_tree_hash()
         parent_num = get_parent_num(did_wallet_1)
 
+        bad_metadata = {"Twitter": {"url": "http://www.twitter.com"}}
+        with pytest.raises(ValueError) as e:
+            await did_wallet_1.update_metadata(bad_metadata)
+        assert e.match("Metadata key value pairs must be strings.")
+
         metadata = {}
         metadata["Twitter"] = "http://www.twitter.com"
         await did_wallet_1.update_metadata(metadata)

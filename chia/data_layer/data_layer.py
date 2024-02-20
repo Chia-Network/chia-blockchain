@@ -664,13 +664,14 @@ class DataLayer:
                         else:
                             self.log.debug(f"uploaded to uploader {uploader}")
 
-    async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
+    async def subscribe(self, store_id: bytes32, urls: List[str]) -> Subscription:
         parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
         await self.wallet_rpc.dl_track_new(subscription.tree_id)
         async with self.subscription_lock:
             await self.data_store.subscribe(subscription)
         self.log.info(f"Done adding subscription: {subscription.tree_id}")
+        return subscription
 
     async def remove_subscriptions(self, store_id: bytes32, urls: List[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
@@ -779,7 +780,8 @@ class DataLayer:
             for local_id in local_tree_ids:
                 if local_id not in subscription_tree_ids:
                     try:
-                        await self.subscribe(local_id, [])
+                        subscription = await self.subscribe(local_id, [])
+                        subscriptions.insert(0, subscription)
                     except Exception as e:
                         self.log.info(
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"

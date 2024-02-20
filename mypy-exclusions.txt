@@ -74,7 +74,6 @@ tests.core.test_daemon_rpc
 tests.core.test_db_conversion
 tests.core.test_filter
 tests.core.test_full_node_rpc
-tests.core.test_merkle_set
 tests.core.util.test_cached_bls
 tests.core.util.test_config
 tests.core.util.test_file_keyring_synchronization
