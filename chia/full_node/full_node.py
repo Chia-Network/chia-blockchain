@@ -64,7 +64,6 @@ from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
-from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -87,7 +86,7 @@ from chia.util import cached_bls
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
-from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
+from chia.util.config import process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
@@ -523,14 +522,7 @@ class FullNode:
             self.full_node_peers = FullNodePeers(
                 self.server,
                 self.config["target_outbound_peer_count"],
-                PeerStoreResolver(
-                    self.root_path,
-                    self.config,
-                    selected_network=network_name,
-                    peers_file_path_key="peers_file_path",
-                    legacy_peer_db_path_key=PEER_DB_PATH_KEY_DEPRECATED,
-                    default_peers_file_path="db/peers.dat",
-                ),
+                self.root_path / Path(self.config["peers_file_path"]),
                 self.config["introducer_peer"],
                 dns_servers,
                 self.config["peer_connect_interval"],

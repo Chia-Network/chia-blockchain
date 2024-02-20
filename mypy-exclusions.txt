@@ -62,7 +62,6 @@ tests.core.full_node.stores.test_sync_store
 tests.core.full_node.test_address_manager
 tests.core.full_node.test_full_node
 tests.core.full_node.test_node_load
-tests.core.full_node.test_peer_store_resolver
 tests.core.full_node.test_performance
 tests.core.full_node.test_transactions
 tests.core.mempool.test_mempool
