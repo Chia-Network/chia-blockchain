@@ -122,6 +122,7 @@ class WalletUpdate:
 class NewPeakWork:
     request: full_node_protocol.NewPeak
     peer: WSChiaConnection
+    done: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
 
 
 @final
@@ -174,7 +175,6 @@ class FullNode:
     # hashes of peaks that failed long sync on chip13 Validation
     bad_peak_cache: Dict[bytes32, uint32] = dataclasses.field(default_factory=dict)
     wallet_sync_task: Optional[asyncio.Task[None]] = None
-    done: List[NewPeakWork] = dataclasses.field(default_factory=list)
 
     @property
     def server(self) -> ChiaServer:
@@ -495,11 +495,11 @@ class FullNode:
         try:
             await self.new_peak(request=work.request, peer=work.peer)
         except Exception:
-            self.log.debug("fuddy worker finished new peak - except")
+            self.log.exception("fuddy worker finished new peak - except")
             raise
         finally:
-            self.done.append(work)
             self.log.debug("fuddy worker finished new peak - finally")
+            work.done.set()
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry) -> None:
         peer = entry.peer

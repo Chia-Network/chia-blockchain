@@ -141,13 +141,11 @@ class FullNodeAPI:
             self.full_node.new_peak_queue.put_nowait(work)
         except asyncio.QueueFull:
             self.log.debug("Ignoring NewPeak, queue full: %s %s", peer.get_peer_logging(), request)
+            return None
 
-        from chia.util.timing import backoff_times
-
-        for backoff in backoff_times():
-            if any(work is done_work for done_work in self.full_node.done):
-                break
-            await asyncio.sleep(backoff)
+        self.log.debug(f"fuddy waiting for work to finish {work}")
+        await work.done.wait()
+        self.log.debug(f"fuddy finished waiting for work {work}")
 
         return None
 
