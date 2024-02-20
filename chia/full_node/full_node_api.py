@@ -136,20 +136,23 @@ class FullNodeAPI:
         from chia.full_node.full_node import NewPeakWork
 
         work = NewPeakWork(request=request, peer=peer)
-
         try:
-            self.full_node.new_peak_queue.put_nowait(work)
-        except asyncio.QueueFull:
-            self.log.debug("Ignoring NewPeak, queue full: %s %s", peer.get_peer_logging(), request)
+            try:
+                self.full_node.new_peak_queue.put_nowait(work)
+            except asyncio.QueueFull:
+                self.log.debug("Ignoring NewPeak, queue full: %s %s", peer.get_peer_logging(), request)
+                return None
+
+            self.log.debug(f"fuddy waiting for work to finish {work}")
+            await work.done.wait()
+            self.log.debug(f"fuddy finished waiting for work {work}")
+            if work.exception is not None:
+                raise work.exception
+
             return None
-
-        self.log.debug(f"fuddy waiting for work to finish {work}")
-        await work.done.wait()
-        self.log.debug(f"fuddy finished waiting for work {work}")
-        if work.exception is not None:
-            raise work.exception
-
-        return None
+        except asyncio.CancelledError:
+            if work.task is not None:
+                work.task.cancel()
 
     @api_request(peer_required=True)
     async def new_transaction(
