@@ -32,7 +32,10 @@ from chia.data_layer.data_layer_errors import KeyNotFoundError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
+    KeysPaginationData,
+    KeysValuesPaginationData,
     KeyValue,
+    KVDiffPaginationData,
     Layer,
     Offer,
     OfferStore,
@@ -328,10 +331,38 @@ class DataLayer:
             self.log.error("Failed to fetch keys values")
         return res
 
+    async def get_keys_values_paginated(
+        self,
+        store_id: bytes32,
+        root_hash: Optional[bytes32],
+        page: int,
+        max_page_size: Optional[int] = None,
+    ) -> KeysValuesPaginationData:
+        await self._update_confirmation_status(tree_id=store_id)
+
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
+        res = await self.data_store.get_keys_values_paginated(store_id, page, max_page_size, root_hash)
+        return res
+
     async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[bytes]:
         await self._update_confirmation_status(tree_id=store_id)
 
         res = await self.data_store.get_keys(store_id, root_hash)
+        return res
+
+    async def get_keys_paginated(
+        self,
+        store_id: bytes32,
+        root_hash: Optional[bytes32],
+        page: int,
+        max_page_size: Optional[int] = None,
+    ) -> KeysPaginationData:
+        await self._update_confirmation_status(tree_id=store_id)
+
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
+        res = await self.data_store.get_keys_paginated(store_id, page, max_page_size, root_hash)
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
@@ -633,13 +664,14 @@ class DataLayer:
                         else:
                             self.log.debug(f"uploaded to uploader {uploader}")
 
-    async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
+    async def subscribe(self, store_id: bytes32, urls: List[str]) -> Subscription:
         parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
         await self.wallet_rpc.dl_track_new(subscription.tree_id)
         async with self.subscription_lock:
             await self.data_store.subscribe(subscription)
         self.log.info(f"Done adding subscription: {subscription.tree_id}")
+        return subscription
 
     async def remove_subscriptions(self, store_id: bytes32, urls: List[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
@@ -709,6 +741,13 @@ class DataLayer:
     async def get_kv_diff(self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Set[DiffData]:
         return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
 
+    async def get_kv_diff_paginated(
+        self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: int, max_page_size: Optional[int] = None
+    ) -> KVDiffPaginationData:
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
+        return await self.data_store.get_kv_diff_paginated(tree_id, page, max_page_size, hash_1, hash_2)
+
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
         while not self._shut_down:
@@ -741,7 +780,8 @@ class DataLayer:
             for local_id in local_tree_ids:
                 if local_id not in subscription_tree_ids:
                     try:
-                        await self.subscribe(local_id, [])
+                        subscription = await self.subscribe(local_id, [])
+                        subscriptions.insert(0, subscription)
                     except Exception as e:
                         self.log.info(
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"

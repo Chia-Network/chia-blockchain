@@ -1610,6 +1610,45 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     }
 
 
+async def _check_delete_key(
+    client: WalletRpcClient, wallet_node: WalletNode, farmer_fp: int, pool_fp: int, observer: bool = False
+) -> None:
+    # Add in reward addresses into farmer and pool for testing delete key checks
+    # set farmer to first private key
+    create_sk = master_sk_to_wallet_sk_unhardened if observer else master_sk_to_wallet_sk
+
+    sk = await wallet_node.get_key_for_fingerprint(farmer_fp)
+    assert sk is not None
+    farmer_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
+
+    sk = await wallet_node.get_key_for_fingerprint(pool_fp)
+    assert sk is not None
+    pool_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
+
+    with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
+        test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(farmer_ph, "txch")
+        test_config["pool"]["xch_target_address"] = encode_puzzle_hash(pool_ph, "txch")
+        save_config(wallet_node.root_path, "config.yaml", test_config)
+
+    # Check farmer_fp key
+    sk_dict = await client.check_delete_key(farmer_fp)
+    assert sk_dict["fingerprint"] == farmer_fp
+    assert sk_dict["used_for_farmer_rewards"] is True
+    assert sk_dict["used_for_pool_rewards"] is False
+
+    # Check pool_fp key
+    sk_dict = await client.check_delete_key(pool_fp)
+    assert sk_dict["fingerprint"] == pool_fp
+    assert sk_dict["used_for_farmer_rewards"] is False
+    assert sk_dict["used_for_pool_rewards"] is True
+
+    # Check unknown key
+    sk_dict = await client.check_delete_key(123456, 10)
+    assert sk_dict["fingerprint"] == 123456
+    assert sk_dict["used_for_farmer_rewards"] is False
+    assert sk_dict["used_for_pool_rewards"] is False
+
+
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
 async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
@@ -1658,67 +1697,32 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     sk_dict = await client.get_private_key(pks[1])
     assert sk_dict["fingerprint"] == pks[1]
 
-    # Add in reward addresses into farmer and pool for testing delete key checks
-    # set farmer to first private key
-    sk = await wallet_node.get_key_for_fingerprint(pks[0])
-    assert sk is not None
-    test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
+    # test hardened keys
+    await _check_delete_key(client=client, wallet_node=wallet_node, farmer_fp=pks[0], pool_fp=pks[1], observer=False)
+
+    # test observer keys
+    await _check_delete_key(client=client, wallet_node=wallet_node, farmer_fp=pks[0], pool_fp=pks[1], observer=True)
+
+    # set farmer to empty string
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
-        test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
-        # set pool to second private key
-        sk = await wallet_node.get_key_for_fingerprint(pks[1])
-        assert sk is not None
-        test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
-        test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+        test_config["farmer"]["xch_target_address"] = ""
         save_config(wallet_node.root_path, "config.yaml", test_config)
 
-    # Check first key
-    sk_dict = await client.check_delete_key(pks[0])
-    assert sk_dict["fingerprint"] == pks[0]
-    assert sk_dict["used_for_farmer_rewards"] is True
-    assert sk_dict["used_for_pool_rewards"] is False
-
-    # Check second key
+    # Check key
     sk_dict = await client.check_delete_key(pks[1])
     assert sk_dict["fingerprint"] == pks[1]
     assert sk_dict["used_for_farmer_rewards"] is False
     assert sk_dict["used_for_pool_rewards"] is True
 
-    # Check unknown key
-    sk_dict = await client.check_delete_key(123456, 10)
-    assert sk_dict["fingerprint"] == 123456
-    assert sk_dict["used_for_farmer_rewards"] is False
-    assert sk_dict["used_for_pool_rewards"] is False
-
-    # Add in observer reward addresses into farmer and pool for testing delete key checks
-    # set farmer to first private key
-    sk = await wallet_node.get_key_for_fingerprint(pks[0])
-    assert sk is not None
-    test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(0)).get_g1())
+    # set farmer and pool to empty string
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
-        test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
-        # set pool to second private key
-        sk = await wallet_node.get_key_for_fingerprint(pks[1])
-        assert sk is not None
-        test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(0)).get_g1())
-        test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+        test_config["farmer"]["xch_target_address"] = ""
+        test_config["pool"]["xch_target_address"] = ""
         save_config(wallet_node.root_path, "config.yaml", test_config)
 
-    # Check first key
+    # Check key
     sk_dict = await client.check_delete_key(pks[0])
     assert sk_dict["fingerprint"] == pks[0]
-    assert sk_dict["used_for_farmer_rewards"] is True
-    assert sk_dict["used_for_pool_rewards"] is False
-
-    # Check second key
-    sk_dict = await client.check_delete_key(pks[1])
-    assert sk_dict["fingerprint"] == pks[1]
-    assert sk_dict["used_for_farmer_rewards"] is False
-    assert sk_dict["used_for_pool_rewards"] is True
-
-    # Check unknown key
-    sk_dict = await client.check_delete_key(123456, 10)
-    assert sk_dict["fingerprint"] == 123456
     assert sk_dict["used_for_farmer_rewards"] is False
     assert sk_dict["used_for_pool_rewards"] is False
 
