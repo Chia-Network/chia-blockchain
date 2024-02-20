@@ -194,6 +194,18 @@ class DataLayer:
             sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
 
+        self.log.info("Compressing DB data. This might take a few minutes to complete")
+        async with DataStore.managed(
+            database=self.db_path, sql_log_path=sql_log_path, foreign_keys=False
+        ) as data_store_cleanup:
+            try:
+                async with self.data_store.transaction() as writer:
+                    await data_store_cleanup.clean_node_table(writer)
+            except asyncio.CancelledError:
+                return
+
+        self.log.info("Finished compressing DB data")
+
         async with DataStore.managed(database=self.db_path, sql_log_path=sql_log_path) as self._data_store:
             self._wallet_rpc = await self.wallet_rpc_init
 

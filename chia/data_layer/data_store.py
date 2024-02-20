@@ -57,7 +57,11 @@ class DataStore:
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
-        cls, database: Union[str, Path], uri: bool = False, sql_log_path: Optional[Path] = None
+        cls,
+        database: Union[str, Path],
+        uri: bool = False,
+        sql_log_path: Optional[Path] = None,
+        foreign_keys: bool = True,
     ) -> AsyncIterator[DataStore]:
         async with DBWrapper2.managed(
             database=database,
@@ -68,7 +72,7 @@ class DataStore:
             synchronous="FULL",
             # If foreign key checking gets turned off, please add corresponding check
             # methods and enable foreign key checking in the tests.
-            foreign_keys=True,
+            foreign_keys=foreign_keys,
             row_factory=aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
