@@ -602,7 +602,7 @@ class BlockTools:
         dummy_block_references: bool = False,
         include_transactions: bool = False,
         skip_overflow: bool = False,
-        min_signage_point: uint64 = 0,
+        min_signage_point: int = 0,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:

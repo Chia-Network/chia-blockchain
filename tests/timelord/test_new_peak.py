@@ -10,8 +10,11 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.protocols import timelord_protocol
 from chia.server.server import ChiaServer
+from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.timelord.timelord_api import TimelordAPI
+from chia.types.aliases import FullNodeService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
@@ -113,16 +116,20 @@ class TestNewPeak:
 
     @pytest.mark.anyio
     async def test_timelord_new_peak_unfinished_orphaned(
-        self, two_nodes, timelord: Tuple[TimelordAPI, ChiaServer], default_1000_blocks: List[FullBlock]
+        self,
+        one_node: Tuple[List[FullNodeService], List[FullNodeSimulator], BlockTools],
+        timelord: Tuple[TimelordAPI, ChiaServer],
+        default_1000_blocks: List[FullBlock],
     ) -> None:
-        full_node_1, _, server_1, _, bt = two_nodes
+        [full_node_service], _, bt = one_node
+        full_node = full_node_service._node
         async with create_blockchain(bt.constants, 2) as (b1, db_wrapper1):
             async with create_blockchain(bt.constants, 2) as (b2, db_wrapper2):
                 timelord_api, _ = timelord
                 for block in default_1000_blocks:
                     await _validate_and_add_block(b1, block)
                     await _validate_and_add_block(b2, block)
-                    await full_node_1.full_node.add_block(block)
+                    await full_node.add_block(block)
 
                 peak = timelord_peak_from_block(b1, default_1000_blocks[-1])
                 assert peak is not None
@@ -193,14 +200,12 @@ class TestNewPeak:
                     block_1.transactions_generator,
                     [],
                 )
-                await full_node_1.full_node.add_unfinished_block(block_1_unf, None)
-                unf: UnfinishedBlock = full_node_1.full_node.full_node_store.get_unfinished_block(
-                    block_1_unf.partial_hash
-                )
+                await full_node.add_unfinished_block(block_1_unf, None)
+                unf: UnfinishedBlock = full_node.full_node_store.get_unfinished_block(block_1_unf.partial_hash)
                 assert unf.get_hash() == block_1_unf.get_hash()
                 # full node peak is block_2
-                await full_node_1.full_node.add_block(block_2)
-                curr = await full_node_1.full_node.blockchain.get_full_peak()
+                await full_node.add_block(block_2)
+                curr = await full_node.blockchain.get_full_peak()
                 assert block_2.header_hash == curr.header_hash
 
                 # full_node gets finished block_1
@@ -214,8 +219,8 @@ class TestNewPeak:
                     block_1.infused_challenge_chain_ip_proof,
                 )
 
-                await full_node_1.full_node.new_infusion_point_vdf(response)
-                peak_after_unf_infusion = await full_node_1.full_node.blockchain.get_full_peak()
+                await full_node.new_infusion_point_vdf(response)
+                peak_after_unf_infusion = await full_node.blockchain.get_full_peak()
                 # assert full node switched peak to block_1 since it has the same height as block_2 but lower iterations
                 assert peak_after_unf_infusion.header_hash == block_1.header_hash
 
