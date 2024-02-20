@@ -6,7 +6,7 @@ import dataclasses
 import logging
 import random
 import time
-from typing import Coroutine, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
@@ -787,19 +787,30 @@ class TestFullNodeProtocol:
                 uint32(0),
                 block.reward_chain_block.get_unfinished().get_hash(),
             )
-            task_1 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
-            await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
-            task_1.cancel()
+
+            async def go():
+                # await asyncio.sleep(1)
+                await full_node_1.new_peak(new_peak, dummy_peer)
+
+            task = asyncio.create_task(go())
+            try:
+                await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
+            finally:
+                await task
 
             await full_node_1.full_node.add_block(block, peer)
-            # Ignores, already have
-            task_2 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
-            await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
-            task_2.cancel()
 
-        async def suppress_value_error(coro: Coroutine) -> None:
-            with contextlib.suppress(ValueError):
-                await coro
+            # Ignores, already have
+            # await full_node_1.new_peak(new_peak, dummy_peer)
+            async def go():
+                # await asyncio.sleep(1)
+                await full_node_1.new_peak(new_peak, dummy_peer)
+
+            task = asyncio.create_task(go())
+            try:
+                await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
+            finally:
+                await task
 
         # Ignores low weight
         new_peak = fnp.NewPeak(
@@ -810,6 +821,8 @@ class TestFullNodeProtocol:
             blocks_reorg[-2].reward_chain_block.get_unfinished().get_hash(),
         )
         asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
+        # with contextlib.suppress(ValueError):
+        #     await full_node_1.new_peak(new_peak, dummy_peer)
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
 
         # Does not ignore equal weight
@@ -821,6 +834,8 @@ class TestFullNodeProtocol:
             blocks_reorg[-1].reward_chain_block.get_unfinished().get_hash(),
         )
         asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
+        # with contextlib.suppress(ValueError):
+        #     await full_node_1.new_peak(new_peak, dummy_peer)
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
 
     @pytest.mark.anyio

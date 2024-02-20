@@ -174,6 +174,7 @@ class FullNode:
     # hashes of peaks that failed long sync on chip13 Validation
     bad_peak_cache: Dict[bytes32, uint32] = dataclasses.field(default_factory=dict)
     wallet_sync_task: Optional[asyncio.Task[None]] = None
+    done: List[NewPeakWork] = dataclasses.field(default_factory=list)
 
     @property
     def server(self) -> ChiaServer:
@@ -487,9 +488,18 @@ class FullNode:
         self.state_changed_callback = callback
 
     async def _handle_new_peak_work(self, worker_id: int) -> None:
+        self.log.debug("fuddy worker waiting for new peak")
         work = await self.new_peak_queue.get()
+        self.log.debug("fuddy worker got new peak")
 
-        await self.new_peak(request=work.request, peer=work.peer)
+        try:
+            await self.new_peak(request=work.request, peer=work.peer)
+        except Exception:
+            self.log.debug("fuddy worker finished new peak - except")
+            raise
+        finally:
+            self.done.append(work)
+            self.log.debug("fuddy worker finished new peak - finally")
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry) -> None:
         peer = entry.peer

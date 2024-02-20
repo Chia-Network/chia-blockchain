@@ -226,6 +226,11 @@ async def block_tools_fixture(get_keychain, blockchain_constants, anyio_backend)
 # to run the tests, change the `self_hostname` fixture
 @pytest.fixture(scope="session")
 def self_hostname():
+    import logging
+
+    for name in ["filelock", "watchdog", "aiosqlite"]:
+        log = logging.getLogger(name)
+        log.setLevel(logging.INFO)
     return "127.0.0.1"
 
 
