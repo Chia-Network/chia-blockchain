@@ -64,7 +64,7 @@ jobs:
         sh install-gui.sh
 
   test_scripts_in_docker:
-    name: Linux ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
+    name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     container: ${{ matrix.distribution.url }}
     strategy:
@@ -74,9 +74,8 @@ jobs:
         - name: Linux
           matrix: linux
           runs-on:
-            arm: [linux, arm64]
             intel: ubuntu-latest
-            risc: ubuntu-latest
+            arm: [linux, arm64]
         distribution:
         - name: amazonlinux:2023
           type: amazon
@@ -119,8 +118,6 @@ jobs:
           matrix: arm
         - name: Intel
           matrix: intel
-        - name: RISC-V
-          matrix: risc
         exclude:
           - distribution:
               type: arch
@@ -128,13 +125,6 @@ jobs:
               matrix: arm
 
     steps:
-    - name: Set up QEMU on x86_64
-      if: matrix.arch.matrix == 'risc'
-      id: qemu
-      uses: docker/setup-qemu-action@v2
-      with:
-        platforms: riscv64
-
     - name: Prepare Amazon Linux
       if: ${{ matrix.distribution.type == 'amazon' }}
       run: |
