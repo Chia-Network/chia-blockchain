@@ -346,7 +346,7 @@ async def send_xch_wallet1_to_wallet2(env: WalletRpcTestEnvironment) -> Optional
 
     transaction_id = tx.name
     assert tx.spend_bundle is not None
-    assert tx.confirmed == False  # flake8: noqa E712
+    assert tx.confirmed == False  # noqa: E712 # flake8: E712
 
     await time_out_assert(20, tx_in_mempool, True, client, transaction_id)
     return tx
@@ -362,9 +362,12 @@ async def test_wallet_rpc_client_get_transaction(wallet_rpc_environment: WalletR
     tx = await client.get_transaction(1, sent_tx.name)
     assert tx.wallet_id == 1
     assert tx.is_in_mempool()
+    # The transaction is expected to be from the wallet_id specified in the request
     with pytest.raises(ValueError):
         tx = await client.get_transaction(7, sent_tx.name)
         print(tx)
+    # Reached only if client.get_transaction() does not throw
+    assert tx.wallet_id == sent_tx.wallet_id
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
