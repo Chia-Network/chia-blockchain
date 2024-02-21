@@ -1,5 +1,4 @@
 # Package: timelord
-# Mock: True
 
 from __future__ import annotations
 

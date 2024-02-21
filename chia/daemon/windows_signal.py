@@ -1,5 +1,4 @@
 # Package: service
-# Mock: False
 
 """
 Code taken from Stack Overflow Eryk Sun.

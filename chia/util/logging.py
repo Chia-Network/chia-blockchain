@@ -1,5 +1,4 @@
 # Package: farmer
-# Mock: False
 
 from __future__ import annotations
 

@@ -1,5 +1,4 @@
 # Package: protocols
-# Mock: False
 
 # These settings should not be end-user configurable
 from __future__ import annotations

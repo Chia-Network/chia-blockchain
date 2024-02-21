@@ -1,6 +1,4 @@
 # Package: service
-# Mock: False
-
 from __future__ import annotations
 
 import asyncio

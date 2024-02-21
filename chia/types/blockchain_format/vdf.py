@@ -1,5 +1,4 @@
 # Package: conesnsus
-# Mock: True
 
 from __future__ import annotations
 

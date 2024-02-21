@@ -1,5 +1,4 @@
 # Package: rpc
-# Mock: False
 
 from __future__ import annotations
 

@@ -1,5 +1,4 @@
 # Package: simulator
-# Mock: false
 
 from __future__ import annotations
 

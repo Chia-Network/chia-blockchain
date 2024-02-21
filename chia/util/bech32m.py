@@ -1,5 +1,4 @@
 # Package: crypto
-# Mock: False
 
 # Copyright (c) 2017 Pieter Wuille
 #

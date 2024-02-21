@@ -1,5 +1,4 @@
 # Package: obsolete
-# Mock: False
 
 from __future__ import annotations
 
