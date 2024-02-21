@@ -3171,7 +3171,7 @@ async def test_node_table_cleanup(
         tree_id = bytes32(range(32))
         await data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
 
-        hint_keys_values = {}
+        hint_keys_values: Dict[bytes32, bytes32] = {}
         for key in range(5):
             await data_store.autoinsert(
                 key=key.to_bytes(1, byteorder="big"),
