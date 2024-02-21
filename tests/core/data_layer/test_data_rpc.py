@@ -3154,3 +3154,54 @@ async def test_pagination_cmds(
             }
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_node_table_cleanup(
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        data_store = data_layer.data_store
+
+        tree_id = bytes32(range(32))
+        await data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+
+        hint_keys_values = {}
+        for key in range(5):
+            await data_store.autoinsert(
+                key=key.to_bytes(1, byteorder="big"),
+                value=key.to_bytes(1, byteorder="big"),
+                tree_id=tree_id,
+                hint_keys_values=hint_keys_values,
+                status=Status.COMMITTED,
+            )
+
+        for key in range(4, 0, -1):
+            await data_store.delete(
+                key=key.to_bytes(1, byteorder="big"),
+                tree_id=tree_id,
+                hint_keys_values=hint_keys_values,
+                status=Status.COMMITTED,
+            )
+
+        await data_store.rollback_to_generation(tree_id, 1)
+        async with data_layer.data_store.db_wrapper.reader() as reader:
+            async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
+                row_count = await cursor.fetchone()
+                assert row_count is not None
+                assert row_count[0] > 1
+
+    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        data_store = data_layer.data_store
+
+        async with data_layer.data_store.db_wrapper.reader() as reader:
+            async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
+                row_count = await cursor.fetchone()
+                assert row_count is not None
+                assert row_count[0] == 1
