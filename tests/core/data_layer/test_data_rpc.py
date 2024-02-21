@@ -3196,7 +3196,6 @@ async def test_node_table_cleanup(
                 assert row_count[0] > 1
 
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
-        data_rpc_api = DataLayerRpcApi(data_layer)
         data_store = data_layer.data_store
 
         async with data_layer.data_store.db_wrapper.reader() as reader:
