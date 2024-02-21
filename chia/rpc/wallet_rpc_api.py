@@ -979,11 +979,19 @@ class WalletRpcApi:
     async def get_transaction(self, request: Dict[str, Any]) -> EndpointResult:
         transaction_id: bytes32 = bytes32(hexstr_to_bytes(request["transaction_id"]))
         tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
+        if "wallet_id" not in request:
+            raise RuntimeError("'wallet_id' parameter is required for get_transaction")
         if tr is None:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
-
+        tx = await self._convert_tx_puzzle_hash(tr)
+        if tx.wallet_id != request["wallet_id"]:
+            raise RuntimeError(
+                f"WalletRpcApi.get_transaction: internal error. "
+                f"retrieved transaction had wallet_id {tx.wallet_id} "
+                f"but wallet_id {request['wallet_id']} was requested."
+            )
         return {
-            "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config),
+            "transaction": tx.to_json_dict_convenience(self.service.config),
             "transaction_id": tr.name,
         }
 

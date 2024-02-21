@@ -286,7 +286,7 @@ def update_verify_signature_request(request: Dict[str, Any], prefix_hex_values: 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
-async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment) -> bytes32:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_2: Wallet = env.wallet_2.wallet
@@ -331,6 +331,41 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in spend_bundle.additions()]
 
     await time_out_assert(20, get_confirmed_balance, generated_funds - tx_amount, client, 1)
+    return transaction_id
+
+
+async def send_xch_wallet1_to_wallet2(env: WalletRpcTestEnvironment) -> Optional[TransactionRecord]:
+    """Send a transaction from env.wallet_1 to env.wallet_2"""
+    wallet_2: Wallet = env.wallet_2.wallet
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+    full_node_api = env.full_node.api
+    wallet_node: WalletNode = env.wallet_1.node
+
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+    tx = await client.send_transaction(1, uint64(1_000_001), addr, DEFAULT_TX_CONFIG)
+
+    transaction_id = tx.name
+    assert tx.spend_bundle is not None
+    assert tx.confirmed == False  # flake8: noqa E712
+
+    await time_out_assert(20, tx_in_mempool, True, client, transaction_id)
+    return tx
+
+
+@pytest.mark.anyio
+async def test_wallet_rpc_client_get_transaction(wallet_rpc_environment: WalletRpcTestEnvironment):
+    """Test to see that `WalletRpcClient.get_transaction uses parameter `wallet_id`"""
+    await generate_funds(wallet_rpc_environment.full_node.api, wallet_rpc_environment.wallet_1, 5)
+    sent_tx = await send_xch_wallet1_to_wallet2(wallet_rpc_environment)
+    assert sent_tx
+    client: WalletRpcClient = wallet_rpc_environment.wallet_1.rpc_client
+    tx = await client.get_transaction(1, sent_tx.name)
+    assert tx.wallet_id == 1
+    assert tx.is_in_mempool()
+    with pytest.raises(ValueError):
+        tx = await client.get_transaction(7, sent_tx.name)
+        print(tx)
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")

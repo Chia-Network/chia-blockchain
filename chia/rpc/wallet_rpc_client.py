@@ -144,7 +144,7 @@ class WalletRpcClient(RpcClient):
         return cast(Dict[str, Dict[str, Any]], response["wallet_balances"])
 
     async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
-        request = {"walled_id": wallet_id, "transaction_id": transaction_id.hex()}
+        request = {"wallet_id": wallet_id, "transaction_id": transaction_id.hex()}
         response = await self.fetch("get_transaction", request)
         return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
