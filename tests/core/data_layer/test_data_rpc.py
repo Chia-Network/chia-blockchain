@@ -3165,7 +3165,6 @@ async def test_node_table_cleanup(
         self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
-        data_rpc_api = DataLayerRpcApi(data_layer)
         data_store = data_layer.data_store
 
         tree_id = bytes32(range(32))
