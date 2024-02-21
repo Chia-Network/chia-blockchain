@@ -286,7 +286,7 @@ def update_verify_signature_request(request: Dict[str, Any], prefix_hex_values: 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
-async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment) -> bytes32:
+async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_2: Wallet = env.wallet_2.wallet
@@ -331,7 +331,6 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in spend_bundle.additions()]
 
     await time_out_assert(20, get_confirmed_balance, generated_funds - tx_amount, client, 1)
-    return transaction_id
 
 
 async def send_xch_wallet1_to_wallet2(env: WalletRpcTestEnvironment) -> Optional[TransactionRecord]:
