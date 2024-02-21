@@ -51,12 +51,20 @@ bash ./build_license_directory.sh
 
 # Builds CLI only .deb
 # need j2 for templating the control file
+format_deb_version_string() {
+  version_str=$1
+  # Use sed to conform to expected apt versioning conventions:
+  # - conditionally insert a hyphen before 'rc' or 'beta' if not already present
+  # - replace '.dev' with '-dev'
+  echo "$version_str" | sed -E 's/([0-9])(rc|beta)/\1-\2/g; s/\.dev/-dev/g'
+}
 pip install j2cli
 CLI_DEB_BASE="chia-blockchain-cli_$CHIA_INSTALLER_VERSION-1_$PLATFORM"
 mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
 mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
 mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
 mkdir -p "dist/$CLI_DEB_BASE/etc/systemd/system"
+CHIA_DEB_CONTROL_VERSION=$(format_deb_version_string "$CHIA_INSTALLER_VERSION"); export CHIA_DEB_CONTROL_VERSION
 j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" assets/deb/control.j2
 cp assets/systemd/*.service "dist/$CLI_DEB_BASE/etc/systemd/system/"
 cp -r dist/daemon/* "dist/$CLI_DEB_BASE/opt/chia/"
