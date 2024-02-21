@@ -3189,7 +3189,7 @@ async def test_node_table_cleanup(
             )
 
         await data_store.rollback_to_generation(tree_id, 1)
-        async with data_layer.data_store.db_wrapper.reader() as reader:
+        async with data_store.db_wrapper.reader() as reader:
             async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
                 row_count = await cursor.fetchone()
                 assert row_count is not None
@@ -3198,7 +3198,7 @@ async def test_node_table_cleanup(
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_store = data_layer.data_store
 
-        async with data_layer.data_store.db_wrapper.reader() as reader:
+        async with data_store.db_wrapper.reader() as reader:
             async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
                 row_count = await cursor.fetchone()
                 assert row_count is not None
