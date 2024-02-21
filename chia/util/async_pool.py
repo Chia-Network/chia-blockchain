@@ -6,7 +6,7 @@ import dataclasses
 import itertools
 import logging
 import traceback
-from typing import AsyncIterator, Dict, Iterator, Protocol, final
+from typing import AsyncIterator, Dict, Generic, Iterator, Optional, Protocol, TypeVar, final
 
 import anyio
 
@@ -21,6 +21,17 @@ class InvalidTargetWorkerCountError(Exception):
 class WorkerCallable(Protocol):
     async def __call__(self, worker_id: int) -> object:
         ...
+
+
+T = TypeVar("T")
+
+
+@dataclasses.dataclass
+class Job(Generic[T]):
+    input: T
+    done: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
+    exception: Optional[BaseException] = None
+    task: Optional[asyncio.Task[object]] = None
 
 
 @final

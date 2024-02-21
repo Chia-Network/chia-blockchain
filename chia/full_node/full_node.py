@@ -84,7 +84,7 @@ from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import WeightProof
 from chia.util import cached_bls
-from chia.util.async_pool import AsyncPool
+from chia.util.async_pool import AsyncPool, Job
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
@@ -118,13 +118,10 @@ class WalletUpdate:
     hints: Dict[bytes32, bytes32]
 
 
-@dataclasses.dataclass(frozen=False)
+@dataclasses.dataclass(frozen=True)
 class NewPeakWork:
     request: full_node_protocol.NewPeak
     peer: WSChiaConnection
-    done: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
-    exception: Optional[Exception] = None
-    task: Optional[asyncio.Task[object]] = None
 
 
 @final
@@ -163,7 +160,7 @@ class FullNode:
     _sync_task: Optional[asyncio.Task[None]] = None
     _transaction_queue: Optional[TransactionQueue] = None
     _compact_vdf_sem: Optional[LimitedSemaphore] = None
-    _new_peak_queue: Optional[asyncio.Queue[NewPeakWork]] = None
+    _new_peak_queue: Optional[asyncio.Queue[Job[NewPeakWork]]] = None
     _add_transaction_semaphore: Optional[asyncio.Semaphore] = None
     _db_wrapper: Optional[DBWrapper2] = None
     _hint_store: Optional[HintStore] = None
@@ -441,7 +438,7 @@ class FullNode:
         return self._hint_store
 
     @property
-    def new_peak_queue(self) -> asyncio.Queue[NewPeakWork]:
+    def new_peak_queue(self) -> asyncio.Queue[Job[NewPeakWork]]:
         assert self._new_peak_queue is not None
         return self._new_peak_queue
 
@@ -490,16 +487,16 @@ class FullNode:
         self.state_changed_callback = callback
 
     async def _handle_new_peak_work(self, worker_id: int) -> None:
-        work = await self.new_peak_queue.get()
-        work.task = asyncio.current_task()
+        job = await self.new_peak_queue.get()
+        job.task = asyncio.current_task()
 
         try:
-            await self.new_peak(request=work.request, peer=work.peer)
+            await self.new_peak(request=job.input.request, peer=job.input.peer)
         except Exception as e:
-            work.exception = e
+            job.exception = e
             raise
         finally:
-            work.done.set()
+            job.done.set()
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry) -> None:
         peer = entry.peer

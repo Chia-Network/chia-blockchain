@@ -134,23 +134,24 @@ class FullNodeAPI:
 
         # TODO: relocate class to avoid this
         from chia.full_node.full_node import NewPeakWork
+        from chia.util.async_pool import Job
 
-        work = NewPeakWork(request=request, peer=peer)
+        job = Job(input=NewPeakWork(request=request, peer=peer))
         try:
             try:
-                self.full_node.new_peak_queue.put_nowait(work)
+                self.full_node.new_peak_queue.put_nowait(job)
             except asyncio.QueueFull:
                 self.log.debug("Ignoring NewPeak, queue full: %s %s", peer.get_peer_logging(), request)
                 return None
 
-            await work.done.wait()
-            if work.exception is not None:
-                raise work.exception
+            await job.done.wait()
+            if job.exception is not None:
+                raise job.exception
 
             return None
         except asyncio.CancelledError:
-            if work.task is not None:
-                work.task.cancel()
+            if job.task is not None:
+                job.task.cancel()
 
     @api_request(peer_required=True)
     async def new_transaction(
