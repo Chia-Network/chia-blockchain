@@ -24,14 +24,84 @@ class WorkerCallable(Protocol):
 
 
 T = TypeVar("T")
+T_co = TypeVar("T_co", covariant=True)
 
 
+class QueuedWorkerCallable(Protocol[T]):
+    async def __call__(self, worker_id: int, job: Job[T]) -> object:
+        ...
+
+
+class QueueProtocol(Protocol[T_co]):
+    async def get(self) -> T_co:
+        ...
+
+
+# TODO: how does this compare to just using a future
 @dataclasses.dataclass
 class Job(Generic[T]):
     input: T
     done: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
     exception: Optional[BaseException] = None
     task: Optional[asyncio.Task[object]] = None
+    cancelled: bool = False
+
+
+@final
+@dataclasses.dataclass
+class QueuedAsyncPool(Generic[T]):
+    name: str
+    queue: QueueProtocol[Job[T]]
+    worker_async_callable: QueuedWorkerCallable[T]
+
+    @classmethod
+    @contextlib.asynccontextmanager
+    async def managed(
+        cls,
+        name: str,
+        queue: QueueProtocol[Job[T]],
+        worker_async_callable: QueuedWorkerCallable[T],
+        target_worker_count: int,
+        log: logging.Logger = logging.getLogger(__name__),
+    ) -> AsyncIterator[QueuedAsyncPool[T]]:
+        self = cls(
+            name=name,
+            queue=queue,
+            worker_async_callable=worker_async_callable,
+        )
+
+        async with AsyncPool.managed(
+            name=self.name,
+            worker_async_callable=self.worker,
+            target_worker_count=target_worker_count,
+            log=log,
+        ):
+            yield self
+
+    async def worker(self, worker_id: int) -> None:
+        while True:
+            job = await self.queue.get()
+            if not job.cancelled:
+                # TODO: can the job just be removed from the queue?
+                break
+
+        job.task = asyncio.current_task()
+
+        try:
+            # TODO: should this handle result output as well?
+            await self.worker_async_callable(worker_id=worker_id, job=job)
+        except BaseException as e:
+            # TODO: can't you not raise the same exception twice so this has to be
+            #       just reference and is all...  well, i dunno.
+            job.exception = e
+            raise
+        finally:
+            job.done.set()
+
+    def cancel(self, job: Job[T]) -> None:
+        job.cancelled = True
+        if job.task is not None:
+            job.task.cancel()
 
 
 @final

@@ -84,7 +84,7 @@ from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import WeightProof
 from chia.util import cached_bls
-from chia.util.async_pool import AsyncPool, Job
+from chia.util.async_pool import Job, QueuedAsyncPool
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
@@ -216,8 +216,9 @@ class FullNode:
 
         # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
         # multiple peers and re-validate.
-        async with AsyncPool.managed(
+        async with QueuedAsyncPool.managed(
             name="new peak request pool",
+            queue=self.new_peak_queue,
             worker_async_callable=self._handle_new_peak_work,
             target_worker_count=2,
             log=self.log,
@@ -486,17 +487,8 @@ class FullNode:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
-    async def _handle_new_peak_work(self, worker_id: int) -> None:
-        job = await self.new_peak_queue.get()
-        job.task = asyncio.current_task()
-
-        try:
-            await self.new_peak(request=job.input.request, peer=job.input.peer)
-        except Exception as e:
-            job.exception = e
-            raise
-        finally:
-            job.done.set()
+    async def _handle_new_peak_work(self, worker_id: int, job: Job[NewPeakWork]) -> None:
+        await self.new_peak(request=job.input.request, peer=job.input.peer)
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry) -> None:
         peer = entry.peer
