@@ -490,19 +490,15 @@ class FullNode:
         self.state_changed_callback = callback
 
     async def _handle_new_peak_work(self, worker_id: int) -> None:
-        self.log.debug("fuddy worker waiting for new peak")
         work = await self.new_peak_queue.get()
         work.task = asyncio.current_task()
-        self.log.debug("fuddy worker got new peak")
 
         try:
             await self.new_peak(request=work.request, peer=work.peer)
         except Exception as e:
-            self.log.exception("fuddy worker finished new peak - except")
             work.exception = e
             raise
         finally:
-            self.log.debug("fuddy worker finished new peak - finally")
             work.done.set()
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry) -> None:

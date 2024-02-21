@@ -143,9 +143,7 @@ class FullNodeAPI:
                 self.log.debug("Ignoring NewPeak, queue full: %s %s", peer.get_peer_logging(), request)
                 return None
 
-            self.log.debug(f"fuddy waiting for work to finish {work}")
             await work.done.wait()
-            self.log.debug(f"fuddy finished waiting for work {work}")
             if work.exception is not None:
                 raise work.exception
 

@@ -788,13 +788,13 @@ class TestFullNodeProtocol:
                 block.reward_chain_block.get_unfinished().get_hash(),
             )
             task_1 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
-            await time_out_assert(30, time_out_messages(incoming_queue, "request_block", 1))
+            await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
             task_1.cancel()
 
             await full_node_1.full_node.add_block(block, peer)
             # Ignores, already have
             task_2 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
-            await time_out_assert(30, time_out_messages(incoming_queue, "request_block", 0))
+            await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
             task_2.cancel()
 
         async def suppress_value_error(coro: Coroutine) -> None:
