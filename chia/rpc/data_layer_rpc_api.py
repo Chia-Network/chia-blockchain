@@ -160,30 +160,69 @@ class DataLayerRpcApi:
     async def get_keys(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         root_hash = request.get("root_hash")
+        page = request.get("page", None)
+        max_page_size = request.get("max_page_size", None)
         if root_hash is not None:
             root_hash = bytes32.from_hexstr(root_hash)
         if self.service is None:
             raise Exception("Data layer not created")
-        keys = await self.service.get_keys(store_id, root_hash)
+
+        if page is None:
+            keys = await self.service.get_keys(store_id, root_hash)
+        else:
+            keys_paginated = await self.service.get_keys_paginated(store_id, root_hash, page, max_page_size)
+            keys = keys_paginated.keys
+
         if keys == [] and root_hash is not None and root_hash != bytes32([0] * 32):
             raise Exception(f"Can't find keys for {root_hash}")
-        return {"keys": [f"0x{key.hex()}" for key in keys]}
+
+        response: EndpointResult = {"keys": [f"0x{key.hex()}" for key in keys]}
+
+        if page is not None:
+            response.update(
+                {
+                    "total_pages": keys_paginated.total_pages,
+                    "total_bytes": keys_paginated.total_bytes,
+                    "root_hash": keys_paginated.root_hash,
+                },
+            )
+
+        return response
 
     async def get_keys_values(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         root_hash = request.get("root_hash")
+        page = request.get("page", None)
+        max_page_size = request.get("max_page_size", None)
         if root_hash is not None:
             root_hash = bytes32.from_hexstr(root_hash)
         if self.service is None:
             raise Exception("Data layer not created")
-        res = await self.service.get_keys_values(store_id, root_hash)
-        json_nodes = []
-        for node in res:
-            json = recurse_jsonify(dataclasses.asdict(node))
-            json_nodes.append(json)
-        if json_nodes == [] and root_hash is not None and root_hash != bytes32([0] * 32):
+
+        if page is None:
+            keys_values = await self.service.get_keys_values(store_id, root_hash)
+        else:
+            keys_values_paginated = await self.service.get_keys_values_paginated(
+                store_id, root_hash, page, max_page_size
+            )
+            keys_values = keys_values_paginated.keys_values
+
+        json_nodes = [recurse_jsonify(dataclasses.asdict(node)) for node in keys_values]
+        if not json_nodes and root_hash is not None and root_hash != bytes32([0] * 32):
             raise Exception(f"Can't find keys and values for {root_hash}")
-        return {"keys_values": json_nodes}
+
+        response: EndpointResult = {"keys_values": json_nodes}
+
+        if page is not None:
+            response.update(
+                {
+                    "total_pages": keys_values_paginated.total_pages,
+                    "total_bytes": keys_values_paginated.total_bytes,
+                    "root_hash": keys_values_paginated.root_hash,
+                },
+            )
+
+        return response
 
     async def get_ancestors(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
@@ -369,11 +408,32 @@ class DataLayerRpcApi:
         hash_1_bytes = bytes32.from_hexstr(hash_1)
         hash_2 = request["hash_2"]
         hash_2_bytes = bytes32.from_hexstr(hash_2)
-        records = await self.service.get_kv_diff(id_bytes, hash_1_bytes, hash_2_bytes)
+        page = request.get("page", None)
+        max_page_size = request.get("max_page_size", None)
         res: List[Dict[str, Any]] = []
+
+        if page is None:
+            records_dict = await self.service.get_kv_diff(id_bytes, hash_1_bytes, hash_2_bytes)
+            records = list(records_dict)
+        else:
+            kv_diff_paginated = await self.service.get_kv_diff_paginated(
+                id_bytes, hash_1_bytes, hash_2_bytes, page, max_page_size
+            )
+            records = kv_diff_paginated.kv_diff
+
         for rec in records:
-            res.insert(0, {"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
-        return {"diff": res}
+            res.append({"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
+
+        response: EndpointResult = {"diff": res}
+        if page is not None:
+            response.update(
+                {
+                    "total_pages": kv_diff_paginated.total_pages,
+                    "total_bytes": kv_diff_paginated.total_bytes,
+                },
+            )
+
+        return response
 
     async def add_mirror(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = request["id"]

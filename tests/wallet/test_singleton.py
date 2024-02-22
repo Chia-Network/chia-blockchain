@@ -45,7 +45,7 @@ def test_only_odd_coins() -> None:
     solution = Program.to(
         [
             (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
-            Program.to(binutils.assemble("(q (51 0xcafef00d 200))")),  # type: ignore[no-untyped-call]
+            Program.to(binutils.assemble("(q (51 0xcafef00d 200))")),
             [0xDEADBEEF, 0xCAFEF00D, 200],
             200,
             [],
@@ -59,7 +59,7 @@ def test_only_odd_coins() -> None:
     solution = Program.to(
         [
             (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
-            Program.to(binutils.assemble("(q (51 0xcafef00d 201))")),  # type: ignore[no-untyped-call]
+            Program.to(binutils.assemble("(q (51 0xcafef00d 201))")),
             [0xDEADBEEF, 0xCAFED00D, 210],
             205,
             0,
@@ -74,7 +74,7 @@ def test_only_one_odd_coin_created() -> None:
     solution = Program.to(
         [
             (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
-            Program.to(binutils.assemble(clsp)),  # type: ignore[no-untyped-call]
+            Program.to(binutils.assemble(clsp)),
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
             [],
@@ -88,7 +88,7 @@ def test_only_one_odd_coin_created() -> None:
     solution = Program.to(
         [
             (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
-            Program.to(binutils.assemble(clsp)),  # type: ignore[no-untyped-call]
+            Program.to(binutils.assemble(clsp)),
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
             [],

@@ -308,7 +308,8 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
         if i > 25 and i <= 200 and random.randint(0, 4):
             is_insert = True
         if i > 200:
-            hint_keys_values = await data_store.get_keys_values_compressed(tree_id)
+            kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+            hint_keys_values = kv_compressed.keys_values_hashed
             if not deleted_all:
                 while node_count > 0:
                     node_count -= 1
@@ -643,7 +644,8 @@ async def test_inserting_duplicate_key_fails(
             side=Side.RIGHT,
         )
 
-    hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
+    kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+    hint_keys_values = kv_compressed.keys_values_hashed
     # TODO: more specific exception
     with pytest.raises(Exception):
         await data_store.insert(
@@ -749,7 +751,8 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (
@@ -789,7 +792,8 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (
@@ -827,7 +831,8 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (
@@ -867,7 +872,8 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (

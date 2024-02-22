@@ -17,6 +17,7 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.full_node.mempool_manager import MempoolManager
@@ -34,6 +35,7 @@ from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
 
 """
 The purpose of this file is to provide a lightweight simulator for the testing of Chialisp smart contracts.
@@ -143,6 +145,7 @@ class SpendSim:
     timestamp: uint64
     block_height: uint32
     defaults: ConsensusConstants
+    hint_store: HintStore
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -157,6 +160,7 @@ class SpendSim:
 
         async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
             self.coin_store = await CoinStore.create(self.db_wrapper)
+            self.hint_store = await HintStore.create(self.db_wrapper)
             self.mempool_manager = MempoolManager(self.coin_store.get_coin_records, defaults)
             self.defaults = defaults
 
@@ -268,10 +272,17 @@ class SpendSim:
                 if result is not None:
                     bundle, additions = result
                     generator_bundle = bundle
+                    for spend in generator_bundle.coin_spends:
+                        hint_dict, _ = compute_spend_hints_and_additions(spend)
+                        hints: List[Tuple[bytes32, bytes]] = []
+                        hint_obj: HintedCoin
+                        for coin_name, hint_obj in hint_dict.items():
+                            if hint_obj.hint is not None:
+                                hints.append((coin_name, bytes(hint_obj.hint)))
+                        await self.hint_store.add_hints(hints)
                     return_additions = additions
                     return_removals = bundle.removals()
                     spent_coins_ids = [r.name() for r in return_removals]
-
                     await self.coin_store._add_coin_records([self.new_coin_record(addition) for addition in additions])
                     await self.coin_store._set_spent(spent_coins_ids, uint32(self.block_height + 1))
 
@@ -449,3 +460,31 @@ class SimClient:
             return None
         else:
             return item.__dict__
+
+    async def get_coin_records_by_hint(
+        self,
+        hint: bytes32,
+        include_spent_coins: bool = True,
+        start_height: Optional[int] = None,
+        end_height: Optional[int] = None,
+    ) -> List[CoinRecord]:
+        """
+        Retrieves coins by hint, by default returns unspent coins.
+        """
+        names: List[bytes32] = await self.service.hint_store.get_coin_ids(hint)
+
+        kwargs: Dict[str, Any] = {
+            "include_spent_coins": False,
+            "names": names,
+        }
+        if start_height:
+            kwargs["start_height"] = uint32(start_height)
+        if end_height:
+            kwargs["end_height"] = uint32(end_height)
+
+        if include_spent_coins:
+            kwargs["include_spent_coins"] = include_spent_coins
+
+        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
+
+        return coin_records
