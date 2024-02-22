@@ -89,13 +89,18 @@ class QueuedAsyncPool(Generic[J, R]):
         ):
             yield self
 
-    async def worker(self, worker_id: int) -> None:
+    async def get_job(self) -> Job[J]:
         while True:
             job = await self.job_queue.get()
-            if not job.cancelled:
-                # TODO: can the job just be removed from the queue?
-                break
+            try:
+                if not job.cancelled:
+                    # TODO: can the job just be removed from the queue?
+                    return job
+            finally:
+                job.done.set()
 
+    async def worker(self, worker_id: int) -> None:
+        job = await self.get_job()
         job.task = asyncio.current_task()
 
         try:
