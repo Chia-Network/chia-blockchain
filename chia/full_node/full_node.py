@@ -218,7 +218,7 @@ class FullNode:
         # multiple peers and re-validate.
         async with QueuedAsyncPool.managed(
             name="new peak request pool",
-            queue=self.new_peak_queue,
+            job_queue=self.new_peak_queue,
             worker_async_callable=self._handle_new_peak_work,
             target_worker_count=2,
             log=self.log,

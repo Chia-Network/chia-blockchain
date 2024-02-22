@@ -23,17 +23,25 @@ class WorkerCallable(Protocol):
         ...
 
 
+J = TypeVar("J")
+R = TypeVar("R")
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
+T_contra = TypeVar("T_contra", contravariant=True)
 
 
-class QueuedWorkerCallable(Protocol[T]):
-    async def __call__(self, worker_id: int, job: Job[T]) -> object:
+class QueuedWorkerCallable(Protocol[T, T_co]):
+    async def __call__(self, worker_id: int, job: Job[T]) -> T_co:
         ...
 
 
-class QueueProtocol(Protocol[T_co]):
+class JobQueueProtocol(Protocol[T_co]):
     async def get(self) -> T_co:
+        ...
+
+
+class ResultQueueProtocol(Protocol[T_contra]):
+    async def put(self, item: T_contra) -> None:
         ...
 
 
@@ -49,24 +57,27 @@ class Job(Generic[T]):
 
 @final
 @dataclasses.dataclass
-class QueuedAsyncPool(Generic[T]):
+class QueuedAsyncPool(Generic[J, R]):
     name: str
-    queue: QueueProtocol[Job[T]]
-    worker_async_callable: QueuedWorkerCallable[T]
+    job_queue: JobQueueProtocol[Job[J]]
+    result_queue: Optional[ResultQueueProtocol[R]]
+    worker_async_callable: QueuedWorkerCallable[J, R]
 
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
         cls,
         name: str,
-        queue: QueueProtocol[Job[T]],
-        worker_async_callable: QueuedWorkerCallable[T],
+        job_queue: JobQueueProtocol[Job[J]],
+        worker_async_callable: QueuedWorkerCallable[J, R],
         target_worker_count: int,
+        result_queue: Optional[ResultQueueProtocol[R]] = None,
         log: logging.Logger = logging.getLogger(__name__),
-    ) -> AsyncIterator[QueuedAsyncPool[T]]:
+    ) -> AsyncIterator[QueuedAsyncPool[J, R]]:
         self = cls(
             name=name,
-            queue=queue,
+            job_queue=job_queue,
+            result_queue=result_queue,
             worker_async_callable=worker_async_callable,
         )
 
@@ -80,7 +91,7 @@ class QueuedAsyncPool(Generic[T]):
 
     async def worker(self, worker_id: int) -> None:
         while True:
-            job = await self.queue.get()
+            job = await self.job_queue.get()
             if not job.cancelled:
                 # TODO: can the job just be removed from the queue?
                 break
@@ -88,17 +99,19 @@ class QueuedAsyncPool(Generic[T]):
         job.task = asyncio.current_task()
 
         try:
-            # TODO: should this handle result output as well?
-            await self.worker_async_callable(worker_id=worker_id, job=job)
+            result = await self.worker_async_callable(worker_id=worker_id, job=job)
         except BaseException as e:
             # TODO: can't you not raise the same exception twice so this has to be
             #       just reference and is all...  well, i dunno.
             job.exception = e
             raise
+        else:
+            if self.result_queue is not None:
+                await self.result_queue.put(result)
         finally:
             job.done.set()
 
-    def cancel(self, job: Job[T]) -> None:
+    def cancel(self, job: Job[J]) -> None:
         job.cancelled = True
         if job.task is not None:
             job.task.cancel()
