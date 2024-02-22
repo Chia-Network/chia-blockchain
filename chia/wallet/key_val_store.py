@@ -18,9 +18,9 @@ class KeyValStore:
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("CREATE TABLE IF NOT EXISTS key_val_store(key text PRIMARY KEY, value blob)")
-
-            await conn.execute("CREATE INDEX IF NOT EXISTS key_val_name on key_val_store(key)")
-
+            # Remove an old redundant index on the primary key
+            # See https://github.com/Chia-Network/chia-blockchain/issues/10276
+            await conn.execute("DROP INDEX IF EXISTS key_val_name")
         return self
 
     async def get_object(self, key: str, object_type: Any) -> Any:

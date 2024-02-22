@@ -867,7 +867,7 @@ class DataLayerWallet:
         puzzle = parent_spend.puzzle_reveal
         solution = parent_spend.solution
 
-        matched, _ = match_dl_singleton(puzzle.to_program())
+        matched, _ = match_dl_singleton(puzzle)
         if matched:
             self.log.info(f"DL singleton removed: {parent_spend.coin}")
             singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(
@@ -1196,7 +1196,7 @@ class DataLayerWallet:
 
             assert txs[0].spend_bundle is not None
             dl_spend: CoinSpend = next(
-                cs for cs in txs[0].spend_bundle.coin_spends if match_dl_singleton(cs.puzzle_reveal.to_program())[0]
+                cs for cs in txs[0].spend_bundle.coin_spends if match_dl_singleton(cs.puzzle_reveal)[0]
             )
             all_other_spends: List[CoinSpend] = [cs for cs in txs[0].spend_bundle.coin_spends if cs != dl_spend]
             dl_solution: Program = dl_spend.solution.to_program()
@@ -1240,7 +1240,7 @@ class DataLayerWallet:
         singleton_to_root: Dict[bytes32, bytes32] = {}
         all_parent_ids: List[bytes32] = [cs.coin.parent_coin_info for cs in offer.coin_spends()]
         for spend in offer.coin_spends():
-            matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
+            matched, curried_args = match_dl_singleton(spend.puzzle_reveal)
             if matched and spend.coin.name() not in all_parent_ids:
                 innerpuz, root_prg, launcher_id = curried_args
                 singleton_struct = launcher_to_struct(bytes32(launcher_id.as_python())).get_tree_hash()
@@ -1251,7 +1251,7 @@ class DataLayerWallet:
         new_spends: List[CoinSpend] = []
         for spend in offer.coin_spends():
             solution = spend.solution.to_program()
-            if match_dl_singleton(spend.puzzle_reveal.to_program())[0]:
+            if match_dl_singleton(spend.puzzle_reveal)[0]:
                 try:
                     graftroot: Program = solution.at("rrffrf")
                 except EvalError:
@@ -1309,7 +1309,7 @@ class DataLayerWallet:
         summary: Dict[str, Any] = {"offered": []}
         for spend in offer.coin_spends():
             solution = spend.solution.to_program()
-            matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
+            matched, curried_args = match_dl_singleton(spend.puzzle_reveal)
             if matched:
                 try:
                     graftroot: Program = solution.at("rrffrf")
@@ -1320,7 +1320,7 @@ class DataLayerWallet:
                     child_spend: CoinSpend = next(
                         cs for cs in offer.coin_spends() if cs.coin.parent_coin_info == spend.coin.name()
                     )
-                    _, child_curried_args = match_dl_singleton(child_spend.puzzle_reveal.to_program())
+                    _, child_curried_args = match_dl_singleton(child_spend.puzzle_reveal)
                     singleton_summary = {
                         "launcher_id": list(curried_args)[2].as_python().hex(),
                         "new_root": list(child_curried_args)[1].as_python().hex(),

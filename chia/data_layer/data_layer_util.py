@@ -51,6 +51,35 @@ def key_hash(key: bytes) -> bytes32:
     return Program.to(key).get_tree_hash()  # type: ignore[no-any-return]
 
 
+@dataclasses.dataclass(frozen=True)
+class PaginationData:
+    total_pages: int
+    total_bytes: int
+    hashes: List[bytes32]
+
+
+def get_hashes_for_page(page: int, lengths: Dict[bytes32, int], max_page_size: int) -> PaginationData:
+    current_page = 0
+    current_page_size = 0
+    total_bytes = 0
+    hashes: List[bytes32] = []
+    for hash, length in sorted(lengths.items(), key=lambda x: (-x[1], x[0])):
+        if length > max_page_size:
+            raise RuntimeError(
+                f"Cannot paginate data, item size is larger than max page size: {length} {max_page_size}"
+            )
+        total_bytes += length
+        if current_page_size + length <= max_page_size:
+            current_page_size += length
+        else:
+            current_page += 1
+            current_page_size = length
+        if current_page == page:
+            hashes.append(hash)
+
+    return PaginationData(current_page + 1, total_bytes, hashes)
+
+
 async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
     async with db.reader() as reader:
         cursor = await reader.execute("SELECT name FROM sqlite_master WHERE type='table';")
@@ -739,6 +768,37 @@ class InsertResult:
 class UnsubscribeData:
     tree_id: bytes32
     retain_data: bool
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysValuesCompressed:
+    keys_values_hashed: Dict[bytes32, bytes32]
+    key_hash_to_length: Dict[bytes32, int]
+    leaf_hash_to_length: Dict[bytes32, int]
+    root_hash: Optional[bytes32]
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysPaginationData:
+    total_pages: int
+    total_bytes: int
+    keys: List[bytes]
+    root_hash: Optional[bytes32]
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysValuesPaginationData:
+    total_pages: int
+    total_bytes: int
+    keys_values: List[TerminalNode]
+    root_hash: Optional[bytes32]
+
+
+@dataclasses.dataclass(frozen=True)
+class KVDiffPaginationData:
+    total_pages: int
+    total_bytes: int
+    kv_diff: List[DiffData]
 
 
 #

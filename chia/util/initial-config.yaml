@@ -685,8 +685,6 @@ data_layer:
 
   logging: *logging
 
-  # TODO: which of these are really appropriate?
-
   ssl:
     private_crt: "config/ssl/data_layer/private_data_layer.crt"
     private_key: "config/ssl/data_layer/private_data_layer.key"

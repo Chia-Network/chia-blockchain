@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import functools
 import logging
 import time
@@ -324,7 +323,7 @@ class FullNodeAPI:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
             if not request.include_transaction_block and block.transactions_generator is not None:
-                block = dataclasses.replace(block, transactions_generator=None)
+                block = block.replace(transactions_generator=None)
             return make_msg(ProtocolMessageTypes.respond_block, full_node_protocol.RespondBlock(block))
         return make_msg(ProtocolMessageTypes.reject_block, RejectBlock(request.height))
 
@@ -358,7 +357,7 @@ class FullNodeAPI:
                 if block is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     return make_msg(ProtocolMessageTypes.reject_blocks, reject)
-                block = dataclasses.replace(block, transactions_generator=None)
+                block = block.replace(transactions_generator=None)
                 blocks.append(block)
             msg = make_msg(
                 ProtocolMessageTypes.respond_blocks,
@@ -1097,7 +1096,7 @@ class FullNodeAPI:
         if candidate.is_transaction_block():
             fsb2 = fsb2.replace(foliage_transaction_block_signature=farmer_request.foliage_transaction_block_signature)
 
-        new_candidate = dataclasses.replace(candidate, foliage=fsb2)
+        new_candidate = candidate.replace(foliage=fsb2)
         if not self.full_node.has_valid_pool_sig(new_candidate):
             self.log.warning("Trying to make a pre-farm block but height is not 0")
             return None

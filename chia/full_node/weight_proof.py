@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import logging
 import math
 import pathlib
@@ -1240,8 +1239,8 @@ def validate_recent_blocks(
             overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
             if not adjusted:
                 assert prev_block_record is not None
-                prev_block_record = dataclasses.replace(
-                    prev_block_record, deficit=uint8(deficit % constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK)
+                prev_block_record = prev_block_record.replace(
+                    deficit=uint8(deficit % constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK)
                 )
                 sub_blocks.add_block_record(prev_block_record)
                 adjusted = True
