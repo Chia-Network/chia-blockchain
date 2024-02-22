@@ -121,6 +121,7 @@ class DataLayer:
     periodically_manage_data_task: Optional[asyncio.Task[None]] = None
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
+    subscription_update_concurrency: int = 5
 
     @property
     def server(self) -> ChiaServer:
@@ -180,6 +181,7 @@ class DataLayer:
             downloaders=downloaders,
             uploaders=uploaders,
             maximum_full_file_count=config.get("maximum_full_file_count", 1),
+            subscription_update_concurrency=config.get("subscription_update_concurrency", 5),
             unsubscribe_data_queue=[],
         )
 
@@ -789,23 +791,18 @@ class DataLayer:
                         )
 
             work_queue = asyncio.Queue[Job[Subscription]]()
-            empty_result_queue = asyncio.Queue[None]()
             async with QueuedAsyncPool.managed(
-                # TODO: pick a name
-                name="",
+                name="DataLayer subscription update pool",
                 worker_async_callable=self.update_subscription,
                 job_queue=work_queue,
-                result_queue=empty_result_queue,
-                # TODO: make configurable
-                target_worker_count=5,
+                target_worker_count=self.subscription_update_concurrency,
                 log=self.log,
             ):
-                for subscription in subscriptions:
-                    await work_queue.put(Job(input=subscription))
+                jobs = [Job(input=subscription) for subscription in subscriptions]
+                for job in jobs:
+                    await work_queue.put(job)
 
-                # TODO: consider better ways to make sure work is done
-                for _ in subscriptions:
-                    await empty_result_queue.get()
+                await asyncio.gather(*(job.done.wait() for job in jobs), return_exceptions=True)
 
             # Do unsubscribes after the fetching of data is complete, to avoid races.
             async with self.subscription_lock:
