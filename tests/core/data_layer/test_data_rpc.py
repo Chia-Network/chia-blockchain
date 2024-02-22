@@ -3353,7 +3353,7 @@ async def test_unsubmitted_batch_update(
             )
             update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
         elif layer == InterfaceLayer.cli:
-            args: List[str] = [
+            args = [
                 sys.executable,
                 "-m",
                 "chia",
