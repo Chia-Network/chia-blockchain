@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
-import functools
 import json
 import logging
 import os
@@ -794,11 +793,7 @@ class DataLayer:
             async with QueuedAsyncPool.managed(
                 # TODO: pick a name
                 name="",
-                worker_async_callable=functools.partial(
-                    self.update_subscription,
-                    work_queue=work_queue,
-                    result_queue=empty_result_queue,
-                ),
+                worker_async_callable=self.update_subscription,
                 job_queue=work_queue,
                 result_queue=empty_result_queue,
                 # TODO: make configurable
