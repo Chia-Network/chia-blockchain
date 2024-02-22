@@ -75,9 +75,9 @@ def test_get_transaction(capsys: object, get_test_cli_clients: Tuple[TestRpcClie
         "get_wallets": [(None,), (None,), (None,)],
         "get_cat_name": [(1,)],
         "get_transaction": [
-            (bytes32.from_hexstr(bytes32_hexstr)),
-            (bytes32.from_hexstr(bytes32_hexstr)),
-            (bytes32.from_hexstr(bytes32_hexstr)),
+            (bytes32.from_hexstr(bytes32_hexstr),),
+            (bytes32.from_hexstr(bytes32_hexstr),),
+            (bytes32.from_hexstr(bytes32_hexstr),),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
