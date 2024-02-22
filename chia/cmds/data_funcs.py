@@ -88,6 +88,7 @@ async def update_data_store_cmd(
 
     return res
 
+
 async def submit_pending_root_cmd(
     rpc_port: Optional[int],
     store_id: str,
