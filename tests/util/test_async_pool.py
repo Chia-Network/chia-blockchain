@@ -4,12 +4,12 @@ import asyncio
 import random
 import re
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple, Type
 
 import anyio
 import pytest
 
-from chia.util.async_pool import AsyncPool, InvalidTargetWorkerCountError
+from chia.util.async_pool import AsyncPool, InvalidTargetWorkerCountError, Job, QueuedAsyncPool
 from chia.util.timing import adjusted_timeout
 
 
@@ -199,5 +199,168 @@ async def test_simple_queue_example() -> None:
         with anyio.fail_after(adjusted_timeout(10)):
             for _ in inputs:
                 results.append(await result_queue.get())
+
+    assert sorted(results) == expected_results
+
+
+@pytest.mark.anyio
+async def test_simple_queue_example_using_queued() -> None:
+    inputs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    expected_results = [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
+
+    work_queue = asyncio.Queue[Job[int]]()
+    result_queue = asyncio.Queue[int]()
+
+    async def worker(
+        worker_id: int,
+        job: Job[int],
+    ) -> int:
+        return job.input**2
+
+    async with QueuedAsyncPool.managed(
+        name="test pool",
+        job_queue=work_queue,
+        result_queue=result_queue,
+        worker_async_callable=worker,
+        target_worker_count=2,
+    ):
+        jobs = [Job(input=input) for input in inputs]
+        for job in jobs:
+            await work_queue.put(job)
+
+        results: List[int] = []
+
+        with anyio.fail_after(adjusted_timeout(10)):
+            for _ in expected_results:
+                results.append(await result_queue.get())
+
+    assert sorted(results) == expected_results
+
+
+@pytest.mark.anyio
+async def test_queued_pre_cancel() -> None:
+    cancel = {4, 7}
+    inputs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    expected_results = [1, 4, 9, 25, 36, 64, 81, 100]
+
+    work_queue = asyncio.Queue[Job[int]]()
+    result_queue = asyncio.Queue[int]()
+
+    async def worker(
+        worker_id: int,
+        job: Job[int],
+    ) -> int:
+        return job.input**2
+
+    async with QueuedAsyncPool.managed(
+        name="test pool",
+        job_queue=work_queue,
+        result_queue=result_queue,
+        worker_async_callable=worker,
+        target_worker_count=2,
+    ) as pool:
+        jobs = [Job(input=input) for input in inputs]
+        for job in jobs:
+            if job.input in cancel:
+                pool.cancel(job=job)
+
+            await work_queue.put(job)
+
+        results: List[int] = []
+
+        with anyio.fail_after(adjusted_timeout(10)):
+            for _ in expected_results:
+                results.append(await result_queue.get())
+
+    assert sorted(results) == expected_results
+
+
+@pytest.mark.anyio
+async def test_queued_active_cancel() -> None:
+    cancel = {4, 7}
+    inputs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    expected_results = [1, 4, 9, 25, 36, 64, 81, 100]
+
+    work_queue = asyncio.Queue[Job[int]]()
+    result_queue = asyncio.Queue[int]()
+
+    async def worker(
+        worker_id: int,
+        job: Job[int],
+    ) -> int:
+        if job.input in cancel:
+            forever = asyncio.Event()
+            await forever.wait()
+        return job.input**2
+
+    async with QueuedAsyncPool.managed(
+        name="test pool",
+        job_queue=work_queue,
+        result_queue=result_queue,
+        worker_async_callable=worker,
+        target_worker_count=2,
+    ) as pool:
+        jobs = [Job(input=input) for input in inputs]
+        for job in jobs:
+            await work_queue.put(job)
+
+        for job in jobs:
+            if job.input in cancel:
+                pool.cancel(job=job)
+
+        results: List[int] = []
+
+        with anyio.fail_after(adjusted_timeout(10)):
+            for _ in expected_results:
+                results.append(await result_queue.get())
+
+    assert sorted(results) == expected_results
+
+
+@pytest.mark.anyio
+async def test_queued_raises() -> None:
+    raises = {4, 7}
+    inputs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    expected_results = [1, 4, 9, 25, 36, 64, 81, 100]
+
+    work_queue = asyncio.Queue[Job[int]]()
+    result_queue = asyncio.Queue[int]()
+
+    async def worker(
+        worker_id: int,
+        job: Job[int],
+    ) -> int:
+        if job.input in raises:
+            raise Exception(job.input)
+
+        return job.input**2
+
+    async with QueuedAsyncPool.managed(
+        name="test pool",
+        job_queue=work_queue,
+        result_queue=result_queue,
+        worker_async_callable=worker,
+        target_worker_count=2,
+    ):
+        jobs = [Job(input=input) for input in inputs]
+        for job in jobs:
+            await work_queue.put(job)
+
+        results: List[int] = []
+
+        with anyio.fail_after(adjusted_timeout(10)):
+            for _ in expected_results:
+                results.append(await result_queue.get())
+
+    raising_jobs = [job for job in jobs if job.input in raises]
+    expected_exceptions = [(Exception, (job.input,)) for job in raising_jobs]
+
+    exceptions: List[Tuple[Type[BaseException], Tuple[int]]] = []
+    for job in raising_jobs:
+        exception = job.exception
+        assert isinstance(exception, BaseException)
+        exceptions.append((type(exception), exception.args))
+
+    assert exceptions == expected_exceptions
 
     assert sorted(results) == expected_results
