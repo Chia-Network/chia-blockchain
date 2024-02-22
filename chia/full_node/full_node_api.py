@@ -149,7 +149,8 @@ class FullNodeAPI:
                 raise job.exception
 
             return None
-        except asyncio.CancelledError:
+        finally:
+            # TODO: i dunno, iffy
             if job.task is not None:
                 job.task.cancel()
 
