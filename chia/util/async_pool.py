@@ -6,7 +6,7 @@ import dataclasses
 import itertools
 import logging
 import traceback
-from typing import AsyncIterator, Dict, Iterator, Protocol, final
+from typing import AsyncIterator, Dict, Generic, Iterator, Optional, Protocol, TypeVar, final
 
 import anyio
 
@@ -21,6 +21,105 @@ class InvalidTargetWorkerCountError(Exception):
 class WorkerCallable(Protocol):
     async def __call__(self, worker_id: int) -> object:
         ...
+
+
+J = TypeVar("J")
+R = TypeVar("R")
+T = TypeVar("T")
+T_co = TypeVar("T_co", covariant=True)
+T_contra = TypeVar("T_contra", contravariant=True)
+
+
+class QueuedWorkerCallable(Protocol[T, T_co]):
+    async def __call__(self, worker_id: int, job: Job[T]) -> T_co:
+        ...
+
+
+class JobQueueProtocol(Protocol[T_co]):
+    async def get(self) -> T_co:
+        ...
+
+
+class ResultQueueProtocol(Protocol[T_contra]):
+    async def put(self, item: T_contra) -> None:
+        ...
+
+
+# TODO: how does this compare to just using a future
+@dataclasses.dataclass
+class Job(Generic[T]):
+    input: T
+    done: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
+    exception: Optional[BaseException] = None
+    task: Optional[asyncio.Task[object]] = None
+    cancelled: bool = False
+
+
+@final
+@dataclasses.dataclass
+class QueuedAsyncPool(Generic[J, R]):
+    name: str
+    job_queue: JobQueueProtocol[Job[J]]
+    result_queue: Optional[ResultQueueProtocol[R]]
+    worker_async_callable: QueuedWorkerCallable[J, R]
+
+    @classmethod
+    @contextlib.asynccontextmanager
+    async def managed(
+        cls,
+        name: str,
+        job_queue: JobQueueProtocol[Job[J]],
+        worker_async_callable: QueuedWorkerCallable[J, R],
+        target_worker_count: int,
+        result_queue: Optional[ResultQueueProtocol[R]] = None,
+        log: logging.Logger = logging.getLogger(__name__),
+    ) -> AsyncIterator[QueuedAsyncPool[J, R]]:
+        self = cls(
+            name=name,
+            job_queue=job_queue,
+            result_queue=result_queue,
+            worker_async_callable=worker_async_callable,
+        )
+
+        async with AsyncPool.managed(
+            name=self.name,
+            worker_async_callable=self.worker,
+            target_worker_count=target_worker_count,
+            log=log,
+        ):
+            yield self
+
+    async def get_job(self) -> Job[J]:
+        while True:
+            job = await self.job_queue.get()
+            try:
+                if not job.cancelled:
+                    # TODO: can the job just be removed from the queue?
+                    return job
+            finally:
+                job.done.set()
+
+    async def worker(self, worker_id: int) -> None:
+        job = await self.get_job()
+        job.task = asyncio.current_task()
+
+        try:
+            result = await self.worker_async_callable(worker_id=worker_id, job=job)
+        except BaseException as e:
+            # TODO: can't you not raise the same exception twice so this has to be
+            #       just reference and is all...  well, i dunno.
+            job.exception = e
+            raise
+        else:
+            if self.result_queue is not None:
+                await self.result_queue.put(result)
+        finally:
+            job.done.set()
+
+    def cancel(self, job: Job[J]) -> None:
+        job.cancelled = True
+        if job.task is not None:
+            job.task.cancel()
 
 
 @final
@@ -73,7 +172,7 @@ class AsyncPool:
                 with log_exceptions(
                     log=self.log,
                     consume=True,
-                    message=f"exception consumed while looping in {method_name} for {self.name!r}",
+                    message=f"fuddy exception consumed while looping in {method_name} for {self.name!r}",
                 ):
                     await self._run_single()
         finally:
@@ -81,7 +180,7 @@ class AsyncPool:
                 with log_exceptions(
                     log=self.log,
                     consume=False,
-                    message=f"exception while tearing down in {method_name} for {self.name!r}",
+                    message=f"fuddy exception while tearing down in {method_name} for {self.name!r}",
                 ):
                     await self._teardown_workers()
 
@@ -89,12 +188,12 @@ class AsyncPool:
         while len(self._workers) < self._target_worker_count:
             new_worker_id = next(self._worker_id_counter)
             new_worker = asyncio.create_task(self.worker_async_callable(new_worker_id))
-            self.log.debug(f"{self.name}: adding worker {new_worker_id}")
+            self.log.debug(f"fuddy {self.name}: adding worker {new_worker_id}")
             self._workers[new_worker] = new_worker_id
 
         self._started.set()
 
-        self.log.debug(f"{self.name}: waiting with {len(self._workers)} workers: {list(self._workers.values())}")
+        self.log.debug(f"fuddy {self.name}: waiting with {len(self._workers)} workers: {list(self._workers.values())}")
         done_workers, pending_workers = await asyncio.wait(
             self._workers,
             return_when=asyncio.FIRST_COMPLETED,
@@ -123,4 +222,4 @@ class AsyncPool:
                 pass
             except Exception:
                 error_trace = traceback.format_exc()
-                self.log.error(f"{self.name}: worker {id} raised exception: {error_trace}")
+                self.log.error(f"fuddy {self.name}: worker {id} raised exception: {error_trace}")
