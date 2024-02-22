@@ -70,7 +70,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.async_pool import AsyncPool
+from chia.util.async_pool import Job, QueuedAsyncPool
 from chia.util.ints import uint32, uint64
 from chia.util.path import path_from_root
 from chia.wallet.trade_record import TradeRecord
@@ -789,9 +789,9 @@ class DataLayer:
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
                         )
 
-            work_queue = asyncio.Queue[Subscription]()
+            work_queue = asyncio.Queue[Job[Subscription]]()
             empty_result_queue = asyncio.Queue[None]()
-            async with AsyncPool.managed(
+            async with QueuedAsyncPool.managed(
                 # TODO: pick a name
                 name="",
                 worker_async_callable=functools.partial(
@@ -799,12 +799,14 @@ class DataLayer:
                     work_queue=work_queue,
                     result_queue=empty_result_queue,
                 ),
+                job_queue=work_queue,
+                result_queue=empty_result_queue,
                 # TODO: make configurable
                 target_worker_count=5,
                 log=self.log,
             ):
                 for subscription in subscriptions:
-                    await work_queue.put(subscription)
+                    await work_queue.put(Job(input=subscription))
 
                 # TODO: consider better ways to make sure work is done
                 for _ in subscriptions:
@@ -821,10 +823,9 @@ class DataLayer:
     async def update_subscription(
         self,
         worker_id: int,
-        work_queue: asyncio.Queue[Subscription],
-        result_queue: asyncio.Queue[None],
+        job: Job[Subscription],
     ) -> None:
-        subscription = await work_queue.get()
+        subscription = job.input
 
         try:
             await self.update_subscriptions_from_wallet(subscription.tree_id)
@@ -833,8 +834,6 @@ class DataLayer:
             await self.clean_old_full_tree_files(subscription.tree_id)
         except Exception as e:
             self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
-
-        await result_queue.put(None)
 
     async def build_offer_changelist(
         self,
