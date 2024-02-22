@@ -173,7 +173,7 @@ def update_data_store(
     data_rpc_port: int,
     fee: str,
     fingerprint: Optional[int],
-    submit_on_chain: bool,
+    submit: bool,
 ) -> None:
     from chia.cmds.data_funcs import update_data_store_cmd
 
@@ -184,7 +184,7 @@ def update_data_store(
             changelist=json.loads(changelist_string),
             fee=fee,
             fingerprint=fingerprint,
-            submit_on_chain=submit_on_chain,
+            submit_on_chain=submit,
         )
     )
 

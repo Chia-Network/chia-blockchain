@@ -275,10 +275,8 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         changelist = [{"action": "insert", "key": key, "value": value}]
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
-        if transaction_record is not None:
-            return {"tx_id": transaction_record.name}
-        else:
-            return {}
+        assert transaction_record is not None
+        return {"tx_id": transaction_record.name}
 
     async def delete_key(self, request: Dict[str, Any]) -> EndpointResult:
         """
@@ -293,10 +291,8 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         changelist = [{"action": "delete", "key": key}]
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
-        if transaction_record is not None:
-            return {"tx_id": transaction_record.name}
-        else:
-            return {}
+        assert transaction_record is not None
+        return {"tx_id": transaction_record.name}
 
     async def get_root(self, request: Dict[str, Any]) -> EndpointResult:
         """get hash of latest tree root"""

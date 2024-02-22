@@ -71,10 +71,13 @@ async def update_data_store_cmd(
     fee: Optional[str],
     fingerprint: Optional[int],
     submit_on_chain: bool,
-) -> None:
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     store_id_bytes = bytes32.from_hexstr(store_id)
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
-    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+    res = dict()
+
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
         res = await client.update_data_store(
             store_id=store_id_bytes,
             changelist=changelist,
@@ -83,6 +86,7 @@ async def update_data_store_cmd(
         )
         print(json.dumps(res, indent=4, sort_keys=True))
 
+    return res
 
 async def submit_pending_root_cmd(
     rpc_port: Optional[int],

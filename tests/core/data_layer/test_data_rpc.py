@@ -24,6 +24,7 @@ from chia.cmds.data_funcs import (
     get_kv_diff_cmd,
     get_proof_cmd,
     submit_pending_root_cmd,
+    update_data_store_cmd,
     verify_proof_cmd,
     wallet_log_in_cmd,
 )
@@ -3189,10 +3190,76 @@ async def test_unsubmitted_batch_update(
         for key, value in to_insert:
             changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
 
-            res = await data_rpc_api.batch_update(
-                {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
-            )
-            assert res == {}
+            if layer == InterfaceLayer.direct:
+                res = await data_rpc_api.batch_update(
+                    {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+                )
+                assert res == {}
+            elif layer == InterfaceLayer.funcs:
+                res = await update_data_store_cmd(
+                    rpc_port=rpc_port,
+                    store_id="0x" + store_id.hex(),
+                    changelist=changelist,
+                    fee=None,
+                    fingerprint=None,
+                    submit_on_chain=False,
+                    root_path=bt.root_path,
+                )
+                assert res == {"success": True}
+            elif layer == InterfaceLayer.cli:
+                args: List[str] = [
+                    sys.executable,
+                    "-m",
+                    "chia",
+                    "data",
+                    "update_data_store",
+                    "--id",
+                    store_id.hex(),
+                    "--changelist",
+                    json.dumps(changelist),
+                    "--no-submit",
+                    "--data-rpc-port",
+                    str(rpc_port),
+                ]
+                process = await asyncio.create_subprocess_exec(
+                    *args,
+                    env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                await process.wait()
+                assert process.stdout is not None
+                assert process.stderr is not None
+                stdout = await process.stdout.read()
+                res = json.loads(stdout)
+                stderr = await process.stderr.read()
+                assert process.returncode == 0
+                if sys.version_info >= (3, 10, 6):
+                    assert stderr == b""
+                else:  # pragma: no cover
+                    # https://github.com/python/cpython/issues/92841
+                    assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+                assert res == {"success": True}
+            elif layer == InterfaceLayer.client:
+                client = await DataLayerRpcClient.create(
+                    self_hostname=self_hostname,
+                    port=rpc_port,
+                    root_path=bt.root_path,
+                    net_config=bt.config,
+                )
+                try:
+                    res = await client.update_data_store(
+                        store_id=store_id,
+                        changelist=changelist,
+                        fee=None,
+                        submit_on_chain=False,
+                    )
+                    assert res == {"success": True}
+                finally:
+                    client.close()
+                    await client.await_closed()
+            else:  # pragma: no cover
+                assert False, "unhandled parametrization"
 
             await full_node_api.farm_blocks_to_puzzlehash(
                 count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
@@ -3353,3 +3420,6 @@ async def test_unsubmitted_batch_update(
         kv_dict = {item["key"]: item["value"] for item in keys_values["keys_values"]}
         for key, value in to_insert:
             assert kv_dict["0x" + key.hex()] == "0x" + value.hex()
+
+        with pytest.raises(Exception, match="Latest root is already confirmed"):
+            res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
