@@ -4,9 +4,9 @@ import time
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple, Union
-from typing_extensions import override
 
 import pytest
+from typing_extensions import override
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
