@@ -1143,11 +1143,24 @@ async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> Non
     )
     root = await data_store.get_pending_root(tree_id)
     assert root is not None
+    assert root.status == Status.PENDING
+    is_empty = await data_store.table_is_empty(tree_id=tree_id)
+    assert is_empty
+
+    await data_store.change_root_status(root, Status.PENDING_BATCH)
+    root = await data_store.get_pending_root(tree_id)
+    assert root is not None
+    assert root.status == Status.PENDING_BATCH
+    is_empty = await data_store.table_is_empty(tree_id=tree_id)
+    assert is_empty
+
     await data_store.change_root_status(root, Status.COMMITTED)
     root = await data_store.get_tree_root(tree_id)
     is_empty = await data_store.table_is_empty(tree_id=tree_id)
     assert not is_empty
     assert root.node_hash is not None
+    root = await data_store.get_pending_root(tree_id)
+    assert root is None
 
 
 @pytest.mark.anyio
@@ -1415,7 +1428,8 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
 
 
 @pytest.mark.anyio
-async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
+@pytest.mark.parametrize("pending_status", [Status.PENDING, Status.PENDING_BATCH])
+async def test_pending_roots(data_store: DataStore, tree_id: bytes32, pending_status: Status) -> None:
     key = b"\x01\x02"
     value = b"abc"
 
@@ -1435,11 +1449,11 @@ async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
         key=key,
         value=value,
         tree_id=tree_id,
-        status=Status.PENDING,
+        status=pending_status,
     )
     pending_root = await data_store.get_pending_root(tree_id=tree_id)
     assert pending_root is not None
-    assert pending_root.generation == 2 and pending_root.status == Status.PENDING
+    assert pending_root.generation == 2 and pending_root.status == pending_status
 
     await data_store.clear_pending_roots(tree_id=tree_id)
     pending_root = await data_store.get_pending_root(tree_id=tree_id)
@@ -1447,7 +1461,10 @@ async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
 
 
 @pytest.mark.anyio
-async def test_clear_pending_roots_returns_root(data_store: DataStore, tree_id: bytes32) -> None:
+@pytest.mark.parametrize("pending_status", [Status.PENDING, Status.PENDING_BATCH])
+async def test_clear_pending_roots_returns_root(
+    data_store: DataStore, tree_id: bytes32, pending_status: Status
+) -> None:
     key = b"\x01\x02"
     value = b"abc"
 
@@ -1457,7 +1474,7 @@ async def test_clear_pending_roots_returns_root(data_store: DataStore, tree_id: 
         tree_id=tree_id,
         reference_node_hash=None,
         side=None,
-        status=Status.PENDING,
+        status=pending_status,
     )
 
     pending_root = await data_store.get_pending_root(tree_id=tree_id)
@@ -1669,7 +1686,8 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
 
 
 @pytest.mark.anyio
-async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStore) -> None:
+@pytest.mark.parametrize("pending_status", [Status.PENDING, Status.PENDING_BATCH])
+async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStore, pending_status: Status) -> None:
     num_stores = 5
     total_keys = 15
     tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
@@ -1685,7 +1703,7 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
         batch = [{"action": "insert", "key": key, "value": key} for key in original_keys[start_index:end_index]]
         batches.append(batch)
     for tree_id, batch in zip(tree_ids, batches):
-        await raw_data_store.insert_batch(tree_id, batch, status=Status.PENDING)
+        await raw_data_store.insert_batch(tree_id, batch, status=pending_status)
 
     tree_id = tree_ids[-1]
     batch = [{"action": "insert", "key": key, "value": key} for key in original_keys]

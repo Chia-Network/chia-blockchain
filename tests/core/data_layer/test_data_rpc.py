@@ -23,6 +23,8 @@ from chia.cmds.data_funcs import (
     get_keys_values_cmd,
     get_kv_diff_cmd,
     get_proof_cmd,
+    submit_pending_root_cmd,
+    update_data_store_cmd,
     verify_proof_cmd,
     wallet_log_in_cmd,
 )
@@ -2144,6 +2146,7 @@ async def test_issue_15955_deadlock(
             changelist=[{"action": "insert", "key": key, "value": value}],
             fee=uint64(0),
         )
+        assert transaction_record is not None
         await full_node_api.process_transaction_records(records=[transaction_record])
         await full_node_api.wait_for_wallet_synced(wallet_node)
         assert await check_singleton_confirmed(dl=data_layer, tree_id=tree_id)
@@ -3154,3 +3157,269 @@ async def test_pagination_cmds(
             }
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
+@pytest.mark.anyio
+async def test_unsubmitted_batch_update(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    layer: InterfaceLayer,
+    bt: BlockTools,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    # Number of farmed blocks to check our batch update was not submitted.
+    NUM_BLOCKS_WITHOUT_SUBMIT = 10
+    async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
+        assert data_layer_service.rpc_server is not None
+        rpc_port = data_layer_service.rpc_server.listen_port
+        data_layer = data_layer_service._api.data_layer
+        data_rpc_api = DataLayerRpcApi(data_layer)
+
+        res = await data_rpc_api.create_data_store({})
+        assert res is not None
+
+        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+
+        to_insert = [(b"a", b"\x00\x01"), (b"b", b"\x00\x02"), (b"c", b"\x00\x03")]
+        for key, value in to_insert:
+            changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+
+            if layer == InterfaceLayer.direct:
+                res = await data_rpc_api.batch_update(
+                    {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+                )
+                assert res == {}
+            elif layer == InterfaceLayer.funcs:
+                res = await update_data_store_cmd(
+                    rpc_port=rpc_port,
+                    store_id="0x" + store_id.hex(),
+                    changelist=changelist,
+                    fee=None,
+                    fingerprint=None,
+                    submit_on_chain=False,
+                    root_path=bt.root_path,
+                )
+                assert res == {"success": True}
+            elif layer == InterfaceLayer.cli:
+                args: List[str] = [
+                    sys.executable,
+                    "-m",
+                    "chia",
+                    "data",
+                    "update_data_store",
+                    "--id",
+                    store_id.hex(),
+                    "--changelist",
+                    json.dumps(changelist),
+                    "--no-submit",
+                    "--data-rpc-port",
+                    str(rpc_port),
+                ]
+                process = await asyncio.create_subprocess_exec(
+                    *args,
+                    env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                await process.wait()
+                assert process.stdout is not None
+                assert process.stderr is not None
+                stdout = await process.stdout.read()
+                res = json.loads(stdout)
+                stderr = await process.stderr.read()
+                assert process.returncode == 0
+                if sys.version_info >= (3, 10, 6):
+                    assert stderr == b""
+                else:  # pragma: no cover
+                    # https://github.com/python/cpython/issues/92841
+                    assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+                assert res == {"success": True}
+            elif layer == InterfaceLayer.client:
+                client = await DataLayerRpcClient.create(
+                    self_hostname=self_hostname,
+                    port=rpc_port,
+                    root_path=bt.root_path,
+                    net_config=bt.config,
+                )
+                try:
+                    res = await client.update_data_store(
+                        store_id=store_id,
+                        changelist=changelist,
+                        fee=None,
+                        submit_on_chain=False,
+                    )
+                    assert res == {"success": True}
+                finally:
+                    client.close()
+                    await client.await_closed()
+            else:  # pragma: no cover
+                assert False, "unhandled parametrization"
+
+            await full_node_api.farm_blocks_to_puzzlehash(
+                count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
+            )
+            keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
+            assert keys_values == {"keys_values": []}
+            pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+            assert pending_root is not None
+            assert pending_root.status == Status.PENDING_BATCH
+
+        key = b"d"
+        value = b"\x00\x04"
+        to_insert.append((key, value))
+
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
+
+        keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
+        assert len(keys_values["keys_values"]) == len(to_insert)
+        kv_dict = {item["key"]: item["value"] for item in keys_values["keys_values"]}
+        for key, value in to_insert:
+            assert kv_dict["0x" + key.hex()] == "0x" + value.hex()
+        prev_keys_values = keys_values
+        old_root = await data_layer.data_store.get_tree_root(tree_id=store_id)
+
+        key = b"e"
+        value = b"\x00\x05"
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        res = await data_rpc_api.batch_update(
+            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+        )
+        assert res == {}
+
+        await full_node_api.farm_blocks_to_puzzlehash(
+            count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
+        )
+        root = await data_layer.data_store.get_tree_root(tree_id=store_id)
+        assert root == old_root
+
+        key = b"f"
+        value = b"\x00\x06"
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        res = await data_rpc_api.batch_update(
+            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+        )
+        assert res == {}
+
+        await full_node_api.farm_blocks_to_puzzlehash(
+            count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
+        )
+
+        await data_rpc_api.clear_pending_roots({"store_id": store_id.hex()})
+        pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+        assert pending_root is None
+        root = await data_layer.data_store.get_tree_root(tree_id=store_id)
+        assert root == old_root
+
+        key = b"g"
+        value = b"\x00\x07"
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        to_insert.append((key, value))
+
+        res = await data_rpc_api.batch_update(
+            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+        )
+        assert res == {}
+
+        await full_node_api.farm_blocks_to_puzzlehash(
+            count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
+        )
+        keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
+        assert keys_values == prev_keys_values
+
+        pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+        assert pending_root is not None
+        assert pending_root.status == Status.PENDING_BATCH
+
+        # submit pending root
+        if layer == InterfaceLayer.direct:
+            res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
+            update_tx_rec1 = res["tx_id"]
+        elif layer == InterfaceLayer.funcs:
+            res = await submit_pending_root_cmd(
+                store_id="0x" + store_id.hex(),
+                fee=None,
+                fingerprint=None,
+                rpc_port=rpc_port,
+                root_path=bt.root_path,
+            )
+            update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
+        elif layer == InterfaceLayer.cli:
+            args = [
+                sys.executable,
+                "-m",
+                "chia",
+                "data",
+                "submit_pending_root",
+                "--id",
+                store_id.hex(),
+                "--data-rpc-port",
+                str(rpc_port),
+            ]
+            process = await asyncio.create_subprocess_exec(
+                *args,
+                env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await process.wait()
+            assert process.stdout is not None
+            assert process.stderr is not None
+            stdout = await process.stdout.read()
+            res = json.loads(stdout)
+            stderr = await process.stderr.read()
+            assert process.returncode == 0
+            if sys.version_info >= (3, 10, 6):
+                assert stderr == b""
+            else:  # pragma: no cover
+                # https://github.com/python/cpython/issues/92841
+                assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+            update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
+        elif layer == InterfaceLayer.client:
+            client = await DataLayerRpcClient.create(
+                self_hostname=self_hostname,
+                port=rpc_port,
+                root_path=bt.root_path,
+                net_config=bt.config,
+            )
+            try:
+                res = await client.submit_pending_root(store_id=store_id, fee=None)
+                update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
+            finally:
+                client.close()
+                await client.await_closed()
+        else:  # pragma: no cover
+            assert False, "unhandled parametrization"
+
+        pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+        assert pending_root is not None
+        assert pending_root.status == Status.PENDING
+
+        key = b"h"
+        value = b"\x00\x08"
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        with pytest.raises(Exception, match="Already have a pending root waiting for confirmation"):
+            res = await data_rpc_api.batch_update(
+                {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+            )
+        with pytest.raises(Exception, match="Pending root is already submitted"):
+            res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
+
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
+
+        keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
+        assert len(keys_values["keys_values"]) == len(to_insert)
+        kv_dict = {item["key"]: item["value"] for item in keys_values["keys_values"]}
+        for key, value in to_insert:
+            assert kv_dict["0x" + key.hex()] == "0x" + value.hex()
+
+        with pytest.raises(Exception, match="Latest root is already confirmed"):
+            res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
