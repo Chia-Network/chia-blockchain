@@ -76,9 +76,9 @@ def test_get_transaction(capsys: object, get_test_cli_clients: Tuple[TestRpcClie
         "get_wallets": [(None,), (None,), (None,)],
         "get_cat_name": [(1,)],
         "get_transaction": [
-            (37, bytes32.from_hexstr(bytes32_hexstr)),
-            (37, bytes32.from_hexstr(bytes32_hexstr)),
-            (37, bytes32.from_hexstr(bytes32_hexstr)),
+            (bytes32.from_hexstr(bytes32_hexstr),),
+            (bytes32.from_hexstr(bytes32_hexstr),),
+            (bytes32.from_hexstr(bytes32_hexstr),),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -433,7 +433,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
                 None,
             )
         ],
-        "get_transaction": [(1, get_bytes32(2)), (1, get_bytes32(2))],
+        "get_transaction": [(get_bytes32(2),), (get_bytes32(2),)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 

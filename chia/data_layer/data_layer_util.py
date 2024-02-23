@@ -137,6 +137,7 @@ def row_to_node(row: aiosqlite.Row) -> Node:
 class Status(IntEnum):
     PENDING = 1
     COMMITTED = 2
+    PENDING_BATCH = 3
 
 
 class NodeType(IntEnum):
