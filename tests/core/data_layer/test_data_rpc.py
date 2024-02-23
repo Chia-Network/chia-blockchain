@@ -2209,6 +2209,12 @@ async def test_maximum_full_file_count(
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_rpc_api.service, timeout=20)
+
+        # Make sure both tasks ran at least once, since the sleep happens only after one loop run.
+        # This way the slower task will sleep for the remaining of the test, and the files will be guaranteed
+        # to be produced by the desired task.
+        await asyncio.sleep(wait_for_task_interval * 4)
+
         for batch_count in range(1, 10):
             key = batch_count.to_bytes(2, "big")
             value = batch_count.to_bytes(2, "big")
