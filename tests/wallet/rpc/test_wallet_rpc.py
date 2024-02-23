@@ -265,7 +265,7 @@ async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNod
 
 
 async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32):
-    tx = await client.get_transaction(1, transaction_id)
+    tx = await client.get_transaction(transaction_id)
     return tx.is_in_mempool()
 
 
@@ -324,7 +324,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Checks that the memo can be retrieved
-    tx_confirmed = await client.get_transaction(1, transaction_id)
+    tx_confirmed = await client.get_transaction(transaction_id)
     assert tx_confirmed.confirmed
     assert len(tx_confirmed.get_memos()) == 1
     assert [b"this is a basic tx"] in tx_confirmed.get_memos().values()
@@ -363,7 +363,7 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
-    tx = await client.get_transaction(1, transaction_id=tx.name)
+    tx = await client.get_transaction(transaction_id=tx.name)
     assert tx.confirmed
 
 
@@ -826,7 +826,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
     await time_out_assert(20, get_confirmed_balance, generated_funds - amount_outputs - amount_fee, client, 1)
 
     # Checks that the memo can be retrieved
-    tx_confirmed = await client.get_transaction(1, send_tx_res.name)
+    tx_confirmed = await client.get_transaction(send_tx_res.name)
     assert tx_confirmed.confirmed
     memos = tx_confirmed.get_memos()
     assert len(memos) == len(outputs)

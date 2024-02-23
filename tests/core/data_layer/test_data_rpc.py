@@ -158,9 +158,9 @@ async def farm_block_check_singleton(
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet, timeout=10)
 
 
-async def is_transaction_confirmed(user_wallet_id: uint32, api: WalletRpcApi, tx_id: bytes32) -> bool:
+async def is_transaction_confirmed(api: WalletRpcApi, tx_id: bytes32) -> bool:
     try:
-        val = await api.get_transaction({"wallet_id": user_wallet_id, "transaction_id": tx_id.hex()})
+        val = await api.get_transaction({"transaction_id": tx_id.hex()})
     except ValueError:  # pragma: no cover
         return False
 
@@ -172,7 +172,7 @@ async def farm_block_with_spend(
 ) -> None:
     await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(10, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, tx_rec)
+    await time_out_assert(10, is_transaction_confirmed, True, wallet_rpc_api, tx_rec)
 
 
 def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: int) -> bool:

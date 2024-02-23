@@ -107,8 +107,8 @@ class TestWalletRpcClient(TestRpcClient):
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
         return [{"id": 1, "type": w_type}]
 
-    async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
-        self.add_to_log("get_transaction", (wallet_id, transaction_id))
+    async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
+        self.add_to_log("get_transaction", (transaction_id,))
         return TransactionRecord(
             confirmed_at_height=uint32(1),
             created_at_time=uint64(1234),
