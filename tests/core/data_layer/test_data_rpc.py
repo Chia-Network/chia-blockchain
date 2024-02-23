@@ -2190,11 +2190,10 @@ async def test_maximum_full_file_count(
     if use_manage_data_task:
         manage_data_interval = 5
         check_confirmation_interval = 1000
-        await asyncio.sleep(manage_data_interval * 3)
     else:
         manage_data_interval = 1000
         check_confirmation_interval = 5
-        await asyncio.sleep(check_confirmation_interval * 3)
+    wait_for_task_interval = min(manage_data_interval, check_confirmation_interval)
     async with init_data_layer(
         wallet_rpc_port=wallet_rpc_port,
         bt=bt,
@@ -2217,7 +2216,7 @@ async def test_maximum_full_file_count(
             res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
             update_tx_rec = res["tx_id"]
             await farm_block_with_spend(full_node_api, ph, update_tx_rec, wallet_rpc_api)
-            await asyncio.sleep(manage_data_interval * 2)
+            await asyncio.sleep(wait_for_task_interval * 2)
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
             with os.scandir(data_layer.server_files_location) as entries:
