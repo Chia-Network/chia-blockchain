@@ -1337,7 +1337,7 @@ class DataStore:
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
     ) -> Optional[bytes32]:
-        async with self.db_wrapper.writer() as writer:
+        async with self.db_wrapper.writer():
             old_root = await self.get_tree_root(tree_id)
             root_hash = old_root.node_hash
             if old_root.node_hash is None:
@@ -1413,7 +1413,7 @@ class DataStore:
                     f"Expected: {old_root.generation + 1}. Got: {new_root.generation}"
                 )
 
-            await self.clean_node_table(writer)
+            # await self.clean_node_table(writer)
             return root.node_hash
 
     async def _get_one_ancestor(
@@ -1710,6 +1710,11 @@ class DataStore:
                         "url": url,
                     },
                 )
+
+    async def delete_store_tables(self, tree_id: bytes32) -> None:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute("DELETE FROM ancestors WHERE tree_id == ?", (tree_id,))
+            await writer.execute("DELETE FROM root WHERE tree_id == ?", (tree_id,))
 
     async def delete_store_data(self, tree_id: bytes32) -> None:
         async with self.db_wrapper.writer() as writer:
