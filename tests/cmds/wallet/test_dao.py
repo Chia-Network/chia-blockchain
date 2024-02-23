@@ -6,6 +6,7 @@ from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pytest
+from typing_extensions import override
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
@@ -134,7 +135,8 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
         ) -> Dict[str, Dict[str, int]]:
             return {"rules": {"proposal_minimum": 100}}
 
-        async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
+        @override
+        async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
             return TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
@@ -296,7 +298,8 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Union[str, int]]]:
             return [{"id": 1, "type": 0}, {"id": 2, "type": 14}]
 
-        async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
+        @override
+        async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
             return TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
@@ -494,7 +497,8 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
         ) -> Dict[str, Union[str, int]]:
             return {"success": True, "tx_id": bytes32(b"x" * 32).hex()}
 
-        async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
+        @override
+        async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
             return TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
