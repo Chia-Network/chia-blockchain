@@ -432,7 +432,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
                 None,
             )
         ],
-        "get_transaction": [(1, get_bytes32(2)), (1, get_bytes32(2))],
+        "get_transaction": [(get_bytes32(2),), (get_bytes32(2),)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
