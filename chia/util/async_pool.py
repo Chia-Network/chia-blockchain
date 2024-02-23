@@ -172,7 +172,7 @@ class AsyncPool:
                 with log_exceptions(
                     log=self.log,
                     consume=True,
-                    message=f"fuddy exception consumed while looping in {method_name} for {self.name!r}",
+                    message=f"exception consumed while looping in {method_name} for {self.name!r}",
                 ):
                     await self._run_single()
         finally:
@@ -180,7 +180,7 @@ class AsyncPool:
                 with log_exceptions(
                     log=self.log,
                     consume=False,
-                    message=f"fuddy exception while tearing down in {method_name} for {self.name!r}",
+                    message=f"exception while tearing down in {method_name} for {self.name!r}",
                 ):
                     await self._teardown_workers()
 
@@ -188,12 +188,12 @@ class AsyncPool:
         while len(self._workers) < self._target_worker_count:
             new_worker_id = next(self._worker_id_counter)
             new_worker = asyncio.create_task(self.worker_async_callable(new_worker_id))
-            self.log.debug(f"fuddy {self.name}: adding worker {new_worker_id}")
+            self.log.debug(f"{self.name}: adding worker {new_worker_id}")
             self._workers[new_worker] = new_worker_id
 
         self._started.set()
 
-        self.log.debug(f"fuddy {self.name}: waiting with {len(self._workers)} workers: {list(self._workers.values())}")
+        self.log.debug(f"{self.name}: waiting with {len(self._workers)} workers: {list(self._workers.values())}")
         done_workers, pending_workers = await asyncio.wait(
             self._workers,
             return_when=asyncio.FIRST_COMPLETED,
@@ -222,4 +222,4 @@ class AsyncPool:
                 pass
             except Exception:
                 error_trace = traceback.format_exc()
-                self.log.error(f"fuddy {self.name}: worker {id} raised exception: {error_trace}")
+                self.log.error(f"{self.name}: worker {id} raised exception: {error_trace}")
