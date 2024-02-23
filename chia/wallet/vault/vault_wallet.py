@@ -6,6 +6,7 @@ import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from chia_rs import G1Element, G2Element
+from ecdsa.keys import SigningKey
 from typing_extensions import Unpack
 
 from chia.protocols.wallet_protocol import CoinState
@@ -15,6 +16,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import Condition, CreateCoin, CreatePuzzleAnnouncement, parse_timelock_info
@@ -24,11 +26,14 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions, solution_for_conditions
 from chia.wallet.signer_protocol import (
     PathHint,
+    Signature,
     SignedTransaction,
     SigningInstructions,
     SigningResponse,
+    SigningTarget,
     Spend,
     SumHint,
+    TransactionInfo,
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
@@ -51,6 +56,7 @@ from chia.wallet.vault.vault_drivers import (
     get_vault_inner_puzzle_hash,
     get_vault_inner_solution,
     get_vault_proof,
+    match_vault_puzzle,
 )
 from chia.wallet.vault.vault_info import RecoveryInfo, VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
@@ -200,7 +206,7 @@ class Vault(Wallet):
 
         p2_singleton_spends = await self.generate_p2_singleton_spends(uint64(total_amount), tx_config, coins=coins)
 
-        coins = set([spend.coin for spend in p2_singleton_spends])
+        coins = {spend.coin for spend in p2_singleton_spends}
         spend_value = sum([coin.amount for coin in coins])
         change = spend_value - total_amount
         assert change >= 0
@@ -263,7 +269,7 @@ class Vault(Wallet):
 
         vault_spend = make_spend(self.vault_info.coin, full_puzzle, full_solution)
         all_spends = [*p2_singleton_spends, vault_spend]
-        
+
         return all_spends
 
     async def generate_signed_vault_spend(
@@ -363,21 +369,70 @@ class Vault(Wallet):
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
 
+    async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
+        pk = self.vault_info.pubkey
+        vault_spend = [spend for spend in coin_spends if spend.as_coin_spend().coin == self.vault_info.coin][0]
+        inner_sol = vault_spend.solution.at("rrf")
+        secp_puz = inner_sol.at("rf")
+        secp_sol = inner_sol.at("rrf")
+        _, secp_args = secp_puz.uncurry()
+        genesis_challenge = secp_args.at("f").as_atom()
+        hidden_puzzle_hash = secp_args.at("rrf").as_atom()
+        delegated_puzzle_hash = secp_sol.at("f").get_tree_hash()
+        coin_id = secp_sol.at("rrrf").as_atom()
+        message = delegated_puzzle_hash + coin_id + genesis_challenge + hidden_puzzle_hash
+        fingerprint = self.wallet_state_manager.observation_root.get_fingerprint().to_bytes(4, "big")
+        target = SigningTarget(fingerprint, message, std_hash(pk + message))
+        sig_info = SigningInstructions(
+            await self.wallet_state_manager.key_hints_for_pubkeys([pk]),
+            [target],
+        )
+        return sig_info
+
     async def apply_signatures(
         self, spends: List[Spend], signing_responses: List[SigningResponse]
     ) -> SignedTransaction:
-        raise NotImplementedError("vault wallet")
+        signed_spends = []
+        for spend in spends:
+            mod, curried_args = spend.puzzle.uncurry()
+            if match_vault_puzzle(mod, curried_args):
+                new_sol = spend.solution.replace(rrfrrfrrf=signing_responses[0].signature)
+                signed_spends.append(Spend(spend.coin, spend.puzzle, new_sol))
+            else:
+                signed_spends.append(spend)
+        return SignedTransaction(
+            TransactionInfo(signed_spends),
+            [Signature("bls_12381_aug_scheme", G2Element().to_bytes())],
+        )
 
     async def execute_signing_instructions(
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
     ) -> List[SigningResponse]:
-        raise NotImplementedError("vault wallet")
+        root_pubkey = self.wallet_state_manager.observation_root
+        sk: SigningKey = self.wallet_state_manager.config["test_sk"]  # Temporary access to private key
+        sk_lookup: Dict[int, SigningKey] = {root_pubkey.get_fingerprint(): sk}
+        responses: List[SigningResponse] = []
+
+        # We don't need to expand path and sum hints since vault signer always uses the same keys
+        # so just sign the targets
+        for target in signing_instructions.targets:
+            fingerprint: int = int.from_bytes(target.fingerprint, "big")
+            if fingerprint not in sk_lookup:
+                raise ValueError(f"Pubkey {fingerprint} not found")
+            responses.append(
+                SigningResponse(
+                    sk_lookup[fingerprint].sign_deterministic(target.message),
+                    target.hook,
+                )
+            )
+
+        return responses
 
     async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:
-        raise NotImplementedError("vault wallet")
+        return None
 
     async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
-        raise NotImplementedError("vault wallet")
+        return None
 
     def make_solution(
         self,

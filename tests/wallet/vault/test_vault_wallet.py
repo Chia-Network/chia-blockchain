@@ -7,9 +7,12 @@ import pytest
 from ecdsa import NIST256p, SigningKey
 from ecdsa.util import PRNG
 
-# from chia.rpc.wallet_request_types import GatherSigningInfo
+from chia.rpc.wallet_request_types import GatherSigningInfo
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
+from chia.wallet.signer_protocol import Spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.vault.vault_root import VaultRoot
@@ -23,6 +26,9 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
     seed = b"chia_secp"
     SECP_SK = SigningKey.generate(curve=NIST256p, entropy=PRNG(seed), hashfunc=sha256)
     SECP_PK = SECP_SK.verifying_key.to_string("compressed")
+
+    # Temporary hack so execute_signing_instructions can access the key
+    env.wallet_state_manager.config["test_sk"] = SECP_SK
     client = env.rpc_client
     fingerprint = (await client.get_public_keys())[0]
     bls_pk = None
@@ -162,11 +168,40 @@ async def test_vault_creation(
     ]
     amount = uint64(1000000)
     fee = uint64(100)
+    balance_delta = 1011000100
 
     unsigned_txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
         amount, recipient_ph, DEFAULT_TX_CONFIG, primaries=primaries, fee=fee
     )
     assert len(unsigned_txs) == 1
 
-    # gather_sig_info = GatherSigningInfo(unsigned_txs[0].spend_bundle.coin_spends)
-    # await env.rpc_client.gather_signing_info(gather_sig_info)
+    # Farm a block so the vault balance includes farmed coins from the test setup in pre-block update.
+    # Do this after generating the tx so we can be sure to spend the right funding coins
+    await wallet_environments.full_node.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+
+    assert unsigned_txs[0].spend_bundle is not None
+    spends = [Spend.from_coin_spend(spend) for spend in unsigned_txs[0].spend_bundle.coin_spends]
+    signing_info = await env.rpc_client.gather_signing_info(GatherSigningInfo(spends))
+
+    signing_responses = await wallet.execute_signing_instructions(signing_info.signing_instructions)
+
+    signed_response = await wallet.apply_signatures(spends, signing_responses)
+    await env.wallet_state_manager.submit_transactions([signed_response])
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "set_remainder": True,
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        "confirmed_wallet_balance": -balance_delta,
+                        "set_remainder": True,
+                    }
+                },
+            ),
+        ],
+    )
