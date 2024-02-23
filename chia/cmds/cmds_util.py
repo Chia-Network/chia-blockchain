@@ -17,7 +17,7 @@ from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.rpc.rpc_client import RpcClient
+from chia.rpc.rpc_client import ResponseFailureError, RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -124,6 +124,17 @@ async def get_any_service_client(
         # check if we can connect to node
         await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
         yield node_client, config
+    except ResponseFailureError as e:
+        if not consume_errors:
+            raise
+
+        response = dict(e.response)
+        tb = response.pop("traceback", None)
+
+        print(f"{ResponseFailureError(response=response)}")
+
+        if tb is not None:
+            print(f"Traceback:\n{tb}")
     except Exception as e:  # this is only here to make the errors more user-friendly.
         if not consume_errors or isinstance(e, CliRpcConnectionError) or isinstance(e, click.Abort):
             # CliRpcConnectionError will be handled by click.
