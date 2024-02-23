@@ -92,12 +92,9 @@ class QueuedAsyncPool(Generic[J, R]):
     async def get_job(self) -> Job[J]:
         while True:
             job = await self.job_queue.get()
-            try:
-                if not job.cancelled:
-                    # TODO: can the job just be removed from the queue?
-                    return job
-            finally:
-                job.done.set()
+            if not job.cancelled:
+                # TODO: can the job just be removed from the queue?
+                return job
 
     async def worker(self, worker_id: int) -> None:
         job = await self.get_job()
@@ -117,9 +114,13 @@ class QueuedAsyncPool(Generic[J, R]):
             job.done.set()
 
     def cancel(self, job: Job[J]) -> None:
+        # TODO: should this just be on the Job object?  or can we do something useful
+        #       here like get it out of the queue.
         job.cancelled = True
         if job.task is not None:
             job.task.cancel()
+        # TODO: should this happen only after actual cancellation completes?
+        job.done.set()
 
 
 @final
