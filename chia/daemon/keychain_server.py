@@ -16,7 +16,7 @@ from chia.util.streamable import Streamable, streamable
 # Commands that are handled by the KeychainServer
 keychain_commands = [
     "add_private_key",
-    "add_public_key",
+    "add_key",
     "check_keys",
     "delete_all_keys",
     "delete_key_by_fingerprint",
@@ -175,9 +175,9 @@ class KeychainServer:
     async def handle_command(self, command: str, data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             if command == "add_private_key":
-                return await self.add_private_key(data)
-            elif command == "add_public_key":
-                return await self.add_public_key(data)
+                return await self.add_key({"mnemonic_or_pk": data["mnemonic"], "label": data["label"], "private": True})
+            elif command == "add_key":
+                return await self.add_key(data)
             elif command == "check_keys":
                 return await self.check_keys(data)
             elif command == "delete_all_keys":
@@ -209,22 +209,23 @@ class KeychainServer:
             log.exception(e)
             return {"success": False, "error": str(e), "command": command}
 
-    async def add_private_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def add_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
-        mnemonic = request.get("mnemonic", None)
+        mnemonic_or_pk = request.get("mnemonic_or_pk", None)
         label = request.get("label", None)
+        private = request.get("private", True)
 
-        if mnemonic is None:
+        if mnemonic_or_pk is None:
             return {
                 "success": False,
                 "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
-                "error_details": {"message": "missing mnemonic"},
+                "error_details": {"message": "missing key_information"},
             }
 
         try:
-            sk = self.get_keychain_for_request(request).add_private_key(mnemonic, label)
+            key = self.get_keychain_for_request(request).add_key(mnemonic_or_pk, label, private)
         except KeyError as e:
             return {
                 "success": False,
@@ -238,38 +239,12 @@ class KeychainServer:
                 "error": str(e),
             }
 
-        return {"success": True, "fingerprint": sk.get_g1().get_fingerprint()}
+        if isinstance(key, PrivateKey):
+            fingerprint = key.get_g1().get_fingerprint()
+        else:
+            fingerprint = key.get_fingerprint()
 
-    async def add_public_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        if self.get_keychain_for_request(request).is_keyring_locked():  # pragma: no cover
-            return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
-
-        public_key = request.get("public_key", None)
-        label = request.get("label", None)
-
-        if public_key is None:  # pragma: no cover
-            return {
-                "success": False,
-                "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
-                "error_details": {"message": "missing public_key"},
-            }
-
-        try:
-            pk = self.get_keychain_for_request(request).add_public_key(public_key, label)
-        except KeyError as e:  # pragma: no cover
-            return {
-                "success": False,
-                "error": KEYCHAIN_ERR_KEYERROR,
-                "error_details": {"message": f"The word '{e.args[0]}' is incorrect.'", "word": e.args[0]},
-            }
-        except ValueError as e:  # pragma: no cover
-            log.exception(e)
-            return {
-                "success": False,
-                "error": str(e),
-            }
-
-        return {"success": True, "fingerprint": pk.get_fingerprint()}
+        return {"success": True, "fingerprint": fingerprint}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():

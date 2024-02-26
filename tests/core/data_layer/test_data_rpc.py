@@ -2243,7 +2243,7 @@ async def test_wallet_log_in_changes_active_fingerprint(
 
     mnemonic = create_mnemonic()
     assert wallet_rpc_api.service.local_keychain is not None
-    private_key = wallet_rpc_api.service.local_keychain.add_private_key(mnemonic=mnemonic)
+    private_key = wallet_rpc_api.service.local_keychain.add_key(mnemonic_or_pk=mnemonic)
     secondary_fingerprint: int = private_key.get_g1().get_fingerprint()
 
     await wallet_rpc_api.log_in(request={"fingerprint": primary_fingerprint})

@@ -327,10 +327,8 @@ class BlockTools:
                 await keychain_proxy.delete_all_keys()
                 self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
                 self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-                self.farmer_master_sk = await keychain_proxy.add_private_key(
-                    bytes_to_mnemonic(self.farmer_master_sk_entropy)
-                )
-                self.pool_master_sk = await keychain_proxy.add_private_key(
+                self.farmer_master_sk = await keychain_proxy.add_key(bytes_to_mnemonic(self.farmer_master_sk_entropy))
+                self.pool_master_sk = await keychain_proxy.add_key(
                     bytes_to_mnemonic(self.pool_master_sk_entropy),
                 )
             else:

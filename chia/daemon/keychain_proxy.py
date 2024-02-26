@@ -5,7 +5,7 @@ import logging
 import ssl
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
 
 from aiohttp import ClientConnectorError, ClientSession
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
@@ -170,47 +170,48 @@ class KeychainProxy(DaemonProxy):
                     raise Exception(f"{err}")
                 raise Exception(f"{error}")
 
-    async def add_private_key(self, mnemonic: str, label: Optional[str] = None) -> PrivateKey:
+    @overload
+    async def add_key(self, mnemonic_or_pk: str) -> PrivateKey:
+        ...
+
+    @overload
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> PrivateKey:
+        ...
+
+    @overload
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> PrivateKey:
+        ...
+
+    @overload
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]) -> G1Element:
+        ...
+
+    @overload
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: bool) -> Union[PrivateKey, G1Element]:
+        ...
+
+    async def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
+    ) -> Union[PrivateKey, G1Element]:
         """
-        Forwards to Keychain.add_private_key()
+        Forwards to Keychain.add_key()
         """
-        key: PrivateKey
+        key: Union[PrivateKey, G1Element]
         if self.use_local_keychain():
-            key = self.keychain.add_private_key(mnemonic, label)
+            key = self.keychain.add_key(mnemonic_or_pk, label, private)
         else:
             response, success = await self.get_response_for_request(
-                "add_private_key", {"mnemonic": mnemonic, "label": label}
+                "add_key", {"mnemonic_or_pk": mnemonic_or_pk, "label": label, "private": private}
             )
             if success:
-                seed = mnemonic_to_seed(mnemonic)
-                key = AugSchemeMPL.key_gen(seed)
+                if private:
+                    seed = mnemonic_to_seed(mnemonic_or_pk)
+                    key = AugSchemeMPL.key_gen(seed)
+                else:
+                    key = G1Element.from_bytes(hexstr_to_bytes(mnemonic_or_pk))
             else:
                 error = response["data"].get("error", None)
                 if error == KEYCHAIN_ERR_KEYERROR:
-                    error_details = response["data"].get("error_details", {})
-                    word = error_details.get("word", "")
-                    raise KeyError(word)
-                else:
-                    self.handle_error(response)
-
-        return key
-
-    async def add_public_key(self, pubkey: str, label: Optional[str] = None) -> G1Element:
-        """
-        Forwards to Keychain.add_public_key()
-        """
-        key: G1Element
-        if self.use_local_keychain():
-            key = self.keychain.add_public_key(pubkey, label)  # pragma: no cover
-        else:
-            response, success = await self.get_response_for_request(
-                "add_public_key", {"public_key": pubkey, "label": label}
-            )
-            if success:
-                key = G1Element.from_bytes(hexstr_to_bytes(pubkey))
-            else:
-                error = response["data"].get("error", None)
-                if error == KEYCHAIN_ERR_KEYERROR:  # pragma: no cover
                     error_details = response["data"].get("error_details", {})
                     word = error_details.get("word", "")
                     raise KeyError(word)
@@ -331,7 +332,7 @@ class KeychainProxy(DaemonProxy):
 
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         """
-        Locates and returns a private key matching the provided fingerprint
+        Locates and returns a public key matching the provided fingerprint
         """
         key: Optional[PrivateKey] = None
         if self.use_local_keychain():
