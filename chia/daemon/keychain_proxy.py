@@ -330,37 +330,57 @@ class KeychainProxy(DaemonProxy):
 
         return key
 
+    @overload
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+        ...
+
+    @overload
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int], private: Literal[True]) -> Optional[PrivateKey]:
+        ...
+
+    @overload
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int], private: Literal[False]) -> Optional[G1Element]:
+        ...
+
+    @overload
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: bool
+    ) -> Optional[Union[PrivateKey, G1Element]]:
+        ...
+
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: bool = True
+    ) -> Optional[Union[PrivateKey, G1Element]]:
         """
-        Locates and returns a public key matching the provided fingerprint
+        Locates and returns a private key matching the provided fingerprint
         """
-        key: Optional[PrivateKey] = None
+        key: Optional[Union[PrivateKey, G1Element]] = None
         if self.use_local_keychain():
-            private_keys = self.keychain.get_all_private_keys()
-            if len(private_keys) == 0:
+            keys = self.keychain.get_keys(include_secrets=private)
+            if len(keys) == 0:
                 raise KeychainIsEmpty()
             else:
+                selected_key = keys[0]
                 if fingerprint is not None:
-                    for sk, _ in private_keys:
-                        if sk.get_g1().get_fingerprint() == fingerprint:
-                            key = sk
+                    for key_data in keys:
+                        if key_data.public_key.get_fingerprint() == fingerprint:
+                            selected_key = key_data
                             break
-                    if key is None:
+                    else:
                         raise KeychainKeyNotFound(fingerprint)
-                else:
-                    key = private_keys[0][0]
+                key = selected_key.private_key if private else selected_key.public_key
         else:
             response, success = await self.get_response_for_request(
-                "get_key_for_fingerprint", {"fingerprint": fingerprint}
+                "get_key_for_fingerprint", {"fingerprint": fingerprint, "private": private}
             )
             if success:
                 pk = response["data"].get("pk", None)
                 ent = response["data"].get("entropy", None)
-                if pk is None or ent is None:
+                if pk is None or (private and ent is None):
                     err = f"Missing pk and/or ent in {response.get('command')} response"
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
-                else:
+                elif private:
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
                     seed = mnemonic_to_seed(mnemonic)
                     private_key = AugSchemeMPL.key_gen(seed)
@@ -369,42 +389,8 @@ class KeychainProxy(DaemonProxy):
                     else:
                         err = "G1Elements don't match"
                         self.log.error(f"{err}")
-            else:
-                self.handle_error(response)
-
-        return key
-
-    async def get_public_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[G1Element]:
-        """
-        Locates and returns a private key matching the provided fingerprint
-        """
-        key: Optional[G1Element] = None
-        if self.use_local_keychain():
-            public_keys = self.keychain.get_all_public_keys()
-            if len(public_keys) == 0:
-                raise KeychainIsEmpty()
-            else:
-                if fingerprint is not None:
-                    for pk in public_keys:
-                        if pk.get_fingerprint() == fingerprint:
-                            key = pk
-                            break
-                    if key is None:
-                        raise KeychainKeyNotFound(fingerprint)
                 else:
-                    key = public_keys[0]
-        else:
-            response, success = await self.get_response_for_request(
-                "get_public_key_for_fingerprint", {"fingerprint": fingerprint}
-            )
-            if success:
-                pk_str = response["data"].get("pk", None)
-                if pk_str is None:  # pragma: no cover
-                    err = f"Missing pk in {response.get('command')} response"
-                    self.log.error(f"{err}")
-                    raise KeychainMalformedResponse(f"{err}")
-                else:
-                    key = G1Element.from_bytes(bytes.fromhex(pk_str))
+                    key = G1Element.from_bytes(bytes.fromhex(pk))
             else:
                 self.handle_error(response)
 
