@@ -174,7 +174,9 @@ class KeychainServer:
     async def handle_command(self, command: str, data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             if command == "add_private_key":
-                return await self.add_key({"mnemonic_or_pk": data["mnemonic"], "label": data["label"], "private": True})
+                return await self.add_key(
+                    {"mnemonic_or_pk": data.get("mnemonic", None), "label": data.get("label", None), "private": True}
+                )
             elif command == "add_key":
                 return await self.add_key(data)
             elif command == "check_keys":
@@ -218,7 +220,7 @@ class KeychainServer:
             return {
                 "success": False,
                 "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
-                "error_details": {"message": "missing key_information"},
+                "error_details": {"message": "missing key information"},
             }
 
         try:

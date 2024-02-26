@@ -971,7 +971,7 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
     missing_mnemonic_response_data = {
         "success": False,
         "error": "malformed request",
-        "error_details": {"message": "missing mnemonic"},
+        "error_details": {"message": "missing key information"},
     }
 
     mnemonic_with_typo_response_data = {
