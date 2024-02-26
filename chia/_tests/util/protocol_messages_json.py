@@ -2088,16 +2088,14 @@ request_puzzle_state_json: Dict[str, Any] = {
         "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
         "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
     ],
-    "min_height": 0,
-    "max_height": None,
+    "previous_height": 0,
     "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411",
+    "max_height": 10000000,
     "filters": {"include_spent": True, "include_unspent": True, "include_hinted": True},
     "subscribe_when_finished": True,
 }
 
-reject_puzzle_state_json: Dict[str, Any] = {
-    "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411"
-}
+reject_puzzle_state_json: Dict[str, Any] = {}
 
 respond_puzzle_state_json: Dict[str, Any] = {
     "puzzle_hashes": [
@@ -2105,8 +2103,9 @@ respond_puzzle_state_json: Dict[str, Any] = {
         "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
         "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
     ],
-    "next_height": None,
-    "next_header_hash": None,
+    "height": 432487,
+    "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411",
+    "is_finished": True,
     "coin_states": [
         {
             "coin": {
@@ -2126,9 +2125,9 @@ request_coin_state_json: Dict[str, Any] = {
         "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
         "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
     ],
-    "min_height": 0,
-    "max_height": 10000000,
+    "previous_height": 0,
     "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411",
+    "max_height": 10000000,
     "subscribe": False,
 }
 
@@ -2151,9 +2150,7 @@ respond_coin_state_json: Dict[str, Any] = {
     ],
 }
 
-reject_coin_state_json: Dict[str, Any] = {
-    "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411"
-}
+reject_coin_state_json: Dict[str, Any] = {}
 
 pool_difficulty_json: Dict[str, Any] = {
     "difficulty": 14819251421858580996,
