@@ -313,7 +313,7 @@ async def coin_record_data(
             if rng.choice([True, False]):
                 coin_ph = std_hash(coin_ph)
 
-            coin = Coin(bytes32(b"\0" * 32), coin_ph, base_amount + added_amount)
+            coin = Coin(bytes32(b"\0" * 32), coin_ph, uint64(base_amount + added_amount))
 
             coin_records[coin.name()] = CoinRecord(
                 coin=coin,
@@ -408,7 +408,7 @@ async def test_coin_state(one_node: OneNode, self_hostname: str) -> None:
     coin_records: OrderedDict[bytes32, CoinRecord] = OrderedDict()
     for i in range(110000):
         coin_record = CoinRecord(
-            coin=Coin(bytes32(b"\0" * 32), bytes32(b"1" * 32), i),
+            coin=Coin(bytes32(b"\0" * 32), bytes32(b"1" * 32), uint64(i)),
             confirmed_block_index=uint32(i),
             spent_block_index=uint32(0),
             coinbase=False,
@@ -451,7 +451,7 @@ async def test_coin_state(one_node: OneNode, self_hostname: str) -> None:
 
 
 @pytest.mark.anyio
-async def test_wallet_sync(one_node: OneNode, self_hostname: str) -> None:
+async def test_transaction_added_update(one_node: OneNode, self_hostname: str) -> None:
     simulator, incoming_queue, peer = await connect_to_simulator(one_node, self_hostname)
     peer_id = peer.peer_node_id
 
@@ -460,7 +460,7 @@ async def test_wallet_sync(one_node: OneNode, self_hostname: str) -> None:
     assert simulator.full_node.subscriptions.add_puzzle_subscriptions(peer_id, [ph], 1) == {ph}
     await simulator.farm_blocks_to_puzzlehash(2, ph, guarantee_transaction_blocks=True)
 
-    coin = Coin(b"test" * 8, ph, 1)
+    coin = Coin(b"test" * 8, ph, uint64(1))
     await simulator.full_node.coin_store._add_coin_records(
         [
             CoinRecord(
