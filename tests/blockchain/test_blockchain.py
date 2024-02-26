@@ -3509,8 +3509,15 @@ async def test_reorg_new_ref(empty_blockchain, bt):
         fork_info: Optional[ForkInfo] = None
         if i < 10:
             expected = AddBlockResult.ALREADY_HAVE_BLOCK
-        elif i < 20:
+        elif i < 19:
             expected = AddBlockResult.ADDED_AS_ORPHAN
+        elif i == 19:
+            # same height as peak decide by iterations
+            peak = b.get_peak()
+            if block.total_iters < peak.total_iters:
+                expected = AddBlockResult.NEW_PEAK
+            else:
+                expected = AddBlockResult.ADDED_AS_ORPHAN
         else:
             expected = AddBlockResult.NEW_PEAK
             if fork_info is None:

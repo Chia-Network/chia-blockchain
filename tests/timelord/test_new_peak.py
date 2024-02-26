@@ -10,7 +10,6 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.protocols import timelord_protocol
 from chia.server.server import ChiaServer
-from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.timelord.timelord_api import TimelordAPI
@@ -142,9 +141,7 @@ class TestNewPeak:
 
                 # make two new blocks on tip, block_2 has higher total iterations
                 block_1 = bt.get_consecutive_blocks(1, default_1000_blocks)[-1]
-                block_2 = bt.get_consecutive_blocks(
-                    1, default_1000_blocks, min_signage_point=block_1.reward_chain_block.signage_point_index
-                )[-1]
+                block_2 = bt.get_consecutive_blocks(1, default_1000_blocks, skip_slots=2)[-1]
 
                 # make sure block_2 has higher iterations then block_1
                 assert block_2.total_iters > block_1.total_iters
