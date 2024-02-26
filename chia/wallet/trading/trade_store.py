@@ -152,7 +152,8 @@ class TradeStore:
 
             await conn.execute("CREATE INDEX IF NOT EXISTS trade_confirmed_index on trade_records(confirmed_at_index)")
             await conn.execute("CREATE INDEX IF NOT EXISTS trade_status on trade_records(status)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS trade_id on trade_records(trade_id)")
+            # Remove an old redundant index on the primary key
+            await conn.execute("DROP INDEX IF EXISTS trade_id")
 
             if needs_is_my_offer_migration:
                 await migrate_is_my_offer(self.log, conn)

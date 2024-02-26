@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import pathlib
 from decimal import Decimal
 from typing import List, Optional, Sequence
 
@@ -443,7 +444,13 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     help="A wallet id of an asset to receive and the amount you wish to receive (formatted like wallet_id:amount)",
     multiple=True,
 )
-@click.option("-p", "--filepath", help="The path to write the generated offer file to", required=True)
+@click.option(
+    "-p",
+    "--filepath",
+    help="The path to write the generated offer file to",
+    required=True,
+    type=click.Path(dir_okay=False, writable=True, path_type=pathlib.Path),
+)
 @click.option(
     "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
 )
@@ -459,7 +466,7 @@ def make_offer_cmd(
     fingerprint: int,
     offer: Sequence[str],
     request: Sequence[str],
-    filepath: str,
+    filepath: pathlib.Path,
     fee: str,
     reuse: bool,
     override: bool,

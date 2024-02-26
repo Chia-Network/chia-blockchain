@@ -500,7 +500,7 @@ async def test_add_states_from_peer_untrusted_shutdown(
     wallet_node._close()
     coin_generator = CoinGenerator()
     # Generate enough coin states to fill up the max number validation/add tasks.
-    coin_states = [CoinState(coin_generator.get().coin, i, i) for i in range(3000)]
+    coin_states = [CoinState(coin_generator.get().coin, uint32(i), uint32(i)) for i in range(3000)]
     with caplog.at_level(logging.INFO):
         assert not await wallet_node.add_states_from_peer(coin_states, list(wallet_server.all_connections.values())[0])
         assert "Terminating receipt and validation due to shut down request" in caplog.text
