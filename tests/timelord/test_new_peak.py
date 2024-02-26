@@ -141,7 +141,9 @@ class TestNewPeak:
 
                 # make two new blocks on tip, block_2 has higher total iterations
                 block_1 = bt.get_consecutive_blocks(1, default_1000_blocks)[-1]
-                block_2 = bt.get_consecutive_blocks(1, default_1000_blocks, skip_slots=2)[-1]
+                block_2 = bt.get_consecutive_blocks(
+                    1, default_1000_blocks, min_signage_point=block_1.reward_chain_block.signage_point_index
+                )[-1]
 
                 # make sure block_2 has higher iterations then block_1
                 assert block_2.total_iters > block_1.total_iters
