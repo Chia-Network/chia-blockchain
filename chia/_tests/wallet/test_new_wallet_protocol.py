@@ -330,7 +330,7 @@ async def coin_record_data(
 
 
 @pytest.mark.anyio
-async def test_puzzle_state(
+async def test_sync_wallet(
     coin_record_data: Tuple[FullNodeSimulator, WSChiaConnection, List[bytes32], Dict[bytes32, CoinRecord]],
 ) -> None:
     simulator, peer, puzzle_hashes, coin_records = coin_record_data
