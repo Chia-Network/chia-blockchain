@@ -278,7 +278,6 @@ async def sync_puzzle_hashes(
                     is_finished = True
 
 
-@pytest.mark.anyio
 @pytest.fixture(scope="function", params=[(0, 0), (1000, 2), (11000, 5)])
 async def coin_record_data(
     one_node: OneNode,
@@ -395,32 +394,34 @@ async def test_sync_wallet(
 async def test_coin_state(one_node: OneNode, self_hostname: str) -> None:
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
 
-    # Farm block
-    await simulator.farm_blocks_to_puzzlehash(1)
+    # Farm blocks 0-11 and make sure the last one is farmed
+    await simulator.farm_blocks_to_puzzlehash(12)
 
-    first_header_hash = simulator.full_node.blockchain.height_to_hash(uint32(0))
-    assert first_header_hash is not None
+    h0 = simulator.full_node.blockchain.height_to_hash(uint32(0))
+    assert h0 is not None
+
+    h1 = simulator.full_node.blockchain.height_to_hash(uint32(1))
+    assert h1 is not None
 
     # Add more than the max response coin records
     coin_records: OrderedDict[bytes32, CoinRecord] = OrderedDict()
-    for i in range(110000):
-        coin_record = CoinRecord(
-            coin=Coin(bytes32(b"\0" * 32), bytes32(b"1" * 32), uint64(i)),
-            confirmed_block_index=uint32(i),
-            spent_block_index=uint32(0),
-            coinbase=False,
-            timestamp=uint64(472618),
-        )
-        coin_records[coin_record.coin.name()] = coin_record
+    for height in range(1, 12):
+        for i in range(10000):
+            coin_record = CoinRecord(
+                coin=Coin(std_hash(i.to_bytes(4, "big")), std_hash(height.to_bytes(4, "big")), uint64(i)),
+                confirmed_block_index=uint32(height),
+                spent_block_index=uint32(0),
+                coinbase=False,
+                timestamp=uint64(472618),
+            )
+            coin_records[coin_record.coin.name()] = coin_record
 
     await simulator.full_node.coin_store._add_coin_records(list(coin_records.values()))
 
     # Fetch the coin records using the wallet protocol,
     # only after height 10000, so that the limit of 100000 isn't exceeded
     resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState(
-            list(coin_records.keys()), uint32(10000), first_header_hash, None, subscribe=False
-        ),
+        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(1), h1, None, subscribe=False),
         peer,
     )
     assert resp is not None
@@ -437,9 +438,7 @@ async def test_coin_state(one_node: OneNode, self_hostname: str) -> None:
 
     # The expected behavior when the limit is exceeded, is to skip the rest
     resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState(
-            list(coin_records.keys()), uint32(0), first_header_hash, None, subscribe=False
-        ),
+        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(0), h0, None, subscribe=False),
         peer,
     )
     assert resp is not None
