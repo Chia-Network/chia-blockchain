@@ -811,7 +811,6 @@ class DataLayer:
                 self.unsubscribe_data_queue.clear()
             await asyncio.sleep(manage_data_interval)
 
-    # TODO: better name
     async def update_subscription(
         self,
         worker_id: int,
