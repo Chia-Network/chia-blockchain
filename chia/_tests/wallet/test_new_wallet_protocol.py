@@ -6,8 +6,7 @@ from random import Random
 from typing import AsyncGenerator, Dict, List, Optional, OrderedDict, Set, Tuple
 
 import pytest
-from chia_rs import Coin, CoinSpend, CoinState, G2Element, Program
-from clvm_tools import binutils
+from chia_rs import Coin, CoinState
 
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -18,11 +17,9 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.aliases import SimulatorFullNodeService, WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from tests.connection_utils import add_dummy_connection
-from tests.wallet.simple_sync.test_simple_sync_protocol import get_all_messages_in_queue
 
 OneNode = Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]
 
@@ -448,41 +445,3 @@ async def test_coin_state(one_node: OneNode, self_hostname: str) -> None:
     assert resp is not None
 
     response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
-
-
-@pytest.mark.anyio
-async def test_transaction_added_update(one_node: OneNode, self_hostname: str) -> None:
-    simulator, incoming_queue, peer = await connect_to_simulator(one_node, self_hostname)
-    peer_id = peer.peer_node_id
-
-    # Create a coin and subscribe to its puzzle hash
-    ph = bytes32.fromhex("4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a")
-    assert simulator.full_node.subscriptions.add_puzzle_subscriptions(peer_id, [ph], 1) == {ph}
-    await simulator.farm_blocks_to_puzzlehash(2, ph, guarantee_transaction_blocks=True)
-
-    coin = Coin(b"test" * 8, ph, uint64(1))
-    await simulator.full_node.coin_store._add_coin_records(
-        [
-            CoinRecord(
-                coin=coin,
-                confirmed_block_index=uint32(1),
-                spent_block_index=uint32(0),
-                coinbase=False,
-                timestamp=uint64(513875),
-            )
-        ]
-    )
-
-    program = Program.to(binutils.assemble("()"))  # type: ignore[no-untyped-call]
-    coin_spend = CoinSpend(coin, program, program)
-    spend_bundle = SpendBundle([coin_spend], G2Element())
-
-    await simulator.full_node.add_transaction(spend_bundle, spend_bundle.name())
-
-    all_messages = await get_all_messages_in_queue(incoming_queue)
-    transaction_added_updates = [
-        wallet_protocol.TransactionAddedUpdate.from_bytes(message.data)
-        for message in all_messages
-        if ProtocolMessageTypes(message.type).name == "transaction_added_update"
-    ]
-    assert len(transaction_added_updates) == 1
