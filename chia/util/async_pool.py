@@ -49,6 +49,7 @@ class ResultQueueProtocol(Protocol[T_contra]):
 @dataclasses.dataclass
 class Job(Generic[T]):
     input: T
+    started: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
     done: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
     exception: Optional[BaseException] = None
     task: Optional[asyncio.Task[object]] = None
@@ -99,6 +100,7 @@ class QueuedAsyncPool(Generic[J, R]):
     async def worker(self, worker_id: int) -> None:
         job = await self.get_job()
         job.task = asyncio.current_task()
+        job.started.set()
 
         try:
             result = await self.worker_async_callable(worker_id=worker_id, job=job)

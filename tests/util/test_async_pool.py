@@ -304,15 +304,15 @@ async def test_queued_active_cancel() -> None:
         for job in jobs:
             await work_queue.put(job)
 
-        for job in jobs:
-            if job.input in cancel:
-                pool.cancel(job=job)
-
         results: List[int] = []
-
         with anyio.fail_after(adjusted_timeout(10)):
-            for _ in expected_results:
-                results.append(await result_queue.get())
+            for job in jobs:
+                await job.started.wait()
+
+                if job.input in cancel:
+                    pool.cancel(job=job)
+                else:
+                    results.append(await result_queue.get())
 
     assert sorted(results) == expected_results
 
