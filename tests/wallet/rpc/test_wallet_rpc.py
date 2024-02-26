@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+# flake8: noqa E712
 import asyncio
 import dataclasses
 import json
 import logging
 import random
+from enum import Enum
 from operator import attrgetter
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 import aiosqlite
 import pytest
@@ -15,7 +17,7 @@ from chia_rs import G2Element
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_server import RpcServer
+from chia.rpc.rpc_server import EndpointResult, RpcServer
 from chia.rpc.wallet_request_types import GetNotifications
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -58,6 +60,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_protocol import WalletProtocol
 from tests.conftest import ConsensusMode
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -96,6 +99,8 @@ class WalletBundle:
     service: Service
     node: WalletNode
     rpc_client: WalletRpcClient
+    rpc_api: WalletRpcApi
+    wallet_node_api: WalletNodeAPI
     wallet: Wallet
 
 
@@ -130,7 +135,14 @@ async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: Wallet
     assert full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
 
 
-async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 1):
+async def get_wallet1_confirmed_funds(env: WalletRpcTestEnvironment) -> int:
+    wallet_id: int = 1
+    balances = await env.wallet_1.rpc_client.get_wallet_balance(wallet_id)
+    return balances["confirmed_wallet_balance"]
+
+
+async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 1) -> int:
+    """Add funds to wallet_id 1 of wallet_bundle. Farms at least one transaction block"""
     wallet_id = 1
     initial_balances = await wallet_bundle.rpc_client.get_wallet_balance(wallet_id)
     ph: bytes32 = decode_puzzle_hash(await wallet_bundle.rpc_client.get_next_address(wallet_id, True))
@@ -191,8 +203,20 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
                 full_node_service.root_path,
                 full_node_service.config,
             ) as client_node:
-                wallet_bundle_1: WalletBundle = WalletBundle(wallet_service, wallet_node, client, wallet)
-                wallet_bundle_2: WalletBundle = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
+                # rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+                # assert rpc_server is not None
+                # api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
+                wallet_bundle_1: WalletBundle = WalletBundle(
+                    wallet_service, wallet_node, client, wallet_service.rpc_server.rpc_api, wallet_service._api, wallet
+                )
+                wallet_bundle_2: WalletBundle = WalletBundle(
+                    wallet_service_2,
+                    wallet_node_2,
+                    client_2,
+                    wallet_service_2.rpc_server.rpc_api,
+                    wallet_service_2._api,
+                    wallet_2,
+                )
                 node_bundle: FullNodeBundle = FullNodeBundle(full_node_server, full_node_api, client_node)
 
                 yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
@@ -2565,3 +2589,424 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert len(bal_ids) == 2
     assert bal["2"]["confirmed_wallet_balance"] == 100
     assert bal["3"]["confirmed_wallet_balance"] == 20
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def setup_delete_unconfirmed(env: WalletRpcTestEnvironment):
+    wallet_client: WalletRpcClient = env.wallet_1.rpc_client
+    wallet_node: WalletNode = env.wallet_1.node
+    wallet = env.wallet_1.wallet
+    full_node_api: FullNodeSimulator = env.full_node.api
+    initial_funds = await generate_funds(full_node_api, env.wallet_1, 1)
+    await time_out_assert(20, wallet_client.get_synced)
+    return initial_funds, env, wallet, wallet_client, wallet_node, full_node_api
+
+
+async def tx_confirmed(client: WalletRpcClient, wallet_id: int, tx_id: bytes32):
+    tx = await client.get_transaction(wallet_id, tx_id)
+    return tx.confirmed
+
+
+async def send_xch_wallet1_to_wallet2(env: WalletRpcTestEnvironment, *, farm_tx: bool) -> Optional[TransactionRecord]:
+    """Send a transaction from env.wallet_1 to env.wallet_2"""
+    wallet_2: Wallet = env.wallet_2.wallet
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+    full_node_api = env.full_node.api
+
+    initial_funds = await get_wallet1_confirmed_funds(env)
+    tx_amount = uint64(1_000_001)
+    await full_node_api.wait_for_wallet_synced(wallet_node=env.wallet_1.node, timeout=20)
+    # await full_node_api.wait_for_wallet_synced(wallet_node=env.wallet_2.node, timeout=20)
+    tx = await client.send_transaction(1, tx_amount, addr, DEFAULT_TX_CONFIG)
+
+    if farm_tx:
+        await farm_transaction(full_node_api, env.wallet_2.node, tx.spend_bundle)
+
+    assert tx.spend_bundle is not None
+    assert tx.confirmed == False  # noqa: E712 # flake8: E712
+
+    await time_out_assert(20, tx_in_mempool, True, client, tx.name)
+    if farm_tx:
+        await time_out_assert(20, get_confirmed_balance, initial_funds - tx_amount, client, 1)
+        await time_out_assert(20, tx_confirmed, True, client, 1, tx.name)
+
+    return tx
+
+
+def select_unconfimed_tx_ids(tx_list: List[TransactionRecord]) -> Set[bytes32]:
+    return set([tx.name for tx in tx_list if not tx.confirmed])
+
+
+class ApiCallType(Enum):
+    """
+    For testing purposes, allow calling internal variants of API functions with same test code
+    at different stages of the API pipeline. Improvement over writing a separate test for each.
+    """
+
+    HTTP_API = 0
+    RPC_CLIENT = 1
+    # TODO: Regularize command line testing. This is too irregular and time-consuming right now
+    CMDLINE = 2
+
+
+async def get_transactions(
+    wallet_id: int, env: WalletRpcTestEnvironment, call_type: ApiCallType
+) -> List[TransactionRecord]:
+    if call_type == ApiCallType.RPC_CLIENT:
+        return await env.wallet_1.rpc_client.get_transactions(wallet_id=wallet_id)
+    elif call_type == ApiCallType.HTTP_API:
+        wallets = {1: env.wallet_1, 2: env.wallet_2}
+        wallet = wallets[wallet_id]
+        request = {"wallet_id": wallet_id}
+        return (await wallet.rpc_api.get_transactions(request))["transactions"]
+    else:
+        raise ValueError(f"Unsupported ApiCallType: {call_type}")
+
+
+def delete_unconfirmed_reply_to_transaction_record(reply: EndpointResult) -> List[TransactionRecord]:
+    txs: Optional[List[bytes32]] = reply["unconfirmed_transactions_deleted"]
+    if txs is None:
+        return []
+    else:
+        return [TransactionRecord(tx) for tx in txs]
+
+
+# @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+# @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
+async def delete_unconfirmed_transactions(
+    client_id: int,
+    wallet_id: int,
+    env: WalletRpcTestEnvironment,
+    call_type: ApiCallType,
+    tx_ids: Any = None
+    # ) -> List[TransactionRecord]:
+) -> EndpointResult:
+    """
+    Keep the type of tx_ids wider than usual for testing bad inputs.
+    This conversion function expresses the difference between the API interfaces
+    """
+    clients = [None, env.wallet_1, env.wallet_2]
+    entity: WalletBundle = clients[client_id]  # type: ignore[assignment]
+    assert entity
+    if call_type == ApiCallType.RPC_CLIENT:
+        if tx_ids is OMIT:
+            reply = await entity.rpc_client.delete_unconfirmed_transactions(wallet_id=wallet_id)
+        else:
+            if tx_ids is not None:
+                print(f"Checking tx_ids: {tx_ids}")
+                assert all([type(tx_id) == bytes32 for tx_id in tx_ids])
+            reply = await entity.rpc_client.delete_unconfirmed_transactions(wallet_id=wallet_id, tx_ids=tx_ids)
+    elif call_type == ApiCallType.HTTP_API:
+        assert all([type(txid) == bytes32 for txid in tx_ids])
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        if tx_ids is not OMIT:
+            request["tx_ids"] = tx_ids  # xxx tx_ids as str vs bytes
+        print(f"rpc_api.delete_unconfirmed_transactions({request})")
+        reply = await entity.rpc_api.delete_unconfirmed_transactions(request)
+
+    else:
+        raise ValueError(f"Unsupported ApiCallType: {call_type}")
+    # return delete_unconfirmed_reply_to_transaction_record(reply)
+    return reply
+
+
+# ----------------- WalletRpcClient.delete_unconfirmed, WalletRpcApi.delete_confirmed
+
+
+@pytest.mark.parametrize(
+    "api_type",
+    [ApiCallType.HTTP_API, ApiCallType.RPC_CLIENT],
+)
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def test_delete_unconfirmed__direct(
+    wallet_rpc_environment: WalletRpcTestEnvironment, api_type: ApiCallType
+) -> None:
+    """Test happy-path with direct calls to Python API, instead of HTTP/RPC API"""
+    initial_funds, env, wallet1, client, wallet_node, full_node_api = await setup_delete_unconfirmed(
+        wallet_rpc_environment
+    )
+
+    # client: WalletRpcClient = env.wallet_1.rpc_client
+    initial_wallet_transactions = await client.get_transactions(wallet_id=1)
+    initial_unconfirmed_transaction_ids = select_unconfimed_tx_ids(initial_wallet_transactions)
+    assert len(initial_unconfirmed_transaction_ids) == 0
+    sent_tx = await send_xch_wallet1_to_wallet2(env, farm_tx=False)
+    assert sent_tx is not None
+    await time_out_assert(20, tx_in_mempool, True, client, sent_tx.name)
+    all_transactions = await client.get_transactions(wallet_id=1)
+    assert all_transactions
+    assert len(all_transactions) == 3
+
+    unconfirmed_transaction_ids = select_unconfimed_tx_ids(all_transactions)
+    assert len(unconfirmed_transaction_ids) == 1
+    assert sent_tx.name in unconfirmed_transaction_ids
+
+    # TODO: tx_ids=json.dumps([sent_tx.name])
+    # ----------- Call we are testing
+    rpc_reply = await client.delete_unconfirmed_transactions(wallet1.wallet_id, tx_ids=[sent_tx.name])
+    # -----------
+    all_transactions_after_delete = await client.get_transactions(wallet_id=1)
+    assert sent_tx.name not in all_transactions_after_delete
+    unconfirmed_transaction_ids_after_delete = select_unconfimed_tx_ids(all_transactions_after_delete)
+    assert len(unconfirmed_transaction_ids_after_delete) == 0
+    assert {sent_tx.name} == set([bytes32.from_hexstr(s) for s in rpc_reply["unconfirmed_transactions_deleted"]])
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def test_delete_unconfirmed__returns_removed_ids(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+    """
+    An expected use case, with a non-empty tx_ids parameter. Check that the requested transactions
+    are removed from our wallet DB
+    """
+    initial_funds, env, wallet1, client, wallet_node, full_node_api = await setup_delete_unconfirmed(
+        wallet_rpc_environment
+    )
+
+    initial_unconfirmed_transactions = await client.get_transactions(wallet_id=1)
+    initial_unconfirmed_transaction_ids = select_unconfimed_tx_ids(initial_unconfirmed_transactions)
+    assert len(initial_unconfirmed_transaction_ids) == 0
+    sent_tx = await send_xch_wallet1_to_wallet2(env, farm_tx=False)
+    assert sent_tx is not None
+    await time_out_assert(20, tx_in_mempool, True, client, sent_tx.name)
+    all_transactions = await client.get_transactions(wallet_id=1)
+    assert all_transactions
+    assert len(all_transactions) == 3
+
+    unconfirmed_transaction_ids = select_unconfimed_tx_ids(all_transactions)
+    assert len(unconfirmed_transaction_ids) == 1
+    assert sent_tx.name in unconfirmed_transaction_ids
+
+
+async def check_tx_count(client: WalletRpcClient, expected_total: int, expected_unconfirmed: int) -> None:
+    pass
+    # all_transactions = await client.get_transactions(wallet_id=1)
+    # assert all_transactions
+    # assert len(all_transactions) == expected_total
+    # unconfirmed_transaction_ids = select_unconfimed_tx_ids(all_transactions)
+    # assert len(unconfirmed_transaction_ids) == expected_unconfirmed
+
+
+@pytest.mark.parametrize("api_type", [ApiCallType.HTTP_API, ApiCallType.RPC_CLIENT])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def test_delete_unconfirmed__no_tx_ids_param(
+    wallet_rpc_environment: WalletRpcTestEnvironment, api_type: ApiCallType
+) -> None:
+    """
+    Test that the original behaviour of `delete_unconfirmed` still works.
+    No tx_ids parameter is specified, and ALL unconfirmed transactions are removed.
+    """
+    initial_funds, env, wallet1, client, wallet_node, full_node_api = await setup_delete_unconfirmed(
+        wallet_rpc_environment
+    )
+    wallet_2_node: WalletNode = env.wallet_2.node
+
+    num_initial_txs = len(await client.get_transactions(wallet_id=1))
+    await check_tx_count(client, num_initial_txs, 0)
+
+    sent_tx_ids = []
+    for i in range(3):
+        sent_tx = await send_xch_wallet1_to_wallet2(env, farm_tx=False)
+        assert sent_tx
+        sent_tx_ids.append(sent_tx.name)
+
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+    await check_tx_count(client, num_initial_txs, 3)
+
+    ret = await delete_unconfirmed_transactions(
+        client_id=1, wallet_id=wallet1.wallet_id, env=env, call_type=api_type, tx_ids=sent_tx_ids
+    )
+
+    await check_tx_count(client, num_initial_txs, 0)
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def test_delete_unconfirmed__xxx(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+    """
+    Test xxx
+    """
+    pass
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+# test_delete_unconfirmed___partial_removal
+async def test_delete_unconfirmed__with_bad_input_tx_ids(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+    """
+    Document whether the server will remove specified tx_ids if there are also bad ids in the request
+      Checks
+        up until there is an error
+        remove all-or-none
+        remove all good ids
+    xxx fix doc
+    """
+    pass
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def test_delete_unconfirmed__only_remove_specified_unconfirmed(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+) -> None:
+    """
+    Test that only specified txns are removed, even if there are other unconfirmed transactions
+    """
+    pass
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def test_delete_unconfirmed__remove_duplicate_txid(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+    """Test that server will remove a valid ID that is mentioned twice, but will only report one removal"""
+    pass
+
+
+# tx_id_str is a tx_id we do not expect to see in the list of unconfirmed transactions
+tx_id_str = "00" * 32
+tx_id = bytes32.fromhex(tx_id_str)
+
+str_too_big = bytearray(tx_id_str, "utf-8")
+str_too_big.extend(str_too_big)
+bytes_too_big = bytearray(tx_id)
+bytes_too_big.extend(bytes_too_big)
+
+OMIT = ("OMIT",)
+
+
+@pytest.mark.parametrize("api_type", [ApiCallType.HTTP_API, ApiCallType.RPC_CLIENT])
+@pytest.mark.parametrize(
+    "tx_ids",
+    [
+        OMIT,
+        None,
+        "None",
+        [None],
+        # Test incorrect arguments to `delete_unconfirmed` parameter `tx_ids`. If specified,
+        # tx_ids must be an array of 32-byte values, (expressed as hex strings when called from the HTTP API)
+        # omitting this optional parameter means "delete all unconfirmed" (this change is backward-compatible)
+        # If tx_ids is an empty list, no operation is performed, and an empty list of deleted tx_ids is returned
+        tx_id_str,  # should be a list
+        [tx_id_str],  # request ok, but non-existent tx_id
+        [tx_id_str[:-2]],  # invalid tx_id - too short
+        ["XX" * 32],  # invalid hex
+        [str_too_big],  # too long
+        [None, None],  # Multiple invalid arguments
+        [None, tx_id_str],  # One invalid argument at the beginning
+        [tx_id_str, None],  # One invalid argument at the end
+        [tx_id_str, tx_id_str],  # Duplicates OK, but non-existent tx_id
+        # Same as above, but with raw bytes
+        tx_id,
+        [tx_id],
+        [tx_id[:-2]],
+        ["XX" * 32],
+        [bytes_too_big],
+        [None, None],
+        [None, tx_id],
+        [tx_id, None],
+        [tx_id, tx_id],
+        # End
+    ],
+)
+# test_delete_unconfirmed__bad_input_tx_ids
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def test_delete_unconfirmed__abort_if_malformed_txids(
+    wallet_rpc_environment: WalletRpcTestEnvironment, api_type: ApiCallType, tx_ids: Any
+) -> None:
+    """
+    Check that no transactions are removed in the case of an incorrect tx_ids parameter
+    submit a request with tx_ids empty, null, missing, etc.
+    TODO: Check all these cases with the following remote states: no unconfirmed, some unconfirmed
+    """
+    initial_funds, env, wallet1, client, wallet_node, full_node_api = await setup_delete_unconfirmed(
+        wallet_rpc_environment
+    )
+    # initial_unconfirmed_transactions = await client.get_transactions(wallet_id=1)
+
+    request = {}
+    if tx_ids is not OMIT:
+        request["tx_ids"] = tx_ids
+
+    ret = await delete_unconfirmed_transactions(
+        client_id=1, wallet_id=wallet1.wallet_id, env=env, call_type=api_type, tx_ids=tx_ids
+    )
+    print("reply: ", ret)
+    assert ret is None
+
+
+@pytest.mark.parametrize("api_type", [ApiCallType.HTTP_API, ApiCallType.RPC_CLIENT])
+@pytest.mark.parametrize(
+    "inputs",
+    [
+        ([], {"success": True, "unconfirmed_transactions_deleted": []}),
+        (OMIT, {"success": True, "unconfirmed_transactions_deleted": []}),
+        (None, {"success": True, "unconfirmed_transactions_deleted": []}),
+    ],
+)
+# @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def test_delete_unconfirmed__ok(
+    wallet_rpc_environment: WalletRpcTestEnvironment, api_type: ApiCallType, inputs: Tuple[Any, Any]
+) -> None:
+    """
+    Test inputs that should work for delete_unconfirmed_transactions
+    TODO: Check all these cases with the following remote states: no unconfirmed, some unconfirmed
+    """
+    wallet_rpc_environment, wallet1, client, wallet_node, full_node_api = await setup_delete_unconfirmed(
+        wallet_rpc_environment
+    )
+    # initial_unconfirmed_transactions = await client.get_transactions(wallet_id=1)
+
+    tx_ids, expected_output = inputs
+
+    ret = await delete_unconfirmed_transactions(
+        client_id=1, wallet_id=wallet1.wallet_id, env=wallet_rpc_environment, call_type=api_type, tx_ids=tx_ids
+    )
+    print(ret)
+    assert ret is not None
+    assert ret == expected_output
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def test_delete_unconfirmed__unknown_param_name_ignored_with_tx_ids_param(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+) -> None:
+    """Check that the operation is still performed in the case of an unknown parameter"""
+    initial_funds, env, wallet1, client, wallet_node, full_node_api = await setup_delete_unconfirmed(
+        wallet_rpc_environment
+    )
+
+    # initial_unconfirmed_transactions = await client.get_transactions(wallet_id=1)
+
+    # request = {tx_ids}
+    # ret = await client.delete_unconfirmed_transactions(wallet_id=wallet1.wallet_id, tx_ids=tx_ids)
+    # print(ret)
+    # assert ret is None
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.anyio
+async def test_delete_unconfirmed__unknown_param_name_ignored(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+    """Check that the operation is still performed in the case of an unknown parameter"""
+    initial_funds, env, wallet1, client, wallet_node, full_node_api = await setup_delete_unconfirmed(
+        wallet_rpc_environment
+    )
+    # initial_unconfirmed_transactions = await client.get_transactions(wallet_id=1)
+
+    # request = {}
+    # ret = await client.delete_unconfirmed_transactions(wallet_id=wallet1.wallet_id, tx_ids=tx_ids)
+    # print(ret)
+    # assert ret is None
+
+
+# TODO: tx_in_mempool already
+# TODO: tx confirmed during removal
+# TODO: test HTTP/RPC and direct calls for all cases
+# TODO: For all RPC calls, test generic errors: missing parameters, incorrect formats, etc.

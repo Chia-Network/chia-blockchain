@@ -65,7 +65,7 @@ class TestRpcClient:
         for k, v in expected_calls.items():
             assert k in self.rpc_log, f"key '{k}' not in rpc_log, rpc log's keys are: '{list(self.rpc_log.keys())}'"
             if v is not None:  # None means we don't care about the value used when calling the rpc.
-                assert self.rpc_log[k] == v, f"for key '{k}'\n'{self.rpc_log[k]}'\n!=\n'{v}'"
+                assert self.rpc_log[k] == v, f"for key '{k}'\nACTUAL:   '{self.rpc_log[k]}'\nEXPECTED: '{v}'"
         self.rpc_log = {}
 
 
@@ -107,8 +107,8 @@ class TestWalletRpcClient(TestRpcClient):
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
         return [{"id": 1, "type": w_type}]
 
-    async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
-        self.add_to_log("get_transaction", (wallet_id, transaction_id))
+    async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
+        self.add_to_log("get_transaction", (transaction_id,))
         return TransactionRecord(
             confirmed_at_height=uint32(1),
             created_at_time=uint64(1234),

@@ -1261,7 +1261,8 @@ class WalletRpcApi:
         Only removes the transaction locally. If a transaction was successfully submitted, it's in the
         mempool and farmer's hands now, and may be confirmed, even if our wallet doesn't know that yet.
 
-        Removing a transaction from our local TX DB will stop the wallet from re-submitting it to the network
+        Removing a transaction from our local TX DB will stop the wallet from re-submitting it to the network.
+        tx_ids=None means "delete all unconfirmed"
         """
         state_mgr = self.service.wallet_state_manager
         wallet_id = uint32(request["wallet_id"])
@@ -1271,18 +1272,26 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced.")
 
         # Specifying tx_ids means "Delete only these (non-trade) transactions, and only if unconfirmed"
+        # If tx_ids exists, it should be a JSON list bytes32 objects encoded as hex strings.
         # A missing or null tx_ids input parameter, means "delete all unconfirmed (non-trade) transactions"
         # A malformed parameter aborts the operation
-        tx_ids = None
-        tx_ids_param: Optional[List[str]] = request.get("tx_ids")
-        if tx_ids_param is not None:
-            tx_ids = set([bytes32.from_hexstr(hex_id) for hex_id in tx_ids_param])
+        # tx_ids = None
+        # tx_ids_param: Optional[List[str]] = request.get("tx_ids")
+        #
+        # if tx_ids_param is not None:
+        #     if all([type(t) is bytes32 for t in tx_ids_param]):
+        #         tx_ids = tx_ids_param
+        #     else:
+        #         tx_ids = set([hexstr_to_bytes(hex_id) for hex_id in tx_ids_param])
 
+        tx_ids: Optional[List[str]] = request.get("tx_ids")
         async with state_mgr.lock:
             unconfirmed_txs_before: List[TransactionRecord] = await state_mgr.tx_store.get_unconfirmed_for_wallet(
                 wallet_id
             )
         async with state_mgr.db_wrapper.writer():
+            # TODO: Document expected behaviour when some tx_ids are missing or malformed
+            print(f"calling tx_store.delete_unconfirmed_transactions with {tx_ids}")
             await state_mgr.tx_store.delete_unconfirmed_transactions(wallet_id, tx_ids=tx_ids)
             wallet = state_mgr.wallets[wallet_id]
             if wallet.type() == WalletType.POOLING_WALLET.value:
@@ -1292,7 +1301,10 @@ class WalletRpcApi:
             unconfirmed_tx_after: List[TransactionRecord] = await state_mgr.tx_store.get_unconfirmed_for_wallet(
                 wallet_id
             )
-        return {"unconfirmed_transactions_removed": list(set(unconfirmed_txs_before) - set(unconfirmed_tx_after))}
+        # return {}
+        deleted_ids = set([tx.name for tx in unconfirmed_txs_before]) - set([tx.name for tx in unconfirmed_tx_after])
+        print("DELETED: ", deleted_ids)
+        return {"success": True, "unconfirmed_transactions_deleted": list(deleted_ids)}
 
     async def select_coins(
         self,

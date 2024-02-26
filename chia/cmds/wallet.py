@@ -11,9 +11,15 @@ from chia.cmds import options
 from chia.cmds.check_wallet_db import help_text as check_help_text
 from chia.cmds.coins import coins_cmd
 from chia.cmds.plotnft import validate_fee
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
+
+# class ClickTransactionID(click.ParamType):
+#     @override
+#     def convert(self, param: str):
+#         return param
 
 
 @click.group("wallet", help="Manage your wallet")
@@ -320,7 +326,26 @@ def clawback(
     )
 
 
-@wallet_cmd.command("delete_unconfirmed_transactions", help="Deletes all unconfirmed transactions for this wallet ID")
+def verify_delete_unconfirmed_transactions_args_are_ok(
+    wallet_rpc_port: Optional[int], id: Optional[int], fingerprint: int, transaction_ids: Optional[List[bytes32]]
+) -> bool:
+    if id and transaction_ids:
+        print("You may only specify either '--id' or one or more --transaction_ids flags")
+        return False
+    return True
+
+
+@wallet_cmd.command(
+    "delete_unconfirmed_transactions",
+    help="Deletes unconfirmed transactions specified by either the --transaction_ids OR the --id flag"
+    "    Specifying both --transaction_ids and (sub-wallet) --id is an error"
+    "    If --id is specified, deletes all unconfirmed transactions from only that wallet ID"
+    "    If --transaction_id (or -t) is specified, deletes only those specified ids"
+    "    To specify multiple transactions, do this:"
+    "        chia wallet delete_unconfirmed_transactions -t b9a7dea... -t 98cfa07... "
+    # "    If neither is specified, abort ???"
+    # "    If wallet_id is not specified, deletes unconfirmed transactions in current wallet. ???"
+)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -328,12 +353,18 @@ def clawback(
     type=int,
     default=None,
 )
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
+@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=False)
+@click.option("-t", "--transaction_ids", help="List of unconfirmed transaction IDs to delete", required=False)
 @options.create_fingerprint()
-def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int) -> None:
+def delete_unconfirmed_transactions_cmd(
+    wallet_rpc_port: Optional[int], fingerprint: int, id: int, transaction_ids: Optional[List[bytes32]]
+) -> None:
     from .wallet_funcs import delete_unconfirmed_transactions
 
-    asyncio.run(delete_unconfirmed_transactions(wallet_rpc_port, fingerprint, id))
+    if not verify_delete_unconfirmed_transactions_args_are_ok(wallet_rpc_port, fingerprint, id, transaction_ids):
+        print("Aborting.")
+        return
+    asyncio.run(delete_unconfirmed_transactions(wallet_rpc_port, fingerprint, id, tx_ids=transaction_ids))
 
 
 @wallet_cmd.command("get_derivation_index", help="Get the last puzzle hash derivation path index")

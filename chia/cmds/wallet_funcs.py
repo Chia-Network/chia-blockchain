@@ -149,9 +149,7 @@ async def get_transaction(
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         transaction_id = bytes32.from_hexstr(tx_id)
         address_prefix = selected_network_address_prefix(config)
-        # The wallet id parameter is required by the client but unused by the RPC.
-        this_is_unused = 37
-        tx: TransactionRecord = await wallet_client.get_transaction(this_is_unused, transaction_id=transaction_id)
+        tx: TransactionRecord = await wallet_client.get_transaction(transaction_id=transaction_id)
 
         try:
             wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
@@ -345,7 +343,7 @@ async def send(
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(wallet_id, tx_id)
+            tx = await wallet_client.get_transaction(tx_id)
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id))
@@ -361,10 +359,22 @@ async def get_address(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_
         print(res)
 
 
-async def delete_unconfirmed_transactions(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
-        await wallet_client.delete_unconfirmed_transactions(wallet_id)
-        print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
+async def delete_unconfirmed_transactions(
+    wallet_rpc_port: Optional[int], input_fingerprint: int, wallet_id: int, tx_ids=Optional[List[bytes32]]
+) -> None:
+    async with get_wallet_client(wallet_rpc_port, input_fingerprint) as (wallet_client, fingerprint, _):
+        reply = await wallet_client.delete_unconfirmed_transactions(wallet_id)
+        if reply is None or type(reply) is not dict:
+            print(f"Error deleting unconfirmed transactions. Reply was: {reply}")
+            return
+        if reply["success"]:
+            print(
+                f"Successfully deleted unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}:"
+                f"\n{reply['unconfirmed_transactions_deleted']}"
+            )
+        else:
+            print(f"Error deleting unconfirmed transactions. Reply was: {reply}")
+            return
 
 
 async def get_derivation_index(wallet_rpc_port: Optional[int], fp: Optional[int]) -> None:

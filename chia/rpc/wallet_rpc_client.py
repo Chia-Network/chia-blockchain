@@ -6,6 +6,7 @@ from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
+from chia.rpc.rpc_server import EndpointResult
 from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -274,8 +275,14 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("spend_clawback_coins", request)
         return response
 
-    async def delete_unconfirmed_transactions(self, wallet_id: int, tx_ids: Optional[List[bytes32]] = None) -> None:
-        await self.fetch("delete_unconfirmed_transactions", {"wallet_id": wallet_id})
+    async def delete_unconfirmed_transactions(
+        self, wallet_id: int, tx_ids: Optional[List[bytes32]] = None
+    ) -> EndpointResult:
+        if tx_ids is None:
+            request: Dict[str, Any] = {"wallet_id": wallet_id}
+        else:
+            request = {"wallet_id": wallet_id, "tx_ids": [id.hex() for id in tx_ids]}
+        return await self.fetch("delete_unconfirmed_transactions", request)
 
     async def get_current_derivation_index(self) -> str:
         response = await self.fetch("get_current_derivation_index", {})
