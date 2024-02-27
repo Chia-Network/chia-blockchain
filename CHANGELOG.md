@@ -52,7 +52,7 @@ for setuptools_scm/PEP 440 reasons.
 * Add `additions` and `removals` to `get_offer_summary` API response (thanks @mikehw)
 * improve handling of `UnfinishedBlock`s
 * Add testnet11 constants to config if missing when configuring to run on testnet
-* We have added several new translations in this release. Thanks to xxx
+* We have added several new translations in this release. Thanks to WNFT, advlive, hezoushe
 
 ### Changed
 * reorg optimizations
