@@ -6,6 +6,87 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.2.0 Chia blockchain 2024-02-28
+
+<!-- Release notes generated using configuration in .github/release.yml at release/2.2.0 -->
+
+## What's Changed
+### Fixed
+* Fix TX amount calculation in trade manager (fixes #16842)
+* add SerializedProgram.to() to simplify some code
+* include information for setuptools_scm in git archives
+* fix type mismatch with Optional[bytes] and bytes in wallet/conditions.py
+* fixed typo in `get_coin_record_by_name` docstring (thanks @Abakrombie)
+* Fixed readme links (thanks @Abakrombie)
+* DL: Use unsubscribe queue to relax subscriptions lock
+* DL: Don't allow mirrors with empty urls
+* DL: Use Datalayer banning logic for HTTP download failures
+* Improve input for DL CLI add_missing_files
+* extend the mempool tests for timelocks, and improve error codes
+* add measured sizes for plot check for bigger k-sizes (thanks @neurosis69)
+* extend measured sizes for plot check with value for k39 (thanks @neurosis69)
+* Add a few missing type annotations
+* Log string header_hash on long validation warnings
+* Subscribe to DIDs that come into wallet (fixes #17242)
+* Fix sorted for dictionary keys of both bytes/xch
+* Fixed an issue where `chia wallet did transfer` command mistreats the type of `fee`
+* Fix signage point message for remote harvesters with large numbers of pools
+* Remove duplicate short option from make_offer command (fixes #17371)
+* undo BlockRecord cache insert, when DB fails
+* Warn if running `install-plotter.sh` as root
+
+### Added
+* Support for third-party, farmer-rewarded, Harvesters (Chip-22)
+* Singleton fast forward
+* Verify p2 delegated conditions signatures and add a new SigningMode for Tangem cards (thanks @MarvinQuevedo)
+* DL: add upsert action
+* DL: Add support for generating and verifying DataLayer Proofs of Inclusions `get_proof` and `verify_proof`
+* Improve transparency of what full nodes are doing and where they spend their time with additional Mempool logging
+* add feature to profile just the block validation
+* Add `--override` flag to `make_offer`
+* Add full node RPC `get_aggsig_additional_data` to get the aggsig additional data
+* Add fork height & rolled_back_records to block event for metrics
+* extend Block validation timing logs to measure just the CLVM and conditions
+* Add support for defining a list of full node peers to connect to (thanks @felixbrucker)
+* Add preliminary support for getting coin states in batches
+* improve mempool reorg logic when the peak is a non-transaction block
+* Add `additions` and `removals` to `get_offer_summary` API response (thanks @mikehw)
+* improve handling of `UnfinishedBlock`s
+* Add testnet11 constants to config if missing when configuring to run on testnet
+* We have added several new translations in this release. Thanks to xxx
+
+### Changed
+* reorg optimization by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16915
+* avoid recursive_replace() in `block_creation.py` by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16708
+* Async connection close handlers by @Rigidity in https://github.com/Chia-Network/chia-blockchain/pull/17017
+* bump `chia_rs` to `0.4.1`
+* initiate phasing out of the `coin_solutions` name in JSON structs
+* slight simplification to `get_min_fee_rate()`
+* Remove `coin_solutions` from `SpendBundle` entirely
+* use rust types for `VDFInfo`, `VDFProof` and `ClassgroupElement`
+* evict entries continuously from `seen_unfinished_blocks`
+* move `tools/legacy_keyring.py` to `chia/legacy/keyring.py`
+* Rust `proof-of-space`, `reward chain` and `foliage` types
+* DL: Compress `get_keys_values` output by hash.
+* replace hardcoded value for `db_readers` (thanks @neurosis69)
+* use rust types for `slots`, `SubEpochSummary` and `SubEpochData`
+* Update default testnet to testnet11
+* remove old work-around for a bug in version `1.1.4` and earlier
+* use rust implementation of `SerializedProgram`
+* Rework block fill logic to fill blocks with more SpendBundles (transactions)
+* fix typo in logging
+* increase farmer block fill rate to 60%
+* Force the use of `coin_puzzle_hash` index to `get_unspent_lineage_info_for_puzzle_hash`
+
+## New Contributors
+* @MarvinQuevedo made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/17054
+* @Abakrombie made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/17076
+* @Ealrann made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/17158
+* @mikehw made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/17333
+* @harold-b made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/16717
+* @haorldbchi made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/17435
+
+
 ## 2.1.4 Chia blockchain 2024-01-10
 
 ### Fixed
