@@ -55,9 +55,7 @@ for setuptools_scm/PEP 440 reasons.
 * We have added several new translations in this release. Thanks to xxx
 
 ### Changed
-* reorg optimization by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16915
-* avoid recursive_replace() in `block_creation.py` by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16708
-* Async connection close handlers by @Rigidity in https://github.com/Chia-Network/chia-blockchain/pull/17017
+* reorg optimizations
 * bump `chia_rs` to `0.4.1`
 * initiate phasing out of the `coin_solutions` name in JSON structs
 * slight simplification to `get_min_fee_rate()`
