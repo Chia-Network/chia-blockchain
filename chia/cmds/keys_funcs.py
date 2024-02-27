@@ -79,7 +79,7 @@ def add_private_key_seed(mnemonic: str, label: Optional[str]) -> None:
     """
     unlock_keyring()
     try:
-        sk = Keychain().add_private_key(mnemonic, label)
+        sk = Keychain().add_key(mnemonic, label)
         fingerprint = sk.get_g1().get_fingerprint()
         print(f"Added private key with public key fingerprint {fingerprint}")
 

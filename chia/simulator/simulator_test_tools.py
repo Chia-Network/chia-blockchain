@@ -42,7 +42,7 @@ def mnemonic_fingerprint(keychain: Keychain) -> Tuple[str, int]:
     )
     # add key to keychain
     try:
-        sk = keychain.add_private_key(mnemonic)
+        sk = keychain.add_key(mnemonic)
     except KeychainFingerprintExists:
         pass
     fingerprint = sk.get_g1().get_fingerprint()

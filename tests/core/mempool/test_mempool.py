@@ -2748,7 +2748,7 @@ def rand_hash() -> bytes32:
 
 def item_cost(cost: int, fee_rate: float) -> MempoolItem:
     fee = cost * fee_rate
-    amount = int(fee + 100)
+    amount = uint64(fee + 100)
     coin = Coin(rand_hash(), rand_hash(), amount)
     return mk_item([coin], cost=cost, fee=int(cost * fee_rate))
 
@@ -2837,7 +2837,7 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
     fee_rate = 2.7
     for cost in items:
         fee = cost * fee_rate
-        amount = int(fee + 100)
+        amount = uint64(fee + 100)
         coin = Coin(rand_hash(), rand_hash(), amount)
         if height:
             ret = mempool.add_to_pool(mk_item([coin], cost=cost, fee=int(cost * fee_rate), assert_before_height=15))

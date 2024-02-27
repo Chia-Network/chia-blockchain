@@ -51,7 +51,7 @@ def additions_for_npc(npc_result: NPCResult) -> List[Coin]:
         return []
     for spend in npc_result.conds.spends:
         for puzzle_hash, amount, _ in spend.create_coin:
-            coin = Coin(spend.coin_id, puzzle_hash, amount)
+            coin = Coin(spend.coin_id, puzzle_hash, uint64(amount))
             additions.append(coin)
 
     return additions
