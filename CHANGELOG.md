@@ -8,9 +8,8 @@ for setuptools_scm/PEP 440 reasons.
 
 ## 2.2.0 Chia blockchain 2024-02-28
 
-<!-- Release notes generated using configuration in .github/release.yml at release/2.2.0 -->
+* Thanks to @bhorvitz for major help debugging a performance issue during coin DB lookup
 
-## What's Changed
 ### Fixed
 * Fix TX amount calculation in trade manager (fixes #16842)
 * add SerializedProgram.to() to simplify some code
@@ -77,15 +76,6 @@ for setuptools_scm/PEP 440 reasons.
 * fix typo in logging
 * increase farmer block fill rate to 60%
 * Force the use of `coin_puzzle_hash` index to `get_unspent_lineage_info_for_puzzle_hash`
-
-## New Contributors
-* @MarvinQuevedo made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/17054
-* @Abakrombie made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/17076
-* @Ealrann made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/17158
-* @mikehw made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/17333
-* @harold-b made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/16717
-* @haorldbchi made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/17435
-
 
 ## 2.1.4 Chia blockchain 2024-01-10
 
