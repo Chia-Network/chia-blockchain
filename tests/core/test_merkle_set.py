@@ -4,17 +4,23 @@ import itertools
 import random
 from hashlib import sha256
 from itertools import permutations
-from typing import List
+from random import Random
+from typing import List, Optional, Tuple
 
 import pytest
-from chia_rs import compute_merkle_set_root
+from chia_rs import Coin, compute_merkle_set_root
 
+from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.hash import std_hash
+from chia.util.ints import uint64
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed
+from chia.util.misc import to_batches
+from chia.wallet.util.wallet_sync_utils import validate_additions, validate_removals
 
 
 @pytest.mark.anyio
-async def test_basics(bt):
+async def test_basics(bt: BlockTools) -> None:
     num_blocks = 20
     blocks = bt.get_consecutive_blocks(num_blocks)
 
@@ -50,7 +56,7 @@ def hashdown(buf: bytes) -> bytes32:
 
 
 @pytest.mark.anyio
-async def test_merkle_set_invalid_hash_size():
+async def test_merkle_set_invalid_hash_size() -> None:
     merkle_set = MerkleSet()
 
     # this is too large
@@ -76,7 +82,7 @@ async def test_merkle_set_invalid_hash_size():
 
 
 @pytest.mark.anyio
-async def test_merkle_set_1():
+async def test_merkle_set_1() -> None:
     a = bytes32([0x80] + [0] * 31)
     merkle_set = MerkleSet()
     merkle_set.add_already_hashed(a)
@@ -85,7 +91,7 @@ async def test_merkle_set_1():
 
 
 @pytest.mark.anyio
-async def test_merkle_set_duplicate():
+async def test_merkle_set_duplicate() -> None:
     a = bytes32([0x80] + [0] * 31)
     merkle_set = MerkleSet()
     merkle_set.add_already_hashed(a)
@@ -95,14 +101,14 @@ async def test_merkle_set_duplicate():
 
 
 @pytest.mark.anyio
-async def test_merkle_set_0():
+async def test_merkle_set_0() -> None:
     merkle_set = MerkleSet()
     assert merkle_set.get_root() == bytes32(compute_merkle_set_root([]))
     assert merkle_set.get_root() == bytes32([0] * 32)
 
 
 @pytest.mark.anyio
-async def test_merkle_set_2():
+async def test_merkle_set_2() -> None:
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0x70] + [0] * 31)
     merkle_set = MerkleSet()
@@ -113,7 +119,7 @@ async def test_merkle_set_2():
 
 
 @pytest.mark.anyio
-async def test_merkle_set_2_reverse():
+async def test_merkle_set_2_reverse() -> None:
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0x70] + [0] * 31)
     merkle_set = MerkleSet()
@@ -124,7 +130,7 @@ async def test_merkle_set_2_reverse():
 
 
 @pytest.mark.anyio
-async def test_merkle_set_3():
+async def test_merkle_set_3() -> None:
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0x70] + [0] * 31)
     c = bytes32([0x71] + [0] * 31)
@@ -145,7 +151,7 @@ async def test_merkle_set_3():
 
 
 @pytest.mark.anyio
-async def test_merkle_set_4():
+async def test_merkle_set_4() -> None:
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0x70] + [0] * 31)
     c = bytes32([0x71] + [0] * 31)
@@ -167,7 +173,7 @@ async def test_merkle_set_4():
 
 
 @pytest.mark.anyio
-async def test_merkle_set_5():
+async def test_merkle_set_5() -> None:
     BLANK = bytes32([0] * 32)
 
     a = bytes32([0x58] + [0] * 31)
@@ -216,7 +222,7 @@ async def test_merkle_set_5():
 
 
 @pytest.mark.anyio
-async def test_merkle_left_edge():
+async def test_merkle_left_edge() -> None:
     BLANK = bytes32([0] * 32)
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0] * 31 + [1])
@@ -257,7 +263,7 @@ async def test_merkle_left_edge():
 
 
 @pytest.mark.anyio
-async def test_merkle_right_edge():
+async def test_merkle_right_edge() -> None:
     BLANK = bytes32([0] * 32)
     a = bytes32([0x40] + [0] * 31)
     b = bytes32([0xFF] * 31 + [0xFF])
@@ -306,7 +312,7 @@ def rand_hash(rng: random.Random) -> bytes32:
 
 @pytest.mark.anyio
 @pytest.mark.skip("This test is expensive and has already convinced us there are no discrepancies")
-async def test_merkle_set_random_regression():
+async def test_merkle_set_random_regression() -> None:
     rng = random.Random()
     rng.seed(123456)
     for i in range(100):
@@ -323,3 +329,44 @@ async def test_merkle_set_random_regression():
             python_root = merkle_set.get_root()
             rust_root = bytes32(compute_merkle_set_root(values))
             assert rust_root == python_root
+
+
+def make_test_coins(n: int, rng: Random) -> List[Coin]:
+    return [Coin(bytes32.random(rng), bytes32.random(rng), uint64(rng.randint(0, 10000000))) for i in range(n)]
+
+
+@pytest.mark.parametrize("num_coins", [0, 1, 2, 100, 1337])
+def test_validate_removals_full_list(num_coins: int, seeded_random: Random) -> None:
+    # when we have all the removals, we don't need to include a proof, because
+    # the root can be computed by all the removals
+    coins = make_test_coins(num_coins, seeded_random)
+
+    removals_merkle_set = MerkleSet()
+    coin_map: List[Tuple[bytes32, Optional[Coin]]] = []
+    for coin in coins:
+        removals_merkle_set.add_already_hashed(coin.name())
+        coin_map.append((coin.name(), coin))
+    removals_root = removals_merkle_set.get_root()
+
+    assert validate_removals(coin_map, None, removals_root) is True
+
+
+@pytest.mark.parametrize("num_coins", [0, 1, 2, 100, 1337])
+@pytest.mark.parametrize("batch_size", [1, 2, 10])
+def test_validate_additions_full_list(num_coins: int, batch_size: int, seeded_random: Random) -> None:
+    # when we have all the removals, we don't need to include a proof, because
+    # the root can be computed by all the removals
+    coins = make_test_coins(num_coins, seeded_random)
+
+    additions_merkle_set = MerkleSet()
+    additions: List[Tuple[bytes32, List[Coin]]] = []
+    for coin_batch in to_batches(coins, batch_size):
+        puzzle_hash = bytes32.random(seeded_random)
+        additions.append((puzzle_hash, coin_batch.entries))
+        additions_merkle_set.add_already_hashed(puzzle_hash)
+        additions_merkle_set.add_already_hashed(
+            std_hash(b"".join(sorted([coin.name() for coin in coin_batch.entries], reverse=True)))
+        )
+    additions_root = additions_merkle_set.get_root()
+
+    assert validate_additions(additions, None, additions_root) is True
