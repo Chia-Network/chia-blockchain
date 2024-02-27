@@ -35,8 +35,8 @@ def keyring_with_one_key(empty_keyring):
 @pytest.fixture(scope="function")
 def keyring_with_one_sk_one_pk(empty_keyring):
     keychain = empty_keyring
-    keychain.add_private_key(TEST_MNEMONIC_SEED)
-    keychain.add_public_key(bytes(G1Element()).hex())
+    keychain.add_key(TEST_MNEMONIC_SEED)
+    keychain.add_key(bytes(G1Element()).hex(), private=False)
     return keychain
 
 
