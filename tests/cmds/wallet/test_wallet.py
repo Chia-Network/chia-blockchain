@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import pkg_resources
+import pytest
 from chia_rs import Coin, G2Element
 
 from chia.server.outbound_message import NodeType
@@ -75,9 +76,9 @@ def test_get_transaction(capsys: object, get_test_cli_clients: Tuple[TestRpcClie
         "get_wallets": [(None,), (None,), (None,)],
         "get_cat_name": [(1,)],
         "get_transaction": [
-            (37, bytes32.from_hexstr(bytes32_hexstr)),
-            (37, bytes32.from_hexstr(bytes32_hexstr)),
-            (37, bytes32.from_hexstr(bytes32_hexstr)),
+            (bytes32.from_hexstr(bytes32_hexstr),),
+            (bytes32.from_hexstr(bytes32_hexstr),),
+            (bytes32.from_hexstr(bytes32_hexstr),),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -432,7 +433,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
                 None,
             )
         ],
-        "get_transaction": [(1, get_bytes32(2)), (1, get_bytes32(2))],
+        "get_transaction": [(get_bytes32(2),), (get_bytes32(2),)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -625,6 +626,59 @@ def test_add_token(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, P
         "set_cat_name": [(2, "examplecat"), (3, "examplecat")],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+def test_make_offer_bad_filename(
+    capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path], tmp_path: Path
+) -> None:
+    _, root_dir = get_test_cli_clients
+
+    request_cat_id = get_bytes32(2)
+    request_nft_id = get_bytes32(2)
+    request_nft_addr = encode_puzzle_hash(request_nft_id, "nft")
+    # we offer xch and a random cat via wallet id and request a random cat, nft via coin and tail
+    command_args_dir = [
+        "wallet",
+        "make_offer",
+        FINGERPRINT_ARG,
+        f"-p{str(tmp_path)}",
+        "--reuse",
+        "-m1",
+        "--offer",
+        "1:10",
+        "--offer",
+        "3:100",
+        "--request",
+        f"{request_cat_id.hex()}:10",
+        "--request",
+        f"{request_nft_addr}:1",
+    ]
+
+    test_file: Path = tmp_path / "test.offer"
+    test_file.touch(mode=0o400)
+
+    command_args_unwritable = [
+        "wallet",
+        "make_offer",
+        FINGERPRINT_ARG,
+        f"-p{str(test_file)}",
+        "--reuse",
+        "-m1",
+        "--offer",
+        "1:10",
+        "--offer",
+        "3:100",
+        "--request",
+        f"{request_cat_id.hex()}:10",
+        "--request",
+        f"{request_nft_addr}:1",
+    ]
+
+    with pytest.raises(AssertionError, match=r".*Invalid value for '-p' / '--filepath.*is a directory.*"):
+        run_cli_command_and_assert(capsys, root_dir, command_args_dir, [""])
+
+    with pytest.raises(AssertionError, match=r".*Invalid value for '-p' / '--filepath.*is not writable.*"):
+        run_cli_command_and_assert(capsys, root_dir, command_args_unwritable, [""])
 
 
 def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path], tmp_path: Path) -> None:

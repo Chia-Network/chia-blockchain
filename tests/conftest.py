@@ -5,6 +5,7 @@ import asyncio
 import dataclasses
 import datetime
 import functools
+import json
 import math
 import multiprocessing
 import os
@@ -20,7 +21,9 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from pytest import MonkeyPatch
 
+import tests
 from chia.clvm.spend_sim import CostLogger
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
@@ -66,10 +69,11 @@ from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from tests import ether
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
-from tests.util.misc import BenchmarkRunner, GcMode, RecordingWebServer, _AssertRuntime, measure_overhead
+from tests.util.misc import BenchmarkRunner, GcMode, RecordingWebServer, TestId, _AssertRuntime, measure_overhead
 from tests.util.setup_nodes import (
     OldSimulatorsAndWallets,
     SimulatorsAndWallets,
@@ -89,6 +93,20 @@ from chia.simulator.block_tools import BlockTools, create_block_tools_async, tes
 from chia.simulator.keyring import TempKeyring
 from chia.util.keyring_wrapper import KeyringWrapper
 from tests.util.setup_nodes import setup_farmer_multi_harvester
+
+
+@pytest.fixture(name="ether_setup", autouse=True)
+def ether_setup_fixture(request: SubRequest, record_property: Callable[[str, object], None]) -> Iterator[None]:
+    with MonkeyPatch.context() as monkeypatch_context:
+        monkeypatch_context.setattr(ether, "record_property", record_property)
+        monkeypatch_context.setattr(ether, "test_id", TestId.create(node=request.node))
+        yield
+
+
+@pytest.fixture(autouse=True)
+def ether_test_id_property_fixture(ether_setup: None, record_property: Callable[[str, object], None]) -> None:
+    assert ether.test_id is not None, "ether.test_id is None, did you forget to use the ether_setup fixture?"
+    record_property("test_id", json.dumps(ether.test_id.marshal(), ensure_ascii=True, sort_keys=True))
 
 
 def make_old_setup_simulators_and_wallets(new: SimulatorsAndWallets) -> OldSimulatorsAndWallets:
@@ -131,16 +149,12 @@ def benchmark_runner_overhead_fixture() -> float:
 
 @pytest.fixture(name="benchmark_runner")
 def benchmark_runner_fixture(
-    request: SubRequest,
     benchmark_runner_overhead: float,
-    record_property: Callable[[str, object], None],
     benchmark_repeat: int,
 ) -> BenchmarkRunner:
-    label = request.node.name
     return BenchmarkRunner(
-        label=label,
+        test_id=ether.test_id,
         overhead=benchmark_runner_overhead,
-        record_property=record_property,
     )
 
 
@@ -434,6 +448,13 @@ def pytest_addoption(parser: pytest.Parser):
         type=int,
         help=f"The number of times to run each benchmark, default {default_repeats}.",
     )
+    group.addoption(
+        "--time-out-assert-repeats",
+        action="store",
+        default=default_repeats,
+        type=int,
+        help=f"The number of times to run each test with time out asserts, default {default_repeats}.",
+    )
 
 
 def pytest_configure(config):
@@ -458,6 +479,22 @@ def pytest_configure(config):
             return 1
 
     globals()[benchmark_repeat_fixture.__name__] = benchmark_repeat_fixture
+
+    time_out_assert_repeats = config.getoption("--time-out-assert-repeats")
+    if time_out_assert_repeats != 1:
+
+        @pytest.fixture(
+            name="time_out_assert_repeat",
+            autouse=True,
+            params=[
+                pytest.param(repeat, id=f"time_out_assert_repeat{repeat:03d}")
+                for repeat in range(time_out_assert_repeats)
+            ],
+        )
+        def time_out_assert_repeat_fixture(request: SubRequest) -> int:
+            return request.param
+
+        globals()[time_out_assert_repeat_fixture.__name__] = time_out_assert_repeat_fixture
 
 
 def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
