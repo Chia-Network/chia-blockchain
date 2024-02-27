@@ -32,15 +32,15 @@ async def keychain_proxy(get_b_tools: BlockTools, request: Any) -> AsyncGenerato
 
 @pytest.fixture(scope="function")
 async def keychain_proxy_with_keys(keychain_proxy: KeychainProxy) -> KeychainProxy:
-    await keychain_proxy.add_private_key(TEST_KEY_1.mnemonic_str(), TEST_KEY_1.label)
-    await keychain_proxy.add_private_key(TEST_KEY_2.mnemonic_str(), TEST_KEY_2.label)
+    await keychain_proxy.add_key(TEST_KEY_1.mnemonic_str(), TEST_KEY_1.label)
+    await keychain_proxy.add_key(TEST_KEY_2.mnemonic_str(), TEST_KEY_2.label)
     return keychain_proxy
 
 
 @pytest.mark.anyio
 async def test_add_private_key(keychain_proxy: KeychainProxy) -> None:
     keychain = keychain_proxy
-    await keychain.add_private_key(TEST_KEY_3.mnemonic_str(), TEST_KEY_3.label)
+    await keychain.add_key(TEST_KEY_3.mnemonic_str(), TEST_KEY_3.label)
     key = await keychain.get_key(TEST_KEY_3.fingerprint, include_secrets=True)
     assert key == TEST_KEY_3
 
@@ -49,24 +49,24 @@ async def test_add_private_key(keychain_proxy: KeychainProxy) -> None:
 async def test_add_public_key(keychain_proxy: KeychainProxy) -> None:
     keychain = keychain_proxy
     assert isinstance(TEST_KEY_3.observation_root, G1Element)
-    await keychain.add_public_key(TEST_KEY_3.public_key.hex(), TEST_KEY_3.label)
+    await keychain.add_key(TEST_KEY_3.public_key.hex(), TEST_KEY_3.label, private=False)
     with pytest.raises(Exception, match="already exists"):
-        await keychain.add_public_key(TEST_KEY_3.public_key.hex(), "")
+        await keychain.add_key(TEST_KEY_3.public_key.hex(), "", private=False)
     key = await keychain.get_key(TEST_KEY_3.fingerprint, include_secrets=False)
     assert key is not None
     assert key.observation_root == TEST_KEY_3.observation_root
     assert key.secrets is None
 
-    pk = await keychain.get_public_key_for_fingerprint(TEST_KEY_3.fingerprint)
+    pk = await keychain.get_key_for_fingerprint(TEST_KEY_3.fingerprint, private=False)
     assert pk is not None
     assert pk == TEST_KEY_3.observation_root
 
-    pk = await keychain.get_public_key_for_fingerprint(None)
+    pk = await keychain.get_key_for_fingerprint(None, private=False)
     assert pk is not None
     assert pk == TEST_KEY_3.observation_root
 
     with pytest.raises(KeychainKeyNotFound):
-        pk = await keychain.get_public_key_for_fingerprint(1234567890)
+        pk = await keychain.get_key_for_fingerprint(1234567890, private=False)
 
 
 @pytest.mark.parametrize("include_secrets", [True, False])
@@ -82,12 +82,12 @@ async def test_get_key(keychain_proxy_with_keys: KeychainProxy, include_secrets:
 async def test_get_key_for_fingerprint(keychain_proxy: KeychainProxy) -> None:
     keychain = keychain_proxy
     with pytest.raises(KeychainIsEmpty):
-        await keychain.get_public_key_for_fingerprint(None)
-    await keychain_proxy.add_private_key(TEST_KEY_1.mnemonic_str(), TEST_KEY_1.label)
-    assert await keychain.get_public_key_for_fingerprint(TEST_KEY_1.fingerprint) == TEST_KEY_1.observation_root
-    assert await keychain.get_public_key_for_fingerprint(None) == TEST_KEY_1.observation_root
+        await keychain.get_key_for_fingerprint(None, private=False)
+    await keychain_proxy.add_key(TEST_KEY_1.mnemonic_str(), TEST_KEY_1.label)
+    assert await keychain.get_key_for_fingerprint(TEST_KEY_1.fingerprint, private=False) == TEST_KEY_1.observation_root
+    assert await keychain.get_key_for_fingerprint(None, private=False) == TEST_KEY_1.observation_root
     with pytest.raises(KeychainKeyNotFound):
-        await keychain.get_public_key_for_fingerprint(1234567890)
+        await keychain.get_key_for_fingerprint(1234567890, private=False)
 
 
 @pytest.mark.parametrize("include_secrets", [True, False])

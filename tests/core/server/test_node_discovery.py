@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from logging import Logger
+from pathlib import Path
 from typing import Tuple
 
 import pytest
 
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.server.node_discovery import FullNodeDiscovery
-from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.util.default_root import SIMULATOR_ROOT_PATH
@@ -23,14 +23,7 @@ async def test_enable_private_networks(
     discovery0 = FullNodeDiscovery(
         chia_server,
         0,
-        PeerStoreResolver(
-            SIMULATOR_ROOT_PATH,
-            chia_server.config,
-            selected_network=chia_server.config["selected_network"],
-            peers_file_path_key="peers_file_path",
-            legacy_peer_db_path_key="db/peer_table_node.sqlite",
-            default_peers_file_path="db/peers.dat",
-        ),
+        SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
         {"host": "introducer.chia.net", "port": 8444},
         [],
         0,
@@ -48,14 +41,7 @@ async def test_enable_private_networks(
     discovery1 = FullNodeDiscovery(
         chia_server,
         0,
-        PeerStoreResolver(
-            SIMULATOR_ROOT_PATH,
-            chia_server.config,
-            selected_network=chia_server.config["selected_network"],
-            peers_file_path_key="peers_file_path",
-            legacy_peer_db_path_key="db/peer_table_node.sqlite",
-            default_peers_file_path="db/peers.dat",
-        ),
+        SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
         {"host": "introducer.chia.net", "port": 8444, "enable_private_networks": False},
         [],
         0,
@@ -73,14 +59,7 @@ async def test_enable_private_networks(
     discovery2 = FullNodeDiscovery(
         chia_server,
         0,
-        PeerStoreResolver(
-            SIMULATOR_ROOT_PATH,
-            chia_server.config,
-            selected_network=chia_server.config["selected_network"],
-            peers_file_path_key="peers_file_path",
-            legacy_peer_db_path_key="db/peer_table_node.sqlite",
-            default_peers_file_path="db/peers.dat",
-        ),
+        SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
         {"host": "introducer.chia.net", "port": 8444, "enable_private_networks": True},
         [],
         0,

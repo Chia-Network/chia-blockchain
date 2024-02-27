@@ -78,32 +78,32 @@ def test_construction() -> None:
 
     with pytest.raises(OverflowError, match="int too big to convert"):
         # overflow
-        Coin(H1, H2, 0x10000000000000000)
+        Coin(H1, H2, 0x10000000000000000)  # type: ignore[arg-type]
 
     with pytest.raises(OverflowError, match="can't convert negative int to unsigned"):
         # overflow
-        Coin(H1, H2, -1)
+        Coin(H1, H2, -1)  # type: ignore[arg-type]
 
     H1_short = b"a" * 31
     H1_long = b"a" * 33
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="could not convert slice to array"):
         # short hash
-        Coin(H1_short, H2, 1)
+        Coin(H1_short, H2, uint64(1))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="could not convert slice to array"):
         # long hash
-        Coin(H1_long, H2, 1)
+        Coin(H1_long, H2, uint64(1))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="could not convert slice to array"):
         # short hash
-        Coin(H2, H1_short, 1)
+        Coin(H2, H1_short, uint64(1))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="could not convert slice to array"):
         # long hash
-        Coin(H2, H1_long, 1)
+        Coin(H2, H1_long, uint64(1))
 
-    c = Coin(H1, H2, 1000)
+    c = Coin(H1, H2, uint64(1000))
     assert c.parent_coin_info == H1
     assert c.puzzle_hash == H2
     assert c.amount == 1000
