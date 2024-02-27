@@ -37,6 +37,7 @@ from chia.data_layer.data_layer_util import (
     ProofLayer,
     Status,
     StoreProofs,
+    UnsubscribeData,
     key_hash,
     leaf_hash,
 )
@@ -86,6 +87,7 @@ async def init_data_layer_service(
     db_path: Optional[Path] = None,
     wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
+    check_confirmation_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
 ) -> AsyncIterator[DataLayerService]:
     config = bt.config
@@ -94,12 +96,12 @@ async def init_data_layer_service(
     config["data_layer"]["run_server"] = False
     config["data_layer"]["port"] = 0
     config["data_layer"]["rpc_port"] = 0
-    config["data_layer"]["manage_data_interval"] = 5
     if maximum_full_file_count is not None:
         config["data_layer"]["maximum_full_file_count"] = maximum_full_file_count
     if db_path is not None:
         config["data_layer"]["database_path"] = str(db_path.joinpath("db.sqlite"))
     config["data_layer"]["manage_data_interval"] = manage_data_interval
+    config["data_layer"]["check_confirmation_interval"] = check_confirmation_interval
     save_config(bt.root_path, "config.yaml", config)
     service = create_data_layer_service(
         root_path=bt.root_path, config=config, wallet_service=wallet_service, downloaders=[], uploaders=[]
@@ -115,10 +117,17 @@ async def init_data_layer(
     db_path: Path,
     wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
+    check_confirmation_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
 ) -> AsyncIterator[DataLayer]:
     async with init_data_layer_service(
-        wallet_rpc_port, bt, db_path, wallet_service, manage_data_interval, maximum_full_file_count
+        wallet_rpc_port,
+        bt,
+        db_path,
+        wallet_service,
+        manage_data_interval,
+        check_confirmation_interval,
+        maximum_full_file_count,
     ) as data_layer_service:
         yield data_layer_service._api.data_layer
 
@@ -768,9 +777,10 @@ async def test_subscriptions(
         assert store_id.hex() in response.get("store_ids", [])
 
         # test unsubscribe
-        response = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
-        assert response is not None
-
+        # We can't unsubscribe our own stores, bypass that by directly appending to queue.
+        with pytest.raises(Exception, match="Cannot unsubscribe to owned store"):
+            await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
+        data_layer.unsubscribe_data_queue.append(UnsubscribeData(store_id, False))
         # wait for unsubscribe to be processed
         await asyncio.sleep(interval * 5)
 
@@ -2168,22 +2178,31 @@ async def test_issue_15955_deadlock(
 
 
 @pytest.mark.parametrize(argnames="maximum_full_file_count", argvalues=[1, 5, 100])
+@pytest.mark.parametrize(argnames="use_manage_data_task", argvalues=[True, False])
 @pytest.mark.anyio
 async def test_maximum_full_file_count(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
     maximum_full_file_count: int,
+    use_manage_data_task: bool,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
-    manage_data_interval = 5
+    if use_manage_data_task:
+        manage_data_interval = 5
+        check_confirmation_interval = 1000
+    else:
+        manage_data_interval = 1000
+        check_confirmation_interval = 5
+    wait_for_task_interval = min(manage_data_interval, check_confirmation_interval)
     async with init_data_layer(
         wallet_rpc_port=wallet_rpc_port,
         bt=bt,
         db_path=tmp_path,
         manage_data_interval=manage_data_interval,
+        check_confirmation_interval=check_confirmation_interval,
         maximum_full_file_count=maximum_full_file_count,
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -2193,6 +2212,12 @@ async def test_maximum_full_file_count(
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_rpc_api.service, timeout=20)
+
+        # Make sure both tasks ran at least once, since the sleep happens only after one loop run.
+        # This way the slower task will sleep for the remaining of the test, and the files will be guaranteed
+        # to be produced by the desired task.
+        await asyncio.sleep(wait_for_task_interval * 4)
+
         for batch_count in range(1, 10):
             key = batch_count.to_bytes(2, "big")
             value = batch_count.to_bytes(2, "big")
@@ -2200,7 +2225,7 @@ async def test_maximum_full_file_count(
             res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
             update_tx_rec = res["tx_id"]
             await farm_block_with_spend(full_node_api, ph, update_tx_rec, wallet_rpc_api)
-            await asyncio.sleep(manage_data_interval * 2)
+            await asyncio.sleep(wait_for_task_interval * 2)
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
             with os.scandir(data_layer.server_files_location) as entries:
@@ -2264,7 +2289,8 @@ async def test_unsubscribe_removes_files(
             assert get_delta_filename(store_id, hash, generation + 1) in filenames
             assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
 
-        res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})
+        # We can't unsubscribe our own stores, bypass that by directly appending to queue.
+        data_layer.unsubscribe_data_queue.append(UnsubscribeData(store_id, retain))
 
         # wait for unsubscribe to be processed
         await asyncio.sleep(manage_data_interval * 3)
