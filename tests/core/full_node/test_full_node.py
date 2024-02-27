@@ -749,7 +749,11 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
         await full_node_1.full_node.add_unfinished_block(unf, None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
-        result = full_node_1.full_node.full_node_store.get_unfinished_block_result(unf.partial_hash)
+        entry = full_node_1.full_node.full_node_store.get_unfinished_block_result(
+            unf.partial_hash, unf.foliage.foliage_transaction_block_hash
+        )
+        assert entry is not None
+        result = entry.result
         assert result is not None
         assert result.npc_result is not None
         assert result.npc_result.conds is not None
@@ -1219,12 +1223,12 @@ class TestFullNodeProtocol:
 
         # Don't have
         if requesting == 1:
-            full_node_1.full_node.full_node_store.requesting_unfinished_blocks.add(unf.partial_hash)
+            full_node_1.full_node.full_node_store.mark_requesting_unfinished_block(unf.partial_hash, None)
             res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
             assert res is None
         elif requesting == 2:
-            full_node_1.full_node.full_node_store.requesting_unfinished_blocks2.setdefault(unf.partial_hash, set()).add(
-                unf.foliage.foliage_transaction_block_hash
+            full_node_1.full_node.full_node_store.mark_requesting_unfinished_block(
+                unf.partial_hash, unf.foliage.foliage_transaction_block_hash
             )
             res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
             assert res is None
@@ -1274,11 +1278,11 @@ class TestFullNodeProtocol:
 
         # Don't have
         if requesting == 1:
-            full_node_1.full_node.full_node_store.requesting_unfinished_blocks.add(unf.partial_hash)
+            full_node_1.full_node.full_node_store.mark_requesting_unfinished_block(unf.partial_hash, None)
 
         if requesting == 2:
-            full_node_1.full_node.full_node_store.requesting_unfinished_blocks2.setdefault(unf.partial_hash, set()).add(
-                unf.foliage.foliage_transaction_block_hash
+            full_node_1.full_node.full_node_store.mark_requesting_unfinished_block(
+                unf.partial_hash, unf.foliage.foliage_transaction_block_hash
             )
             res = await full_node_1.new_unfinished_block2(
                 fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
@@ -1350,7 +1354,7 @@ class TestFullNodeProtocol:
                 fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
             )
             # 3 is the default number of different unfinished blocks we forward
-            if idx <= 3:
+            if idx < 3:
                 # Don't have
                 assert res is not None and res.data == bytes(
                     fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
