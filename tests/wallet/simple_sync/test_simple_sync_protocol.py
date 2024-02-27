@@ -478,7 +478,7 @@ async def test_subscribe_for_hint(simulator_and_wallet: OldSimulatorsAndWallets,
     coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
     coin_spent = coins[0].coin
     hint_puzzle_hash = 32 * b"\2"
-    amount = 1
+    amount = uint64(1)
     amount_bin = int_to_bytes(1)
     hint = bytes32(32 * b"\5")
 
@@ -581,7 +581,7 @@ async def test_subscribe_for_hint_long_sync(
     coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
     coin_spent = coins[0].coin
     hint_puzzle_hash = 32 * b"\2"
-    amount = 1
+    amount = uint64(1)
     amount_bin = int_to_bytes(1)
     hint = bytes32(32 * b"\5")
 

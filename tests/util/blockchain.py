@@ -68,7 +68,7 @@ def persistent_blocks(
             block_bytes_list: List[bytes] = pickle.loads(bytes_list)
             blocks: List[FullBlock] = []
             for block_bytes in block_bytes_list:
-                blocks.append(FullBlock.from_bytes(block_bytes))
+                blocks.append(FullBlock.from_bytes_unchecked(block_bytes))
             if len(blocks) == num_of_blocks + len(block_list_input):
                 print(f"\n loaded {file_path} with {len(blocks)} blocks")
                 return blocks

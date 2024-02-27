@@ -5,7 +5,7 @@ import unicodedata
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
 
 import pkg_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
@@ -332,17 +332,50 @@ class Keychain:
             except KeychainUserNotFound:
                 return index
 
-    def add_private_key(self, mnemonic: str, label: Optional[str] = None) -> PrivateKey:
+    @overload
+    def add_key(self, mnemonic_or_pk: str) -> PrivateKey:
+        ...
+
+    @overload
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> PrivateKey:
+        ...
+
+    @overload
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> PrivateKey:
+        ...
+
+    @overload
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]) -> G1Element:
+        ...
+
+    @overload
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: bool) -> Union[PrivateKey, G1Element]:
+        ...
+
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
+    ) -> Union[PrivateKey, G1Element]:
         """
-        Adds a private key to the keychain, with the given entropy and passphrase. The
-        keychain itself will store the public key, and the entropy bytes,
+        Adds a key to the keychain. The keychain itself will store the public key, and the entropy bytes (if given),
         but not the passphrase.
         """
-        seed = mnemonic_to_seed(mnemonic)
-        entropy = bytes_from_mnemonic(mnemonic)
-        index = self._get_free_private_key_index()
-        key = AugSchemeMPL.key_gen(seed)
-        fingerprint = key.get_g1().get_fingerprint()
+        key: Union[PrivateKey, G1Element]
+        if private:
+            seed = mnemonic_to_seed(mnemonic_or_pk)
+            entropy = bytes_from_mnemonic(mnemonic_or_pk)
+            index = self._get_free_private_key_index()
+            key = AugSchemeMPL.key_gen(seed)
+            assert isinstance(key, PrivateKey)
+            pk = key.get_g1()
+            key_data = bytes(pk).hex() + entropy.hex()
+            fingerprint = pk.get_fingerprint()
+        else:
+            index = self._get_free_private_key_index()
+            pk_bytes = hexstr_to_bytes(mnemonic_or_pk)
+            key = G1Element.from_bytes(pk_bytes)
+            assert isinstance(key, G1Element)
+            key_data = pk_bytes.hex()
+            fingerprint = key.get_fingerprint()
 
         if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
             # Prevents duplicate add
@@ -357,39 +390,9 @@ class Keychain:
             self.keyring_wrapper.set_passphrase(
                 self.service,
                 get_private_key_user(self.user, index),
-                bytes(key.get_g1()).hex() + entropy.hex(),
+                key_data,
             )
         except Exception:
-            if label is not None:
-                self.keyring_wrapper.delete_label(fingerprint)
-            raise
-
-        return key
-
-    def add_public_key(self, pubkey: str, label: Optional[str] = None) -> G1Element:
-        """
-        Adds a public key to the keychain.
-        """
-        key = G1Element.from_bytes(hexstr_to_bytes(pubkey))
-        index = self._get_free_private_key_index()
-        fingerprint = key.get_fingerprint()
-
-        if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
-            # Prevents duplicate add
-            raise KeychainFingerprintExists(fingerprint)
-
-        # Try to set the label first, it may fail if the label is invalid or already exists.
-        # This can probably just be moved into `FileKeyring.set_passphrase` after the legacy keyring stuff was dropped.
-        if label is not None:
-            self.keyring_wrapper.set_label(fingerprint, label)
-
-        try:
-            self.keyring_wrapper.set_passphrase(
-                self.service,
-                get_private_key_user(self.user, index),
-                bytes(key).hex(),
-            )
-        except Exception:  # pragma: no cover
             if label is not None:
                 self.keyring_wrapper.delete_label(fingerprint)
             raise

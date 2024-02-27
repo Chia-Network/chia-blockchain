@@ -10,7 +10,21 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    ClassVar,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+    overload,
+)
 
 import aiosqlite
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -37,7 +51,6 @@ from chia.protocols.wallet_protocol import (
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
-from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
@@ -46,12 +59,7 @@ from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.weight_proof import WeightProof
-from chia.util.config import (
-    WALLET_PEERS_PATH_KEY_DEPRECATED,
-    lock_and_load_config,
-    process_config_start_method,
-    save_config,
-)
+from chia.util.config import lock_and_load_config, process_config_start_method, save_config
 from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
@@ -220,16 +228,33 @@ class WalletNode:
         for cache in self.peer_caches.values():
             cache.clear_after_height(reorg_height)
 
+    @overload
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[G1Element]:
+        ...
+
+    @overload
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int], private: Literal[True]) -> Optional[PrivateKey]:
+        ...
+
+    @overload
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int], private: Literal[False]) -> Optional[G1Element]:
+        ...
+
+    @overload
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: bool
+    ) -> Optional[Union[PrivateKey, G1Element]]:
+        ...
+
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool = False
     ) -> Optional[Union[PrivateKey, G1Element]]:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
             # Returns first key if fingerprint is None
-            if private:
-                key: Optional[Union[PrivateKey, G1Element]] = await keychain_proxy.get_key_for_fingerprint(fingerprint)
-            else:
-                key = await keychain_proxy.get_public_key_for_fingerprint(fingerprint)
+            key: Optional[Union[PrivateKey, G1Element]] = await keychain_proxy.get_key_for_fingerprint(
+                fingerprint, private=private
+            )
         except KeychainIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
             return None
@@ -691,14 +716,7 @@ class WalletNode:
             self.wallet_peers = WalletPeers(
                 self.server,
                 self.config["target_peer_count"],
-                PeerStoreResolver(
-                    self.root_path,
-                    self.config,
-                    selected_network=network_name,
-                    peers_file_path_key="wallet_peers_file_path",
-                    legacy_peer_db_path_key=WALLET_PEERS_PATH_KEY_DEPRECATED,
-                    default_peers_file_path="wallet/db/wallet_peers.dat",
-                ),
+                self.root_path / Path(self.config["wallet_peers_file_path"]),
                 self.config["introducer_peer"],
                 self.config.get("dns_servers", ["dns-introducer.chia.net"]),
                 self.config["peer_connect_interval"],
@@ -1075,7 +1093,7 @@ class WalletNode:
                 self.log.debug(f"get_timestamp_for_height_from_peer use cached block for height {request_height}")
 
             if block is not None and block.foliage_transaction_block is not None:
-                return uint64(block.foliage_transaction_block.timestamp)
+                return block.foliage_transaction_block.timestamp
 
             request_height -= 1
 

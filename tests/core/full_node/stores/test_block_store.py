@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import logging
 import random
 import sqlite3
@@ -278,7 +277,7 @@ async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, use
             assert block.challenge_chain_ip_proof is not None
             proof = rand_vdf_proof()
             replaced.append(proof)
-            new_block = dataclasses.replace(block, challenge_chain_ip_proof=proof)
+            new_block = block.replace(challenge_chain_ip_proof=proof)
             await block_store.replace_proof(block.header_hash, new_block)
 
         for block, proof in zip(blocks, replaced):
@@ -307,7 +306,7 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
 
         new_blocks = []
         for i, block in enumerate(blocks):
-            block = dataclasses.replace(block, transactions_generator=generator(i))
+            block = block.replace(transactions_generator=generator(i))
             block_record = header_block_to_sub_block_record(
                 DEFAULT_CONSTANTS, uint64(0), block, uint64(0), False, uint8(0), uint32(max(0, block.height - 1)), None
             )

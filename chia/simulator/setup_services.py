@@ -254,7 +254,7 @@ async def setup_wallet_node(
         entropy = bytes32.secret()
         if key_seed is None:
             key_seed = entropy
-        keychain.add_private_key(bytes_to_mnemonic(key_seed))
+        keychain.add_key(bytes_to_mnemonic(key_seed))
         first_pk = keychain.get_first_public_key()
         assert first_pk is not None
         db_path_key_suffix = str(first_pk.get_fingerprint())

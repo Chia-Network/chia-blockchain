@@ -14,6 +14,7 @@ from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import ValidationError
+from chia.util.ints import uint64
 
 BLANK_SPEND_BUNDLE = SpendBundle(coin_spends=[], aggregated_signature=G2Element())
 NULL_SIGNATURE = "0xc" + "0" * 191
@@ -59,8 +60,8 @@ def create_spends(num: int) -> Tuple[List[CoinSpend], List[Coin]]:
     for i in range(num):
         target_ph = rand_hash(rng)
         conditions = [[ConditionOpcode.CREATE_COIN, target_ph, 1]]
-        coin = Coin(rand_hash(rng), puzzle_hash, 1000)
-        new_coin = Coin(coin.name(), target_ph, 1)
+        coin = Coin(rand_hash(rng), puzzle_hash, uint64(1000))
+        new_coin = Coin(coin.name(), target_ph, uint64(1))
         create_coin.append(new_coin)
         spends.append(make_spend(coin, puzzle, Program.to(conditions)))
 
