@@ -32,7 +32,10 @@ from chia.data_layer.data_layer_errors import KeyNotFoundError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
+    KeysPaginationData,
+    KeysValuesPaginationData,
     KeyValue,
+    KVDiffPaginationData,
     Layer,
     Offer,
     OfferStore,
@@ -247,20 +250,43 @@ class DataLayer:
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
         fee: uint64,
+        submit_on_chain: bool = True,
+    ) -> Optional[TransactionRecord]:
+        status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
+        await self.batch_insert(tree_id=tree_id, changelist=changelist, status=status)
+
+        if submit_on_chain:
+            return await self.publish_update(tree_id=tree_id, fee=fee)
+        else:
+            return None
+
+    async def submit_pending_root(
+        self,
+        tree_id: bytes32,
+        fee: uint64,
     ) -> TransactionRecord:
-        await self.batch_insert(tree_id=tree_id, changelist=changelist)
-        return await self.publish_update(tree_id=tree_id, fee=fee)
+        await self._update_confirmation_status(tree_id=tree_id)
+
+        pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
+        if pending_root is None:
+            raise Exception("Latest root is already confirmed.")
+        if pending_root.status == Status.PENDING:
+            raise Exception("Pending root is already submitted.")
+
+        await self.data_store.change_root_status(pending_root, Status.PENDING)
+        return await self.publish_update(tree_id, fee)
 
     async def batch_insert(
         self,
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
+        status: Status = Status.PENDING,
     ) -> bytes32:
         await self._update_confirmation_status(tree_id=tree_id)
 
         async with self.data_store.transaction():
             pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
-            if pending_root is not None:
+            if pending_root is not None and pending_root.status == Status.PENDING:
                 raise Exception("Already have a pending root waiting for confirmation.")
 
             # check before any DL changes that this singleton is currently owned by this wallet
@@ -269,7 +295,7 @@ class DataLayer:
                 raise ValueError(f"Singleton with launcher ID {tree_id} is not owned by DL Wallet")
 
             t1 = time.monotonic()
-            batch_hash = await self.data_store.insert_batch(tree_id, changelist)
+            batch_hash = await self.data_store.insert_batch(tree_id, changelist, status)
             t2 = time.monotonic()
             self.log.info(f"Data store batch update process time: {t2 - t1}.")
             # todo return empty node hash from get_tree_root
@@ -290,6 +316,8 @@ class DataLayer:
         pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
         if pending_root is None:
             raise Exception("Latest root is already confirmed.")
+        if pending_root.status == Status.PENDING_BATCH:
+            raise Exception("Unable to publish on chain, batch update set still open.")
 
         root_hash = self.none_bytes if pending_root.node_hash is None else pending_root.node_hash
 
@@ -312,14 +340,12 @@ class DataLayer:
             node = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash)
             return node.hash
 
-    async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None) -> Optional[bytes]:
+    async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None) -> bytes:
         await self._update_confirmation_status(tree_id=store_id)
 
         async with self.data_store.transaction():
+            # this either returns the node or raises an exception
             res = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash)
-            if res is None:
-                self.log.error("Failed to fetch key")
-                return None
             return res.value
 
     async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
@@ -330,10 +356,38 @@ class DataLayer:
             self.log.error("Failed to fetch keys values")
         return res
 
+    async def get_keys_values_paginated(
+        self,
+        store_id: bytes32,
+        root_hash: Optional[bytes32],
+        page: int,
+        max_page_size: Optional[int] = None,
+    ) -> KeysValuesPaginationData:
+        await self._update_confirmation_status(tree_id=store_id)
+
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
+        res = await self.data_store.get_keys_values_paginated(store_id, page, max_page_size, root_hash)
+        return res
+
     async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[bytes]:
         await self._update_confirmation_status(tree_id=store_id)
 
         res = await self.data_store.get_keys(store_id, root_hash)
+        return res
+
+    async def get_keys_paginated(
+        self,
+        store_id: bytes32,
+        root_hash: Optional[bytes32],
+        page: int,
+        max_page_size: Optional[int] = None,
+    ) -> KeysPaginationData:
+        await self._update_confirmation_status(tree_id=store_id)
+
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
+        res = await self.data_store.get_keys_paginated(store_id, page, max_page_size, root_hash)
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
@@ -382,7 +436,7 @@ class DataLayer:
                 return
             if root is None:
                 pending_root = await self.data_store.get_pending_root(tree_id=tree_id)
-                if pending_root is not None:
+                if pending_root is not None and pending_root.status == Status.PENDING:
                     if pending_root.generation == 0 and pending_root.node_hash is None:
                         await self.data_store.change_root_status(pending_root, Status.COMMITTED)
                         await self.data_store.clear_pending_roots(tree_id=tree_id)
@@ -421,6 +475,7 @@ class DataLayer:
                     pending_root is not None
                     and pending_root.generation == root.generation + 1
                     and pending_root.node_hash == expected_root_hash
+                    and pending_root.status == Status.PENDING
                 ):
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED)
                     await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
@@ -635,13 +690,14 @@ class DataLayer:
                         else:
                             self.log.debug(f"uploaded to uploader {uploader}")
 
-    async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
+    async def subscribe(self, store_id: bytes32, urls: List[str]) -> Subscription:
         parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
         await self.wallet_rpc.dl_track_new(subscription.tree_id)
         async with self.subscription_lock:
             await self.data_store.subscribe(subscription)
         self.log.info(f"Done adding subscription: {subscription.tree_id}")
+        return subscription
 
     async def remove_subscriptions(self, store_id: bytes32, urls: List[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
@@ -711,6 +767,13 @@ class DataLayer:
     async def get_kv_diff(self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Set[DiffData]:
         return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
 
+    async def get_kv_diff_paginated(
+        self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: int, max_page_size: Optional[int] = None
+    ) -> KVDiffPaginationData:
+        if max_page_size is None:
+            max_page_size = 40 * 1024 * 1024
+        return await self.data_store.get_kv_diff_paginated(tree_id, page, max_page_size, hash_1, hash_2)
+
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
         while not self._shut_down:
@@ -743,7 +806,8 @@ class DataLayer:
             for local_id in local_tree_ids:
                 if local_id not in subscription_tree_ids:
                     try:
-                        await self.subscribe(local_id, [])
+                        subscription = await self.subscribe(local_id, [])
+                        subscriptions.insert(0, subscription)
                     except Exception as e:
                         self.log.info(
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"

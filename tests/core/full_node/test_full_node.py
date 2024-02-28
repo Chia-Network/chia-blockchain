@@ -757,7 +757,7 @@ class TestFullNodeProtocol:
 
         assert not full_node_1.full_node.blockchain.contains_block(block.header_hash)
         assert block.transactions_generator is not None
-        block_no_transactions = dataclasses.replace(block, transactions_generator=None)
+        block_no_transactions = block.replace(transactions_generator=None)
         assert block_no_transactions.transactions_generator is None
 
         await full_node_1.full_node.add_block(block_no_transactions)
