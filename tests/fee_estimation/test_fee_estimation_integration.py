@@ -107,25 +107,28 @@ test_mempool_info = MempoolInfo(
 )
 
 
-def test_mempool_fee_estimator_add_item() -> None:
+@pytest.mark.anyio
+async def test_mempool_fee_estimator_add_item() -> None:
     fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
     mempool = Mempool(test_mempool_info, fee_estimator)
     item = make_mempoolitem()
-    mempool.add_to_pool(item)
+    await mempool.add_to_pool(item)
     assert mempool.fee_estimator.add_mempool_item_called_count == 1  # type: ignore[attr-defined]
 
 
-def test_item_not_removed_if_not_added() -> None:
+@pytest.mark.anyio
+async def test_item_not_removed_if_not_added() -> None:
     for reason in MempoolRemoveReason:
         fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
         mempool = Mempool(test_mempool_info, fee_estimator)
         item = make_mempoolitem()
         with pytest.raises(KeyError):
-            mempool.remove_from_pool([item.name], reason)
+            await mempool.remove_from_pool([item.name], reason)
         assert mempool.fee_estimator.remove_mempool_item_called_count == 0  # type: ignore[attr-defined]
 
 
-def test_mempool_fee_estimator_remove_item() -> None:
+@pytest.mark.anyio
+async def test_mempool_fee_estimator_remove_item() -> None:
     should_call_fee_estimator_remove: Dict[MempoolRemoveReason, int] = {
         MempoolRemoveReason.BLOCK_INCLUSION: 0,
         MempoolRemoveReason.CONFLICT: 1,
@@ -135,8 +138,8 @@ def test_mempool_fee_estimator_remove_item() -> None:
         fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
         mempool = Mempool(test_mempool_info, fee_estimator)
         item = make_mempoolitem()
-        mempool.add_to_pool(item)
-        mempool.remove_from_pool([item.name], reason)
+        await mempool.add_to_pool(item)
+        await mempool.remove_from_pool([item.name], reason)
         assert mempool.fee_estimator.remove_mempool_item_called_count == call_count  # type: ignore[attr-defined]
 
 
@@ -156,24 +159,26 @@ def test_current_block_height_init() -> None:
     assert mempool.fee_estimator.current_block_height == uint32(0)  # type: ignore[attr-defined]
 
 
-def test_current_block_height_add() -> None:
+@pytest.mark.anyio
+async def test_current_block_height_add() -> None:
     fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
     mempool = Mempool(test_mempool_info, fee_estimator)
     item = make_mempoolitem()
     height = uint32(7)
     fee_estimator.new_block_height(height)
-    mempool.add_to_pool(item)
+    await mempool.add_to_pool(item)
     assert mempool.fee_estimator.current_block_height == height  # type: ignore[attr-defined]
 
 
-def test_current_block_height_remove() -> None:
+@pytest.mark.anyio
+async def test_current_block_height_remove() -> None:
     fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
     mempool = Mempool(test_mempool_info, fee_estimator)
     item = make_mempoolitem()
     height = uint32(8)
     fee_estimator.new_block_height(height)
-    mempool.add_to_pool(item)
-    mempool.remove_from_pool([item.name], MempoolRemoveReason.CONFLICT)
+    await mempool.add_to_pool(item)
+    await mempool.remove_from_pool([item.name], MempoolRemoveReason.CONFLICT)
     assert mempool.fee_estimator.current_block_height == height  # type: ignore[attr-defined]
 
 
@@ -241,7 +246,8 @@ async def test_mm_calls_new_block_height() -> None:
     assert new_block_height_called
 
 
-def test_add_tx_called() -> None:
+@pytest.mark.anyio
+async def test_add_tx_called() -> None:
     max_block_cost = uint64(1000 * 1000)
     fee_estimator = create_bitcoin_fee_estimator(max_block_cost)
     mempool = Mempool(test_mempool_info, fee_estimator)
@@ -258,6 +264,6 @@ def test_add_tx_called() -> None:
         add_tx_called_fun, mempool.fee_estimator.tracker  # type: ignore[attr-defined]
     )
 
-    mempool.add_to_pool(item)
+    await mempool.add_to_pool(item)
 
     assert add_tx_called

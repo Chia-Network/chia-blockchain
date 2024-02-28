@@ -166,7 +166,12 @@ async def run_mempool_benchmark() -> None:
         else:
             print("\n== Multi-threaded")
 
-        mempool = MempoolManager(get_coin_records, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+        mempool = MempoolManager(
+            get_coin_records,
+            get_unspent_lineage_info_for_puzzle_hash,
+            DEFAULT_CONSTANTS,
+            single_threaded=single_threaded,
+        )
 
         height = start_height
         rec = fake_block_record(height, timestamp)
@@ -196,7 +201,12 @@ async def run_mempool_benchmark() -> None:
         print(f"  time: {stop - start:0.4f}s")
         print(f"  per call: {(stop - start) / total_bundles * 1000:0.2f}ms")
 
-        mempool = MempoolManager(get_coin_records, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+        mempool = MempoolManager(
+            get_coin_records,
+            get_unspent_lineage_info_for_puzzle_hash,
+            DEFAULT_CONSTANTS,
+            single_threaded=single_threaded,
+        )
 
         height = start_height
         rec = fake_block_record(height, timestamp)
@@ -232,10 +242,7 @@ async def run_mempool_benchmark() -> None:
         with enable_profiler(True, f"create-{suffix}"):
             start = monotonic()
             for _ in range(500):
-                await mempool.create_bundle_from_mempool(
-                    last_tb_header_hash=rec.header_hash,
-                    get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
-                )
+                mempool.create_bundle_from_mempool(last_tb_header_hash=rec.header_hash)
             stop = monotonic()
         print(f"  time: {stop - start:0.4f}s")
         print(f"  per call: {(stop - start) / 500 * 1000:0.2f}ms")

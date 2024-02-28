@@ -159,6 +159,7 @@ class MempoolManager:
     constants: ConsensusConstants
     seen_bundle_hashes: Dict[bytes32, bytes32]
     get_coin_records: Callable[[Collection[bytes32]], Awaitable[List[CoinRecord]]]
+    get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]]
     nonzero_fee_minimum_fpc: int
     mempool_max_total_cost: int
     # a cache of MempoolItems that conflict with existing items in the pool
@@ -175,6 +176,7 @@ class MempoolManager:
     def __init__(
         self,
         get_coin_records: Callable[[Collection[bytes32]], Awaitable[List[CoinRecord]]],
+        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         consensus_constants: ConsensusConstants,
         multiprocessing_context: Optional[BaseContext] = None,
         *,
@@ -187,6 +189,8 @@ class MempoolManager:
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
 
         self.get_coin_records = get_coin_records
+
+        self.get_unspent_lineage_info_for_puzzle_hash = get_unspent_lineage_info_for_puzzle_hash
 
         # The fee per cost must be above this amount to consider the fee "nonzero", and thus able to kick out other
         # transactions. This prevents spam. This is equivalent to 0.055 XCH per block, or about 0.00005 XCH for two
@@ -223,16 +227,13 @@ class MempoolManager:
             FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
             CLVMCost(uint64(self.max_block_clvm_cost)),
         )
-        self.mempool: Mempool = Mempool(mempool_info, self.fee_estimator)
+        self.mempool: Mempool = Mempool(mempool_info, self.fee_estimator, self.get_unspent_lineage_info_for_puzzle_hash)
 
     def shut_down(self) -> None:
         self.pool.shutdown(wait=True)
 
-    async def create_bundle_from_mempool(
-        self,
-        last_tb_header_hash: bytes32,
-        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
+    def create_bundle_from_mempool(
+        self, last_tb_header_hash: bytes32, item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None
     ) -> Optional[Tuple[SpendBundle, List[Coin]]]:
         """
         Returns aggregated spendbundle that can be used for creating new block,
@@ -247,9 +248,7 @@ class MempoolManager:
                 return True
 
             item_inclusion_filter = always
-        return await self.mempool.create_bundle_from_mempool_items(
-            item_inclusion_filter, get_unspent_lineage_info_for_puzzle_hash, self.constants, self.peak.height
-        )
+        return self.mempool.create_bundle_from_mempool_items(item_inclusion_filter, self.constants, self.peak.height)
 
     def get_filter(self) -> bytes:
         all_transactions: Set[bytes32] = set()
@@ -373,8 +372,8 @@ class MempoolManager:
         if err is None:
             # No error, immediately add to mempool, after removing conflicting TXs.
             assert item is not None
-            self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT)
-            err = self.mempool.add_to_pool(item)
+            await self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT)
+            err = await self.mempool.add_to_pool(item)
             if err is not None:
                 return item.cost, MempoolInclusionStatus.FAILED, err
             return item.cost, MempoolInclusionStatus.SUCCESS, None
@@ -453,6 +452,7 @@ class MempoolManager:
             )
         removal_names_from_coin_spends: Set[bytes32] = set()
         fast_forward_coin_ids: Set[bytes32] = set()
+        fast_forward_puzzle_hashes: Set[bytes32] = set()
         bundle_coin_spends: Dict[bytes32, BundleCoinSpend] = {}
         for coin_spend in new_spend.coin_spends:
             coin_id = coin_spend.coin.name()
@@ -473,6 +473,7 @@ class MempoolManager:
                 non_eligible_coin_ids.append(coin_id)
             if mark_as_fast_forward:
                 fast_forward_coin_ids.add(coin_id)
+                fast_forward_puzzle_hashes.add(coin_spend.coin.puzzle_hash)
             bundle_coin_spends[coin_id] = BundleCoinSpend(
                 coin_spend=coin_spend,
                 eligible_for_dedup=eligibility_info.is_eligible_for_dedup,
@@ -602,6 +603,25 @@ class MempoolManager:
             if not can_replace(conflicts, removal_names, potential):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
+        # Check that each singleton fast forward has one and only one unspent
+        # and update the puzzle hash to unspent lineage info map accordingly
+        for puzzle_hash in fast_forward_puzzle_hashes:
+            info_and_refcount = self.mempool.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
+            if info_and_refcount is not None:
+                # Update the refcount
+                current_unspent_lineage_info, refcount = info_and_refcount
+                self.mempool.set_unspent_lineage_info_for_puzzle_hash(
+                    puzzle_hash=puzzle_hash, unspent_lineage_info=current_unspent_lineage_info, ref_count=refcount + 1
+                )
+            else:
+                # Add a new item to the map
+                unspent_lineage_info = await self.get_unspent_lineage_info_for_puzzle_hash(puzzle_hash)
+                if unspent_lineage_info is None:
+                    return Err.DOUBLE_SPEND, None, []
+                self.mempool.set_unspent_lineage_info_for_puzzle_hash(
+                    puzzle_hash=puzzle_hash, unspent_lineage_info=unspent_lineage_info, ref_count=1
+                )
+
         duration = time.time() - start_time
 
         log.log(
@@ -684,7 +704,7 @@ class MempoolManager:
         self.fee_estimator.new_block_height(new_peak.height)
         included_items: List[MempoolItemInfo] = []
 
-        self.mempool.new_tx_block(new_peak.height, new_peak.timestamp)
+        await self.mempool.new_tx_block(new_peak.height, new_peak.timestamp)
 
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
@@ -702,7 +722,7 @@ class MempoolManager:
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
                     self.remove_seen(item.name)
                     spendbundle_ids_to_remove.add(item.name)
-            self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
+            await self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
         else:
             log.warning(
                 "updating the mempool using the slow-path. "
@@ -711,8 +731,13 @@ class MempoolManager:
                 f"coins: {'not set' if spent_coins is None else 'set'}"
             )
             old_pool = self.mempool
-            self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
+            self.mempool = Mempool(
+                old_pool.mempool_info, old_pool.fee_estimator, self.get_unspent_lineage_info_for_puzzle_hash
+            )
             self.seen_bundle_hashes = {}
+
+            # Reset the singleton fast forward puzzle hash to unspent lineage info map
+            self.mempool.reset_unspent_lineage_info_for_puzzle_hash()
 
             # in order to make this a bit quicker, we look-up all the spends in
             # a single query, rather than one at a time.

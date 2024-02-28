@@ -157,7 +157,9 @@ class SpendSim:
 
         async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
             self.coin_store = await CoinStore.create(self.db_wrapper)
-            self.mempool_manager = MempoolManager(self.coin_store.get_coin_records, defaults)
+            self.mempool_manager = MempoolManager(
+                self.coin_store.get_coin_records, self.coin_store.get_unspent_lineage_info_for_puzzle_hash, defaults
+            )
             self.defaults = defaults
 
             # Load the next data if there is any
@@ -259,10 +261,8 @@ class SpendSim:
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
             if peak is not None:
-                result = await self.mempool_manager.create_bundle_from_mempool(
-                    last_tb_header_hash=peak.header_hash,
-                    get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
-                    item_inclusion_filter=item_inclusion_filter,
+                result = self.mempool_manager.create_bundle_from_mempool(
+                    last_tb_header_hash=peak.header_hash, item_inclusion_filter=item_inclusion_filter
                 )
 
                 if result is not None:
@@ -311,7 +311,9 @@ class SpendSim:
         self.blocks = new_block_list
         await self.coin_store.rollback_to_block(block_height)
         old_pool = self.mempool_manager.mempool
-        self.mempool_manager.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
+        self.mempool_manager.mempool = Mempool(
+            old_pool.mempool_info, old_pool.fee_estimator, self.coin_store.get_unspent_lineage_info_for_puzzle_hash
+        )
         self.block_height = block_height
         if new_br_list:
             self.timestamp = new_br_list[-1].timestamp

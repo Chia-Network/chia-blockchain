@@ -98,6 +98,10 @@ async def zero_calls_get_coin_records(coin_ids: Collection[bytes32]) -> List[Coi
     return []
 
 
+async def zero_calls_get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
+    assert False
+
+
 async def get_coin_records_for_test_coins(coin_ids: Collection[bytes32]) -> List[CoinRecord]:
     test_coin_records = {
         TEST_COIN_ID: TEST_COIN_RECORD,
@@ -130,12 +134,17 @@ def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 
 async def instantiate_mempool_manager(
     get_coin_records: Callable[[Collection[bytes32]], Awaitable[List[CoinRecord]]],
     *,
+    get_unspent_lineage_info_for_puzzle_hash: Callable[
+        [bytes32], Awaitable[Optional[UnspentLineageInfo]]
+    ] = zero_calls_get_unspent_lineage_info_for_puzzle_hash,
     block_height: uint32 = TEST_HEIGHT,
     block_timestamp: uint64 = TEST_TIMESTAMP,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     max_tx_clvm_cost: Optional[uint64] = None,
 ) -> MempoolManager:
-    mempool_manager = MempoolManager(get_coin_records, constants, max_tx_clvm_cost=max_tx_clvm_cost)
+    mempool_manager = MempoolManager(
+        get_coin_records, get_unspent_lineage_info_for_puzzle_hash, constants, max_tx_clvm_cost=max_tx_clvm_cost
+    )
     test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
     await mempool_manager.new_peak(test_block_record, None)
     invariant_check_mempool(mempool_manager.mempool)
@@ -976,10 +985,7 @@ async def test_total_mempool_fees() -> None:
 @pytest.mark.parametrize("reverse_tx_order", [True, False])
 @pytest.mark.anyio
 async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
-
-    async def make_coin_spends(coins: List[Coin], *, high_fees: bool = True) -> List[CoinSpend]:
+    def make_coin_spends(coins: List[Coin], *, high_fees: bool = True) -> List[CoinSpend]:
         spends_list = []
         for i in range(0, len(coins)):
             coin_spend = make_spend(
@@ -1000,14 +1006,12 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
             assert result[1] == MempoolInclusionStatus.SUCCESS
 
     mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(2000000000, 2000002200)))
-    high_rate_spends = await make_coin_spends(coins[0:2200])
-    low_rate_spends = await make_coin_spends(coins[2200:2400], high_fees=False)
+    high_rate_spends = make_coin_spends(coins[0:2200])
+    low_rate_spends = make_coin_spends(coins[2200:2400], high_fees=False)
     spends = low_rate_spends + high_rate_spends if reverse_tx_order else high_rate_spends + low_rate_spends
     await send_spends_to_mempool(spends)
     assert mempool_manager.peak is not None
-    result = await mempool_manager.create_bundle_from_mempool(
-        mempool_manager.peak.header_hash, get_unspent_lineage_info_for_puzzle_hash
-    )
+    result = mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
     # Make sure we filled the block with only high rate spends
     assert len([s for s in high_rate_spends if s in result[0].coin_spends]) == len(result[0].coin_spends)
@@ -1017,9 +1021,6 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
 @pytest.mark.parametrize("num_skipped_items", [PRIORITY_TX_THRESHOLD, MAX_SKIPPED_ITEMS])
 @pytest.mark.anyio
 async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, caplog: pytest.LogCaptureFixture) -> None:
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
-
     # This test exercises the path where an item's inclusion would exceed the
     # maximum cumulative cost, so it gets skipped as a result
 
@@ -1070,9 +1071,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
 
     assert mempool_manager.peak is not None
     caplog.set_level(logging.DEBUG)
-    result = await mempool_manager.create_bundle_from_mempool(
-        mempool_manager.peak.header_hash, get_unspent_lineage_info_for_puzzle_hash
-    )
+    result = mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
     agg, additions = result
     skipped_due_to_eligible_coins = sum(

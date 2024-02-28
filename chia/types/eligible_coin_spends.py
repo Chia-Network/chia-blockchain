@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from chia_rs import CoinSpend as RustCoinSpend
 from chia_rs import Program as RustProgram
@@ -233,11 +233,11 @@ class EligibleCoinSpends:
         self.deduplication_spends.update(new_dedup_spends)
         return unique_coin_spends, uint64(cost_saving), unique_additions
 
-    async def process_fast_forward_spends(
+    def process_fast_forward_spends(
         self,
         *,
         mempool_item: InternalMempoolItem,
-        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
+        puzzle_hash_to_unspent_lineage_info: Dict[bytes32, Tuple[UnspentLineageInfo, int]],
         height: uint32,
         constants: ConsensusConstants,
     ) -> None:
@@ -248,7 +248,7 @@ class EligibleCoinSpends:
 
         Args:
             mempool_item: in-out parameter for the internal mempool item to process
-            get_unspent_lineage_info_for_puzzle_hash: to lookup the most recent
+            puzzle_hash_to_unspent_lineage_info: to lookup the most recent
                 version of the singleton from the coin store
             constants: needed in order to refresh the mempool item if needed
             height: needed in order to refresh the mempool item if needed
@@ -272,13 +272,12 @@ class EligibleCoinSpends:
             # See if we added a fast forward spend with this puzzle hash before
             unspent_lineage_info = self.fast_forward_spends.get(spend_data.coin_spend.coin.puzzle_hash)
             if unspent_lineage_info is None:
-                # We didn't, so let's lookup the most recent version from the DB
-                unspent_lineage_info = await get_unspent_lineage_info_for_puzzle_hash(
-                    spend_data.coin_spend.coin.puzzle_hash
-                )
-                if unspent_lineage_info is None:
+                # We didn't, so let's lookup the mempool's most recent version
+                info_and_refcount = puzzle_hash_to_unspent_lineage_info.get(spend_data.coin_spend.coin.puzzle_hash)
+                if info_and_refcount is None:
                     raise ValueError("Cannot proceed with singleton spend fast forward.")
                 # See if we're the most recent version
+                unspent_lineage_info, _ = info_and_refcount
                 if unspent_lineage_info.coin_id == coin_id:
                     # We are, so we don't need to fast forward, we just need to
                     # set the next version from our additions to chain ff spends
