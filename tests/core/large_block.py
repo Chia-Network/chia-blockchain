@@ -4,7 +4,7 @@ import zstd
 
 from chia.types.full_block import FullBlock
 
-LARGE_BLOCK: FullBlock = FullBlock.from_bytes(
+LARGE_BLOCK: FullBlock = FullBlock.from_bytes_unchecked(
     zstd.decompress(
         bytes.fromhex(
             "28b52ffda006b904005c3204ec00080000000145318d2f5c31cc4403aad4bfed"

@@ -108,6 +108,8 @@ def configure(
                 testnet_dns_introducer = "dns-introducer-testnet11.chia.net"
                 bootstrap_peers = ["testnet11-node-us-west-2.chia.net"]
                 testnet = "testnet11"
+                config["full_node"]["peers_file_path"] = "db/peers-testnet11.dat"
+                config["wallet"]["wallet_peers_file_path"] = "wallet/db/wallet_peers-testnet11.dat"
                 config["full_node"]["port"] = int(testnet_port)
                 if config["full_node"]["introducer_peer"] is None:
                     config["full_node"]["introducer_peer"] = {}
@@ -152,6 +154,8 @@ def configure(
                 mainnet_dns_introducer = "dns-introducer.chia.net"
                 bootstrap_peers = ["node.chia.net"]
                 net = "mainnet"
+                config["full_node"]["peers_file_path"] = "db/peers.dat"
+                config["wallet"]["wallet_peers_file_path"] = "wallet/db/wallet_peers.dat"
                 config["full_node"]["port"] = int(mainnet_port)
                 config["full_node"]["introducer_peer"]["port"] = int(mainnet_port)
                 set_peer_info(config["farmer"], peer_type=NodeType.FULL_NODE, peer_port=int(mainnet_port))

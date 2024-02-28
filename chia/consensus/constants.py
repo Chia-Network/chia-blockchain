@@ -48,7 +48,7 @@ class ConsensusConstants:
     # Size of mempool = 10x the size of block
     MEMPOOL_BLOCK_BUFFER: int
     # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M chia.
-    MAX_COIN_AMOUNT: int
+    MAX_COIN_AMOUNT: uint64
     # Max block cost in clvm cost units
     MAX_BLOCK_COST_CLVM: int
     # Cost per byte of generator program

@@ -109,8 +109,8 @@ class TestWalletRpcClient(TestRpcClient):
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
         return [{"id": 1, "type": w_type}]
 
-    async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
-        self.add_to_log("get_transaction", (wallet_id, transaction_id))
+    async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
+        self.add_to_log("get_transaction", (transaction_id,))
         return TransactionRecord(
             confirmed_at_height=uint32(1),
             created_at_time=uint64(1234),
@@ -385,6 +385,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
         rpc_port: Optional[int] = None,
         root_path: Optional[Path] = None,
         consume_errors: bool = True,
+        use_ssl: bool = True,
     ) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
         if root_path is None:
             root_path = default_root

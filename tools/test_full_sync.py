@@ -146,7 +146,7 @@ async def run_sync_checkpoint(
             block_batch = []
             peer_info = peer.get_peer_logging()
             async for r in rows:
-                block = FullBlock.from_bytes(zstd.decompress(r[0]))
+                block = FullBlock.from_bytes_unchecked(zstd.decompress(r[0]))
                 block_batch.append(block)
 
                 if len(block_batch) < 32:

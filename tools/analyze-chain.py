@@ -80,7 +80,7 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: O
         height: int = r[1]
         block: Union[BlockInfo, FullBlock]
         if verify_signatures:
-            block = FullBlock.from_bytes(zstd.decompress(r[2]))
+            block = FullBlock.from_bytes_unchecked(zstd.decompress(r[2]))
         else:
             block = block_info_from_block(zstd.decompress(r[2]))
 

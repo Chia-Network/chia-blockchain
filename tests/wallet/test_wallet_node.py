@@ -40,7 +40,7 @@ async def test_get_private_key(root_path_populated_with_config: Path, get_temp_k
     keychain = get_temp_keyring
     config = load_config(root_path, "config.yaml", "wallet")
     node = WalletNode(config, root_path, test_constants, keychain)
-    sk = keychain.add_private_key(generate_mnemonic())
+    sk = keychain.add_key(generate_mnemonic())
     fingerprint = sk.get_g1().get_fingerprint()
 
     key = await node.get_key(fingerprint)
@@ -56,12 +56,12 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
     keychain = get_temp_keyring
     config = load_config(root_path, "config.yaml", "wallet")
     node = WalletNode(config, root_path, test_constants, keychain)
-    sk = keychain.add_private_key(generate_mnemonic())
+    sk = keychain.add_key(generate_mnemonic())
     fingerprint = sk.get_g1().get_fingerprint()
 
     # Add a couple more keys
-    keychain.add_private_key(generate_mnemonic())
-    keychain.add_private_key(generate_mnemonic())
+    keychain.add_key(generate_mnemonic())
+    keychain.add_key(generate_mnemonic())
 
     # When no fingerprint is provided, we should get the default (first) key
     key = await node.get_key(None)
@@ -95,7 +95,7 @@ async def test_get_private_key_missing_key_use_default(
     keychain = get_temp_keyring
     config = load_config(root_path, "config.yaml", "wallet")
     node = WalletNode(config, root_path, test_constants, keychain)
-    sk = keychain.add_private_key(generate_mnemonic())
+    sk = keychain.add_key(generate_mnemonic())
     fingerprint = sk.get_g1().get_fingerprint()
 
     # Stupid sanity check that the fingerprint we're going to use isn't actually in the keychain
@@ -115,8 +115,10 @@ async def test_get_public_key(root_path_populated_with_config: Path, get_temp_ke
     keychain: Keychain = get_temp_keyring
     config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
-    pk: G1Element = keychain.add_public_key(
-        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    pk: G1Element = keychain.add_key(
+        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        None,
+        private=False,
     )
     fingerprint: int = pk.get_fingerprint()
 
@@ -133,17 +135,23 @@ async def test_get_public_key_default_key(root_path_populated_with_config: Path,
     keychain: Keychain = get_temp_keyring
     config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
-    pk: G1Element = keychain.add_public_key(
-        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    pk: G1Element = keychain.add_key(
+        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        None,
+        private=False,
     )
     fingerprint: int = pk.get_fingerprint()
 
     # Add a couple more keys
-    keychain.add_public_key(
-        "83062a1b26d27820600eac4e31c1a890a6ba026b28bb96bb66454e9ce1033f4cba8824259dc17dc3b643ab1003e6b961"
+    keychain.add_key(
+        "83062a1b26d27820600eac4e31c1a890a6ba026b28bb96bb66454e9ce1033f4cba8824259dc17dc3b643ab1003e6b961",
+        None,
+        private=False,
     )
-    keychain.add_public_key(
-        "a272d5aaa6046e64bd7fd69bae288b9f9e5622c13058ec7d1b85e3d4d1acfa5d63d6542336c7b24d2fceab991919e989"
+    keychain.add_key(
+        "a272d5aaa6046e64bd7fd69bae288b9f9e5622c13058ec7d1b85e3d4d1acfa5d63d6542336c7b24d2fceab991919e989",
+        None,
+        private=False,
     )
 
     # When no fingerprint is provided, we should get the default (first) key
@@ -178,8 +186,10 @@ async def test_get_public_key_missing_key_use_default(
     keychain: Keychain = get_temp_keyring
     config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
-    pk: G1Element = keychain.add_public_key(
-        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    pk: G1Element = keychain.add_key(
+        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        None,
+        private=False,
     )
     fingerprint: int = pk.get_fingerprint()
 
@@ -199,7 +209,7 @@ def test_log_in(root_path_populated_with_config: Path, get_temp_keyring: Keychai
     keychain = get_temp_keyring
     config = load_config(root_path, "config.yaml", "wallet")
     node = WalletNode(config, root_path, test_constants)
-    sk = keychain.add_private_key(generate_mnemonic())
+    sk = keychain.add_key(generate_mnemonic())
     fingerprint = sk.get_g1().get_fingerprint()
 
     node.log_in(fingerprint)
@@ -225,7 +235,7 @@ def test_log_in_failure_to_write_last_used_fingerprint(
         keychain = get_temp_keyring
         config = load_config(root_path, "config.yaml", "wallet")
         node = WalletNode(config, root_path, test_constants)
-        sk = keychain.add_private_key(generate_mnemonic())
+        sk = keychain.add_key(generate_mnemonic())
         fingerprint = sk.get_g1().get_fingerprint()
 
         # Expect log_in to succeed, even though we can't write the last used fingerprint
@@ -242,7 +252,7 @@ def test_log_out(root_path_populated_with_config: Path, get_temp_keyring: Keycha
     keychain = get_temp_keyring
     config = load_config(root_path, "config.yaml", "wallet")
     node = WalletNode(config, root_path, test_constants)
-    sk = keychain.add_private_key(generate_mnemonic())
+    sk = keychain.add_key(generate_mnemonic())
     fingerprint = sk.get_g1().get_fingerprint()
 
     node.log_in(fingerprint)
@@ -525,7 +535,7 @@ async def test_get_balance(
     # Load another key without funds, make sure the balance is empty.
     other_key = KeyData.generate()
     assert wallet_node.local_keychain is not None
-    wallet_node.local_keychain.add_private_key(other_key.mnemonic_str())
+    wallet_node.local_keychain.add_key(other_key.mnemonic_str())
     await restart_with_fingerprint(other_key.fingerprint)
     assert await wallet_node.get_balance(wallet_id) == Balance()
     # Load the initial fingerprint again and make sure the balance is still what we generated earlier
@@ -589,7 +599,7 @@ async def test_add_states_from_peer_untrusted_shutdown(
     wallet_node._close()
     coin_generator = CoinGenerator()
     # Generate enough coin states to fill up the max number validation/add tasks.
-    coin_states = [CoinState(coin_generator.get().coin, i, i) for i in range(3000)]
+    coin_states = [CoinState(coin_generator.get().coin, uint32(i), uint32(i)) for i in range(3000)]
     with caplog.at_level(logging.INFO):
         assert not await wallet_node.add_states_from_peer(coin_states, list(wallet_server.all_connections.values())[0])
         assert "Terminating receipt and validation due to shut down request" in caplog.text
