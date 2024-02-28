@@ -7,7 +7,7 @@ from enum import Enum
 from functools import cached_property
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union, overload
 
 import pkg_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
@@ -362,17 +362,59 @@ class Keychain:
             except KeychainUserNotFound:
                 return index
 
-    def add_private_key(self, mnemonic: str, label: Optional[str] = None) -> PrivateKey:
+    @overload
+    def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]:
+        raise NotImplementedError()
+
+    @overload
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]:
+        raise NotImplementedError()
+
+    @overload
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> Tuple[PrivateKey, KeyTypes]:
+        raise NotImplementedError()
+
+    @overload
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]
+    ) -> Tuple[ObservationRoot, KeyTypes]:
+        raise NotImplementedError()
+
+    @overload
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: bool
+    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
+        raise NotImplementedError()
+
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
+    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
         """
-        Adds a private key to the keychain, with the given entropy and passphrase. The
-        keychain itself will store the public key, and the entropy bytes,
+        Adds a key to the keychain. The keychain itself will store the public key, and the entropy bytes (if given),
         but not the passphrase.
         """
-        seed = mnemonic_to_seed(mnemonic)
-        entropy = bytes_from_mnemonic(mnemonic)
-        index = self._get_free_private_key_index()
-        key = AugSchemeMPL.key_gen(seed)
-        fingerprint = key.get_g1().get_fingerprint()
+        key: Union[PrivateKey, ObservationRoot]
+        key_type: KeyTypes
+        if private:
+            seed = mnemonic_to_seed(mnemonic_or_pk)
+            entropy = bytes_from_mnemonic(mnemonic_or_pk)
+            index = self._get_free_private_key_index()
+            key = AugSchemeMPL.key_gen(seed)
+            key_type = KeyTypes.G1_ELEMENT
+            assert isinstance(key, PrivateKey)
+            pk = key.get_g1()
+            key_data = bytes(pk).hex() + entropy.hex()
+            fingerprint = pk.get_fingerprint()
+        else:
+            index = self._get_free_private_key_index()
+            pk_bytes = hexstr_to_bytes(mnemonic_or_pk)
+            if len(pk_bytes) == 48:
+                key = G1Element.from_bytes(pk_bytes)
+                key_type = KeyTypes.G1_ELEMENT
+            else:
+                raise ValueError(f"Cannot identify type of pubkey {mnemonic_or_pk}")  # pragma: no cover
+            key_data = pk_bytes.hex()
+            fingerprint = key.get_fingerprint()
 
         if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
             # Prevents duplicate add
@@ -387,44 +429,9 @@ class Keychain:
             self.keyring_wrapper.set_passphrase(
                 self.service,
                 get_private_key_user(self.user, index),
-                bytes(key.get_g1()).hex() + entropy.hex(),
+                key_data,
             )
         except Exception:
-            if label is not None:
-                self.keyring_wrapper.delete_label(fingerprint)
-            raise
-
-        return key
-
-    def add_public_key(self, pubkey: str, label: Optional[str] = None) -> Tuple[ObservationRoot, KeyTypes]:
-        """
-        Adds a public key to the keychain.
-        """
-        pk_bytes = hexstr_to_bytes(pubkey)
-        if len(pk_bytes) == 48:
-            key: ObservationRoot = G1Element.from_bytes(pk_bytes)
-            key_type: KeyTypes = KeyTypes.G1_ELEMENT
-        else:
-            raise ValueError(f"Cannot identify type of pubkey {pubkey}")  # pragma: no cover
-        index = self._get_free_private_key_index()
-        fingerprint = key.get_fingerprint()
-
-        if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
-            # Prevents duplicate add
-            raise KeychainFingerprintExists(fingerprint)
-
-        # Try to set the label first, it may fail if the label is invalid or already exists.
-        # This can probably just be moved into `FileKeyring.set_passphrase` after the legacy keyring stuff was dropped.
-        if label is not None:
-            self.keyring_wrapper.set_label(fingerprint, label)
-
-        try:
-            self.keyring_wrapper.set_passphrase(
-                self.service,
-                get_private_key_user(self.user, index),
-                bytes(key).hex(),
-            )
-        except Exception:  # pragma: no cover
             if label is not None:
                 self.keyring_wrapper.delete_label(fingerprint)
             raise
