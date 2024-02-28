@@ -79,11 +79,11 @@ def add_key_info(mnemonic_or_pk: str, label: Optional[str]) -> None:
     unlock_keyring()
     try:
         if mnemonic_or_pk.count(" ") == 23:
-            sk = Keychain().add_private_key(mnemonic_or_pk, label)
+            sk = Keychain().add_key(mnemonic_or_pk, label, private=True)
             fingerprint = sk.get_g1().get_fingerprint()
             print(f"Added private key with public key fingerprint {fingerprint}")
         else:
-            pk = Keychain().add_public_key(mnemonic_or_pk, label)
+            pk = Keychain().add_key(mnemonic_or_pk, label, private=False)
             fingerprint = pk.get_fingerprint()
             print(f"Added public key with fingerprint {fingerprint}")
 

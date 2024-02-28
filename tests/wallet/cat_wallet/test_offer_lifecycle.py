@@ -67,7 +67,7 @@ async def generate_coins(
                         CAT_MOD,
                         [
                             SpendableCAT(
-                                Coin(parent_coin.name(), cat_puzzle_hash, amount),
+                                Coin(parent_coin.name(), cat_puzzle_hash, uint64(amount)),
                                 tail_hash,
                                 acs,
                                 Program.to([[51, acs_ph, amount], [51, 0, -113, tail, []]]),
