@@ -116,7 +116,7 @@ class CATWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> CATWallet:
+    ) -> Tuple[CATWallet, List[TransactionRecord]]:
         self = CATWallet()
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
@@ -200,9 +200,8 @@ class CATWallet:
             valid_times=ConditionValidTimes(),
         )
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle, name=spend_bundle.name())
-        await self.standard_wallet.push_transaction(chia_tx)
-        await self.standard_wallet.push_transaction(cat_record)
-        return self
+        await self.wallet_state_manager.add_pending_transactions([chia_tx, cat_record])
+        return self, [chia_tx, cat_record]
 
     @staticmethod
     async def get_or_create_wallet_for_cat(
@@ -337,25 +336,20 @@ class CATWallet:
     def cost_of_single_tx(self) -> int:
         return 30000000  # Estimate
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        spendable: List[WalletCoinRecord] = list(await self.get_cat_spendable_coins())
-        if len(spendable) == 0:
-            return uint128(0)
+    @property
+    def max_send_quantity(self) -> int:
+        # avoid full block TXs
+        return int(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2 / self.cost_of_single_tx)
+
+    async def get_max_spendable_coins(self, records: Optional[Set[WalletCoinRecord]] = None) -> Set[WalletCoinRecord]:
+        spendable: List[WalletCoinRecord] = list(
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+        )
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
+        return set(spendable[0 : min(len(spendable), self.max_send_quantity)])
 
-        max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2  # avoid full block TXs
-        current_cost = 0
-        total_amount = 0
-        total_coin_count = 0
-
-        for record in spendable:
-            current_cost += self.cost_of_single_tx
-            total_amount += record.coin.amount
-            total_coin_count += 1
-            if current_cost + self.cost_of_single_tx > max_cost:
-                break
-
-        return uint128(total_amount)
+    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return uint128(sum(cr.coin.amount for cr in await self.get_max_spendable_coins()))
 
     def get_name(self) -> str:
         return self.wallet_info.name
@@ -512,7 +506,7 @@ class CATWallet:
             if lineage is not None and not lineage.is_none():
                 result.append(record)
 
-        return result
+        return list(await self.get_max_spendable_coins(set(result)))
 
     async def select_coins(
         self,
@@ -552,9 +546,7 @@ class CATWallet:
                 private = await self.wallet_state_manager.get_private_key(puzzle_hash)
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 conditions = conditions_dict_for_solution(
-                    spend.puzzle_reveal.to_program(),
-                    spend.solution.to_program(),
-                    self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                    spend.puzzle_reveal, spend.solution, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
                 )
                 synthetic_pk = synthetic_secret_key.get_g1()
                 for pk, msg in pkm_pairs_for_conditions_dict(
@@ -797,7 +789,6 @@ class CATWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
-        ignore_max_send_amount: bool = False,
         memos: Optional[List[List[bytes]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
@@ -817,10 +808,6 @@ class CATWallet:
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])
-        if not ignore_max_send_amount:
-            max_send = await self.get_max_send_amount()
-            if payment_sum > max_send:
-                raise ValueError(f" Insufficient funds. Your max amount is {max_send} mojos in a single transaction.")
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             tx_config,

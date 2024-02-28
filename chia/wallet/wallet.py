@@ -71,26 +71,20 @@ class Wallet:
     def cost_of_single_tx(self) -> int:
         return 11000000  # Estimate
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    @property
+    def max_send_quantity(self) -> int:
+        # avoid full block TXs
+        return int(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 5 / self.cost_of_single_tx)
+
+    async def get_max_spendable_coins(self, records: Optional[Set[WalletCoinRecord]] = None) -> Set[WalletCoinRecord]:
         spendable: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         )
-        if len(spendable) == 0:
-            return uint128(0)
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
+        return set(spendable[0 : min(len(spendable), self.max_send_quantity)])
 
-        max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 5  # avoid full block TXs
-        current_cost = 0
-        total_amount = 0
-        total_coin_count = 0
-        for record in spendable:
-            current_cost += self.cost_of_single_tx
-            total_amount += record.coin.amount
-            total_coin_count += 1
-            if current_cost + self.cost_of_single_tx > max_cost:
-                break
-
-        return uint128(total_amount)
+    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return uint128(sum(cr.coin.amount for cr in await self.get_max_spendable_coins()))
 
     @classmethod
     def type(cls) -> WalletType:
@@ -221,9 +215,7 @@ class Wallet:
         Note: Must be called under wallet state manager lock
         """
         spendable_amount: uint128 = await self.get_spendable_balance()
-        spendable_coins: List[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
-        )
+        spendable_coins: List[WalletCoinRecord] = list(await self.get_max_spendable_coins())
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
@@ -250,7 +242,6 @@ class Wallet:
         origin_id: Optional[bytes32] = None,
         coins: Optional[Set[Coin]] = None,
         primaries_input: Optional[List[Payment]] = None,
-        ignore_max_send_amount: bool = False,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
@@ -270,11 +261,6 @@ class Wallet:
 
         total_amount = amount + sum(primary.amount for primary in primaries) + fee
         total_balance = await self.get_spendable_balance()
-        if not ignore_max_send_amount:
-            max_send = await self.get_max_send_amount()
-            if total_amount > max_send:
-                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction, got {total_amount}")
-            self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
             if total_amount > total_balance:
                 raise ValueError(
@@ -391,7 +377,6 @@ class Wallet:
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
-        ignore_max_send_amount: bool = False,
         memos: Optional[List[bytes]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -418,7 +403,6 @@ class Wallet:
             origin_id,
             coins,
             primaries,
-            ignore_max_send_amount,
             memos,
             negative_change_allowed,
             puzzle_decorator_override=puzzle_decorator_override,
@@ -478,11 +462,6 @@ class Wallet:
         )
         assert chia_tx.spend_bundle is not None
         return chia_tx
-
-    async def push_transaction(self, tx: TransactionRecord) -> None:
-        """Use this API to send transactions."""
-        await self.wallet_state_manager.add_pending_transaction(tx)
-        await self.wallet_state_manager.wallet_node.update_ui()
 
     async def get_coins_to_offer(
         self,

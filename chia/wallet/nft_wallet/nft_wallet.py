@@ -338,9 +338,8 @@ class NFTWallet:
         percentage: uint16 = uint16(0),
         did_id: Optional[bytes] = None,
         fee: uint64 = uint64(0),
-        push_tx: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Optional[SpendBundle]:
+    ) -> List[TransactionRecord]:
         """
         This must be called under the wallet state manager lock
         """
@@ -398,7 +397,6 @@ class NFTWallet:
             fee,
             coins,
             None,
-            False,
             origin_id=origin.name(),
             extra_conditions=(
                 *extra_conditions,
@@ -414,8 +412,7 @@ class NFTWallet:
         eve_coin = Coin(launcher_coin.name(), eve_fullpuz_hash, uint64(amount))
 
         if tx_record.spend_bundle is None:
-            self.log.error("Couldn't produce a launcher spend")
-            return None
+            raise ValueError("Couldn't produce a launcher spend")  # pragma: no cover
 
         bundles_to_agg = [tx_record.spend_bundle, launcher_sb]
 
@@ -445,10 +442,7 @@ class NFTWallet:
             memos=[[target_puzzle_hash]],
         )
         txs.append(dataclasses.replace(tx_record, spend_bundle=None))
-        if push_tx:
-            for tx in txs:
-                await self.wallet_state_manager.add_pending_transaction(tx)
-        return SpendBundle.aggregate([x.spend_bundle for x in txs if x.spend_bundle is not None])
+        return txs
 
     async def sign(self, spend_bundle: SpendBundle, puzzle_hashes: Optional[List[bytes32]] = None) -> SpendBundle:
         if puzzle_hashes is None:
@@ -468,9 +462,7 @@ class NFTWallet:
                 synthetic_pk = synthetic_secret_key.get_g1()
                 pks[bytes(synthetic_pk)] = synthetic_secret_key
             conditions = conditions_dict_for_solution(
-                spend.puzzle_reveal.to_program(),
-                spend.solution.to_program(),
-                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                spend.puzzle_reveal, spend.solution, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
             )
             for pk, msg in pkm_pairs_for_conditions_dict(
                 conditions, spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
@@ -496,7 +488,7 @@ class NFTWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Optional[SpendBundle]:
+    ) -> List[TransactionRecord]:
         uncurried_nft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
         assert uncurried_nft is not None
         puzzle_hash = uncurried_nft.p2_puzzle.get_tree_hash()
@@ -515,11 +507,9 @@ class NFTWallet:
             metadata_update=(key, uri),
             extra_conditions=extra_conditions,
         )
-        for tx in txs:
-            await self.wallet_state_manager.add_pending_transaction(tx)
         await self.update_coin_status(nft_coin_info.coin.name(), True)
         self.wallet_state_manager.state_changed("nft_coin_updated", self.wallet_info.id)
-        return SpendBundle.aggregate([x.spend_bundle for x in txs if x.spend_bundle is not None])
+        return txs
 
     async def get_current_nfts(self, start_index: int = 0, count: int = 50) -> List[NFTCoinInfo]:
         return await self.nft_store.get_nft_list(wallet_id=self.id(), start_index=start_index, count=count)
@@ -626,7 +616,6 @@ class NFTWallet:
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         memos: Optional[List[List[bytes]]] = None,
-        ignore_max_send_amount: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
@@ -806,7 +795,7 @@ class NFTWallet:
         tx_config: TXConfig,
         fee: uint64,
         extra_conditions: Tuple[Condition, ...],
-    ) -> Offer:
+    ) -> Tuple[Offer, List[TransactionRecord]]:
         # First, let's take note of all the royalty enabled NFTs
         royalty_nft_asset_dict: Dict[bytes32, int] = {}
         for asset, amount in offer_dict.items():
@@ -1099,7 +1088,7 @@ class NFTWallet:
         txs_bundle = SpendBundle.aggregate([tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None])
         aggregate_bundle = SpendBundle.aggregate([txs_bundle, *additional_bundles])
         offer = Offer(notarized_payments, aggregate_bundle, driver_dict)
-        return offer
+        return offer, all_transactions
 
     async def set_bulk_nft_did(
         self,
@@ -1205,7 +1194,7 @@ class NFTWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> SpendBundle:
+    ) -> List[TransactionRecord]:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_coin_info, did_id)
         unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
         assert unft is not None
@@ -1228,15 +1217,10 @@ class NFTWallet:
             additional_bundles=additional_bundles,
             extra_conditions=extra_conditions,
         )
-        spend_bundle = SpendBundle.aggregate([x.spend_bundle for x in nft_tx_record if x.spend_bundle is not None])
-        if spend_bundle:
-            for tx in nft_tx_record:
-                await self.wallet_state_manager.add_pending_transaction(tx)
-            await self.update_coin_status(nft_coin_info.coin.name(), True)
-            self.wallet_state_manager.state_changed("nft_coin_did_set", self.wallet_info.id)
-            return spend_bundle
-        else:
-            raise ValueError("Couldn't set DID on given NFT")
+
+        await self.update_coin_status(nft_coin_info.coin.name(), True)
+        self.wallet_state_manager.state_changed("nft_coin_did_set", self.wallet_info.id)
+        return nft_tx_record
 
     async def mint_from_did(
         self,

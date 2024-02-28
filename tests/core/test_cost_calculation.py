@@ -146,7 +146,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
         binutils.assemble(
             f"(q ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa {disassembly} 300"
             f"  (() (q . (({unknown_opcode} '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
-        ).as_bin()  # type: ignore[no-untyped-call]
+        ).as_bin()
     )
     generator = BlockGenerator(program, [], [])
     npc_result: NPCResult = get_name_puzzle_conditions(
@@ -169,7 +169,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
     coin = Coin(
         bytes32.fromhex("3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa"),
         bytes32.fromhex("14947eb0e69ee8fc8279190fc2d38cb4bbb61ba28f1a270cfd643a0e8d759576"),
-        300,
+        uint64(300),
     )
     spend_info = get_puzzle_and_solution_for_coin(generator, coin, softfork_height, bt.constants)
     assert spend_info.puzzle.to_program() == puzzle
@@ -183,9 +183,7 @@ async def test_clvm_mempool_mode(softfork_height: int) -> None:
     # if-condition, that depends on executing an unknown operator
     # ("0xfe"). In mempool mode, this should fail, but in non-mempool
     # mode, the unknown operator should be treated as if it returns ().
-    program = SerializedProgram.from_bytes(
-        binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin()  # type: ignore[no-untyped-call]
-    )
+    program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
     generator = BlockGenerator(program, [], [])
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator,
@@ -236,9 +234,7 @@ async def test_clvm_max_cost(softfork_height: int) -> None:
     # mode, the unknown operator should be treated as if it returns ().
     # the CLVM program has a cost of 391969
     program = SerializedProgram.from_bytes(
-        binutils.assemble(
-            f"(i (softfork (q . 10000000)) (q . ()) {disassembly})"
-        ).as_bin()  # type: ignore[no-untyped-call]
+        binutils.assemble(f"(i (softfork (q . 10000000)) (q . ()) {disassembly})").as_bin()
     )
 
     # ensure we fail if the program exceeds the cost
@@ -273,7 +269,7 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner) -> None:
     conditions = binutils.assemble(
         "((51 0x699eca24f2b6f4b25b16f7a418d0dc4fc5fce3b9145aecdda184158927738e3e 10)"
         " (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))"
-    )  # type: ignore[no-untyped-call]
+    )
     solution_program = SerializedProgram.from_bytes(
         bytes(p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions))
     )
@@ -287,31 +283,32 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner) -> None:
 
 @pytest.mark.anyio
 async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: BenchmarkRunner) -> None:
-    from clvm.casts import int_from_bytes
-
     from chia.full_node.mempool_check_conditions import DESERIALIZE_MOD
     from tests.core.large_block import LARGE_BLOCK
 
-    spends: List[Coin] = []
-
     assert LARGE_BLOCK.transactions_generator is not None
     # first, list all spent coins in the block
-    cost, result = LARGE_BLOCK.transactions_generator.run_with_cost(
+    _, result = LARGE_BLOCK.transactions_generator.run_with_cost(
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, [DESERIALIZE_MOD, []]
     )
 
     coin_spends = result.first()
+    spent_coins: List[Coin] = []
     for spend in coin_spends.as_iter():
-        parent, puzzle, amount, solution = spend.as_iter()
-        spends.append(Coin(bytes32(parent.atom), Program.to(puzzle).get_tree_hash(), int_from_bytes(amount.atom)))
+        parent, puzzle, amount_program, _ = spend.as_iter()
+        parent_coin_info = parent.as_atom()
+        puzzle_hash = puzzle.get_tree_hash()
+        amount = amount_program.as_int()
+        coin = Coin(parent_coin_info=parent_coin_info, puzzle_hash=puzzle_hash, amount=amount)
+        spent_coins.append(coin)
 
-    print(f"found {len(spends)} spent coins in block")
+    print(f"found {len(spent_coins)} spent coins in block")
 
     # benchmark the function to pick out the puzzle and solution for a specific
     # coin
     generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [], [])
     with benchmark_runner.assert_runtime(seconds=8.5):
-        for i in range(3):
-            for c in spends:
+        for _ in range(3):
+            for c in spent_coins:
                 spend_info = get_puzzle_and_solution_for_coin(generator, c, 0, test_constants)
                 assert spend_info.puzzle.get_tree_hash() == c.puzzle_hash
