@@ -149,9 +149,7 @@ async def get_transaction(
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         transaction_id = bytes32.from_hexstr(tx_id)
         address_prefix = selected_network_address_prefix(config)
-        # The wallet id parameter is required by the client but unused by the RPC.
-        this_is_unused = 37
-        tx: TransactionRecord = await wallet_client.get_transaction(this_is_unused, transaction_id=transaction_id)
+        tx: TransactionRecord = await wallet_client.get_transaction(transaction_id=transaction_id)
 
         try:
             wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
@@ -345,7 +343,7 @@ async def send(
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(wallet_id, tx_id)
+            tx = await wallet_client.get_transaction(tx_id)
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id))
@@ -413,7 +411,7 @@ async def make_offer(
     d_fee: Decimal,
     offers: Sequence[str],
     requests: Sequence[str],
-    filepath: str,
+    filepath: pathlib.Path,
     reuse_puzhash: Optional[bool],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
@@ -550,23 +548,24 @@ async def make_offer(
 
                 cli_confirm("Confirm (y/n): ", "Not creating offer...")
 
-                offer, trade_record = await wallet_client.create_offer_for_ids(
-                    offer_dict,
-                    driver_dict=driver_dict,
-                    fee=fee,
-                    tx_config=CMDTXConfigLoader(
-                        reuse_puzhash=reuse_puzhash,
-                    ).to_tx_config(units["chia"], config, fingerprint),
-                )
-                if offer is not None:
-                    with open(pathlib.Path(filepath), "w") as file:
-                        file.write(offer.to_bech32())
-                    print(f"Created offer with ID {trade_record.trade_id}")
-                    print(
-                        f"Use chia wallet get_offers --id " f"{trade_record.trade_id} -f {fingerprint} to view status"
+                with filepath.open(mode="w") as file:
+                    offer, trade_record = await wallet_client.create_offer_for_ids(
+                        offer_dict,
+                        driver_dict=driver_dict,
+                        fee=fee,
+                        tx_config=CMDTXConfigLoader(
+                            reuse_puzhash=reuse_puzhash,
+                        ).to_tx_config(units["chia"], config, fingerprint),
                     )
-                else:
-                    print("Error creating offer")
+                    if offer is not None:
+                        file.write(offer.to_bech32())
+                        print(f"Created offer with ID {trade_record.trade_id}")
+                        print(
+                            f"Use chia wallet get_offers --id "
+                            f"{trade_record.trade_id} -f {fingerprint} to view status"
+                        )
+                    else:
+                        print("Error creating offer")
 
 
 def timestamp_to_time(timestamp: int) -> str:

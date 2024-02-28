@@ -646,7 +646,7 @@ class DAOWallet:
 
         genesis_launcher_puz = SINGLETON_LAUNCHER
         # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
-        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
+        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), uint64(1))
 
         if cat_tail_hash is None:
             assert amount_of_cats_to_create is not None

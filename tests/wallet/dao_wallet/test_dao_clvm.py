@@ -555,7 +555,7 @@ def test_validator() -> None:
         1200,
     )
     full_proposal = SINGLETON_MOD.curry(proposal_struct, proposal)
-    proposal_amt = 10
+    proposal_amt = uint64(10)
     proposal_coin_id = Coin(parent_id, full_proposal.get_tree_hash(), proposal_amt).name()
     solution = Program.to(
         [
@@ -696,7 +696,7 @@ def test_merge_p2_singleton() -> None:
 
     # Merge Spend (not output creator)
     output_parent_id = Program.to("output_parent").get_tree_hash()
-    output_coin_amount = 100
+    output_coin_amount = uint64(100)
     aggregator_sol = Program.to([my_id, my_puzhash, 300, 0, [output_parent_id, output_coin_amount]])
     merge_p2_singleton_sol = Program.to([aggregator_sol, 0, 0, 0, 0])
     conds = conditions_dict_for_solution(p2_singleton, merge_p2_singleton_sol, INFINITE_COST)
@@ -706,7 +706,7 @@ def test_merge_p2_singleton() -> None:
 
     # Merge Spend (output creator)
     fake_parent_id = Program.to("fake_parent").get_tree_hash()
-    merged_coin_id = Coin(fake_parent_id, my_puzhash, 200).name()
+    merged_coin_id = Coin(fake_parent_id, my_puzhash, uint64(200)).name()
     merge_sol = Program.to([[my_id, my_puzhash, 100, [[fake_parent_id, my_puzhash, 200]], 0]])
     conds = conditions_dict_for_solution(p2_singleton, merge_sol, INFINITE_COST)
     assert len(conds) == 7
@@ -719,7 +719,7 @@ def test_merge_p2_singleton() -> None:
         Program.to("fake_parent_2").get_tree_hash(),
         Program.to("fake_parent_3").get_tree_hash(),
     ]
-    amounts = [1000, 2000, 3000]
+    amounts = [uint64(1000), uint64(2000), uint64(3000)]
     parent_puzhash_amounts = []
     merge_coin_ids: List[bytes32] = []
     for pid, amt in zip(parent_ids, amounts):
@@ -843,7 +843,7 @@ def test_treasury() -> None:
     assert len(conds.as_python()) == 3
 
     # Proposal Spend
-    proposal_amt = 10
+    proposal_amt = uint64(10)
     proposal_coin_id = Coin(parent_id, full_proposal.get_tree_hash(), proposal_amt).name()
     solution = Program.to(
         [
@@ -1090,7 +1090,7 @@ def test_proposal_lifecycle() -> None:
     )
     full_proposal: Program = SINGLETON_MOD.curry(proposal_singleton_struct, proposal)
     full_proposal_puzhash: bytes32 = full_proposal.get_tree_hash()
-    proposal_amt = 11
+    proposal_amt = uint64(11)
     proposal_coin_id = Coin(parent_id, full_proposal_puzhash, proposal_amt).name()
 
     treasury_solution: Program = Program.to(

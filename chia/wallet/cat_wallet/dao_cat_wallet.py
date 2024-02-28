@@ -291,7 +291,7 @@ class DAOCATWallet:
                 primaries = [
                     Payment(
                         new_innerpuzzle.get_tree_hash(),
-                        uint64(vote_amount),
+                        vote_amount,
                         [standard_inner_puz.get_tree_hash()],
                     )
                 ]
@@ -301,12 +301,12 @@ class DAOCATWallet:
                     conditions=(CreatePuzzleAnnouncement(message),),
                 )
             else:
-                vote_amount = amount - running_sum
+                vote_amount = uint64(amount - running_sum)
                 running_sum = running_sum + coin.amount
                 primaries = [
                     Payment(
                         new_innerpuzzle.get_tree_hash(),
-                        uint64(vote_amount),
+                        vote_amount,
                         [standard_inner_puz.get_tree_hash()],
                     ),
                 ]

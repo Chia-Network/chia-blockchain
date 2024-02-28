@@ -15,6 +15,7 @@ from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.condition_tools import parse_sexp_to_conditions, pkm_pairs, pkm_pairs_for_conditions_dict
 from chia.util.errors import ConsensusError
 from chia.util.hash import std_hash
+from chia.util.ints import uint64
 
 H1 = bytes32(b"a" * 32)
 H2 = bytes32(b"b" * 32)
@@ -23,7 +24,7 @@ H3 = bytes32(b"c" * 32)
 PK1 = G1Element.generator()
 PK2 = G1Element.generator()
 
-TEST_COIN = Coin(H1, H2, 123)
+TEST_COIN = Coin(H1, H2, uint64(123))
 
 
 def mk_agg_sig_conditions(
