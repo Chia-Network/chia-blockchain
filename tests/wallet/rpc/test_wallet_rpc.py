@@ -1729,7 +1729,10 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     sk_dict = await client.get_private_key(pks[1])
     assert sk_dict["fingerprint"] == pks[1]
 
-    assert not (await client.log_in(1234567890))["success"]
+    assert await client.log_in(1234567890) == (
+        'RPC response failure: {"error": "fingerprint 1234567890 not found'
+        ' in keychain or keychain is empty", "success": false}'
+    )
 
     # test hardened keys
     await _check_delete_key(client=client, wallet_node=wallet_node, farmer_fp=pks[0], pool_fp=pks[1], observer=False)
