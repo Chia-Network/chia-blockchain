@@ -64,13 +64,18 @@ jobs:
         sh install-gui.sh
 
   test_scripts_in_docker:
-    name: Test Install Scripts ${{ matrix.distribution.name }}
-    runs-on: ${{ matrix.os }}
+    name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     container: ${{ matrix.distribution.url }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os:
+        - name: Linux
+          matrix: linux
+          runs-on:
+            intel: ubuntu-latest
+            arm: [linux, arm64]
         distribution:
         - name: amazonlinux:2023
           type: amazon
@@ -108,6 +113,16 @@ jobs:
           type: ubuntu
           # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
           url: "docker://ubuntu:jammy"
+        arch:
+        - name: ARM64
+          matrix: arm
+        - name: Intel
+          matrix: intel
+        exclude:
+          - distribution:
+              type: arch
+            arch:
+              matrix: arm
 
     steps:
     - name: Prepare Amazon Linux
@@ -131,7 +146,7 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
         apt-get --yes update
-        apt-get install --yes git lsb-release sudo
+        apt-get install --yes git lsb-release sudo python3-venv
 
     - name: Prepare Fedora
       if: ${{ matrix.distribution.type == 'fedora' }}
@@ -141,7 +156,7 @@ jobs:
     - name: Prepare Rocky
       if: ${{ matrix.distribution.type == 'rocky' }}
       run: |
-        yum install --assumeyes git sudo
+        yum install --assumeyes git sudo python39
 
     - name: Prepare Ubuntu
       if: ${{ matrix.distribution.type == 'ubuntu' }}
@@ -153,7 +168,7 @@ jobs:
         apt-get install --yes software-properties-common
         add-apt-repository --yes ppa:git-core/ppa
         apt-get --yes update
-        apt-get install --yes git lsb-release sudo
+        apt-get install --yes git lsb-release sudo python3-venv
 
     - name: Add safe git directory
       run: git config --global --add safe.directory "$GITHUB_WORKSPACE"

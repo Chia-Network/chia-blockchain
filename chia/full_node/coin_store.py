@@ -598,7 +598,7 @@ class CoinStore:
                 "unspent.coin_parent, "
                 "parent.amount, "
                 "parent.coin_parent "
-                "FROM coin_record AS unspent "
+                "FROM coin_record AS unspent INDEXED BY coin_puzzle_hash "
                 "LEFT JOIN coin_record AS parent ON unspent.coin_parent = parent.coin_name "
                 "WHERE unspent.spent_index = 0 "
                 "AND parent.spent_index > 0 "

@@ -6,19 +6,19 @@ import pytest
 from chia_rs import Coin, CoinState
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.wallet_sync_utils import sort_coin_states
 
 coin_states = [
     CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\00" * 32), uint64(1)), None, None),
-    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\11" * 32), uint64(1)), None, 1),
-    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\22" * 32), uint64(1)), 1, 1),
-    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\33" * 32), uint64(1)), 1, 1),
-    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\44" * 32), uint64(1)), 2, 1),
-    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\55" * 32), uint64(1)), 2, 2),
-    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\66" * 32), uint64(1)), 20, 10),
-    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\77" * 32), uint64(1)), None, 20),
+    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\11" * 32), uint64(1)), None, uint32(1)),
+    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\22" * 32), uint64(1)), uint32(1), uint32(1)),
+    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\33" * 32), uint64(1)), uint32(1), uint32(1)),
+    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\44" * 32), uint64(1)), uint32(2), uint32(1)),
+    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\55" * 32), uint64(1)), uint32(2), uint32(2)),
+    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\66" * 32), uint64(1)), uint32(20), uint32(10)),
+    CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\77" * 32), uint64(1)), None, uint32(20)),
 ]
 
 
@@ -32,7 +32,11 @@ def assert_race_cache(cache: PeerRequestCache, expected_entries: Dict[int, Set[C
 
 
 def dummy_coin_state(*, created_height: Optional[int], spent_height: Optional[int]) -> CoinState:
-    return CoinState(Coin(bytes(b"0" * 32), bytes(b"0" * 32), 0), spent_height, created_height)
+    return CoinState(
+        Coin(bytes(b"0" * 32), bytes(b"0" * 32), uint64(0)),
+        uint32.construct_optional(spent_height),
+        uint32.construct_optional(created_height),
+    )
 
 
 def heights(coin_states: Collection[CoinState]) -> List[Tuple[Optional[int], Optional[int]]]:

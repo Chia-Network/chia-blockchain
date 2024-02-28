@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
+from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -151,8 +152,8 @@ class WalletRpcClient(RpcClient):
         # TODO: casting due to lack of type checked deserialization
         return cast(Dict[str, Dict[str, Any]], response["wallet_balances"])
 
-    async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
-        request = {"walled_id": wallet_id, "transaction_id": transaction_id.hex()}
+    async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
+        request = {"transaction_id": transaction_id.hex()}
         response = await self.fetch("get_transaction", request)
         return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
@@ -1244,6 +1245,10 @@ class WalletRpcClient(RpcClient):
             },
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+
+    async def dl_verify_proof(self, request: DLProof) -> VerifyProofResponse:
+        response = await self.fetch(path="dl_verify_proof", request_json=request.to_json_dict())
+        return VerifyProofResponse.from_json_dict(response)
 
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
         return GetNotificationsResponse.from_json_dict(await self.fetch("get_notifications", request.to_json_dict()))
