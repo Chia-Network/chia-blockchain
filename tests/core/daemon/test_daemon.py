@@ -236,6 +236,7 @@ plotter_request_ref = {
 def add_private_key_response_data(fingerprint: int) -> Dict[str, object]:
     return {
         "success": True,
+        "key_type": KeyTypes.G1_ELEMENT.value,
         "fingerprint": fingerprint,
     }
 
@@ -1035,14 +1036,14 @@ async def test_add_private_key_label(daemon_connection_and_temp_keychain):
     key_data_0 = KeyData.generate()
     await assert_add_private_key_with_label(
         key_data_0,
-        {"mnemonic": key_data_0.mnemonic_str(), "key_type": KeyTypes.G1_ELEMENT},
+        {"mnemonic": key_data_0.mnemonic_str()},
         add_private_key_response_data(key_data_0.fingerprint),
     )
     # with `label=None`
     key_data_1 = KeyData.generate()
     await assert_add_private_key_with_label(
         key_data_1,
-        {"mnemonic": key_data_1.mnemonic_str(), "key_type": KeyTypes.G1_ELEMENT, "label": None},
+        {"mnemonic": key_data_1.mnemonic_str(), "label": None},
         add_private_key_response_data(key_data_1.fingerprint),
     )
     # with `label="key_2"`
