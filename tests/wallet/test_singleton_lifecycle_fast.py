@@ -295,7 +295,7 @@ def launcher_conditions_and_spend_bundle(
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
     expected_announcement = AssertCoinAnnouncement(
-        asserted_id=launcher_coin.name(), asserted_msg=message_program.get_tree_hash()
+        asserted_id=launcher_id, asserted_msg=message_program.get_tree_hash()
     )
     expected_conditions = []
     clsp = f"(0x{ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.hex()} 0x{expected_announcement.msg_calc})"

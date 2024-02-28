@@ -158,7 +158,7 @@ def generate_and_return_fingerprint(mnemonic: Optional[str] = None) -> int:
         print("Generating private key")
         mnemonic = generate_mnemonic()
     try:
-        sk = Keychain().add_private_key(mnemonic, None)
+        sk = Keychain().add_key(mnemonic, None)
         fingerprint: int = sk.get_g1().get_fingerprint()
     except KeychainFingerprintExists as e:
         fingerprint = e.fingerprint

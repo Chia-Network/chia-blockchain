@@ -272,7 +272,10 @@ def recurse_jsonify(d: Any) -> Any:
     """
     Makes bytes objects into strings with 0x, and makes large ints into strings.
     """
-    if dataclasses.is_dataclass(d):
+    if hasattr(d, "override_json_serialization"):
+        overrid_ret: Union[List[Any], Dict[str, Any], str, None, int] = d.override_json_serialization(recurse_jsonify)
+        return overrid_ret
+    elif dataclasses.is_dataclass(d):
         new_dict = {}
         for field in dataclasses.fields(d):
             new_dict[field.name] = recurse_jsonify(getattr(d, field.name))

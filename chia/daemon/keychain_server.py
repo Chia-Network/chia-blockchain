@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Type
 
 from chia_rs import PrivateKey
 
@@ -16,6 +16,7 @@ from chia.util.streamable import Streamable, streamable
 # Commands that are handled by the KeychainServer
 keychain_commands = [
     "add_private_key",
+    "add_key",
     "check_keys",
     "delete_all_keys",
     "delete_key_by_fingerprint",
@@ -173,7 +174,11 @@ class KeychainServer:
     async def handle_command(self, command: str, data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             if command == "add_private_key":
-                return await self.add_private_key(data)
+                return await self.add_key(
+                    {"mnemonic_or_pk": data.get("mnemonic", None), "label": data.get("label", None), "private": True}
+                )
+            elif command == "add_key":
+                return await self.add_key(data)
             elif command == "check_keys":
                 return await self.check_keys(data)
             elif command == "delete_all_keys":
@@ -203,22 +208,23 @@ class KeychainServer:
             log.exception(e)
             return {"success": False, "error": str(e), "command": command}
 
-    async def add_private_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def add_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
-        mnemonic = request.get("mnemonic", None)
+        mnemonic_or_pk = request.get("mnemonic_or_pk", None)
         label = request.get("label", None)
+        private = request.get("private", True)
 
-        if mnemonic is None:
+        if mnemonic_or_pk is None:
             return {
                 "success": False,
                 "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
-                "error_details": {"message": "missing mnemonic"},
+                "error_details": {"message": "missing key information"},
             }
 
         try:
-            sk = self.get_keychain_for_request(request).add_private_key(mnemonic, label)
+            key = self.get_keychain_for_request(request).add_key(mnemonic_or_pk, label, private)
         except KeyError as e:
             return {
                 "success": False,
@@ -232,7 +238,12 @@ class KeychainServer:
                 "error": str(e),
             }
 
-        return {"success": True, "fingerprint": sk.get_g1().get_fingerprint()}
+        if isinstance(key, PrivateKey):
+            fingerprint = key.get_g1().get_fingerprint()
+        else:
+            fingerprint = key.get_fingerprint()
+
+        return {"success": True, "fingerprint": fingerprint}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
@@ -330,25 +341,25 @@ class KeychainServer:
         return {"success": True, "private_key": key}
 
     async def get_key_for_fingerprint(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        if self.get_keychain_for_request(request).is_keyring_locked():
+        keychain = self.get_keychain_for_request(request)
+        if keychain.is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
-        private_keys = self.get_keychain_for_request(request).get_all_private_keys()
-        if len(private_keys) == 0:
+        private = request.get("private", True)
+        keys = keychain.get_keys(include_secrets=private)
+        if len(keys) == 0:
             return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
 
-        fingerprint = request.get("fingerprint", None)
-        private_key: Optional[PrivateKey] = None
-        entropy: Optional[bytes] = None
-        if fingerprint is not None:
-            for sk, entropy in private_keys:
-                if sk.get_g1().get_fingerprint() == fingerprint:
-                    private_key = sk
-                    break
-        else:
-            private_key, entropy = private_keys[0]
-
-        if private_key is not None and entropy is not None:
-            return {"success": True, "pk": bytes(private_key.get_g1()).hex(), "entropy": entropy.hex()}
-        else:
+        try:
+            if request["fingerprint"] is None:
+                key_data = keys[0]
+            else:
+                key_data = keychain.get_key(request["fingerprint"], include_secrets=private)
+        except KeychainFingerprintNotFound:
             return {"success": False, "error": KEYCHAIN_ERR_KEY_NOT_FOUND}
+
+        return {
+            "success": True,
+            "pk": bytes(key_data.public_key).hex(),
+            "entropy": key_data.entropy.hex() if private else None,
+        }

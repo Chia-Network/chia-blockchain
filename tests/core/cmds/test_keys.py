@@ -27,7 +27,7 @@ TEST_FINGERPRINT = 2877570395
 @pytest.fixture(scope="function")
 def keyring_with_one_key(empty_keyring):
     keychain = empty_keyring
-    keychain.add_private_key(TEST_MNEMONIC_SEED)
+    keychain.add_key(TEST_MNEMONIC_SEED)
     return keychain
 
 
@@ -287,7 +287,7 @@ class TestKeysCommands:
         # Add 10 keys to the keychain, give every other a label
         keys = [KeyData.generate(f"key_{i}" if i % 2 == 0 else None) for i in range(10)]
         for key in keys:
-            keychain.add_private_key(key.mnemonic_str(), key.label)
+            keychain.add_key(key.mnemonic_str(), key.label)
         # Make sure all 10 keys are printed correct
         result = runner.invoke(cli, [*base_params, *cmd_params], catch_exceptions=False)
         assert result.exit_code == 0
@@ -336,7 +336,7 @@ class TestKeysCommands:
         keychain = keyring_with_one_key
 
         # add a key
-        keychain.add_private_key(generate_mnemonic())
+        keychain.add_key(generate_mnemonic())
         assert len(keychain.get_all_private_keys()) == 2
 
         keys_root_path = keychain.keyring_wrapper.keys_root_path
@@ -584,7 +584,7 @@ class TestKeysCommands:
 
         for i in range(5):
             mnemonic: str = generate_mnemonic()
-            keychain.add_private_key(mnemonic)
+            keychain.add_key(mnemonic)
 
         assert len(keychain.get_all_private_keys()) == 5
 

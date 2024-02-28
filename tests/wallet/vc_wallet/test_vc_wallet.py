@@ -343,7 +343,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         uint64(2000000000),
         memos=["hey"],
     )
-    await wallet_node_0.wallet_state_manager.add_pending_transactions([tx])
+    [tx] = await wallet_node_0.wallet_state_manager.add_pending_transactions([tx])
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -514,7 +514,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         uint64(0),
         cat_discrepancy=(-50, Program.to(None), Program.to(None)),
     )
-    await wallet_node_1.wallet_state_manager.add_pending_transactions([tx])
+    [tx] = await wallet_node_1.wallet_state_manager.add_pending_transactions([tx])
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(),
@@ -671,7 +671,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
 
     # Send the DID to oblivion
     txs = await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config)
-    await did_wallet.wallet_state_manager.add_pending_transactions(txs)
+    txs = await did_wallet.wallet_state_manager.add_pending_transactions(txs)
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(

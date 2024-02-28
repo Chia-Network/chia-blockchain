@@ -6,7 +6,16 @@ from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
-from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
+from chia.rpc.wallet_request_types import (
+    ApplySignatures,
+    ApplySignaturesResponse,
+    GatherSigningInfo,
+    GatherSigningInfoResponse,
+    GetNotifications,
+    GetNotificationsResponse,
+    SubmitTransactions,
+    SubmitTransactionsResponse,
+)
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -1601,6 +1610,63 @@ class WalletRpcClient(RpcClient):
             {
                 "wallet_id": wallet_id,
                 "min_amount_to_claim": min_amount_to_claim,
+                "fee": fee,
+                "push": push,
+                **tx_config.to_json_dict(),
+            },
+        )
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+
+    async def gather_signing_info(
+        self,
+        args: GatherSigningInfo,
+    ) -> GatherSigningInfoResponse:
+        return GatherSigningInfoResponse.from_json_dict(
+            await self.fetch(
+                "gather_signing_info",
+                args.to_json_dict(),
+            )
+        )
+
+    async def apply_signatures(
+        self,
+        args: ApplySignatures,
+    ) -> ApplySignaturesResponse:
+        return ApplySignaturesResponse.from_json_dict(
+            await self.fetch(
+                "apply_signatures",
+                args.to_json_dict(),
+            )
+        )
+
+    async def submit_transactions(
+        self,
+        args: SubmitTransactions,
+    ) -> SubmitTransactionsResponse:
+        return SubmitTransactionsResponse.from_json_dict(
+            await self.fetch(
+                "submit_transactions",
+                args.to_json_dict(),
+            )
+        )
+
+    async def vault_create(
+        self,
+        secp_pk: bytes,
+        hp_index: uint32,
+        bls_pk: bytes,
+        timelock: uint64,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+        push: bool = True,
+    ) -> List[TransactionRecord]:
+        response = await self.fetch(
+            "vault_create",
+            {
+                "secp_pk": secp_pk.hex(),
+                "hp_index": hp_index,
+                "bls_pk": bls_pk.hex(),
+                "timelock": timelock,
                 "fee": fee,
                 "push": push,
                 **tx_config.to_json_dict(),

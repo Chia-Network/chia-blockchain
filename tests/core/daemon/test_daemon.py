@@ -9,6 +9,7 @@ import aiohttp
 import pkg_resources
 import pytest
 from aiohttp.web_ws import WebSocketResponse
+from chia_rs import G1Element
 from pytest_mock import MockerFixture
 
 from chia.daemon.client import connect_to_daemon
@@ -403,8 +404,11 @@ def mock_daemon_with_config_and_keys(get_keychain_for_function, root_path_popula
     keychain = Keychain()
 
     # populate the keychain with some test keys
-    keychain.add_private_key(test_key_data.mnemonic_str())
-    keychain.add_private_key(test_key_data_2.mnemonic_str())
+    keychain.add_key(test_key_data.mnemonic_str())
+    keychain.add_key(test_key_data_2.mnemonic_str())
+
+    # Throw in an unused pubkey-only entry
+    keychain.add_key(bytes(G1Element()).hex(), private=False)
 
     # Mock daemon server with net_config set for mainnet
     return Daemon(services={}, connections={}, net_config=config)
@@ -415,8 +419,8 @@ async def daemon_client_with_config_and_keys(get_keychain_for_function, get_daem
     keychain = Keychain()
 
     # populate the keychain with some test keys
-    keychain.add_private_key(test_key_data.mnemonic_str())
-    keychain.add_private_key(test_key_data_2.mnemonic_str())
+    keychain.add_key(test_key_data.mnemonic_str())
+    keychain.add_key(test_key_data_2.mnemonic_str())
 
     daemon = get_daemon
     client = await connect_to_daemon(
@@ -592,6 +596,12 @@ async def test_get_routes(mock_lonely_daemon):
         response={
             "success": True,
             "wallet_addresses": {
+                G1Element().get_fingerprint(): [
+                    {
+                        "address": "xch1dr2sj4jqdt6nj4l32d4f5dk7mrwak3qw5hsykty5lhhd00053y0szaz8zj",
+                        "hd_path": "m/12381/8444/2/0",
+                    }
+                ],
                 test_key_data.fingerprint: [
                     {
                         "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
@@ -665,11 +675,27 @@ async def test_get_routes(mock_lonely_daemon):
         },
     ),
     WalletAddressCase(
-        id="missing private key",
-        request={"fingerprints": [test_key_data.fingerprint]},
+        id="missing private key hardened",
+        request={"fingerprints": [test_key_data.fingerprint], "non_observer_derivation": True},
         response={
             "success": False,
             "error": f"missing private key for key with fingerprint {test_key_data.fingerprint}",
+        },
+        pubkeys_only=True,
+    ),
+    WalletAddressCase(
+        id="missing private key unhardened",
+        request={"fingerprints": [test_key_data.fingerprint]},
+        response={
+            "success": True,
+            "wallet_addresses": {
+                test_key_data.fingerprint: [
+                    {
+                        "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
+                        "hd_path": "m/12381/8444/2/0",
+                    },
+                ],
+            },
         },
         pubkeys_only=True,
     ),
@@ -945,7 +971,7 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
     missing_mnemonic_response_data = {
         "success": False,
         "error": "malformed request",
-        "error_details": {"message": "missing mnemonic"},
+        "error_details": {"message": "missing key information"},
     }
 
     mnemonic_with_typo_response_data = {
@@ -1035,7 +1061,7 @@ async def test_get_key(daemon_connection_and_temp_keychain):
     await ws.send_str(create_payload("get_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
     assert_response(await ws.receive(), fingerprint_not_found_response_data(test_key_data.fingerprint))
 
-    keychain.add_private_key(test_key_data.mnemonic_str())
+    keychain.add_key(test_key_data.mnemonic_str())
 
     # without `include_secrets`
     await ws.send_str(create_payload("get_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
@@ -1073,7 +1099,7 @@ async def test_get_keys(daemon_connection_and_temp_keychain):
     keys = [KeyData.generate() for _ in range(5)]
     keys_added = []
     for key_data in keys:
-        keychain.add_private_key(key_data.mnemonic_str())
+        keychain.add_key(key_data.mnemonic_str())
         keys_added.append(key_data)
 
         get_keys_response_data_without_secrets = get_keys_response_data(
@@ -1101,7 +1127,7 @@ async def test_get_public_key(daemon_connection_and_temp_keychain):
     await ws.send_str(create_payload("get_public_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
     assert_response(await ws.receive(), fingerprint_not_found_response_data(test_key_data.fingerprint))
 
-    keychain.add_private_key(test_key_data.mnemonic_str())
+    keychain.add_key(test_key_data.mnemonic_str())
 
     await ws.send_str(create_payload("get_public_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
     response = await ws.receive()
@@ -1127,7 +1153,7 @@ async def test_get_public_keys(daemon_connection_and_temp_keychain):
     keys = [KeyData.generate() for _ in range(5)]
     keys_added = []
     for key_data in keys:
-        keychain.add_private_key(key_data.mnemonic_str())
+        keychain.add_key(key_data.mnemonic_str())
         keys_added.append(key_data)
 
     get_public_keys_response = get_public_keys_response_data(keys_added)
@@ -1147,7 +1173,7 @@ async def test_get_public_keys(daemon_connection_and_temp_keychain):
 @pytest.mark.anyio
 async def test_key_renaming(daemon_connection_and_temp_keychain):
     ws, keychain = daemon_connection_and_temp_keychain
-    keychain.add_private_key(test_key_data.mnemonic_str())
+    keychain.add_key(test_key_data.mnemonic_str())
     # Rename the key three times
     for i in range(3):
         key_data = replace(test_key_data_no_secrets, label=f"renaming_{i}")
@@ -1172,7 +1198,7 @@ async def test_key_renaming(daemon_connection_and_temp_keychain):
 async def test_key_label_deletion(daemon_connection_and_temp_keychain):
     ws, keychain = daemon_connection_and_temp_keychain
 
-    keychain.add_private_key(test_key_data.mnemonic_str(), "key_0")
+    keychain.add_key(test_key_data.mnemonic_str(), "key_0")
     assert keychain.get_key(test_key_data.fingerprint).label == "key_0"
     await ws.send_str(create_payload("delete_label", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
     assert_response(await ws.receive(), success_response_data)
@@ -1246,7 +1272,7 @@ async def test_key_label_methods(
     daemon_connection_and_temp_keychain, method: str, parameter: Dict[str, Any], response_data_dict: Dict[str, Any]
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
-    keychain.add_private_key(test_key_data.mnemonic_str(), "key_0")
+    keychain.add_key(test_key_data.mnemonic_str(), "key_0")
     await ws.send_str(create_payload(method, parameter, "test", "daemon"))
     assert_response(await ws.receive(), response_data_dict)
 
