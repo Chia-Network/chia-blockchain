@@ -19,13 +19,13 @@ parent_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 phs = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 removals = [(coin_ids[0], phs[0]), (coin_ids[2], phs[0]), (coin_ids[1], phs[7])]
 additions = [
-    (Coin(coin_ids[0], phs[2], 123), None),
-    (Coin(coin_ids[0], phs[4], 3), b"1" * 32),
-    (Coin(coin_ids[2], phs[7], 123), None),
-    (Coin(coin_ids[2], phs[4], 6), None),
-    (Coin(coin_ids[2], phs[9], 123), b"1" * 32),
-    (Coin(coin_ids[1], phs[5], 123), None),
-    (Coin(coin_ids[1], phs[6], 5), b"1" * 3),
+    (Coin(coin_ids[0], phs[2], uint64(123)), None),
+    (Coin(coin_ids[0], phs[4], uint64(3)), b"1" * 32),
+    (Coin(coin_ids[2], phs[7], uint64(123)), None),
+    (Coin(coin_ids[2], phs[4], uint64(6)), None),
+    (Coin(coin_ids[2], phs[9], uint64(123)), b"1" * 32),
+    (Coin(coin_ids[1], phs[5], uint64(123)), None),
+    (Coin(coin_ids[1], phs[6], uint64(5)), b"1" * 3),
 ]
 
 

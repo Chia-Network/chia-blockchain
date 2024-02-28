@@ -1786,6 +1786,7 @@ async def test_trade_conflict(three_wallets_prefarm):
     txs1 = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
         txs1, additional_signing_responses=signing_response
     )
+    await full_node.wait_transaction_records_entered_mempool(records=txs1)
     # we shouldn't be able to respond to a duplicate offer
     with pytest.raises(ValueError):
         await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
@@ -1799,6 +1800,7 @@ async def test_trade_conflict(three_wallets_prefarm):
     assert await trade_manager_trader.get_coins_of_interest()
     offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
     await full_node.process_transaction_records(records=offer_tx_records)
+    await full_node.wait_for_wallet_synced(wallet_node=wallet_node_trader, timeout=20)
     await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_trader, tr2)
 
 
