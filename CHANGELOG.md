@@ -12,25 +12,24 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 * Fix TX amount calculation in trade manager (fixes #16842)
-* add SerializedProgram.to() to simplify some code
-* include information for setuptools_scm in git archives
-* fix type mismatch with Optional[bytes] and bytes in wallet/conditions.py
+* Subscribe to DIDs that come into wallet (fixes #17242)
+* Remove duplicate short option from make_offer command (fixes #17371)
+* add `SerializedProgram.to()` to simplify some code
+* include information for `setuptools_scm` in git archives
+* fix type mismatch with `Optional[bytes]` and `bytes` in `wallet/conditions.py`
 * fixed typo in `get_coin_record_by_name` docstring (thanks @Abakrombie)
 * Fixed readme links (thanks @Abakrombie)
+* DL: Don't allow mirrors with empty urls (fixes #16920)
+* DL: Improve input for CLI `add_missing_files` (fixes #17039)
 * DL: Use unsubscribe queue to relax subscriptions lock
-* DL: Don't allow mirrors with empty urls
 * DL: Use Datalayer banning logic for HTTP download failures
-* Improve input for DL CLI add_missing_files
 * extend the mempool tests for timelocks, and improve error codes
-* add measured sizes for plot check for bigger k-sizes (thanks @neurosis69)
-* extend measured sizes for plot check with value for k39 (thanks @neurosis69)
+* extend measured sizes for plot check with value for larger K sizes (thanks @neurosis69)
 * Add a few missing type annotations
 * Log string header_hash on long validation warnings
-* Subscribe to DIDs that come into wallet (fixes #17242)
 * Fix sorted for dictionary keys of both bytes/xch
 * Fixed an issue where `chia wallet did transfer` command mistreats the type of `fee`
 * Fix signage point message for remote harvesters with large numbers of pools
-* Remove duplicate short option from make_offer command (fixes #17371)
 * undo BlockRecord cache insert, when DB fails
 * Warn if running `install-plotter.sh` as root
 
