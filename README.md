@@ -35,11 +35,11 @@ Chia is a modern cryptocurrency built from scratch, designed to be efficient, de
 * Simplified UTXO based transaction model, with small on-chain state
 * Lisp-style Turing-complete functional [programming language](https://chialisp.com/) for money related use cases
 * BLS keys and aggregate signatures (only one signature per block)
-* [Pooling protocol](https://github.com/Chia-Network/chia-blockchain/wiki/Pooling-User-Guide) that allows farmers to have control of making blocks
+* [Pooling protocol](https://docs.chia.net/pool-farming/) that allows farmers to have control of making blocks
 * Support for light clients with fast, objective syncing
 * A growing community of farmers and developers around the world
 
-Please check out the [Chia website](https://www.chia.net/), the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki), and [FAQ](https://github.com/Chia-Network/chia-blockchain/wiki/FAQ) for
+Please check out the [Chia website](https://www.chia.net/), the [intro to Chia](https://docs.chia.net/introduction/), and [FAQ](https://docs.chia.net/faq) for
 information on this project.
 
 Python 3.8.1+ is required. Make sure your default python version is >=3.8.1
