@@ -24,6 +24,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions, solution_for_conditions
+from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition, make_reserve_fee_condition
 from chia.wallet.signer_protocol import (
     PathHint,
     Signature,
@@ -171,7 +172,7 @@ class Vault(Wallet):
             )
         assert len(coins) > 0
 
-        p2_singleton_puzzle: Program = get_p2_singleton_puzzle(self.vault_info.launcher_coin_id)
+        p2_singleton_puzzle: Program = get_p2_singleton_puzzle(self.vault_info.launcher_id)
 
         spends: List[CoinSpend] = []
         for coin in list(coins):
@@ -211,7 +212,7 @@ class Vault(Wallet):
         change = spend_value - total_amount
         assert change >= 0
         if change > 0:
-            change_puzzle_hash: bytes32 = get_p2_singleton_puzzle_hash(self.vault_info.launcher_coin_id)
+            change_puzzle_hash: bytes32 = get_p2_singleton_puzzle_hash(self.vault_info.launcher_id)
             primaries.append(Payment(change_puzzle_hash, uint64(change)))
 
         conditions = [primary.as_condition() for primary in primaries]
@@ -260,7 +261,7 @@ class Vault(Wallet):
         proof = get_vault_proof(merkle_tree, secp_puzzle.get_tree_hash())
         vault_inner_solution = get_vault_inner_solution(secp_puzzle, secp_solution, proof)
 
-        full_puzzle = get_vault_full_puzzle(self.vault_info.launcher_coin_id, vault_inner_puzzle)
+        full_puzzle = get_vault_full_puzzle(self.vault_info.launcher_id, vault_inner_puzzle)
         full_solution = get_vault_full_solution(
             self.vault_info.lineage_proof,
             uint64(self.vault_info.coin.amount),
@@ -313,7 +314,7 @@ class Vault(Wallet):
         proof = get_vault_proof(merkle_tree, secp_puzzle.get_tree_hash())
         vault_inner_solution = get_vault_inner_solution(secp_puzzle, secp_solution, proof)
 
-        full_puzzle = get_vault_full_puzzle(self.vault_info.launcher_coin_id, vault_inner_puzzle)
+        full_puzzle = get_vault_full_puzzle(self.vault_info.launcher_id, vault_inner_puzzle)
         full_solution = get_vault_full_solution(
             self.vault_info.lineage_proof,
             uint64(self.vault_info.coin.amount),
@@ -440,7 +441,47 @@ class Vault(Wallet):
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
     ) -> Program:
-        raise NotImplementedError("vault wallet")
+        assert fee >= 0
+        condition_list: List[Any] = [condition.to_program() for condition in conditions]
+        if len(primaries) > 0:
+            for primary in primaries:
+                condition_list.append(make_create_coin_condition(primary.puzzle_hash, primary.amount, primary.memos))
+        if fee:
+            condition_list.append(make_reserve_fee_condition(fee))
+        delegated_puzzle = puzzle_for_conditions(condition_list)
+        delegated_solution = solution_for_conditions(condition_list)
+
+        secp_puzzle = construct_p2_delegated_secp(
+            self.vault_info.pubkey,
+            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+            self.vault_info.hidden_puzzle_hash,
+        )
+        secp_solution = Program.to(
+            [
+                delegated_puzzle,
+                delegated_solution,
+                None,  # signature slot
+                self.vault_info.coin.name(),
+            ]
+        )
+        if self.vault_info.is_recoverable:
+            recovery_puzzle_hash = get_recovery_puzzle(
+                secp_puzzle.get_tree_hash(),
+                self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
+                self.recovery_info.timelock if self.vault_info.is_recoverable else None,
+            ).get_tree_hash()
+            merkle_tree = construct_vault_merkle_tree(secp_puzzle.get_tree_hash(), recovery_puzzle_hash)
+        else:
+            merkle_tree = construct_vault_merkle_tree(secp_puzzle.get_tree_hash())
+        proof = get_vault_proof(merkle_tree, secp_puzzle.get_tree_hash())
+        vault_inner_solution = get_vault_inner_solution(secp_puzzle, secp_solution, proof)
+
+        full_solution = get_vault_full_solution(
+            self.vault_info.lineage_proof,
+            uint64(self.vault_info.coin.amount),
+            vault_inner_solution,
+        )
+        return full_solution
 
     async def get_puzzle(self, new: bool) -> Program:
         if new:
@@ -476,7 +517,7 @@ class Vault(Wallet):
         return None, None
 
     def get_p2_singleton_puzzle_hash(self) -> bytes32:
-        return get_p2_singleton_puzzle_hash(self.vault_info.launcher_coin_id)
+        return get_p2_singleton_puzzle_hash(self.vault_info.launcher_id)
 
     async def select_coins(self, amount: uint64, coin_selection_config: CoinSelectionConfig) -> Set[Coin]:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
@@ -553,7 +594,7 @@ class Vault(Wallet):
         proof = get_vault_proof(merkle_tree, recovery_puzzle_hash)
         inner_solution = get_vault_inner_solution(recovery_puzzle, recovery_solution, proof)
 
-        full_puzzle = get_vault_full_puzzle(self.vault_info.launcher_coin_id, inner_puzzle)
+        full_puzzle = get_vault_full_puzzle(self.vault_info.launcher_id, inner_puzzle)
         assert full_puzzle.get_tree_hash() == vault_coin.puzzle_hash
 
         full_solution = get_vault_full_solution(self.vault_info.lineage_proof, amount, inner_solution)
@@ -565,7 +606,7 @@ class Vault(Wallet):
         )
         recovery_finish_solution = Program.to([])
         recovery_inner_puzzle = get_recovery_inner_puzzle(secp_puzzle_hash, recovery_finish_puzzle.get_tree_hash())
-        full_recovery_puzzle = get_vault_full_puzzle(self.vault_info.launcher_coin_id, recovery_inner_puzzle)
+        full_recovery_puzzle = get_vault_full_puzzle(self.vault_info.launcher_id, recovery_inner_puzzle)
         recovery_coin = Coin(self.vault_info.coin.name(), full_recovery_puzzle.get_tree_hash(), amount)
         recovery_solution = get_vault_inner_solution(recovery_finish_puzzle, recovery_finish_solution, proof)
         lineage = LineageProof(self.vault_info.coin.name(), inner_puzzle.get_tree_hash(), amount)
@@ -652,12 +693,11 @@ class Vault(Wallet):
         lineage_proof = LineageProof(parent_state.coin.parent_coin_info, None, uint64(parent_state.coin.amount))
         vault_info = VaultInfo(
             coin_state.coin,
-            launcher_id,
+            parent_state.coin.name(),
             secp_pk,
             hidden_puzzle_hash,
             inner_puzzle_hash,
             is_recoverable,
-            parent_state.coin.name(),
             lineage_proof,
         )
         await self.save_info(vault_info)
@@ -714,7 +754,6 @@ class Vault(Wallet):
             hidden_puzzle_hash,
             next_inner_puzzle.get_tree_hash(),
             self.vault_info.is_recoverable,
-            self.vault_info.launcher_coin_id,
             lineage_proof,
         )
 
