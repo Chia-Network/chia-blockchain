@@ -191,18 +191,18 @@ class FullNodeStore:
         ents.setdefault(foliage_hash, UnfinishedBlockEntry(None, None, uint32(0)))
 
     def remove_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]) -> None:
-        ents = self._unfinished_blocks.get(reward_block_hash)
-        if ents is None:
+        reward_ents = self._unfinished_blocks.get(reward_block_hash)
+        if reward_ents is None:
             return
-        ent = ents.get(foliage_hash)
-        if ent is None:
+        foliage_ent = reward_ents.get(foliage_hash)
+        if foliage_ent is None:
             return
-        if ent.unfinished_block is not None:
+        if foliage_ent.unfinished_block is not None:
             # in this case we've successfully received the unfinished block,
             # it's already considered "not requesting", but actually downloaded
             return
-        del ents[foliage_hash]
-        if len(ents) == 0:
+        del reward_ents[foliage_hash]
+        if len(reward_ents) == 0:
             del self._unfinished_blocks[reward_block_hash]
 
     def add_candidate_block(
