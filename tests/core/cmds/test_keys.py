@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import pytest
+from chia_rs import G1Element
 from click.testing import CliRunner
 
 from chia.cmds.chia import cli
@@ -28,6 +29,14 @@ TEST_FINGERPRINT = 2877570395
 def keyring_with_one_key(empty_keyring):
     keychain = empty_keyring
     keychain.add_key(TEST_MNEMONIC_SEED)
+    return keychain
+
+
+@pytest.fixture(scope="function")
+def keyring_with_one_sk_one_pk(empty_keyring):
+    keychain = empty_keyring
+    keychain.add_key(TEST_MNEMONIC_SEED)
+    keychain.add_key(bytes(G1Element()).hex(), private=False)
     return keychain
 
 
@@ -302,12 +311,12 @@ class TestKeysCommands:
             else:
                 assert label == key.label
 
-    def test_show(self, keyring_with_one_key, tmp_path):
+    def test_show(self, keyring_with_one_sk_one_pk, tmp_path):
         """
         Test that the `chia keys show` command shows the correct key.
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_sk_one_pk
 
         assert len(keychain.get_all_private_keys()) == 1
 
@@ -327,6 +336,10 @@ class TestKeysCommands:
 
         # assert result.exit_code == 0
         assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
+        assert result.output.find(f"Fingerprint: {G1Element().get_fingerprint()}") != -1
+
+        result = runner.invoke(cli, [*base_params, *cmd_params, "--non-observer-derivation"], catch_exceptions=False)
+        assert result.output.find("First wallet address (non-observer): N/A") != -1
 
     def test_show_fingerprint(self, keyring_with_one_key, tmp_path):
         """

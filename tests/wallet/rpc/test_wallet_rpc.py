@@ -1648,11 +1648,11 @@ async def _check_delete_key(
     # set farmer to first private key
     create_sk = master_sk_to_wallet_sk_unhardened if observer else master_sk_to_wallet_sk
 
-    sk = await wallet_node.get_key_for_fingerprint(farmer_fp)
+    sk = await wallet_node.get_key_for_fingerprint(farmer_fp, private=True)
     assert sk is not None
     farmer_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
 
-    sk = await wallet_node.get_key_for_fingerprint(pool_fp)
+    sk = await wallet_node.get_key_for_fingerprint(pool_fp, private=True)
     assert sk is not None
     pool_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
 

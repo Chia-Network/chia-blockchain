@@ -61,7 +61,7 @@ async def test_get_private_key(simulator_and_wallet: OldSimulatorsAndWallets, ha
     wallet_state_manager: WalletStateManager = wallet_node.wallet_state_manager
     derivation_index = uint32(10000)
     conversion_method = master_sk_to_wallet_sk if hardened else master_sk_to_wallet_sk_unhardened
-    expected_private_key = conversion_method(wallet_state_manager.private_key, derivation_index)
+    expected_private_key = conversion_method(wallet_state_manager.get_master_private_key(), derivation_index)
     record = DerivationRecord(
         derivation_index,
         bytes32(b"0" * 32),
