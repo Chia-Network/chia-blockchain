@@ -81,7 +81,7 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
             ),
         ]
     )
-    await env.node.keychain_proxy.add_public_key(launcher_id.hex())
+    await env.node.keychain_proxy.add_key(launcher_id.hex(), label="vault", private=False)
     await env.restart(vault_root.get_fingerprint())
     await wallet_environments.full_node.wait_for_wallet_synced(env.node, 20)
 

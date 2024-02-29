@@ -427,6 +427,9 @@ class Keychain:
             if len(pk_bytes) == 48:
                 key = G1Element.from_bytes(pk_bytes)
                 key_type = KeyTypes.G1_ELEMENT
+            elif len(pk_bytes) == 32:
+                key = VaultRoot(pk_bytes)
+                key_type = KeyTypes.VAULT_LAUNCHER
             else:
                 raise ValueError(f"Cannot identify type of pubkey {mnemonic_or_pk}")  # pragma: no cover
             key_data = pk_bytes.hex()
