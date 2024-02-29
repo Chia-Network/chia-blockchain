@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from hashlib import sha256
 from typing import Awaitable, Callable, List
 
@@ -15,6 +16,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.signer_protocol import Spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.vault.vault_info import RecoveryInfo, VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
 from tests.conftest import ConsensusMode
@@ -168,7 +170,7 @@ async def test_vault_creation(
     ]
     amount = uint64(1000000)
     fee = uint64(100)
-    balance_delta = 1011000100
+    balance_delta = 1011000099
 
     unsigned_txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
         amount, recipient_ph, DEFAULT_TX_CONFIG, primaries=primaries, fee=fee
@@ -187,6 +189,7 @@ async def test_vault_creation(
 
     signed_response = await wallet.apply_signatures(spends, signing_responses)
     await env.wallet_state_manager.submit_transactions([signed_response])
+    vault_eve_id = wallet.vault_info.coin.name()
 
     await wallet_environments.process_pending_states(
         [
@@ -205,3 +208,18 @@ async def test_vault_creation(
             ),
         ],
     )
+
+    # check the wallet and singleton store have the latest vault coin
+    assert wallet.vault_info.coin.parent_coin_info == vault_eve_id
+    record = (await wallet.wallet_state_manager.singleton_store.get_records_by_coin_id(wallet.vault_info.coin.name()))[
+        0
+    ]
+    assert record is not None
+
+    assert isinstance(record.custom_data, bytes)
+    custom_data = json.loads(record.custom_data)
+    vault_info = VaultInfo.from_json_dict(custom_data["vault_info"])
+    assert vault_info == wallet.vault_info
+    if wallet.vault_info.is_recoverable:
+        recovery_info = RecoveryInfo.from_json_dict(custom_data["recovery_info"])
+        assert recovery_info == wallet.recovery_info

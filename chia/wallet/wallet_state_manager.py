@@ -807,9 +807,7 @@ class WalletStateManager:
 
         vault_check = match_vault_puzzle(uncurried.mod, uncurried.args)
         if vault_check:
-            await self.handle_vault(puzzle, coin_spend, coin_state)
-            # Return None since we don't want to add the vault singleton to the normal wallet coin store
-            return None, None
+            return await self.handle_vault(puzzle, coin_spend, coin_state), None
 
         dao_ids = []
         wallets = self.wallets.values()
@@ -1090,7 +1088,7 @@ class WalletStateManager:
         puzzle: Program,
         coin_spend: CoinSpend,
         coin_state: CoinState,
-    ) -> None:
+    ) -> Optional[WalletIdentifier]:
         if isinstance(self.observation_root, VaultRoot):
             for wallet in self.wallets.values():
                 if wallet.type() == WalletType.STANDARD_WALLET:
@@ -1099,6 +1097,8 @@ class WalletStateManager:
                     if coin_state.coin.amount % 2 == 1:
                         # Update the vault singleton record
                         await wallet.update_vault_singleton(puzzle, coin_spend, coin_state)
+                        return WalletIdentifier.create(wallet)
+        return None
 
     async def handle_dao_cat(
         self,

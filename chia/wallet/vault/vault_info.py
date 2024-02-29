@@ -23,7 +23,8 @@ class VaultInfo(Streamable):
     lineage_proof: LineageProof
 
 
+@streamable
 @dataclass(frozen=True)
-class RecoveryInfo:
+class RecoveryInfo(Streamable):
     bls_pk: G1Element
     timelock: uint64

@@ -757,12 +757,24 @@ class Vault(Wallet):
             lineage_proof,
         )
 
-        await self.wallet_state_manager.singleton_store.add_spend(self.id(), coin_spend)
+        await self.update_vault_store(
+            new_vault_info, self.recovery_info if self.vault_info.is_recoverable else None, coin_spend
+        )
         await self.save_info(new_vault_info)
 
     async def save_info(self, vault_info: VaultInfo) -> None:
         self.vault_info = vault_info
-        current_info = self.wallet_info
-        data_str = json.dumps(vault_info.to_json_dict())
-        wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
-        self.wallet_info = wallet_info
+
+    async def update_vault_store(
+        self, vault_info: VaultInfo, recovery_info: Optional[RecoveryInfo], coin_spend: CoinSpend
+    ) -> None:
+        custom_data = bytes(
+            json.dumps(
+                {
+                    "vault_info": vault_info.to_json_dict(),
+                    "recovery_info": recovery_info.to_json_dict() if recovery_info else None,
+                }
+            ),
+            "utf-8",
+        )
+        await self.wallet_state_manager.singleton_store.add_spend(self.id(), coin_spend, custom_data=custom_data)
