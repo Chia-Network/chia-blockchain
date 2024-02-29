@@ -268,20 +268,12 @@ class FullNodeStore:
         else:
             return entry.unfinished_block, len(result), has_better
 
-    def get_unfinished_block_result(self, unfinished_reward_hash: bytes32) -> Optional[PreValidationResult]:
-        result = self.unfinished_blocks.get(unfinished_reward_hash, None)
-        if result is None:
-            return None
-        return next(iter(result.values())).result
-
     def get_unfinished_block_result2(
-        self, unfinished_reward_hash: bytes32, unfinished_foliage_hash: Optional[bytes32]
+        self, unfinished_reward_hash: bytes32, unfinished_foliage_hash: bytes32
     ) -> Optional[PreValidationResult]:
         result = self.unfinished_blocks.get(unfinished_reward_hash, None)
         if result is None:
             return None
-        if unfinished_foliage_hash is None:
-            return next(iter(result.values())).result
         else:
             entry = result.get(unfinished_foliage_hash)
             return None if entry is None else entry.result
