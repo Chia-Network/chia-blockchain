@@ -317,6 +317,7 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
 
 
 @pytest.mark.anyio
+@pytest.mark.standard_block_tools
 async def test_subscribe_for_ph_reorg(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     num_blocks = 4
     long_blocks = 20
@@ -559,6 +560,7 @@ async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
 
 
 @pytest.mark.anyio
+@pytest.mark.standard_block_tools
 async def test_subscribe_for_hint_long_sync(
     wallet_two_node_simulator: OldSimulatorsAndWallets, self_hostname: str
 ) -> None:

@@ -114,8 +114,8 @@ class WalletRpcTestEnvironment:
 
 
 async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode):
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+    await full_node_api.farm_blocks_to_puzzlehash(count=1)
+    await full_node_api.wait_for_wallet_synced(wallet_node)
 
 
 def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends):
@@ -377,9 +377,11 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
     async with wallet_node.wallet_state_manager.lock:
-        cat_wallet, _ = await CATWallet.create_new_cat_wallet(
+        cat_wallet, tx_records = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), DEFAULT_TX_CONFIG
         )
+    await full_node_api.wait_transaction_records_entered_mempool(tx_records)
+    await full_node_api.wait_for_wallet_synced(wallet_node)
     await assert_get_balance(wallet_rpc_client, wallet_node, wallet)
     await assert_get_balance(wallet_rpc_client, wallet_node, cat_wallet)
 
@@ -394,14 +396,14 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
     await full_node_api.farm_blocks_to_wallet(2, wallet)
 
     get_farmed_amount_result = await wallet_rpc_client.get_farmed_amount()
-    get_timestamp_for_height_result = await wallet_rpc_client.get_timestamp_for_height(uint32(2))
+    get_timestamp_for_height_result = await wallet_rpc_client.get_timestamp_for_height(uint32(3))  # genesis + 2
 
     expected_result = {
         "blocks_won": 2,
         "farmed_amount": 4_000_000_000_000,
         "farmer_reward_amount": 500_000_000_000,
         "fee_amount": 0,
-        "last_height_farmed": 2,
+        "last_height_farmed": 3,
         "last_time_farmed": get_timestamp_for_height_result,
         "pool_reward_amount": 3_500_000_000_000,
         "success": True,

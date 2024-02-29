@@ -291,7 +291,7 @@ class TestSimulation:
 
         # The requested number of blocks had been processed plus 1 to handle the final reward
         # transactions in the case of a non-zero count.
-        expected_height = count
+        expected_height = count + 1  # +1 for genesis block (those rewards don't go to wallet)
         if count > 0:
             expected_height += 1
 

@@ -63,6 +63,9 @@ async def get_nft_count(wallet: NFTWallet) -> int:
 log = getLogger(__name__)
 
 
+pytestmark = pytest.mark.standard_block_tools
+
+
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_request_block_headers(
