@@ -1214,4 +1214,4 @@ async def test_mark_requesting(
     assert store.is_requesting_unfinished_block(b, c) == (False, 0)
     assert store.is_requesting_unfinished_block(b, b) == (False, 0)
 
-    assert len(store.unfinished_blocks) == 0
+    assert len(store._unfinished_blocks) == 0

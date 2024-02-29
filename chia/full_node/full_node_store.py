@@ -105,7 +105,10 @@ class FullNodeStore:
     # The UnfinishedBlockEntry is a placeholder for UnfinishedBlocks we have
     # requested (but don't have yet) or that we have but haven't completed
     # validation of (yet).
-    unfinished_blocks: Dict[bytes32, Dict[Optional[bytes32], UnfinishedBlockEntry]]
+    # The inner key (the foliage hash) is Optional, where None either means
+    # it's not a transaction block, or it's a block we learned about via the old
+    # protocol, where all we get is the reward block hash.
+    _unfinished_blocks: Dict[bytes32, Dict[Optional[bytes32], UnfinishedBlockEntry]]
 
     # Finished slots and sps from the peak's slot onwards
     # We store all 32 SPs for each slot, starting as 32 Nones and filling them as we go
@@ -145,7 +148,7 @@ class FullNodeStore:
         self.candidate_blocks = {}
         self.candidate_backup_blocks = {}
         self.seen_unfinished_blocks = {}
-        self.unfinished_blocks = {}
+        self._unfinished_blocks = {}
         self.finished_sub_slots = []
         self.future_eos_cache = {}
         self.future_sp_cache = {}
@@ -175,7 +178,7 @@ class FullNodeStore:
         currently requesting. This is useful to ensure we limit the number of
         variants we request.
         """
-        ents = self.unfinished_blocks.get(reward_block_hash)
+        ents = self._unfinished_blocks.get(reward_block_hash)
         if ents is None:
             return (False, 0)
         elif foliage_hash is None:
@@ -184,11 +187,11 @@ class FullNodeStore:
             return (foliage_hash in ents, len(ents))
 
     def mark_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]) -> None:
-        ents = self.unfinished_blocks.setdefault(reward_block_hash, {})
+        ents = self._unfinished_blocks.setdefault(reward_block_hash, {})
         ents.setdefault(foliage_hash, UnfinishedBlockEntry(None, None, uint32(0)))
 
     def remove_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]) -> None:
-        ents = self.unfinished_blocks.get(reward_block_hash)
+        ents = self._unfinished_blocks.get(reward_block_hash)
         if ents is None:
             return
         ent = ents.get(foliage_hash)
@@ -200,7 +203,7 @@ class FullNodeStore:
             return
         del ents[foliage_hash]
         if len(ents) == 0:
-            del self.unfinished_blocks[reward_block_hash]
+            del self._unfinished_blocks[reward_block_hash]
 
     def add_candidate_block(
         self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False
@@ -252,13 +255,13 @@ class FullNodeStore:
         self, height: uint32, unfinished_block: UnfinishedBlock, result: PreValidationResult
     ) -> None:
         partial_hash = unfinished_block.partial_hash
-        entry = self.unfinished_blocks.setdefault(partial_hash, {})
+        entry = self._unfinished_blocks.setdefault(partial_hash, {})
         entry[unfinished_block.foliage.foliage_transaction_block_hash] = UnfinishedBlockEntry(
             unfinished_block, result, height
         )
 
     def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
-        result = self.unfinished_blocks.get(unfinished_reward_hash, None)
+        result = self._unfinished_blocks.get(unfinished_reward_hash, None)
         if result is None:
             return None
         # The old API doesn't distinguish between duplicate UnfinishedBlocks,
@@ -286,7 +289,7 @@ class FullNodeStore:
             3. whether we already have a "better" UnfinishedBlock candidate than
                this
         """
-        result = self.unfinished_blocks.get(unfinished_reward_hash, None)
+        result = self._unfinished_blocks.get(unfinished_reward_hash, None)
         if result is None:
             return None, 0, False
         if unfinished_foliage_hash is None:
@@ -308,7 +311,7 @@ class FullNodeStore:
     def get_unfinished_block_result(
         self, unfinished_reward_hash: bytes32, unfinished_foliage_hash: bytes32
     ) -> Optional[UnfinishedBlockEntry]:
-        result = self.unfinished_blocks.get(unfinished_reward_hash, None)
+        result = self._unfinished_blocks.get(unfinished_reward_hash, None)
         if result is None:
             return None
         else:
@@ -317,7 +320,7 @@ class FullNodeStore:
     # returns all unfinished blocks for the specified height
     def get_unfinished_blocks(self, height: uint32) -> List[UnfinishedBlock]:
         ret: List[UnfinishedBlock] = []
-        for entry in self.unfinished_blocks.values():
+        for entry in self._unfinished_blocks.values():
             for ube in entry.values():
                 if ube.height == height and ube.unfinished_block is not None:
                     ret.append(ube.unfinished_block)
@@ -325,7 +328,7 @@ class FullNodeStore:
 
     def clear_unfinished_blocks_below(self, height: uint32) -> None:
         del_partial: List[bytes32] = []
-        for partial_hash, entry in self.unfinished_blocks.items():
+        for partial_hash, entry in self._unfinished_blocks.items():
             del_foliage: List[Optional[bytes32]] = []
             for foliage_hash, ube in entry.items():
                 if ube.height < height:
@@ -335,12 +338,12 @@ class FullNodeStore:
             if len(entry) == 0:
                 del_partial.append(partial_hash)
         for ph in del_partial:
-            del self.unfinished_blocks[ph]
+            del self._unfinished_blocks[ph]
 
     # TODO: this should be removed. It's only used by a test
     def remove_unfinished_block(self, partial_reward_hash: bytes32) -> None:
-        if partial_reward_hash in self.unfinished_blocks:
-            del self.unfinished_blocks[partial_reward_hash]
+        if partial_reward_hash in self._unfinished_blocks:
+            del self._unfinished_blocks[partial_reward_hash]
 
     def add_to_future_ip(self, infusion_point: timelord_protocol.NewInfusionPointVDF) -> None:
         ch: bytes32 = infusion_point.reward_chain_ip_vdf.challenge
