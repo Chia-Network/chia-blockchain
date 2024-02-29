@@ -59,13 +59,22 @@ def db_upgrade_cmd(
     is_flag=True,
     help="validate consistency of properties of the encoded blocks and block records",
 )
+@click.option(
+    "--validate-tx-generators",
+    default=False,
+    is_flag=True,
+    help="validate block generator hash (may have been corrupted by running 2.2.0)",
+)
 @click.pass_context
-def db_validate_cmd(ctx: click.Context, in_db_path: Optional[str], validate_blocks: bool) -> None:
+def db_validate_cmd(
+    ctx: click.Context, in_db_path: Optional[str], validate_blocks: bool, validate_tx_generators: bool
+) -> None:
     try:
         db_validate_func(
             Path(ctx.obj["root_path"]),
             None if in_db_path is None else Path(in_db_path),
             validate_blocks=validate_blocks,
+            validate_tx_generators=validate_tx_generators,
         )
     except RuntimeError as e:
         print(f"FAILED: {e}")

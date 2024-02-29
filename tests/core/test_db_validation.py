@@ -75,7 +75,7 @@ def test_db_validate_wrong_version() -> None:
             make_version(conn, 3)
 
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, validate_blocks=False, validate_tx_generators=False)
         assert "Database has the wrong version (3 expected 2)" in str(execinfo.value)
 
 
@@ -85,7 +85,7 @@ def test_db_validate_missing_peak_table() -> None:
             make_version(conn, 2)
 
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, validate_blocks=False, validate_tx_generators=False)
         assert "Database is missing current_peak table" in str(execinfo.value)
 
 
@@ -98,7 +98,7 @@ def test_db_validate_missing_peak_block() -> None:
             make_block_table(conn)
 
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, validate_blocks=False, validate_tx_generators=False)
         assert "Database is missing the peak block" in str(execinfo.value)
 
 
@@ -122,10 +122,10 @@ def test_db_validate_in_main_chain(invalid_in_chain: bool) -> None:
 
         if invalid_in_chain:
             with pytest.raises(RuntimeError) as execinfo:
-                validate_v2(db_file, validate_blocks=False)
+                validate_v2(db_file, validate_blocks=False, validate_tx_generators=False)
             assert " (height: 96) is orphaned, but in_main_chain is set" in str(execinfo.value)
         else:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, validate_blocks=False, validate_tx_generators=False)
 
 
 async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
@@ -154,5 +154,5 @@ async def test_db_validate_default_1000_blocks(default_1000_blocks: List[FullBlo
         # we expect everything to be valid except this is a test chain, so it
         # doesn't have the correct genesis challenge
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=True)
+            validate_v2(db_file, validate_blocks=True, validate_tx_generators=False)
         assert "Blockchain has invalid genesis challenge" in str(execinfo.value)

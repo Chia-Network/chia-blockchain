@@ -8,6 +8,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.config import load_config
+from chia.util.hash import std_hash
 from chia.util.path import path_from_root
 
 
@@ -16,6 +17,7 @@ def db_validate_func(
     in_db_path: Optional[Path] = None,
     *,
     validate_blocks: bool,
+    validate_tx_generators: bool,
 ) -> None:
     if in_db_path is None:
         config: Dict[str, Any] = load_config(root_path, "config.yaml")["full_node"]
@@ -24,12 +26,12 @@ def db_validate_func(
         db_path_replaced: str = db_pattern.replace("CHALLENGE", selected_network)
         in_db_path = path_from_root(root_path, db_path_replaced)
 
-    validate_v2(in_db_path, validate_blocks=validate_blocks)
+    validate_v2(in_db_path, validate_blocks=validate_blocks, validate_tx_generators=validate_tx_generators)
 
     print(f"\n\nDATABASE IS VALID: {in_db_path}\n")
 
 
-def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
+def validate_v2(in_path: Path, *, validate_blocks: bool, validate_tx_generators: bool) -> None:
     import sqlite3
     from contextlib import closing
 
@@ -83,10 +85,12 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
         num_orphans = 0
         height_to_hash = bytearray(peak_height * 32)
 
+        failed = False
+
         with closing(
             in_db.execute(
                 f"SELECT header_hash, prev_hash, height, in_main_chain"
-                f"{', block, block_record' if validate_blocks else ''} "
+                f"{', block, block_record' if (validate_blocks or validate_tx_generators) else ''} "
                 "FROM full_blocks ORDER BY height DESC"
             )
         ) as cursor:
@@ -100,6 +104,14 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
                 # the ones added since we picked the peak
                 if height > peak_height:
                     continue
+
+                if validate_tx_generators:
+                    block = FullBlock.from_bytes(zstd.decompress(row[4]))
+                    if block.transactions_generator is not None:
+                        assert block.transactions_info is not None
+                        if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
+                            print("Block at height {height} is corrupt (hash: {hh.hex()})")
+                            failed = True
 
                 if validate_blocks:
                     block = FullBlock.from_bytes(zstd.decompress(row[4]))
@@ -167,6 +179,10 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
                     if in_main_chain:
                         raise RuntimeError(f"block {hh.hex()} (height: {height}) is orphaned, but in_main_chain is set")
                     num_orphans += 1
+
+        if failed:
+            raise RuntimeError("Found blocks with invalid transactions generator")
+
         print("")
 
         if current_height != 0:
