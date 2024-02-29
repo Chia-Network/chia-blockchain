@@ -8,6 +8,8 @@ from typing import Dict, List, Optional
 import click
 import packaging.version
 
+from chia.daemon.server import executable_for_service
+
 
 def check_plotter(plotter: List[str], expected_output: bytes, specify_tmp: bool = True) -> None:
     with tempfile.TemporaryDirectory() as path:
@@ -15,7 +17,7 @@ def check_plotter(plotter: List[str], expected_output: bytes, specify_tmp: bool 
         if specify_tmp:
             tmp_dir = ["--tmp_dir", path]
         process = subprocess.Popen(
-            ["chia", "plotters", *plotter, *tmp_dir, "--final_dir", path],
+            [executable_for_service("chia"), "plotters", *plotter, *tmp_dir, "--final_dir", path],
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
