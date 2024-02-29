@@ -71,8 +71,15 @@ def test_command(expected_chia_version_str: str) -> None:
     assert plotter_version_process.returncode == 0
     assert plotter_version_process.stderr == ""
 
+    found_start = False
     plotter_versions: Dict[str, packaging.version.Version] = {}
     for line in plotter_version_process.stdout.splitlines():
+        if line.startswith("chiapos:"):
+            found_start = True
+
+        if not found_start:
+            continue
+
         plotter, version = (segment.strip() for segment in line.split(":", maxsplit=1))
         plotter_versions[plotter] = packaging.version.Version(version)
 
