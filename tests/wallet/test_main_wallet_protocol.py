@@ -218,7 +218,7 @@ async def acs_setup(wallet_environments: WalletTestFramework, monkeypatch: pytes
         pk = PrivateKey.from_bytes(
             bytes.fromhex("548dd25590a19f0a6a294560fc36f2900575fb9d1b2650e6fe80ad9abc1c4a60")
         ).get_g1()
-        await env.node.keychain_proxy.add_public_key(bytes(pk).hex())
+        await env.node.keychain_proxy.add_key(bytes(pk).hex(), None, private=False)
         await env.restart(pk.get_fingerprint())
 
 

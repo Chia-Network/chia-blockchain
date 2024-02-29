@@ -117,7 +117,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                     assert block.foliage_transaction_block is not None
                     await coin_store.new_block(
                         block.height,
-                        uint64(block.foliage_transaction_block.timestamp),
+                        block.foliage_transaction_block.timestamp,
                         block.get_included_reward_coins(),
                         tx_additions,
                         tx_removals,
@@ -127,7 +127,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                         with pytest.raises(Exception):
                             await coin_store.new_block(
                                 block.height,
-                                uint64(block.foliage_transaction_block.timestamp),
+                                block.foliage_transaction_block.timestamp,
                                 block.get_included_reward_coins(),
                                 tx_additions,
                                 tx_removals,
@@ -185,7 +185,7 @@ async def test_set_spent(db_version: int, bt: BlockTools) -> None:
                         assert block.foliage_transaction_block is not None
                         await coin_store.new_block(
                             block.height,
-                            uint64(block.foliage_transaction_block.timestamp),
+                            block.foliage_transaction_block.timestamp,
                             block.get_included_reward_coins(),
                             additions,
                             removals,
@@ -233,7 +233,7 @@ async def test_num_unspent(bt: BlockTools, db_version: int) -> None:
                 additions: List[Coin] = []
                 await coin_store.new_block(
                     block.height,
-                    uint64(block.foliage_transaction_block.timestamp),
+                    block.foliage_transaction_block.timestamp,
                     block.get_included_reward_coins(),
                     additions,
                     removals,
@@ -265,7 +265,7 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
                 assert block.foliage_transaction_block is not None
                 await coin_store.new_block(
                     block.height,
-                    uint64(block.foliage_transaction_block.timestamp),
+                    block.foliage_transaction_block.timestamp,
                     block.get_included_reward_coins(),
                     additions,
                     removals,
@@ -667,7 +667,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
         await coin_store._add_coin_records(
             [
                 CoinRecord(
-                    coin=Coin(std_hash(b"extra coin"), ph, 0),
+                    coin=Coin(std_hash(b"extra coin"), ph, uint64(0)),
                     # Insert a coin record in the middle between heights 10 and 12.
                     # Or after all of the other coins if testing the batch limit.
                     confirmed_block_index=uint32(11 if cut_off_middle else 50),
@@ -694,9 +694,9 @@ async def test_unsupported_version() -> None:
 
 TEST_COIN_ID = b"c" * 32
 TEST_PUZZLEHASH = b"p" * 32
-TEST_AMOUNT = 1337
+TEST_AMOUNT = uint64(1337)
 TEST_PARENT_ID = Coin(b"a" * 32, TEST_PUZZLEHASH, TEST_AMOUNT).name()
-TEST_PARENT_DIFFERENT_AMOUNT = 5
+TEST_PARENT_DIFFERENT_AMOUNT = uint64(5)
 TEST_PARENT_ID_DIFFERENT_AMOUNT = Coin(b"a" * 32, TEST_PUZZLEHASH, TEST_PARENT_DIFFERENT_AMOUNT).name()
 TEST_PARENT_PARENT_ID = b"f" * 32
 
