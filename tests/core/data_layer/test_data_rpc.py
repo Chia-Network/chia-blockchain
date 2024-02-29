@@ -1586,7 +1586,7 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     assert maker_response["success"] is True
 
     taker_request = {
-        "offer": reference.make_offer_response,
+        "offer": maker_response["offer"],
         "fee": 0,
     }
     taker_response = await offer_setup.taker.api.take_offer(request=taker_request)
@@ -1778,7 +1778,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     assert maker_response["success"] is True
 
     cancel_request = {
-        "trade_id": reference.make_offer_response["trade_id"],
+        "trade_id": maker_response["offer"]["trade_id"],
         "secure": True,
         "fee": None,
     }
@@ -1787,7 +1787,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     for _ in range(10):
         if not (
             await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
-                offer=TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"])),
+                offer=TradingOffer.from_bytes(hexstr_to_bytes(maker_response["offer"]["offer"])),
             )
         )[1]:
             break
@@ -1797,7 +1797,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
         assert False, "offer was not cancelled"
 
     taker_request = {
-        "offer": reference.make_offer_response,
+        "offer": maker_response["offer"],
         "fee": 0,
     }
 
@@ -1858,14 +1858,14 @@ async def test_make_and_cancel_offer_then_update(
     assert maker_response["success"] is True
 
     cancel_request = {
-        "trade_id": reference.make_offer_response["trade_id"],
+        "trade_id": maker_response["offer"]["trade_id"],
         "secure": secure,
         "fee": None,
     }
     await offer_setup.maker.api.cancel_offer(request=cancel_request)
 
     if secure:
-        offer_to_cancel = TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"]))
+        offer_to_cancel = TradingOffer.from_bytes(hexstr_to_bytes(maker_response["offer"]["offer"]))
 
         await time_out_assert(
             timeout=20,
@@ -1946,7 +1946,7 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
     assert maker_response["success"] is True
 
     cancel_request = {
-        "trade_id": reference.make_offer_response["trade_id"],
+        "trade_id": maker_response["offer"]["trade_id"],
         "secure": False,
         "fee": None,
     }
