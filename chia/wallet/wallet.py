@@ -118,7 +118,7 @@ class Wallet:
                         f"TransactionRecord SpendBundle ID: {record.spend_bundle.name()} not in mempool. "
                         f"(peer, included, error) list: {record.sent_to}"
                     )
-                continue
+                    continue
             our_spend = False
             for coin in record.removals:
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
