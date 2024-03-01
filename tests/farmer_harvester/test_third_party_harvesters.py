@@ -129,6 +129,7 @@ async def test_harvester_receive_source_signing_data(
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
     def validate_harvester_request_signatures(request: harvester_protocol.RequestSignatures) -> None:
+        nonlocal farmer
         nonlocal full_node_2
         nonlocal farmer_reward_address
         nonlocal validated_foliage_data
@@ -163,6 +164,10 @@ async def test_harvester_receive_source_signing_data(
                     or data.farmer_reward_puzzle_hash
                     == bytes32(full_node_2.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH)
                 )
+                # RC block unfinished must always be present when foliage block data is present
+                assert request.rc_block_unfinished
+                assert request.rc_block_unfinished.get_hash() == data.unfinished_reward_block_hash
+
                 if data.farmer_reward_puzzle_hash == farmer_reward_address:
                     validated_foliage_data = True
             elif src.kind == uint8(SigningDataKind.FOLIAGE_TRANSACTION_BLOCK):
