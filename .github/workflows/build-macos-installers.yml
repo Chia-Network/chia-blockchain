@@ -450,6 +450,10 @@ jobs:
         ls -l "${{ steps.download.outputs.download-path }}"
         hdiutil attach "${{ steps.download.outputs.download-path }}"/chia-*.dmg
 
+    - name: List .dmg contents
+      run: |
+        find "/Volumes/Chia "*
+
     - name: Run chia dev installers test
       run: |
         "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"
