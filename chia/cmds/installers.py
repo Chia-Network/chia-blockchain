@@ -52,7 +52,7 @@ def test_command(expected_chia_version_str: str) -> None:
     expected_chia_version = packaging.version.Version(expected_chia_version_str)
 
     chia_version_process = subprocess.run(
-        ["chia", "version"],
+        [executable_for_service("chia"), "version"],
         capture_output=True,
         encoding="utf-8",
     )
@@ -64,7 +64,7 @@ def test_command(expected_chia_version_str: str) -> None:
     assert chia_version == expected_chia_version, f"{chia_version} != {expected_chia_version}"
 
     plotter_version_process = subprocess.run(
-        ["chia", "plotters", "version"],
+        [executable_for_service("chia"), "plotters", "version"],
         capture_output=True,
         encoding="utf-8",
     )
