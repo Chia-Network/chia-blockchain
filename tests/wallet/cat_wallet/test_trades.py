@@ -525,6 +525,7 @@ async def test_cat_trades(
                         "<=#max_send_amount": -2,
                         # Unconfirmed balance doesn't change because receiveing 1 XCH and spending 1 in fee
                         "unconfirmed_wallet_balance": 0,
+                        ">=#pending_change": 1,  # any amount increase
                     },
                     "new cat": {
                         "unconfirmed_wallet_balance": -2,
@@ -550,6 +551,7 @@ async def test_cat_trades(
                         ">#max_send_amount": 0,
                         # Confirmed balance doesn't change because receiveing 1 XCH and spending 1 in fee
                         "confirmed_wallet_balance": 0,
+                        "<=#pending_change": 1,  # any amount decrease
                     },
                     "new cat": {
                         "confirmed_wallet_balance": -2,
@@ -713,6 +715,7 @@ async def test_cat_trades(
                         "<=#spendable_balance": -4,
                         "<=#max_send_amount": -4,
                         "pending_coin_removal_count": 1,
+                        ">=#pending_change": 1,  # any amount increase
                     },
                     "cat": {
                         "init": True,
@@ -740,6 +743,7 @@ async def test_cat_trades(
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
                         "pending_coin_removal_count": -1,
+                        "<=#pending_change": 1,  # any amount decrease
                     },
                     "cat": {
                         "unspent_coin_count": 1,
@@ -1278,6 +1282,7 @@ async def test_cat_trades(
                         "<=#spendable_balance": -10,
                         "<=#max_send_amount": -10,
                         "pending_coin_removal_count": 1,
+                        ">=#pending_change": 1,  # any amount increase
                     },
                     "cat": {
                         "unconfirmed_wallet_balance": 11,
@@ -1301,6 +1306,7 @@ async def test_cat_trades(
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
                         "pending_coin_removal_count": -1,
+                        "<=#pending_change": 1,  # any amount increase
                     },
                     "cat": {
                         "confirmed_wallet_balance": 11,
