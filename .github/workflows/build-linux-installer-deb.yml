@@ -411,6 +411,10 @@ jobs:
         ls -l "${{ steps.download.outputs.download-path }}"
         apt-get install --yes "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
 
+    - name: List /opt/chia contents
+      run: |
+        find /opt/chia
+
     - name: Run chia dev installers test
       run: |
         chia dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"
