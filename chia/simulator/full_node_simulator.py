@@ -691,7 +691,8 @@ class FullNodeSimulator(FullNodeAPI):
 
     async def wallet_is_synced(self, wallet_node: WalletNode) -> bool:
         if not self.self_is_synced():
-            return False
+            # Depending on races, may not be covered every time
+            return False  # pragma: no cover
         if not await wallet_node.wallet_state_manager.synced():
             return False
         wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
@@ -731,4 +732,5 @@ class FullNodeSimulator(FullNodeAPI):
             for backoff_time in backoff_times():
                 if await self.self_is_synced():
                     break
-                await asyncio.sleep(backoff_time)
+                # Depending on races, may not be covered every time
+                await asyncio.sleep(backoff_time)  # pragma: no cover
