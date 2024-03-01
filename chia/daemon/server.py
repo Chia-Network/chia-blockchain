@@ -81,8 +81,14 @@ class PlotEvent(str, Enum):
 
 # determine if application is a script file or frozen exe
 if getattr(sys, "frozen", False):
+    chia: str
+    if sys.platform == "darwin":
+        chia = "Chia"
+    else:
+        chia = "chia"
+
     name_map = {
-        "chia": "chia",
+        "chia": chia,
         "chia_data_layer": "start_data_layer",
         "chia_data_layer_http": "start_data_layer_http",
         "chia_wallet": "start_wallet",
@@ -102,10 +108,12 @@ if getattr(sys, "frozen", False):
         if sys.platform == "win32" or sys.platform == "cygwin":
             executable = name_map[service_name]
             path = f"{application_path}/{executable}.exe"
-            return path
+        elif sys.platform == "darwin" and service_name == "chia":
+            path = f"{application_path}/../../../MacOS/{name_map[service_name]}"
         else:
             path = f"{application_path}/{name_map[service_name]}"
-            return path
+
+        return path
 
 else:
     application_path = os.path.dirname(__file__)
