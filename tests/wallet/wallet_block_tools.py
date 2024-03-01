@@ -55,7 +55,6 @@ class WalletBlockTools(BlockTools):
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
         transaction_data: Optional[SpendBundle] = None,
-        current_time: bool = False,
         genesis_timestamp: Optional[uint64] = None,
         **kwargs: Any,  # We're overriding so there's many arguments no longer used.
     ) -> List[FullBlock]:
@@ -78,11 +77,8 @@ class WalletBlockTools(BlockTools):
         if len(block_list_input) > 0:
             latest_block: Optional[BlockRecord] = blocks[block_list_input[-1].header_hash]
             assert latest_block is not None
-            curr = latest_block
-            while not curr.is_transaction_block:
-                curr = blocks[curr.prev_hash]
-            assert curr.timestamp is not None
-            last_timestamp = curr.timestamp
+            assert latest_block.timestamp is not None
+            last_timestamp = latest_block.timestamp
         else:
             latest_block = None
             last_timestamp = uint64((int(time.time()) if genesis_timestamp is None else genesis_timestamp) - 20)
@@ -113,7 +109,6 @@ class WalletBlockTools(BlockTools):
                 block_generator,
                 additions,
                 removals,
-                current_time=current_time,
             )
 
             transaction_data = None
@@ -205,12 +200,8 @@ def get_full_block_and_block_record(
     block_generator: Optional[BlockGenerator],
     additions: List[Coin],
     removals: List[Coin],
-    current_time: bool = False,
 ) -> Tuple[FullBlock, BlockRecord, float]:
-    if current_time is True:
-        timestamp = max(int(time.time()), last_timestamp + 20)
-    else:
-        timestamp = last_timestamp + 20
+    timestamp = last_timestamp + 20
     if prev_block is None:
         height: uint32 = uint32(0)
         prev_block_hash: bytes32 = constants.GENESIS_CHALLENGE

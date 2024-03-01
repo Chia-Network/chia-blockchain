@@ -12,14 +12,15 @@ from chia.full_node.full_node import FullNode
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.types.weight_proof import SubSlotData
-from chia.util.ints import uint8, uint32, uint64, uint128
+
+# from chia.types.weight_proof import SubSlotData
+from chia.util.ints import uint32, uint64, uint128  # , uint8
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
 from tests.util.setup_nodes import setup_simulators_and_wallets_service
-from tests.wallet.wallet_block_tools import DEFAULT_VDF_INFO, DEFAULT_VDF_PROOF, WalletBlockTools
+from tests.wallet.wallet_block_tools import WalletBlockTools  # , DEFAULT_VDF_INFO, DEFAULT_VDF_PROOF
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -42,22 +43,23 @@ async def ignore_block_validation(request: pytest.FixtureRequest, monkeypatch: p
     async def validate_block_body(*args: Any, **kwargs: Any) -> Tuple[Literal[None], NPCResult]:
         return None, args[7]
 
-    async def fetch_and_update_weight_proof(*args: Any, **kwargs: Any) -> int:
-        return args[2].height  # type: ignore[no-any-return]
+    # async def fetch_and_update_weight_proof(*args: Any, **kwargs: Any) -> int:
+    #     return args[2].height  # type: ignore[no-any-return]
 
-    def async_lambda(return_value: Any) -> Any:
-        async def the_lambda(*args: Any, **kwargs: Any) -> Any:
-            return return_value
-
-        return the_lambda
+    # def async_lambda(return_value: Any) -> Any:
+    #     async def the_lambda(*args: Any, **kwargs: Any) -> Any:
+    #         return return_value
+    #
+    #     return the_lambda
 
     def create_wrapper(original_create: Any) -> Any:
         async def new_create(*args: Any, **kwargs: Any) -> Any:
             # Modify the config argument directly since it's a mutable dictionary
             if "config" in kwargs:
                 kwargs["config"]["single_threaded"] = True
-            else:
-                args[0]["single_threaded"] = True  # Assuming config is the first positional argument
+            else:  # pragma: no cover
+                # Nowhere covers this line right now but its entirely possible
+                args[0]["single_threaded"] = True
 
             # Call the original function with modified arguments
             full_node = await original_create(*args, **kwargs)
@@ -65,22 +67,22 @@ async def ignore_block_validation(request: pytest.FixtureRequest, monkeypatch: p
 
         return new_create
 
-    def handle_block_vdfs(*args: Any) -> SubSlotData:
-        return SubSlotData(
-            None,
-            DEFAULT_VDF_PROOF,
-            DEFAULT_VDF_PROOF,
-            DEFAULT_VDF_PROOF,
-            DEFAULT_VDF_INFO,
-            uint8(0),
-            None,
-            None,
-            None,
-            None,
-            DEFAULT_VDF_INFO,
-            DEFAULT_VDF_INFO,
-            uint128(1),
-        )
+    # def handle_block_vdfs(*args: Any) -> SubSlotData:
+    #     return SubSlotData(
+    #         None,
+    #         DEFAULT_VDF_PROOF,
+    #         DEFAULT_VDF_PROOF,
+    #         DEFAULT_VDF_PROOF,
+    #         DEFAULT_VDF_INFO,
+    #         uint8(0),
+    #         None,
+    #         None,
+    #         None,
+    #         None,
+    #         DEFAULT_VDF_INFO,
+    #         DEFAULT_VDF_INFO,
+    #         uint128(1),
+    #     )
 
     monkeypatch.setattr("chia.simulator.block_tools.BlockTools", WalletBlockTools)
     monkeypatch.setattr(FullNode, "create", create_wrapper(FullNode.create))
@@ -103,11 +105,11 @@ async def ignore_block_validation(request: pytest.FixtureRequest, monkeypatch: p
     monkeypatch.setattr("chia.consensus.make_sub_epoch_summary.calculate_ip_iters", lambda *_: uint64(0))
     monkeypatch.setattr("chia.consensus.difficulty_adjustment._get_next_sub_slot_iters", lambda *_: uint64(1))
     monkeypatch.setattr("chia.consensus.difficulty_adjustment._get_next_difficulty", lambda *_: uint64(1))
-    monkeypatch.setattr("chia.full_node.weight_proof.WeightProofHandler.handle_block_vdfs", handle_block_vdfs)
-    monkeypatch.setattr("chia.full_node.weight_proof.WeightProofHandler.get_proof_of_weight", async_lambda(None))
-    monkeypatch.setattr(
-        "chia.wallet.wallet_node.WalletNode.fetch_and_update_weight_proof", fetch_and_update_weight_proof
-    )
+    # monkeypatch.setattr("chia.full_node.weight_proof.WeightProofHandler.handle_block_vdfs", handle_block_vdfs)
+    # monkeypatch.setattr("chia.full_node.weight_proof.WeightProofHandler.get_proof_of_weight", async_lambda(None))
+    # monkeypatch.setattr(
+    #     "chia.wallet.wallet_node.WalletNode.fetch_and_update_weight_proof", fetch_and_update_weight_proof
+    # )
     monkeypatch.setattr("chia.full_node.full_node_store.calculate_sp_interval_iters", lambda *_: uint64(1))
     monkeypatch.setattr("chia.consensus.pot_iterations.calculate_sp_interval_iters", lambda *_: uint64(1))
     monkeypatch.setattr("chia.consensus.pot_iterations.calculate_ip_iters", lambda *_: uint64(1))
