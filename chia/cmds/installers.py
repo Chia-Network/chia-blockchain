@@ -9,6 +9,7 @@ import click
 import packaging.version
 
 from chia.daemon.server import executable_for_service
+from chia.util.timing import adjusted_timeout
 
 
 def check_plotter(plotter: List[str], expected_output: bytes, specify_tmp: bool = True) -> None:
@@ -49,12 +50,16 @@ def installers_group() -> None:
 @installers_group.command(name="test")
 @click.option("--expected-chia-version", "expected_chia_version_str", required=True)
 def test_command(expected_chia_version_str: str) -> None:
+    print("testing installed executables")
     expected_chia_version = packaging.version.Version(expected_chia_version_str)
 
+    args = [executable_for_service("chia"), "version"]
+    print(f"launching: {args}")
     chia_version_process = subprocess.run(
-        [executable_for_service("chia"), "version"],
+        args,
         capture_output=True,
         encoding="utf-8",
+        timeout=adjusted_timeout(30),
     )
     assert chia_version_process.returncode == 0
     assert chia_version_process.stderr == ""
@@ -63,10 +68,13 @@ def test_command(expected_chia_version_str: str) -> None:
     print(chia_version)
     assert chia_version == expected_chia_version, f"{chia_version} != {expected_chia_version}"
 
+    args = [executable_for_service("chia"), "plotters", "version"]
+    print(f"launching: {args}")
     plotter_version_process = subprocess.run(
-        [executable_for_service("chia"), "plotters", "version"],
+        args,
         capture_output=True,
         encoding="utf-8",
+        timeout=adjusted_timeout(30),
     )
     assert plotter_version_process.returncode == 0
     assert plotter_version_process.stderr == ""
