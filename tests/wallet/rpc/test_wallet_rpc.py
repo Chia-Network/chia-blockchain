@@ -230,14 +230,15 @@ def assert_tx_amounts(
     assert tx.fee_amount == amount_fee
     assert tx.amount == sum(output["amount"] for output in outputs)
     expected_additions = len(outputs) + 1 if change_expected else len(outputs)
-    if is_cat and amount_fee:
-        expected_additions += 1
     assert len(tx.additions) == expected_additions
     addition_amounts = [addition.amount for addition in tx.additions]
     removal_amounts = [removal.amount for removal in tx.removals]
     for output in outputs:
         assert output["amount"] in addition_amounts
-    assert (sum(removal_amounts) - sum(addition_amounts)) == amount_fee
+    if is_cat:
+        assert (sum(removal_amounts) - sum(addition_amounts)) == 0
+    else:
+        assert (sum(removal_amounts) - sum(addition_amounts)) == amount_fee
 
 
 async def assert_push_tx_error(node_rpc: FullNodeRpcClient, tx: TransactionRecord):
