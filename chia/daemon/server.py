@@ -109,7 +109,7 @@ if getattr(sys, "frozen", False):
             executable = name_map[service_name]
             path = f"{application_path}/{executable}.exe"
         elif sys.platform == "darwin" and service_name == "chia":
-            path = f"{application_path}/../../../MacOS/{name_map[service_name]}"
+            path = os.fspath(Path(application_path, "..", "..", "..", "MacOS", name_map[service_name]).resolve())
         else:
             path = f"{application_path}/{name_map[service_name]}"
 
