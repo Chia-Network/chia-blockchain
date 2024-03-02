@@ -12,6 +12,7 @@ from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator import simulator_protocol
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.aliases import SimulatorFullNodeService, WalletService
@@ -197,6 +198,327 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
     assert len(overflow_coin_response.coin_ids) == 0
 
 
+@pytest.mark.anyio
+async def test_request_coin_state(one_node: OneNode, self_hostname: str) -> None:
+    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
+
+    # Farm block
+    await simulator.farm_blocks_to_puzzlehash(3)
+
+    first_header_hash = simulator.full_node.blockchain.height_to_hash(uint32(0))
+    assert first_header_hash is not None
+
+    # Add coin records
+    coin_records = [
+        CoinRecord(
+            coin=Coin(bytes32(b"\0" * 32), bytes32(b"\0" * 32), uint64(i)),
+            confirmed_block_index=uint32(1),
+            spent_block_index=uint32(1 if i % 2 == 0 else 0),
+            coinbase=False,
+            timestamp=uint64(0),
+        )
+        for i in range(50)
+    ]
+    ignored_coin = CoinRecord(
+        coin=Coin(bytes32(b"\1" * 32), bytes32(b"\1" * 32), uint64(1)),
+        confirmed_block_index=uint32(1),
+        spent_block_index=uint32(2),
+        coinbase=False,
+        timestamp=uint64(1),
+    )
+    await simulator.full_node.coin_store._add_coin_records(coin_records + [ignored_coin])
+
+    # Request no coin states
+    resp = await simulator.request_coin_state(
+        wallet_protocol.RequestCoinState([], uint32(0), first_header_hash, False), peer
+    )
+    assert resp is not None
+
+    response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
+
+    assert len(response.coin_ids) == 0
+    assert len(response.coin_states) == 0
+
+    # Request coin state
+    coin_ids = [cr.coin.name() for cr in coin_records]
+
+    resp = await simulator.request_coin_state(
+        wallet_protocol.RequestCoinState(coin_ids, uint32(0), first_header_hash, False), peer
+    )
+    assert resp is not None
+
+    response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
+
+    assert response.coin_ids == coin_ids
+    assert set(response.coin_states) == {cr.coin_state for cr in coin_records}
+
+
+@pytest.mark.anyio
+async def test_request_coin_state_reorg(one_node: OneNode, self_hostname: str) -> None:
+    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
+
+    # Farm block
+    await simulator.farm_blocks_to_puzzlehash(8)
+
+    header_hash = simulator.full_node.blockchain.height_to_hash(uint32(5))
+    assert header_hash is not None
+
+    # Reorg
+    await simulator.reorg_from_index_to_new_index(
+        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\0" * 32), bytes32(b"\0" * 32))
+    )
+
+    # Request coin state, should reject due to reorg
+    resp = await simulator.request_coin_state(wallet_protocol.RequestCoinState([], uint32(5), header_hash, False), peer)
+    assert resp is not None
+
+    assert wallet_protocol.RejectCoinState.from_bytes(resp.data) == wallet_protocol.RejectCoinState()
+
+
+@pytest.mark.anyio
+async def test_request_coin_state_limit(one_node: OneNode, self_hostname: str) -> None:
+    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
+
+    # Farm blocks 0-11 and make sure the last one is farmed
+    await simulator.farm_blocks_to_puzzlehash(12)
+
+    h0 = simulator.full_node.blockchain.height_to_hash(uint32(0))
+    assert h0 is not None
+
+    h1 = simulator.full_node.blockchain.height_to_hash(uint32(1))
+    assert h1 is not None
+
+    # Add more than the max response coin records
+    coin_records: OrderedDict[bytes32, CoinRecord] = OrderedDict()
+    for height in range(1, 12):
+        for i in range(10000):
+            coin_record = CoinRecord(
+                coin=Coin(std_hash(i.to_bytes(4, "big")), std_hash(height.to_bytes(4, "big")), uint64(i)),
+                confirmed_block_index=uint32(height),
+                spent_block_index=uint32(0),
+                coinbase=False,
+                timestamp=uint64(472618),
+            )
+            coin_records[coin_record.coin.name()] = coin_record
+
+    await simulator.full_node.coin_store._add_coin_records(list(coin_records.values()))
+
+    # Fetch the coin records using the wallet protocol,
+    # only after height 10000, so that the limit of 100000 isn't exceeded
+    resp = await simulator.request_coin_state(
+        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(1), h1, False),
+        peer,
+    )
+    assert resp is not None
+
+    response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
+
+    assert set(response.coin_ids) == set(coin_records.keys())
+    assert len(response.coin_states) == len(coin_records) - 10000
+
+    for coin_state in response.coin_states:
+        coin_record = coin_records[coin_state.coin.name()]
+        assert coin_record.coin_state == coin_state
+        assert coin_record.confirmed_block_index > 1
+
+    # The expected behavior when the limit is exceeded, is to skip the rest
+    # The order is not guaranteed, so it can't be relied upon here
+    # Just request the remaining coin ids in subsequent request(s)
+    resp = await simulator.request_coin_state(
+        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(0), h0, False),
+        peer,
+    )
+    assert resp is not None
+
+    response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
+
+    assert set(response.coin_ids) == set(coin_records.keys())
+    assert len(response.coin_states) == len(coin_records) - 10000
+
+    for coin_state in response.coin_states:
+        coin_record = coin_records[coin_state.coin.name()]
+        assert coin_record.coin_state == coin_state
+
+
+@pytest.mark.anyio
+async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> None:
+    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
+
+    # Farm block
+    await simulator.farm_blocks_to_puzzlehash(3)
+
+    first_header_hash = simulator.full_node.blockchain.height_to_hash(uint32(0))
+    assert first_header_hash is not None
+
+    peak_height = simulator.full_node.blockchain.get_peak_height()
+    assert peak_height is not None
+
+    peak_header_hash = simulator.full_node.blockchain.height_to_hash(peak_height)
+    assert peak_header_hash is not None
+
+    # Add coin records
+    coin_records: List[CoinRecord] = []
+    puzzle_hashes: List[bytes32] = []
+
+    for ph_i in range(10):
+        puzzle_hash = bytes32(ph_i.to_bytes(1, "big") * 32)
+        puzzle_hashes.append(puzzle_hash)
+
+        for i in range(5):
+            coin_records.append(
+                CoinRecord(
+                    coin=Coin(bytes32(b"\0" * 32), puzzle_hash, uint64(i)),
+                    confirmed_block_index=uint32(1),
+                    spent_block_index=uint32(1 if i % 2 == 0 else 0),
+                    coinbase=False,
+                    timestamp=uint64(0),
+                )
+            )
+
+    ignored_coin = CoinRecord(
+        coin=Coin(bytes32(b"\1" * 32), bytes32(b"\1" * 31 + b"\0"), uint64(1)),
+        confirmed_block_index=uint32(1),
+        spent_block_index=uint32(2),
+        coinbase=False,
+        timestamp=uint64(1),
+    )
+
+    await simulator.full_node.coin_store._add_coin_records(coin_records + [ignored_coin])
+
+    # We already test permutations of CoinStateFilters in the CoinStore tests
+    # So it's redundant to do so here
+    filters = wallet_protocol.CoinStateFilters(True, True, True, uint64(0))
+
+    # Request no coin states
+    resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState([], uint32(0), first_header_hash, filters, False), peer
+    )
+    assert resp is not None
+
+    response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
+
+    # The peak height and header hash is returned when you are caught up to the peak
+    assert response == wallet_protocol.RespondPuzzleState([], peak_height, peak_header_hash, True, [])
+
+    # Request coin state
+    resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState(puzzle_hashes, uint32(0), first_header_hash, filters, False), peer
+    )
+    assert resp is not None
+
+    response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
+
+    assert response.puzzle_hashes == puzzle_hashes
+    assert set(response.coin_states) == {cr.coin_state for cr in coin_records}
+
+    assert response.height == peak_height
+    assert response.header_hash == peak_header_hash
+
+    assert response.is_finished
+
+
+@pytest.mark.anyio
+async def test_request_puzzle_state_reorg(one_node: OneNode, self_hostname: str) -> None:
+    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
+
+    # Farm block
+    await simulator.farm_blocks_to_puzzlehash(8)
+
+    header_hash = simulator.full_node.blockchain.height_to_hash(uint32(5))
+    assert header_hash is not None
+
+    # Reorg
+    await simulator.reorg_from_index_to_new_index(
+        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\0" * 32), bytes32(b"\0" * 32))
+    )
+
+    # Request coin state, should reject due to reorg
+    resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState(
+            [], uint32(5), header_hash, wallet_protocol.CoinStateFilters(True, True, True, uint64(0)), False
+        ),
+        peer,
+    )
+    assert resp is not None
+
+    assert wallet_protocol.RejectPuzzleState.from_bytes(resp.data) == wallet_protocol.RejectPuzzleState()
+
+
+@pytest.mark.anyio
+async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str) -> None:
+    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
+
+    # Farm blocks 0-11 and make sure the last one is farmed
+    await simulator.farm_blocks_to_puzzlehash(12)
+
+    h0 = simulator.full_node.blockchain.height_to_hash(uint32(0))
+    assert h0 is not None
+
+    h1 = simulator.full_node.blockchain.height_to_hash(uint32(1))
+    assert h1 is not None
+
+    # Add more than the max response coin records
+    coin_records: OrderedDict[bytes32, CoinRecord] = OrderedDict()
+    ph = bytes32(b"\1" * 32)
+
+    for height in range(1, 12):
+        for i in range(10000):
+            coin_record = CoinRecord(
+                coin=Coin(std_hash(i.to_bytes(4, "big")), ph, uint64(height)),
+                confirmed_block_index=uint32(height),
+                spent_block_index=uint32(0),
+                coinbase=False,
+                timestamp=uint64(472618),
+            )
+            coin_records[coin_record.coin.name()] = coin_record
+
+    await simulator.full_node.coin_store._add_coin_records(list(coin_records.values()))
+
+    # Fetch the coin records using the wallet protocol,
+    # only after height 10000, so that the limit of 100000 isn't exceeded
+    resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState(
+            [ph], uint32(1), h1, wallet_protocol.CoinStateFilters(True, True, True, uint64(0)), False
+        ),
+        peer,
+    )
+    assert resp is not None
+
+    response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
+
+    assert response.puzzle_hashes == [ph]
+    assert len(response.coin_states) == len(coin_records) - 10000
+
+    for coin_state in response.coin_states:
+        coin_record = coin_records[coin_state.coin.name()]
+        assert coin_record.coin_state == coin_state
+        assert coin_record.confirmed_block_index > 1
+
+    # The expected behavior when the limit is exceeded, is to skip the rest
+    resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState(
+            [ph],
+            uint32(0),
+            h0,
+            wallet_protocol.CoinStateFilters(True, True, True, uint64(0)),
+            False,
+        ),
+        peer,
+    )
+    assert resp is not None
+
+    response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
+
+    assert response.puzzle_hashes == [ph]
+    assert len(response.coin_states) == len(coin_records) - 10000
+
+    for coin_state in response.coin_states:
+        coin_record = coin_records[coin_state.coin.name()]
+        assert coin_record.coin_state == coin_state
+        # Unlike requesting coin state by ids, the order is enforced here so block 11 should be excluded
+        assert coin_record.confirmed_block_index <= 10
+
+
 @dataclass(frozen=True)
 class PuzzleStateData:
     coin_states: List[CoinState]
@@ -211,10 +533,9 @@ async def sync_puzzle_hashes(
     *,
     initial_previous_height: uint32,
     initial_header_hash: bytes32,
-    max_height: Optional[uint32],
     filters: wallet_protocol.CoinStateFilters,
     subscribe_when_finished: bool = False,
-    max_hashes_in_request: int = 100000,
+    max_hashes_in_request: int = 15000,
     simulator: FullNodeSimulator,
     peer: WSChiaConnection,
 ) -> AsyncGenerator[PuzzleStateData, None]:
@@ -231,7 +552,6 @@ async def sync_puzzle_hashes(
                     remaining[:max_hashes_in_request],
                     previous_height,
                     previous_header_hash,
-                    max_height,
                     filters,
                     subscribe_when_finished,
                 ),
@@ -240,7 +560,8 @@ async def sync_puzzle_hashes(
             assert resp is not None
 
             if ProtocolMessageTypes(resp.type).name == "reject_puzzle_state":
-                wallet_protocol.RejectPuzzleState.from_bytes(resp.data)  # Validate response
+                # Validate response
+                wallet_protocol.RejectPuzzleState.from_bytes(resp.data)
 
                 yield PuzzleStateData(
                     coin_states=[],
@@ -278,13 +599,9 @@ async def sync_puzzle_hashes(
                     is_finished = True
 
 
-@pytest.fixture(scope="function", params=[(0, 0), (1000, 2), (11000, 5)])
-async def coin_record_data(
-    one_node: OneNode,
-    self_hostname: str,
-    request: pytest.FixtureRequest,
-) -> Tuple[FullNodeSimulator, WSChiaConnection, List[bytes32], Dict[bytes32, CoinRecord]]:
-    # Setup simulator
+@pytest.mark.anyio
+@pytest.mark.parametrize("block_count,coins_per_block", [(0, 0), (5, 100), (3000, 3), (25000, 1)])
+async def test_sync_puzzle_state(one_node: OneNode, self_hostname: str, block_count: int, coins_per_block: int) -> None:
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
 
     # Generate coin records
@@ -294,19 +611,18 @@ async def coin_record_data(
 
     rng = Random(0)
 
-    for i in range(request.param[0]):
-        # Skip block 0 because it's skipped by `RequestPuzzleState`.
-        i += 1
-
+    # Skip block 0 because it's skipped by `RequestPuzzleState`.
+    for i in range(1, block_count + 1):
         puzzle_hash = std_hash(i.to_bytes(4, "big"))
         puzzle_hashes.append(puzzle_hash)
 
         base_amount = rng.randint(0, 1000000000)
 
-        for added_amount in range(request.param[1]):
+        for added_amount in range(coins_per_block):
             coin_ph = puzzle_hash
 
-            if rng.choice([True, False]):
+            # Weight toward normal puzzle hash.
+            if rng.choice([True, False, False, False, False]):
                 coin_ph = std_hash(coin_ph)
 
             coin = Coin(bytes32(b"\0" * 32), coin_ph, uint64(base_amount + added_amount))
@@ -325,22 +641,13 @@ async def coin_record_data(
     await simulator.full_node.coin_store._add_coin_records(list(coin_records.values()))
     await simulator.full_node.hint_store.add_hints(hints)
 
-    return simulator, peer, puzzle_hashes, coin_records
-
-
-@pytest.mark.anyio
-async def test_sync_wallet(
-    coin_record_data: Tuple[FullNodeSimulator, WSChiaConnection, List[bytes32], Dict[bytes32, CoinRecord]],
-) -> None:
-    simulator, peer, puzzle_hashes, coin_records = coin_record_data
-
     # Farm block
     await simulator.farm_blocks_to_puzzlehash(1)
 
     first_header_hash = simulator.full_node.blockchain.height_to_hash(uint32(0))
     assert first_header_hash is not None
 
-    async def run_test(include_spent: bool, include_unspent: bool, include_hinted: bool) -> None:
+    async def run_test(include_spent: bool, include_unspent: bool, include_hinted: bool, min_amount: uint64) -> None:
         # Calculate expected coin records based on filters
         expected_coin_records: Dict[bytes32, CoinRecord] = dict()
 
@@ -351,6 +658,8 @@ async def test_sync_wallet(
                 continue
             if not include_hinted and coin_record.coin.puzzle_hash not in puzzle_hashes:
                 continue
+            if coin_record.coin.amount < min_amount:
+                continue
 
             expected_coin_records[coin_id] = coin_record
 
@@ -360,10 +669,9 @@ async def test_sync_wallet(
 
         async for batch in sync_puzzle_hashes(
             puzzle_hashes,
-            max_height=None,
             initial_previous_height=uint32(0),
             initial_header_hash=first_header_hash,
-            filters=wallet_protocol.CoinStateFilters(include_spent, include_unspent, include_hinted),
+            filters=wallet_protocol.CoinStateFilters(include_spent, include_unspent, include_hinted, min_amount),
             simulator=simulator,
             peer=peer,
         ):
@@ -373,7 +681,7 @@ async def test_sync_wallet(
                 coin_id = coin_state.coin.name()
                 coin_ids.add(coin_id)
 
-                coin_record = coin_records[coin_id]
+                coin_record = expected_coin_records[coin_id]
                 assert coin_record.coin_state == coin_state
 
                 height = max(coin_state.created_height or 0, coin_state.spent_height or 0)
@@ -387,60 +695,5 @@ async def test_sync_wallet(
     for include_spent in [True, False]:
         for include_unspent in [True, False]:
             for include_hinted in [True, False]:
-                await run_test(include_spent, include_unspent, include_hinted)
-
-
-@pytest.mark.anyio
-async def test_coin_state(one_node: OneNode, self_hostname: str) -> None:
-    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
-
-    # Farm blocks 0-11 and make sure the last one is farmed
-    await simulator.farm_blocks_to_puzzlehash(12)
-
-    h0 = simulator.full_node.blockchain.height_to_hash(uint32(0))
-    assert h0 is not None
-
-    h1 = simulator.full_node.blockchain.height_to_hash(uint32(1))
-    assert h1 is not None
-
-    # Add more than the max response coin records
-    coin_records: OrderedDict[bytes32, CoinRecord] = OrderedDict()
-    for height in range(1, 12):
-        for i in range(10000):
-            coin_record = CoinRecord(
-                coin=Coin(std_hash(i.to_bytes(4, "big")), std_hash(height.to_bytes(4, "big")), uint64(i)),
-                confirmed_block_index=uint32(height),
-                spent_block_index=uint32(0),
-                coinbase=False,
-                timestamp=uint64(472618),
-            )
-            coin_records[coin_record.coin.name()] = coin_record
-
-    await simulator.full_node.coin_store._add_coin_records(list(coin_records.values()))
-
-    # Fetch the coin records using the wallet protocol,
-    # only after height 10000, so that the limit of 100000 isn't exceeded
-    resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(1), h1, None, subscribe=False),
-        peer,
-    )
-    assert resp is not None
-
-    response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
-
-    # We did still search for all of the coin ids.
-    assert set(response.coin_ids) == set(coin_records.keys())
-    assert len(response.coin_states) == len(coin_records) - 10000
-
-    for coin_state in response.coin_states:
-        coin_record = coin_records[coin_state.coin.name()]
-        assert coin_record.coin_state == coin_state
-
-    # The expected behavior when the limit is exceeded, is to skip the rest
-    resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(0), h0, None, subscribe=False),
-        peer,
-    )
-    assert resp is not None
-
-    response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
+                for min_amount in [0, 100000, 500000000]:
+                    await run_test(include_spent, include_unspent, include_hinted, uint64(min_amount))

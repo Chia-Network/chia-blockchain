@@ -1830,10 +1830,10 @@ class FullNodeAPI:
         (coin_states, next_min_height) = await self.full_node.coin_store.batch_coin_states_by_puzzle_hashes(
             puzzle_hashes,
             min_height=min_height,
-            max_height=request.max_height or uint32.MAXIMUM,
             include_spent=request.filters.include_spent,
             include_unspent=request.filters.include_unspent,
             include_hinted=request.filters.include_hinted,
+            min_amount=request.filters.min_amount,
             max_items=max_items,
         )
         is_done = next_min_height is None
@@ -1863,23 +1863,20 @@ class FullNodeAPI:
         max_items = self.max_subscribe_response_items(peer)
         max_subscriptions = self.max_subscriptions(peer)
 
-        if request.previous_height is not None:
-            previous_header_hash = self.full_node.blockchain.height_to_hash(request.previous_height)
+        previous_header_hash = self.full_node.blockchain.height_to_hash(request.previous_height)
+        assert previous_header_hash is not None
 
-            if request.header_hash is None or request.header_hash != previous_header_hash:
-                rejection = wallet_protocol.RejectCoinState()
-                msg = make_msg(ProtocolMessageTypes.reject_coin_state, rejection)
-                return msg
+        if request.header_hash != previous_header_hash:
+            rejection = wallet_protocol.RejectCoinState()
+            msg = make_msg(ProtocolMessageTypes.reject_coin_state, rejection)
+            return msg
 
-            min_height = uint32(request.previous_height + 1)
-        else:
-            min_height = uint32(0)
+        min_height = uint32(request.previous_height + 1)
 
         coin_states = await self.full_node.coin_store.get_coin_states_by_ids(
             True,
             set(request.coin_ids),
             min_height=min_height,
-            max_height=request.max_height or uint32.MAXIMUM,
             max_items=max_items,
         )
 
