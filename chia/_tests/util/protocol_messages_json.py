@@ -2012,7 +2012,12 @@ respond_ses_info_json: Dict[str, Any] = {
     "heights": [[1, 2, 3], [4, 606340525]],
 }
 
-coin_state_filters_json: Dict[str, Any] = {"include_spent": True, "include_unspent": True, "include_hinted": True}
+coin_state_filters_json: Dict[str, Any] = {
+    "include_spent": True,
+    "include_unspent": True,
+    "include_hinted": True,
+    "min_amount": 0,
+}
 
 request_add_puzzle_subscriptions_json: Dict[str, Any] = {
     "puzzle_hashes": [
@@ -2090,8 +2095,7 @@ request_puzzle_state_json: Dict[str, Any] = {
     ],
     "previous_height": 0,
     "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411",
-    "max_height": 10000000,
-    "filters": {"include_spent": True, "include_unspent": True, "include_hinted": True},
+    "filters": {"include_spent": True, "include_unspent": True, "include_hinted": True, "min_amount": 0},
     "subscribe_when_finished": True,
 }
 
@@ -2127,7 +2131,6 @@ request_coin_state_json: Dict[str, Any] = {
     ],
     "previous_height": 0,
     "header_hash": "0x9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411",
-    "max_height": 10000000,
     "subscribe": False,
 }
 
