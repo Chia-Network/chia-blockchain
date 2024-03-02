@@ -7,8 +7,7 @@ from typing import List, Tuple
 import typing_extensions
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
-from chia.util.misc import to_batches
+from chia.util.db_wrapper import DBWrapper2
 
 log = logging.getLogger(__name__)
 
@@ -30,8 +29,6 @@ class HintStore:
             await conn.execute("CREATE TABLE IF NOT EXISTS hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
             log.info("DB: Creating index hint_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS hint_index on hints(hint)")
-            log.info("DB: Creating index coin_index")
-            await conn.execute("CREATE INDEX IF NOT EXISTS coin_index on hints(coin_id)")
         return self
 
     async def get_coin_ids(self, hint: bytes, *, max_items: int = 50000) -> List[bytes32]:
@@ -40,27 +37,6 @@ class HintStore:
             rows = await cursor.fetchall()
             await cursor.close()
         return [bytes32(row[0]) for row in rows]
-
-    async def get_hints_for_coins(self, coin_ids: List[bytes32], *, max_items: int = 50000) -> List[bytes]:
-        if len(coin_ids) == 0:
-            return []
-
-        hints: List[bytes] = []
-
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            for batch in to_batches(coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
-                coin_ids_db: Tuple[bytes32, ...] = tuple(batch.entries)
-                async with conn.execute(
-                    "SELECT hint FROM hints " f'WHERE coin_id in ({"?," * (len(batch.entries) - 1)}?) ' "LIMIT ?",
-                    coin_ids_db + (max_items - len(hints),),
-                ) as cursor:
-                    for row in await cursor.fetchall():
-                        hints.append(bytes(row[0]))
-
-                if len(hints) >= max_items:
-                    break
-
-        return hints
 
     async def add_hints(self, coin_hint_list: List[Tuple[bytes32, bytes]]) -> None:
         if len(coin_hint_list) == 0:
