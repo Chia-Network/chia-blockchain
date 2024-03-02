@@ -133,6 +133,5 @@ class ProtocolMessageTypes(Enum):
     request_coin_state = 105
     respond_coin_state = 106
     reject_coin_state = 107
-    transaction_added_update = 108
 
     error = 255
