@@ -336,6 +336,7 @@ class CoinStateFilters(Streamable):
     include_spent: bool
     include_unspent: bool
     include_hinted: bool
+    min_amount: uint64
 
 
 @streamable
@@ -344,7 +345,6 @@ class RequestPuzzleState(Streamable):
     puzzle_hashes: List[bytes32]
     previous_height: uint32
     header_hash: bytes32
-    max_height: Optional[uint32]
     filters: CoinStateFilters
     subscribe_when_finished: bool
 
@@ -371,7 +371,6 @@ class RequestCoinState(Streamable):
     coin_ids: List[bytes32]
     previous_height: uint32
     header_hash: bytes32
-    max_height: Optional[uint32]
     subscribe: bool
 
 
