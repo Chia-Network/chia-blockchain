@@ -1090,6 +1090,9 @@ class BlockTools:
                     constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA,
                     constants.NUM_SPS_SUB_SLOT,
                 ):
+                    if signage_point_index <= min_signage_point:
+                        # start farming blocks after min_signage_point
+                        continue
                     # note that we are passing in the finished slots which include the last slot
                     signage_point = get_signage_point(
                         constants,
