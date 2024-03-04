@@ -24,7 +24,7 @@ from tests.wallet.wallet_block_tools import WalletBlockTools
 @pytest.fixture(scope="function", autouse=True)
 def block_is_current_at(monkeypatch: pytest.MonkeyPatch) -> None:
     def make_new_synced(func: Callable[..., Awaitable[bool]]) -> Any:
-        async def mocked_synced(self: Any, block_is_current_at: int = 0) -> bool:
+        async def mocked_synced(self: Any, block_is_current_at: Optional[uint64] = 0) -> bool:
             return await func(self, block_is_current_at)
 
         return mocked_synced
