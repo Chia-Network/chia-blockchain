@@ -202,11 +202,8 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
 async def test_request_coin_state(one_node: OneNode, self_hostname: str) -> None:
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
 
-    # Farm block
-    await simulator.farm_blocks_to_puzzlehash(3)
-
-    first_header_hash = simulator.full_node.blockchain.height_to_hash(uint32(0))
-    assert first_header_hash is not None
+    genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
+    assert genesis is not None
 
     # Add coin records
     coin_records = [
@@ -229,9 +226,7 @@ async def test_request_coin_state(one_node: OneNode, self_hostname: str) -> None
     await simulator.full_node.coin_store._add_coin_records(coin_records + [ignored_coin])
 
     # Request no coin states
-    resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState([], uint32(0), first_header_hash, False), peer
-    )
+    resp = await simulator.request_coin_state(wallet_protocol.RequestCoinState([], None, genesis, False), peer)
     assert resp is not None
 
     response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
@@ -242,9 +237,7 @@ async def test_request_coin_state(one_node: OneNode, self_hostname: str) -> None
     # Request coin state
     coin_ids = [cr.coin.name() for cr in coin_records]
 
-    resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState(coin_ids, uint32(0), first_header_hash, False), peer
-    )
+    resp = await simulator.request_coin_state(wallet_protocol.RequestCoinState(coin_ids, None, genesis, False), peer)
     assert resp is not None
 
     response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
@@ -347,8 +340,7 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
     # Farm block
     await simulator.farm_blocks_to_puzzlehash(3)
 
-    first_header_hash = simulator.full_node.blockchain.height_to_hash(uint32(0))
-    assert first_header_hash is not None
+    genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
 
     peak_height = simulator.full_node.blockchain.get_peak_height()
     assert peak_height is not None
@@ -391,7 +383,7 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
 
     # Request no coin states
     resp = await simulator.request_puzzle_state(
-        wallet_protocol.RequestPuzzleState([], uint32(0), first_header_hash, filters, False), peer
+        wallet_protocol.RequestPuzzleState([], None, genesis, filters, False), peer
     )
     assert resp is not None
 
@@ -402,7 +394,7 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
 
     # Request coin state
     resp = await simulator.request_puzzle_state(
-        wallet_protocol.RequestPuzzleState(puzzle_hashes, uint32(0), first_header_hash, filters, False), peer
+        wallet_protocol.RequestPuzzleState(puzzle_hashes, None, genesis, filters, False), peer
     )
     assert resp is not None
 
@@ -531,7 +523,7 @@ class PuzzleStateData:
 async def sync_puzzle_hashes(
     puzzle_hashes: List[bytes32],
     *,
-    initial_previous_height: uint32,
+    initial_previous_height: Optional[uint32],
     initial_header_hash: bytes32,
     filters: wallet_protocol.CoinStateFilters,
     subscribe_when_finished: bool = False,
@@ -641,11 +633,10 @@ async def test_sync_puzzle_state(one_node: OneNode, self_hostname: str, block_co
     await simulator.full_node.coin_store._add_coin_records(list(coin_records.values()))
     await simulator.full_node.hint_store.add_hints(hints)
 
-    # Farm block
+    # Farm peak
     await simulator.farm_blocks_to_puzzlehash(1)
 
-    first_header_hash = simulator.full_node.blockchain.height_to_hash(uint32(0))
-    assert first_header_hash is not None
+    genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
 
     async def run_test(include_spent: bool, include_unspent: bool, include_hinted: bool, min_amount: uint64) -> None:
         # Calculate expected coin records based on filters
@@ -669,8 +660,8 @@ async def test_sync_puzzle_state(one_node: OneNode, self_hostname: str, block_co
 
         async for batch in sync_puzzle_hashes(
             puzzle_hashes,
-            initial_previous_height=uint32(0),
-            initial_header_hash=first_header_hash,
+            initial_previous_height=None,
+            initial_header_hash=genesis,
             filters=wallet_protocol.CoinStateFilters(include_spent, include_unspent, include_hinted, min_amount),
             simulator=simulator,
             peer=peer,

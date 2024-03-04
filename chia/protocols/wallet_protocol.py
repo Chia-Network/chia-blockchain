@@ -343,7 +343,7 @@ class CoinStateFilters(Streamable):
 @dataclass(frozen=True)
 class RequestPuzzleState(Streamable):
     puzzle_hashes: List[bytes32]
-    previous_height: uint32
+    previous_height: Optional[uint32]
     header_hash: bytes32
     filters: CoinStateFilters
     subscribe_when_finished: bool
@@ -369,7 +369,7 @@ class RejectPuzzleState(Streamable):
 @dataclass(frozen=True)
 class RequestCoinState(Streamable):
     coin_ids: List[bytes32]
-    previous_height: uint32
+    previous_height: Optional[uint32]
     header_hash: bytes32
     subscribe: bool
 
