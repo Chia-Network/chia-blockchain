@@ -247,6 +247,33 @@ async def test_request_coin_state(one_node: OneNode, self_hostname: str) -> None
 
 
 @pytest.mark.anyio
+async def test_request_coin_state_and_subscribe(one_node: OneNode, self_hostname: str) -> None:
+    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
+
+    genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
+    assert genesis is not None
+
+    c1 = bytes32(b"1" * 32)
+    c2 = bytes32(b"2" * 32)
+    c3 = bytes32(b"3" * 32)
+    c4 = bytes32(b"4" * 32)
+
+    # Request initial state (empty in this case) and subscribe
+    resp = await simulator.request_coin_state(
+        wallet_protocol.RequestCoinState([c1, c2, c3, c3, c4], None, genesis, True), peer
+    )
+    assert resp is not None
+
+    response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
+
+    assert len(response.coin_ids) == 4
+    assert len(response.coin_states) == 0
+
+    # Make sure the subscriptions were added
+    assert simulator.full_node.subscriptions.coin_subscriptions(peer.peer_node_id) == {c1, c2, c3, c4}
+
+
+@pytest.mark.anyio
 async def test_request_coin_state_reorg(one_node: OneNode, self_hostname: str) -> None:
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
 
@@ -407,6 +434,44 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
     assert response.header_hash == peak_header_hash
 
     assert response.is_finished
+
+
+@pytest.mark.anyio
+async def test_request_puzzle_state_and_subscribe(one_node: OneNode, self_hostname: str) -> None:
+    simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
+
+    # You have to farm a block so there is a peak.
+    # Otherwise you will get an AssertionError from `request_puzzle_state`.
+    await simulator.farm_blocks_to_puzzlehash(1)
+
+    genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
+    assert genesis is not None
+
+    ph1 = bytes32(b"1" * 32)
+    ph2 = bytes32(b"2" * 32)
+    ph3 = bytes32(b"3" * 32)
+    ph4 = bytes32(b"4" * 32)
+
+    # Request initial state (empty in this case) and subscribe
+    resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState(
+            [ph1, ph2, ph3, ph3, ph4],
+            None,
+            genesis,
+            wallet_protocol.CoinStateFilters(True, True, True, uint64(0)),
+            True,
+        ),
+        peer,
+    )
+    assert resp is not None
+
+    response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
+
+    assert len(response.puzzle_hashes) == 4
+    assert len(response.coin_states) == 0
+
+    # Make sure the subscriptions were added
+    assert simulator.full_node.subscriptions.puzzle_subscriptions(peer.peer_node_id) == {ph1, ph2, ph3, ph4}
 
 
 @pytest.mark.anyio
