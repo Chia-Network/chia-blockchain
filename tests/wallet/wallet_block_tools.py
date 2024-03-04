@@ -47,10 +47,10 @@ class WalletBlockTools(BlockTools):
     (Differs from standard block tools by patching away as much consensus logic as possible)
     """
 
-    def get_consecutive_blocks(  # type: ignore[override]
+    def get_consecutive_blocks(
         self,
         num_blocks: int,
-        block_list_input: List[FullBlock] = [],
+        block_list_input: Optional[List[FullBlock]] = None,
         *,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
@@ -63,6 +63,9 @@ class WalletBlockTools(BlockTools):
 
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
+
+        if block_list_input is None:
+            block_list_input = []
 
         blocks: Dict[bytes32, BlockRecord]
         if len(block_list_input) == 0:
