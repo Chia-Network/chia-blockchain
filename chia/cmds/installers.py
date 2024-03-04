@@ -49,7 +49,7 @@ def installers_group() -> None:
 
 @installers_group.command(name="test")
 @click.option("--expected-chia-version", "expected_chia_version_str", required=True)
-@click.option("--require-madmax/--no-require-madmax", "require_madmax", default=True)
+@click.option("--require-madmax/--require-no-madmax", "require_madmax", default=True)
 def test_command(expected_chia_version_str: str, require_madmax: bool) -> None:
     print("testing installed executables")
     expected_chia_version = packaging.version.Version(expected_chia_version_str)
