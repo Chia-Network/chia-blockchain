@@ -49,7 +49,8 @@ def installers_group() -> None:
 
 @installers_group.command(name="test")
 @click.option("--expected-chia-version", "expected_chia_version_str", required=True)
-def test_command(expected_chia_version_str: str) -> None:
+@click.option("--require-madmax/--no-require-madmax", "require_madmax", default=True)
+def test_command(expected_chia_version_str: str, require_madmax: bool) -> None:
     print("testing installed executables")
     expected_chia_version = packaging.version.Version(expected_chia_version_str)
 
@@ -99,7 +100,12 @@ def test_command(expected_chia_version_str: str) -> None:
         plotter_versions[plotter] = packaging.version.Version(version)
 
     print(json.dumps({plotter: str(version) for plotter, version in plotter_versions.items()}, indent=4))
-    assert {"chiapos", "madmax", "bladebit"} == plotter_versions.keys()
+    expected = {"chiapos", "bladebit"}
+
+    if require_madmax:
+        expected.add("madmax")
+
+    assert plotter_versions.keys() == expected, f"{expected=}"
 
     # TODO: figure out a better test, these actually start plots which can use up disk
     #       space too fast
