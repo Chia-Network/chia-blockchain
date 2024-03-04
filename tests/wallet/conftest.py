@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from contextlib import AsyncExitStack
 from dataclasses import replace
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Literal, Tuple
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Literal, Optional, Tuple
 
 import pytest
 
@@ -24,7 +24,7 @@ from tests.wallet.wallet_block_tools import WalletBlockTools
 @pytest.fixture(scope="function", autouse=True)
 def block_is_current_at(monkeypatch: pytest.MonkeyPatch) -> None:
     def make_new_synced(func: Callable[..., Awaitable[bool]]) -> Any:
-        async def mocked_synced(self: Any, block_is_current_at: Optional[uint64] = 0) -> bool:
+        async def mocked_synced(self: Any, block_is_current_at: Optional[uint64] = uint64(0)) -> bool:
             return await func(self, block_is_current_at)
 
         return mocked_synced
@@ -35,6 +35,17 @@ def block_is_current_at(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(scope="function", autouse=True)
 async def ignore_block_validation(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    This fixture exists to patch the existing BlockTools with WalletBlockTools and to patch existing code to work with
+    simplified blocks. This is done as a step towards the separation of the wallet into its own self contained project.
+
+    Many consensus concepts are irrelevant when testing wallet code which generally only cares about the mempool's
+    acceptance of its spends and notifications of new representations of the coin set.  One day, it would be good to
+    patch away the full node entirely in favor of the bare minimum logic to emulate the two features above.
+
+    In addition, making truly consensus valid blocks is often slow so shortcutting the logic makes wallet tests as of
+    today (3/4/24) about ~30% faster.
+    """
     if "standard_block_tools" in request.keywords:
         return None
 
