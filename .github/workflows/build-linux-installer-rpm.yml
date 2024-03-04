@@ -411,7 +411,7 @@ jobs:
     - name: Install package
       run: |
         ls -l "${{ steps.download.outputs.download-path }}"
-        yum install -y "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
+        yum install -y numactl-libs "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
 
     - name: List /opt/chia contents
       run: |

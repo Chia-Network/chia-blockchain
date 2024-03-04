@@ -409,7 +409,7 @@ jobs:
     - name: Install package
       run: |
         ls -l "${{ steps.download.outputs.download-path }}"
-        apt-get install --yes "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
+        apt-get install --yes libnuma1 "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
 
     - name: List /opt/chia contents
       run: |
