@@ -75,9 +75,12 @@ def get_bladebit_src_path(plotters_root_path: Path) -> Path:
 
 
 def get_bladebit_package_path() -> Path:
+    print(f"sys.executable path is : {os.path.dirname(sys.executable)}")
     p = Path(os.path.dirname(sys.executable)).joinpath("_internal/bladebit")
+    print(f"get_bladebit_package_path: {p}")
     if p.exists():
         return p
+    print(f"{p} does not exist. Trying another path...")
     return Path(os.path.dirname(sys.executable)).joinpath("bladebit")
 
 
@@ -109,24 +112,33 @@ def get_bladebit_exec_package_path(with_cuda: bool = False) -> Path:
 
 
 def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
+    print("Getting bladebit executable path for CUDA")
     # Search for bladebit executable which supports CUDA at the first priority
     bladebit_exec_venv_path = get_bladebit_exec_venv_path(with_cuda=True)
+    print(f"bladebit_exec_venv_path: {bladebit_exec_venv_path}")
     if bladebit_exec_venv_path is not None and bladebit_exec_venv_path.exists():
         return bladebit_exec_venv_path
     bladebit_exec_src_path = get_bladebit_exec_src_path(plotters_root_path, with_cuda=True)
+    print(f"bladebit_exec_src_path: {bladebit_exec_src_path}")
     if bladebit_exec_src_path.exists():
         return bladebit_exec_src_path
     bladebit_exec_package_path = get_bladebit_exec_package_path(with_cuda=True)
+    print(f"bladebit_exec_package_path: {bladebit_exec_package_path}")
     if bladebit_exec_package_path.exists():
         return bladebit_exec_package_path
 
+    print("Getting bladebit executable path for non-CUDA")
     bladebit_exec_venv_path = get_bladebit_exec_venv_path(with_cuda=False)
+    print(f"bladebit_exec_venv_path: {bladebit_exec_venv_path}")
     if bladebit_exec_venv_path is not None and bladebit_exec_venv_path.exists():
         return bladebit_exec_venv_path
     bladebit_exec_src_path = get_bladebit_exec_src_path(plotters_root_path, with_cuda=False)
+    print(f"bladebit_exec_src_path: {bladebit_exec_src_path}")
     if bladebit_exec_src_path.exists():
         return bladebit_exec_src_path
-    return get_bladebit_exec_package_path(with_cuda=False)
+    bladebit_exec_package_path = get_bladebit_exec_package_path(with_cuda=False)
+    print(f"bladebit_exec_package_path: {bladebit_exec_package_path}")
+    return bladebit_exec_package_path
 
 
 def get_bladebit_version(
