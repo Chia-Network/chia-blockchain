@@ -1811,7 +1811,11 @@ class FullNodeAPI:
         max_items = self.max_subscribe_response_items(peer)
         max_subscriptions = self.max_subscriptions(peer)
 
-        previous_header_hash = self.full_node.blockchain.height_to_hash(request.previous_height)
+        previous_header_hash = (
+            self.full_node.blockchain.height_to_hash(request.previous_height)
+            if request.previous_height is not None
+            else self.full_node.blockchain.constants.GENESIS_CHALLENGE
+        )
         assert previous_header_hash is not None
 
         if request.header_hash != previous_header_hash:
@@ -1819,7 +1823,7 @@ class FullNodeAPI:
             msg = make_msg(ProtocolMessageTypes.reject_puzzle_state, rejection)
             return msg
 
-        min_height = uint32(request.previous_height + 1)
+        min_height = uint32((request.previous_height + 1) if request.previous_height is not None else 0)
 
         # This is a limit imposed by `batch_coin_states_by_puzzle_hashes`, due to the SQLite variable limit.
         # It can be increased in the future, and this protocol should be written and tested in a way that
@@ -1863,7 +1867,11 @@ class FullNodeAPI:
         max_items = self.max_subscribe_response_items(peer)
         max_subscriptions = self.max_subscriptions(peer)
 
-        previous_header_hash = self.full_node.blockchain.height_to_hash(request.previous_height)
+        previous_header_hash = (
+            self.full_node.blockchain.height_to_hash(request.previous_height)
+            if request.previous_height is not None
+            else self.full_node.blockchain.constants.GENESIS_CHALLENGE
+        )
         assert previous_header_hash is not None
 
         if request.header_hash != previous_header_hash:
@@ -1871,7 +1879,7 @@ class FullNodeAPI:
             msg = make_msg(ProtocolMessageTypes.reject_coin_state, rejection)
             return msg
 
-        min_height = uint32(request.previous_height + 1)
+        min_height = uint32(request.previous_height + 1 if request.previous_height is not None else 0)
 
         coin_states = await self.full_node.coin_store.get_coin_states_by_ids(
             True,
