@@ -315,11 +315,11 @@ async def send(
                 ).to_tx_config(mojo_per_unit, config, fingerprint),
                 final_fee,
                 memos,
-                puzzle_decorator_override=[
-                    {"decorator": PuzzleDecoratorType.CLAWBACK.name, "clawback_timelock": clawback_time_lock}
-                ]
-                if clawback_time_lock > 0
-                else None,
+                puzzle_decorator_override=(
+                    [{"decorator": PuzzleDecoratorType.CLAWBACK.name, "clawback_timelock": clawback_time_lock}]
+                    if clawback_time_lock > 0
+                    else None
+                ),
             )
         elif typ in {WalletType.CAT, WalletType.CRCAT}:
             print("Submitting transaction...")
@@ -721,11 +721,15 @@ async def take_offer(
         royalty_asset_dict: Dict[Any, Tuple[Any, uint16]] = {}
         for royalty_asset_id in nft_coin_ids_supporting_royalties_from_offer(offer):
             if royalty_asset_id.hex() in offered:
-                eve_spend = next((cs for cs in offer.coin_spends() if cs.coin.parent_coin_info == royalty_asset_id), None)
+                eve_spend = next(
+                    (cs for cs in offer.coin_spends() if cs.coin.parent_coin_info == royalty_asset_id), None
+                )
                 if eve_spend:
                     uncurried_nft = UncurriedNFT.uncurry(*eve_spend.puzzle_reveal.uncurry())
-                    percentage = uncurried_nft.trade_price_percentage
+                    assert uncurried_nft is not None
+                    percentage = uncurried_nft.trade_price_percentage or uint16(0)
                     address = uncurried_nft.royalty_address
+                    assert address is not None
                 else:
                     percentage, address = await get_nft_royalty_percentage_and_address(royalty_asset_id, wallet_client)
                 royalty_asset_dict[encode_puzzle_hash(royalty_asset_id, AddressType.NFT.hrp(config))] = (
@@ -1477,10 +1481,12 @@ async def mint_vc(
         vc_record, txs = await wallet_client.vc_mint(
             decode_puzzle_hash(ensure_valid_address(did, allowed_types={AddressType.DID}, config=config)),
             CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
-            None
-            if target_address is None
-            else decode_puzzle_hash(
-                ensure_valid_address(target_address, allowed_types={AddressType.XCH}, config=config)
+            (
+                None
+                if target_address is None
+                else decode_puzzle_hash(
+                    ensure_valid_address(target_address, allowed_types={AddressType.XCH}, config=config)
+                )
             ),
             uint64(int(d_fee * units["chia"])),
         )
