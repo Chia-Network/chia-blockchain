@@ -76,6 +76,13 @@ def test_command(expected_chia_version_str: str) -> None:
         encoding="utf-8",
         timeout=adjusted_timeout(30),
     )
+
+    print()
+    print(plotter_version_process.stdout)
+    print()
+    print(plotter_version_process.stderr)
+    print()
+
     assert plotter_version_process.returncode == 0
     assert plotter_version_process.stderr == ""
 
