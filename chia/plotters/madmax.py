@@ -26,7 +26,10 @@ def get_madmax_src_path(plotters_root_path: Path) -> Path:
 
 
 def get_madmax_package_path() -> Path:
-    return Path(os.path.dirname(sys.executable)) / "madmax"
+    p = Path(os.path.dirname(sys.executable)).joinpath("_internal/madmax")
+    if p.exists():
+        return p
+    return Path(os.path.dirname(sys.executable)).joinpath("madmax")
 
 
 def get_madmax_exec_venv_path(ksize: int = 32) -> Optional[Path]:
