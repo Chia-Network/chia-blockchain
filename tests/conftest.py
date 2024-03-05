@@ -6,6 +6,7 @@ import dataclasses
 import datetime
 import functools
 import json
+import logging
 import math
 import multiprocessing
 import os
@@ -458,6 +459,10 @@ def pytest_addoption(parser: pytest.Parser):
 
 
 def pytest_configure(config):
+    for logger_name in ["aiosqlite", "filelock", "watchdog"]:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(max(logger.getEffectiveLevel(), logging.INFO))
+
     config.addinivalue_line("markers", "benchmark: automatically assigned by the benchmark_runner fixture")
 
     benchmark_repeats = config.getoption("--benchmark-repeats")
