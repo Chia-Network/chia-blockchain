@@ -818,7 +818,9 @@ class FullNode:
             else:
                 await self.server.send_to_specific([msg], peer.peer_node_id)
 
-    async def synced(self) -> bool:
+    async def synced(self, block_is_current_at: Optional[uint64] = None) -> bool:
+        if block_is_current_at is None:
+            block_is_current_at = uint64(int(time.time() - 60 * 7))
         if "simulator" in str(self.config.get("selected_network")):
             return True  # sim is always synced because it has no peers
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -828,11 +830,10 @@ class FullNode:
         while curr is not None and not curr.is_transaction_block:
             curr = self.blockchain.try_block_record(curr.prev_hash)
 
-        now = time.time()
         if (
             curr is None
             or curr.timestamp is None
-            or curr.timestamp < uint64(int(now - 60 * 7))
+            or curr.timestamp < block_is_current_at
             or self.sync_store.get_sync_mode()
         ):
             return False

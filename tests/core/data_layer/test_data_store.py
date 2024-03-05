@@ -5,6 +5,7 @@ import logging
 import random
 import re
 import statistics
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
@@ -34,6 +35,7 @@ from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import (
     get_delta_filename,
     get_full_tree_filename,
+    insert_from_delta_file,
     insert_into_data_store_from_file,
     is_filename_valid,
     write_files_for_root,
@@ -1373,6 +1375,68 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
         servers_info = await data_store.get_available_servers_for_store(tree_id=tree_id, timestamp=current_timestamp)
         assert servers_info == []
         current_timestamp += 1
+
+
+@pytest.mark.anyio
+async def test_server_http_ban(
+    data_store: DataStore, tree_id: bytes32, monkeypatch: Any, tmp_path: Path, seeded_random: random.Random
+) -> None:
+    sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
+    await data_store.subscribe(Subscription(tree_id, [sinfo]))
+
+    async def mock_http_download(
+        client_folder: Path,
+        filename: str,
+        proxy_url: str,
+        server_info: ServerInfo,
+        timeout: int,
+        log: logging.Logger,
+    ) -> bool:
+        return False
+
+    start_timestamp = int(time.time())
+    with monkeypatch.context() as m:
+        m.setattr("chia.data_layer.download_data.http_download", mock_http_download)
+        success = await insert_from_delta_file(
+            data_store=data_store,
+            tree_id=tree_id,
+            existing_generation=3,
+            root_hashes=[bytes32.random(seeded_random)],
+            server_info=sinfo,
+            client_foldername=tmp_path,
+            timeout=15,
+            log=log,
+            proxy_url="",
+            downloader=None,
+        )
+
+    assert success is False
+
+    subscriptions = await data_store.get_subscriptions()
+    sinfo = subscriptions[0].servers_info[0]
+    assert sinfo.num_consecutive_failures == 1
+    assert sinfo.ignore_till >= start_timestamp + 5 * 60  # ban for 5 minutes
+    start_timestamp = sinfo.ignore_till
+
+    with monkeypatch.context() as m:
+        m.setattr("chia.data_layer.download_data.http_download", mock_http_download)
+        success = await insert_from_delta_file(
+            data_store=data_store,
+            tree_id=tree_id,
+            existing_generation=3,
+            root_hashes=[bytes32.random(seeded_random)],
+            server_info=sinfo,
+            client_foldername=tmp_path,
+            timeout=15,
+            log=log,
+            proxy_url="",
+            downloader=None,
+        )
+
+    subscriptions = await data_store.get_subscriptions()
+    sinfo = subscriptions[0].servers_info[0]
+    assert sinfo.num_consecutive_failures == 2
+    assert sinfo.ignore_till == start_timestamp  # we don't increase on second failure
 
 
 @pytest.mark.parametrize(

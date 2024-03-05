@@ -2,18 +2,32 @@ from __future__ import annotations
 
 from contextlib import AsyncExitStack
 from dataclasses import replace
-from typing import Any, AsyncIterator, Dict, List
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 
 import pytest
 
 from chia.consensus.constants import ConsensusConstants
+from chia.full_node.full_node import FullNode
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
+from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
 from tests.util.setup_nodes import setup_simulators_and_wallets_service
+
+
+@pytest.fixture(scope="function", autouse=True)
+def block_is_current_at(monkeypatch: pytest.MonkeyPatch) -> None:
+    def make_new_synced(func: Callable[..., Awaitable[bool]]) -> Any:
+        async def mocked_synced(self: Any, block_is_current_at: Optional[uint64] = uint64(0)) -> bool:
+            return await func(self, block_is_current_at)
+
+        return mocked_synced
+
+    monkeypatch.setattr(WalletStateManager, "synced", make_new_synced(WalletStateManager.synced))
+    monkeypatch.setattr(FullNode, "synced", make_new_synced(FullNode.synced))
 
 
 @pytest.fixture(scope="function", params=[True, False])
