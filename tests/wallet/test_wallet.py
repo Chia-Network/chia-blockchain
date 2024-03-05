@@ -33,42 +33,25 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
-from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.conftest import ConsensusMode
+from tests.environments.wallet import WalletTestFramework
 from tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
 class TestWalletSimulator:
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [10], "reuse_puzhash": True}],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_wallet_coinbase(
-        self,
-        simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        num_blocks = 10
-        full_nodes, wallets, _ = simulator_and_wallet
-        full_node_api = full_nodes[0]
-        server_1: ChiaServer = full_node_api.full_node.server
-        wallet_node, server_2 = wallets[0]
+    async def test_wallet_coinbase(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        wsm = env.wallet_state_manager
 
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-
-        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
-        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-
-        wsm: WalletStateManager = wallet_node.wallet_state_manager
         all_txs = await wsm.get_all_transactions(1)
-
-        assert len(all_txs) == num_blocks * 2
+        assert len(all_txs) == 20
 
         pool_rewards = 0
         farm_rewards = 0
@@ -79,10 +62,9 @@ class TestWalletSimulator:
             elif TransactionType(tx.type) == TransactionType.FEE_REWARD:
                 farm_rewards += 1
 
-        assert pool_rewards == num_blocks
-        assert farm_rewards == num_blocks
-
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
+        assert pool_rewards == 10
+        assert farm_rewards == 10
+        await env.check_balances()
 
     @pytest.mark.parametrize(
         "trusted",
