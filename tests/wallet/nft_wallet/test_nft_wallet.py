@@ -1420,6 +1420,8 @@ async def test_nft_bulk_transfer(self_hostname: str, two_wallet_nodes: OldSimula
     for _ in range(1, num_blocks + 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
+    await full_node_api.wait_for_wallet_synced(wallet_node_0)
+
     funds = sum(
         [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
@@ -1568,6 +1570,8 @@ async def test_nft_set_did(self_hostname: str, two_wallet_nodes: OldSimulatorsAn
 
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    await full_node_api.wait_for_wallet_synced(wallet_node_0)
 
     funds = sum(
         [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
