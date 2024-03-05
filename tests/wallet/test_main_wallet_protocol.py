@@ -166,6 +166,7 @@ class AnyoneCanSpend(Wallet):
         primaries: List[Payment],
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
+        **kwargs: Any,
     ) -> Program:
         condition_list: List[Condition] = [CreateCoin(p.puzzle_hash, p.amount, p.memos) for p in primaries]
         condition_list.append(ReserveFee(fee))

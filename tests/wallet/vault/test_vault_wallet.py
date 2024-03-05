@@ -223,3 +223,13 @@ async def test_vault_creation(
     if wallet.vault_info.is_recoverable:
         recovery_info = RecoveryInfo.from_json_dict(custom_data["recovery_info"])
         assert recovery_info == wallet.recovery_info
+
+    # test make_solution
+    coin = (await wallet.select_coins(uint64(100), DEFAULT_COIN_SELECTION_CONFIG)).pop()
+    wallet.make_solution(primaries, coin_id=coin.name())
+    with pytest.raises(ValueError):
+        wallet.make_solution(primaries)
+
+    # test match_hinted_coin
+    matched = await wallet.match_hinted_coin(wallet.vault_info.coin, wallet.vault_info.inner_puzzle_hash)
+    assert matched

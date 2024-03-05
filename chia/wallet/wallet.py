@@ -213,6 +213,7 @@ class Wallet:
         primaries: List[Payment],
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
+        **kwargs: Any,
     ) -> Program:
         assert fee >= 0
         condition_list: List[Any] = [condition.to_program() for condition in conditions]

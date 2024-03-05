@@ -173,6 +173,7 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
         primaries: List[Payment],
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
+        **kwargs: Any,
     ) -> Program:
         ...
 

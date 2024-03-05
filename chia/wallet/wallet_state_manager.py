@@ -142,7 +142,7 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
-from chia.wallet.vault.vault_drivers import get_vault_full_puzzle_hash, get_vault_inner_puzzle_hash
+from chia.wallet.vault.vault_drivers import get_vault_full_puzzle_hash, get_vault_inner_puzzle_hash, match_vault_puzzle
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
@@ -802,8 +802,6 @@ class WalletStateManager:
         solution = Program.from_bytes(bytes(coin_spend.solution))
 
         uncurried = uncurry_puzzle(puzzle)
-
-        from chia.wallet.vault.vault_drivers import match_vault_puzzle
 
         vault_check = match_vault_puzzle(uncurried.mod, uncurried.args)
         if vault_check:

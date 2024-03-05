@@ -24,10 +24,8 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions, solution_for_conditions
-from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition, make_reserve_fee_condition
 from chia.wallet.signer_protocol import (
     PathHint,
-    Signature,
     SignedTransaction,
     SigningInstructions,
     SigningResponse,
@@ -41,6 +39,7 @@ from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
+from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.vault.vault_drivers import (
     construct_p2_delegated_secp,
     construct_vault_merkle_tree,
@@ -216,8 +215,9 @@ class Vault(Wallet):
             primaries.append(Payment(change_puzzle_hash, uint64(change)))
 
         conditions = [primary.as_condition() for primary in primaries]
-        next_puzzle_hash = await self.get_new_puzzlehash()
-        # TODO: should the vault inner puz create this condition?
+        next_puzzle_hash = (
+            self.vault_info.coin.puzzle_hash if tx_config.reuse_puzhash else (await self.get_new_puzzlehash())
+        )
         recreate_vault_condition = CreateCoin(
             next_puzzle_hash, uint64(self.vault_info.coin.amount), memos=[next_puzzle_hash]
         ).to_program()
@@ -273,83 +273,6 @@ class Vault(Wallet):
 
         return all_spends
 
-    async def generate_signed_vault_spend(
-        self,
-        signed_message: bytes,
-        delegated_puzzle: Program,
-        delegated_solution: Program,
-        p2_spends: List[CoinSpend],
-        primaries: List[Payment],
-        fee: uint64 = uint64(0),
-    ) -> List[TransactionRecord]:
-        secp_puzzle = construct_p2_delegated_secp(
-            self.vault_info.pubkey,
-            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
-            self.vault_info.hidden_puzzle_hash,
-        )
-        vault_inner_puzzle = get_vault_inner_puzzle(
-            self.vault_info.pubkey,
-            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
-            self.vault_info.hidden_puzzle_hash,
-            self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
-            self.recovery_info.timelock if self.vault_info.is_recoverable else None,
-        )
-        secp_solution = Program.to(
-            [
-                delegated_puzzle,
-                delegated_solution,
-                signed_message,
-                self.vault_info.coin.name(),
-            ]
-        )
-        if self.vault_info.is_recoverable:
-            recovery_puzzle_hash = get_recovery_puzzle(
-                secp_puzzle.get_tree_hash(),
-                self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
-                self.recovery_info.timelock if self.vault_info.is_recoverable else None,
-            ).get_tree_hash()
-            merkle_tree = construct_vault_merkle_tree(secp_puzzle.get_tree_hash(), recovery_puzzle_hash)
-        else:
-            merkle_tree = construct_vault_merkle_tree(secp_puzzle.get_tree_hash())
-        proof = get_vault_proof(merkle_tree, secp_puzzle.get_tree_hash())
-        vault_inner_solution = get_vault_inner_solution(secp_puzzle, secp_solution, proof)
-
-        full_puzzle = get_vault_full_puzzle(self.vault_info.launcher_id, vault_inner_puzzle)
-        full_solution = get_vault_full_solution(
-            self.vault_info.lineage_proof,
-            uint64(self.vault_info.coin.amount),
-            vault_inner_solution,
-        )
-
-        vault_spend = make_spend(self.vault_info.coin, full_puzzle, full_solution)
-        all_spends = [*p2_spends, vault_spend]
-        spend_bundle = SpendBundle(all_spends, G2Element())
-
-        amount = uint64(sum([payment.amount for payment in primaries]))
-        target_puzzle_hash = primaries[0].puzzle_hash
-
-        tx_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=target_puzzle_hash,
-            amount=amount,
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.id(),
-            sent_to=[],
-            memos=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=spend_bundle.name(),
-            valid_times=parse_timelock_info(tuple()),
-        )
-        await self.wallet_state_manager.add_pending_transactions([tx_record], sign=False)
-        return [tx_record]
-
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         raise NotImplementedError("vault wallet")
 
@@ -372,7 +295,12 @@ class Vault(Wallet):
 
     async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
         pk = self.vault_info.pubkey
-        vault_spend = [spend for spend in coin_spends if spend.as_coin_spend().coin == self.vault_info.coin][0]
+        # match the vault puzzle
+        for spend in coin_spends:
+            mod, curried_args = spend.puzzle.uncurry()
+            if match_vault_puzzle(mod, curried_args):
+                vault_spend = spend
+                break
         inner_sol = vault_spend.solution.at("rrf")
         secp_puz = inner_sol.at("rf")
         secp_sol = inner_sol.at("rrf")
@@ -403,7 +331,7 @@ class Vault(Wallet):
                 signed_spends.append(spend)
         return SignedTransaction(
             TransactionInfo(signed_spends),
-            [Signature("bls_12381_aug_scheme", G2Element().to_bytes())],
+            [],
         )
 
     async def execute_signing_instructions(
@@ -440,48 +368,14 @@ class Vault(Wallet):
         primaries: List[Payment],
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
+        **kwargs: Any,
     ) -> Program:
         assert fee >= 0
-        condition_list: List[Any] = [condition.to_program() for condition in conditions]
-        if len(primaries) > 0:
-            for primary in primaries:
-                condition_list.append(make_create_coin_condition(primary.puzzle_hash, primary.amount, primary.memos))
-        if fee:
-            condition_list.append(make_reserve_fee_condition(fee))
-        delegated_puzzle = puzzle_for_conditions(condition_list)
-        delegated_solution = solution_for_conditions(condition_list)
-
-        secp_puzzle = construct_p2_delegated_secp(
-            self.vault_info.pubkey,
-            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
-            self.vault_info.hidden_puzzle_hash,
-        )
-        secp_solution = Program.to(
-            [
-                delegated_puzzle,
-                delegated_solution,
-                None,  # signature slot
-                self.vault_info.coin.name(),
-            ]
-        )
-        if self.vault_info.is_recoverable:
-            recovery_puzzle_hash = get_recovery_puzzle(
-                secp_puzzle.get_tree_hash(),
-                self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
-                self.recovery_info.timelock if self.vault_info.is_recoverable else None,
-            ).get_tree_hash()
-            merkle_tree = construct_vault_merkle_tree(secp_puzzle.get_tree_hash(), recovery_puzzle_hash)
-        else:
-            merkle_tree = construct_vault_merkle_tree(secp_puzzle.get_tree_hash())
-        proof = get_vault_proof(merkle_tree, secp_puzzle.get_tree_hash())
-        vault_inner_solution = get_vault_inner_solution(secp_puzzle, secp_solution, proof)
-
-        full_solution = get_vault_full_solution(
-            self.vault_info.lineage_proof,
-            uint64(self.vault_info.coin.amount),
-            vault_inner_solution,
-        )
-        return full_solution
+        coin_id = kwargs.get("coin_id")
+        if coin_id is None:
+            raise ValueError("Vault p2_singleton solutions require a coin id")
+        p2_singleton_solution: Program = Program.to([self.vault_info.inner_puzzle_hash, coin_id])
+        return p2_singleton_solution
 
     async def get_puzzle(self, new: bool) -> Program:
         if new:
@@ -506,7 +400,12 @@ class Vault(Wallet):
         return False
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
-        raise NotImplementedError("vault wallet")
+        wallet_identifier: Optional[
+            WalletIdentifier
+        ] = await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(hint)
+        if wallet_identifier:
+            return True
+        return False
 
     def handle_own_derivation(self) -> bool:
         return True
