@@ -117,38 +117,21 @@ class TestWalletSimulator:
         assert await wallet.match_hinted_coin(selected_coin, selected_coin.puzzle_hash)
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True}],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_wallet_reuse_address(
-        self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        num_blocks = 5
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_api = full_nodes[0]
-        server_1 = full_node_api.full_node.server
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+    async def test_wallet_reuse_address(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        wallet = env.xch_wallet
 
-        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
-
-        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         tx_amount = 10
 
         [tx] = await wallet.generate_signed_transaction(
             uint64(tx_amount),
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            bytes32([0] * 32),
             DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
             uint64(0),
         )
@@ -156,17 +139,32 @@ class TestWalletSimulator:
         assert len(tx.spend_bundle.coin_spends) == 1
         new_puzhash = [c.puzzle_hash.hex() for c in tx.additions]
         assert tx.spend_bundle.coin_spends[0].coin.puzzle_hash.hex() in new_puzhash
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
-        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance - tx_amount
-
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-        expected_confirmed_balance -= tx_amount
-
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "unconfirmed_wallet_balance": -1 * tx_amount,
+                            "<=#spendable_balance": -1 * tx_amount,
+                            "<=#max_send_amount": -1 * tx_amount,
+                            ">=#pending_change": 1,  # any amount increase
+                            "pending_coin_removal_count": 1,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -1 * tx_amount,
+                            ">=#spendable_balance": 1,
+                            ">=#max_send_amount": 1,
+                            "<=#pending_change": 1,  # any amount decrease
+                            "pending_coin_removal_count": -1,
+                        }
+                    },
+                )
+            ]
+        )
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize(
