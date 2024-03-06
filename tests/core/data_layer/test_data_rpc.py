@@ -2582,6 +2582,14 @@ async def test_dl_proof_errors(
         with pytest.raises(ValueError, match="no root"):
             await data_rpc_api.get_proof(request={"store_id": fakeroot.hex(), "keys": []})
 
+        with pytest.raises(Exception, match="No generations found"):
+            await data_rpc_api.get_proof(request={"store_id": store_id.hex(), "keys": [b"4".hex()]})
+
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": b"a".hex(), "value": b"\x00\x01".hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
+
         with pytest.raises(KeyNotFoundError, match="Key not found"):
             await data_rpc_api.get_proof(request={"store_id": store_id.hex(), "keys": [b"4".hex()]})
 

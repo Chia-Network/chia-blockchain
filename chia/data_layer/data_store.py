@@ -1577,7 +1577,7 @@ class DataStore:
         """Collect the information for a proof of inclusion of a hash in the Merkle
         tree.
         """
-        ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash)
+        ancestors = await self.get_ancestors_optimized(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash)
 
         layers: List[ProofOfInclusionLayer] = []
         child_hash = node_hash
