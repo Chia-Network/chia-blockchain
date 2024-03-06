@@ -437,10 +437,9 @@ class NFTWallet:
             nft_coin=nft_coin,
             new_owner=did_id,
             new_did_inner_hash=did_inner_hash,
-            additional_bundles=bundles_to_agg,
             memos=[[target_puzzle_hash]],
         )
-        txs.append(dataclasses.replace(tx_record, spend_bundle=None))
+        txs.append(dataclasses.replace(tx_record, spend_bundle=SpendBundle.aggregate(bundles_to_agg)))
         return txs
 
     async def sign(self, spend_bundle: SpendBundle, puzzle_hashes: Optional[List[bytes32]] = None) -> SpendBundle:
@@ -654,6 +653,11 @@ class NFTWallet:
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
+            other_tx_removals: Set[Coin] = {removal for removal in chia_tx.removals}
+            other_tx_additions: Set[Coin] = {addition for addition in chia_tx.additions}
+        else:
+            other_tx_removals = set()
+            other_tx_additions = set()
 
         tx_list = [
             TransactionRecord(
@@ -665,8 +669,8 @@ class NFTWallet:
                 confirmed=False,
                 sent=uint32(0),
                 spend_bundle=spend_bundle,
-                additions=spend_bundle.additions(),
-                removals=spend_bundle.removals(),
+                additions=list(set(spend_bundle.additions()) - other_tx_additions),
+                removals=list(set(spend_bundle.removals()) - other_tx_removals),
                 wallet_id=self.id(),
                 sent_to=[],
                 trade_id=None,
