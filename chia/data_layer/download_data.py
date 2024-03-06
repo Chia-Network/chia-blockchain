@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import time
@@ -156,9 +157,16 @@ async def insert_from_delta_file(
         filename = get_delta_filename(tree_id, root_hash, existing_generation)
         request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
         if downloader is None:
-            # use http downloader
-            if not await http_download(client_foldername, filename, proxy_url, server_info, timeout, log):
-                await data_store.server_misses_file(tree_id, server_info, timestamp)
+            # use http downloader - this raises on any error
+            try:
+                await http_download(client_foldername, filename, proxy_url, server_info, timeout, log)
+            except (asyncio.TimeoutError, aiohttp.ClientError):
+                new_server_info = await data_store.server_misses_file(tree_id, server_info, timestamp)
+                log.info(
+                    f"Failed to download {filename} from {new_server_info.url}."
+                    f"Miss {new_server_info.num_consecutive_failures}."
+                )
+                log.info(f"Next attempt from {new_server_info.url} in {new_server_info.ignore_till - timestamp}s.")
                 return False
         else:
             log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
@@ -230,7 +238,11 @@ async def http_download(
     server_info: ServerInfo,
     timeout: int,
     log: logging.Logger,
-) -> bool:
+) -> None:
+    """
+    Download a file from a server using aiohttp.
+    Raises exceptions on errors
+    """
     async with aiohttp.ClientSession() as session:
         headers = {"accept-encoding": "gzip"}
         async with session.get(
@@ -250,5 +262,3 @@ async def http_download(
                     if new_percentage != progress_percentage:
                         progress_percentage = new_percentage
                         log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
-
-    return True
