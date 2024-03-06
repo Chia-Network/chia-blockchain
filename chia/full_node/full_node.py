@@ -1667,7 +1667,10 @@ class FullNode:
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
-            unf_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(unfinished_rh)
+            foliage_hash: Optional[bytes32] = block.foliage.foliage_transaction_block_hash
+            assert foliage_hash is not None
+            unf_block: Optional[UnfinishedBlock]
+            unf_block, count, has_better = self.full_node_store.get_unfinished_block2(unfinished_rh, foliage_hash)
             if (
                 unf_block is not None
                 and unf_block.transactions_generator is not None
@@ -1675,7 +1678,7 @@ class FullNode:
             ):
                 # We checked that the transaction block is the same, therefore all transactions and the signature
                 # must be identical in the unfinished and finished blocks. We can therefore use the cache.
-                pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
+                pre_validation_result = self.full_node_store.get_unfinished_block_result2(unfinished_rh, foliage_hash)
                 assert pre_validation_result is not None
                 block = block.replace(
                     transactions_generator=unf_block.transactions_generator,

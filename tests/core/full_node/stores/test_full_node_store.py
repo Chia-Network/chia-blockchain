@@ -224,13 +224,11 @@ async def test_basic_store(
             foliage_hash is not None and dummy_hash > foliage_hash,
         )
 
-        ublock = store.get_unfinished_block_result(unf_block.partial_hash)
-        assert ublock is not None and ublock.required_iters == uint64(123532)
-        ublock = store.get_unfinished_block_result2(
-            unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
-        )
-
-        assert ublock is not None and ublock.required_iters == uint64(123532)
+        if unf_block.foliage.foliage_transaction_block_hash:
+            ublock = store.get_unfinished_block_result2(
+                unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+            )
+            assert ublock is not None and ublock.required_iters == uint64(123532)
 
         store.remove_unfinished_block(unf_block.partial_hash)
         assert store.get_unfinished_block(unf_block.partial_hash) is None
@@ -289,17 +287,11 @@ async def test_basic_store(
     )
     assert store.get_unfinished_block2(unf4.partial_hash, None) == (unf1, 2, False)
 
-    ublock = store.get_unfinished_block_result(unf1.partial_hash)
-    assert ublock is not None and ublock.required_iters == uint64(0)
     ublock = store.get_unfinished_block_result2(unf1.partial_hash, unf1.foliage.foliage_transaction_block_hash)
-    assert ublock is not None and ublock.required_iters == uint64(0)
-    # still, when not specifying a foliage hash, you just get the first ublock
-    ublock = store.get_unfinished_block_result2(unf1.partial_hash, None)
     assert ublock is not None and ublock.required_iters == uint64(0)
 
     # negative test cases
-    assert store.get_unfinished_block_result(bytes32([1] * 32)) is None
-    assert store.get_unfinished_block_result2(bytes32([1] * 32), None) is None
+    assert store.get_unfinished_block_result2(bytes32([1] * 32), unf1.foliage.foliage_transaction_block_hash) is None
 
     blocks = custom_block_tools.get_consecutive_blocks(
         1,
