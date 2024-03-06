@@ -1118,7 +1118,7 @@ async def test_dusted_wallet(
         [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
     txs = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
-    await farm_nft_wallet.wallet_state_manager.add_pending_transactions(txs)
+    txs = await farm_nft_wallet.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
         if tx.spend_bundle is not None:
             assert len(compute_memos(tx.spend_bundle)) > 0
@@ -1146,8 +1146,8 @@ async def test_dusted_wallet(
         [uint64(nft_coins[0].coin.amount)], [dust_ph], DEFAULT_TX_CONFIG, coins={nft_coins[0].coin}
     )
     assert len(txs) == 1
+    txs = await farm_wallet_node.wallet_state_manager.add_pending_transactions(txs)
     assert txs[0].spend_bundle is not None
-    await farm_wallet_node.wallet_state_manager.add_pending_transactions(txs)
     assert len(compute_memos(txs[0].spend_bundle)) > 0
 
     # Farm a new block.
