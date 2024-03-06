@@ -561,7 +561,6 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
 async def test_get_network_info(one_wallet_and_one_simulator_services, self_hostname):
     nodes, _, bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
-    full_node_api_1 = full_node_service_1._api
 
     try:
         client = await FullNodeRpcClient.create(
