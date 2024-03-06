@@ -8,31 +8,31 @@ from setuptools import find_packages, setup
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.2.0",
-    "boto3==1.34.11",  # AWS S3 for DL s3 plugin
+    "boto3==1.34.46",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.1",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
     "chiapos==2.0.3",  # proof of space
     "clvm==0.9.8",
-    "clvm_tools==0.4.7",  # Currying, Program.to, other conveniences
-    "chia_rs==0.4.0",
+    "clvm_tools==0.4.8",  # Currying, Program.to, other conveniences
+    "chia_rs==0.5.2",
     "clvm-tools-rs==0.1.40",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.9.1",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.1.4",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
-    "colorlog==6.8.0",  # Adds color to logs
+    "colorlog==6.8.2",  # Adds color to logs
     "concurrent-log-handler==0.9.25",  # Concurrently log and rotate logs
-    "cryptography==41.0.7",  # Python cryptography library for TLS - keyring conflict
+    "cryptography==42.0.4",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.13.1",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==24.3.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0.1",  # Used for config file format
     "setproctitle==1.3.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
-    "dnspython==2.4.2",  # Query DNS seeds
+    "dnspython==2.5.0",  # Query DNS seeds
     "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
-    "dnslib==0.9.23",  # dns lib
-    "typing-extensions==4.9.0",  # typing backports like Protocol and TypedDict
+    "dnslib==0.9.24",  # dns lib
+    "typing-extensions==4.10.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
     "packaging==23.2",
     "psutil==5.9.4",
@@ -44,29 +44,29 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build==1.0.3",
-    "coverage==7.3.3",
-    "diff-cover==8.0.1",
+    "coverage==7.4.1",
+    "diff-cover==8.0.3",
     "pre-commit==3.5.0; python_version < '3.9'",
     "pre-commit==3.6.0; python_version >= '3.9'",
     "py3createtorrent==1.2.0",
     "pylint==3.0.3",
-    "pytest==7.4.4",
+    "pytest==8.0.2",
     "pytest-cov==4.1.0",
     "pytest-mock==3.12.0",
     "pytest-xdist==3.5.0",
     "pyupgrade==3.15.0",
-    "twine==4.0.2",
+    "twine==5.0.0",
     "isort==5.13.2",
     "flake8==7.0.0",
     "mypy==1.8.0",
     "black==23.12.1",
-    "lxml==4.9.3",
+    "lxml==5.1.0",
     "aiohttp_cors==0.7.0",  # For blackd
     "pyinstaller==6.3.0",
     "types-aiofiles==23.2.0.20240106",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.12",
-    "types-setuptools==69.0.0.20240115",
+    "types-setuptools==69.1.0.20240217",
 ]
 
 legacy_keyring_dependencies = [

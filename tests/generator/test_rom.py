@@ -46,7 +46,7 @@ GENERATOR_CODE = """
 COMPILED_GENERATOR_CODE = bytes(Program.to(compile_clvm_text(GENERATOR_CODE, [])))  # type: ignore[no-untyped-call]
 
 FIRST_GENERATOR = Program.to(
-    binutils.assemble(  # type: ignore[no-untyped-call]
+    binutils.assemble(
         """
         ((0x0000000000000000000000000000000000000000000000000000000000000000 1 50000
         ((51 0x0000000000000000000000000000000000000000000000000000000000000001 500))
@@ -54,7 +54,7 @@ FIRST_GENERATOR = Program.to(
     )
 ).as_bin()
 
-SECOND_GENERATOR = Program.to(binutils.assemble("(extra data for block)")).as_bin()  # type: ignore[no-untyped-call]
+SECOND_GENERATOR = Program.to(binutils.assemble("(extra data for block)")).as_bin()
 
 
 def to_sp(sexp: bytes) -> SerializedProgram:

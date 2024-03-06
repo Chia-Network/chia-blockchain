@@ -21,17 +21,12 @@ chia.types.blockchain_format.program
 chia.wallet.chialisp
 chia.wallet.did_wallet.did_wallet
 chia.wallet.key_val_store
-chia.wallet.lineage_proof
-chia.wallet.nft_wallet.nft_puzzles
 chia.wallet.payment
 chia.wallet.puzzles.load_clvm
 chia.wallet.puzzles.p2_conditions
-chia.wallet.puzzles.p2_delegated_conditions
 chia.wallet.puzzles.p2_delegated_puzzle
 chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle
 chia.wallet.puzzles.p2_m_of_n_delegate_direct
-chia.wallet.puzzles.p2_puzzle_hash
-chia.wallet.puzzles.singleton_top_layer
 chia.wallet.puzzles.tails
 chia.wallet.trading.trade_store
 chia.wallet.transaction_record
@@ -67,7 +62,6 @@ tests.core.full_node.stores.test_sync_store
 tests.core.full_node.test_address_manager
 tests.core.full_node.test_full_node
 tests.core.full_node.test_node_load
-tests.core.full_node.test_peer_store_resolver
 tests.core.full_node.test_performance
 tests.core.full_node.test_transactions
 tests.core.mempool.test_mempool
@@ -79,7 +73,6 @@ tests.core.test_daemon_rpc
 tests.core.test_db_conversion
 tests.core.test_filter
 tests.core.test_full_node_rpc
-tests.core.test_merkle_set
 tests.core.util.test_cached_bls
 tests.core.util.test_config
 tests.core.util.test_file_keyring_synchronization
@@ -105,11 +98,7 @@ tests.util.time_out_assert
 tests.wallet.cat_wallet.test_trades
 tests.wallet.did_wallet.test_did
 tests.wallet.rpc.test_wallet_rpc
-tests.wallet.simple_sync.test_simple_sync_protocol
-tests.wallet.sync.test_wallet_sync
 tests.wallet.test_chialisp
-tests.wallet.test_singleton_lifecycle
-tests.wallet.test_singleton_lifecycle_fast
 tests.wallet.test_taproot
 tests.wallet.test_wallet_interested_store
 tests.wallet.test_wallet_key_val_store

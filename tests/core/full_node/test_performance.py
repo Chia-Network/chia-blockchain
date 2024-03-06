@@ -137,7 +137,9 @@ class TestPerformance:
         curr: BlockRecord = peak
         while not curr.is_transaction_block:
             curr = full_node_1.full_node.blockchain.block_record(curr.prev_hash)
-        mempool_bundle = full_node_1.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
+        mempool_bundle = await full_node_1.full_node.mempool_manager.create_bundle_from_mempool(
+            curr.header_hash, full_node_1.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
+        )
         if mempool_bundle is None:
             spend_bundle = None
         else:
@@ -174,7 +176,7 @@ class TestPerformance:
 
         with benchmark_runner.assert_runtime(seconds=0.1, label="full block"):
             # No transactions generator, the full node already cached it from the unfinished block
-            block_small = dataclasses.replace(block, transactions_generator=None)
+            block_small = block.replace(transactions_generator=None)
             res = await full_node_1.full_node.add_block(block_small)
 
         log.warning(f"Res: {res}")

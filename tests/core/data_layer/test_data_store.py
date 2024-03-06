@@ -5,6 +5,7 @@ import logging
 import random
 import re
 import statistics
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
@@ -34,6 +35,7 @@ from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import (
     get_delta_filename,
     get_full_tree_filename,
+    insert_from_delta_file,
     insert_into_data_store_from_file,
     is_filename_valid,
     write_files_for_root,
@@ -308,7 +310,8 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
         if i > 25 and i <= 200 and random.randint(0, 4):
             is_insert = True
         if i > 200:
-            hint_keys_values = await data_store.get_keys_values_compressed(tree_id)
+            kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+            hint_keys_values = kv_compressed.keys_values_hashed
             if not deleted_all:
                 while node_count > 0:
                     node_count -= 1
@@ -643,7 +646,8 @@ async def test_inserting_duplicate_key_fails(
             side=Side.RIGHT,
         )
 
-    hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
+    kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+    hint_keys_values = kv_compressed.keys_values_hashed
     # TODO: more specific exception
     with pytest.raises(Exception):
         await data_store.insert(
@@ -749,7 +753,8 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (
@@ -789,7 +794,8 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (
@@ -827,7 +833,8 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (
@@ -867,7 +874,8 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
 
     hint_keys_values = None
     if use_hint:
-        hint_keys_values = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        kv_compressed = await data_store.get_keys_values_compressed(tree_id=tree_id)
+        hint_keys_values = kv_compressed.keys_values_hashed
 
     expected = Program.to(
         (
@@ -1137,11 +1145,24 @@ async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> Non
     )
     root = await data_store.get_pending_root(tree_id)
     assert root is not None
+    assert root.status == Status.PENDING
+    is_empty = await data_store.table_is_empty(tree_id=tree_id)
+    assert is_empty
+
+    await data_store.change_root_status(root, Status.PENDING_BATCH)
+    root = await data_store.get_pending_root(tree_id)
+    assert root is not None
+    assert root.status == Status.PENDING_BATCH
+    is_empty = await data_store.table_is_empty(tree_id=tree_id)
+    assert is_empty
+
     await data_store.change_root_status(root, Status.COMMITTED)
     root = await data_store.get_tree_root(tree_id)
     is_empty = await data_store.table_is_empty(tree_id=tree_id)
     assert not is_empty
     assert root.node_hash is not None
+    root = await data_store.get_pending_root(tree_id)
+    assert root is None
 
 
 @pytest.mark.anyio
@@ -1356,6 +1377,68 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
         current_timestamp += 1
 
 
+@pytest.mark.anyio
+async def test_server_http_ban(
+    data_store: DataStore, tree_id: bytes32, monkeypatch: Any, tmp_path: Path, seeded_random: random.Random
+) -> None:
+    sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
+    await data_store.subscribe(Subscription(tree_id, [sinfo]))
+
+    async def mock_http_download(
+        client_folder: Path,
+        filename: str,
+        proxy_url: str,
+        server_info: ServerInfo,
+        timeout: int,
+        log: logging.Logger,
+    ) -> bool:
+        return False
+
+    start_timestamp = int(time.time())
+    with monkeypatch.context() as m:
+        m.setattr("chia.data_layer.download_data.http_download", mock_http_download)
+        success = await insert_from_delta_file(
+            data_store=data_store,
+            tree_id=tree_id,
+            existing_generation=3,
+            root_hashes=[bytes32.random(seeded_random)],
+            server_info=sinfo,
+            client_foldername=tmp_path,
+            timeout=15,
+            log=log,
+            proxy_url="",
+            downloader=None,
+        )
+
+    assert success is False
+
+    subscriptions = await data_store.get_subscriptions()
+    sinfo = subscriptions[0].servers_info[0]
+    assert sinfo.num_consecutive_failures == 1
+    assert sinfo.ignore_till >= start_timestamp + 5 * 60  # ban for 5 minutes
+    start_timestamp = sinfo.ignore_till
+
+    with monkeypatch.context() as m:
+        m.setattr("chia.data_layer.download_data.http_download", mock_http_download)
+        success = await insert_from_delta_file(
+            data_store=data_store,
+            tree_id=tree_id,
+            existing_generation=3,
+            root_hashes=[bytes32.random(seeded_random)],
+            server_info=sinfo,
+            client_foldername=tmp_path,
+            timeout=15,
+            log=log,
+            proxy_url="",
+            downloader=None,
+        )
+
+    subscriptions = await data_store.get_subscriptions()
+    sinfo = subscriptions[0].servers_info[0]
+    assert sinfo.num_consecutive_failures == 2
+    assert sinfo.ignore_till == start_timestamp  # we don't increase on second failure
+
+
 @pytest.mark.parametrize(
     "test_delta",
     [True, False],
@@ -1409,7 +1492,8 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
 
 
 @pytest.mark.anyio
-async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
+@pytest.mark.parametrize("pending_status", [Status.PENDING, Status.PENDING_BATCH])
+async def test_pending_roots(data_store: DataStore, tree_id: bytes32, pending_status: Status) -> None:
     key = b"\x01\x02"
     value = b"abc"
 
@@ -1429,11 +1513,11 @@ async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
         key=key,
         value=value,
         tree_id=tree_id,
-        status=Status.PENDING,
+        status=pending_status,
     )
     pending_root = await data_store.get_pending_root(tree_id=tree_id)
     assert pending_root is not None
-    assert pending_root.generation == 2 and pending_root.status == Status.PENDING
+    assert pending_root.generation == 2 and pending_root.status == pending_status
 
     await data_store.clear_pending_roots(tree_id=tree_id)
     pending_root = await data_store.get_pending_root(tree_id=tree_id)
@@ -1441,7 +1525,10 @@ async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
 
 
 @pytest.mark.anyio
-async def test_clear_pending_roots_returns_root(data_store: DataStore, tree_id: bytes32) -> None:
+@pytest.mark.parametrize("pending_status", [Status.PENDING, Status.PENDING_BATCH])
+async def test_clear_pending_roots_returns_root(
+    data_store: DataStore, tree_id: bytes32, pending_status: Status
+) -> None:
     key = b"\x01\x02"
     value = b"abc"
 
@@ -1451,7 +1538,7 @@ async def test_clear_pending_roots_returns_root(data_store: DataStore, tree_id: 
         tree_id=tree_id,
         reference_node_hash=None,
         side=None,
-        status=Status.PENDING,
+        status=pending_status,
     )
 
     pending_root = await data_store.get_pending_root(tree_id=tree_id)
@@ -1663,7 +1750,8 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
 
 
 @pytest.mark.anyio
-async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStore) -> None:
+@pytest.mark.parametrize("pending_status", [Status.PENDING, Status.PENDING_BATCH])
+async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStore, pending_status: Status) -> None:
     num_stores = 5
     total_keys = 15
     tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
@@ -1679,7 +1767,7 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
         batch = [{"action": "insert", "key": key, "value": key} for key in original_keys[start_index:end_index]]
         batches.append(batch)
     for tree_id, batch in zip(tree_ids, batches):
-        await raw_data_store.insert_batch(tree_id, batch, status=Status.PENDING)
+        await raw_data_store.insert_batch(tree_id, batch, status=pending_status)
 
     tree_id = tree_ids[-1]
     batch = [{"action": "insert", "key": key, "value": key} for key in original_keys]

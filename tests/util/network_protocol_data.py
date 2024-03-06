@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from chia_rs import G1Element, G2Element
+from chia_rs import G1Element, G2Element, RewardChainBlockUnfinished
 
 from chia.protocols import (
     farmer_protocol,
@@ -209,10 +209,12 @@ sub_epochs = SubEpochData(
     uint64(989988965238543242),
 )
 
+classgroup_element = ClassgroupElement.get_default_element()
+
 vdf_info = VDFInfo(
     bytes32(bytes.fromhex("7cbd5905838c1dc2becd00298a5b3a6e42b6a306d574c8897cd721f84d429972")),
     uint64(14708638287767651172),
-    ClassgroupElement.get_default_element(),
+    classgroup_element,
 )
 
 vdf_proof = VDFProof(
@@ -408,11 +410,21 @@ respond_block = full_node_protocol.RespondBlock(
 )
 
 new_unfinished_block = full_node_protocol.NewUnfinishedBlock(
-    bytes32(bytes.fromhex("229646fb33551966039d9324c0d10166c554d20e9a11e3f30942ec0bb346377e")),
+    bytes32.fromhex("229646fb33551966039d9324c0d10166c554d20e9a11e3f30942ec0bb346377e"),
 )
 
 request_unfinished_block = full_node_protocol.RequestUnfinishedBlock(
-    bytes32(bytes.fromhex("8b5e5a59f33bb89e1bfd5aca79409352864e70aa7765c331d641875f83d59d1d")),
+    bytes32.fromhex("8b5e5a59f33bb89e1bfd5aca79409352864e70aa7765c331d641875f83d59d1d"),
+)
+
+new_unfinished_block2 = full_node_protocol.NewUnfinishedBlock2(
+    bytes32.fromhex("229646fb33551966039d9324c0d10166c554d20e9a11e3f30942ec0bb346377e"),
+    bytes32.fromhex("166c554d20e9a11e3f30942ec0bb346377e229646fb33551966039d9324c0d10"),
+)
+
+request_unfinished_block2 = full_node_protocol.RequestUnfinishedBlock2(
+    bytes32.fromhex("8b5e5a59f33bb89e1bfd5aca79409352864e70aa7765c331d641875f83d59d1d"),
+    bytes32.fromhex("a79409352864e70aa7765c331d641875f83d59d1d8b5e5a59f33bb89e1bfd5ac"),
 )
 
 unfinished_block = UnfinishedBlock(
@@ -710,18 +722,66 @@ new_signage_point_harvester = harvester_protocol.NewSignagePointHarvester(
 )
 
 new_proof_of_space = harvester_protocol.NewProofOfSpace(
-    bytes32(bytes.fromhex("1b64ec6bf3fe33bb80eca5b64ff1c88be07771eaed1e98a7199510522087e56e")),
-    bytes32(bytes.fromhex("ad1f8a74376ce8c5c93b7fbb355c2fb6d689ae4f4a7134166593d95265a3da30")),
+    bytes32.fromhex("1b64ec6bf3fe33bb80eca5b64ff1c88be07771eaed1e98a7199510522087e56e"),
+    bytes32.fromhex("ad1f8a74376ce8c5c93b7fbb355c2fb6d689ae4f4a7134166593d95265a3da30"),
     "plot_1",
     proof_of_space,
     uint8(160),
+    include_source_signature_data=True,
+    farmer_reward_address_override=bytes32.fromhex("ad1f8a7437134166593d95265a3da3076ce8c5c93b7fbb355c2fb6d689ae4f4a"),
+    fee_info=harvester_protocol.ProofOfSpaceFeeInfo(applied_fee_threshold=uint32(1337)),
+)
+
+# part of the pool protocol
+post_partial_payload = pool_protocol.PostPartialPayload(
+    bytes32(bytes.fromhex("dada61e179e67e5e8bc7aaab16e192facf0f15871f0c479d2a96ac5f85721a1a")),
+    uint64(2491521039628830788),
+    proof_of_space,
+    bytes32.fromhex("929287fab514e2204808821e2afe8c4d84f0093c75554b067fe4fca272890c9d"),
+    False,
+    bytes32.fromhex("f98dff6bdcc3926b33cb8ab22e11bd15c13d6a9b6832ac948b3273f5ccd8e7ec"),
 )
 
 request_signatures = harvester_protocol.RequestSignatures(
     "plot_1",
-    bytes32(bytes.fromhex("b5fa873020fa8b959d89bc2ffc5797501bf870ac8b30437cd6b4fcdea0812789")),
-    bytes32(bytes.fromhex("bccb7744192771f3a7abca2bce6ea03ed53f1f0d991c13bd2711ce32a2fb3777")),
-    [bytes32(bytes.fromhex("3fc12545f50a9f0621371688f60b29eff05805dd51b42c90063f5e3c6698fc75"))],
+    bytes32.fromhex("b5fa873020fa8b959d89bc2ffc5797501bf870ac8b30437cd6b4fcdea0812789"),
+    bytes32.fromhex("bccb7744192771f3a7abca2bce6ea03ed53f1f0d991c13bd2711ce32a2fb3777"),
+    [bytes32.fromhex("3fc12545f50a9f0621371688f60b29eff05805dd51b42c90063f5e3c6698fc75")],
+    [
+        harvester_protocol.SignatureRequestSourceData(
+            uint8(harvester_protocol.SigningDataKind.FOLIAGE_BLOCK_DATA),
+            bytes(foliage_block_data),
+        ),
+        harvester_protocol.SignatureRequestSourceData(
+            uint8(harvester_protocol.SigningDataKind.FOLIAGE_TRANSACTION_BLOCK),
+            bytes(foliage_transaction_block),
+        ),
+        harvester_protocol.SignatureRequestSourceData(
+            uint8(harvester_protocol.SigningDataKind.CHALLENGE_CHAIN_VDF),
+            bytes(vdf_info),
+        ),
+        harvester_protocol.SignatureRequestSourceData(
+            uint8(harvester_protocol.SigningDataKind.REWARD_CHAIN_VDF),
+            bytes(classgroup_element),
+        ),
+        harvester_protocol.SignatureRequestSourceData(
+            uint8(harvester_protocol.SigningDataKind.CHALLENGE_CHAIN_SUB_SLOT),
+            bytes(challenge_chain),
+        ),
+        harvester_protocol.SignatureRequestSourceData(
+            uint8(harvester_protocol.SigningDataKind.REWARD_CHAIN_SUB_SLOT),
+            bytes(reward_chain),
+        ),
+        harvester_protocol.SignatureRequestSourceData(
+            uint8(harvester_protocol.SigningDataKind.PARTIAL),
+            bytes(post_partial_payload),
+        ),
+    ],
+    RewardChainBlockUnfinished.from_bytes(
+        bytes.fromhex(
+            "000000000000000000000000000e006704e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b85511ddefb0e56532907ceee3d48b23896b55863b9ba71e06441caf274389616c7600011b9d1eaa3c6a9b27cd90ad9070eb012794a74b277446417bc7b904145010c0878fde05dff50c7409c6ac3c5c42d7cdf596e6232bdfa833e715dbd19cfec3e9d08a407b11288a0a6fd25a932ebd0d6a3f14000000a06b99913f88112ab38726b8119e7f7006b24274f1a8c4c552c2a23c8076bdf0d4e8546c4a47fb5b82041e429a3fd44936ce5e9d811a4996a6f0d2896805b6ae018430d944db57080b1abb5863cb48c6deeaf86e93e6c2f0f8f88f527aa4966d88e1e607dadb45869f18225ef1b987d2b43a08a8defff0b0320106fdaad531edfca2b7b78d873d3f20a3780b2baaea3caafb8ad47f43e649872d16e69afd06527d01e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855000000000008000003005f4faabe7ceb8796e2d8db3db666212273962e2bf1e951717352e0d284ec7b18f4595dafdb7edd4e0e2ae7b231bce7ca75f551afcea51b32679713aa01faf62f375f821e835c333cc2d2a4d8c9e5edaae1702dd82f1f9dd63841e572df587d110100b243a5388d5858bcfa76cc93f53eba8479136480ae9c1b892ebdae4180f4f4c2fbf9a1ae01a59e634f877cb1b74cbc7805c0be9c97e6c133a0e7c29a9d89bfc8b08250184d85275c8cb64401ade1bb06443c92df171ca527dee1af4e81cd931001e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855000000000008000003005f4faabe7ceb8796e2d8db3db666212273962e2bf1e951717352e0d284ec7b18f4595dafdb7edd4e0e2ae7b231bce7ca75f551afcea51b32679713aa01faf62f375f821e835c333cc2d2a4d8c9e5edaae1702dd82f1f9dd63841e572df587d110100b243a5388d5858bcfa76cc93f53eba8479136480ae9c1b892ebdae4180f4f4c2fbf9a1ae01a59e634f877cb1b74cbc7805c0be9c97e6c133a0e7c29a9d89bfc8b08250184d85275c8cb64401ade1bb06443c92df171ca527dee1af4e81cd9310"
+        )
+    ),
 )
 
 respond_signatures = harvester_protocol.RespondSignatures(
@@ -739,6 +799,8 @@ respond_signatures = harvester_protocol.RespondSignatures(
         ),
     ),
     [(bytes32(bytes.fromhex("c32fd5310f5e8623697561930dca73cb9da5b3ddb903f52818724bb3bdd9349c")), g2_element)],
+    True,
+    bytes32.fromhex("cb3ddb903f52818724bb3b32fd5310f5e8623697561930dca73cb9da5dd9349c"),
 )
 
 plot = harvester_protocol.Plot(
@@ -801,15 +863,6 @@ get_pool_info_response = pool_protocol.GetPoolInfoResponse(
     "pool description.",
     bytes32(bytes.fromhex("f6b5120ff1ab7ba661e3b2c91c8b373a8aceea8e4eb6ce3f085f3e80a8655b36")),
     uint8(76),
-)
-
-post_partial_payload = pool_protocol.PostPartialPayload(
-    bytes32(bytes.fromhex("dada61e179e67e5e8bc7aaab16e192facf0f15871f0c479d2a96ac5f85721a1a")),
-    uint64(2491521039628830788),
-    proof_of_space,
-    bytes32(bytes.fromhex("929287fab514e2204808821e2afe8c4d84f0093c75554b067fe4fca272890c9d")),
-    False,
-    bytes32(bytes.fromhex("f98dff6bdcc3926b33cb8ab22e11bd15c13d6a9b6832ac948b3273f5ccd8e7ec")),
 )
 
 post_partial_request = pool_protocol.PostPartialRequest(

@@ -7,7 +7,6 @@ from typing import Iterable, List, Optional, Tuple, Type, TypeVar
 
 from clvm.casts import int_to_bytes
 
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -16,6 +15,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
@@ -438,7 +438,7 @@ class CRCAT:
         inner_solution: Program,
         # For optimization purposes the conditions may already have been run
         conditions: Optional[Iterable[Program]] = None,
-    ) -> Tuple[List[Announcement], CoinSpend, List[CRCAT]]:
+    ) -> Tuple[List[AssertCoinAnnouncement], CoinSpend, List[CRCAT]]:
         """
         Spend a CR-CAT.
 
@@ -449,7 +449,7 @@ class CRCAT:
         Likely, spend_many is more useful.
         """
         # Gather the output information
-        announcements: List[Announcement] = []
+        announcements: List[AssertCoinAnnouncement] = []
         new_inner_puzzle_hashes_and_amounts: List[Tuple[bytes32, uint64]] = []
         if conditions is None:
             conditions = inner_puzzle.run(inner_solution).as_iter()  # pragma: no cover
@@ -459,7 +459,10 @@ class CRCAT:
                 new_inner_puzzle_hash: bytes32 = bytes32(condition.at("rf").as_atom())
                 new_amount: uint64 = uint64(condition.at("rrf").as_int())
                 announcements.append(
-                    Announcement(self.coin.name(), b"\xcd" + std_hash(new_inner_puzzle_hash + int_to_bytes(new_amount)))
+                    AssertCoinAnnouncement(
+                        asserted_id=self.coin.name(),
+                        asserted_msg=b"\xcd" + std_hash(new_inner_puzzle_hash + int_to_bytes(new_amount)),
+                    )
                 )
                 new_inner_puzzle_hashes_and_amounts.append((new_inner_puzzle_hash, new_amount))
 
@@ -523,7 +526,7 @@ class CRCAT:
         provider_id: bytes32,
         vc_launcher_id: bytes32,
         vc_inner_puzhash: Optional[bytes32],  # Optional for incomplete spends
-    ) -> Tuple[List[Announcement], List[CoinSpend], List[CRCAT]]:
+    ) -> Tuple[List[AssertCoinAnnouncement], List[CoinSpend], List[CRCAT]]:
         """
         Spend a multiple CR-CATs.
 
@@ -543,7 +546,7 @@ class CRCAT:
             key=lambda spend: spend[0].coin.name(),
         )
 
-        all_expected_announcements: List[Announcement] = []
+        all_expected_announcements: List[AssertCoinAnnouncement] = []
         all_coin_spends: List[CoinSpend] = []
         all_new_crcats: List[CRCAT] = []
 

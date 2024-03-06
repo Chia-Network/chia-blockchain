@@ -169,7 +169,7 @@ jobs:
         rm -rf ./chia-blockchain-gui
 
     - name: Cache GUI
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-gui
       with:
         path: ./chia-blockchain-gui
@@ -206,7 +206,7 @@ jobs:
     needs:
     - build
     container: chianetwork/ubuntu-20.04-builder:latest
-    timeout-minutes: 5
+    timeout-minutes: ${{ matrix.os.timeout }}
     strategy:
       fail-fast: false
       matrix:
@@ -215,9 +215,12 @@ jobs:
           - runs-on: ubuntu-latest
             arch: amd64
             glue-name: "build-amd64-deb"
+            timeout: 5
           - runs-on: [Linux, ARM64]
             arch: arm64
             glue-name: "build-arm64-deb"
+            # TOOD: some self hosted runners are exhibiting slow artifact downloads sometimes
+            timeout: 20
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}

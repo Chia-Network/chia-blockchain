@@ -5,12 +5,15 @@ import asyncio
 import dataclasses
 import datetime
 import functools
+import json
+import logging
 import math
 import multiprocessing
 import os
 import random
 import sysconfig
 import tempfile
+from contextlib import AsyncExitStack
 from enum import Enum
 from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Union
 
@@ -19,7 +22,9 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from pytest import MonkeyPatch
 
+import tests
 from chia.clvm.spend_sim import CostLogger
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
@@ -33,7 +38,14 @@ from chia.seeder.dns_server import DNSServer
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord
+from chia.simulator.setup_services import (
+    setup_crawler,
+    setup_daemon,
+    setup_full_node,
+    setup_introducer,
+    setup_seeder,
+    setup_timelord,
+)
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
@@ -58,10 +70,11 @@ from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from tests import ether
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
-from tests.util.misc import BenchmarkRunner, GcMode, _AssertRuntime, measure_overhead
+from tests.util.misc import BenchmarkRunner, GcMode, RecordingWebServer, TestId, _AssertRuntime, measure_overhead
 from tests.util.setup_nodes import (
     OldSimulatorsAndWallets,
     SimulatorsAndWallets,
@@ -81,6 +94,20 @@ from chia.simulator.block_tools import BlockTools, create_block_tools_async, tes
 from chia.simulator.keyring import TempKeyring
 from chia.util.keyring_wrapper import KeyringWrapper
 from tests.util.setup_nodes import setup_farmer_multi_harvester
+
+
+@pytest.fixture(name="ether_setup", autouse=True)
+def ether_setup_fixture(request: SubRequest, record_property: Callable[[str, object], None]) -> Iterator[None]:
+    with MonkeyPatch.context() as monkeypatch_context:
+        monkeypatch_context.setattr(ether, "record_property", record_property)
+        monkeypatch_context.setattr(ether, "test_id", TestId.create(node=request.node))
+        yield
+
+
+@pytest.fixture(autouse=True)
+def ether_test_id_property_fixture(ether_setup: None, record_property: Callable[[str, object], None]) -> None:
+    assert ether.test_id is not None, "ether.test_id is None, did you forget to use the ether_setup fixture?"
+    record_property("test_id", json.dumps(ether.test_id.marshal(), ensure_ascii=True, sort_keys=True))
 
 
 def make_old_setup_simulators_and_wallets(new: SimulatorsAndWallets) -> OldSimulatorsAndWallets:
@@ -123,16 +150,12 @@ def benchmark_runner_overhead_fixture() -> float:
 
 @pytest.fixture(name="benchmark_runner")
 def benchmark_runner_fixture(
-    request: SubRequest,
     benchmark_runner_overhead: float,
-    record_property: Callable[[str, object], None],
     benchmark_repeat: int,
 ) -> BenchmarkRunner:
-    label = request.node.name
     return BenchmarkRunner(
-        label=label,
+        test_id=ether.test_id,
         overhead=benchmark_runner_overhead,
-        record_property=record_property,
     )
 
 
@@ -426,9 +449,20 @@ def pytest_addoption(parser: pytest.Parser):
         type=int,
         help=f"The number of times to run each benchmark, default {default_repeats}.",
     )
+    group.addoption(
+        "--time-out-assert-repeats",
+        action="store",
+        default=default_repeats,
+        type=int,
+        help=f"The number of times to run each test with time out asserts, default {default_repeats}.",
+    )
 
 
 def pytest_configure(config):
+    for logger_name in ["aiosqlite", "filelock", "watchdog"]:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(max(logger.getEffectiveLevel(), logging.INFO))
+
     config.addinivalue_line("markers", "benchmark: automatically assigned by the benchmark_runner fixture")
 
     benchmark_repeats = config.getoption("--benchmark-repeats")
@@ -450,6 +484,22 @@ def pytest_configure(config):
             return 1
 
     globals()[benchmark_repeat_fixture.__name__] = benchmark_repeat_fixture
+
+    time_out_assert_repeats = config.getoption("--time-out-assert-repeats")
+    if time_out_assert_repeats != 1:
+
+        @pytest.fixture(
+            name="time_out_assert_repeat",
+            autouse=True,
+            params=[
+                pytest.param(repeat, id=f"time_out_assert_repeat{repeat:03d}")
+                for repeat in range(time_out_assert_repeats)
+            ],
+        )
+        def time_out_assert_repeat_fixture(request: SubRequest) -> int:
+            return request.param
+
+        globals()[time_out_assert_repeat_fixture.__name__] = time_out_assert_repeat_fixture
 
 
 def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
@@ -1107,3 +1157,75 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
     """Populated with a payload containing 0 keys using the default passphrase."""
     with TempKeyring(populate=True) as keyring:
         yield keyring
+
+
+@pytest.fixture(scope="function")
+async def farmer_harvester_2_simulators_zero_bits_plot_filter(
+    tmp_path: Path, get_temp_keyring: Keychain
+) -> AsyncIterator[
+    Tuple[
+        FarmerService,
+        HarvesterService,
+        Union[FullNodeService, SimulatorFullNodeService],
+        Union[FullNodeService, SimulatorFullNodeService],
+        BlockTools,
+    ]
+]:
+    zero_bit_plot_filter_consts = dataclasses.replace(
+        test_constants_modified,
+        NUMBER_ZERO_BITS_PLOT_FILTER=0,
+        NUM_SPS_SUB_SLOT=uint32(8),
+    )
+
+    async with AsyncExitStack() as async_exit_stack:
+        bt = await create_block_tools_async(
+            zero_bit_plot_filter_consts,
+            keychain=get_temp_keyring,
+        )
+
+        config_overrides: Dict[str, int] = {"full_node.max_sync_wait": 0}
+
+        bts = [
+            await create_block_tools_async(
+                zero_bit_plot_filter_consts,
+                keychain=get_temp_keyring,
+                num_og_plots=0,
+                num_pool_plots=0,
+                num_non_keychain_plots=0,
+                config_overrides=config_overrides,
+            )
+            for _ in range(2)
+        ]
+
+        simulators: List[SimulatorFullNodeService] = [
+            await async_exit_stack.enter_async_context(
+                # Passing simulator=True gets us this type guaranteed
+                setup_full_node(  # type: ignore[arg-type]
+                    consensus_constants=bts[index].constants,
+                    db_name=f"blockchain_test_{index}_sim.db",
+                    self_hostname=bts[index].config["self_hostname"],
+                    local_bt=bts[index],
+                    simulator=True,
+                    db_version=2,
+                )
+            )
+            for index in range(len(bts))
+        ]
+
+        [harvester_service], farmer_service, _ = await async_exit_stack.enter_async_context(
+            setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True)
+        )
+
+        yield farmer_service, harvester_service, simulators[0], simulators[1], bt
+
+
+@pytest.fixture(name="recording_web_server")
+async def recording_web_server_fixture(self_hostname: str) -> AsyncIterator[RecordingWebServer]:
+    server = await RecordingWebServer.create(
+        hostname=self_hostname,
+        port=uint16(0),
+    )
+    try:
+        yield server
+    finally:
+        await server.await_closed()
