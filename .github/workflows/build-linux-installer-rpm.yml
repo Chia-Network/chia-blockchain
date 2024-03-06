@@ -419,7 +419,7 @@ jobs:
 
     - name: Run chia dev installers test
       run: |
-        chia dev installers test --no-require-madmax --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"
+        chia dev installers test --require-no-madmax --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"
 
     - name: Verify /opt/chia present
       run: |
