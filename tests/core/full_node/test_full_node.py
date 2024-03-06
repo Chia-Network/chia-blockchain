@@ -749,9 +749,7 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
         await full_node_1.full_node.add_unfinished_block(unf, None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
-        result = full_node_1.full_node.full_node_store.get_unfinished_block_result2(
-            unf.partial_hash, unf.foliage.foliage_transaction_block_hash
-        )
+        result = full_node_1.full_node.full_node_store.get_unfinished_block_result(unf.partial_hash)
         assert result is not None
         assert result.npc_result is not None
         assert result.npc_result.conds is not None
