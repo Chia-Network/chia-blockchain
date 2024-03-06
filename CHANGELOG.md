@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.2.1 Chia blockchain 2024-03-4
+
+### Fixed
+* Fixed issue with finding bladebit and madmax plotters in CLI and GUI (thanks @nanofarmer)
+* Fixed issue with banning peers due to incorrect `INVALID_TRANSACTIONS_FILTER_HASH` and `INVALID_BLOCK_COST` log errors (#17620)
+
 ## 2.2.0 Chia blockchain 2024-02-28
 
 * Thanks to @bhorvitz for major help debugging a performance issue during coin DB lookup
