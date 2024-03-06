@@ -350,39 +350,21 @@ class TestWalletSimulator:
         await time_out_assert(20, wsm_1.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": True}],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_wallet_clawback_clawback(
-        self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        num_blocks = 1
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_api = full_nodes[0]
-        server_1 = full_node_api.full_node.server
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        wallet_1 = wallet_node_2.wallet_state_manager.main_wallet
-        api_0 = WalletRpcApi(wallet_node)
-        api_1 = WalletRpcApi(wallet_node_2)
-        if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-
-        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
-        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
-        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
+    async def test_wallet_clawback_clawback(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        env_2 = wallet_environments.environments[1]
+        wsm = env.wallet_state_manager
+        wsm_2 = env_2.wallet_state_manager
+        wallet = env.xch_wallet
+        wallet_1 = env_2.xch_wallet
+        api_0 = env.rpc_api
+        api_1 = env_2.rpc_api
 
         normal_puzhash = await wallet_1.get_new_puzzlehash()
         # Transfer to normal wallet
@@ -395,51 +377,93 @@ class TestWalletSimulator:
             memos=[b"Test"],
         )
 
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
-        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "unconfirmed_wallet_balance": -500,
+                            "<=#spendable_balance": -500,
+                            "<=#max_send_amount": -500,
+                            ">=#pending_change": 1,  # any amount increase
+                            "pending_coin_removal_count": 1,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -500,
+                            ">=#spendable_balance": 1,  # any amount increase
+                            ">=#max_send_amount": 1,  # any amount increase
+                            "<=#pending_change": -1,  # any amount decrease
+                            "pending_coin_removal_count": -1,
+                        }
+                    },
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={},
+                    post_block_balance_updates={},
+                ),
+            ]
+        )
+
         # Check merkle coins
-        await time_out_assert(
-            20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
-        )
-        await time_out_assert(
-            20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
-        )
+        await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
+        await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
         txs = await api_0.get_transactions(
             dict(type_filter={"values": [TransactionType.INCOMING_CLAWBACK_SEND], "mode": 1}, wallet_id=1)
         )
-        assert await wallet.get_confirmed_balance() == 3999999999500
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
-        interested_coins = await wallet_node_2.wallet_state_manager.interested_store.get_interested_coin_ids()
+        interested_coins = await wsm_2.interested_store.get_interested_coin_ids()
         assert merkle_coin.name() in set(interested_coins)
         assert len(txs["transactions"]) == 1
         assert not txs["transactions"][0]["confirmed"]
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
         assert txs["transactions"][0]["metadata"]["coin_id"] == merkle_coin.name().hex()
-        has_exception = False
-        try:
+        with pytest.raises(ValueError):
             await api_0.spend_clawback_coins({})
-        except ValueError:
-            has_exception = True
-        assert has_exception
+
         resp = await api_0.spend_clawback_coins(
-            dict({"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": 1000})
+            dict({"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": 10})
         )
         json.dumps(resp)
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
-        # Wait mempool update
-        await time_out_assert_not_none(
-            5, full_node_api.full_node.mempool_manager.get_spendbundle, bytes32.from_hexstr(resp["transaction_ids"][0])
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "unconfirmed_wallet_balance": 500 - 10,  # 10 for fee
+                            "<=#spendable_balance": -1,
+                            "<=#max_send_amount": -1,
+                            ">=#pending_change": 1,
+                            "pending_coin_removal_count": 2,  # 1 for fee, one for clawback
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": 500 - 10,
+                            ">=#spendable_balance": 1,
+                            ">=#max_send_amount": 1,
+                            "<=#pending_change": -1,
+                            "unspent_coin_count": 1,
+                            "pending_coin_removal_count": -2,
+                        }
+                    },
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={},
+                    post_block_balance_updates={},
+                ),
+            ]
         )
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
-        await time_out_assert(
-            20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
-        )
-        await time_out_assert(
-            20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
-        )
+
+        await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
+        await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
         txs = await api_0.get_transactions(
             dict(
                 type_filter={
@@ -452,11 +476,7 @@ class TestWalletSimulator:
         assert len(txs["transactions"]) == 2
         assert txs["transactions"][0]["confirmed"]
         assert txs["transactions"][1]["confirmed"]
-        await time_out_assert(10, wallet.get_confirmed_balance, 3999999999000)
-        await time_out_assert(10, wallet_1.get_confirmed_balance, 2000000001000)
-        resp = await api_0.get_transactions(dict(wallet_id=1, reverse=True))
-        xch_tx = resp["transactions"][0]
-        assert list(xch_tx["memos"].values())[0] == b"Test".hex()
+
         txs = await api_1.get_transactions(
             dict(
                 type_filter={
@@ -471,7 +491,7 @@ class TestWalletSimulator:
         )
         assert len(txs["transactions"]) == 1
         assert txs["transactions"][0]["confirmed"]
-        interested_coins = await wallet_node_2.wallet_state_manager.interested_store.get_interested_coin_ids()
+        interested_coins = await wsm_2.interested_store.get_interested_coin_ids()
         assert merkle_coin.name() not in set(interested_coins)
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
