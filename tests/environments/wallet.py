@@ -272,10 +272,13 @@ class WalletTestFramework:
                     ] = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
                 puzzle_hash_indexes.append(ph_indexes)
 
-        # Gather all pending transactions and ensure they enter mempool
+        # Gather all pending transactions
         pending_txs: List[List[TransactionRecord]] = [
             await env.wallet_state_manager.tx_store.get_all_unconfirmed() for env in self.environments
         ]
+        # Filter clawback txs
+        pending_txs = [[tx for tx in txs if tx.confirmed_at_height == 0] for txs in pending_txs]
+        # Ensure txs enter mempool
         await self.full_node.wait_transaction_records_entered_mempool([tx for txs in pending_txs for tx in txs])
         for local_pending_txs, (i, env) in zip(pending_txs, enumerate(self.environments)):
             try:

@@ -716,6 +716,11 @@ class WalletStateManager:
         all_unspent_coins: Set[Coin] = {cr.coin for cr in unspent_coin_records}
 
         for record in unconfirmed_tx:
+            if record.confirmed_at_height != 0:
+                # This is the heuristic that determines a clawback transaction. We do not wish to consider clawback-able
+                # funds as unconfirmed balance. That is reserved for when the action to actually claw a tx back is
+                # initiated.
+                continue
             for addition in record.additions:
                 # This change or a self transaction
                 if await self.does_coin_belong_to_wallet(addition, wallet_id, record.hint_dict()):
@@ -737,6 +742,11 @@ class WalletStateManager:
         removals: Dict[bytes32, Coin] = {}
         unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         for record in unconfirmed_tx:
+            if record.confirmed_at_height != 0:
+                # This is the heuristic that determines a clawback transaction. We do not wish to consider clawback-able
+                # funds as pending removal. That is reserved for when the action to actually claw a tx back is
+                # initiated.
+                continue
             for coin in record.removals:
                 removals[coin.name()] = coin
         trade_removals: Dict[bytes32, WalletCoinRecord] = await self.trade_manager.get_locked_coins()
