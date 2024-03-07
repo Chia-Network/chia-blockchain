@@ -562,20 +562,15 @@ async def test_get_network_info(one_wallet_and_one_simulator_services, self_host
     nodes, _, bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
 
-    try:
-        client = await FullNodeRpcClient.create(
-            self_hostname,
-            full_node_service_1.rpc_server.listen_port,
-            full_node_service_1.root_path,
-            full_node_service_1.config,
-        )
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service_1.rpc_server.listen_port,
+        full_node_service_1.root_path,
+        full_node_service_1.config,
+    ) as client:
         await validate_get_routes(client, full_node_service_1.rpc_server.rpc_api)
         network_info = await client.fetch("get_network_info", {})
         assert network_info == {**network_info, "network_name": "testnet0", "network_prefix": "txch"}
-    finally:
-        # Checks that the RPC manages to stop the node
-        client.close()
-        await client.await_closed()
 
 
 @pytest.mark.anyio
