@@ -14,6 +14,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.util.ints import uint32
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
@@ -277,7 +278,7 @@ class WalletTestFramework:
             await env.wallet_state_manager.tx_store.get_all_unconfirmed() for env in self.environments
         ]
         # Filter clawback txs
-        pending_txs = [[tx for tx in txs if tx.confirmed_at_height == 0] for txs in pending_txs]
+        pending_txs = [[tx for tx in txs if tx.type not in CLAWBACK_INCOMING_TRANSACTION_TYPES] for txs in pending_txs]
         # Ensure txs enter mempool
         await self.full_node.wait_transaction_records_entered_mempool([tx for txs in pending_txs for tx in txs])
         for local_pending_txs, (i, env) in zip(pending_txs, enumerate(self.environments)):
