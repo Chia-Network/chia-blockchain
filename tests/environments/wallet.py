@@ -11,6 +11,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
@@ -242,6 +243,23 @@ class WalletEnvironment:
                 ),
             }
 
+    async def wait_for_transactions_to_settle(
+        self, full_node_api: FullNodeSimulator, _exclude_from_mempool_check: List[bytes32] = []
+    ) -> List[TransactionRecord]:
+        # Gather all pending transactions
+        pending_txs: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
+        # Filter clawback txs
+        pending_txs = [
+            tx
+            for tx in pending_txs
+            if tx.type not in CLAWBACK_INCOMING_TRANSACTION_TYPES and tx.name not in _exclude_from_mempool_check
+        ]
+        # Ensure txs enter mempool and are marked as such locally
+        await full_node_api.wait_transaction_records_entered_mempool(pending_txs)
+        await full_node_api.wait_transaction_records_marked_as_in_mempool([tx.name for tx in pending_txs], self.node)
+
+        return pending_txs
+
 
 @dataclass
 class WalletTestFramework:
@@ -273,26 +291,16 @@ class WalletTestFramework:
                     ] = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
                 puzzle_hash_indexes.append(ph_indexes)
 
-        # Gather all pending transactions
-        pending_txs: List[List[TransactionRecord]] = [
-            await env.wallet_state_manager.tx_store.get_all_unconfirmed() for env in self.environments
-        ]
-        # Filter clawback txs
-        pending_txs = [[tx for tx in txs if tx.type not in CLAWBACK_INCOMING_TRANSACTION_TYPES] for txs in pending_txs]
-        # Ensure txs enter mempool
-        await self.full_node.wait_transaction_records_entered_mempool([tx for txs in pending_txs for tx in txs])
-        for local_pending_txs, (i, env) in zip(pending_txs, enumerate(self.environments)):
-            try:
-                await self.full_node.wait_transaction_records_marked_as_in_mempool(
-                    [tx.name for tx in local_pending_txs], env.node
-                )
-            except TimeoutError:  # pragma: no cover
-                raise ValueError(f"All tx records from env index {i} were not marked correctly with `.is_in_mempool()`")
+        pending_txs: List[List[TransactionRecord]] = []
 
         # Check balances prior to block
         try:
-            for env in self.environments:
+            for i, env in enumerate(self.environments):
                 await self.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20)
+                try:
+                    pending_txs.append(await env.wait_for_transactions_to_settle(self.full_node))
+                except TimeoutError:  # pragma: no cover
+                    raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
             for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
                 try:
                     async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
@@ -304,12 +312,22 @@ class WalletTestFramework:
             raise ValueError("Error before block was farmed")
 
         # Farm block
+        peak = self.full_node.full_node.blockchain.get_peak_height()
+        assert peak is not None
         await self.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
 
         # Check balances after block
         try:
-            for env in self.environments:
-                await self.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20)
+            for i, (env, local_pending_txs) in enumerate(zip(self.environments, pending_txs)):
+                await self.full_node.wait_for_wallet_synced(
+                    wallet_node=env.node, timeout=20, peak_height=uint32(peak + 1)
+                )
+                try:
+                    await env.wait_for_transactions_to_settle(
+                        self.full_node, _exclude_from_mempool_check=[tx.name for tx in local_pending_txs]
+                    )
+                except TimeoutError:  # pragma: no cover
+                    raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
             for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
                 try:
                     async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
@@ -320,7 +338,7 @@ class WalletTestFramework:
         except Exception:
             raise ValueError("Error after block was farmed")
 
-        # Make sure all pending txs are now confirmed
+        # Make sure all pending txs from before the block are now confirmed
         for i, (env, txs) in enumerate(zip(self.environments, pending_txs)):
             try:
                 await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)

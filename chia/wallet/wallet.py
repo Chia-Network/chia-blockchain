@@ -33,7 +33,7 @@ from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition, make_re
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
-from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -112,6 +112,10 @@ class Wallet:
         addition_amount = 0
 
         for record in unconfirmed_tx:
+            if record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                # We do not wish to consider clawback-able funds as pending change.
+                # That is reserved for when the action to actually claw a tx back or forward is initiated.
+                continue
             if not record.is_in_mempool():
                 if record.spend_bundle is not None:
                     self.log.warning(
