@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import json
 import time
@@ -1225,35 +1224,37 @@ class TestWalletSimulator:
         assert before_txs["sender"] == after_txs["sender"]
         assert before_txs["recipient"] == after_txs["recipient"]
 
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
-    @pytest.mark.parametrize("trusted", [True, False])
+    @pytest.mark.parametrize(
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [3]}],
+        indirect=True,
+    )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_wallet_coinbase_reorg(
-        self,
-        simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        full_nodes, wallets, _ = simulator_and_wallet
-        full_node_api = full_nodes[0]
-        fn_server = full_node_api.full_node.server
-        wallet_node, server_2 = wallets[0]
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        if trusted:
-            wallet_node.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
-        await asyncio.sleep(5)
+    async def test_wallet_coinbase_reorg(self, wallet_environments: WalletTestFramework) -> None:
+        full_node_api = wallet_environments.full_node
+        env = wallet_environments.environments[0]
+        wallet = env.xch_wallet
 
-        permanent_blocks = 3
-        extra_blocks = 2
-
-        permanent_funds = await full_node_api.farm_blocks_to_wallet(count=permanent_blocks, wallet=wallet)
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
-        permanent_height = peak.height
+        permanent_height = peak.height  # The height of the blocks we will not reorg
+
+        extra_blocks = 2
         await full_node_api.farm_blocks_to_wallet(count=extra_blocks, wallet=wallet)
+        await full_node_api.wait_for_wallet_synced(wallet_node=env.node, timeout=5)
+        await env.change_balances(
+            {
+                1: {
+                    "confirmed_wallet_balance": 2_000_000_000_000 * extra_blocks,
+                    "unconfirmed_wallet_balance": 2_000_000_000_000 * extra_blocks,
+                    "max_send_amount": 2_000_000_000_000 * extra_blocks,
+                    "spendable_balance": 2_000_000_000_000 * extra_blocks,
+                    "unspent_coin_count": 4,
+                }
+            }
+        )
+        await env.check_balances()
 
         await full_node_api.reorg_from_index_to_new_index(
             ReorgProtocol(
@@ -1261,8 +1262,20 @@ class TestWalletSimulator:
             )
         )
 
-        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
-        assert await wallet.get_confirmed_balance() == permanent_funds
+        await full_node_api.wait_for_wallet_synced(wallet_node=env.node, timeout=5)
+
+        await env.change_balances(
+            {
+                1: {
+                    "confirmed_wallet_balance": -2_000_000_000_000 * extra_blocks,
+                    "unconfirmed_wallet_balance": -2_000_000_000_000 * extra_blocks,
+                    "max_send_amount": -2_000_000_000_000 * extra_blocks,
+                    "spendable_balance": -2_000_000_000_000 * extra_blocks,
+                    "unspent_coin_count": -4,
+                }
+            }
+        )
+        await env.check_balances()
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
