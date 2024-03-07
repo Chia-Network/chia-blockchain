@@ -152,7 +152,6 @@ async def test_request_block_headers_rejected(
     [dict(disable_capabilities=[Capability.BLOCK_HEADERS]), dict(disable_capabilities=[Capability.BASE])],
     indirect=True,
 )
-@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_basic_sync_wallet(
@@ -207,7 +206,6 @@ async def test_basic_sync_wallet(
     [dict(disable_capabilities=[Capability.BLOCK_HEADERS]), dict(disable_capabilities=[Capability.BASE])],
     indirect=True,
 )
-@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_almost_recent(
@@ -258,7 +256,6 @@ async def test_almost_recent(
         await time_out_assert(30, wallet.get_confirmed_balance, 10 * calculate_pool_reward(uint32(1000)))
 
 
-@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.anyio
 async def test_backtrack_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets,
@@ -289,7 +286,6 @@ async def test_backtrack_sync_wallet(
 
 
 # Tests a reorg with the wallet
-@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.anyio
 async def test_short_batch_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets,
@@ -319,7 +315,6 @@ async def test_short_batch_sync_wallet(
         await time_out_assert(100, wallet_height_at_least, True, wallet_node, 199)
 
 
-@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_long_sync_wallet(
@@ -376,7 +371,6 @@ async def test_long_sync_wallet(
         )
 
 
-@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_wallet_reorg_sync(
@@ -722,7 +716,6 @@ It runs in seven phases:
         (105, 1_000_000, 1),  # default filter level (1m mojos), default dust size (1)
     ],
 )
-@pytest.mark.parametrize("use_delta_sync", [False, True])
 async def test_dusted_wallet(
     self_hostname: str,
     two_wallet_nodes_custom_spam_filtering: OldSimulatorsAndWallets,
@@ -1423,7 +1416,6 @@ async def test_bad_peak_mismatch(
         log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
 
 
-@pytest.mark.parametrize("use_delta_sync", [False, True])
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_long_sync_untrusted_break(
