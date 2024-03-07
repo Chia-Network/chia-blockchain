@@ -74,7 +74,7 @@ jobs:
     - name: Run install-gui script (Windows)
       if: matrix.os.matrix == 'windows'
       run: |
-        Install-gui.ps1
+        ./Install-gui.ps1
 
   test_scripts_in_docker:
     name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
