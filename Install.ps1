@@ -105,6 +105,10 @@ if ($extras.length -gt 0)
     $extras_cli = $extras -join ","
     $pip_parameters += ".[$extras_cli]"
 }
+else
+{
+    $pip_parameters += "."
+}
 
 py -$pythonVersion -m venv venv
 
