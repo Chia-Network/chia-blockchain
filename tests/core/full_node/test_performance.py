@@ -176,7 +176,7 @@ class TestPerformance:
 
         with benchmark_runner.assert_runtime(seconds=0.1, label="full block"):
             # No transactions generator, the full node already cached it from the unfinished block
-            block_small = dataclasses.replace(block, transactions_generator=None)
+            block_small = block.replace(transactions_generator=None)
             res = await full_node_1.full_node.add_block(block_small)
 
         log.warning(f"Res: {res}")

@@ -153,6 +153,7 @@ class FarmerAPI:
                     new_proof_of_space.sp_hash,
                     [sp.challenge_chain_sp, sp.reward_chain_sp],
                     message_data=sp_src_data,
+                    rc_block_unfinished=None,
                 )
 
                 if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
@@ -284,6 +285,7 @@ class FarmerAPI:
                     new_proof_of_space.sp_hash,
                     [m_to_sign],
                     message_data=m_src_data,
+                    rc_block_unfinished=None,
                 )
                 response: Any = await peer.call_api(HarvesterAPI.request_signatures, request)
                 if not isinstance(response, harvester_protocol.RespondSignatures):
@@ -565,30 +567,28 @@ class FarmerAPI:
             full_node_request.quality_string
         ]
 
-        foliage_block_data: Optional[SignatureRequestSourceData] = None
-        foliage_transaction_block_data: Optional[SignatureRequestSourceData] = None
-        include_source_data = False
+        message_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
 
         if full_node_request.foliage_block_data is not None:
-            include_source_data = True
-            foliage_block_data = SignatureRequestSourceData(
-                uint8(SigningDataKind.FOLIAGE_BLOCK_DATA), bytes(full_node_request.foliage_block_data)
-            )
-
-        if full_node_request.foliage_transaction_block_data is not None:
-            assert foliage_block_data
-            include_source_data = True
-            foliage_transaction_block_data = SignatureRequestSourceData(
-                uint8(SigningDataKind.FOLIAGE_TRANSACTION_BLOCK),
-                bytes(full_node_request.foliage_transaction_block_data),
-            )
+            message_data = [
+                SignatureRequestSourceData(
+                    uint8(SigningDataKind.FOLIAGE_BLOCK_DATA), bytes(full_node_request.foliage_block_data)
+                ),
+                None
+                if full_node_request.foliage_transaction_block_data is None
+                else SignatureRequestSourceData(
+                    uint8(SigningDataKind.FOLIAGE_TRANSACTION_BLOCK),
+                    bytes(full_node_request.foliage_transaction_block_data),
+                ),
+            ]
 
         request = harvester_protocol.RequestSignatures(
             plot_identifier,
             challenge_hash,
             sp_hash,
             [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
-            message_data=[foliage_block_data, foliage_transaction_block_data] if include_source_data else None,
+            message_data=message_data,
+            rc_block_unfinished=full_node_request.rc_block_unfinished,
         )
 
         response = await self.farmer.server.call_api_of_specific(HarvesterAPI.request_signatures, request, node_id)

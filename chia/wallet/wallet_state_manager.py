@@ -596,7 +596,9 @@ class WalletStateManager:
 
         self.pending_tx_callback()
 
-    async def synced(self) -> bool:
+    async def synced(self, block_is_current_at: Optional[int] = None) -> bool:
+        if block_is_current_at is None:
+            block_is_current_at = int(time.time() - 60 * 5)
         if len(self.server.get_connections(NodeType.FULL_NODE)) == 0:
             return False
 
@@ -613,7 +615,7 @@ class WalletStateManager:
         latest_timestamp = self.blockchain.get_latest_timestamp()
         has_pending_queue_items = self.wallet_node.new_peak_queue.has_pending_data_process_items()
 
-        if latest_timestamp > int(time.time()) - 5 * 60 and not has_pending_queue_items:
+        if latest_timestamp > block_is_current_at and not has_pending_queue_items:
             return True
         return False
 

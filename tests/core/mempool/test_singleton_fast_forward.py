@@ -79,7 +79,7 @@ async def test_process_fast_forward_spends_unknown_ff() -> None:
             return None
         assert False  # pragma: no cover
 
-    test_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
+    test_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1))
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     sb = spend_bundle_from_conditions(conditions, test_coin)
     item = mempool_item_from_spendbundle(sb)
@@ -107,7 +107,7 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     we don't need to fast forward, we just need to set the next version from
     our additions to chain ff spends.
     """
-    test_amount = 3
+    test_amount = uint64(3)
     test_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, test_amount)
     test_unspent_lineage_info = UnspentLineageInfo(
         coin_id=test_coin.name(),
@@ -164,7 +164,7 @@ def test_perform_the_fast_forward() -> None:
     """
     test_parent_id = bytes32.from_hexstr("0x039759eda861cd44c0af6c9501300f66fe4f5de144b8ae4fc4e8da35701f38ac")
     test_ph = bytes32.from_hexstr("0x9ae0917f3ca301f934468ec60412904c0a88b232aeabf220c01ef53054e0281a")
-    test_amount = 1337
+    test_amount = uint64(1337)
     test_coin = Coin(test_parent_id, test_ph, test_amount)
     test_child_coin = Coin(test_coin.name(), test_ph, test_amount)
     latest_unspent_coin = Coin(test_child_coin.name(), test_ph, test_amount)

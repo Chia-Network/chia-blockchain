@@ -107,6 +107,25 @@ def create_fee_option() -> Callable[[FC], FC]:
     )
 
 
+def create_page_option() -> Callable[[FC], FC]:
+    return click.option(
+        "-p",
+        "--page",
+        help="Enables pagination of the output and requests a specific page.",
+        type=int,
+        required=False,
+    )
+
+
+def create_max_page_size_option() -> Callable[[FC], FC]:
+    return click.option(
+        "--max-page-size",
+        help="Set how many bytes to be included in a page, if pagination is enabled.",
+        type=int,
+        required=False,
+    )
+
+
 @data_cmd.command("create_data_store", help="Create a new data store")
 @create_rpc_port_option()
 @create_fee_option()
@@ -147,12 +166,14 @@ def get_value(
 @create_rpc_port_option()
 @create_fee_option()
 @options.create_fingerprint()
+@click.option("--submit/--no-submit", default=True, help="Submit the result on chain")
 def update_data_store(
     id: str,
     changelist_string: str,
     data_rpc_port: int,
     fee: str,
     fingerprint: Optional[int],
+    submit: bool,
 ) -> None:
     from chia.cmds.data_funcs import update_data_store_cmd
 
@@ -161,6 +182,30 @@ def update_data_store(
             rpc_port=data_rpc_port,
             store_id=id,
             changelist=json.loads(changelist_string),
+            fee=fee,
+            fingerprint=fingerprint,
+            submit_on_chain=submit,
+        )
+    )
+
+
+@data_cmd.command("submit_pending_root", help="Submit on chain a locally stored batch")
+@create_data_store_id_option()
+@create_rpc_port_option()
+@create_fee_option()
+@options.create_fingerprint()
+def submit_pending_root(
+    id: str,
+    data_rpc_port: int,
+    fee: str,
+    fingerprint: Optional[int],
+) -> None:
+    from chia.cmds.data_funcs import submit_pending_root_cmd
+
+    run(
+        submit_pending_root_cmd(
+            rpc_port=data_rpc_port,
+            store_id=id,
             fee=fee,
             fingerprint=fingerprint,
         )
@@ -172,15 +217,19 @@ def update_data_store(
 @click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
 @create_rpc_port_option()
 @options.create_fingerprint()
+@create_page_option()
+@create_max_page_size_option()
 def get_keys(
     id: str,
     root_hash: Optional[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import get_keys_cmd
 
-    run(get_keys_cmd(data_rpc_port, id, root_hash, fingerprint=fingerprint))
+    run(get_keys_cmd(data_rpc_port, id, root_hash, fingerprint=fingerprint, page=page, max_page_size=max_page_size))
 
 
 @data_cmd.command("get_keys_values", help="Get all keys and values for a given store")
@@ -188,15 +237,23 @@ def get_keys(
 @click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
 @create_rpc_port_option()
 @options.create_fingerprint()
+@create_page_option()
+@create_max_page_size_option()
 def get_keys_values(
     id: str,
     root_hash: Optional[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import get_keys_values_cmd
 
-    run(get_keys_values_cmd(data_rpc_port, id, root_hash, fingerprint=fingerprint))
+    run(
+        get_keys_values_cmd(
+            data_rpc_port, id, root_hash, fingerprint=fingerprint, page=page, max_page_size=max_page_size
+        )
+    )
 
 
 @data_cmd.command("get_root", help="Get the published root hash value for a given store")
@@ -276,16 +333,30 @@ def unsubscribe(
 @click.option("-hash_2", "--hash_2", help="Final hash", type=str)
 @create_rpc_port_option()
 @options.create_fingerprint()
+@create_page_option()
+@create_max_page_size_option()
 def get_kv_diff(
     id: str,
     hash_1: str,
     hash_2: str,
     data_rpc_port: int,
     fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import get_kv_diff_cmd
 
-    run(get_kv_diff_cmd(rpc_port=data_rpc_port, store_id=id, hash_1=hash_1, hash_2=hash_2, fingerprint=fingerprint))
+    run(
+        get_kv_diff_cmd(
+            rpc_port=data_rpc_port,
+            store_id=id,
+            hash_1=hash_1,
+            hash_2=hash_2,
+            fingerprint=fingerprint,
+            page=page,
+            max_page_size=max_page_size,
+        )
+    )
 
 
 @data_cmd.command("get_root_history", help="Get all changes of a singleton")

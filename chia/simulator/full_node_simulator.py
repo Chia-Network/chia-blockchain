@@ -290,6 +290,7 @@ class FullNodeSimulator(FullNodeAPI):
         farm_to: bytes32 = bytes32([0] * 32),
         guarantee_transaction_blocks: bool = False,
         timeout: Union[None, _Default, float] = default,
+        _wait_for_synced: bool = True,
     ) -> int:
         """Process the requested number of blocks including farming to the passed puzzle
         hash. Note that the rewards for the last block will not have been processed.
@@ -323,6 +324,9 @@ class FullNodeSimulator(FullNodeAPI):
 
                 rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
 
+            if _wait_for_synced:
+                await self.wait_for_self_synced(timeout=None)
+
             return rewards
 
     async def farm_blocks_to_wallet(
@@ -330,6 +334,7 @@ class FullNodeSimulator(FullNodeAPI):
         count: int,
         wallet: Wallet,
         timeout: Union[None, _Default, float] = default,
+        _wait_for_synced: bool = True,
     ) -> int:
         """Farm the requested number of blocks to the passed wallet. This will
         process additional blocks as needed to process the reward transactions
@@ -369,9 +374,12 @@ class FullNodeSimulator(FullNodeAPI):
                         farm_to=target_puzzlehash,
                         guarantee_transaction_blocks=tx_block,
                         timeout=None,
+                        _wait_for_synced=False,
                     )
                 else:
-                    await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=tx_block, timeout=None)
+                    await self.farm_blocks_to_puzzlehash(
+                        count=1, guarantee_transaction_blocks=tx_block, timeout=None, _wait_for_synced=False
+                    )
 
                 expected_peak_height += 1
                 peak_height = self.full_node.blockchain.get_peak_height()
@@ -388,7 +396,8 @@ class FullNodeSimulator(FullNodeAPI):
                 )
 
             await wait_for_coins_in_wallet(coins=block_reward_coins, wallet=wallet, timeout=None)
-
+            if _wait_for_synced:
+                await self.wait_for_wallet_synced(wallet.wallet_state_manager.wallet_node, timeout=None)
             return rewards
 
     async def farm_rewards_to_wallet(
@@ -505,6 +514,8 @@ class FullNodeSimulator(FullNodeAPI):
             records: The transaction records to process.
         """
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            await self.wait_for_self_synced(timeout=None)
+
             coins_to_wait_for: Set[Coin] = set()
             for record in records:
                 if record.spend_bundle is None:
@@ -674,11 +685,18 @@ class FullNodeSimulator(FullNodeAPI):
     def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:
         return all(self.tx_id_in_mempool(tx_id=tx.spend_bundle.name()) for tx in txs if tx.spend_bundle is not None)
 
+    async def self_is_synced(self) -> bool:
+        return await self.full_node.synced()
+
     async def wallet_is_synced(self, wallet_node: WalletNode) -> bool:
+        if not self.self_is_synced():
+            # Depending on races, may not be covered every time
+            return False  # pragma: no cover
+        if not await wallet_node.wallet_state_manager.synced():
+            return False
         wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
         full_node_height = self.full_node.blockchain.get_peak_height()
-        has_pending_queue_items = wallet_node.new_peak_queue.has_pending_data_process_items()
-        return wallet_height == full_node_height and not has_pending_queue_items
+        return wallet_height == full_node_height
 
     async def wait_for_wallet_synced(
         self,
@@ -704,3 +722,14 @@ class FullNodeSimulator(FullNodeAPI):
                 if await self.wallets_are_synced(wallet_nodes=wallet_nodes):
                     break
                 await asyncio.sleep(backoff_time)
+
+    async def wait_for_self_synced(
+        self,
+        timeout: Optional[float] = 5,
+    ) -> None:
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            for backoff_time in backoff_times():
+                if await self.self_is_synced():
+                    break
+                # Depending on races, may not be covered every time
+                await asyncio.sleep(backoff_time)  # pragma: no cover
