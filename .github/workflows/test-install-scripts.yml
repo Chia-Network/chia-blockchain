@@ -24,12 +24,19 @@ concurrency:
 jobs:
   test_scripts:
     name: Test Install Scripts - ${{ matrix.development.name }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os.runs-on }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
-        os: [macOS-latest, ubuntu-latest]
+        python:
+          - major-dot-minor: "3.10"
+        os:
+          - runs-on: macos-latest
+            matrix: macos
+          - runs-on: ubuntu-latest
+            matrix: linux
+          - runs-on: windows-latest
+            matrix: windows
         development:
           - name: Non-development
             value: false
@@ -45,11 +52,11 @@ jobs:
     - name: Setup Python environment
       uses: Chia-Network/actions/setup-python@main
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: ${{ matrix.python.major-dot-minor }}
 
     - uses: ./.github/actions/install
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: ${{ matrix.python.major-dot-minor }}
         development: ${{ matrix.development.value }}
         do-system-installs: true
 
@@ -59,9 +66,15 @@ jobs:
       run: |
         chia --help
 
-    - name: Run install-gui script
+    - name: Run install-gui script (Linux, macOS)
+      if: matrix.os.matrix != 'windows'
       run: |
         sh install-gui.sh
+
+    - name: Run install-gui script (Windows)
+      if: matrix.os.matrix == 'windows'
+      run: |
+        ./Install-gui.ps1
 
   test_scripts_in_docker:
     name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
