@@ -132,6 +132,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     service_name: str
     ssl_context: SSLContext
     ssl_client_context: SSLContext
+    net_config: Dict[str, Any]
     webserver: Optional[WebServer] = None
     daemon_heartbeat: int = 300
     daemon_connection_task: Optional[asyncio.Task[None]] = None
@@ -163,6 +164,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             service_name,
             ssl_context,
             ssl_client_context,
+            net_config,
             daemon_heartbeat=daemon_heartbeat,
             prefer_ipv6=prefer_ipv6,
         )
@@ -235,6 +237,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     def _get_routes(self) -> Dict[str, Endpoint]:
         return {
             **self.rpc_api.get_routes(),
+            "/get_network_info": self.get_network_info,
             "/get_connections": self.get_connections,
             "/open_connection": self.open_connection,
             "/close_connection": self.close_connection,
@@ -248,6 +251,11 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             "success": True,
             "routes": list(self._get_routes().keys()),
         }
+
+    async def get_network_info(self, _: Dict[str, Any]) -> EndpointResult:
+        network_name = self.net_config["selected_network"]
+        address_prefix = self.net_config["network_overrides"]["config"][network_name]["address_prefix"]
+        return {"network_name": network_name, "network_prefix": address_prefix}
 
     async def get_connections(self, request: Dict[str, Any]) -> EndpointResult:
         request_node_type: Optional[NodeType] = None

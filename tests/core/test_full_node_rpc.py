@@ -558,6 +558,22 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
 
 
 @pytest.mark.anyio
+async def test_get_network_info(one_wallet_and_one_simulator_services, self_hostname):
+    nodes, _, bt = one_wallet_and_one_simulator_services
+    (full_node_service_1,) = nodes
+
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service_1.rpc_server.listen_port,
+        full_node_service_1.root_path,
+        full_node_service_1.config,
+    ) as client:
+        await validate_get_routes(client, full_node_service_1.rpc_server.rpc_api)
+        network_info = await client.fetch("get_network_info", {})
+        assert network_info == {"network_name": "testnet0", "network_prefix": "txch", "success": True}
+
+
+@pytest.mark.anyio
 async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_hostname):
     num_blocks = 5
     nodes, _, bt = one_wallet_and_one_simulator_services

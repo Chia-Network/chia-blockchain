@@ -10,6 +10,7 @@ async def validate_get_routes(client: RpcClient, api: RpcApiProtocol) -> None:
     routes_api = list(api.get_routes().keys())
     # TODO: avoid duplication of RpcServer.get_routes()
     routes_server = [
+        "/get_network_info",
         "/get_connections",
         "/open_connection",
         "/close_connection",
