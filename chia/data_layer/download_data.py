@@ -23,6 +23,32 @@ def get_delta_filename(tree_id: bytes32, node_hash: bytes32, generation: int) ->
     return f"{tree_id}-{node_hash}-delta-{generation}-v1.0.dat"
 
 
+def get_full_tree_filename_path(
+    foldername: Path,
+    tree_id: bytes32,
+    node_hash: bytes32,
+    generation: int,
+    group_by_store: bool = False,
+) -> Path:
+    if group_by_store:
+        path = foldername.joinpath(f"{tree_id}")
+        return path.joinpath(f"{node_hash}-full-{generation}-v1.0.dat")
+    return foldername.joinpath(f"{tree_id}-{node_hash}-full-{generation}-v1.0.dat")
+
+
+def get_delta_filename_path(
+    foldername: Path,
+    tree_id: bytes32,
+    node_hash: bytes32,
+    generation: int,
+    group_by_store: bool = False,
+) -> Path:
+    if group_by_store:
+        path = foldername.joinpath(f"{tree_id}")
+        return path.joinpath(f"{node_hash}-delta-{generation}-v1.0.dat")
+    return foldername.joinpath(f"{tree_id}-{node_hash}-delta-{generation}-v1.0.dat")
+
+
 def is_filename_valid(filename: str) -> bool:
     split = filename.split("-")
 
@@ -106,8 +132,9 @@ async def write_files_for_root(
     else:
         node_hash = bytes32([0] * 32)  # todo change
 
-    filename_full_tree = foldername.joinpath(get_full_tree_filename(tree_id, node_hash, root.generation))
-    filename_diff_tree = foldername.joinpath(get_delta_filename(tree_id, node_hash, root.generation))
+    filename_full_tree = get_full_tree_filename_path(foldername, tree_id, node_hash, root.generation, True)
+    filename_diff_tree = get_delta_filename_path(foldername, tree_id, node_hash, root.generation, True)
+    filename_full_tree.parent.mkdir(parents=True, exist_ok=True)
 
     written = False
     mode: Literal["wb", "xb"] = "wb" if overwrite else "xb"
@@ -150,28 +177,56 @@ async def insert_from_delta_file(
     proxy_url: str,
     downloader: Optional[PluginRemote],
 ) -> bool:
+    client_foldername.joinpath(f"{tree_id}").mkdir(parents=True, exist_ok=True)
+
     for root_hash in root_hashes:
         timestamp = int(time.time())
         existing_generation += 1
-        filename = get_delta_filename(tree_id, root_hash, existing_generation)
-        request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
-        if downloader is None:
-            # use http downloader
-            if not await http_download(client_foldername, filename, proxy_url, server_info, timeout, log):
-                await data_store.server_misses_file(tree_id, server_info, timestamp)
-                return False
-        else:
-            log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    downloader.url + "/download",
-                    json=request_json,
-                    headers=downloader.headers,
-                ) as response:
-                    res_json = await response.json()
-                    if not res_json["downloaded"]:
-                        log.error(f"Failed to download delta file {filename} from {downloader}: {res_json}")
-                        break
+        target_filename_path = get_delta_filename_path(
+            client_foldername, tree_id, root_hash, existing_generation, True
+        )
+        for group_by_store in (True, False):
+            filename_path = get_delta_filename_path(
+                client_foldername, tree_id, root_hash, existing_generation, group_by_store
+            )
+            if group_by_store:
+                filename = f"{tree_id}/" + filename_path.name
+            else:
+                filename = filename_path.name
+
+            request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
+            if downloader is None:
+                # use http downloader
+                if await http_download(
+                    client_foldername,
+                    target_filename_path,
+                    filename,
+                    proxy_url,
+                    server_info,
+                    timeout,
+                    log,
+                ):
+                    break
+                else:
+                    if not group_by_store:
+                        await data_store.server_misses_file(tree_id, server_info, timestamp)
+                        return False
+            else:
+                log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        downloader.url + "/download",
+                        json=request_json,
+                        headers=downloader.headers,
+                    ) as response:
+                        res_json = await response.json()
+                        if res_json["downloaded"]:
+                            break
+                        else:
+                            log.info(f"Failed to download delta file {filename} from {downloader}: {res_json}")
+                            if not group_by_store:
+                                await data_store.server_misses_file(tree_id, server_info, timestamp)
+                                return False
 
         log.info(f"Successfully downloaded delta file {filename}.")
         try:
@@ -179,15 +234,19 @@ async def insert_from_delta_file(
                 data_store,
                 tree_id,
                 None if root_hash == bytes32([0] * 32) else root_hash,
-                client_foldername.joinpath(filename),
+                target_filename_path,
             )
             log.info(
                 f"Successfully inserted hash {root_hash} from delta file. "
                 f"Generation: {existing_generation}. Tree id: {tree_id}."
             )
 
-            filename_full_tree = client_foldername.joinpath(
-                get_full_tree_filename(tree_id, root_hash, existing_generation)
+            filename_full_tree = get_full_tree_filename_path(
+                client_foldername,
+                tree_id,
+                root_hash,
+                existing_generation,
+                True,
             )
             root = await data_store.get_tree_root(tree_id=tree_id)
             with open(filename_full_tree, "wb") as writer:
@@ -214,17 +273,24 @@ def delete_full_file_if_exists(foldername: Path, tree_id: bytes32, root: Root) -
     else:
         node_hash = bytes32([0] * 32)  # todo change
 
-    filename_full_tree = foldername.joinpath(get_full_tree_filename(tree_id, node_hash, root.generation))
-    try:
-        filename_full_tree.unlink()
-    except FileNotFoundError:
-        return False
+    for group_by_store in (True, False):
+        not_found = 0
+        filename_full_tree = get_full_tree_filename_path(
+            foldername, tree_id, node_hash, root.generation, group_by_store
+        )
+        try:
+            filename_full_tree.unlink()
+        except FileNotFoundError:
+            not_found += 1
+        if not_found == 2:
+            return False
 
     return True
 
 
 async def http_download(
     client_folder: Path,
+    target_filename_path: Path,
     filename: str,
     proxy_url: str,
     server_info: ServerInfo,
@@ -236,13 +302,15 @@ async def http_download(
         async with session.get(
             server_info.url + "/" + filename, headers=headers, timeout=timeout, proxy=proxy_url
         ) as resp:
-            resp.raise_for_status()
+            try:
+                resp.raise_for_status()
+            except aiohttp.ClientResponseError:
+                return False
             size = int(resp.headers.get("content-length", 0))
             log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
             progress_byte = 0
             progress_percentage = f"{0:.0%}"
-            target_filename = client_folder.joinpath(filename)
-            with target_filename.open(mode="wb") as f:
+            with target_filename_path.open(mode="wb") as f:
                 async for chunk, _ in resp.content.iter_chunks():
                     f.write(chunk)
                     progress_byte += len(chunk)

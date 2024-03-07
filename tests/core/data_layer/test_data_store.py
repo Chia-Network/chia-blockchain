@@ -33,8 +33,8 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import (
-    get_delta_filename,
-    get_full_tree_filename,
+    get_delta_filename_path,
+    get_full_tree_filename_path,
     insert_from_delta_file,
     insert_into_data_store_from_file,
     is_filename_valid,
@@ -1481,10 +1481,11 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
     for root in roots:
         assert root.node_hash is not None
         if not test_delta:
-            filename = get_full_tree_filename(tree_id, root.node_hash, generation)
+            filename = get_full_tree_filename_path(tmp_path, tree_id, root.node_hash, generation, True)
+            assert filename.exists()
         else:
-            filename = get_delta_filename(tree_id, root.node_hash, generation)
-        assert is_filename_valid(filename)
+            filename = get_delta_filename_path(tmp_path, tree_id, root.node_hash, generation, True)
+            assert filename.exists()
         await insert_into_data_store_from_file(data_store, tree_id, root.node_hash, tmp_path.joinpath(filename))
         current_root = await data_store.get_tree_root(tree_id=tree_id)
         assert current_root.node_hash == root.node_hash
