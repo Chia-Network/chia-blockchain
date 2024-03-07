@@ -516,15 +516,15 @@ class TradeManager:
                 requested_payments, driver_dict, taking
             )
 
-            potential_special_offer: Optional[
-                Tuple[Offer, List[TransactionRecord]]
-            ] = await self.check_for_special_offer_making(
-                offer_dict_no_ints,
-                driver_dict,
-                tx_config,
-                solver,
-                fee,
-                extra_conditions,
+            potential_special_offer: Optional[Tuple[Offer, List[TransactionRecord]]] = (
+                await self.check_for_special_offer_making(
+                    offer_dict_no_ints,
+                    driver_dict,
+                    tx_config,
+                    solver,
+                    fee,
+                    extra_conditions,
+                )
             )
 
             if potential_special_offer is not None:
