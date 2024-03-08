@@ -249,8 +249,10 @@ jobs:
         -v ${{ github.workspace }}:/ws \
         --workdir=/ws \
         ${{ matrix.distribution.ref[matrix.arch.matrix] || matrix.distribution.ref }} \
-        bash -exc '\
+        bash -exc ' \
         git config --global --add safe.directory /ws && \
+        git config --global --add safe.directory /ws/mozilla-ca && \
+        git config --global --add safe.directory /ws/chia-blockchain-gui && \
         ${{ steps.install-action.outputs.command }} && \
         chia --help \
         '
