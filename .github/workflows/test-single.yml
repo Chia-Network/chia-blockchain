@@ -228,7 +228,7 @@ jobs:
         run: |
           cd cloned/
           pip install pipx
-          pipx run --spec='cibuildwheel==2.16.2' cibuildwheel --output-dir dist --platform windows --archs x86_64 2>&1
+          pipx run --spec='cibuildwheel==2.16.2' cibuildwheel --output-dir dist --platform windows --archs AMD64 2>&1
           ls -l dist/*.whl
           pip install dist/*.whl
 
