@@ -245,6 +245,7 @@ jobs:
     - name: Test via QEMU
       if: matrix.arch.cross
       run: |
+        # TODO: ack yuck about penv global hardcoded
         docker run --rm --platform ${{ matrix.arch.cross.docker_platform }} \
         -v ${{ github.workspace }}:/ws \
         --workdir=/ws \
@@ -253,6 +254,7 @@ jobs:
         git config --global --add safe.directory /ws && \
         git config --global --add safe.directory /ws/mozilla-ca && \
         git config --global --add safe.directory /ws/chia-blockchain-gui && \
+        pyenv global 3.11 && \
         ${{ steps.install-action.outputs.command }} && \
         chia --help \
         '
