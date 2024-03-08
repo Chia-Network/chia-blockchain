@@ -42,7 +42,7 @@ inputs:
 outputs:
   command:
     description: "The command that is run.  Particularly useful with dry-run set."
-    value: ${{ steps.define-command-macos-ubuntu.command + steps.define-command-windows.command }}
+    value: ${{ steps.define-command-macos-ubuntu.command }}${{ steps.define-command-windows.command }}
 
 runs:
   using: "composite"
