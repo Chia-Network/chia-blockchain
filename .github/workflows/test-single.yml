@@ -216,6 +216,21 @@ jobs:
 
       - uses: chia-network/actions/activate-venv@main
 
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: chia-network/chiavdf
+          ref: debug
+          path: cloned/
+          fetch-depth: 0
+
+      - name: chivdf
+        run:
+          cd cloned/
+          pip install pipx
+          pipx run --spec='cibuildwheel==2.16.2' cibuildwheel --output-dir dist 2>&1
+          pip install dist/*.whl
+
       - name: Install timelord
         if: matrix.configuration.install_timelord
         run: |
