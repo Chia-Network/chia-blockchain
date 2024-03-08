@@ -60,7 +60,7 @@ runs:
         echo "command=${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }}" >> "${GITHUB_OUTPUT}"
 
     - name: Run install script (macOS, Ubuntu)
-      if: (runner.os == 'macos' || runner.os == 'linux') && inputs.dry-run == "false"
+      if: (runner.os == 'macos' || runner.os == 'linux') && inputs.dry-run == 'false'
       shell: bash
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
@@ -68,7 +68,7 @@ runs:
         ${{ steps.define-command-macos-ubuntu.command }}
 
     - name: Run install script (Windows)
-      if: runner.os == 'windows' && inputs.dry-run == "false"
+      if: runner.os == 'windows' && inputs.dry-run == 'false'
       shell: pwsh
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
@@ -76,13 +76,13 @@ runs:
         ${{ steps.define-command-windows.command }}
 
     - name: Create constraints file
-      if: inputs.constraints-file-artifact-name != '' && inputs.dry-run == "false"
+      if: inputs.constraints-file-artifact-name != '' && inputs.dry-run == 'false'
       shell: bash
       run: |
         ${{ runner.os == 'windows' && 'venv/scripts/pip' || 'venv/bin/pip' }} freeze --exclude-editable > venv/constraints.txt
 
     - name: Upload constraints file
-      if: inputs.constraints-file-artifact-name != '' && inputs.dry-run == "false"
+      if: inputs.constraints-file-artifact-name != '' && inputs.dry-run == 'false'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.constraints-file-artifact-name }}
