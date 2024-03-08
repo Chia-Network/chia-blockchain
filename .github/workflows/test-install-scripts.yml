@@ -79,7 +79,7 @@ jobs:
   test_scripts_in_docker:
     name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
-    container: ${{ matrix.distribution.url }}
+    container: ${{ (! matrix.arch.cross) && matrix.distribution.url || ''}}
     strategy:
       fail-fast: false
       matrix:
