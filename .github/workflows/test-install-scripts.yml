@@ -161,12 +161,12 @@ jobs:
 
     steps:
     - name: Prepare Amazon Linux
-      if: ${{ matrix.distribution.type == 'amazon' }}
+      if: ${{ matrix.distribution.type == 'amazon' && (! matrix.arch.cross) }}
       run: |
         yum install --assumeyes git sudo
 
     - name: Prepare Arch
-      if: ${{ matrix.distribution.type == 'arch' }}
+      if: ${{ matrix.distribution.type == 'arch' && (! matrix.arch.cross) }}
       run: |
         pacman --noconfirm -Syu
         pacman --noconfirm -S base git sudo openssl-1.1
@@ -176,7 +176,7 @@ jobs:
         pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
 
     - name: Prepare Debian
-      if: ${{ matrix.distribution.type == 'debian' }}
+      if: ${{ matrix.distribution.type == 'debian' && (! matrix.arch.cross) }}
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
@@ -184,17 +184,17 @@ jobs:
         apt-get install --yes git lsb-release sudo python3-venv
 
     - name: Prepare Fedora
-      if: ${{ matrix.distribution.type == 'fedora' }}
+      if: ${{ matrix.distribution.type == 'fedora' && (! matrix.arch.cross) }}
       run: |
         yum install --assumeyes git
 
     - name: Prepare Rocky
-      if: ${{ matrix.distribution.type == 'rocky' }}
+      if: ${{ matrix.distribution.type == 'rocky' && (! matrix.arch.cross) }}
       run: |
         yum install --assumeyes git sudo python39
 
     - name: Prepare Ubuntu
-      if: ${{ matrix.distribution.type == 'ubuntu' }}
+      if: ${{ matrix.distribution.type == 'ubuntu' && (! matrix.arch.cross)}}
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
