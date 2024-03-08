@@ -1727,41 +1727,19 @@ class TestWalletSimulator:
         await time_out_assert(10, transaction_has_failed, True, stolen_tx.name)
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [{"num_environments": 2, "blocks_needed": [4, 1]}],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_wallet_tx_reorg(
-        self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        permanent_block_count = 4
-        reorg_block_count = 3
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_api = full_nodes[0]
-        fn_server = full_node_api.full_node.server
-
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
-
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
-
-        ph2 = await wallet_2.get_new_puzzlehash()
-        if trusted:
-            wallet_node.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-
-        await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
-        await server_3.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
-        permanent_funds = await full_node_api.farm_blocks_to_wallet(count=permanent_block_count, wallet=wallet)
-
-        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
+    async def test_wallet_tx_reorg(self, wallet_environments: WalletTestFramework) -> None:
+        full_node_api = wallet_environments.full_node
+        env = wallet_environments.environments[0]
+        env_2 = wallet_environments.environments[1]
+        wsm = env.wallet_state_manager
+        wallet = env.xch_wallet
+        wallet_2 = env_2.xch_wallet
 
         # Ensure that we use a coin that we will not reorg out
         tx_amount = 1000
@@ -1772,16 +1750,51 @@ class TestWalletSimulator:
 
         reorg_height = full_node_api.full_node.blockchain.get_peak_height()
         assert reorg_height is not None
-        reorg_funds = await full_node_api.farm_blocks_to_wallet(count=reorg_block_count, wallet=wallet)
+        await full_node_api.farm_blocks_to_puzzlehash(count=3)
 
-        [tx] = await wallet.generate_signed_transaction(uint64(tx_amount), ph2, DEFAULT_TX_CONFIG, coins={coin})
+        [tx] = await wallet.generate_signed_transaction(
+            uint64(tx_amount), await wallet_2.get_puzzle_hash(False), DEFAULT_TX_CONFIG, coins={coin}
+        )
         assert tx.spend_bundle is not None
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
-        await full_node_api.process_transaction_records(records=[tx])
-        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2], timeout=20)
+        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
-        assert await wallet.get_confirmed_balance() == permanent_funds + reorg_funds - tx_amount
-        assert await wallet_2.get_confirmed_balance() == tx_amount
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "unconfirmed_wallet_balance": -tx_amount,
+                            "<=#spendable_balance": -tx_amount,
+                            "<=#max_send_amount": -tx_amount,
+                            ">=#pending_change": 1,  # any amount increase
+                            "pending_coin_removal_count": 1,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -tx_amount,
+                            ">=#spendable_balance": 1,  # any amount increase
+                            ">=#max_send_amount": 1,  # any amount increase
+                            "<=#pending_change": -1,  # any amount decrease
+                            "pending_coin_removal_count": -1,
+                        }
+                    },
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={},
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": tx_amount,
+                            "unconfirmed_wallet_balance": tx_amount,
+                            "spendable_balance": tx_amount,
+                            "max_send_amount": tx_amount,
+                            "unspent_coin_count": 1,
+                        }
+                    },
+                ),
+            ]
+        )
+
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         peak_height = peak.height
@@ -1795,30 +1808,60 @@ class TestWalletSimulator:
 
         await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, target_height_after_reorg)
 
-        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2], timeout=20)
-        assert await wallet.get_confirmed_balance() == permanent_funds
-        assert await wallet_2.get_confirmed_balance() == 0
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": tx_amount,
+                            "unconfirmed_wallet_balance": 0,
+                            "<=#spendable_balance": -1,  # any amount decrease
+                            "<=#max_send_amount": -1,  # any amount decrease
+                            ">=#pending_change": 1,  # any amount increase
+                            "pending_coin_removal_count": 1,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -tx_amount,
+                            ">=#spendable_balance": -1,  # any amount increase
+                            ">=#max_send_amount": -1,  # any amount increase
+                            "<=#pending_change": -1,  # any amount decrease
+                            "pending_coin_removal_count": -1,
+                        }
+                    },
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -tx_amount,
+                            "unconfirmed_wallet_balance": -tx_amount,
+                            "spendable_balance": -tx_amount,
+                            "max_send_amount": -tx_amount,
+                            "unspent_coin_count": -1,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": tx_amount,
+                            "unconfirmed_wallet_balance": tx_amount,
+                            "spendable_balance": tx_amount,
+                            "max_send_amount": tx_amount,
+                            "unspent_coin_count": 1,
+                        }
+                    },
+                ),
+            ]
+        )
 
-        # process the resubmitted tx
-        for _ in range(10):
-            await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-            await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2], timeout=20)
-
-            if (await wallet.get_confirmed_balance() == permanent_funds - tx_amount) and (
-                await wallet_2.get_confirmed_balance() == tx_amount
-            ):
-                break
-        else:
-            raise Exception("failed to reprocess reorged resubmitted tx")
-
-        unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
+        unconfirmed = await wsm.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
         assert len(unconfirmed) == 0
-        tx_record = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(tx.name)
+        tx_record = await wsm.tx_store.get_transaction_record(tx.name)
         assert tx_record is not None
         removed = tx_record.removals[0]
         added = tx_record.additions[0]
         added_1 = tx_record.additions[1]
-        wallet_coin_record_rem = await wallet_node.wallet_state_manager.coin_store.get_coin_record(removed.name())
+        wallet_coin_record_rem = await wsm.coin_store.get_coin_record(removed.name())
         assert wallet_coin_record_rem is not None
         assert wallet_coin_record_rem.spent
 
