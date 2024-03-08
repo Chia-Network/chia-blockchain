@@ -225,7 +225,7 @@ jobs:
           fetch-depth: 0
 
       - name: chivdf
-        run:
+        run: |
           cd cloned/
           pip install pipx
           pipx run --spec='cibuildwheel==2.16.2' cibuildwheel --output-dir dist --platform windows --archs x86_64 2>&1
