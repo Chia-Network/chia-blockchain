@@ -899,14 +899,16 @@ class DataLayer:
                     store_id=offer_store.store_id,
                     inclusions=offer_store.inclusions,
                 )
+                existing_root = await self.get_root(store_id=offer_store.store_id)
+                existing_generation = -1 if existing_root is None else existing_root.generation
 
                 if len(changelist) > 0:
                     new_root_hash = await self.batch_insert(
                         tree_id=offer_store.store_id,
                         changelist=changelist,
+                        status=Status.COMMITTED,
                     )
                 else:
-                    existing_root = await self.get_root(store_id=offer_store.store_id)
                     if existing_root is None:
                         raise Exception(f"store id not available: {offer_store.store_id.hex()}")
                     new_root_hash = existing_root.root
@@ -940,6 +942,12 @@ class DataLayer:
                         ),
                     )
                     proofs.append(proof)
+                await self.data_store.rollback_to_generation(offer_store.store_id, existing_generation)
+                await self.data_store.insert_root_with_ancestor_table(
+                    tree_id=offer_store.store_id,
+                    node_hash=new_root_hash,
+                    status=Status.PENDING,
+                )
                 store_proof = StoreProofs(store_id=offer_store.store_id, proofs=tuple(proofs))
                 our_store_proofs[offer_store.store_id] = store_proof
             return our_store_proofs
