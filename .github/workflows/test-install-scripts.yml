@@ -248,7 +248,7 @@ jobs:
         docker run --rm --platform ${{ matrix.arch.cross.docker_platform }} \
         -v ${{ github.workspace }}:/ws \
         --workdir=/ws \
-        ${{ matrix.distribution.ref['matrix.arch.matrix'] || matrix.distribution.ref }} \
+        ${{ matrix.distribution.ref[matrix.arch.matrix] || matrix.distribution.ref }} \
         bash -exc '\
         ${{ steps.install-action.outputs.command }} && \
         chia --help \
