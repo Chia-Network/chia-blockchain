@@ -237,6 +237,7 @@ jobs:
         platforms: ${{ matrix.arch.cross.qemu_platform }}
 
     - name: Test via QEMU
+      if: matrix.arch.cross
       run: |
         docker run --rm --platform ${{ matrix.arch.cross.docker_platform }} \
         -v ${{ github.workspace }}:/ws \
