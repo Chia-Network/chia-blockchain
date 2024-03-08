@@ -60,6 +60,7 @@ jobs:
             runs-on: ${{ inputs.runs-on }}
         python:
           - name: '3.8'
+            cibw-build: cp38-*
             file_name: '3.8'
             action: '3.8'
             apt: '3.8'
@@ -69,6 +70,7 @@ jobs:
               limited: True
               main: True
           - name: '3.9'
+            cibw-build: cp39-*
             file_name: '3.9'
             action: '3.9'
             apt: '3.9'
@@ -78,12 +80,14 @@ jobs:
               limited: True
               main: True
           - name: '3.10'
+            cibw-build: cp310-*
             file_name: '3.10'
             action: '3.10'
             apt: '3.10'
             install_sh: '3.10'
             matrix: '3.10'
           - name: '3.11'
+            cibw-build: cp311-*
             file_name: '3.11'
             action: '3.11'
             apt: '3.11'
@@ -93,6 +97,7 @@ jobs:
               limited: True
               main: True
           - name: '3.12'
+            cibw-build: cp312-*
             file_name: '3.12'
             action: '3.12'
             apt: '3.12'
@@ -225,6 +230,11 @@ jobs:
           fetch-depth: 0
 
       - name: chivdf
+        env:
+          CIBW_BUILD: ${{ matrix.python.cibw-build }}
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_ARCHS_MACOS: x86_64
+          CIBW_PRERELEASE_PYTHONS: True
         run: |
           cd cloned/
           pip install pipx
