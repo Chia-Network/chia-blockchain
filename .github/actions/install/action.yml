@@ -49,11 +49,14 @@ runs:
   steps:
     - name: Define command (macOS, Ubuntu)
       id: define-command-macos-ubuntu
+      shell: bash
       run: |
         echo "command=${{ inputs.command-prefix }} sh install.sh ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }} ${{ (fromJSON(inputs.do-system-installs) != true) && '-s' || '' }}" >> "${GITHUB_OUTPUT}"
 
     - name: Define command (Windows)
       id: define-command-windows
+      shell: bash
+      run: |
         echo "command=${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }}" >> "${GITHUB_OUTPUT}"
 
     - name: Run install script (macOS, Ubuntu)
