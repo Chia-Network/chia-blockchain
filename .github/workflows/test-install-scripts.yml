@@ -237,7 +237,7 @@ jobs:
 
     - name: Test via QEMU
       run: |
-        docker run --rm --platform ${{ matrix.arch.cross.docker_platform \
+        docker run --rm --platform ${{ matrix.arch.cross.docker_platform }} \
         -v ${{ github.workspace }}:/ws \
         --workdir=/ws \
         ${{ matrix.distribution.url }} \
