@@ -554,7 +554,7 @@ class DataLayerRpcApi:
         for key in request.keys:
             node = await self.service.data_store.get_node_by_key(tree_id=request.store_id, key=key)
             pi = await self.service.data_store.get_proof_of_inclusion_by_hash(
-                tree_id=request.store_id, node_hash=node.hash
+                tree_id=request.store_id, node_hash=node.hash, use_optimized=True
             )
 
             proof = HashOnlyProof.from_key_value(
