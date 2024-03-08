@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Test Install Scripts - ${{ matrix.development.name }}
+    name: ${{ matrix.os.name }} ${{ matrix.development.name }}
     runs-on: ${{ matrix.os.runs-on }}
     strategy:
       fail-fast: false
@@ -31,11 +31,14 @@ jobs:
         python:
           - major-dot-minor: "3.10"
         os:
-          - runs-on: macos-latest
-            matrix: macos
           - runs-on: ubuntu-latest
+            name: Linux
             matrix: linux
+          - runs-on: macos-latest
+            name: macOS
+            matrix: macos
           - runs-on: windows-latest
+            name: Windows
             matrix: windows
         development:
           - name: Non-development
@@ -77,7 +80,7 @@ jobs:
         ./Install-gui.ps1
 
   test_scripts_in_docker:
-    name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
+    name: ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     container: ${{ (! matrix.arch.cross) && matrix.distribution.url || ''}}
     strategy:
@@ -94,49 +97,49 @@ jobs:
         - name: amazonlinux:2023
           type: amazon
           risc: false
-          url: "docker://amazonlinux:2023"
+          url: "amazonlinux:2023"
         - name: arch:latest
           type: arch
           risc: false
-          url: "docker://archlinux:latest"
+          url: "archlinux:latest"
         - name: debian:bullseye
           type: debian
           risc: false
           # https://packages.debian.org/bullseye/python/python3 (3.9)
-          url: "docker://debian:bullseye"
+          url: "debian:bullseye"
         - name: debian:bookworm
           type: debian
           risc: false
           # https://packages.debian.org/bookworm/python/python3 (3.11)
-          url: "docker://debian:bookworm"
+          url: "debian:bookworm"
         - name: fedora:37
           type: fedora
           risc: false
           # (37, 3.11) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+37&start=0
-          url: "docker://fedora:37"
+          url: "fedora:37"
         - name: fedora:38
           type: fedora
           risc: false
           # (38, 3.11) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+38&start=0
-          url: "docker://fedora:38"
+          url: "fedora:38"
         - name: rockylinux:8
           type: rocky
           risc: false
-          url: "docker://rockylinux:8"
+          url: "rockylinux:8"
         - name: rockylinux:9
           type: rocky
           risc: false
-          url: "docker://rockylinux:9"
+          url: "rockylinux:9"
         - name: ubuntu:focal (20.04)
           type: ubuntu
           risc: false
           # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
-          url: "docker://ubuntu:focal"
+          url: "ubuntu:focal"
         - name: ubuntu:jammy (22.04)
           type: ubuntu
           risc: true
           # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
-          url: "docker://ubuntu:jammy"
+          url: "ubuntu:jammy"
         arch:
         - name: ARM64
           matrix: arm
