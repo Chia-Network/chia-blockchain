@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -21,13 +20,13 @@ from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.types.spend_bundle import estimate_fees
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
@@ -1670,48 +1669,21 @@ class TestWalletSimulator:
             )
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [2], "trusted": True, "reuse_puzhash": True}],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_wallet_prevent_fee_theft(
-        self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        num_blocks = 5
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_1 = full_nodes[0]
+    async def test_wallet_prevent_fee_theft(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        wallet = env.xch_wallet
 
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
-
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, full_node_1.full_node.server.get_port()), None)
-
-        expected_confirmed_balance = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-
-        await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
-        await time_out_assert(20, wallet.get_unconfirmed_balance, expected_confirmed_balance)
-
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
-        tx_amount = 3200000000000
-        tx_fee = 300000000000
+        tx_amount = 1_750_000_000_000
+        tx_fee = 2_000_000_000_000
         [tx] = await wallet.generate_signed_transaction(
             uint64(tx_amount),
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            bytes32([0] * 32),
             DEFAULT_TX_CONFIG,
             uint64(tx_fee),
         )
@@ -1722,39 +1694,37 @@ class TestWalletSimulator:
             if compute_additions(cs) == []:
                 stolen_cs = cs
         # get a legit signature
-        stolen_sb = await wallet_node.wallet_state_manager.sign_transaction([stolen_cs])
-        now = uint64(int(time.time()))
-        add_list = list(stolen_sb.additions())
-        rem_list = list(stolen_sb.removals())
+        stolen_sb = await wallet.wallet_state_manager.sign_transaction([stolen_cs])
         name = stolen_sb.name()
         stolen_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=now,
+            created_at_time=uint64(0),
             to_puzzle_hash=bytes32(32 * b"0"),
             amount=uint64(0),
-            fee_amount=uint64(stolen_cs.coin.amount),
+            fee_amount=uint64(0),
             confirmed=False,
             sent=uint32(0),
             spend_bundle=stolen_sb,
-            additions=add_list,
-            removals=rem_list,
+            additions=[],
+            removals=[],
             wallet_id=wallet.id(),
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=name,
-            memos=list(compute_memos(stolen_sb).items()),
+            memos=[],
             valid_times=ConditionValidTimes(),
         )
-        await wallet.wallet_state_manager.add_pending_transactions([stolen_tx])
+        [stolen_tx] = await wallet.wallet_state_manager.add_pending_transactions([stolen_tx])
 
-        await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
-        await time_out_assert(20, wallet.get_unconfirmed_balance, expected_confirmed_balance - stolen_cs.coin.amount)
+        async def transaction_has_failed(tx_id: bytes32) -> bool:
+            tx = await wallet.wallet_state_manager.tx_store.get_transaction_record(tx_id)
+            assert tx is not None
+            return (
+                len(tuple(True for sent_to in tx.sent_to if sent_to[2] == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED.name)) > 0
+            )
 
-        await full_node_1.farm_blocks_to_puzzlehash(count=num_blocks, guarantee_transaction_blocks=True)
-
-        # Funds have not decreased because stolen_tx was rejected
-        await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
+        await time_out_assert(10, transaction_has_failed, True, stolen_tx.name)
 
     @pytest.mark.parametrize(
         "trusted",
