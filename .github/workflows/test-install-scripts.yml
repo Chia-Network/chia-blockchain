@@ -89,6 +89,7 @@ jobs:
           runs-on:
             intel: ubuntu-latest
             arm: [linux, arm64]
+            risc: ubuntu-latest
         distribution:
         - name: amazonlinux:2023
           type: amazon
