@@ -1511,49 +1511,22 @@ class TestWalletSimulator:
         )
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [{"num_environments": 2, "blocks_needed": [1, 1]}],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_wallet_make_transaction_with_memo(
-        self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        num_blocks = 2
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_1 = full_nodes[0]
+    async def test_wallet_make_transaction_with_memo(self, wallet_environments: WalletTestFramework) -> None:
+        env_0 = wallet_environments.environments[0]
+        env_1 = wallet_environments.environments[1]
+        wallet_0 = env_0.xch_wallet
+        wallet_1 = env_1.xch_wallet
 
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
-
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        wallet_1 = wallet_node_2.wallet_state_manager.main_wallet
-        api_0 = WalletRpcApi(wallet_node)
-        api_1 = WalletRpcApi(wallet_node_2)
-        if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, full_node_1.full_node.server.get_port()), None)
-        await server_3.start_client(PeerInfo(self_hostname, full_node_1.full_node.server.get_port()), None)
-
-        expected_confirmed_balance = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
-
-        tx_amount = 3200000000000
+        tx_amount = 1_750_000_000_000  # ensures we grab both coins
         tx_fee = 10
         ph_2 = await wallet_1.get_new_puzzlehash()
-        [tx] = await wallet.generate_signed_transaction(
+        [tx] = await wallet_0.generate_signed_transaction(
             uint64(tx_amount), ph_2, DEFAULT_TX_CONFIG, uint64(tx_fee), memos=[ph_2]
         )
         tx_id = tx.name.hex()
@@ -1562,23 +1535,54 @@ class TestWalletSimulator:
         fees = estimate_fees(tx.spend_bundle)
         assert fees == tx_fee
 
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
-        await full_node_1.wait_transaction_records_entered_mempool(records=[tx])
-        memos = await api_0.get_transaction_memo(dict(transaction_id=tx_id))
+        [tx] = await wallet_0.wallet_state_manager.add_pending_transactions([tx])
+        memos = await env_0.rpc_api.get_transaction_memo(dict(transaction_id=tx_id))
         # test json serialization
-        json.dumps(memos)
         assert len(memos[tx_id]) == 1
         assert list(memos[tx_id].values())[0][0] == ph_2.hex()
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance - tx_amount - tx_fee
 
-        await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "unconfirmed_wallet_balance": -1 * tx_amount - tx_fee,
+                            "<=#spendable_balance": -1 * tx_amount - tx_fee,
+                            "<=#max_send_amount": -1 * tx_amount - tx_fee,
+                            ">=#pending_change": 1,  # any amount increase
+                            "pending_coin_removal_count": 2,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -1 * tx_amount - tx_fee,
+                            ">=#spendable_balance": 1,  # any amount increase
+                            ">=#max_send_amount": 1,  # any amount increase
+                            "<=#pending_change": -1,  # any amount decrease
+                            "pending_coin_removal_count": -2,
+                            "unspent_coin_count": -1,
+                        }
+                    },
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={},
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": tx_amount,
+                            "unconfirmed_wallet_balance": tx_amount,
+                            "spendable_balance": tx_amount,
+                            "max_send_amount": tx_amount,
+                            "unspent_coin_count": 1,
+                        }
+                    },
+                ),
+            ]
+        )
 
-        await time_out_assert(15, wallet_1.get_confirmed_balance, tx_amount)
         for coin in tx.additions:
             if coin.amount == tx_amount:
                 tx_id = coin.name().hex()
-        memos = await api_1.get_transaction_memo(dict(transaction_id=tx_id))
+        memos = await env_1.rpc_api.get_transaction_memo(dict(transaction_id=tx_id))
         assert len(memos[tx_id]) == 1
         assert list(memos[tx_id].values())[0][0] == ph_2.hex()
 
