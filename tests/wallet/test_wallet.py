@@ -1343,82 +1343,106 @@ class TestWalletSimulator:
         await full_node_api_2.wait_transaction_records_entered_mempool(records=[tx])
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [{"num_environments": 2, "blocks_needed": [1, 1]}],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_wallet_make_transaction_hop(
-        self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        num_blocks = 10
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_api_0 = full_nodes[0]
-        full_node_0 = full_node_api_0.full_node
-        server_0 = full_node_0.server
-
-        wallet_node_0, wallet_0_server = wallets[0]
-        wallet_node_1, wallet_1_server = wallets[1]
-
-        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-
-        if trusted:
-            wallet_node_0.config["trusted_peers"] = {server_0.node_id.hex(): server_0.node_id.hex()}
-            wallet_node_1.config["trusted_peers"] = {server_0.node_id.hex(): server_0.node_id.hex()}
-        else:
-            wallet_node_0.config["trusted_peers"] = {}
-            wallet_node_1.config["trusted_peers"] = {}
-        await wallet_0_server.start_client(PeerInfo(self_hostname, server_0.get_port()), None)
-
-        await wallet_1_server.start_client(PeerInfo(self_hostname, server_0.get_port()), None)
-
-        expected_confirmed_balance = await full_node_api_0.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-
-        assert await wallet_0.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet_0.get_unconfirmed_balance() == expected_confirmed_balance
+    async def test_wallet_make_transaction_hop(self, wallet_environments: WalletTestFramework) -> None:
+        env_0 = wallet_environments.environments[0]
+        env_1 = wallet_environments.environments[1]
+        wallet_0 = env_0.xch_wallet
+        wallet_1 = env_1.xch_wallet
 
         tx_amount = 10
         [tx] = await wallet_0.generate_signed_transaction(
             uint64(tx_amount),
-            await wallet_node_1.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            await wallet_1.get_puzzle_hash(False),
             DEFAULT_TX_CONFIG,
             uint64(0),
         )
+        [tx] = await wallet_0.wallet_state_manager.add_pending_transactions([tx])
 
-        await wallet_0.wallet_state_manager.add_pending_transactions([tx])
-        await full_node_api_0.wait_transaction_records_entered_mempool(records=[tx])
-
-        assert await wallet_0.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet_0.get_unconfirmed_balance() == expected_confirmed_balance - tx_amount
-
-        await full_node_api_0.farm_blocks_to_puzzlehash(count=4, guarantee_transaction_blocks=True)
-        expected_confirmed_balance -= tx_amount
-
-        # Full node height 17, wallet height 15
-        await time_out_assert(20, wallet_0.get_confirmed_balance, expected_confirmed_balance)
-        await time_out_assert(20, wallet_0.get_unconfirmed_balance, expected_confirmed_balance)
-        await time_out_assert(20, wallet_1.get_confirmed_balance, 10)
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "unconfirmed_wallet_balance": -10,
+                            "<=#spendable_balance": -10,
+                            "<=#max_send_amount": -10,
+                            ">=#pending_change": 1,  # any amount increase
+                            "pending_coin_removal_count": 1,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -10,
+                            ">=#spendable_balance": 1,  # any amount increase
+                            ">=#max_send_amount": 1,  # any amount increase
+                            "<=#pending_change": -1,  # any amount decrease
+                            "pending_coin_removal_count": -1,
+                        }
+                    },
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={},
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": 10,
+                            "unconfirmed_wallet_balance": 10,
+                            "spendable_balance": 10,
+                            "max_send_amount": 10,
+                            "unspent_coin_count": 1,
+                        }
+                    },
+                ),
+            ]
+        )
 
         tx_amount = 5
         [tx] = await wallet_1.generate_signed_transaction(
-            uint64(tx_amount), await wallet_0.get_new_puzzlehash(), DEFAULT_TX_CONFIG, uint64(0)
+            uint64(tx_amount), await wallet_0.get_puzzle_hash(False), DEFAULT_TX_CONFIG, uint64(0)
         )
-        await wallet_1.wallet_state_manager.add_pending_transactions([tx])
-        await full_node_api_0.wait_transaction_records_entered_mempool(records=[tx])
+        [tx] = await wallet_1.wallet_state_manager.add_pending_transactions([tx])
 
-        await full_node_api_0.farm_blocks_to_puzzlehash(count=4, guarantee_transaction_blocks=True)
-        expected_confirmed_balance += tx_amount
-
-        await wallet_0.get_confirmed_balance()
-        await wallet_0.get_unconfirmed_balance()
-        await wallet_1.get_confirmed_balance()
-
-        await time_out_assert(20, wallet_0.get_confirmed_balance, expected_confirmed_balance)
-        await time_out_assert(20, wallet_0.get_unconfirmed_balance, expected_confirmed_balance)
-        await time_out_assert(20, wallet_1.get_confirmed_balance, 5)
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={},
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": 5,
+                            "unconfirmed_wallet_balance": 5,
+                            "spendable_balance": 5,
+                            "max_send_amount": 5,
+                            "unspent_coin_count": 1,
+                        }
+                    },
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "unconfirmed_wallet_balance": -5,
+                            "<=#spendable_balance": -5,
+                            "<=#max_send_amount": -5,
+                            ">=#pending_change": 1,  # any amount increase
+                            "pending_coin_removal_count": 1,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -5,
+                            ">=#spendable_balance": 1,  # any amount increase
+                            ">=#max_send_amount": 1,  # any amount increase
+                            "<=#pending_change": -1,  # any amount decrease
+                            "pending_coin_removal_count": -1,
+                        }
+                    },
+                ),
+            ]
+        )
 
     @pytest.mark.parametrize(
         "trusted",
