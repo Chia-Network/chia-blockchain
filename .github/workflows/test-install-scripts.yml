@@ -82,7 +82,7 @@ jobs:
   test_scripts_in_docker:
     name: ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
-    container: ${{ (! matrix.arch.cross) && matrix.distribution.ref || ''}}
+    container: ${{ (! matrix.arch.cross) && ( matrix.distribution.ref[matrix.arch.matrix] || matrix.distribution.ref) || ''}}
     strategy:
       fail-fast: false
       matrix:
