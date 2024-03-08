@@ -250,6 +250,7 @@ jobs:
         --workdir=/ws \
         ${{ matrix.distribution.ref[matrix.arch.matrix] || matrix.distribution.ref }} \
         bash -exc '\
+        git config --global --add safe.directory /ws && \
         ${{ steps.install-action.outputs.command }} && \
         chia --help \
         '
