@@ -12,7 +12,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
-from chia.simulator.full_node_simulator import FullNodeSimulator, wait_for_coins_in_wallet
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -1587,50 +1587,51 @@ class TestWalletSimulator:
         assert list(memos[tx_id].values())[0][0] == ph_2.hex()
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_wallet_create_hit_max_send_amount(
-        self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        num_blocks = 5
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_1 = full_nodes[0]
+    async def test_wallet_create_hit_max_send_amount(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        wallet = env.xch_wallet
 
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
-
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
-        if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, full_node_1.full_node.server.get_port()), None)
-
-        expected_confirmed_balance = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-
-        await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
-
+        ph = await wallet.get_puzzle_hash(False)
         primaries = [Payment(ph, uint64(1000000000 + i)) for i in range(int(wallet.max_send_quantity) + 1)]
         [tx_split_coins] = await wallet.generate_signed_transaction(
             uint64(1), ph, DEFAULT_TX_CONFIG, uint64(0), primaries=primaries
         )
         assert tx_split_coins.spend_bundle is not None
 
-        await wallet.wallet_state_manager.add_pending_transactions([tx_split_coins])
-        await full_node_1.process_transaction_records(records=[tx_split_coins])
-        await wait_for_coins_in_wallet(coins=set(tx_split_coins.additions), wallet=wallet, timeout=20)
+        [tx_split_coins] = await wallet.wallet_state_manager.add_pending_transactions([tx_split_coins])
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            # tx sent to ourselves
+                            "unconfirmed_wallet_balance": 0,
+                            "<=#spendable_balance": 0,
+                            "<=#max_send_amount": 0,
+                            ">=#pending_change": 1,  # any amount increase
+                            "pending_coin_removal_count": 1,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": 0,
+                            ">=#spendable_balance": 1,  # any amount increase
+                            ">=#max_send_amount": 1,  # any amount increase
+                            "<=#pending_change": -1,  # any amount decrease
+                            "pending_coin_removal_count": -1,
+                            "unspent_coin_count": len(primaries) + 1,
+                        }
+                    },
+                ),
+            ]
+        )
 
         max_sent_amount = await wallet.get_max_send_amount()
         assert max_sent_amount < (await wallet.get_spendable_balance())
