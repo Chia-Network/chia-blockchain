@@ -1891,6 +1891,19 @@ class WalletStateManager:
                                 else:
                                     for rem_coin in tx_record.removals:
                                         if rem_coin == coin_state.coin:
+                                            if tx_record.type == TransactionType.OUTGOING_CLAWBACK.value:
+                                                # Check if the coin is spent by the current wallet
+                                                coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
+                                                new_coins = set(compute_spend_hints_and_additions(coin_spend).keys())
+                                                # Check if the new coin belongs to the current wallet.
+                                                # Otherwise, we should remove the TX.
+                                                need_remove: bool = True
+                                                for added_coin in tx_record.additions:
+                                                    if added_coin.name() in new_coins:
+                                                        need_remove = False
+                                                        break
+                                                if need_remove:
+                                                    await self.tx_store.delete_transaction_record(tx_record.name)
                                             confirmed_tx_records.append(tx_record)
 
                             for tx_record in confirmed_tx_records:

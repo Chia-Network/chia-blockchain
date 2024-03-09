@@ -777,6 +777,7 @@ class TestWalletSimulator:
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
         api_1 = WalletRpcApi(wallet_node_1)
+        api_2 = WalletRpcApi(wallet_node_2)
         if trusted:
             wallet_node_1.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
             wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -839,6 +840,9 @@ class TestWalletSimulator:
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
         resp = await api_1.spend_clawback_coins(dict({"coin_ids": [clawback_coin_id_2.hex()], "fee": 0}))
+        assert resp["success"]
+        assert len(resp["transaction_ids"]) == 1
+        resp = await api_2.spend_clawback_coins(dict({"coin_ids": [clawback_coin_id_1.hex()], "fee": 0}))
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
