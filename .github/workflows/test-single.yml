@@ -100,7 +100,7 @@ jobs:
             matrix: '3.12'
             exclude_from:
               limited: True
-#              main: True
+              main: True
         exclude:
           - os:
               matrix: macos
