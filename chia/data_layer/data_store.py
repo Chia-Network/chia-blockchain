@@ -1515,6 +1515,10 @@ class DataStore:
 
     async def get_node_by_key_latest_generation(self, key: bytes, tree_id: bytes32) -> TerminalNode:
         async with self.db_wrapper.reader() as reader:
+            root = await self.get_tree_root(tree_id=tree_id)
+            if root.node_hash is None:
+                raise KeyNotFoundError(key=key)
+
             cursor = await reader.execute(
                 """
                 SELECT a.hash FROM ancestors a
@@ -1532,6 +1536,15 @@ class DataStore:
                 raise KeyNotFoundError(key=key)
 
             node = await self.get_node(row["hash"])
+            node_hash = node.hash
+            while True:
+                internal_node = await self._get_one_ancestor(node_hash, tree_id)
+                if internal_node is None:
+                    break
+                node_hash = internal_node.hash
+
+            if node_hash != root.node_hash:
+                raise KeyNotFoundError(key=key)
             assert isinstance(node, TerminalNode)
             return node
 

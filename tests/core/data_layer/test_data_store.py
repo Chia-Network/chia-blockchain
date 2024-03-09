@@ -1804,7 +1804,9 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
     num_stores = 5
     num_keys = 20
     values_offset = 10000
-    repetitions = 10
+    repetitions = 25
+    random = Random()
+    random.seed(100, version=2)
 
     tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
     for tree_id in tree_ids:
@@ -1829,3 +1831,8 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
             for key, value in zip(keys, values):
                 node = await raw_data_store.get_node_by_key(tree_id=tree_id, key=key)
                 assert node.value == value
+                if random.randint(0, 4) == 0:
+                    batch = [{"action": "delete", "key": key}]
+                    await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
+                    with pytest.raises(Exception):
+                        node = await raw_data_store.get_node_by_key(tree_id=tree_id, key=key)
