@@ -9,11 +9,11 @@ dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.2.0",
     "boto3==1.34.46",  # AWS S3 for DL s3 plugin
-    "chiavdf==1.1.1",  # timelord and vdf verification
-    "chiabip158==1.3",  # bip158-style wallet filters
-    "chiapos==2.0.3",  # proof of space
-    "clvm==0.9.8",
-    "clvm_tools==0.4.8",  # Currying, Program.to, other conveniences
+    "chiavdf==1.1.4",  # timelord and vdf verification
+    "chiabip158==1.4",  # bip158-style wallet filters
+    "chiapos==2.0.4",  # proof of space
+    "clvm==0.9.9",
+    "clvm_tools==0.4.9",  # Currying, Program.to, other conveniences
     "chia_rs==0.5.2",
     "clvm-tools-rs==0.1.40",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.9.1",  # HTTP server for full node rpc
