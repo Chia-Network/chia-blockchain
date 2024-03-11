@@ -2041,38 +2041,15 @@ class TestWalletSimulator:
         )
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [2]}],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_wallet_transaction_options(
-        self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        num_blocks = 5
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_api = full_nodes[0]
-        server_1 = full_node_api.full_node.server
-
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
-
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-
-        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
-
-        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-
-        await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
-        await time_out_assert(20, wallet.get_unconfirmed_balance, expected_confirmed_balance)
+    async def test_wallet_transaction_options(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        wallet = env.xch_wallet
 
         AMOUNT_TO_SEND = 4000000000000
         coins = await wallet.select_coins(uint64(AMOUNT_TO_SEND), DEFAULT_TX_CONFIG.coin_selection_config)
@@ -2080,7 +2057,7 @@ class TestWalletSimulator:
 
         [tx] = await wallet.generate_signed_transaction(
             uint64(AMOUNT_TO_SEND),
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            bytes32([0] * 32),
             DEFAULT_TX_CONFIG,
             uint64(0),
             coins=coins,
@@ -2089,17 +2066,33 @@ class TestWalletSimulator:
         assert tx.spend_bundle is not None
         paid_coin = [coin for coin in tx.spend_bundle.additions() if coin.amount == AMOUNT_TO_SEND][0]
         assert paid_coin.parent_coin_info == coin_list[2].name()
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
+        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
-        await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
-        await time_out_assert(20, wallet.get_unconfirmed_balance, expected_confirmed_balance - AMOUNT_TO_SEND)
-        await time_out_assert(20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
-
-        await full_node_api.farm_blocks_to_puzzlehash(count=num_blocks, guarantee_transaction_blocks=True)
-        expected_confirmed_balance -= AMOUNT_TO_SEND
-
-        await time_out_assert(10, wallet.get_confirmed_balance, expected_confirmed_balance)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, expected_confirmed_balance)
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "unconfirmed_wallet_balance": -1 * AMOUNT_TO_SEND,
+                            "spendable_balance": -1 * AMOUNT_TO_SEND,  # used exact amount
+                            "max_send_amount": -1 * AMOUNT_TO_SEND,  # used exact amount
+                            "pending_change": 0,  # used exact amount
+                            "pending_coin_removal_count": len(coins),
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -1 * AMOUNT_TO_SEND,
+                            "spendable_balance": 0,  # used exact amount
+                            "max_send_amount": 0,  # used exact amount
+                            "pending_change": 0,  # used exact amount
+                            "unspent_coin_count": -len(coins),
+                            "pending_coin_removal_count": -len(coins),
+                        }
+                    },
+                )
+            ]
+        )
 
 
 def test_get_wallet_db_path_v2_r1() -> None:
