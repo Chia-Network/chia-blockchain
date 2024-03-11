@@ -120,8 +120,7 @@ async def test_vault_creation(
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(1, p2_singleton_puzzle_hash)
 
     if with_recovery:
-        assert wallet.vault_info.is_recoverable
-        assert wallet.recovery_info is not None
+        assert wallet.vault_info.recovery_info is not None
         [recovery_spend, finish_spend] = await wallet.create_recovery_spends()
         assert recovery_spend
         assert finish_spend
@@ -220,9 +219,8 @@ async def test_vault_creation(
     custom_data = json.loads(record.custom_data)
     vault_info = VaultInfo.from_json_dict(custom_data["vault_info"])
     assert vault_info == wallet.vault_info
-    if wallet.vault_info.is_recoverable:
-        recovery_info = RecoveryInfo.from_json_dict(custom_data["recovery_info"])
-        assert recovery_info == wallet.recovery_info
+    recovery_info = RecoveryInfo.from_json_dict(custom_data["vault_info"]["recovery_info"])
+    assert recovery_info == wallet.vault_info.recovery_info
 
     # test make_solution
     coin = (await wallet.select_coins(uint64(100), DEFAULT_COIN_SELECTION_CONFIG)).pop()

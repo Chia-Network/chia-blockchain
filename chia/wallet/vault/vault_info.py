@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 from chia_rs import G1Element
 
@@ -13,18 +14,19 @@ from chia.wallet.lineage_proof import LineageProof
 
 @streamable
 @dataclass(frozen=True)
+class RecoveryInfo(Streamable):
+    bls_pk: Optional[G1Element] = None
+    timelock: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
 class VaultInfo(Streamable):
     coin: Coin
     launcher_id: bytes32
     pubkey: bytes
     hidden_puzzle_hash: bytes32
     inner_puzzle_hash: bytes32
-    is_recoverable: bool
     lineage_proof: LineageProof
-
-
-@streamable
-@dataclass(frozen=True)
-class RecoveryInfo(Streamable):
-    bls_pk: G1Element
-    timelock: uint64
+    is_recoverable: bool
+    recovery_info: RecoveryInfo

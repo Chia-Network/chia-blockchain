@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from chia_rs import G1Element, G2Element
@@ -65,7 +66,20 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
 
 
+@dataclass
 class Vault(Wallet):
+    _vault_info: Optional[VaultInfo] = None
+
+    @property
+    def vault_info(self) -> VaultInfo:
+        if self._vault_info is None:
+            raise ValueError("VaultInfo is not set")
+        return self._vault_info
+
+    @vault_info.setter
+    def vault_info(self, new_vault_info: VaultInfo) -> None:
+        self._vault_info = new_vault_info
+    
     @staticmethod
     async def create(
         wallet_state_manager: Any,
@@ -86,8 +100,8 @@ class Vault(Wallet):
             self.vault_info.pubkey,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
             hidden_puzzle_hash,
-            self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
-            self.recovery_info.timelock if self.vault_info.is_recoverable else None,
+            self.vault_info.recovery_info.bls_pk,
+            self.vault_info.recovery_info.timelock,
         )
         return puzzle
 
@@ -237,8 +251,8 @@ class Vault(Wallet):
             self.vault_info.pubkey,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
             self.vault_info.hidden_puzzle_hash,
-            self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
-            self.recovery_info.timelock if self.vault_info.is_recoverable else None,
+            self.vault_info.recovery_info.bls_pk,
+            self.vault_info.recovery_info.timelock,
         )
 
         secp_solution = Program.to(
@@ -252,8 +266,8 @@ class Vault(Wallet):
         if self.vault_info.is_recoverable:
             recovery_puzzle_hash = get_recovery_puzzle(
                 secp_puzzle.get_tree_hash(),
-                self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
-                self.recovery_info.timelock if self.vault_info.is_recoverable else None,
+                self.vault_info.recovery_info.bls_pk,
+                self.vault_info.recovery_info.timelock,
             ).get_tree_hash()
             merkle_tree = construct_vault_merkle_tree(secp_puzzle.get_tree_hash(), recovery_puzzle_hash)
         else:
@@ -395,7 +409,7 @@ class Vault(Wallet):
         raise ValueError("This won't work")
 
     def require_derivation_paths(self) -> bool:
-        if getattr(self, "vault_info", None):
+        if getattr(self, "_vault_info", None):
             return True
         return False
 
@@ -409,11 +423,6 @@ class Vault(Wallet):
 
     def handle_own_derivation(self) -> bool:
         return True
-
-    def get_recovery_info(self) -> Tuple[Optional[G1Element], Optional[uint64]]:
-        if self.vault_info.is_recoverable:
-            return self.recovery_info.bls_pk, self.recovery_info.timelock
-        return None, None
 
     def get_p2_singleton_puzzle_hash(self) -> bytes32:
         return get_p2_singleton_puzzle_hash(self.vault_info.launcher_id)
@@ -439,13 +448,12 @@ class Vault(Wallet):
     def derivation_for_index(self, index: int) -> List[DerivationRecord]:
         hidden_puzzle = get_vault_hidden_puzzle_with_index(uint32(index))
         hidden_puzzle_hash = hidden_puzzle.get_tree_hash()
-        bls_pk, timelock = self.get_recovery_info()
         inner_puzzle_hash = get_vault_inner_puzzle_hash(
             self.vault_info.pubkey,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
             hidden_puzzle_hash,
-            bls_pk,
-            timelock,
+            self.vault_info.recovery_info.bls_pk,
+            self.vault_info.recovery_info.timelock,
         )
         record = DerivationRecord(
             uint32(index), inner_puzzle_hash, self.vault_info.pubkey, self.type(), self.id(), False
@@ -454,11 +462,11 @@ class Vault(Wallet):
 
     async def create_recovery_spends(self) -> List[TransactionRecord]:
         """
-        Returns two spendbundles
-        1. The spend recovering the vault which can be taken to the appropriate BLS wallet for signing
-        2. The spend that completes the recovery after the timelock has elapsed
+        Returns two tx records
+        1. Recover the vault which can be taken to the appropriate BLS wallet for signing
+        2. Complete the recovery after the timelock has elapsed
         """
-        assert self.vault_info.is_recoverable
+        assert self.vault_info.recovery_info is not None
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer = wallet_node.get_full_node_peer()
         assert peer is not None
@@ -473,8 +481,8 @@ class Vault(Wallet):
             self.vault_info.pubkey,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
             self.vault_info.hidden_puzzle_hash,
-            self.recovery_info.bls_pk,
-            self.recovery_info.timelock,
+            self.vault_info.recovery_info.bls_pk,
+            self.vault_info.recovery_info.timelock,
         )
         assert inner_puzzle.get_tree_hash() == self.vault_info.inner_puzzle_hash
 
@@ -484,10 +492,12 @@ class Vault(Wallet):
             self.vault_info.hidden_puzzle_hash,
         ).get_tree_hash()
 
-        recovery_puzzle = get_recovery_puzzle(secp_puzzle_hash, self.recovery_info.bls_pk, self.recovery_info.timelock)
+        recovery_puzzle = get_recovery_puzzle(
+            secp_puzzle_hash, self.vault_info.recovery_info.bls_pk, self.vault_info.recovery_info.timelock
+        )
         recovery_puzzle_hash = recovery_puzzle.get_tree_hash()
-
-        recovery_solution = get_recovery_solution(amount, self.recovery_info.bls_pk)
+        assert isinstance(self.vault_info.recovery_info.bls_pk, G1Element)
+        recovery_solution = get_recovery_solution(amount, self.vault_info.recovery_info.bls_pk)
 
         merkle_tree = construct_vault_merkle_tree(secp_puzzle_hash, recovery_puzzle_hash)
         proof = get_vault_proof(merkle_tree, recovery_puzzle_hash)
@@ -500,8 +510,10 @@ class Vault(Wallet):
         recovery_spend = SpendBundle([make_spend(vault_coin, full_puzzle, full_solution)], G2Element())
 
         # 2. Generate the Finish Recovery Spend
+        assert isinstance(self.vault_info.recovery_info.bls_pk, G1Element)
+        assert isinstance(self.vault_info.recovery_info.timelock, uint64)
         recovery_finish_puzzle = get_recovery_finish_puzzle(
-            self.recovery_info.bls_pk, self.recovery_info.timelock, amount
+            self.vault_info.recovery_info.bls_pk, self.vault_info.recovery_info.timelock, amount
         )
         recovery_finish_solution = Program.to([])
         recovery_inner_puzzle = get_recovery_inner_puzzle(secp_puzzle_hash, recovery_finish_puzzle.get_tree_hash())
@@ -582,10 +594,13 @@ class Vault(Wallet):
         secp_pk = memos.at("f").as_atom()
         hidden_puzzle_hash = bytes32(memos.at("rf").as_atom())
         if memos.list_len() == 4:
-            is_recoverable = True
             bls_pk = G1Element.from_bytes(memos.at("rrf").as_atom())
             timelock = uint64(memos.at("rrrf").as_int())
-            self.recovery_info = RecoveryInfo(bls_pk, timelock)
+            recovery_info = RecoveryInfo(bls_pk, timelock)
+            is_recoverable = True
+        else:
+            recovery_info = RecoveryInfo(None, None)
+            is_recoverable = False
         inner_puzzle_hash = get_vault_inner_puzzle_hash(
             secp_pk, self.wallet_state_manager.constants.GENESIS_CHALLENGE, hidden_puzzle_hash, bls_pk, timelock
         )
@@ -596,8 +611,9 @@ class Vault(Wallet):
             secp_pk,
             hidden_puzzle_hash,
             inner_puzzle_hash,
-            is_recoverable,
             lineage_proof,
+            is_recoverable,
+            recovery_info,
         )
         await self.save_info(vault_info)
         await self.wallet_state_manager.create_more_puzzle_hashes()
@@ -631,8 +647,8 @@ class Vault(Wallet):
             self.vault_info.pubkey,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
             hidden_puzzle_hash,
-            self.recovery_info.bls_pk if self.vault_info.is_recoverable else None,
-            self.recovery_info.timelock if self.vault_info.is_recoverable else None,
+            self.vault_info.recovery_info.bls_pk,
+            self.vault_info.recovery_info.timelock,
         )
 
         # get the parent state to create lineage proof
@@ -652,26 +668,22 @@ class Vault(Wallet):
             self.vault_info.pubkey,
             hidden_puzzle_hash,
             next_inner_puzzle.get_tree_hash(),
-            self.vault_info.is_recoverable,
             lineage_proof,
+            self.vault_info.is_recoverable,
+            self.vault_info.recovery_info,
         )
 
-        await self.update_vault_store(
-            new_vault_info, self.recovery_info if self.vault_info.is_recoverable else None, coin_spend
-        )
+        await self.update_vault_store(new_vault_info, coin_spend)
         await self.save_info(new_vault_info)
 
     async def save_info(self, vault_info: VaultInfo) -> None:
         self.vault_info = vault_info
 
-    async def update_vault_store(
-        self, vault_info: VaultInfo, recovery_info: Optional[RecoveryInfo], coin_spend: CoinSpend
-    ) -> None:
+    async def update_vault_store(self, vault_info: VaultInfo, coin_spend: CoinSpend) -> None:
         custom_data = bytes(
             json.dumps(
                 {
                     "vault_info": vault_info.to_json_dict(),
-                    "recovery_info": recovery_info.to_json_dict() if recovery_info else None,
                 }
             ),
             "utf-8",
