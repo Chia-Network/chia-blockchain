@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Tuple
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
-from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -1973,35 +1972,19 @@ class TestWalletSimulator:
         )
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [1]}],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_sign_message(
-        self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_api = full_nodes[0]
-        server_1 = full_node_api.full_node.server
+    async def test_sign_message(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        api_0 = env.rpc_api
 
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
-        api_0 = WalletRpcApi(wallet_node)
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
-        if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-
-        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         # Test general string
         message = "Hello World"
+        ph = await env.xch_wallet.get_puzzle_hash(False)
         response = await api_0.sign_message_by_address({"address": encode_puzzle_hash(ph, "xch"), "message": message})
         puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
 
