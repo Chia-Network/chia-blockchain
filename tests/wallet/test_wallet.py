@@ -1876,67 +1876,101 @@ class TestWalletSimulator:
         assert add_2_coin_record_full_node.confirmed_block_index > 0
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [
+            {
+                "num_environments": 1,
+                "blocks_needed": [1],
+                "trusted": True,
+                "reuse_puzhash": False,
+                "config_overrides": {"initial_num_public_keys": 100},
+            }
+        ],
+        indirect=True,
     )
     @pytest.mark.anyio
-    async def test_address_sliding_window(
-        self,
-        wallet_node_100_pk: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        full_nodes, wallets, _ = wallet_node_100_pk
-        full_node_api = full_nodes[0]
-        server_1: ChiaServer = full_node_api.full_node.server
-        wallet_node, server_2 = wallets[0]
-        if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-        wallet = wallet_node.wallet_state_manager.main_wallet
+    async def test_address_sliding_window(self, wallet_environments: WalletTestFramework) -> None:
+        full_node_api = wallet_environments.full_node
+        env = wallet_environments.environments[0]
+        wsm = env.wallet_state_manager
+        wallet = env.xch_wallet
 
-        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        peak = full_node_api.full_node.blockchain.get_peak_height()
+        assert peak is not None
 
         puzzle_hashes = []
         for i in range(211):
-            pubkey = master_sk_to_wallet_sk(wallet_node.wallet_state_manager.private_key, uint32(i)).get_g1()
+            pubkey = master_sk_to_wallet_sk(wsm.private_key, uint32(i)).get_g1()
             puzzle: Program = wallet.puzzle_for_pk(pubkey)
             puzzle_hash: bytes32 = puzzle.get_tree_hash()
             puzzle_hashes.append(puzzle_hash)
 
-        expected_confirmed_balance = 0
-        gapped_funds = 0
-
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[0])
-        gapped_funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[210])
-        gapped_funds += await full_node_api.farm_blocks_to_puzzlehash(
+        await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[0])
+        await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[210])
+        await full_node_api.farm_blocks_to_puzzlehash(
             count=1,
             farm_to=puzzle_hashes[114],
             guarantee_transaction_blocks=True,
         )
-        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
 
-        await time_out_assert(60, wallet.get_confirmed_balance, expected_confirmed_balance)
+        await full_node_api.wait_for_wallet_synced(env.node, peak_height=uint32(peak + 3))
+        await env.change_balances(
+            {
+                1: {
+                    "confirmed_wallet_balance": 2_000_000_000_000,
+                    "unconfirmed_wallet_balance": 2_000_000_000_000,
+                    "spendable_balance": 2_000_000_000_000,
+                    "max_send_amount": 2_000_000_000_000,
+                    "unspent_coin_count": 2,
+                }
+            }
+        )
+        await env.check_balances()
 
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_puzzlehash(
+        await full_node_api.farm_blocks_to_puzzlehash(
             count=1,
             farm_to=puzzle_hashes[50],
             guarantee_transaction_blocks=True,
         )
-        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-        expected_confirmed_balance += gapped_funds
+        await full_node_api.farm_blocks_to_puzzlehash(
+            count=1,
+            guarantee_transaction_blocks=True,
+        )
 
-        await time_out_assert(60, wallet.get_confirmed_balance, expected_confirmed_balance)
+        await full_node_api.wait_for_wallet_synced(env.node, peak_height=uint32(peak + 5))
+        await env.change_balances(
+            {
+                1: {
+                    "confirmed_wallet_balance": 6_000_000_000_000,
+                    "unconfirmed_wallet_balance": 6_000_000_000_000,
+                    "spendable_balance": 6_000_000_000_000,
+                    "max_send_amount": 6_000_000_000_000,
+                    "unspent_coin_count": 6,
+                }
+            }
+        )
+        await env.check_balances()
 
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[113])
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_puzzlehash(
+        await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[113])
+        await full_node_api.farm_blocks_to_puzzlehash(
             count=1,
             farm_to=puzzle_hashes[209],
             guarantee_transaction_blocks=True,
         )
         await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-        await time_out_assert(60, wallet.get_confirmed_balance, expected_confirmed_balance)
+
+        await full_node_api.wait_for_wallet_synced(env.node, peak_height=uint32(peak + 8))
+        await env.change_balances(
+            {
+                1: {
+                    "confirmed_wallet_balance": 4_000_000_000_000,
+                    "unconfirmed_wallet_balance": 4_000_000_000_000,
+                    "spendable_balance": 4_000_000_000_000,
+                    "max_send_amount": 4_000_000_000_000,
+                    "unspent_coin_count": 4,
+                }
+            }
+        )
 
     @pytest.mark.parametrize(
         "trusted",
