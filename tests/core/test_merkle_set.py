@@ -14,7 +14,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
-from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed
+from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, deserialize_proof
 from chia.util.misc import to_batches
 from chia.wallet.util.wallet_sync_utils import validate_additions, validate_removals
 
@@ -148,6 +148,12 @@ async def test_merkle_set_3() -> None:
     #     o    a
     #    / \
     #   b   c
+    for value in values:
+        (found, proof) = merkle_set.is_included_already_hashed(value)
+        assert found
+        new_set = deserialize_proof(proof)
+        assert new_set.get_root() == merkle_set.get_root()
+
 
 
 @pytest.mark.anyio
@@ -170,6 +176,11 @@ async def test_merkle_set_4() -> None:
     #     o     o
     #    / \   / \
     #   b   c a   d
+    for value in values:
+        (found, proof) = merkle_set.is_included_already_hashed(value)
+        assert found
+        new_set = deserialize_proof(proof)
+        assert new_set.get_root() == merkle_set.get_root()
 
 
 @pytest.mark.anyio
@@ -219,6 +230,11 @@ async def test_merkle_set_5() -> None:
     #   o   b
     #  / \
     # e   c
+    for value in values:
+        (found, proof) = merkle_set.is_included_already_hashed(value)
+        assert found
+        new_set = deserialize_proof(proof)
+        assert new_set.get_root() == expected
 
 
 @pytest.mark.anyio
@@ -260,6 +276,11 @@ async def test_merkle_left_edge() -> None:
     # b   o
     #    / \
     #   c   d
+    for value in values:
+        (found, proof) = merkle_set.is_included_already_hashed(value)
+        assert found
+        new_set = deserialize_proof(proof)
+        assert new_set.get_root() == expected
 
 
 @pytest.mark.anyio
@@ -301,6 +322,11 @@ async def test_merkle_right_edge() -> None:
     #               d   o
     #                  / \
     #                 c   b
+    for value in values:
+        (found, proof) = merkle_set.is_included_already_hashed(value)
+        assert found
+        new_set = deserialize_proof(proof)
+        assert new_set.get_root() == expected
 
 
 def rand_hash(rng: random.Random) -> bytes32:
