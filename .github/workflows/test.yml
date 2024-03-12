@@ -3,21 +3,21 @@ name: 🧪 test
 on:
   push:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
-    - long_lived/**
-    - main
-    - release/**
+      - long_lived/**
+      - main
+      - release/**
     tags:
-    - '**'
+      - "**"
   pull_request:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
-    - '**'
+      - "**"
   workflow_dispatch: null
   schedule:
-    - cron: '0 13 * * *'
+    - cron: "0 13 * * *"
 
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}--${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
@@ -35,7 +35,7 @@ jobs:
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - name: Generate matrix configuration
         id: configure
@@ -102,11 +102,11 @@ jobs:
             name: Ubuntu
             runs-on: ubuntu-latest
         python:
-          - name: '3.10'
-            action: '3.10'
-            apt: '3.10'
-            install_sh: '3.10'
-            matrix: '3.10'
+          - name: "3.10"
+            action: "3.10"
+            apt: "3.10"
+            install_sh: "3.10"
+            matrix: "3.10"
 
     steps:
       - uses: actions/checkout@v4

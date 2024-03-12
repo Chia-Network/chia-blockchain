@@ -4,29 +4,29 @@ on:
   workflow_dispatch:
     inputs:
       release_type:
-        description: 'Tagged release testing scenario'
+        description: "Tagged release testing scenario"
         required: false
         type: choice
-        default: ''
+        default: ""
         options:
-        - ''
-        - 9.9.9-b1
-        - 9.9.9-rc1
-        - 9.9.9
+          - ""
+          - 9.9.9-b1
+          - 9.9.9-rc1
+          - 9.9.9
   push:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
-      - 'long_lived/**'
+      - "long_lived/**"
       - main
-      - 'release/**'
+      - "release/**"
   release:
     types: [published]
   pull_request:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
-      - '**'
+      - "**"
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -117,8 +117,7 @@ jobs:
       # This will be recreated in the next step
       # Done now and at the end of the workflow in case the last workflow fails, and this is still around
       - name: Delete keychain if it already exists
-        run:
-          security delete-keychain signing_temp.keychain || true
+        run: security delete-keychain signing_temp.keychain || true
 
       - name: Import Apple app signing certificate
         if: steps.check_secrets.outputs.HAS_APPLE_SECRET
@@ -191,7 +190,7 @@ jobs:
       - name: Setup Node 18.x
         uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: "18.x"
 
       - name: Prepare GUI cache
         id: gui-ref
@@ -242,14 +241,13 @@ jobs:
       # We want to delete this no matter what happened in the previous steps (failures, success, etc)
       - name: Delete signing keychain
         if: always()
-        run:
-          security delete-keychain signing_temp.keychain || true
+        run: security delete-keychain signing_temp.keychain || true
 
   publish:
     name: Publish ${{ matrix.os.name }} DMG
     runs-on: ${{ matrix.os.runs-on }}
     needs:
-    - build
+      - build
     timeout-minutes: 5
     strategy:
       fail-fast: false
@@ -398,7 +396,7 @@ jobs:
     name: Test ${{ matrix.os.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
-    - build
+      - build
     strategy:
       fail-fast: false
       matrix:
@@ -434,27 +432,27 @@ jobs:
               matrix: arm
 
     steps:
-    - uses: Chia-Network/actions/clean-workspace@main
+      - uses: Chia-Network/actions/clean-workspace@main
 
-    - name: Download packages
-      uses: actions/download-artifact@v4
-      id: download
-      with:
-        name: chia-installers-macos-dmg-${{ matrix.arch.artifact-name }}
-        path: packages
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        id: download
+        with:
+          name: chia-installers-macos-dmg-${{ matrix.arch.artifact-name }}
+          path: packages
 
-    - name: Mount .dmg
-      env:
-        PACKAGE_PATH: ${{ github.workspace }}/build_scripts/final_installer/
-      run: |
-        ls -l "${{ steps.download.outputs.download-path }}"
-        hdiutil attach "${{ steps.download.outputs.download-path }}"/chia-*.dmg
+      - name: Mount .dmg
+        env:
+          PACKAGE_PATH: ${{ github.workspace }}/build_scripts/final_installer/
+        run: |
+          ls -l "${{ steps.download.outputs.download-path }}"
+          hdiutil attach "${{ steps.download.outputs.download-path }}"/chia-*.dmg
 
-    - name: Run chia version
-      run: |
-        "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" version
+      - name: Run chia version
+        run: |
+          "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" version
 
-    - name: Detach .dmg
-      if: always()
-      run: |
-        hdiutil detach -force "/Volumes/Chia "*
+      - name: Detach .dmg
+        if: always()
+        run: |
+          hdiutil detach -force "/Volumes/Chia "*
