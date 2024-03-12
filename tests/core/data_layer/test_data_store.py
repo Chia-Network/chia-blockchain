@@ -37,7 +37,6 @@ from chia.data_layer.download_data import (
     get_full_tree_filename_path,
     insert_from_delta_file,
     insert_into_data_store_from_file,
-    is_filename_valid,
     write_files_for_root,
 )
 from chia.types.blockchain_format.program import Program

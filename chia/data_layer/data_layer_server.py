@@ -62,10 +62,12 @@ class DataLayerServer:
         self.server_dir = path_from_root(self.root_path, server_files_replaced)
 
         self.webserver = await WebServer.create(
-            hostname=self.host_ip, port=self.port, routes=[
+            hostname=self.host_ip,
+            port=self.port,
+            routes=[
                 web.get("/{filename}", self.file_handler),
                 web.get("/{tree_id}/{filename}", self.folder_handler),
-            ]
+            ],
         )
         self.log.info("Started Data Layer HTTP Server.")
 

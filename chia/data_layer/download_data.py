@@ -182,9 +182,7 @@ async def insert_from_delta_file(
     for root_hash in root_hashes:
         timestamp = int(time.time())
         existing_generation += 1
-        target_filename_path = get_delta_filename_path(
-            client_foldername, tree_id, root_hash, existing_generation, True
-        )
+        target_filename_path = get_delta_filename_path(client_foldername, tree_id, root_hash, existing_generation, True)
         for group_by_store in (True, False):
             filename_path = get_delta_filename_path(
                 client_foldername, tree_id, root_hash, existing_generation, group_by_store
