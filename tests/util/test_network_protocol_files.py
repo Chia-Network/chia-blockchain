@@ -20,7 +20,6 @@ def parse_blob(input_bytes: bytes) -> Tuple[bytes, bytes]:
 
 
 def test_protocol_bytes() -> None:
-
     filename: Path = get_network_protocol_filename()
     assert filename.exists()
     with open(filename, "rb") as f:
