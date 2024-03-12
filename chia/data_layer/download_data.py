@@ -196,7 +196,6 @@ async def insert_from_delta_file(
             if downloader is None:
                 # use http downloader
                 if await http_download(
-                    client_foldername,
                     target_filename_path,
                     filename,
                     proxy_url,
@@ -287,7 +286,6 @@ def delete_full_file_if_exists(foldername: Path, tree_id: bytes32, root: Root) -
 
 
 async def http_download(
-    client_folder: Path,
     target_filename_path: Path,
     filename: str,
     proxy_url: str,

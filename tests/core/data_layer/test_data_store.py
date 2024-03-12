@@ -1384,7 +1384,7 @@ async def test_server_http_ban(
     await data_store.subscribe(Subscription(tree_id, [sinfo]))
 
     async def mock_http_download(
-        client_folder: Path,
+        target_filename_path: Path,
         filename: str,
         proxy_url: str,
         server_info: ServerInfo,
