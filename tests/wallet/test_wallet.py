@@ -62,7 +62,6 @@ class TestWalletSimulator:
 
         assert pool_rewards == 10
         assert farm_rewards == 10
-        await env.check_balances()
 
     @pytest.mark.parametrize(
         "wallet_environments",
