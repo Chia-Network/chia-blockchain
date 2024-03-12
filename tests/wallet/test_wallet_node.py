@@ -329,6 +329,7 @@ def test_timestamp_in_sync(root_path_populated_with_config: Path, testing: bool,
 
 
 @pytest.mark.anyio
+@pytest.mark.standard_block_tools
 async def test_get_timestamp_for_height_from_peer(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -393,6 +394,7 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
+@pytest.mark.standard_block_tools
 async def test_get_balance(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
 ) -> None:

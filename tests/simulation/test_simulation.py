@@ -290,10 +290,11 @@ class TestSimulation:
         rewards = await full_node_api.farm_blocks_to_wallet(count=count, wallet=wallet)
 
         # The requested number of blocks had been processed plus 1 to handle the final reward
-        # transactions in the case of a non-zero count.
+        # transactions in the case of a non-zero count. An additional +1 is added for the genesis block which does not
+        # farm rewards to the wallet.
         expected_height = count
         if count > 0:
-            expected_height += 1
+            expected_height += 2
 
         peak_height = full_node_api.full_node.blockchain.get_peak_height()
         if peak_height is None:

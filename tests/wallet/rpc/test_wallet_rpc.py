@@ -114,7 +114,7 @@ class WalletRpcTestEnvironment:
 
 
 async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode):
-    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+    await full_node_api.farm_blocks_to_puzzlehash(count=1)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
 
@@ -397,14 +397,14 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
     await full_node_api.farm_blocks_to_wallet(2, wallet)
 
     get_farmed_amount_result = await wallet_rpc_client.get_farmed_amount()
-    get_timestamp_for_height_result = await wallet_rpc_client.get_timestamp_for_height(uint32(2))
+    get_timestamp_for_height_result = await wallet_rpc_client.get_timestamp_for_height(uint32(3))  # genesis + 2
 
     expected_result = {
         "blocks_won": 2,
         "farmed_amount": 4_000_000_000_000,
         "farmer_reward_amount": 500_000_000_000,
         "fee_amount": 0,
-        "last_height_farmed": 2,
+        "last_height_farmed": 3,
         "last_time_farmed": get_timestamp_for_height_result,
         "pool_reward_amount": 3_500_000_000_000,
         "success": True,

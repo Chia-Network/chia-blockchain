@@ -160,7 +160,6 @@ class WalletRpcApi:
             # this function is just here for backwards-compatibility. It will probably
             # be removed in the future
             "/get_initial_freeze_period": self.get_initial_freeze_period,
-            "/get_network_info": self.get_network_info,
             # Wallet management
             "/get_wallets": self.get_wallets,
             "/create_new_wallet": self.create_new_wallet,
@@ -593,11 +592,6 @@ class WalletRpcApi:
     async def get_height_info(self, request: Dict[str, Any]) -> EndpointResult:
         height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
         return {"height": height}
-
-    async def get_network_info(self, request: Dict[str, Any]) -> EndpointResult:
-        network_name = self.service.config["selected_network"]
-        address_prefix = self.service.config["network_overrides"]["config"][network_name]["address_prefix"]
-        return {"network_name": network_name, "network_prefix": address_prefix}
 
     async def push_tx(self, request: Dict[str, Any]) -> EndpointResult:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
