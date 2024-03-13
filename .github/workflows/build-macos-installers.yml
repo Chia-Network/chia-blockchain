@@ -188,6 +188,8 @@ jobs:
 
       - uses: chia-network/actions/activate-venv@main
 
+      - uses: chia-network/actions/report-python-information@add_report_python_information
+
       - name: Setup Node 18.x
         uses: actions/setup-node@v4
         with:
