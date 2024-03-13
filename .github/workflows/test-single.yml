@@ -33,7 +33,6 @@ on:
         required: true
         type: string
 
-
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
   group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency_name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
@@ -59,45 +58,45 @@ jobs:
             file_name: ${{ inputs.file_name }}
             runs-on: ${{ inputs.runs-on }}
         python:
-          - name: '3.8'
-            file_name: '3.8'
-            action: '3.8'
-            apt: '3.8'
-            install_sh: '3.8'
-            matrix: '3.8'
+          - name: "3.8"
+            file_name: "3.8"
+            action: "3.8"
+            apt: "3.8"
+            install_sh: "3.8"
+            matrix: "3.8"
             exclude_from:
               limited: True
               main: True
-          - name: '3.9'
-            file_name: '3.9'
-            action: '3.9'
-            apt: '3.9'
-            install_sh: '3.9'
-            matrix: '3.9'
+          - name: "3.9"
+            file_name: "3.9"
+            action: "3.9"
+            apt: "3.9"
+            install_sh: "3.9"
+            matrix: "3.9"
             exclude_from:
               limited: True
               main: True
-          - name: '3.10'
-            file_name: '3.10'
-            action: '3.10'
-            apt: '3.10'
-            install_sh: '3.10'
-            matrix: '3.10'
-          - name: '3.11'
-            file_name: '3.11'
-            action: '3.11'
-            apt: '3.11'
-            install_sh: '3.11'
-            matrix: '3.11'
+          - name: "3.10"
+            file_name: "3.10"
+            action: "3.10"
+            apt: "3.10"
+            install_sh: "3.10"
+            matrix: "3.10"
+          - name: "3.11"
+            file_name: "3.11"
+            action: "3.11"
+            apt: "3.11"
+            install_sh: "3.11"
+            matrix: "3.11"
             exclude_from:
               limited: True
               main: True
-          - name: '3.12'
-            file_name: '3.12'
-            action: '3.12'
-            apt: '3.12'
-            install_sh: '3.12'
-            matrix: '3.12'
+          - name: "3.12"
+            file_name: "3.12"
+            action: "3.12"
+            apt: "3.12"
+            install_sh: "3.12"
+            matrix: "3.12"
             exclude_from:
               limited: True
               main: True
@@ -105,7 +104,7 @@ jobs:
           - os:
               matrix: macos
             python:
-              matrix: '3.8'
+              matrix: "3.8"
           - os:
               matrix: windows
             configuration:
@@ -191,7 +190,6 @@ jobs:
             ${{ github.workspace }}/.chia/blocks
             ${{ github.workspace }}/.chia/test-plots
           key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
-
 
       - name: Checkout test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit != 'true'
