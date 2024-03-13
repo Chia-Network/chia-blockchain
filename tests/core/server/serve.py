@@ -49,8 +49,7 @@ async def async_main(
     ip: str = "127.0.0.1",
     port: int = 8444,
     port_holder: Optional[List[int]] = None,
-) -> None:
-    ...
+) -> None: ...
 
 
 @overload
@@ -61,8 +60,7 @@ async def async_main(
     ip: str = "127.0.0.1",
     port: int = 8444,
     port_holder: Optional[List[int]] = None,
-) -> None:
-    ...
+) -> None: ...
 
 
 async def async_main(

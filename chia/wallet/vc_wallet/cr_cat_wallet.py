@@ -383,11 +383,13 @@ class CRCATWallet(CATWallet):
                 metadata.lineage_proof,
                 self.info.authorized_providers,
                 self.info.proofs_checker.as_program(),
-                construct_pending_approval_state(
-                    metadata.inner_puzzle_hash, uint64(coin_record.coin.amount)
-                ).get_tree_hash()
-                if coin_record.coin_type == CoinType.CRCAT_PENDING
-                else metadata.inner_puzzle_hash,
+                (
+                    construct_pending_approval_state(
+                        metadata.inner_puzzle_hash, uint64(coin_record.coin.amount)
+                    ).get_tree_hash()
+                    if coin_record.coin_type == CoinType.CRCAT_PENDING
+                    else metadata.inner_puzzle_hash
+                ),
             )
             return crcat
         except Exception as e:  # pragma: no cover
@@ -639,10 +641,12 @@ class CRCATWallet(CATWallet):
             # Force wrap the outgoing coins in the pending state if not going to us
             payments.append(
                 Payment(
-                    construct_pending_approval_state(puzhash, amount).get_tree_hash()
-                    if puzhash != Offer.ph()
-                    and not await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(puzhash)
-                    else puzhash,
+                    (
+                        construct_pending_approval_state(puzhash, amount).get_tree_hash()
+                        if puzhash != Offer.ph()
+                        and not await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(puzhash)
+                        else puzhash
+                    ),
                     amount,
                     memos_with_hint,
                 )

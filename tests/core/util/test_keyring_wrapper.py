@@ -292,7 +292,10 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("私は幸せな農夫です") is True
 
         # Expect: an invalid passphrase containing an non-ascii characters should fail validation
-        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() != ("私は幸せな農夫ではありません", True)
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() != (
+            "私は幸せな農夫ではありません",
+            True,
+        )
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("私は幸せな農夫ではありません") is False
 
     # When: using a new empty keyring

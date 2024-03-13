@@ -852,35 +852,35 @@ class TestWalletSimulator:
         assert len(await wallet_node_1.wallet_state_manager.coin_store.get_all_unspent_coins()) == 6
         assert len(await wallet_node_2.wallet_state_manager.coin_store.get_all_unspent_coins()) == 0
         before_txs: Dict[str, Dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
-        before_txs["sender"][
-            TransactionType.INCOMING_CLAWBACK_SEND
-        ] = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
+        before_txs["sender"][TransactionType.INCOMING_CLAWBACK_SEND] = (
+            await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
+            )
         )
-        before_txs["sender"][
-            TransactionType.OUTGOING_CLAWBACK
-        ] = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
+        before_txs["sender"][TransactionType.OUTGOING_CLAWBACK] = (
+            await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
+            )
         )
-        before_txs["sender"][
-            TransactionType.OUTGOING_TX
-        ] = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+        before_txs["sender"][TransactionType.OUTGOING_TX] = (
+            await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+            )
         )
-        before_txs["sender"][
-            TransactionType.INCOMING_TX
-        ] = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_TX])
+        before_txs["sender"][TransactionType.INCOMING_TX] = (
+            await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_TX])
+            )
         )
-        before_txs["sender"][
-            TransactionType.COINBASE_REWARD
-        ] = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+        before_txs["sender"][TransactionType.COINBASE_REWARD] = (
+            await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+            )
         )
-        before_txs["recipient"][
-            TransactionType.INCOMING_CLAWBACK_RECEIVE
-        ] = await wallet_node_2.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
+        before_txs["recipient"][TransactionType.INCOMING_CLAWBACK_RECEIVE] = (
+            await wallet_node_2.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
+            )
         )
         # Resync start
         wallet_node_1._close()
@@ -899,35 +899,35 @@ class TestWalletSimulator:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=20)
         after_txs: Dict[str, Dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
-        after_txs["sender"][
-            TransactionType.INCOMING_CLAWBACK_SEND
-        ] = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
+        after_txs["sender"][TransactionType.INCOMING_CLAWBACK_SEND] = (
+            await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
+            )
         )
-        after_txs["sender"][
-            TransactionType.OUTGOING_CLAWBACK
-        ] = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
+        after_txs["sender"][TransactionType.OUTGOING_CLAWBACK] = (
+            await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
+            )
         )
-        after_txs["sender"][
-            TransactionType.OUTGOING_TX
-        ] = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+        after_txs["sender"][TransactionType.OUTGOING_TX] = (
+            await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+            )
         )
-        after_txs["sender"][
-            TransactionType.INCOMING_TX
-        ] = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_TX])
+        after_txs["sender"][TransactionType.INCOMING_TX] = (
+            await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_TX])
+            )
         )
-        after_txs["sender"][
-            TransactionType.COINBASE_REWARD
-        ] = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+        after_txs["sender"][TransactionType.COINBASE_REWARD] = (
+            await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+            )
         )
-        after_txs["recipient"][
-            TransactionType.INCOMING_CLAWBACK_RECEIVE
-        ] = await wallet_node_2.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
+        after_txs["recipient"][TransactionType.INCOMING_CLAWBACK_RECEIVE] = (
+            await wallet_node_2.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
+            )
         )
         # Check clawback
         clawback_tx_1 = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_record(clawback_coin_id_1)

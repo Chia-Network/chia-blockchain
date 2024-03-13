@@ -232,12 +232,12 @@ class BlockTools:
         if automated_testing:
             # Hold onto the wrappers so that they can keep track of whether the certs/keys
             # are in use by another BlockTools instance.
-            self.ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
-                SSLTestCACertAndPrivateKey
-            ] = get_next_private_ca_cert_and_key()
-            self.ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
-                SSLTestNodeCertsAndKeys
-            ] = get_next_nodes_certs_and_keys()
+            self.ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[SSLTestCACertAndPrivateKey] = (
+                get_next_private_ca_cert_and_key()
+            )
+            self.ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[SSLTestNodeCertsAndKeys] = (
+                get_next_nodes_certs_and_keys()
+            )
             create_default_chia_config(root_path)
             create_all_ssl(
                 root_path,

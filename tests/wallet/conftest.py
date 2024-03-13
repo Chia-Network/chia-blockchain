@@ -137,9 +137,11 @@ async def wallet_environments(
             for service in wallet_services:
                 service._node.config = {
                     **service._node.config,
-                    "trusted_peers": {full_node[0]._api.server.node_id.hex(): full_node[0]._api.server.node_id.hex()}
-                    if trusted_full_node
-                    else {},
+                    "trusted_peers": (
+                        {full_node[0]._api.server.node_id.hex(): full_node[0]._api.server.node_id.hex()}
+                        if trusted_full_node
+                        else {}
+                    ),
                     **config_overrides,
                 }
                 service._node.wallet_state_manager.config = service._node.config

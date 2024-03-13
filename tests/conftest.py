@@ -798,7 +798,15 @@ async def two_nodes_one_block(blockchain_constants: ConsensusConstants):
 async def farmer_one_harvester_simulator_wallet(
     tmp_path: Path,
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[Tuple[HarvesterService, FarmerService, SimulatorFullNodeService, WalletService, BlockTools,]]:
+) -> AsyncIterator[
+    Tuple[
+        HarvesterService,
+        FarmerService,
+        SimulatorFullNodeService,
+        WalletService,
+        BlockTools,
+    ]
+]:
     async with setup_simulators_and_wallets_service(1, 1, blockchain_constants) as (nodes, wallets, bt):
         async with setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as (
             harvester_services,

@@ -188,15 +188,13 @@ def create_valid_node_values(
     node_type: Literal[NodeType.INTERNAL],
     left_hash: bytes32,
     right_hash: bytes32,
-) -> Dict[str, Any]:
-    ...
+) -> Dict[str, Any]: ...
 
 
 @overload
 def create_valid_node_values(
     node_type: Literal[NodeType.TERMINAL],
-) -> Dict[str, Any]:
-    ...
+) -> Dict[str, Any]: ...
 
 
 def create_valid_node_values(

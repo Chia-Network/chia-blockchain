@@ -1936,9 +1936,7 @@ async def test_get_coin_records_rpc_limits(
     max_coins = api.max_get_coin_records_limit * 10
     coin_records = [
         WalletCoinRecord(
-            Coin(
-                bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(seeded_random.randrange(2**64))
-            ),
+            Coin(bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(seeded_random.randrange(2**64))),
             uint32(seeded_random.randrange(2**32)),
             uint32(0),
             False,
