@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import random
-from typing import AsyncIterator, Dict, List, Optional
+from typing import AsyncIterator, Dict, List, Optional, Tuple
 
 import pytest
 
@@ -117,27 +117,40 @@ async def test_unfinished_block_rank(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.parametrize(
     "blocks,expected",
     [
-        ([None, 1, 2, 3], 1),
-        ([None], None),
+        ([(None, True), (1, True), (2, True), (3, True)], 1),
+        ([(None, True), (1, False), (2, True), (3, True)], 2),
+        ([(None, True), (1, False), (2, False), (3, True)], 3),
+        ([(None, True)], None),
         ([], None),
-        ([4, 5, 3], 3),
-        ([4], 4),
+        ([(4, True), (5, True), (3, True)], 3),
+        ([(4, True)], 4),
+        ([(4, False)], None),
     ],
 )
 async def test_find_best_block(
     seeded_random: random.Random,
-    blocks: List[Optional[int]],
+    blocks: List[Tuple[Optional[int], bool]],
     expected: Optional[int],
+    default_400_blocks: List[FullBlock],
+    bt: BlockTools,
 ) -> None:
     result: Dict[Optional[bytes32], UnfinishedBlockEntry] = {}
-    for b in blocks:
-        if b is None:
-            result[b] = UnfinishedBlockEntry(None, None, 123)  # type: ignore
+    i = 0
+    for b, with_unf in blocks:
+        unf: Optional[UnfinishedBlock]
+        if with_unf:
+            unf = make_unfinished_block(default_400_blocks[i], bt.constants)
+            i += 1
         else:
-            result[bytes32(b.to_bytes(1, "big") * 32)] = UnfinishedBlockEntry(None, None, 123)  # type: ignore
+            unf = None
+        if b is None:
+            result[b] = UnfinishedBlockEntry(unf, None, uint32(123))
+        else:
+            result[bytes32(b.to_bytes(1, "big") * 32)] = UnfinishedBlockEntry(unf, None, uint32(123))
 
     foliage_hash, block = find_best_block(result)
     if expected is None:
@@ -224,13 +237,22 @@ async def test_basic_store(
             foliage_hash is not None and dummy_hash > foliage_hash,
         )
 
-        ublock = store.get_unfinished_block_result(unf_block.partial_hash)
-        assert ublock is not None and ublock.required_iters == uint64(123532)
-        ublock = store.get_unfinished_block_result2(
-            unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
-        )
+        # only transaction blocks have PreValidationResults
+        # so get_unfinished_block_result requires the foliage hash
+        if unf_block.foliage.foliage_transaction_block_hash is not None:
+            entry = store.get_unfinished_block_result(
+                unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+            )
+            assert entry is not None
+            ublock = entry.result
+            assert ublock is not None and ublock.required_iters == uint64(123532)
+            entry = store.get_unfinished_block_result(
+                unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+            )
+            assert entry is not None
+            ublock = entry.result
 
-        assert ublock is not None and ublock.required_iters == uint64(123532)
+            assert ublock is not None and ublock.required_iters == uint64(123532)
 
         store.remove_unfinished_block(unf_block.partial_hash)
         assert store.get_unfinished_block(unf_block.partial_hash) is None
@@ -289,17 +311,22 @@ async def test_basic_store(
     )
     assert store.get_unfinished_block2(unf4.partial_hash, None) == (unf1, 2, False)
 
-    ublock = store.get_unfinished_block_result(unf1.partial_hash)
+    entry = store.get_unfinished_block_result(unf1.partial_hash, unf1.foliage.foliage_transaction_block_hash)
+    assert entry is not None
+    ublock = entry.result
     assert ublock is not None and ublock.required_iters == uint64(0)
-    ublock = store.get_unfinished_block_result2(unf1.partial_hash, unf1.foliage.foliage_transaction_block_hash)
+    entry = store.get_unfinished_block_result(unf1.partial_hash, unf1.foliage.foliage_transaction_block_hash)
+    assert entry is not None
+    ublock = entry.result
     assert ublock is not None and ublock.required_iters == uint64(0)
     # still, when not specifying a foliage hash, you just get the first ublock
-    ublock = store.get_unfinished_block_result2(unf1.partial_hash, None)
+    entry = store.get_unfinished_block_result(unf1.partial_hash, unf1.foliage.foliage_transaction_block_hash)
+    assert entry is not None
+    ublock = entry.result
     assert ublock is not None and ublock.required_iters == uint64(0)
 
     # negative test cases
-    assert store.get_unfinished_block_result(bytes32([1] * 32)) is None
-    assert store.get_unfinished_block_result2(bytes32([1] * 32), None) is None
+    assert store.get_unfinished_block_result(bytes32([1] * 32), bytes32([2] * 32)) is None
 
     blocks = custom_block_tools.get_consecutive_blocks(
         1,
@@ -1141,50 +1168,50 @@ async def test_mark_requesting(
     b = bytes32.random(seeded_random)
     c = bytes32.random(seeded_random)
 
-    assert not store.is_requesting_unfinished_block(a, a)
-    assert not store.is_requesting_unfinished_block(a, b)
-    assert not store.is_requesting_unfinished_block(a, c)
-    assert not store.is_requesting_unfinished_block(b, b)
-    assert not store.is_requesting_unfinished_block(c, c)
+    assert store.is_requesting_unfinished_block(a, a) == (False, 0)
+    assert store.is_requesting_unfinished_block(a, b) == (False, 0)
+    assert store.is_requesting_unfinished_block(a, c) == (False, 0)
+    assert store.is_requesting_unfinished_block(b, b) == (False, 0)
+    assert store.is_requesting_unfinished_block(c, c) == (False, 0)
 
     store.mark_requesting_unfinished_block(a, b)
-    assert store.is_requesting_unfinished_block(a, b)
-    assert not store.is_requesting_unfinished_block(a, c)
-    assert not store.is_requesting_unfinished_block(a, a)
-    assert not store.is_requesting_unfinished_block(b, c)
-    assert not store.is_requesting_unfinished_block(b, b)
+    assert store.is_requesting_unfinished_block(a, b) == (True, 1)
+    assert store.is_requesting_unfinished_block(a, c) == (False, 1)
+    assert store.is_requesting_unfinished_block(a, a) == (False, 1)
+    assert store.is_requesting_unfinished_block(b, c) == (False, 0)
+    assert store.is_requesting_unfinished_block(b, b) == (False, 0)
 
     store.mark_requesting_unfinished_block(a, c)
-    assert store.is_requesting_unfinished_block(a, b)
-    assert store.is_requesting_unfinished_block(a, c)
-    assert not store.is_requesting_unfinished_block(a, a)
-    assert not store.is_requesting_unfinished_block(b, c)
-    assert not store.is_requesting_unfinished_block(b, b)
+    assert store.is_requesting_unfinished_block(a, b) == (True, 2)
+    assert store.is_requesting_unfinished_block(a, c) == (True, 2)
+    assert store.is_requesting_unfinished_block(a, a) == (False, 2)
+    assert store.is_requesting_unfinished_block(b, c) == (False, 0)
+    assert store.is_requesting_unfinished_block(b, b) == (False, 0)
 
     # this is a no-op
     store.remove_requesting_unfinished_block(a, a)
     store.remove_requesting_unfinished_block(c, a)
 
-    assert store.is_requesting_unfinished_block(a, b)
-    assert store.is_requesting_unfinished_block(a, c)
-    assert not store.is_requesting_unfinished_block(a, a)
-    assert not store.is_requesting_unfinished_block(b, c)
-    assert not store.is_requesting_unfinished_block(b, b)
+    assert store.is_requesting_unfinished_block(a, b) == (True, 2)
+    assert store.is_requesting_unfinished_block(a, c) == (True, 2)
+    assert store.is_requesting_unfinished_block(a, a) == (False, 2)
+    assert store.is_requesting_unfinished_block(b, c) == (False, 0)
+    assert store.is_requesting_unfinished_block(b, b) == (False, 0)
 
     store.remove_requesting_unfinished_block(a, b)
 
-    assert not store.is_requesting_unfinished_block(a, b)
-    assert store.is_requesting_unfinished_block(a, c)
-    assert not store.is_requesting_unfinished_block(a, a)
-    assert not store.is_requesting_unfinished_block(b, c)
-    assert not store.is_requesting_unfinished_block(b, b)
+    assert store.is_requesting_unfinished_block(a, b) == (False, 1)
+    assert store.is_requesting_unfinished_block(a, c) == (True, 1)
+    assert store.is_requesting_unfinished_block(a, a) == (False, 1)
+    assert store.is_requesting_unfinished_block(b, c) == (False, 0)
+    assert store.is_requesting_unfinished_block(b, b) == (False, 0)
 
     store.remove_requesting_unfinished_block(a, c)
 
-    assert not store.is_requesting_unfinished_block(a, b)
-    assert not store.is_requesting_unfinished_block(a, c)
-    assert not store.is_requesting_unfinished_block(a, a)
-    assert not store.is_requesting_unfinished_block(b, c)
-    assert not store.is_requesting_unfinished_block(b, b)
+    assert store.is_requesting_unfinished_block(a, b) == (False, 0)
+    assert store.is_requesting_unfinished_block(a, c) == (False, 0)
+    assert store.is_requesting_unfinished_block(a, a) == (False, 0)
+    assert store.is_requesting_unfinished_block(b, c) == (False, 0)
+    assert store.is_requesting_unfinished_block(b, b) == (False, 0)
 
-    assert len(store.requesting_unfinished_blocks) == 0
+    assert len(store._unfinished_blocks) == 0
