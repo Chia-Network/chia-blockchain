@@ -200,6 +200,11 @@ jobs:
 
     - uses: chia-network/actions/activate-venv@main
 
+    - name: Run install timelord script
+      run: |
+        . ./activate
+        sh install-timelord.sh
+
     - name: Run chia --help
       run: |
         chia --help
