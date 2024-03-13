@@ -887,28 +887,55 @@ async def test_valid_times_migration() -> None:
 async def test_large_tx_record_query() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
-
-        for _ in range(0, db_wrapper.host_parameter_limit + 1):
-            await store.add_transaction_record(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(1000000000),
-                    to_puzzle_hash=bytes32([0] * 32),
-                    amount=uint64(0),
-                    fee_amount=uint64(0),
-                    confirmed=False,
-                    sent=uint32(10),
-                    spend_bundle=None,
-                    additions=[],
-                    removals=[],
-                    wallet_id=uint32(1),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.INCOMING_TX.value),
-                    name=bytes32.secret(),
-                    memos=[],
-                    valid_times=ConditionValidTimes(),
+        tx_records_to_insert = []
+        for _ in range(db_wrapper.host_parameter_limit + 1):
+            name = bytes32.random()
+            record = TransactionRecordOld(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(1000000000),
+                to_puzzle_hash=bytes32([0] * 32),
+                amount=uint64(0),
+                fee_amount=uint64(0),
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=None,
+                additions=[],
+                removals=[],
+                wallet_id=uint32(1),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=name,
+                memos=[],
+            )
+            tx_records_to_insert.append(
+                (
+                    bytes(record),
+                    record.name,
+                    record.confirmed_at_height,
+                    record.created_at_time,
+                    record.to_puzzle_hash.hex(),
+                    record.amount.stream_to_bytes(),
+                    record.fee_amount.stream_to_bytes(),
+                    int(record.confirmed),
+                    record.sent,
+                    record.wallet_id,
+                    record.trade_id,
+                    record.type,
                 )
             )
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            await conn.executemany(
+                "INSERT INTO transaction_record VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", tx_records_to_insert
+            )
+            # Insert a specific tx_times item for the last transaction_record item
+            await conn.execute(
+                "INSERT INTO tx_times VALUES (?, ?)", (name, bytes(ConditionValidTimes(min_height=uint32(42))))
+            )
 
-        assert len(await store.get_all_transactions_for_wallet(1)) == db_wrapper.host_parameter_limit + 1
+        all_transactions = await store.get_all_transactions_for_wallet(1)
+        assert len(all_transactions) == db_wrapper.host_parameter_limit + 1
+        # Check that all transaction record items have correct valid times
+        empty_valid_times = ConditionValidTimes()
+        assert all(tx.valid_times == empty_valid_times for tx in all_transactions[:-1])
+        assert all_transactions[-1].valid_times.min_height == uint32(42)
