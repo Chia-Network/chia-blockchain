@@ -109,5 +109,5 @@ jobs:
         git config --global --add safe.directory /ws/mozilla-ca && \
         git config --global --add safe.directory /ws/chia-blockchain-gui && \
         pyenv global ${{ matrix.python-version }} && \
-        python build_scripts/check_dependency_artifacts.py && \
+        python build_scripts/check_dependency_artifacts.py
         '
