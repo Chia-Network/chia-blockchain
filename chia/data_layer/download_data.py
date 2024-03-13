@@ -190,7 +190,7 @@ async def download_file(
             server_info,
             timeout,
             log,
-        ):
+        )
 
     log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
     request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
