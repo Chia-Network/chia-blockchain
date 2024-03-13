@@ -23,6 +23,7 @@ from tests.util.setup_nodes import OldSimulatorsAndWallets
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
+@pytest.mark.standard_block_tools
 async def test_wallet_blockchain(
     simulator_and_wallet: OldSimulatorsAndWallets, default_1000_blocks: List[FullBlock]
 ) -> None:

@@ -42,7 +42,7 @@ async def test_protocol_messages(
     await time_out_assert(60, node_height_at_least, True, full_node_sim, blocks[-1].height)
 
     offset_secs = [60, 120, 300]
-    now_unix_secs = int(datetime.datetime.utcnow().timestamp())
+    now_unix_secs = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
     request_times = [uint64(now_unix_secs + s) for s in offset_secs]
     request: wallet_protocol.RequestFeeEstimates = wallet_protocol.RequestFeeEstimates(request_times)
     estimates = await full_node_sim.request_fee_estimates(request)
