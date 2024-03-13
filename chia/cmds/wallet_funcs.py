@@ -1510,7 +1510,7 @@ async def get_vcs(
             print(f"Coin ID: {record.vc.coin.name().hex()}")
             print(
                 f"Inner Address:"
-                f" {encode_puzzle_hash(record.vc.inner_puzzle_hash,selected_network_address_prefix(config))}"
+                f" {encode_puzzle_hash(record.vc.inner_puzzle_hash, selected_network_address_prefix(config))}"
             )
             if record.vc.proof_hash is None:
                 pass

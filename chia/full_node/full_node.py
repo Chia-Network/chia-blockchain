@@ -1469,7 +1469,7 @@ class FullNode:
             f"difficulty: {difficulty}, "
             f"sub slot iters: {sub_slot_iters}, "
             f"Generator size: "
-            f"{len(bytes(block.transactions_generator)) if  block.transactions_generator else 'No tx'}, "
+            f"{len(bytes(block.transactions_generator)) if block.transactions_generator else 'No tx'}, "
             f"Generator ref list size: "
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )

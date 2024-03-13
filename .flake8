@@ -2,7 +2,7 @@
 max-line-length = 120
 exclude = ./typings/**/*
 ignore = E203,W503
-extend-ignore = E704,E701
+extend-ignore = E226,E704,E701
 per-file-ignores =
     tests/util/build_network_protocol_files.py:F405
     tests/util/test_network_protocol_files.py:F405
