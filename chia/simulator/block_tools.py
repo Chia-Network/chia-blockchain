@@ -734,9 +734,9 @@ class BlockTools:
                             # Ignore this signage_point because it's in the past
                             continue
 
-                    if signage_point_index <= min_signage_point:
-                        # start farming blocks after min_signage_point
-                        continue
+                        if signage_point_index <= min_signage_point:
+                            # start farming blocks after min_signage_point
+                            continue
 
                     signage_point: SignagePoint = get_signage_point(
                         constants,
@@ -773,6 +773,7 @@ class BlockTools:
                                 # Ignore this block because it's in the past
                                 if required_iters <= latest_block.required_iters:
                                     continue
+
                         assert latest_block.header_hash in blocks
                         additions = None
                         removals = None
@@ -1090,7 +1091,7 @@ class BlockTools:
                     constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA,
                     constants.NUM_SPS_SUB_SLOT,
                 ):
-                    if signage_point_index <= min_signage_point:
+                    if same_slot_as_last and signage_point_index <= min_signage_point:
                         # start farming blocks after min_signage_point
                         continue
                     # note that we are passing in the finished slots which include the last slot
