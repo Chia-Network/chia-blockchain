@@ -307,8 +307,8 @@ def delete_full_file_if_exists(foldername: Path, tree_id: bytes32, root: Root) -
     else:
         node_hash = bytes32([0] * 32)  # todo change
 
+    not_found = 0
     for group_by_store in (True, False):
-        not_found = 0
         filename_full_tree = get_full_tree_filename_path(
             foldername, tree_id, node_hash, root.generation, group_by_store
         )
@@ -316,6 +316,7 @@ def delete_full_file_if_exists(foldername: Path, tree_id: bytes32, root: Root) -
             filename_full_tree.unlink()
         except FileNotFoundError:
             not_found += 1
+        # File does not exist in both old and new path.
         if not_found == 2:
             return False
 
