@@ -165,8 +165,46 @@ async def write_files_for_root(
     return WriteFilesResult(written, filename_full_tree if written_full_file else None, filename_diff_tree)
 
 
+async def download_file(
+    target_filename_path: Path,
+    tree_id: bytes32,
+    root_hash: bytes32,
+    generation: int,
+    server_info: ServerInfo,
+    proxy_url: str,
+    downloader: Optional[PluginRemote],
+    timeout: int,
+    client_foldername: Path,
+    log: logging.Logger,
+    grouped_by_store: bool,
+) -> bool:
+    filename = get_delta_filename(tree_id, root_hash, generation)
+    if grouped_by_store:
+        filename = filename.replace("-", "/", 1)
+
+    if downloader is None:
+        return await http_download(
+            target_filename_path,
+            filename,
+            proxy_url,
+            server_info,
+            timeout,
+            log,
+        ):
+
+    log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
+    request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            downloader.url + "/download",
+            json=request_json,
+            headers=downloader.headers,
+        ) as response:
+            res_json = await response.json()
+            return res_json["downloaded"]
+
+
 async def insert_from_delta_file(
-    data_store: DataStore,
     tree_id: bytes32,
     existing_generation: int,
     root_hashes: List[bytes32],
@@ -183,50 +221,48 @@ async def insert_from_delta_file(
         timestamp = int(time.time())
         existing_generation += 1
         target_filename_path = get_delta_filename_path(client_foldername, tree_id, root_hash, existing_generation, True)
-        for group_by_store in (True, False):
-            filename_path = get_delta_filename_path(
-                client_foldername, tree_id, root_hash, existing_generation, group_by_store
-            )
-            if group_by_store:
-                filename = f"{tree_id}/" + filename_path.name
-            else:
-                filename = filename_path.name
 
-            request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
-            if downloader is None:
-                # use http downloader
-                if await http_download(
-                    target_filename_path,
-                    filename,
-                    proxy_url,
-                    server_info,
-                    timeout,
-                    log,
-                ):
-                    break
-                else:
-                    if not group_by_store:
-                        await data_store.server_misses_file(tree_id, server_info, timestamp)
-                        return False
-            else:
-                log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        downloader.url + "/download",
-                        json=request_json,
-                        headers=downloader.headers,
-                    ) as response:
-                        res_json = await response.json()
-                        if res_json["downloaded"]:
-                            break
-                        else:
-                            log.info(f"Failed to download delta file {filename} from {downloader}: {res_json}")
-                            if not group_by_store:
-                                await data_store.server_misses_file(tree_id, server_info, timestamp)
-                                return False
+        success = await download_file(
+            target_filename_path=target_filename_path,
+            tree_id=tree_id,
+            root_hash=root_hash,
+            generation=existing_generation,
+            server_info=server_info,
+            proxy_url=proxy_url,
+            downloader=downloader,
+            timeout=timemout,
+            client_foldername=client_foldername,
+            log=log,
+            grouped_by_store=True,
+        )
+        if not success:
+            # Older versions store all files in a single folder
+            success = await download_file(
+                target_filename_path=target_filename_path,
+                tree_id=tree_id,
+                root_hash=root_hash,
+                generation=existing_generation,
+                server_info=server_info,
+                proxy_url=proxy_url,
+                downloader=downloader,
+                timeout=timemout,
+                client_foldername=client_foldername,
+                log=log,
+                grouped_by_store=False,
+            )
+            if not success:
+                await data_store.server_misses_file(tree_id, server_info, timestamp)
+                return False
 
         log.info(f"Successfully downloaded delta file {filename}.")
         try:
+            filename_full_tree = get_full_tree_filename_path(
+                client_foldername,
+                tree_id,
+                root_hash,
+                existing_generation,
+                True,
+            )
             await insert_into_data_store_from_file(
                 data_store,
                 tree_id,
@@ -238,21 +274,22 @@ async def insert_from_delta_file(
                 f"Generation: {existing_generation}. Tree id: {tree_id}."
             )
 
-            filename_full_tree = get_full_tree_filename_path(
-                client_foldername,
-                tree_id,
-                root_hash,
-                existing_generation,
-                True,
-            )
             root = await data_store.get_tree_root(tree_id=tree_id)
             with open(filename_full_tree, "wb") as writer:
                 await data_store.write_tree_to_file(root, root_hash, tree_id, False, writer)
             log.info(f"Successfully written full tree filename {filename_full_tree}.")
             await data_store.received_correct_file(tree_id, server_info)
         except Exception:
-            target_filename = client_foldername.joinpath(filename)
-            os.remove(target_filename)
+            try:
+                target_filename_path.unlink()
+            except FileExistsError:
+                pass
+
+            try:
+                filename_full_tree.unlink()
+            except FileExistsError:
+                pass
+
             # await data_store.received_incorrect_file(tree_id, server_info, timestamp)
             # incorrect file bans for 7 days which in practical usage
             # is too long given this file might be incorrect for various reasons
