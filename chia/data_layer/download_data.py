@@ -200,6 +200,7 @@ async def download_file(
             headers=downloader.headers,
         ) as response:
             res_json = await response.json()
+            assert isinstance(res_json["downloaded"], bool)
             return res_json["downloaded"]
 
 
