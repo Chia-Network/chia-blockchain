@@ -35,34 +35,56 @@ inputs:
     description: "Name of the artifact to upload the constraints file to."
     required: false
     default: ""
+  dry-run:
+    description: "Do not execute anything, just set outputs"
+    required: false
+    default: "false"
+outputs:
+  command:
+    description: "The command that is run.  Particularly useful with dry-run set."
+    value: ${{ steps.define-command-macos-ubuntu.outputs.command }}${{ steps.define-command-windows.outputs.command }}
 
 runs:
   using: "composite"
   steps:
-    - name: Run install script (macOS, Ubuntu)
+    - name: Define command (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
+      id: define-command-macos-ubuntu
+      shell: bash
+      run: |
+        echo "command=${{ inputs.command-prefix }} sh install.sh ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }} ${{ (fromJSON(inputs.do-system-installs) != true) && '-s' || '' }}" >> "${GITHUB_OUTPUT}"
+
+    - name: Define command (Windows)
+      if: runner.os == 'windows'
+      id: define-command-windows
+      shell: bash
+      run: |
+        echo "command=${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }}" >> "${GITHUB_OUTPUT}"
+
+    - name: Run install script (macOS, Ubuntu)
+      if: (runner.os == 'macos' || runner.os == 'linux') && inputs.dry-run == 'false'
       shell: bash
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }} ${{ (fromJSON(inputs.do-system-installs) != true) && '-s' || '' }}
+        ${{ steps.define-command-macos-ubuntu.outputs.command }}
 
     - name: Run install script (Windows)
-      if: runner.os == 'windows'
+      if: runner.os == 'windows' && inputs.dry-run == 'false'
       shell: pwsh
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        ${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }}
+        ${{ steps.define-command-windows.outputs.command }}
 
     - name: Create constraints file
-      if: inputs.constraints-file-artifact-name != ''
+      if: inputs.constraints-file-artifact-name != '' && inputs.dry-run == 'false'
       shell: bash
       run: |
         ${{ runner.os == 'windows' && 'venv/scripts/pip' || 'venv/bin/pip' }} freeze --exclude-editable > venv/constraints.txt
 
     - name: Upload constraints file
-      if: inputs.constraints-file-artifact-name != ''
+      if: inputs.constraints-file-artifact-name != '' && inputs.dry-run == 'false'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.constraints-file-artifact-name }}

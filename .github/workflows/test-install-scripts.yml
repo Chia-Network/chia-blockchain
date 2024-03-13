@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Test Install Scripts - ${{ matrix.development.name }}
+    name: ${{ matrix.os.name }} ${{ matrix.development.name }}
     runs-on: ${{ matrix.os.runs-on }}
     strategy:
       fail-fast: false
@@ -31,11 +31,14 @@ jobs:
         python:
           - major-dot-minor: "3.10"
         os:
-          - runs-on: macos-latest
-            matrix: macos
           - runs-on: ubuntu-latest
+            name: Linux
             matrix: linux
+          - runs-on: macos-latest
+            name: macOS
+            matrix: macos
           - runs-on: windows-latest
+            name: Windows
             matrix: windows
         development:
           - name: Non-development
@@ -77,9 +80,9 @@ jobs:
         ./Install-gui.ps1
 
   test_scripts_in_docker:
-    name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
+    name: ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
-    container: ${{ matrix.distribution.url }}
+    container: ${{ (! matrix.arch.cross) && ( matrix.distribution.ref[matrix.arch.matrix] || matrix.distribution.ref) || ''}}
     strategy:
       fail-fast: false
       matrix:
@@ -89,62 +92,87 @@ jobs:
           runs-on:
             intel: ubuntu-latest
             arm: [linux, arm64]
+            risc: ubuntu-latest
         distribution:
         - name: amazonlinux:2023
           type: amazon
-          url: "docker://amazonlinux:2023"
+          risc: false
+          ref: "amazonlinux:2023"
         - name: arch:latest
           type: arch
-          url: "docker://archlinux:latest"
+          risc: false
+          ref: "archlinux:latest"
         - name: debian:bullseye
           type: debian
+          risc: false
           # https://packages.debian.org/bullseye/python/python3 (3.9)
-          url: "docker://debian:bullseye"
+          ref: "debian:bullseye"
         - name: debian:bookworm
           type: debian
+          risc: false
           # https://packages.debian.org/bookworm/python/python3 (3.11)
-          url: "docker://debian:bookworm"
+          ref: "debian:bookworm"
         - name: fedora:37
           type: fedora
+          risc: false
           # (37, 3.11) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+37&start=0
-          url: "docker://fedora:37"
+          ref: "fedora:37"
         - name: fedora:38
           type: fedora
+          risc: false
           # (38, 3.11) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+38&start=0
-          url: "docker://fedora:38"
+          ref: "fedora:38"
         - name: rockylinux:8
           type: rocky
-          url: "docker://rockylinux:8"
+          risc: false
+          ref: "rockylinux:8"
         - name: rockylinux:9
           type: rocky
-          url: "docker://rockylinux:9"
+          risc: false
+          ref: "rockylinux:9"
         - name: ubuntu:focal (20.04)
           type: ubuntu
+          risc: false
           # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
-          url: "docker://ubuntu:focal"
+          ref: "ubuntu:focal"
         - name: ubuntu:jammy (22.04)
           type: ubuntu
+          risc: true
           # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
-          url: "docker://ubuntu:jammy"
+          ref:
+            arm: "ubuntu:jammy"
+            intel: "ubuntu:jammy"
+            risc: "chianetwork/ubuntu-22.04-risc-builder:latest"
         arch:
         - name: ARM64
           matrix: arm
+          cross:
         - name: Intel
           matrix: intel
+          cross:
+        - name: RISCV
+          matrix: risc
+          cross:
+            qemu_platform: riscv64
+            docker_platform: linux/riscv64
         exclude:
           - distribution:
               type: arch
             arch:
               matrix: arm
+          - distribution:
+              risc: false
+            arch:
+              matrix: risc
 
     steps:
     - name: Prepare Amazon Linux
-      if: ${{ matrix.distribution.type == 'amazon' }}
+      if: ${{ matrix.distribution.type == 'amazon' && (! matrix.arch.cross) }}
       run: |
         yum install --assumeyes git sudo
 
     - name: Prepare Arch
-      if: ${{ matrix.distribution.type == 'arch' }}
+      if: ${{ matrix.distribution.type == 'arch' && (! matrix.arch.cross) }}
       run: |
         pacman --noconfirm -Syu
         pacman --noconfirm -S base git sudo openssl-1.1
@@ -154,7 +182,7 @@ jobs:
         pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
 
     - name: Prepare Debian
-      if: ${{ matrix.distribution.type == 'debian' }}
+      if: ${{ matrix.distribution.type == 'debian' && (! matrix.arch.cross) }}
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
@@ -162,17 +190,17 @@ jobs:
         apt-get install --yes git lsb-release sudo python3-venv
 
     - name: Prepare Fedora
-      if: ${{ matrix.distribution.type == 'fedora' }}
+      if: ${{ matrix.distribution.type == 'fedora' && (! matrix.arch.cross) }}
       run: |
         yum install --assumeyes git
 
     - name: Prepare Rocky
-      if: ${{ matrix.distribution.type == 'rocky' }}
+      if: ${{ matrix.distribution.type == 'rocky' && (! matrix.arch.cross) }}
       run: |
         yum install --assumeyes git sudo python39
 
     - name: Prepare Ubuntu
-      if: ${{ matrix.distribution.type == 'ubuntu' }}
+      if: ${{ matrix.distribution.type == 'ubuntu' && (! matrix.arch.cross)}}
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
@@ -193,13 +221,40 @@ jobs:
         fetch-depth: 0
 
     - uses: ./.github/actions/install
+      id: install-action
       with:
         python-version: ${{ matrix.python-version }}
         development: true
         do-system-installs: true
+        dry-run: ${{ matrix.arch.cross && 'true' || 'false' }}
 
     - uses: chia-network/actions/activate-venv@main
+      if: (! matrix.arch.cross)
 
     - name: Run chia --help
+      if: (! matrix.arch.cross)
       run: |
         chia --help
+
+    - name: Set up QEMU
+      if: matrix.arch.cross
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: ${{ matrix.arch.cross.qemu_platform }}
+
+    - name: Test via QEMU
+      if: matrix.arch.cross
+      run: |
+        # TODO: ack yuck about penv global hardcoded
+        docker run --rm --platform ${{ matrix.arch.cross.docker_platform }} \
+        -v ${{ github.workspace }}:/ws \
+        --workdir=/ws \
+        ${{ matrix.distribution.ref[matrix.arch.matrix] || matrix.distribution.ref }} \
+        bash -exc ' \
+        git config --global --add safe.directory /ws && \
+        git config --global --add safe.directory /ws/mozilla-ca && \
+        git config --global --add safe.directory /ws/chia-blockchain-gui && \
+        pyenv global 3.11 && \
+        ${{ steps.install-action.outputs.command }} && \
+        chia --help \
+        '
