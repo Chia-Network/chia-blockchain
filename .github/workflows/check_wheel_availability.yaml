@@ -30,6 +30,9 @@ jobs:
             runs-on:
               intel: ubuntu-latest
               arm: [linux, arm64]
+              risc: ubuntu-latest
+            ref:
+              risc: "chianetwork/ubuntu-22.04-risc-builder:latest"
           - name: macOS
             matrix: macos
             runs-on:
@@ -42,8 +45,15 @@ jobs:
         arch:
           - name: ARM64
             matrix: arm
+            cross:
           - name: Intel
             matrix: intel
+            cross:
+          - name: RISCV
+            matrix: risc
+            cross:
+              qemu_platform: riscv64
+              docker_platform: linux/riscv64
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
         exclude:
           - os:
@@ -55,6 +65,14 @@ jobs:
               matrix: windows
             arch:
               matrix: arm
+          - os:
+              matrix: macos
+            arch:
+              matrix: risc
+          - os:
+              matrix: windows
+            arch:
+              matrix: risc
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
@@ -63,9 +81,33 @@ jobs:
       uses: actions/checkout@v4
 
     - uses: Chia-Network/actions/setup-python@main
+      if: (! matrix.arch.cross)
       with:
         python-version: ${{ matrix.python-version }}
         force-pyenv: ${{ matrix.os.matrix == 'macos' && matrix.arch.matrix == 'intel' }}
 
     - name: Check Wheel Availability
+      if: (! matrix.arch.cross)
       run: python build_scripts/check_dependency_artifacts.py
+
+    - name: Set up QEMU
+      if: matrix.arch.cross
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: ${{ matrix.arch.cross.qemu_platform }}
+
+    - name: Test via QEMU
+      if: matrix.arch.cross
+      run: |
+        # TODO: ack yuck about penv global hardcoded
+        docker run --rm --platform ${{ matrix.arch.cross.docker_platform }} \
+        -v ${{ github.workspace }}:/ws \
+        --workdir=/ws \
+        ${{ matrix.os.ref[matrix.arch.matrix] }} \
+        bash -exc ' \
+        git config --global --add safe.directory /ws && \
+        git config --global --add safe.directory /ws/mozilla-ca && \
+        git config --global --add safe.directory /ws/chia-blockchain-gui && \
+        pyenv global ${{ matrix.python-version }} && \
+        python build_scripts/check_dependency_artifacts.py && \
+        '
