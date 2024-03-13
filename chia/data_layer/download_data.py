@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -205,6 +204,7 @@ async def download_file(
 
 
 async def insert_from_delta_file(
+    data_store: DataStore,
     tree_id: bytes32,
     existing_generation: int,
     root_hashes: List[bytes32],
@@ -230,7 +230,7 @@ async def insert_from_delta_file(
             server_info=server_info,
             proxy_url=proxy_url,
             downloader=downloader,
-            timeout=timemout,
+            timeout=timeout,
             client_foldername=client_foldername,
             log=log,
             grouped_by_store=True,
@@ -245,7 +245,7 @@ async def insert_from_delta_file(
                 server_info=server_info,
                 proxy_url=proxy_url,
                 downloader=downloader,
-                timeout=timemout,
+                timeout=timeout,
                 client_foldername=client_foldername,
                 log=log,
                 grouped_by_store=False,
@@ -254,7 +254,7 @@ async def insert_from_delta_file(
                 await data_store.server_misses_file(tree_id, server_info, timestamp)
                 return False
 
-        log.info(f"Successfully downloaded delta file {filename}.")
+        log.info(f"Successfully downloaded delta file {target_filename_path.name}.")
         try:
             filename_full_tree = get_full_tree_filename_path(
                 client_foldername,
