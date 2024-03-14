@@ -765,12 +765,16 @@ def handle_finished_slots(end_of_slot: EndOfSubSlotBundle, icc_end_of_slot_info:
         None,
         None,
         None,
-        None
-        if end_of_slot.proofs.challenge_chain_slot_proof is None
-        else end_of_slot.proofs.challenge_chain_slot_proof,
-        None
-        if end_of_slot.proofs.infused_challenge_chain_slot_proof is None
-        else end_of_slot.proofs.infused_challenge_chain_slot_proof,
+        (
+            None
+            if end_of_slot.proofs.challenge_chain_slot_proof is None
+            else end_of_slot.proofs.challenge_chain_slot_proof
+        ),
+        (
+            None
+            if end_of_slot.proofs.infused_challenge_chain_slot_proof is None
+            else end_of_slot.proofs.infused_challenge_chain_slot_proof
+        ),
         end_of_slot.challenge_chain.challenge_chain_end_of_slot_vdf,
         icc_end_of_slot_info,
         None,

@@ -143,9 +143,11 @@ class ClvmBytes:
         hex_bytes = paths.hex.read_bytes()
         return cls(
             hex=hex_bytes,
-            hash=bytes32(bytes.fromhex(hash_dict[paths.hash]))
-            if paths.hash in hash_dict
-            else generate_hash_bytes(hex_bytes=hex_bytes),
+            hash=(
+                bytes32(bytes.fromhex(hash_dict[paths.hash]))
+                if paths.hash in hash_dict
+                else generate_hash_bytes(hex_bytes=hex_bytes)
+            ),
         )
 
     @classmethod
