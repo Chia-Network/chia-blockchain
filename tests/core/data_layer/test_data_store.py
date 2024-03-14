@@ -14,7 +14,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, c
 import aiosqlite
 import pytest
 
-from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
@@ -1834,5 +1834,5 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
                 if random.randint(0, 4) == 0:
                     batch = [{"action": "delete", "key": key}]
                     await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
-                    with pytest.raises(Exception):
-                        node = await raw_data_store.get_node_by_key(tree_id=tree_id, key=key)
+                    with pytest.raises(KeyNotFoundError, match=f"Key not found: {key.hex()}"):
+                        await raw_data_store.get_node_by_key(tree_id=tree_id, key=key)
