@@ -274,7 +274,7 @@ jobs:
               fi
             done
             OUTPUT+="\n| Total | Missing | Coverage |\n|-------|---------|----------|\n| ${TOTAL_LINES} | ${MISSING_LINES} | ${TOTAL_COVERAGE} |\n"
-            OUTPUT+="\n---\n https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/
+            OUTPUT+="\n---\n https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/"
             echo -e "$OUTPUT" > temp_comment.txt
             gh pr comment "$PR_NUM" -F temp_comment.txt
             if [[ $COVERAGE_LABEL != "coverage-diff" ]]; then
