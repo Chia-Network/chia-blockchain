@@ -540,7 +540,9 @@ class FullNode:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
-    async def short_sync_batch(self, peer: WSChiaConnection, start_height: uint32, target_height: uint32) -> bool:
+    async def short_sync_batch(
+        self, peer: WSChiaConnection, start_height: uint32, peak: full_node_protocol.NewPeak
+    ) -> bool:
         """
         Tries to sync to a chain which is not too far in the future, by downloading batches of blocks. If the first
         block that we download is not connected to our chain, we return False and do an expensive long sync instead.
@@ -549,7 +551,7 @@ class FullNode:
         Args:
             peer: peer to sync from
             start_height: height that we should start downloading at. (Our peak is higher)
-            target_height: target to sync to
+            peak: target to sync to
 
         Returns:
             False if the fork point was not found, and we need to do a long sync. True otherwise.
@@ -563,7 +565,7 @@ class FullNode:
             return True  # Don't trigger a long sync
         self.sync_store.batch_syncing.add(peer.peer_node_id)
 
-        self.log.info(f"Starting batch short sync from {start_height} to height {target_height}")
+        self.log.info(f"Starting batch short sync from {start_height} to height {peak.height}")
         if start_height > 0:
             first = await peer.call_api(
                 FullNodeAPI.request_block, full_node_protocol.RequestBlock(uint32(start_height), False)
@@ -588,8 +590,8 @@ class FullNode:
 
         try:
             peer_info = peer.get_peer_logging()
-            for height in range(start_height, target_height, batch_size):
-                end_height = min(target_height, height + batch_size)
+            for height in range(start_height, peak.height, batch_size):
+                end_height = min(peak.height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
                 response = await peer.call_api(FullNodeAPI.request_blocks, request)
                 if not response:
@@ -748,7 +750,7 @@ class FullNode:
             if request.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                 # This is the case of syncing up more than a few blocks, at the start of the chain
                 self.log.debug("Doing batch sync, no backup")
-                await self.short_sync_batch(peer, uint32(0), request.height)
+                await self.short_sync_batch(peer, uint32(0), request)
                 return None
 
             if (
@@ -756,7 +758,7 @@ class FullNode:
                 and request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]
             ):
                 # This case of being behind but not by so much
-                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
+                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request):
                     return None
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
@@ -1048,15 +1050,14 @@ class FullNode:
         buffer_size = 4
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
         peers_with_peak: List[WSChiaConnection] = self.get_peers_with_peak(peak_hash)
+        # check if we are extending our current peak
         fork_point_height = await check_fork_next_block(
             self.blockchain, fork_point_height, peers_with_peak, node_next_block_check
         )
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
-
-        # normally "fork_point" or "fork_height" refers to the first common
-        # block between the main chain and the fork. Here "fork_point_height"
-        # seems to refer to the first diverging block
-
+        # this is called under the priority_mutex, peaks will not change during sync
+        peak = self.blockchain.get_peak()
+        extending_main_chain: bool = peak is None or fork_point_height == peak.height
         async def fetch_block_batches(
             batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
         ) -> None:
@@ -1095,7 +1096,11 @@ class FullNode:
         async def validate_block_batches(
             inner_batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
         ) -> None:
-            fork_info: Optional[ForkInfo] = None
+            fork_info = None
+            if not extending_main_chain and fork_point_height > 0:
+                fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
+                assert fork_hash is not None
+                fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
 
             while True:
                 res: Optional[Tuple[WSChiaConnection, List[FullBlock]]] = await inner_batch_queue.get()
@@ -1105,28 +1110,6 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
-
-                # in case we're validating a reorg fork (i.e. not extending the
-                # main chain), we need to record the coin set from that fork in
-                # fork_info. Otherwise validation is very expensive, especially
-                # for deep reorgs
-                peak: Optional[BlockRecord]
-                if fork_info is None:
-                    peak = self.blockchain.get_peak()
-                    extending_main_chain: bool = peak is None or (
-                        peak.header_hash == blocks[0].prev_header_hash or peak.header_hash == blocks[0].header_hash
-                    )
-                    # if we're simply extending the main chain, it's important
-                    # *not* to pass in a ForkInfo object, as it can potentially
-                    # accrue a large state (with no value, since we can validate
-                    # against the CoinStore)
-                    if not extending_main_chain:
-                        if fork_point_height == 0:
-                            fork_info = ForkInfo(-1, -1, bytes32([0] * 32))
-                        else:
-                            fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
-                            assert fork_hash is not None
-                            fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
 
                 success, state_change_summary, err = await self.add_block_batch(
                     blocks,
@@ -1229,12 +1212,11 @@ class FullNode:
         self,
         all_blocks: List[FullBlock],
         peer_info: PeerInfo,
-        fork_info: Optional[ForkInfo],
+        fork_info: Optional[ForkInfo] = None,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
-
         block_dict: Dict[bytes32, FullBlock] = {}
         for block in all_blocks:
             block_dict[block.header_hash] = block
@@ -1276,7 +1258,11 @@ class FullNode:
         # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.monotonic()
         pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
-            blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
+            blocks_to_validate,
+            {},
+            fork_height=None if fork_info is None else fork_info.fork_height,
+            wp_summaries=wp_summaries,
+            validate_signatures=True,
         )
         pre_validate_end = time.monotonic()
         pre_validate_time = pre_validate_end - pre_validate_start
@@ -1735,7 +1721,10 @@ class FullNode:
             # Don't validate signatures because we want to validate them in the main thread later, since we have a
             # cache available
             pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
-                [block], npc_results, validate_signatures=False
+                [block],
+                npc_results,
+                validate_signatures=False,
+                fork_height=None if fork_info is None else fork_info.fork_height,
             )
             added: Optional[AddBlockResult] = None
             pre_validation_time = time.monotonic() - validation_start

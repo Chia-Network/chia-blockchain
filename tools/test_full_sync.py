@@ -12,6 +12,7 @@ import click
 import zstd
 
 from chia.cmds.init_funcs import chia_init
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.full_node import FullNode
 from chia.server.ws_connection import WSChiaConnection
@@ -151,7 +152,6 @@ async def run_sync_checkpoint(
 
                 if len(block_batch) < 32:
                     continue
-
                 success, _, _ = await full_node.add_block_batch(block_batch, peer_info, None)
                 end_height = block_batch[-1].height
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
