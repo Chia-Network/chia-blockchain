@@ -128,12 +128,12 @@ jobs:
           - name: black
             command: black --check --diff .
           - name: flake8
-            command: flake8 benchmarks build_scripts chia tests tools *.py
+            command: flake8 benchmarks build_scripts chia tools *.py
           - name: pylint
-            command: pylint benchmarks build_scripts chia tests tools *.py
+            command: pylint benchmarks build_scripts chia tools *.py
           - name: generated protocol tests
             command: |
-              python3 -m tests.util.build_network_protocol_files
+              python3 -m chia._tests.util.build_network_protocol_files
               git diff --exit-code
 
     steps:
