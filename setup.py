@@ -110,6 +110,10 @@ kwargs = dict(
     },
     package_data={
         "": ["*.clsp", "*.clsp.hex", "*.clvm", "*.clib", "py.typed"],
+        "chia._tests.cmds.wallet": ["test_offer.toffer"],
+        "chia._tests.farmer_harvester": ["*.json"],
+        "chia._tests.tools": ["*.json", "test-blockchain-db.sqlite"],
+        "chia._tests.util": ["bip39_test_vectors.json", "clvm_generator.bin", "protocol_messages_bytes-v*"],
         "chia.util": ["initial-*.yaml", "english.txt"],
         "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],
