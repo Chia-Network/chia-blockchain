@@ -359,10 +359,22 @@ async def get_address(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_
         print(res)
 
 
-async def delete_unconfirmed_transactions(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
-        await wallet_client.delete_unconfirmed_transactions(wallet_id)
-        print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
+async def delete_unconfirmed_transactions(
+    wallet_rpc_port: Optional[int], input_fingerprint: int, wallet_id: int, tx_ids=Optional[List[bytes32]]
+) -> None:
+    async with get_wallet_client(wallet_rpc_port, input_fingerprint) as (wallet_client, fingerprint, _):
+        reply = await wallet_client.delete_unconfirmed_transactions(wallet_id)
+        if reply is None or type(reply) is not dict:
+            print(f"Error deleting unconfirmed transactions. Reply was: {reply}")
+            return
+        if reply["success"]:
+            print(
+                f"Successfully deleted unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}:"
+                f"\n{reply['unconfirmed_transactions_deleted']}"
+            )
+        else:
+            print(f"Error deleting unconfirmed transactions. Reply was: {reply}")
+            return
 
 
 async def get_derivation_index(wallet_rpc_port: Optional[int], fp: Optional[int]) -> None:

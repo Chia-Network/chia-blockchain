@@ -50,7 +50,7 @@ def test_get_transaction(capsys: object, get_test_cli_clients: Tuple[TestRpcClie
     inst_rpc_client = TestWalletRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     # get output with all options but verbose
-    command_args = ["wallet", "get_transaction", WALLET_ID_ARG, "-tx", bytes32_hexstr]
+    command_args = ["wallet", "get_transaction", "-tx", bytes32_hexstr]
     assert_list = [
         "Transaction 0202020202020202020202020202020202020202020202020202020202020202",
         "Status: In mempool",
@@ -395,7 +395,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
     run_cli_command_and_assert(capsys, root_dir, command_args + [FINGERPRINT_ARG], assert_list)
     run_cli_command_and_assert(capsys, root_dir, command_args + [CAT_FINGERPRINT_ARG], cat_assert_list)
     # these are various things that should be in the output
-    expected_calls: logType = {
+    expected_output: logType = {
         "get_wallets": [(None,), (None,)],
         "send_transaction": [
             (
@@ -435,7 +435,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
         ],
         "get_transaction": [(get_bytes32(2),), (get_bytes32(2),)],
     }
-    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+    test_rpc_clients.wallet_rpc_client.check_log(expected_output)
 
 
 def test_get_address(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
@@ -510,9 +510,9 @@ def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: Tuple[TestRpcC
 
     # set RPC Client
     class UnconfirmedTxRpcClient(TestWalletRpcClient):
-        async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
+        async def delete_unconfirmed_transactions(self, wallet_id: int) -> Dict[str, Any]:
             self.add_to_log("delete_unconfirmed_transactions", (wallet_id,))
-            return None
+            return {"success": True, "unconfirmed_transactions_deleted": [f"{bytes32_hexstr}"]}
 
     inst_rpc_client = UnconfirmedTxRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -521,8 +521,8 @@ def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: Tuple[TestRpcC
         "delete_unconfirmed_transactions",
         WALLET_ID_ARG,
         FINGERPRINT_ARG,
-    ]
-    assert_list = [f"Successfully deleted all unconfirmed transactions for wallet id {WALLET_ID} on key {FINGERPRINT}"]
+    ]  # xxx
+    assert_list = [f"Successfully deleted unconfirmed transactions for wallet id {WALLET_ID} on key {FINGERPRINT}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     # these are various things that should be in the output
     expected_calls: logType = {

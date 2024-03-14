@@ -65,7 +65,7 @@ class TestRpcClient:
         for k, v in expected_calls.items():
             assert k in self.rpc_log, f"key '{k}' not in rpc_log, rpc log's keys are: '{list(self.rpc_log.keys())}'"
             if v is not None:  # None means we don't care about the value used when calling the rpc.
-                assert self.rpc_log[k] == v, f"for key '{k}'\n'{self.rpc_log[k]}'\n!=\n'{v}'"
+                assert self.rpc_log[k] == v, f"for key '{k}'\nACTUAL:   '{self.rpc_log[k]}'\nEXPECTED: '{v}'"
         self.rpc_log = {}
 
 

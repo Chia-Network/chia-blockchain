@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
 
 
+"""EndpointResult should always contain an entry "success" of type bool"""
 EndpointResult = Dict[str, Any]
 Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
 _T_RpcApiProtocol = TypeVar("_T_RpcApiProtocol", bound="RpcApiProtocol")

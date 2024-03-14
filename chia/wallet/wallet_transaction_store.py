@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 
@@ -33,6 +33,8 @@ def filter_ok_mempool_status(sent_to: List[Tuple[str, uint8, Optional[str]]]) ->
 class WalletTransactionStore:
     """
     WalletTransactionStore stores transaction history for the wallet.
+
+    Note that table transaction_record uses bundle_id and table tx_times uses txid. They are the same
     """
 
     db_wrapper: DBWrapper2
@@ -366,7 +368,9 @@ class WalletTransactionStore:
             )
         return 0 if len(rows) == 0 else rows[0][0]
 
-    async def get_all_transactions_for_wallet(self, wallet_id: int, type: int = None) -> List[TransactionRecord]:
+    async def get_all_transactions_for_wallet(
+        self, wallet_id: int, type: Optional[int] = None
+    ) -> List[TransactionRecord]:
         """
         Returns all stored transactions.
         """
@@ -415,18 +419,21 @@ class WalletTransactionStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))).close()
 
-    async def delete_unconfirmed_transactions(self, wallet_id: int):
+    async def delete_unconfirmed_transactions(self, wallet_id: int, tx_ids: Optional[Set[bytes32]] = None):
+        sql_cmd = "DELETE FROM transaction_record WHERE confirmed=0 AND wallet_id=? AND type not in (?,?)"
+        args = (
+            wallet_id,
+            TransactionType.INCOMING_CLAWBACK_SEND.value,
+            TransactionType.INCOMING_CLAWBACK_RECEIVE.value,
+        )
+        if tx_ids is not None and len(tx_ids) > 0:
+            tx_id_qualifier = f"AND bundle_id IN ({','.join('?' * len(tx_ids))})"
+            args += tuple(tx_id for tx_id in tx_ids)
+            sql_cmd += f" {tx_id_qualifier}"
+        print(f"SQL:  {sql_cmd}")
+        print(f"args: {args}")
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await (
-                await conn.execute(
-                    "DELETE FROM transaction_record WHERE confirmed=0 AND wallet_id=? AND type not in (?,?)",
-                    (
-                        wallet_id,
-                        TransactionType.INCOMING_CLAWBACK_SEND.value,
-                        TransactionType.INCOMING_CLAWBACK_RECEIVE.value,
-                    ),
-                )
-            ).close()
+            await (await conn.execute(sql_cmd, args)).close()
 
     async def _get_new_tx_records_from_old(self, old_records: List[TransactionRecordOld]) -> List[TransactionRecord]:
         tx_id_to_valid_times: Dict[bytes, ConditionValidTimes] = {}
