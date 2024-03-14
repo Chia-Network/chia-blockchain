@@ -3,14 +3,14 @@ name: 🚨 Check Dependency Artifacts
 on:
   push:
     branches:
-      - 'long_lived/**'
+      - "long_lived/**"
       - main
-      - 'release/**'
+      - "release/**"
   release:
     types: [published]
   pull_request:
     branches:
-      - '**'
+      - "**"
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -44,28 +44,28 @@ jobs:
             matrix: arm
           - name: Intel
             matrix: intel
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         exclude:
           - os:
               matrix: macos
             arch:
               matrix: arm
-            python-version: '3.8'
+            python-version: "3.8"
           - os:
               matrix: windows
             arch:
               matrix: arm
 
     steps:
-    - uses: Chia-Network/actions/clean-workspace@main
+      - uses: Chia-Network/actions/clean-workspace@main
 
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - uses: Chia-Network/actions/setup-python@main
-      with:
-        python-version: ${{ matrix.python-version }}
-        force-pyenv: ${{ matrix.os.matrix == 'macos' && matrix.arch.matrix == 'intel' }}
+      - uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
+          force-pyenv: ${{ matrix.os.matrix == 'macos' && matrix.arch.matrix == 'intel' }}
 
-    - name: Check Wheel Availability
-      run: python build_scripts/check_dependency_artifacts.py
+      - name: Check Wheel Availability
+        run: python build_scripts/check_dependency_artifacts.py

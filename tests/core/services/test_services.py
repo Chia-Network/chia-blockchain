@@ -34,8 +34,7 @@ class CreateServiceProtocol(Protocol):
         port: uint16,
         root_path: Path,
         net_config: Dict[str, Any],
-    ) -> RpcClient:
-        ...
+    ) -> RpcClient: ...
 
 
 async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], timeout: float = 15) -> DaemonProxy:

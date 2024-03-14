@@ -420,8 +420,7 @@ class DataCase(Protocol):
     marks: Marks
 
     @property
-    def id(self) -> str:
-        ...
+    def id(self) -> str: ...
 
 
 def datacases(*cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
@@ -432,8 +431,7 @@ def datacases(*cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
 
 
 class DataCasesDecorator(Protocol):
-    def __call__(self, *cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
-        ...
+    def __call__(self, *cases: DataCase, _name: str = "case") -> pytest.MarkDecorator: ...
 
 
 def named_datacases(name: str) -> DataCasesDecorator:
@@ -627,8 +625,6 @@ class DataTypeProtocol(Protocol):
     __match_args__: ClassVar[Tuple[str, ...]] = ()
 
     @classmethod
-    def unmarshal(cls: Type[T], marshalled: Dict[str, Any]) -> T:
-        ...
+    def unmarshal(cls: Type[T], marshalled: Dict[str, Any]) -> T: ...
 
-    def marshal(self) -> Dict[str, Any]:
-        ...
+    def marshal(self) -> Dict[str, Any]: ...

@@ -232,9 +232,11 @@ class WalletEnvironment:
                                 **(
                                     asdict(existing_values)
                                     if "set_remainder" in kwargs and kwargs["set_remainder"]
-                                    else {}
-                                    if "init" in kwargs and kwargs["init"]
-                                    else asdict(self.wallet_states[wallet_id].balance)
+                                    else (
+                                        {}
+                                        if "init" in kwargs and kwargs["init"]
+                                        else asdict(self.wallet_states[wallet_id].balance)
+                                    )
                                 ),
                                 **new_values,
                             }
@@ -286,9 +288,9 @@ class WalletTestFramework:
             for env in self.environments:
                 ph_indexes: Dict[uint32, Optional[DerivationRecord]] = {}
                 for wallet_id in env.wallet_state_manager.wallets:
-                    ph_indexes[
-                        wallet_id
-                    ] = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
+                    ph_indexes[wallet_id] = (
+                        await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
+                    )
                 puzzle_hash_indexes.append(ph_indexes)
 
         pending_txs: List[List[TransactionRecord]] = []

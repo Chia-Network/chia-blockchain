@@ -168,10 +168,10 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: List[
-                    PreValidationResult
-                ] = await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                    [genesis], {}, validate_signatures=True
+                pre_validation_results: List[PreValidationResult] = (
+                    await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
+                        [genesis], {}, validate_signatures=True
+                    )
                 )
                 assert pre_validation_results is not None
                 await self.full_node.blockchain.add_block(genesis, pre_validation_results[0])
@@ -219,10 +219,10 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: List[
-                    PreValidationResult
-                ] = await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                    [genesis], {}, validate_signatures=True
+                pre_validation_results: List[PreValidationResult] = (
+                    await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
+                        [genesis], {}, validate_signatures=True
+                    )
                 )
                 assert pre_validation_results is not None
                 await self.full_node.blockchain.add_block(genesis, pre_validation_results[0])
@@ -363,8 +363,9 @@ class FullNodeSimulator(FullNodeAPI):
 
             original_peak_height = self.full_node.blockchain.get_peak_height()
             expected_peak_height = 0 if original_peak_height is None else original_peak_height
+            extra_blocks = [[False, False]] if original_peak_height is None else []  # Farm genesis block first
 
-            for to_wallet, tx_block in [*([[True, False]] * (count - 1)), [True, True], [False, True]]:
+            for to_wallet, tx_block in [*extra_blocks, *([[True, False]] * (count - 1)), [True, True], [False, True]]:
                 # This complicated application of the last two blocks being transaction
                 # blocks is due to the transaction blocks only including rewards from
                 # blocks up until, and including, the previous transaction block.

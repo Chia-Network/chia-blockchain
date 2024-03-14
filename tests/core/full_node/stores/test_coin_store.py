@@ -829,9 +829,11 @@ async def test_get_unspent_lineage_info_for_puzzle_hash(case: UnspentLineageInfo
             assert result == UnspentLineageInfo(
                 coin_id=bytes32(TEST_COIN_ID),
                 coin_amount=TEST_AMOUNT,
-                parent_id=bytes32(TEST_PARENT_ID_DIFFERENT_AMOUNT)
-                if case.parent_with_diff_amount
-                else bytes32(TEST_PARENT_ID),
+                parent_id=(
+                    bytes32(TEST_PARENT_ID_DIFFERENT_AMOUNT)
+                    if case.parent_with_diff_amount
+                    else bytes32(TEST_PARENT_ID)
+                ),
                 parent_amount=TEST_PARENT_DIFFERENT_AMOUNT if case.parent_with_diff_amount else TEST_AMOUNT,
                 parent_parent_id=bytes32(TEST_PARENT_PARENT_ID),
             )

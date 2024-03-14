@@ -431,9 +431,11 @@ async def test_cat_trades(
             driver_item["also"] = {
                 "type": AssetType.CR.value,
                 "authorized_providers": ["0x" + provider.hex() for provider in authorized_providers],
-                "proofs_checker": proofs_checker_maker.as_program()
-                if wallet == cat_wallet_maker
-                else proofs_checker_taker.as_program(),
+                "proofs_checker": (
+                    proofs_checker_maker.as_program()
+                    if wallet == cat_wallet_maker
+                    else proofs_checker_taker.as_program()
+                ),
             }
         driver_dict[bytes32.from_hexstr(asset_id)] = PuzzleInfo(driver_item)
 
@@ -492,30 +494,34 @@ async def test_cat_trades(
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
                     },
-                    "new cat": {
-                        # No change if credential_restricted because pending approval balance needs to be claimed
-                        "confirmed_wallet_balance": 0,
-                        "unconfirmed_wallet_balance": 0,
-                        "spendable_balance": 0,
-                        "max_send_amount": 0,
-                        "unspent_coin_count": 0,
+                    "new cat": (
+                        {
+                            # No change if credential_restricted because pending approval balance needs to be claimed
+                            "confirmed_wallet_balance": 0,
+                            "unconfirmed_wallet_balance": 0,
+                            "spendable_balance": 0,
+                            "max_send_amount": 0,
+                            "unspent_coin_count": 0,
+                        }
+                        if credential_restricted
+                        else {
+                            "confirmed_wallet_balance": 2,
+                            "unconfirmed_wallet_balance": 2,
+                            "spendable_balance": 2,
+                            "max_send_amount": 2,
+                            "unspent_coin_count": 1,
+                        }
+                    ),
+                },
+                post_block_additional_balance_info=(
+                    {
+                        "new cat": {
+                            "pending_approval_balance": 2,
+                        }
                     }
                     if credential_restricted
-                    else {
-                        "confirmed_wallet_balance": 2,
-                        "unconfirmed_wallet_balance": 2,
-                        "spendable_balance": 2,
-                        "max_send_amount": 2,
-                        "unspent_coin_count": 1,
-                    },
-                },
-                post_block_additional_balance_info={
-                    "new cat": {
-                        "pending_approval_balance": 2,
-                    }
-                }
-                if credential_restricted
-                else {},
+                    else {}
+                ),
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
@@ -815,22 +821,24 @@ async def test_cat_trades(
                     },
                 },
                 post_block_balance_updates={
-                    "new cat": {
-                        # No change if credential_restricted because pending approval balance needs to be claimed
-                        "confirmed_wallet_balance": 0,
-                        "unconfirmed_wallet_balance": 0,
-                        "spendable_balance": 0,
-                        "max_send_amount": 0,
-                        "unspent_coin_count": 0,
-                    }
-                    if credential_restricted
-                    else {
-                        "confirmed_wallet_balance": 6,
-                        "unconfirmed_wallet_balance": 6,
-                        "spendable_balance": 6,
-                        "max_send_amount": 6,
-                        "unspent_coin_count": 1,
-                    },
+                    "new cat": (
+                        {
+                            # No change if credential_restricted because pending approval balance needs to be claimed
+                            "confirmed_wallet_balance": 0,
+                            "unconfirmed_wallet_balance": 0,
+                            "spendable_balance": 0,
+                            "max_send_amount": 0,
+                            "unspent_coin_count": 0,
+                        }
+                        if credential_restricted
+                        else {
+                            "confirmed_wallet_balance": 6,
+                            "unconfirmed_wallet_balance": 6,
+                            "spendable_balance": 6,
+                            "max_send_amount": 6,
+                            "unspent_coin_count": 1,
+                        }
+                    ),
                     "cat": {
                         "confirmed_wallet_balance": -5,
                         "unconfirmed_wallet_balance": -5,
@@ -839,13 +847,15 @@ async def test_cat_trades(
                         "pending_coin_removal_count": -1,
                     },
                 },
-                post_block_additional_balance_info={
-                    "new cat": {
-                        "pending_approval_balance": 6,
+                post_block_additional_balance_info=(
+                    {
+                        "new cat": {
+                            "pending_approval_balance": 6,
+                        }
                     }
-                }
-                if credential_restricted
-                else {},
+                    if credential_restricted
+                    else {}
+                ),
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
@@ -1011,49 +1021,55 @@ async def test_cat_trades(
                         "unconfirmed_wallet_balance": -7,
                         "confirmed_wallet_balance": -7,
                     },
-                    "cat": {
-                        # No change if credential_restricted because pending approval balance needs to be claimed
-                        "confirmed_wallet_balance": 0,
-                        "unconfirmed_wallet_balance": 0,
-                        "spendable_balance": 0,
-                        "max_send_amount": 0,
-                        "unspent_coin_count": 0,
-                    }
-                    if credential_restricted
-                    else {
-                        "confirmed_wallet_balance": 8,
-                        "unconfirmed_wallet_balance": 8,
-                        "spendable_balance": 8,
-                        "max_send_amount": 8,
-                        "unspent_coin_count": 1,
-                    },
-                    "new cat": {
-                        # No change if credential_restricted because pending approval balance needs to be claimed
-                        "confirmed_wallet_balance": 0,
-                        "unconfirmed_wallet_balance": 0,
-                        "spendable_balance": 0,
-                        "max_send_amount": 0,
-                        "unspent_coin_count": 0,
-                    }
-                    if credential_restricted
-                    else {
-                        "confirmed_wallet_balance": 9,
-                        "unconfirmed_wallet_balance": 9,
-                        "spendable_balance": 9,
-                        "max_send_amount": 9,
-                        "unspent_coin_count": 1,
-                    },
+                    "cat": (
+                        {
+                            # No change if credential_restricted because pending approval balance needs to be claimed
+                            "confirmed_wallet_balance": 0,
+                            "unconfirmed_wallet_balance": 0,
+                            "spendable_balance": 0,
+                            "max_send_amount": 0,
+                            "unspent_coin_count": 0,
+                        }
+                        if credential_restricted
+                        else {
+                            "confirmed_wallet_balance": 8,
+                            "unconfirmed_wallet_balance": 8,
+                            "spendable_balance": 8,
+                            "max_send_amount": 8,
+                            "unspent_coin_count": 1,
+                        }
+                    ),
+                    "new cat": (
+                        {
+                            # No change if credential_restricted because pending approval balance needs to be claimed
+                            "confirmed_wallet_balance": 0,
+                            "unconfirmed_wallet_balance": 0,
+                            "spendable_balance": 0,
+                            "max_send_amount": 0,
+                            "unspent_coin_count": 0,
+                        }
+                        if credential_restricted
+                        else {
+                            "confirmed_wallet_balance": 9,
+                            "unconfirmed_wallet_balance": 9,
+                            "spendable_balance": 9,
+                            "max_send_amount": 9,
+                            "unspent_coin_count": 1,
+                        }
+                    ),
                 },
-                post_block_additional_balance_info={
-                    "cat": {
-                        "pending_approval_balance": 8,
-                    },
-                    "new cat": {
-                        "pending_approval_balance": 9,
-                    },
-                }
-                if credential_restricted
-                else {},
+                post_block_additional_balance_info=(
+                    {
+                        "cat": {
+                            "pending_approval_balance": 8,
+                        },
+                        "new cat": {
+                            "pending_approval_balance": 9,
+                        },
+                    }
+                    if credential_restricted
+                    else {}
+                ),
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
@@ -1394,21 +1410,23 @@ async def test_cat_trades(
                         "unconfirmed_wallet_balance": -14,
                         "confirmed_wallet_balance": -14,
                     },
-                    "new cat": {
-                        "spendable_balance": 0,
-                        "max_send_amount": 0,
-                        "unconfirmed_wallet_balance": 0,
-                        "confirmed_wallet_balance": 0,
-                        "unspent_coin_count": 0,
-                    }
-                    if credential_restricted
-                    else {
-                        "spendable_balance": 15,
-                        "max_send_amount": 15,
-                        "unconfirmed_wallet_balance": 15,
-                        "confirmed_wallet_balance": 15,
-                        "unspent_coin_count": 1,
-                    },
+                    "new cat": (
+                        {
+                            "spendable_balance": 0,
+                            "max_send_amount": 0,
+                            "unconfirmed_wallet_balance": 0,
+                            "confirmed_wallet_balance": 0,
+                            "unspent_coin_count": 0,
+                        }
+                        if credential_restricted
+                        else {
+                            "spendable_balance": 15,
+                            "max_send_amount": 15,
+                            "unconfirmed_wallet_balance": 15,
+                            "confirmed_wallet_balance": 15,
+                            "unspent_coin_count": 1,
+                        }
+                    ),
                 },
             ),
             WalletStateTransition(
