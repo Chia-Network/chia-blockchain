@@ -13,6 +13,7 @@ SERVICES_FOR_GROUP = {
         "chia_data_layer",
         "chia_data_layer_http",
     ],
+    "daemon": [],
     # TODO: should this be `data_layer`?
     "data": ["chia_wallet", "chia_data_layer"],
     "data_layer_http": ["chia_data_layer_http"],
