@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from chia.util.service_groups import services_for_groups
 
 
-def test_services_for_groups():
+def test_services_for_groups() -> None:
     i = 0
     for service in services_for_groups(["harvester"]):
         assert service == "chia_harvester"
