@@ -193,6 +193,13 @@ class DAOCATWallet:
         if new_cat_puzhash != coin.puzzle_hash:  # pragma: no cover
             raise ValueError(f"Cannot add coin - incorrect lockup puzzle: {coin}")
 
+        # check for parent spend's lineage proof so we catch them during wallet resync
+        parent_lineage = await self.lineage_store.get_lineage_proof(coin.parent_coin_info)
+        if parent_lineage is None:
+            parent_lineage_proof = LineageProof(
+                parent_coin.coin.parent_coin_info, cat_inner.get_tree_hash(), uint64(parent_coin.coin.amount)
+            )
+            await self.add_lineage(parent_coin.coin.name(), parent_lineage_proof)
         lineage_proof = LineageProof(coin.parent_coin_info, lockup_puz.get_tree_hash(), uint64(coin.amount))
         await self.add_lineage(coin.name(), lineage_proof)
 
