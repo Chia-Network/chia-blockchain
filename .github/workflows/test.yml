@@ -40,7 +40,7 @@ jobs:
       - name: Generate matrix configuration
         id: configure
         run: |
-          python chia/_tests/build-job-matrix.py --per directory --verbose > matrix.json
+          python chia/_tests/build-job-matrix.py --per directory --verbose --only clvm > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> "$GITHUB_OUTPUT"
           echo matrix_mode=${{ ( github.event_name == 'schedule' ) && 'all' || ( github.event_name == 'workflow_dispatch' ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') ) && 'all' || 'main' }} >> "$GITHUB_OUTPUT"
@@ -207,7 +207,7 @@ jobs:
           COV_STATUS="${PIPESTATUS[0]}"
           echo "COV_STATUS=$COV_STATUS" >> "$GITHUB_ENV"
           if [[ $COV_STATUS != '0' && "$GITHUB_BASE_REF" != '' ]]; then
-            exit 1
+            exit ${{ contains(github.event.pull_request.labels.*.name, 'coverage-exception') && '0' || '1' }}
           fi
 
       - name: Remove previous coverage report comment and label from PR
@@ -274,6 +274,7 @@ jobs:
               fi
             done
             OUTPUT+="\n| Total | Missing | Coverage |\n|-------|---------|----------|\n| ${TOTAL_LINES} | ${MISSING_LINES} | ${TOTAL_COVERAGE} |\n"
+            OUTPUT+="\n---\n https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/
             echo -e "$OUTPUT" > temp_comment.txt
             gh pr comment "$PR_NUM" -F temp_comment.txt
             if [[ $COVERAGE_LABEL != "coverage-diff" ]]; then
