@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypeVar
 
-from chia.full_node.fee_estimation import FeeMempoolInfo
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
@@ -17,7 +16,8 @@ class FeePerCost(Streamable):
     fee: uint64
     cost: uint64
 
-    def as_float(self) -> float: return float(self.fee) / float(self.cost)
+    def as_float(self) -> float:
+        return float(self.fee) / float(self.cost)
 
 
 @dataclass(frozen=True)

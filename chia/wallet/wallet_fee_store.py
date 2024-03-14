@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 import sqlite3
 import time
 from typing import Optional
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint8, uint32
+from chia.util.ints import uint32
 from chia.wallet.fee_record import FeeRecord, FeeRecordKey
 
 """
@@ -63,7 +61,7 @@ class FeeStore:
                 " fee_record blob,"
                 " block_index int,"
                 " block_time bigint,"
-                " block_fpc  int,"  # 
+                " block_fpc  int,"  #
                 " fpc_to_add_std_tx int,"  # mojos
                 " estimated_fpc_numerator int,"
                 " estimated_fpc_denominator int,"
@@ -84,7 +82,6 @@ class FeeStore:
         # if record.block_hash
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             if not replace:
-
                 existing_entries_with_same_block_hash = await self.get_fee_record(key)
                 if existing_entries_with_same_block_hash:
                     raise ValueError(f"FeeRecord for {key} already exists. Not replacing.")
@@ -99,7 +96,6 @@ class FeeStore:
                     bytes(rec),
                     rec.block_index,
                     rec.block_time,
-
                 ),
             )
             await cursor.close()
