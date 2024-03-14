@@ -162,7 +162,7 @@ class DataStore:
                 )
                 await writer.execute(
                     """
-                    CREATE INDEX IF NOT EXISTS key ON node(key)
+                    CREATE INDEX IF NOT EXISTS node_key_index ON node(key)
                     """
                 )
 
