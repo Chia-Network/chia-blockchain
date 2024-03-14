@@ -283,12 +283,12 @@ async def insert_from_delta_file(
         except Exception:
             try:
                 target_filename_path.unlink()
-            except FileExistsError:
+            except FileNotFoundError:
                 pass
 
             try:
                 filename_full_tree.unlink()
-            except FileExistsError:
+            except FileNotFoundError:
                 pass
 
             # await data_store.received_incorrect_file(tree_id, server_info, timestamp)
