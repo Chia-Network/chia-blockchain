@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-
 import pytest
 
 from chia.types.blockchain_format.sized_bytes import bytes32
