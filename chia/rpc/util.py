@@ -17,7 +17,7 @@ from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_fr
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.clvm_streamable import clvm_serialization_mode
+from chia.wallet.util.clvm_streamable import byte_serialize_clvm_streamable, json_serialize_with_clvm_streamable
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
@@ -43,8 +43,13 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
             *args,
             **kwargs,
         )
-        with clvm_serialization_mode(not request.get("full_jsonify", False)):
+        if request.get("full_jsonify", False):
             return response_obj.to_json_dict()
+        else:
+            response_dict = json_serialize_with_clvm_streamable(response_obj)
+            if isinstance(response_dict, str):  # pragma: no cover
+                raise ValueError("Internal Error. Marshalled endpoint was made with clvm_streamable.")
+            return response_dict
 
     return rpc_endpoint
 
@@ -144,7 +149,7 @@ def tx_endpoint(
             if request.get("full_jsonify", False):
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
             else:
-                response["unsigned_transactions"] = [bytes(tx.as_program()).hex() for tx in unsigned_txs]
+                response["unsigned_transactions"] = [byte_serialize_clvm_streamable(tx).hex() for tx in unsigned_txs]
 
             new_txs: List[TransactionRecord] = []
             if request.get("sign", self.service.config.get("auto_sign_txs", True)):
@@ -154,7 +159,7 @@ def tx_endpoint(
                 response["transactions"] = [
                     TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
                 ]
-                response["signing_responses"] = [bytes(r.as_program()).hex() for r in signing_responses]
+                response["signing_responses"] = [byte_serialize_clvm_streamable(r).hex() for r in signing_responses]
             else:
                 new_txs = tx_records  # pragma: no cover
 
