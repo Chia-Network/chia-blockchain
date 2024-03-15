@@ -7,7 +7,7 @@ from setuptools import find_packages, setup
 
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
-    "anyio==4.2.0",
+    "anyio==4.3.0",
     "boto3==1.34.46",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.4",  # timelord and vdf verification
     "chiabip158==1.4",  # bip158-style wallet filters
@@ -44,7 +44,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build==1.0.3",
-    "coverage==7.4.1",
+    "coverage==7.4.3",
     "diff-cover==8.0.3",
     "pre-commit==3.5.0; python_version < '3.9'",
     "pre-commit==3.6.0; python_version >= '3.9'",
@@ -59,10 +59,10 @@ dev_dependencies = [
     "isort==5.13.2",
     "flake8==7.0.0",
     "mypy==1.8.0",
-    "black==24.1.1",
+    "black==24.2.0",
     "lxml==5.1.0",
     "aiohttp_cors==0.7.0",  # For blackd
-    "pyinstaller==6.3.0",
+    "pyinstaller==6.5.0",
     "types-aiofiles==23.2.0.20240106",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.12",
