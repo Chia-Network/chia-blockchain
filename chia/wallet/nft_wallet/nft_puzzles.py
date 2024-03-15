@@ -278,11 +278,7 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: 
     for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
-            atom = condition.at("rf").atom
-            if atom is None:
-                new_did_id = atom
-            else:
-                new_did_id = bytes32(atom)
+            new_did_id = condition.at("rf").atom
         elif condition.first().as_int() == 51:
             new_puzhash = condition.at("rf").atom
     # assert new_puzhash and new_did_id
@@ -299,9 +295,5 @@ def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Optional[bytes32
     for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
-            atom = condition.at("rf").atom
-            if atom is None:
-                new_did_id = atom
-            else:
-                new_did_id = bytes32(atom)
+            new_did_id = condition.at("rf").atom
     return new_did_id
