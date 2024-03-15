@@ -1237,3 +1237,11 @@ async def recording_web_server_fixture(self_hostname: str) -> AsyncIterator[Reco
         yield server
     finally:
         await server.await_closed()
+
+
+@pytest.fixture(
+    scope="session",
+    params=[True, False],
+)
+def use_delta_sync(request: SubRequest):
+    return request.param
