@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, Optional, TextIO, Type, Union
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, TextIO, Type, Union
 
 import aiosqlite
 import anyio
@@ -22,6 +22,17 @@ else:
 
 # integers in sqlite are limited by int64
 SQLITE_INT_MAX = 2**63 - 1
+
+
+class DBWrapperError(Exception):
+    pass
+
+
+class ForeignKeyError(DBWrapperError):
+    # TODO: but not always a row object...  sometimes a lovely tuple
+    def __init__(self, violations: Iterable[aiosqlite.Row]) -> None:
+        self.violations: List[Dict[str, object]] = [dict(violation) for violation in violations]
+        super().__init__(f"Found {len(self.violations)} FK violations: {self.violations}")
 
 
 def generate_in_memory_db_uri() -> str:
@@ -132,9 +143,12 @@ class DBWrapper2:
         log_path: Optional[Path] = None,
         journal_mode: str = "WAL",
         synchronous: Optional[str] = None,
-        foreign_keys: bool = False,
+        foreign_keys: Optional[bool] = None,
         row_factory: Optional[Type[aiosqlite.Row]] = None,
     ) -> AsyncIterator[DBWrapper2]:
+        if foreign_keys is None:
+            foreign_keys = False
+
         async with contextlib.AsyncExitStack() as async_exit_stack:
             if log_path is None:
                 log_file = None
@@ -249,7 +263,7 @@ class DBWrapper2:
             await self._write_connection.execute(f"RELEASE {name}")
 
     @contextlib.asynccontextmanager
-    async def writer(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def writer(self, foreign_keys: Optional[bool] = None) -> AsyncIterator[aiosqlite.Connection]:
         """
         Initiates a new, possibly nested, transaction. If this task is already
         in a transaction, none of the changes made as part of this transaction
@@ -264,17 +278,57 @@ class DBWrapper2:
         assert task is not None
         if self._current_writer == task:
             # we allow nesting writers within the same task
+            if foreign_keys is not None:
+                # TODO: better exception
+                # TODO: technically this is complaining even if the requested state is already in place
+                raise Exception("already in a connection so this won't work")
             async with self._savepoint_ctx():
                 yield self._write_connection
             return
 
         async with self._lock:
-            async with self._savepoint_ctx():
-                self._current_writer = task
-                try:
-                    yield self._write_connection
-                finally:
-                    self._current_writer = None
+            async with contextlib.AsyncExitStack() as exit_stack:
+                if foreign_keys is not None:
+                    await exit_stack.enter_async_context(self._set_foreign_keys(enabled=foreign_keys))
+
+                async with self._savepoint_ctx():
+                    self._current_writer = task
+                    try:
+                        yield self._write_connection
+
+                        if foreign_keys is not None and not foreign_keys:
+                            await self._check_foreign_keys()
+                    finally:
+                        self._current_writer = None
+
+    @contextlib.asynccontextmanager
+    async def _set_foreign_keys(self, enabled: bool) -> AsyncIterator[None]:
+        # TODO: protections around when this is ok to run
+        async with self._write_connection.execute("PRAGMA foreign_keys") as cursor:
+            result = await cursor.fetchone()
+            if result is None:
+                # TODO: better exception
+                raise Exception("unable to query foreign_keys value")
+            [original_value] = result
+
+        if bool(original_value) == enabled:
+            yield
+            return
+
+        try:
+            await self._write_connection.execute(f"PRAGMA foreign_keys={enabled}")
+            yield
+        finally:
+            with anyio.CancelScope(shield=True):
+                await self._write_connection.execute(f"PRAGMA foreign_keys={original_value}")
+
+    async def _check_foreign_keys(self) -> None:
+        # TODO: protections around when this is ok to run
+        async with self._write_connection.execute("PRAGMA foreign_key_check") as cursor:
+            violations = list(await cursor.fetchall())
+
+        if len(violations) > 0:
+            raise ForeignKeyError(violations=violations)
 
     @contextlib.asynccontextmanager
     async def writer_maybe_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
