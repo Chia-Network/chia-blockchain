@@ -31,7 +31,7 @@ class BalanceCheckingError(Exception):
         self.errors = errors
 
     def __repr__(self) -> str:
-        return json.dumps(self.errors, indent=4)
+        return json.dumps(self.errors, indent=2)
 
     def __str__(self) -> str:
         return self.__repr__()
