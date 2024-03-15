@@ -80,6 +80,7 @@ def create_data_layer_service(
         connect_to_daemon=connect_to_daemon,
     )
 
+
 async def async_main() -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", fill_missing_services=True)
