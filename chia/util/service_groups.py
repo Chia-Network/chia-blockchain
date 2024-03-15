@@ -40,9 +40,7 @@ def all_groups() -> KeysView[str]:
 
 def services_for_groups(groups: Iterable[str]) -> Generator[str, None, None]:
     for group in groups:
-        service = SERVICES_FOR_GROUP[group]
-        if service:
-            yield from service
+        yield from SERVICES_FOR_GROUP[group]
 
 
 def validate_service(service: str) -> bool:
