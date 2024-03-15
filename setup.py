@@ -7,7 +7,7 @@ from setuptools import find_packages, setup
 
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
-    "anyio==4.2.0",
+    "anyio==4.3.0",
     "boto3==1.34.46",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.4",  # timelord and vdf verification
     "chiabip158==1.4",  # bip158-style wallet filters
