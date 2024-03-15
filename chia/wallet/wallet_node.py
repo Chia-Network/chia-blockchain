@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import multiprocessing
@@ -9,10 +10,10 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
 
 import aiosqlite
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from packaging.version import Version
 
 from chia.consensus.blockchain import AddBlockResult
@@ -36,7 +37,6 @@ from chia.protocols.wallet_protocol import (
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
-from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
@@ -45,12 +45,7 @@ from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.weight_proof import WeightProof
-from chia.util.config import (
-    WALLET_PEERS_PATH_KEY_DEPRECATED,
-    lock_and_load_config,
-    process_config_start_method,
-    save_config,
-)
+from chia.util.config import lock_and_load_config, process_config_start_method, save_config
 from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
@@ -110,6 +105,11 @@ class Balance(Streamable):
 
 @dataclasses.dataclass
 class WalletNode:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("WalletNode", None)
+
     config: Dict[str, Any]
     root_path: Path
     constants: ConsensusConstants
@@ -145,6 +145,15 @@ class WalletNode:
     _retry_failed_states_task: Optional[asyncio.Task[None]] = None
     _secondary_peer_sync_task: Optional[asyncio.Task[None]] = None
     _tx_messages_in_progress: Dict[bytes32, List[bytes32]] = dataclasses.field(default_factory=dict)
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        await self._start()
+        try:
+            yield
+        finally:
+            self._close()
+            await self._await_closed()
 
     @property
     def keychain_proxy(self) -> KeychainProxy:
@@ -285,7 +294,6 @@ class WalletNode:
             "trade_record_times",
             "tx_times",
             "pool_state_transitions",
-            "singletons",
             "singleton_records",
             "mirrors",
             "launchers",
@@ -660,14 +668,7 @@ class WalletNode:
             self.wallet_peers = WalletPeers(
                 self.server,
                 self.config["target_peer_count"],
-                PeerStoreResolver(
-                    self.root_path,
-                    self.config,
-                    selected_network=network_name,
-                    peers_file_path_key="wallet_peers_file_path",
-                    legacy_peer_db_path_key=WALLET_PEERS_PATH_KEY_DEPRECATED,
-                    default_peers_file_path="wallet/db/wallet_peers.dat",
-                ),
+                self.root_path / Path(self.config["wallet_peers_file_path"]),
                 self.config["introducer_peer"],
                 self.config.get("dns_servers", ["dns-introducer.chia.net"]),
                 self.config["peer_connect_interval"],
@@ -677,7 +678,7 @@ class WalletNode:
             )
             asyncio.create_task(self.wallet_peers.start())
 
-    def on_disconnect(self, peer: WSChiaConnection) -> None:
+    async def on_disconnect(self, peer: WSChiaConnection) -> None:
         if self.is_trusted(peer):
             self.local_node_synced = False
             self.initialize_wallet_peers()

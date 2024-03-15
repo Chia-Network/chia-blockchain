@@ -342,6 +342,25 @@ class BlockStore:
             ret.append(all_blocks[hh])
         return ret
 
+    async def get_prev_hash(self, header_hash: bytes32) -> bytes32:
+        """
+        Returns the header hash preceeding the input header hash.
+        Throws an exception if the block is not present
+        """
+        cached = self.block_cache.get(header_hash)
+        if cached is not None:
+            return cached.prev_header_hash
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT prev_hash FROM full_blocks WHERE header_hash=?",
+                (header_hash,),
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row is None:
+                    raise KeyError("missing block in chain")
+                return bytes32(row[0])
+
     async def get_block_bytes_by_hash(self, header_hashes: List[bytes32]) -> List[bytes]:
         """
         Returns a list of Full Blocks block blobs, ordered by the same order in which header_hashes are passed in.

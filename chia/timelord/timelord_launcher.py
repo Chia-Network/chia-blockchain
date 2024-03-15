@@ -88,8 +88,11 @@ async def spawn_process(
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
             resolved = await resolve(host, prefer_ipv6=prefer_ipv6)
-            proc = await asyncio.create_subprocess_shell(
-                f"{basename} {resolved} {port} {counter}",
+            proc = await asyncio.create_subprocess_exec(
+                os.fspath(basename),
+                str(resolved),
+                str(port),
+                str(counter),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env={"PATH": os.fspath(dirname)},

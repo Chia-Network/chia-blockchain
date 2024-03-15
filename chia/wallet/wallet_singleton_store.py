@@ -99,9 +99,7 @@ class WalletSingletonStore:
 
         # get details for singleton record
         conditions = conditions_dict_for_solution(
-            coin_state.puzzle_reveal.to_program(),
-            coin_state.solution.to_program(),
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            coin_state.puzzle_reveal, coin_state.solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
         )
 
         cc_cond = [cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1][0]
@@ -113,9 +111,11 @@ class WalletSingletonStore:
 
         lineage_bytes = [x.as_atom() for x in coin_state.solution.to_program().first().as_iter()]
         if len(lineage_bytes) == 2:
-            lineage_proof = LineageProof(lineage_bytes[0], None, int_from_bytes(lineage_bytes[1]))
+            lineage_proof = LineageProof(bytes32(lineage_bytes[0]), None, int_from_bytes(lineage_bytes[1]))
         else:
-            lineage_proof = LineageProof(lineage_bytes[0], lineage_bytes[1], int_from_bytes(lineage_bytes[2]))
+            lineage_proof = LineageProof(
+                bytes32(lineage_bytes[0]), bytes32(lineage_bytes[1]), int_from_bytes(lineage_bytes[2])
+            )
         # Create and save the new singleton record
         new_record = SingletonRecord(
             coin, singleton_id, wallet_id, coin_state, inner_puz.get_tree_hash(), pending, 0, lineage_proof, None

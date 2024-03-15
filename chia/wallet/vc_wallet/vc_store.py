@@ -169,7 +169,7 @@ class VCStore:
                     record.vc.coin.name().hex(),
                     record.vc.coin.parent_coin_info.hex(),
                     record.vc.coin.puzzle_hash.hex(),
-                    bytes(uint64(record.vc.coin.amount)),
+                    uint64(record.vc.coin.amount).stream_to_bytes(),
                     bytes(record.vc.singleton_lineage_proof),
                     bytes(record.vc.eml_lineage_proof),
                     record.vc.inner_puzzle_hash.hex(),

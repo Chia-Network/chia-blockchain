@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from typing import Any, Callable, Dict, Set, Tuple
+from typing import Any, Callable, Dict, Optional, Set, Tuple, Type
 
 from chia_rs import ALLOW_BACKREFS, run_chia_program, tree_hash
 from clvm import SExp
@@ -47,6 +47,16 @@ class Program(SExp):
     @classmethod
     def fromhex(cls, hexstr: str) -> Program:
         return cls.from_bytes(hexstr_to_bytes(hexstr))
+
+    @classmethod
+    def from_json_dict(cls: Type[Program], json_dict: Any) -> Program:
+        if isinstance(json_dict, cls):
+            return json_dict
+        item = hexstr_to_bytes(json_dict)
+        return cls.from_bytes(item)
+
+    def to_json_dict(self) -> str:
+        return f"0x{self}"
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
@@ -176,6 +186,12 @@ class Program(SExp):
 
     def as_int(self) -> int:
         return int_from_bytes(self.as_atom())
+
+    def as_atom(self) -> bytes:
+        ret: Optional[bytes] = self.atom
+        if ret is None:
+            raise ValueError("expected atom")
+        return ret
 
     def __deepcopy__(self, memo):
         return type(self).from_bytes(bytes(self))

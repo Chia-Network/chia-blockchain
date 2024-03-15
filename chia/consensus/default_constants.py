@@ -43,8 +43,8 @@ DEFAULT_CONSTANTS = ConsensusConstants(
         "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
     ),
     MAX_VDF_WITNESS_SIZE=64,
-    # Size of mempool = 50x the size of block
-    MEMPOOL_BLOCK_BUFFER=50,
+    # Size of mempool = 10x the size of block
+    MEMPOOL_BLOCK_BUFFER=10,
     # Max coin amount, fits into 64 bits
     MAX_COIN_AMOUNT=uint64((1 << 64) - 1),
     # Max block cost in clvm cost units
@@ -54,13 +54,15 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     WEIGHT_PROOF_THRESHOLD=uint8(2),
     BLOCKS_CACHE_SIZE=uint32(4608 + (128 * 4)),
     WEIGHT_PROOF_RECENT_BLOCKS=uint32(1000),
-    MAX_BLOCK_COUNT_PER_REQUESTS=uint32(32),  # Allow up to 32 blocks per request
+    # Allow up to 33 blocks per request. This defines the max allowed difference
+    # between start and end in the block request message. But the range is
+    # inclusive, so the max allowed range of 32 is a request for 33 blocks
+    # (which is allowed)
+    MAX_BLOCK_COUNT_PER_REQUESTS=uint32(32),
     MAX_GENERATOR_SIZE=uint32(1000000),
     MAX_GENERATOR_REF_LIST_SIZE=uint32(512),  # Number of references allowed in the block generator ref list
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
     SOFT_FORK2_HEIGHT=uint32(0),
-    # November 14, 2023
-    SOFT_FORK3_HEIGHT=uint32(4510000),
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
     HARD_FORK_FIX_HEIGHT=uint32(5496000),
@@ -80,8 +82,6 @@ def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None
     # these numbers are supposed to match initial-config.yaml
     if "SOFT_FORK2_HEIGHT" not in overrides:
         overrides["SOFT_FORK2_HEIGHT"] = 3000000
-    if "SOFT_FORK3_HEIGHT" not in overrides:
-        overrides["SOFT_FORK3_HEIGHT"] = 2997292
     if "HARD_FORK_HEIGHT" not in overrides:
         overrides["HARD_FORK_HEIGHT"] = 2997292
     if "HARD_FORK_FIX_HEIGHT" not in overrides:

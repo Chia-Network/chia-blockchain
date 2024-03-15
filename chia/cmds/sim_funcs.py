@@ -8,7 +8,7 @@ from random import randint
 from typing import Any, Dict, List, Optional
 
 from aiohttp import ClientConnectorError
-from blspy import PrivateKey
+from chia_rs import PrivateKey
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.start_funcs import async_start

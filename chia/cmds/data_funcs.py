@@ -70,12 +70,43 @@ async def update_data_store_cmd(
     changelist: List[Dict[str, str]],
     fee: Optional[str],
     fingerprint: Optional[int],
-) -> None:
+    submit_on_chain: bool,
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     store_id_bytes = bytes32.from_hexstr(store_id)
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
-    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.update_data_store(store_id=store_id_bytes, changelist=changelist, fee=final_fee)
+    res = dict()
+
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.update_data_store(
+            store_id=store_id_bytes,
+            changelist=changelist,
+            fee=final_fee,
+            submit_on_chain=submit_on_chain,
+        )
         print(json.dumps(res, indent=4, sort_keys=True))
+
+    return res
+
+
+async def submit_pending_root_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+    fee: Optional[str],
+    fingerprint: Optional[int],
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
+    res = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.submit_pending_root(
+            store_id=store_id_bytes,
+            fee=final_fee,
+        )
+        print(json.dumps(res, indent=4, sort_keys=True))
+
+    return res
 
 
 async def get_keys_cmd(
@@ -83,12 +114,20 @@ async def get_keys_cmd(
     store_id: str,
     root_hash: Optional[str],
     fingerprint: Optional[int],
-) -> None:
+    page: Optional[int],
+    max_page_size: Optional[int],
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     store_id_bytes = bytes32.from_hexstr(store_id)
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
-    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_keys(store_id=store_id_bytes, root_hash=root_hash_bytes)
+    res = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.get_keys(
+            store_id=store_id_bytes, root_hash=root_hash_bytes, page=page, max_page_size=max_page_size
+        )
         print(json.dumps(res, indent=4, sort_keys=True))
+
+    return res
 
 
 async def get_keys_values_cmd(
@@ -96,12 +135,20 @@ async def get_keys_values_cmd(
     store_id: str,
     root_hash: Optional[str],
     fingerprint: Optional[int],
-) -> None:
+    page: Optional[int],
+    max_page_size: Optional[int],
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     store_id_bytes = bytes32.from_hexstr(store_id)
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
-    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_keys_values(store_id=store_id_bytes, root_hash=root_hash_bytes)
+    res = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.get_keys_values(
+            store_id=store_id_bytes, root_hash=root_hash_bytes, page=page, max_page_size=max_page_size
+        )
         print(json.dumps(res, indent=4, sort_keys=True))
+
+    return res
 
 
 async def get_root_cmd(
@@ -157,13 +204,22 @@ async def get_kv_diff_cmd(
     hash_1: str,
     hash_2: str,
     fingerprint: Optional[int],
-) -> None:
+    page: Optional[int],
+    max_page_size: Optional[int],
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     store_id_bytes = bytes32.from_hexstr(store_id)
     hash_1_bytes = bytes32.from_hexstr(hash_1)
     hash_2_bytes = bytes32.from_hexstr(hash_2)
-    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.get_kv_diff(store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes)
+    res = dict()
+
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.get_kv_diff(
+            store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes, page=page, max_page_size=max_page_size
+        )
         print(json.dumps(res, indent=4, sort_keys=True))
+
+    return res
 
 
 async def get_root_history_cmd(
@@ -283,6 +339,35 @@ async def clear_pending_roots(
 ) -> Dict[str, Any]:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
         result = await client.clear_pending_roots(store_id=store_id)
+        print(json.dumps(result, indent=4, sort_keys=True))
+
+    return result
+
+
+async def get_proof_cmd(
+    store_id: bytes32,
+    key_strings: List[str],
+    rpc_port: Optional[int],
+    root_path: Optional[Path] = None,
+    fingerprint: Optional[int] = None,
+) -> Dict[str, Any]:
+    result = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        result = await client.get_proof(store_id=store_id, keys=[hexstr_to_bytes(key) for key in key_strings])
+        print(json.dumps(result, indent=4, sort_keys=True))
+
+    return result
+
+
+async def verify_proof_cmd(
+    proof: Dict[str, Any],
+    rpc_port: Optional[int],
+    root_path: Optional[Path] = None,
+    fingerprint: Optional[int] = None,
+) -> Dict[str, Any]:
+    result = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        result = await client.verify_proof(proof=proof)
         print(json.dumps(result, indent=4, sort_keys=True))
 
     return result

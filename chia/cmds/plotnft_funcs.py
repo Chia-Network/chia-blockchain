@@ -106,7 +106,7 @@ async def create(
                 start = time.time()
                 while time.time() - start < 10:
                     await asyncio.sleep(0.1)
-                    tx = await wallet_client.get_transaction(1, tx_record.name)
+                    tx = await wallet_client.get_transaction(tx_record.name)
                     if len(tx.sent_to) > 0:
                         print(transaction_submitted_msg(tx))
                         print(transaction_status_msg(fingerprint, tx_record.name))
@@ -272,7 +272,7 @@ async def submit_tx_with_confirmation(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(1, tx_record.name)
+                tx = await wallet_client.get_transaction(tx_record.name)
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_record.name))
