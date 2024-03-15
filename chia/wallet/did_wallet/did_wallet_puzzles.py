@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Iterator, List, Optional, Tuple, Union, cast
+from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 from chia_rs import G1Element
 
@@ -132,8 +132,7 @@ def create_recovery_message_puzzle(recovering_coin_id: bytes32, newpuz: bytes32,
             ],
         )
     )
-    # TODO: Remove cast when we have proper hinting for this
-    return cast(Program, puzzle)
+    return puzzle
 
 
 def create_spend_for_message(
@@ -163,8 +162,7 @@ def match_did_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[P
         if mod == SINGLETON_TOP_LAYER_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DID_INNERPUZ_MOD:
-                # TODO: Remove cast when we have clvm type hinting for this
-                return cast(Iterator[Program], curried_args.as_iter())
+                return curried_args.as_iter()
     except Exception:
         import traceback
 
@@ -194,8 +192,7 @@ def metadata_to_program(metadata: Dict[str, str]) -> Program:
     kv_list = []
     for key, value in metadata.items():
         kv_list.append((key, value))
-    # TODO: Remove cast when we have proper hinting for this
-    return cast(Program, Program.to(kv_list))
+    return Program.to(kv_list)
 
 
 def did_program_to_metadata(program: Program) -> Dict[str, str]:

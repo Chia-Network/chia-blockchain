@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple
 
 from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
@@ -237,8 +237,7 @@ def create_ownership_layer_transfer_solution(
     log.debug("Condition list raw: %r", condition_list)
     solution = Program.to([[solution_for_conditions(condition_list)]])
     log.debug("Generated transfer solution: %s", solution)
-    # TODO: Remove cast when we improve typing
-    return cast(Program, solution)
+    return solution
 
 
 def get_metadata_and_phs(unft: UncurriedNFT, solution: SerializedProgram) -> Tuple[Program, bytes32]:

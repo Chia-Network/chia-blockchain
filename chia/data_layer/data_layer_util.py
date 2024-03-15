@@ -42,7 +42,7 @@ def leaf_hash(key: bytes, value: bytes) -> bytes32:
 
 
 def key_hash(key: bytes) -> bytes32:
-    return Program.to(key).get_tree_hash()  # type: ignore[no-any-return]
+    return Program.to(key).get_tree_hash()
 
 
 @dataclasses.dataclass(frozen=True)
