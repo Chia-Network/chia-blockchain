@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import contextlib
+import json
 from typing import AsyncIterator, Iterator, List, Optional, Tuple, Type, TypeVar
 
 import aiohttp
 import anyio
 import pytest
-import json
 
 from chia._tests.util.misc import RecordingWebServer
 from chia.types.blockchain_format.program import Program
@@ -18,12 +18,12 @@ from chia.util.misc import (
     ValuedEvent,
     format_bytes,
     format_minutes,
+    load_plugin_configurations,
     satisfies_hint,
     split_async_manager,
     split_manager,
     to_batches,
     validate_directory_writable,
-    load_plugin_configurations
 )
 from chia.util.timing import adjusted_timeout, backoff_times
 
