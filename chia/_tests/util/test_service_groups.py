@@ -10,7 +10,6 @@ def test_services_for_groups() -> None:
         i += 1
     assert i == 1
 
-    i = 0
     for _ in services_for_groups(["daemon"]):
-        i += 1
-    assert i == 0
+        # The loop should never be run
+        assert False  # pragma: no cover
