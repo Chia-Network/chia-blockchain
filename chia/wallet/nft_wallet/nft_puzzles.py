@@ -250,20 +250,22 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: SerializedProgram) -> Tup
             continue
         condition_code = condition.first().as_int()
         log.debug("Checking condition code: %r", condition_code)
-        atom = condition.rest().rest().first().atom
-        assert atom is not None
         if condition_code == -24:
             # metadata update
             metadata = update_metadata(metadata, condition)
             metadata = Program.to(metadata)
-        elif condition_code == 51 and int_from_bytes(atom) == 1:
-            # destination puzhash
-            if puzhash_for_derivation is not None:
-                # ignore duplicated create coin conditions
-                continue
-            memo = bytes32(condition.as_python()[-1][0])
-            puzhash_for_derivation = memo
-            log.debug("Got back puzhash from solution: %s", puzhash_for_derivation)
+        else:
+            atom = condition.rest().rest().first().atom
+            assert atom is not None
+
+            if condition_code == 51 and int_from_bytes(atom) == 1:
+                # destination puzhash
+                if puzhash_for_derivation is not None:
+                    # ignore duplicated create coin conditions
+                    continue
+                memo = bytes32(condition.as_python()[-1][0])
+                puzhash_for_derivation = memo
+                log.debug("Got back puzhash from solution: %s", puzhash_for_derivation)
     assert puzhash_for_derivation
     return metadata, puzhash_for_derivation
 

@@ -105,12 +105,6 @@ class UncurriedNFT(Streamable):
         try:
             (singleton_struct, nft_state_layer) = curried_args.as_iter()
             singleton_mod_hash = singleton_struct.first()
-
-            # singleton_mod_hash: Optional[bytes32]
-            # if atom is None:
-            #     singleton_mod_hash = None
-            # else:
-            #     singleton_mod_hash = bytes32(atom)
             singleton_launcher_id = singleton_struct.rest().first()
             launcher_puzhash = singleton_struct.rest().rest()
         except ValueError as e:
