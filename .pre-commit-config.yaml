@@ -61,6 +61,13 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
+      - id: shielding
+        name: Check for proper async cancellation shielding
+        entry: ./activated.py chia dev check shielding
+        language: system
+        pass_filenames: false
+  - repo: local
+    hooks:
       - id: build mypy.ini
         name: build mypy.ini
         entry: ./activated.py python manage-mypy.py build-mypy-ini
