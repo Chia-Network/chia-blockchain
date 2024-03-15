@@ -19,8 +19,7 @@ class InvalidTargetWorkerCountError(Exception):
 
 
 class WorkerCallable(Protocol):
-    async def __call__(self, worker_id: int) -> object:
-        ...
+    async def __call__(self, worker_id: int) -> object: ...
 
 
 J = TypeVar("J")
@@ -31,18 +30,15 @@ T_contra = TypeVar("T_contra", contravariant=True)
 
 
 class QueuedWorkerCallable(Protocol[T, T_co]):
-    async def __call__(self, worker_id: int, job: Job[T]) -> T_co:
-        ...
+    async def __call__(self, worker_id: int, job: Job[T]) -> T_co: ...
 
 
 class JobQueueProtocol(Protocol[T_co]):
-    async def get(self) -> T_co:
-        ...
+    async def get(self) -> T_co: ...
 
 
 class ResultQueueProtocol(Protocol[T_contra]):
-    async def put(self, item: T_contra) -> None:
-        ...
+    async def put(self, item: T_contra) -> None: ...
 
 
 # TODO: how does this compare to just using a future
