@@ -34,7 +34,7 @@ def create_innerpuz(
     num_of_backup_ids_needed: uint64,
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
-    recovery_list_hash: Optional[bytes32] = None,
+    recovery_list_hash: Optional[Program] = None,
 ) -> Program:
     """
     Create DID inner puzzle
@@ -48,7 +48,7 @@ def create_innerpuz(
     Note: Receiving a standard P2 puzzle hash wouldn't calculate a valid puzzle, but
     that can be useful if calling `.get_tree_hash_precalc()` on it.
     """
-    backup_ids_hash = Program.to(recovery_list).get_tree_hash()
+    backup_ids_hash: Union[Program, bytes32] = Program.to(recovery_list).get_tree_hash()
     if recovery_list_hash is not None:
         backup_ids_hash = recovery_list_hash
     singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))

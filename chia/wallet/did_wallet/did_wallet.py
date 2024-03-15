@@ -1170,21 +1170,15 @@ class DIDWallet:
         assert self.did_info.current_inner is not None
         uncurried_args = uncurry_innerpuz(self.did_info.current_inner)
         assert uncurried_args is not None
-        old_recovery_list: Optional[Program]
-        p2_puzzle, old_recovery_list, _, _, _ = uncurried_args
+        old_recovery_list_hash: Optional[Program] = None
+        p2_puzzle, old_recovery_list_hash, _, _, _ = uncurried_args
         if record is None:
             record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                 p2_puzzle.get_tree_hash()
             )
         if not (self.did_info.num_of_backup_ids_needed > 0 and len(self.did_info.backup_ids) == 0):
             # We have the recovery list, don't reset it
-            old_recovery_list = None
-
-        old_recovery_list_hash: Optional[bytes32]
-        if old_recovery_list is not None:
-            old_recovery_list_hash = bytes32(old_recovery_list)
-        else:
-            old_recovery_list_hash = old_recovery_list
+            old_recovery_list_hash = None
 
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
             p2_puzzle_or_hash=puzzle_for_pk(record.pubkey),
