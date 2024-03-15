@@ -72,6 +72,9 @@ jobs:
 
     - uses: chia-network/actions/activate-venv@main
 
+    - name: Show environment tolls versions
+      run: ./tools/tool-versions.sh
+
     - env:
         CHIA_MANAGE_CLVM_CHECK_USE_CACHE: "false"
         CHIA_MANAGE_MYPY_CHECK_EXCLUSIONS: "true"
