@@ -6,6 +6,7 @@ from typing import AsyncIterator, Iterator, List, Optional, Tuple, Type, TypeVar
 import aiohttp
 import anyio
 import pytest
+import json
 
 from chia.types.blockchain_format.program import Program
 from chia.util.errors import InvalidPathError
@@ -21,6 +22,7 @@ from chia.util.misc import (
     split_manager,
     to_batches,
     validate_directory_writable,
+    load_plugin_configurations
 )
 from chia.util.timing import adjusted_timeout, backoff_times
 from tests.util.misc import RecordingWebServer
@@ -453,7 +455,7 @@ async def test_recording_web_server_specified_response(
 def test_satisfies_hint(obj: T, type_hint: Type[T], expected_result: bool) -> None:
     assert satisfies_hint(obj, type_hint) == expected_result
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_load_plugin_configurations(tmp_path) -> None:
     # Setup test environment
     plugin_type = 'downloaders'
@@ -474,7 +476,7 @@ async def test_load_plugin_configurations(tmp_path) -> None:
 
     assert set(loaded_configs) == set(valid_config), "Should only load valid configurations"
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_load_plugin_configurations_no_configs(tmp_path) -> None:
     # Setup test environment with no config files
     plugin_type = 'uploaders'
