@@ -254,11 +254,11 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: SerializedProgram) -> Tup
             # metadata update
             metadata = update_metadata(metadata, condition)
             metadata = Program.to(metadata)
-        else:
+        elif condition_code == 51:
             atom = condition.rest().rest().first().atom
             assert atom is not None
 
-            if condition_code == 51 and int_from_bytes(atom) == 1:
+            if int_from_bytes(atom) == 1:
                 # destination puzhash
                 if puzhash_for_derivation is not None:
                     # ignore duplicated create coin conditions
