@@ -99,7 +99,7 @@ async def async_main() -> int:
     )
 
     plugins_config = config["data_layer"].get("plugins", {})
-    service_dir = DEFAULT_ROOT_PATH / SERVICE_NAME
+    service_dir = str(DEFAULT_ROOT_PATH / SERVICE_NAME)
 
     old_uploaders = config["data_layer"].get("uploaders", [])
     new_uploaders = plugins_config.get("uploaders", [])

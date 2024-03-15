@@ -574,11 +574,13 @@ class FarmerAPI:
                 SignatureRequestSourceData(
                     uint8(SigningDataKind.FOLIAGE_BLOCK_DATA), bytes(full_node_request.foliage_block_data)
                 ),
-                None
-                if full_node_request.foliage_transaction_block_data is None
-                else SignatureRequestSourceData(
-                    uint8(SigningDataKind.FOLIAGE_TRANSACTION_BLOCK),
-                    bytes(full_node_request.foliage_transaction_block_data),
+                (
+                    None
+                    if full_node_request.foliage_transaction_block_data is None
+                    else SignatureRequestSourceData(
+                        uint8(SigningDataKind.FOLIAGE_TRANSACTION_BLOCK),
+                        bytes(full_node_request.foliage_transaction_block_data),
+                    )
                 ),
             ]
 
