@@ -48,7 +48,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult
+from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
@@ -65,7 +65,6 @@ from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
-from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -88,7 +87,7 @@ from chia.util import cached_bls
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
-from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
+from chia.util.config import process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
@@ -528,14 +527,7 @@ class FullNode:
             self.full_node_peers = FullNodePeers(
                 self.server,
                 self.config["target_outbound_peer_count"],
-                PeerStoreResolver(
-                    self.root_path,
-                    self.config,
-                    selected_network=network_name,
-                    peers_file_path_key="peers_file_path",
-                    legacy_peer_db_path_key=PEER_DB_PATH_KEY_DEPRECATED,
-                    default_peers_file_path="db/peers.dat",
-                ),
+                self.root_path / Path(self.config["peers_file_path"]),
                 self.config["introducer_peer"],
                 dns_servers,
                 self.config["peer_connect_interval"],
@@ -836,7 +828,9 @@ class FullNode:
             else:
                 await self.server.send_to_specific([msg], peer.peer_node_id)
 
-    async def synced(self) -> bool:
+    async def synced(self, block_is_current_at: Optional[uint64] = None) -> bool:
+        if block_is_current_at is None:
+            block_is_current_at = uint64(int(time.time() - 60 * 7))
         if "simulator" in str(self.config.get("selected_network")):
             return True  # sim is always synced because it has no peers
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -846,11 +840,10 @@ class FullNode:
         while curr is not None and not curr.is_transaction_block:
             curr = self.blockchain.try_block_record(curr.prev_hash)
 
-        now = time.time()
         if (
             curr is None
             or curr.timestamp is None
-            or curr.timestamp < uint64(int(now - 60 * 7))
+            or curr.timestamp < block_is_current_at
             or self.sync_store.get_sync_mode()
         ):
             return False
@@ -1482,7 +1475,7 @@ class FullNode:
 
         self.log.info(
             f"🌱 Updated peak to height {record.height}, weight {record.weight}, "
-            f"hh {record.header_hash}, "
+            f"hh {record.header_hash.hex()}, "
             f"forked at {state_change_summary.fork_height}, rh: {record.reward_infusion_new_challenge.hex()}, "
             f"total iters: {record.total_iters}, "
             f"overflow: {record.overflow}, "
@@ -1490,7 +1483,7 @@ class FullNode:
             f"difficulty: {difficulty}, "
             f"sub slot iters: {sub_slot_iters}, "
             f"Generator size: "
-            f"{len(bytes(block.transactions_generator)) if  block.transactions_generator else 'No tx'}, "
+            f"{len(bytes(block.transactions_generator)) if block.transactions_generator else 'No tx'}, "
             f"Generator ref list size: "
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
@@ -1688,20 +1681,27 @@ class FullNode:
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
-            unf_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(unfinished_rh)
+            foliage_hash: Optional[bytes32] = block.foliage.foliage_transaction_block_hash
+            assert foliage_hash is not None
+            unf_entry: Optional[UnfinishedBlockEntry] = self.full_node_store.get_unfinished_block_result(
+                unfinished_rh, foliage_hash
+            )
             if (
-                unf_block is not None
-                and unf_block.transactions_generator is not None
-                and unf_block.foliage_transaction_block == block.foliage_transaction_block
+                unf_entry is not None
+                and unf_entry.unfinished_block is not None
+                and unf_entry.unfinished_block.transactions_generator is not None
+                and unf_entry.unfinished_block.foliage_transaction_block == block.foliage_transaction_block
             ):
                 # We checked that the transaction block is the same, therefore all transactions and the signature
                 # must be identical in the unfinished and finished blocks. We can therefore use the cache.
-                pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
+
+                # this is a transaction block, the foliage hash should be set
+                assert foliage_hash is not None
+                pre_validation_result = unf_entry.result
                 assert pre_validation_result is not None
-                block = dataclasses.replace(
-                    block,
-                    transactions_generator=unf_block.transactions_generator,
-                    transactions_generator_ref_list=unf_block.transactions_generator_ref_list,
+                block = block.replace(
+                    transactions_generator=unf_entry.unfinished_block.transactions_generator,
+                    transactions_generator_ref_list=unf_entry.unfinished_block.transactions_generator_ref_list,
                 )
             else:
                 # We still do not have the correct information for this block, perhaps there is a duplicate block
@@ -1719,12 +1719,15 @@ class FullNode:
                     return None
                 new_block: FullBlock = block_response.block
                 if new_block.foliage_transaction_block != block.foliage_transaction_block:
-                    self.log.warning(f"Received the wrong block for height {block.height} {new_block.header_hash}")
+                    self.log.warning(
+                        f"Received the wrong block for height {block.height} {new_block.header_hash.hex()}"
+                    )
                     return None
                 assert new_block.transactions_generator is not None
 
                 self.log.debug(
-                    f"Wrong info in the cache for bh {new_block.header_hash}, there might be multiple blocks from the "
+                    f"Wrong info in the cache for bh {new_block.header_hash.hex()}, "
+                    f"there might be multiple blocks from the "
                     f"same farmer with the same pospace."
                 )
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
@@ -2493,7 +2496,7 @@ class FullNode:
                     new_subslot = sub_slot.replace(proofs=new_proofs)
                     new_finished_subslots = block.finished_sub_slots
                     new_finished_subslots[index] = new_subslot
-                    new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
+                    new_block = block.replace(finished_sub_slots=new_finished_subslots)
                     break
         if field_vdf == CompressibleVDFField.ICC_EOS_VDF:
             for index, sub_slot in enumerate(block.finished_sub_slots):
@@ -2505,15 +2508,15 @@ class FullNode:
                     new_subslot = sub_slot.replace(proofs=new_proofs)
                     new_finished_subslots = block.finished_sub_slots
                     new_finished_subslots[index] = new_subslot
-                    new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
+                    new_block = block.replace(finished_sub_slots=new_finished_subslots)
                     break
         if field_vdf == CompressibleVDFField.CC_SP_VDF:
             if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
                 assert block.challenge_chain_sp_proof is not None
-                new_block = dataclasses.replace(block, challenge_chain_sp_proof=vdf_proof)
+                new_block = block.replace(challenge_chain_sp_proof=vdf_proof)
         if field_vdf == CompressibleVDFField.CC_IP_VDF:
             if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
-                new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
+                new_block = block.replace(challenge_chain_ip_proof=vdf_proof)
         if new_block is None:
             return False
         async with self.db_wrapper.writer():

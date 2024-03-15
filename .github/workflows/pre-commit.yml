@@ -4,9 +4,9 @@ on:
   pull_request:
   push:
     branches:
-      - 'long_lived/**'
+      - "long_lived/**"
       - main
-      - 'release/**'
+      - "release/**"
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -42,7 +42,7 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: '3.10'
+          - major_dot_minor: "3.10"
         exclude:
           - os:
               matrix: windows
@@ -50,29 +50,29 @@ jobs:
               matrix: arm
 
     steps:
-    - name: Clean workspace
-      uses: Chia-Network/actions/clean-workspace@main
+      - name: Clean workspace
+        uses: Chia-Network/actions/clean-workspace@main
 
-    - uses: Chia-Network/actions/git-mark-workspace-safe@main
+      - uses: Chia-Network/actions/git-mark-workspace-safe@main
 
-    - name: disable git autocrlf
-      run: |
-        git config --global core.autocrlf false
+      - name: disable git autocrlf
+        run: |
+          git config --global core.autocrlf false
 
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - uses: Chia-Network/actions/setup-python@main
-      with:
-        python-version: ${{ matrix.python.major_dot_minor }}
+      - uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
 
-    - uses: ./.github/actions/install
-      with:
-        python-version: ${{ matrix.python.major_dot_minor }}
-        development: true
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+          development: true
 
-    - uses: chia-network/actions/activate-venv@main
+      - uses: chia-network/actions/activate-venv@main
 
-    - env:
-        CHIA_MANAGE_CLVM_CHECK_USE_CACHE: "false"
-        CHIA_MANAGE_MYPY_CHECK_EXCLUSIONS: "true"
-      run: pre-commit run --all-files --verbose
+      - env:
+          CHIA_MANAGE_CLVM_CHECK_USE_CACHE: "false"
+          CHIA_MANAGE_MYPY_CHECK_EXCLUSIONS: "true"
+        run: pre-commit run --all-files --verbose
