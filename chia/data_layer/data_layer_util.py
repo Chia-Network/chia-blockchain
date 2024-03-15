@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
@@ -179,6 +179,9 @@ class TerminalNode:
     # generation: int
     key: bytes
     value: bytes
+
+    # left for now for interface back-compat even though it is constant
+    atom: None = field(init=False, default=None)
 
     @classmethod
     def from_key_value(cls, key: bytes, value: bytes) -> TerminalNode:
