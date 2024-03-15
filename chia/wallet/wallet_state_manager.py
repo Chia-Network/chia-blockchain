@@ -959,9 +959,11 @@ class WalletStateManager:
                             memos,  # Forward memo of the first coin
                         )
                     ],
-                    conditions=extra_conditions
-                    if len(coin_spends) > 0 or fee == 0
-                    else (*extra_conditions, CreateCoinAnnouncement(message)),
+                    conditions=(
+                        extra_conditions
+                        if len(coin_spends) > 0 or fee == 0
+                        else (*extra_conditions, CreateCoinAnnouncement(message))
+                    ),
                 )
                 coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
                 coin_spends.append(coin_spend)
@@ -1440,12 +1442,12 @@ class WalletStateManager:
             old_p2_puzhash,
             new_p2_puzhash,
         )
-        new_derivation_record: Optional[
-            DerivationRecord
-        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(new_p2_puzhash)
-        old_derivation_record: Optional[
-            DerivationRecord
-        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
+        new_derivation_record: Optional[DerivationRecord] = (
+            await self.puzzle_store.get_derivation_record_for_puzzle_hash(new_p2_puzhash)
+        )
+        old_derivation_record: Optional[DerivationRecord] = (
+            await self.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
+        )
         if new_derivation_record is None and old_derivation_record is None:
             self.log.debug(
                 "Cannot find a P2 puzzle hash for NFT:%s, this NFT belongs to others.",
@@ -1518,9 +1520,9 @@ class WalletStateManager:
         assert coin_state.created_height is not None
         is_recipient: Optional[bool] = None
         # Check if the wallet is the sender
-        sender_derivation_record: Optional[
-            DerivationRecord
-        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(metadata.sender_puzzle_hash)
+        sender_derivation_record: Optional[DerivationRecord] = (
+            await self.puzzle_store.get_derivation_record_for_puzzle_hash(metadata.sender_puzzle_hash)
+        )
         # Check if the wallet is the recipient
         recipient_derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
             metadata.recipient_puzzle_hash
@@ -1549,9 +1551,11 @@ class WalletStateManager:
                     tx_record = TransactionRecord(
                         confirmed_at_height=uint32(coin_state.spent_height),
                         created_at_time=created_timestamp,
-                        to_puzzle_hash=metadata.sender_puzzle_hash
-                        if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
-                        else metadata.recipient_puzzle_hash,
+                        to_puzzle_hash=(
+                            metadata.sender_puzzle_hash
+                            if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
+                            else metadata.recipient_puzzle_hash
+                        ),
                         amount=uint64(coin_state.coin.amount),
                         fee_amount=uint64(0),
                         confirmed=True,

@@ -7,10 +7,10 @@ from contextlib import contextmanager
 from subprocess import check_call
 from typing import Iterator
 
+from chia._tests.util.blockchain import persistent_blocks
 from chia.simulator.block_tools import create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.util.keyring_wrapper import KeyringWrapper
-from tests.util.blockchain import persistent_blocks
 
 
 @contextmanager

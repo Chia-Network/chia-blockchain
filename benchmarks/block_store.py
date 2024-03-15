@@ -9,6 +9,17 @@ from time import monotonic
 from typing import List
 
 from benchmarks.utils import setup_db
+from chia._tests.util.benchmarks import (
+    clvm_generator,
+    rand_bytes,
+    rand_class_group_element,
+    rand_g1,
+    rand_g2,
+    rand_hash,
+    rand_vdf,
+    rand_vdf_proof,
+    rewards,
+)
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -20,17 +31,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.util.ints import uint8, uint32, uint64, uint128
-from tests.util.benchmarks import (
-    clvm_generator,
-    rand_bytes,
-    rand_class_group_element,
-    rand_g1,
-    rand_g2,
-    rand_hash,
-    rand_vdf,
-    rand_vdf_proof,
-    rewards,
-)
 
 # to run this benchmark:
 # python -m benchmarks.coin_store

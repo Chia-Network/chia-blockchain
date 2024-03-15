@@ -667,15 +667,17 @@ class WalletRpcApi:
         if include_data:
             response = {
                 "wallets": [
-                    wallet
-                    if wallet.type != WalletType.CRCAT
-                    else {
-                        **wallet.to_json_dict(),
-                        "authorized_providers": [
-                            p.hex() for p in CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).authorized_providers
-                        ],
-                        "flags_needed": CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).proofs_checker.flags,
-                    }
+                    (
+                        wallet
+                        if wallet.type != WalletType.CRCAT
+                        else {
+                            **wallet.to_json_dict(),
+                            "authorized_providers": [
+                                p.hex() for p in CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).authorized_providers
+                            ],
+                            "flags_needed": CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).proofs_checker.flags,
+                        }
+                    )
                     for wallet in response["wallets"]
                 ]
             }
@@ -850,9 +852,9 @@ class WalletRpcApi:
                 "treasury_id": dao_wallet.dao_info.treasury_id,
                 "cat_wallet_id": dao_wallet.dao_info.cat_wallet_id,
                 "dao_cat_wallet_id": dao_wallet.dao_info.dao_cat_wallet_id,
-                "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs]
-                if mode == "new"
-                else [],
+                "transactions": (
+                    [tx.to_json_dict_convenience(self.service.config) for tx in txs] if mode == "new" else []
+                ),
             }
         elif request["wallet_type"] == "nft_wallet":
             for wallet in self.service.wallet_state_manager.wallets.values():
@@ -1463,10 +1465,10 @@ class WalletRpcApi:
     @marshal
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
         if request.ids is None:
-            notifications: List[
-                Notification
-            ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
-                pagination=(request.start, request.end)
+            notifications: List[Notification] = (
+                await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
+                    pagination=(request.start, request.end)
+                )
             )
         else:
             notifications = (
@@ -1914,17 +1916,19 @@ class WalletRpcApi:
             "summary": {
                 **response["summary"],  # type: ignore[dict-item]
                 "infos": {
-                    key: {
-                        **info,
-                        "also": {
-                            **info["also"],
-                            "flags": ProofsChecker.from_program(
-                                uncurry_puzzle(Program(assemble(info["also"]["proofs_checker"])))
-                            ).flags,
-                        },
-                    }
-                    if "also" in info and "proofs_checker" in info["also"]
-                    else info
+                    key: (
+                        {
+                            **info,
+                            "also": {
+                                **info["also"],
+                                "flags": ProofsChecker.from_program(
+                                    uncurry_puzzle(Program(assemble(info["also"]["proofs_checker"])))
+                                ).flags,
+                            },
+                        }
+                        if "also" in info and "proofs_checker" in info["also"]
+                        else info
+                    )
                     for key, info in response["summary"]["infos"].items()  # type: ignore[index]
                 },
             },
@@ -3853,18 +3857,22 @@ class WalletRpcApi:
                         *(
                             AssertCoinAnnouncement(
                                 asserted_id=bytes32.from_hexstr(ca["coin_id"]),
-                                asserted_msg=hexstr_to_bytes(ca["message"])
-                                if request.get("morph_bytes") is None
-                                else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"])),
+                                asserted_msg=(
+                                    hexstr_to_bytes(ca["message"])
+                                    if request.get("morph_bytes") is None
+                                    else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"]))
+                                ),
                             )
                             for ca in request.get("coin_announcements", [])
                         ),
                         *(
                             AssertPuzzleAnnouncement(
                                 asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
-                                asserted_msg=hexstr_to_bytes(pa["message"])
-                                if request.get("morph_bytes") is None
-                                else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"])),
+                                asserted_msg=(
+                                    hexstr_to_bytes(pa["message"])
+                                    if request.get("morph_bytes") is None
+                                    else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"]))
+                                ),
                             )
                             for pa in request.get("puzzle_announcements", [])
                         ),
@@ -3888,18 +3896,22 @@ class WalletRpcApi:
                         *(
                             AssertCoinAnnouncement(
                                 asserted_id=bytes32.from_hexstr(ca["coin_id"]),
-                                asserted_msg=hexstr_to_bytes(ca["message"])
-                                if request.get("morph_bytes") is None
-                                else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"])),
+                                asserted_msg=(
+                                    hexstr_to_bytes(ca["message"])
+                                    if request.get("morph_bytes") is None
+                                    else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"]))
+                                ),
                             )
                             for ca in request.get("coin_announcements", [])
                         ),
                         *(
                             AssertPuzzleAnnouncement(
                                 asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
-                                asserted_msg=hexstr_to_bytes(pa["message"])
-                                if request.get("morph_bytes") is None
-                                else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"])),
+                                asserted_msg=(
+                                    hexstr_to_bytes(pa["message"])
+                                    if request.get("morph_bytes") is None
+                                    else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"]))
+                                ),
                             )
                             for pa in request.get("puzzle_announcements", [])
                         ),
