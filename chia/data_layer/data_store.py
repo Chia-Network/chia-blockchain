@@ -160,6 +160,11 @@ class DataStore:
                     CREATE INDEX IF NOT EXISTS node_hash ON root(node_hash)
                     """
                 )
+                await writer.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS node_key_index ON node(key)
+                    """
+                )
 
             yield self
 
@@ -1508,12 +1513,50 @@ class DataStore:
             if status == Status.COMMITTED:
                 await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
 
+    async def get_node_by_key_latest_generation(self, key: bytes, tree_id: bytes32) -> TerminalNode:
+        async with self.db_wrapper.reader() as reader:
+            root = await self.get_tree_root(tree_id=tree_id)
+            if root.node_hash is None:
+                raise KeyNotFoundError(key=key)
+
+            cursor = await reader.execute(
+                """
+                SELECT a.hash FROM ancestors a
+                JOIN node n ON a.hash = n.hash
+                WHERE n.key = :key
+                AND a.tree_id = :tree_id
+                ORDER BY a.generation DESC
+                LIMIT 1
+                """,
+                {"key": key, "tree_id": tree_id},
+            )
+
+            row = await cursor.fetchone()
+            if row is None:
+                raise KeyNotFoundError(key=key)
+
+            node = await self.get_node(row["hash"])
+            node_hash = node.hash
+            while True:
+                internal_node = await self._get_one_ancestor(node_hash, tree_id)
+                if internal_node is None:
+                    break
+                node_hash = internal_node.hash
+
+            if node_hash != root.node_hash:
+                raise KeyNotFoundError(key=key)
+            assert isinstance(node, TerminalNode)
+            return node
+
     async def get_node_by_key(
         self,
         key: bytes,
         tree_id: bytes32,
         root_hash: Optional[bytes32] = None,
     ) -> TerminalNode:
+        if root_hash is None:
+            return await self.get_node_by_key_latest_generation(key, tree_id)
+
         nodes = await self.get_keys_values(tree_id=tree_id, root_hash=root_hash)
 
         for node in nodes:
