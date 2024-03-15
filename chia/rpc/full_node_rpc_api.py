@@ -106,7 +106,6 @@ class FullNodeRpcApi:
             # this function is just here for backwards-compatibility. It will probably
             # be removed in the future
             "/get_initial_freeze_period": self.get_initial_freeze_period,
-            "/get_network_info": self.get_network_info,
             "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
             # Coins
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
@@ -284,11 +283,6 @@ class FullNodeRpcApi:
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
         return response
-
-    async def get_network_info(self, _: Dict[str, Any]) -> EndpointResult:
-        network_name = self.service.config["selected_network"]
-        address_prefix = self.service.config["network_overrides"]["config"][network_name]["address_prefix"]
-        return {"network_name": network_name, "network_prefix": address_prefix}
 
     async def get_recent_signage_point_or_eos(self, request: Dict[str, Any]) -> EndpointResult:
         if "sp_hash" not in request:

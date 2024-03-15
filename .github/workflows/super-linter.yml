@@ -18,14 +18,14 @@ name: 🚨 GitHub Super Linter
 on:
   push:
     branches:
-      - 'long_lived/**'
+      - "long_lived/**"
       - main
-      - 'release/**'
+      - "release/**"
   release:
     types: [published]
   pull_request:
     branches:
-      - '**'
+      - "**"
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -58,7 +58,7 @@ jobs:
       ################################
       - name: Lint Code Base
         uses: github/super-linter@v5
-#        uses: docker://github/super-linter:v3.10.2
+        #        uses: docker://github/super-linter:v3.10.2
         env:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: main
@@ -81,5 +81,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FILTER_REGEX_EXCLUDE: .*github/ISSUE_TEMPLATE/config.yml
 #          ACTIONS_RUNNER_DEBUG: true
-
-...
