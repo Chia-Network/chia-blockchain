@@ -7,18 +7,15 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 @overload
-def std_hash(b: Union[bytes, SupportsBytes]) -> bytes32:
-    ...
+def std_hash(b: Union[bytes, SupportsBytes]) -> bytes32: ...
 
 
 @overload
-def std_hash(b: Union[bytes, SupportsBytes], skip_bytes_conversion: Literal[False]) -> bytes32:
-    ...
+def std_hash(b: Union[bytes, SupportsBytes], skip_bytes_conversion: Literal[False]) -> bytes32: ...
 
 
 @overload
-def std_hash(b: bytes, skip_bytes_conversion: Literal[True]) -> bytes32:
-    ...
+def std_hash(b: bytes, skip_bytes_conversion: Literal[True]) -> bytes32: ...
 
 
 def std_hash(b: Union[bytes, SupportsBytes], skip_bytes_conversion: bool = False) -> bytes32:

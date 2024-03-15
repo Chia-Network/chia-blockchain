@@ -945,7 +945,7 @@ def validate_finished_header_block(
         number_of_iterations=ip_iters
     ):
         expected = cc_target_vdf_info.replace(number_of_iterations=ip_iters)
-        log.error(f"{header_block.reward_chain_block.challenge_chain_ip_vdf }. expected {expected}")
+        log.error(f"{header_block.reward_chain_block.challenge_chain_ip_vdf}. expected {expected}")
         log.error(f"Block: {header_block}")
         return None, ValidationError(Err.INVALID_CC_IP_VDF)
     if not header_block.challenge_chain_ip_proof.normalized_to_identity and not validate_vdf(

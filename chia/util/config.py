@@ -21,9 +21,6 @@ from chia.server.outbound_message import NodeType
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.lock import Lockfile
 
-PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
-WALLET_PEERS_PATH_KEY_DEPRECATED = "wallet_peers_path"  # replaced by "wallet_peers_file_path"
-
 log = logging.getLogger(__name__)
 
 
