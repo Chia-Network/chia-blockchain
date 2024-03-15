@@ -29,13 +29,11 @@ else:
 
 
 @overload
-def adjusted_timeout(timeout: float) -> float:
-    ...
+def adjusted_timeout(timeout: float) -> float: ...
 
 
 @overload
-def adjusted_timeout(timeout: None) -> None:
-    ...
+def adjusted_timeout(timeout: None) -> None: ...
 
 
 def adjusted_timeout(timeout: Optional[float]) -> Optional[float]:

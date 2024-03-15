@@ -4,9 +4,11 @@ import asyncio
 import contextlib
 import dataclasses
 import functools
+import os
 import signal
 import sys
 from dataclasses import dataclass
+from inspect import getframeinfo, stack
 from pathlib import Path
 from types import FrameType
 from typing import (
@@ -18,15 +20,21 @@ from typing import (
     ContextManager,
     Dict,
     Generic,
+    Iterable,
     Iterator,
     List,
     Optional,
     Sequence,
+    Tuple,
+    Type,
     TypeVar,
     Union,
     final,
+    get_args,
+    get_origin,
 )
 
+import psutil
 from typing_extensions import Protocol
 
 from chia.util.errors import InvalidPathError
@@ -195,8 +203,7 @@ class Handler(Protocol):
         signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class AsyncHandler(Protocol):
@@ -205,8 +212,7 @@ class AsyncHandler(Protocol):
         signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 @final
@@ -263,8 +269,19 @@ class SignalHandlers:
         loop = asyncio.get_event_loop()
 
         if sys.platform == "win32" or sys.platform == "cygwin":
+
+            def ensure_signal_object_not_int(
+                signal_: int,
+                stack_frame: Optional[FrameType],
+                *,
+                handler: Handler = handler,
+                loop: asyncio.AbstractEventLoop = loop,
+            ) -> None:
+                signal_ = signal.Signals(signal_)
+                handler(signal_=signal_, stack_frame=stack_frame, loop=loop)
+
             for signal_ in [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]:
-                signal.signal(signal_, functools.partial(handler, loop=loop))
+                signal.signal(signal_, ensure_signal_object_not_int)
         else:
             for signal_ in [signal.SIGINT, signal.SIGTERM]:
                 loop.add_signal_handler(
@@ -399,3 +416,59 @@ class ValuedEvent(Generic[T]):
         if isinstance(self._value, ValuedEventSentinel):
             raise Exception("Value not set despite event being set")
         return self._value
+
+
+def available_logical_cores() -> int:
+    if sys.platform == "darwin":
+        count = os.cpu_count()
+        assert count is not None
+        return count
+
+    return len(psutil.Process().cpu_affinity())
+
+
+def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:
+    caller = getframeinfo(stack()[distance + 1][0])
+
+    caller_path = Path(caller.filename)
+    options: List[str] = [caller_path.as_posix()]
+    for path in relative_to:
+        try:
+            options.append(caller_path.relative_to(path).as_posix())
+        except ValueError:
+            pass
+
+    return min(options, key=len), caller.lineno
+
+
+def satisfies_hint(obj: T, type_hint: Type[T]) -> bool:
+    """
+    Check if an object satisfies a type hint.
+    This is a simplified version of `isinstance` that also handles generic types.
+    """
+    # Start from the initial type hint
+    object_hint_pairs = [(obj, type_hint)]
+    while len(object_hint_pairs) > 0:
+        obj, type_hint = object_hint_pairs.pop()
+        origin = get_origin(type_hint)
+        args = get_args(type_hint)
+        if origin:
+            # Handle generic types
+            if not isinstance(obj, origin):
+                return False
+            if len(args) > 0:
+                # Tuple[T, ...] gets handled just like List[T]
+                if origin is list or (origin is tuple and args[-1] is Ellipsis):
+                    object_hint_pairs.extend((item, args[0]) for item in obj)
+                elif origin is tuple:
+                    object_hint_pairs.extend((item, arg) for item, arg in zip(obj, args))
+                elif origin is dict:
+                    object_hint_pairs.extend((k, args[0]) for k in obj.keys())
+                    object_hint_pairs.extend((v, args[1]) for v in obj.values())
+                else:
+                    raise NotImplementedError(f"Type {origin} is not yet supported")
+        else:
+            # Handle concrete types
+            if type(obj) is not type_hint:
+                return False
+    return True

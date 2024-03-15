@@ -99,9 +99,7 @@ class WalletSingletonStore:
 
         # get details for singleton record
         conditions = conditions_dict_for_solution(
-            coin_state.puzzle_reveal.to_program(),
-            coin_state.solution.to_program(),
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            coin_state.puzzle_reveal, coin_state.solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
         )
 
         cc_cond = [cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1][0]

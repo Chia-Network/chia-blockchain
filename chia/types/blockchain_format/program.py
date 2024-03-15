@@ -53,6 +53,16 @@ class Program(SExp):
     def fromhex(cls: Type[T_Program], hexstr: str) -> T_Program:
         return cls.from_bytes(hexstr_to_bytes(hexstr))
 
+    @classmethod
+    def from_json_dict(cls: Type[Program], json_dict: Any) -> Program:
+        if isinstance(json_dict, cls):
+            return json_dict
+        item = hexstr_to_bytes(json_dict)
+        return cls.from_bytes(item)
+
+    def to_json_dict(self) -> str:
+        return f"0x{self}"
+
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
         self.stream(f)  # noqa

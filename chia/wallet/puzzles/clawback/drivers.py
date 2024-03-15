@@ -122,7 +122,9 @@ def create_merkle_solution(
 
 
 def match_clawback_puzzle(
-    uncurried: UncurriedPuzzle, inner_puzzle: Program, inner_solution: Program
+    uncurried: UncurriedPuzzle,
+    inner_puzzle: Union[Program, SerializedProgram],
+    inner_solution: Union[Program, SerializedProgram],
 ) -> Optional[ClawbackMetadata]:
     # Check if the inner puzzle is a P2 puzzle
     if MOD != uncurried.mod:

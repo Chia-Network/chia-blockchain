@@ -106,7 +106,7 @@ async def run_mempool_benchmark() -> None:
 
         # add 10 transactions to the mempool
         for i in range(10):
-            coin = Coin(make_hash(height * 10 + i), IDENTITY_PUZZLE_HASH, height * 100000 + i * 100)
+            coin = Coin(make_hash(height * 10 + i), IDENTITY_PUZZLE_HASH, uint64(height * 100000 + i * 100))
             sb = make_spend_bundle(coin, height)
             # make this coin available via get_coin_record, which is called
             # by mempool_manager

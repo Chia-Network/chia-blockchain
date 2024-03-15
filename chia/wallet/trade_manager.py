@@ -5,7 +5,7 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 
-from typing_extensions import Literal
+from typing_extensions import Literal, Never
 
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.protocols.wallet_protocol import CoinState
@@ -239,7 +239,7 @@ class TradeManager:
         secure: bool = True,  # Cancel with a transaction on chain
         trade_cache: Dict[bytes32, TradeRecord] = {},  # Optional pre-fetched trade records for optimization
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Optional[List[TransactionRecord]]:
+    ) -> List[TransactionRecord]:
         """This will create a transaction that includes coins that were offered"""
 
         all_txs: List[TransactionRecord] = []
@@ -293,7 +293,6 @@ class TradeManager:
                         ),
                         fee=fee_to_pay,
                         coins=selected_coins,
-                        ignore_max_send_amount=True,
                         extra_conditions=extra_conditions,
                     )
                     if tx is not None and tx.spend_bundle is not None:
@@ -310,7 +309,6 @@ class TradeManager:
                         ),
                         fee=fee_to_pay,
                         coins={coin},
-                        ignore_max_send_amount=True,
                         extra_conditions=extra_conditions,
                     )
                     for tx in txs:
@@ -347,8 +345,8 @@ class TradeManager:
         # Aggregate spend bundles to the first tx
         if len(all_txs) > 0:
             all_txs[0] = dataclasses.replace(all_txs[0], spend_bundle=SpendBundle.aggregate(bundles))
-        for tx in all_txs:
-            await self.wallet_state_manager.add_pending_transaction(tx_record=dataclasses.replace(tx, fee_amount=fee))
+
+        all_txs = [dataclasses.replace(tx, fee_amount=fee) for tx in all_txs]
 
         return all_txs
 
@@ -376,7 +374,9 @@ class TradeManager:
         validate_only: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         taking: bool = False,
-    ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
+    ) -> Union[
+        Tuple[Literal[True], TradeRecord, List[TransactionRecord], None], Tuple[Literal[False], None, List[Never], str]
+    ]:
         if driver_dict is None:
             driver_dict = {}
         if solver is None:
@@ -393,7 +393,7 @@ class TradeManager:
         if not result[0] or result[1] is None:
             raise Exception(f"Error creating offer: {result[2]}")
 
-        success, created_offer, error = result
+        success, created_offer, tx_records, error = result
 
         now = uint64(int(time.time()))
         trade_offer: TradeRecord = TradeRecord(
@@ -414,7 +414,7 @@ class TradeManager:
         if success is True and trade_offer is not None and not validate_only:
             await self.save_trade(trade_offer, created_offer)
 
-        return success, trade_offer, error
+        return success, trade_offer, tx_records, error
 
     async def _create_offer_for_ids(
         self,
@@ -425,7 +425,9 @@ class TradeManager:
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
         taking: bool = False,
-    ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
+    ) -> Union[
+        Tuple[Literal[True], Offer, List[TransactionRecord], None], Tuple[Literal[False], None, List[Never], str]
+    ]:
         """
         Offer is dictionary of wallet ids and amount
         """
@@ -514,17 +516,19 @@ class TradeManager:
                 requested_payments, driver_dict, taking
             )
 
-            potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
-                offer_dict_no_ints,
-                driver_dict,
-                tx_config,
-                solver,
-                fee,
-                extra_conditions,
+            potential_special_offer: Optional[Tuple[Offer, List[TransactionRecord]]] = (
+                await self.check_for_special_offer_making(
+                    offer_dict_no_ints,
+                    driver_dict,
+                    tx_config,
+                    solver,
+                    fee,
+                    extra_conditions,
+                )
             )
 
             if potential_special_offer is not None:
-                return True, potential_special_offer, None
+                return True, potential_special_offer[0], potential_special_offer[1], None
 
             all_coins: List[Coin] = [c for coins in coins_to_offer.values() for c in coins]
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
@@ -550,8 +554,7 @@ class TradeManager:
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcements_to_assert),
                     )
                     all_transactions.append(tx)
                 elif wallet.type() == WalletType.NFT:
@@ -565,8 +568,7 @@ class TradeManager:
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcements_to_assert),
                     )
                     all_transactions.extend(txs)
                 else:
@@ -577,8 +579,7 @@ class TradeManager:
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcements_to_assert),
                         add_authorizations_to_cr_cats=False,
                     )
                     all_transactions.extend(txs)
@@ -591,11 +592,11 @@ class TradeManager:
             )
 
             offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
-            return True, offer, None
+            return True, offer, all_transactions, None
 
         except Exception as e:
             self.log.exception("Error creating trade offer")
-            return False, None, str(e)
+            return False, None, [], str(e)
 
     async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
         for key in offer.arbitrage():
@@ -791,7 +792,7 @@ class TradeManager:
         if not result[0] or result[1] is None:
             raise ValueError(result[2])
 
-        success, take_offer, error = result
+        success, take_offer, _, error = result
 
         complete_offer, valid_spend_solver = await self.check_for_final_modifications(
             Offer.aggregate([offer, take_offer]), solver, tx_config
@@ -842,9 +843,6 @@ class TradeManager:
             memos=[],
             valid_times=ConditionValidTimes(),
         )
-        await self.wallet_state_manager.add_pending_transaction(push_tx)
-        for tx in tx_records:
-            await self.wallet_state_manager.add_transaction(tx)
 
         return trade_record, [push_tx, *tx_records]
 
@@ -856,7 +854,7 @@ class TradeManager:
         solver: Solver,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Optional[Offer]:
+    ) -> Optional[Tuple[Offer, List[TransactionRecord]]]:
         for puzzle_info in driver_dict.values():
             if (
                 puzzle_info.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value, AssetType.OWNERSHIP.value])
@@ -990,23 +988,25 @@ class TradeManager:
                         raise ValueError("Cannot request CR-CATs that you cannot approve with a VC")  # pragma: no cover
 
             return {
-                asset_id: [
-                    dataclasses.replace(
-                        payment,
-                        puzzle_hash=construct_pending_approval_state(
-                            payment.puzzle_hash, payment.amount
-                        ).get_tree_hash(),
-                    )
-                    for payment in payments
-                ]
-                if asset_id is not None
-                and driver_dict[asset_id].check_type(
+                asset_id: (
                     [
-                        AssetType.CAT.value,
-                        AssetType.CR.value,
+                        dataclasses.replace(
+                            payment,
+                            puzzle_hash=construct_pending_approval_state(
+                                payment.puzzle_hash, payment.amount
+                            ).get_tree_hash(),
+                        )
+                        for payment in payments
                     ]
+                    if asset_id is not None
+                    and driver_dict[asset_id].check_type(
+                        [
+                            AssetType.CAT.value,
+                            AssetType.CR.value,
+                        ]
+                    )
+                    else payments
                 )
-                else payments
                 for asset_id, payments in requested_payments.items()
             }
         else:

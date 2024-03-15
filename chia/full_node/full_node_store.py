@@ -38,6 +38,53 @@ class FullNodeStorePeakResult(Streamable):
     new_infusion_points: List[timelord_protocol.NewInfusionPointVDF]
 
 
+@dataclasses.dataclass
+class UnfinishedBlockEntry:
+    # if this is None, it means we've requested this block but not yet received
+    # it
+    unfinished_block: Optional[UnfinishedBlock]
+    # If this is None, it means we've initiated validation of this block, but it
+    # hasn't completed yet
+    result: Optional[PreValidationResult]
+    height: uint32
+
+
+def find_best_block(
+    result: Dict[Optional[bytes32], UnfinishedBlockEntry]
+) -> Tuple[Optional[bytes32], Optional[UnfinishedBlock]]:
+    """
+    Given a collection of UnfinishedBlocks (all with the same reward block
+    hash), return the "best" one. i.e. the one with the smallest foliage hash.
+    """
+    if len(result) == 0:
+        return None, None
+
+    all_blocks = list(result.items())
+    if len(all_blocks) == 1:
+        foliage_hash, entry = all_blocks[0]
+        # this means we don't have the block yet
+        if entry.unfinished_block is None:
+            return None, None
+        else:
+            return foliage_hash, entry.unfinished_block
+
+    def include_block(item: Tuple[Optional[bytes32], UnfinishedBlockEntry]) -> bool:
+        foliage_hash, entry = item
+        return foliage_hash is not None and entry.unfinished_block is not None
+
+    # if there are unfinished blocks with foliage (i.e. not None) we prefer
+    # those, so drop the first element
+    all_blocks = [e for e in all_blocks if include_block(e)]
+    all_blocks = sorted(all_blocks)
+
+    # we may have filtered out some blocks that we have only requested, but not
+    # yet received.
+    if len(all_blocks) == 0:
+        return None, None
+
+    return all_blocks[0][0], all_blocks[0][1].unfinished_block
+
+
 class FullNodeStore:
     constants: ConsensusConstants
 
@@ -52,7 +99,16 @@ class FullNodeStore:
     seen_unfinished_blocks: Dict[bytes32, None]
 
     # Unfinished blocks, keyed from reward hash
-    unfinished_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock, PreValidationResult]]
+    # There may be multiple different unfinished blocks with the same partial
+    # hash (reward chain block hash). They are stored under their partial hash
+    # though. The inner dictionary uses the foliage hash as the key
+    # The UnfinishedBlockEntry is a placeholder for UnfinishedBlocks we have
+    # requested (but don't have yet) or that we have but haven't completed
+    # validation of (yet).
+    # The inner key (the foliage hash) is Optional, where None either means
+    # it's not a transaction block, or it's a block we learned about via the old
+    # protocol, where all we get is the reward block hash.
+    _unfinished_blocks: Dict[bytes32, Dict[Optional[bytes32], UnfinishedBlockEntry]]
 
     # Finished slots and sps from the peak's slot onwards
     # We store all 32 SPs for each slot, starting as 32 Nones and filling them as we go
@@ -79,9 +135,6 @@ class FullNodeStore:
     recent_signage_points: LRUCache[bytes32, Tuple[SignagePoint, float]]
     recent_eos: LRUCache[bytes32, Tuple[EndOfSubSlotBundle, float]]
 
-    # Partial hashes of unfinished blocks we are requesting
-    requesting_unfinished_blocks: Set[bytes32]
-
     previous_generator: Optional[CompressorArg]
     pending_tx_request: Dict[bytes32, bytes32]  # tx_id: peer_id
     peers_with_tx: Dict[bytes32, Set[bytes32]]  # tx_id: Set[peer_ids}
@@ -95,14 +148,13 @@ class FullNodeStore:
         self.candidate_blocks = {}
         self.candidate_backup_blocks = {}
         self.seen_unfinished_blocks = {}
-        self.unfinished_blocks = {}
+        self._unfinished_blocks = {}
         self.finished_sub_slots = []
         self.future_eos_cache = {}
         self.future_sp_cache = {}
         self.future_ip_cache = {}
         self.recent_signage_points = LRUCache(500)
         self.recent_eos = LRUCache(50)
-        self.requesting_unfinished_blocks = set()
         self.previous_generator = None
         self.future_cache_key_times = {}
         self.constants = constants
@@ -114,6 +166,44 @@ class FullNodeStore:
         self.serialized_wp_message = None
         self.serialized_wp_message_tip = None
         self.max_seen_unfinished_blocks = 1000
+
+    def is_requesting_unfinished_block(
+        self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]
+    ) -> Tuple[bool, int]:
+        """
+        Asks if we are already requesting this specific unfinished block (given
+        the reward block hash and foliage hash). The returned bool is true if we
+        are and false otherwise. The function also returns the number of
+        variants of an unfinished block with this reward block hash we are
+        currently requesting. This is useful to ensure we limit the number of
+        variants we request.
+        """
+        ents = self._unfinished_blocks.get(reward_block_hash)
+        if ents is None:
+            return (False, 0)
+        elif foliage_hash is None:
+            return (len(ents) > 0, len(ents))
+        else:
+            return (foliage_hash in ents, len(ents))
+
+    def mark_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]) -> None:
+        ents = self._unfinished_blocks.setdefault(reward_block_hash, {})
+        ents.setdefault(foliage_hash, UnfinishedBlockEntry(None, None, uint32(0)))
+
+    def remove_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]) -> None:
+        reward_ents = self._unfinished_blocks.get(reward_block_hash)
+        if reward_ents is None:
+            return
+        foliage_ent = reward_ents.get(foliage_hash)
+        if foliage_ent is None:
+            return
+        if foliage_ent.unfinished_block is not None:
+            # in this case we've successfully received the unfinished block,
+            # it's already considered "not requesting", but actually downloaded
+            return
+        del reward_ents[foliage_hash]
+        if len(reward_ents) == 0:
+            del self._unfinished_blocks[reward_block_hash]
 
     def add_candidate_block(
         self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False
@@ -164,35 +254,96 @@ class FullNodeStore:
     def add_unfinished_block(
         self, height: uint32, unfinished_block: UnfinishedBlock, result: PreValidationResult
     ) -> None:
-        self.unfinished_blocks[unfinished_block.partial_hash] = (height, unfinished_block, result)
+        partial_hash = unfinished_block.partial_hash
+        entry = self._unfinished_blocks.setdefault(partial_hash, {})
+        entry[unfinished_block.foliage.foliage_transaction_block_hash] = UnfinishedBlockEntry(
+            unfinished_block, result, height
+        )
 
     def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
-        result = self.unfinished_blocks.get(unfinished_reward_hash, None)
+        result = self._unfinished_blocks.get(unfinished_reward_hash, None)
         if result is None:
             return None
-        return result[1]
+        # The old API doesn't distinguish between duplicate UnfinishedBlocks,
+        # return the *best* UnfinishedBlock. This is the path taken when the
+        # timelord sends us an infusion point with this specific reward block
+        # hash. We pick one of the unfinished blocks based on an arbitrary but
+        # deterministic property.
+        # this sorts the UnfinishedBlocks by the foliage hash, and picks the
+        # smallest hash
+        foliage_hash, block = find_best_block(result)
+        return block
 
-    def get_unfinished_block_result(self, unfinished_reward_hash: bytes32) -> Optional[PreValidationResult]:
-        result = self.unfinished_blocks.get(unfinished_reward_hash, None)
+    def get_unfinished_block2(
+        self, unfinished_reward_hash: bytes32, unfinished_foliage_hash: Optional[bytes32]
+    ) -> Tuple[Optional[UnfinishedBlock], int, bool]:
+        """
+        Looks up an UnfinishedBlock by its reward block hash and foliage hash.
+        If the foliage hash is None (e.g. it's not a transaction block), we fall
+        back to the original function that looks up unfinished blocks just by
+        their reward block hash.
+        Returns:
+            1. the (optional) UnfinishedBlock
+            2. the number of other candidate blocks we know of with the same
+               reward block hash
+            3. whether we already have a "better" UnfinishedBlock candidate than
+               this
+        """
+        result = self._unfinished_blocks.get(unfinished_reward_hash, None)
+        if result is None:
+            return None, 0, False
+        if unfinished_foliage_hash is None:
+            foliage_hash, block = find_best_block(result)
+            return block, len(result), False
+
+        foliage_hash, block = find_best_block(result)
+        has_better: bool = foliage_hash is not None and foliage_hash < unfinished_foliage_hash
+
+        entry = result.get(unfinished_foliage_hash)
+
+        if entry is None:
+            return None, len(result), has_better
+        else:
+            return entry.unfinished_block, len(result), has_better
+
+    # we only have PreValidationResults for transaction blocks, and they all
+    # have a foliage hash. That's why unfinished_foliage_hash is not Optional.
+    def get_unfinished_block_result(
+        self, unfinished_reward_hash: bytes32, unfinished_foliage_hash: bytes32
+    ) -> Optional[UnfinishedBlockEntry]:
+        result = self._unfinished_blocks.get(unfinished_reward_hash, None)
         if result is None:
             return None
-        return result[2]
+        else:
+            return result.get(unfinished_foliage_hash)
 
     # returns all unfinished blocks for the specified height
     def get_unfinished_blocks(self, height: uint32) -> List[UnfinishedBlock]:
-        return [block for ub_height, block, _ in self.unfinished_blocks.values() if ub_height == height]
+        ret: List[UnfinishedBlock] = []
+        for entry in self._unfinished_blocks.values():
+            for ube in entry.values():
+                if ube.height == height and ube.unfinished_block is not None:
+                    ret.append(ube.unfinished_block)
+        return ret
 
     def clear_unfinished_blocks_below(self, height: uint32) -> None:
-        del_keys: List[bytes32] = []
-        for partial_reward_hash, (unf_height, unfinished_block, _) in self.unfinished_blocks.items():
-            if unf_height < height:
-                del_keys.append(partial_reward_hash)
-        for del_key in del_keys:
-            del self.unfinished_blocks[del_key]
+        del_partial: List[bytes32] = []
+        for partial_hash, entry in self._unfinished_blocks.items():
+            del_foliage: List[Optional[bytes32]] = []
+            for foliage_hash, ube in entry.items():
+                if ube.height < height:
+                    del_foliage.append(foliage_hash)
+            for fh in del_foliage:
+                del entry[fh]
+            if len(entry) == 0:
+                del_partial.append(partial_hash)
+        for ph in del_partial:
+            del self._unfinished_blocks[ph]
 
+    # TODO: this should be removed. It's only used by a test
     def remove_unfinished_block(self, partial_reward_hash: bytes32) -> None:
-        if partial_reward_hash in self.unfinished_blocks:
-            del self.unfinished_blocks[partial_reward_hash]
+        if partial_reward_hash in self._unfinished_blocks:
+            del self._unfinished_blocks[partial_reward_hash]
 
     def add_to_future_ip(self, infusion_point: timelord_protocol.NewInfusionPointVDF) -> None:
         ch: bytes32 = infusion_point.reward_chain_ip_vdf.challenge
