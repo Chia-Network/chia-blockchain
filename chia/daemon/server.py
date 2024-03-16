@@ -459,7 +459,14 @@ class WebSocketServer:
             "get_routes": self.get_routes,
             "get_wallet_addresses": self.get_wallet_addresses,
             "get_keys_for_plotting": self.get_keys_for_plotting,
+            "get_network_info": self.get_network_info,
         }
+
+    async def get_network_info(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        network_name = self.net_config["selected_network"]
+        address_prefix = self.net_config["network_overrides"]["config"][network_name]["address_prefix"]
+        response: Dict[str, Any] = {"success": True, "network_name": network_name, "network_prefix": address_prefix}
+        return response
 
     async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         locked: bool = Keychain.is_keyring_locked()
