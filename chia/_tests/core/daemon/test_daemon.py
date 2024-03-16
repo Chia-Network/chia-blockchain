@@ -13,7 +13,7 @@ from pytest_mock import MockerFixture
 
 from chia._tests.util.misc import Marks, datacases
 from chia._tests.util.time_out_assert import time_out_assert_not_none
-from chia.daemon.client import connect_to_daemon, DaemonProxy
+from chia.daemon.client import DaemonProxy, connect_to_daemon
 from chia.daemon.keychain_server import (
     DeleteLabelRequest,
     GetKeyRequest,
