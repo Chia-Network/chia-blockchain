@@ -3,7 +3,7 @@ name: 📦🚀 Trigger Main Docker Build
 on:
   push:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
       - main
 

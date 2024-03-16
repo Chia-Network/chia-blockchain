@@ -53,7 +53,7 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-$supportedPythonVersions = "3.11", "3.10", "3.9", "3.8"
+$supportedPythonVersions = "3.12", "3.11", "3.10", "3.9", "3.8"
 if ("$env:INSTALL_PYTHON_VERSION" -ne "")
 {
     $pythonVersion = $env:INSTALL_PYTHON_VERSION
@@ -104,6 +104,10 @@ if ($extras.length -gt 0)
 {
     $extras_cli = $extras -join ","
     $pip_parameters += ".[$extras_cli]"
+}
+else
+{
+    $pip_parameters += "."
 }
 
 py -$pythonVersion -m venv venv

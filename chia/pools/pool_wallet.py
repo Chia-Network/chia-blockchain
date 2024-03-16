@@ -936,9 +936,9 @@ class PoolWallet:
 
             # Add some buffer (+2) to reduce chances of a reorg
             if peak_height > leave_height + 2:
-                unconfirmed: List[
-                    TransactionRecord
-                ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_id)
+                unconfirmed: List[TransactionRecord] = (
+                    await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_id)
+                )
                 next_tip: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
                 assert next_tip is not None
 
