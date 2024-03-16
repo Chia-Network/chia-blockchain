@@ -280,6 +280,8 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: 
             # this is the change owner magic condition
             atom = condition.at("rf").atom
             if atom is None or atom == b"":
+                # TODO: 0193847 this is a similar case to below where there is
+                #       trouble, review
                 new_did_id = None
             else:
                 new_did_id = bytes32(atom)
@@ -295,13 +297,14 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: 
 
 def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Optional[bytes32]:
     conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution))
-    new_did_id: Optional[bytes32] = None
+    new_did_id = None
     for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
             atom = condition.at("rf").atom
             if atom is None or atom == b"":
-                new_did_id = None
+                # TODO: 0193847 something seems to depend on retaining b"" and not None
+                new_did_id = atom
             else:
                 new_did_id = bytes32(atom)
     return new_did_id

@@ -1299,6 +1299,7 @@ class WalletStateManager:
         if not eve_uncurried_nft.supports_did:
             return None
         minter_did = get_new_owner_did(eve_uncurried_nft, eve_coin_spend.solution.to_program())
+        # TODO: 0193847 per hinting for above, this shouldn't be needed
         if minter_did == b"":
             minter_did = None
         if minter_did is None:
@@ -1438,6 +1439,8 @@ class WalletStateManager:
             if new_did_id is None:
                 new_did_id = old_did_id
             if new_did_id == b"":
+                # TODO: 0193847 per hinting for above, this shouldn't be needed and
+                #       shouldn't be reachable but it seems it is
                 new_did_id = None
         self.log.debug(
             "Handling NFT: %s， old DID:%s, new DID:%s, old P2:%s, new P2:%s",
