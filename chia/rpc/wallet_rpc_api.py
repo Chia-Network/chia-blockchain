@@ -2338,6 +2338,7 @@ class WalletRpcApi:
 
             full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launcher_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                # It's unclear whether this path is ever reached, and there is no coverage in the DID wallet tests
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
                 elif (
@@ -2368,7 +2369,9 @@ class WalletRpcApi:
                             uint32(index), uint32(1), False
                         )
                         while derivation_record is not None:
-                            assert isinstance(derivation_record.pubkey, G1Element)
+                            # The assert is needed for the updated DerivationRecord to include secp keys
+                            # No cover added for mypy since there is no test case that reaches this code.
+                            assert isinstance(derivation_record.pubkey, G1Element)  # pragma: no cover
                             our_inner_puzzle = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
                                 derivation_record.pubkey
                             )
