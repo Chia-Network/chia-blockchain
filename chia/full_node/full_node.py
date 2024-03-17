@@ -2160,10 +2160,25 @@ class FullNode:
             sub_slot_start_iters = uint128(0)
         else:
             ss_res = self.full_node_store.get_sub_slot(unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash)
-            if ss_res is None:
-                self.log.warning(f"Do not have sub slot {unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash}")
-                return None
-            _, _, sub_slot_start_iters = ss_res
+            sub_slot_start_iters = None
+            if ss_res is not None:
+                _, _, sub_slot_start_iters = ss_res
+            else:
+                curr = prev_b
+                assert curr is not None
+                while not curr.first_in_sub_slot:
+                    curr = self.blockchain.block_record(curr.prev_hash)
+                assert curr.finished_challenge_slot_hashes is not None
+                for slot_hash in curr.finished_challenge_slot_hashes:
+                    if slot_hash == unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash:
+                        assert len(self.full_node_store.finished_sub_slots) >= 1
+                        sub_slot_start_iters = uint128(
+                            self.full_node_store.finished_sub_slots[0][2] - curr.sub_slot_iters
+                        )
+                        break
+        if sub_slot_start_iters is None:
+            self.log.warning(f"Do not have sub slot {unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash}")
+            return None
         sp_total_iters = uint128(
             sub_slot_start_iters
             + calculate_sp_iters(
