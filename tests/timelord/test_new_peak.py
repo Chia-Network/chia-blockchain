@@ -116,14 +116,14 @@ class TestNewPeak:
                 == new_peak.reward_chain_block.get_hash()
             )
 
-    @pytest.mark.parametrize("skip_slot", [0,1,2])
+    @pytest.mark.parametrize("skip_slot", [0, 1, 2])
     @pytest.mark.anyio
     async def test_timelord_new_peak_unfinished_orphaned(
         self,
         one_node: Tuple[List[FullNodeService], List[FullNodeSimulator], BlockTools],
         timelord: Tuple[TimelordAPI, ChiaServer],
         default_1000_blocks: List[FullBlock],
-        skip_slot,
+        skip_slot: int,
     ) -> None:
         [full_node_service], _, bt = one_node
         full_node = full_node_service._node
@@ -409,9 +409,9 @@ class TestNewPeak:
                         ),
                     ),
                 )
-                bl = full_node.blockchain.try_block_record(default_1000_blocks_new[-1].header_hash)
                 await full_node.add_block(block_1)
-                assert full_node.blockchain.get_peak().height == block_1.height
+                peak = full_node.blockchain.get_peak()
+                assert peak is not None and peak.height == block_1.height
 
 
 async def get_rc_prev(blockchain: Blockchain, block: FullBlock) -> bytes32:
