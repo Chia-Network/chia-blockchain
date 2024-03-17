@@ -2162,8 +2162,9 @@ class FullNode:
             ss_res = self.full_node_store.get_sub_slot(unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash)
             sub_slot_start_iters = None
             if ss_res is not None:
-                _, _, sub_slot_start_iters = ss_res
+                sub_slot_start_iters = ss_res[2]
             else:
+                # check the prev slot
                 curr = prev_b
                 assert curr is not None
                 while not curr.first_in_sub_slot:
