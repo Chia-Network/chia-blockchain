@@ -98,7 +98,7 @@ def load_cache(file: typing.IO[str]) -> Cache:
 
 
 def dump_cache(cache: Cache, file: typing.IO[str]) -> None:
-    json.dump(cache, file, indent=4)
+    json.dump(cache, file, indent=2)
 
 
 def generate_hash_bytes(hex_bytes: bytes) -> bytes32:
