@@ -230,6 +230,7 @@ def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
 NIL = Program.from_bytes(b"\x80")
 
 
+# TODO: review
 # real return type is more like Union[T_Program, CastableType] when considering corner and terminal cases
 def _sexp_replace(
     sexp: T_CLVMStorage, to_sexp: Callable[[CastableType], T_Program], **kwargs: CastableType

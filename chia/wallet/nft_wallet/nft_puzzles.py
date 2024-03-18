@@ -280,8 +280,6 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: 
             # this is the change owner magic condition
             atom = condition.at("rf").atom
             if atom is None or atom == b"":
-                # TODO: 0193847 this is a similar case to below where there is
-                #       trouble, review
                 new_did_id = None
             else:
                 new_did_id = bytes32(atom)
@@ -303,7 +301,6 @@ def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Union[None, Lite
             # this is the change owner magic condition
             atom = condition.at("rf").as_atom()
             if atom == b"":
-                # TODO: 0193847 something seems to depend on retaining b"" and not None
                 new_did_id = b""
             else:
                 new_did_id = bytes32(atom)
