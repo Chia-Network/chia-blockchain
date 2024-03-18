@@ -17,7 +17,7 @@ from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.rpc.rpc_client import RpcClient
+from chia.rpc.rpc_client import ResponseFailureError, RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -124,6 +124,17 @@ async def get_any_service_client(
         # check if we can connect to node
         await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
         yield node_client, config
+    except ResponseFailureError as e:
+        if not consume_errors:
+            raise
+
+        response = dict(e.response)
+        tb = response.pop("traceback", None)
+
+        print(f"{ResponseFailureError(response=response)}")
+
+        if tb is not None:
+            print(f"Traceback:\n{tb}")
     except Exception as e:  # this is only here to make the errors more user-friendly.
         if not consume_errors or isinstance(e, CliRpcConnectionError) or isinstance(e, click.Abort):
             # CliRpcConnectionError will be handled by click.
@@ -328,9 +339,11 @@ class CMDCoinSelectionConfigLoader(Streamable):
         return CoinSelectionConfigLoader(
             uint64(int(Decimal(self.min_coin_amount) * mojo_per_unit)) if self.min_coin_amount is not None else None,
             uint64(int(Decimal(self.max_coin_amount) * mojo_per_unit)) if self.max_coin_amount is not None else None,
-            [uint64(int(Decimal(a) * mojo_per_unit)) for a in self.excluded_coin_amounts]
-            if self.excluded_coin_amounts is not None
-            else None,
+            (
+                [uint64(int(Decimal(a) * mojo_per_unit)) for a in self.excluded_coin_amounts]
+                if self.excluded_coin_amounts is not None
+                else None
+            ),
             [bytes32.from_hexstr(id) for id in self.excluded_coin_ids] if self.excluded_coin_ids is not None else None,
         ).autofill(constants=DEFAULT_CONSTANTS)
 
