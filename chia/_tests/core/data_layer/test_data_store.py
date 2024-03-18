@@ -17,7 +17,7 @@ import pytest
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
 from chia._tests.util.misc import BenchmarkRunner, Marks, datacases
-from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
@@ -1871,3 +1871,42 @@ async def test_insert_from_delta_file(
         assert len(filenames) == 2 * (num_files + 1)
     kv = await data_store.get_keys_values(tree_id=tree_id)
     assert kv == kv_before
+
+
+@pytest.mark.anyio
+async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) -> None:
+    num_stores = 5
+    num_keys = 20
+    values_offset = 10000
+    repetitions = 25
+    random = Random()
+    random.seed(100, version=2)
+
+    tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
+    for tree_id in tree_ids:
+        await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+    keys = [key.to_bytes(4, byteorder="big") for key in range(num_keys)]
+    for repetition in range(repetitions):
+        for index, tree_id in enumerate(tree_ids):
+            values = [
+                (value + values_offset * repetition).to_bytes(4, byteorder="big")
+                for value in range(index * num_keys, (index + 1) * num_keys)
+            ]
+            batch = []
+            for key, value in zip(keys, values):
+                batch.append({"action": "upsert", "key": key, "value": value})
+            await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
+
+        for index, tree_id in enumerate(tree_ids):
+            values = [
+                (value + values_offset * repetition).to_bytes(4, byteorder="big")
+                for value in range(index * num_keys, (index + 1) * num_keys)
+            ]
+            for key, value in zip(keys, values):
+                node = await raw_data_store.get_node_by_key(tree_id=tree_id, key=key)
+                assert node.value == value
+                if random.randint(0, 4) == 0:
+                    batch = [{"action": "delete", "key": key}]
+                    await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
+                    with pytest.raises(KeyNotFoundError, match=f"Key not found: {key.hex()}"):
+                        await raw_data_store.get_node_by_key(tree_id=tree_id, key=key)
