@@ -505,10 +505,11 @@ class TestWalletSimulator:
         wallet = env.xch_wallet
         api_0 = env.rpc_api
 
+        tx_amount = 500
         normal_puzhash = await wallet.get_new_puzzlehash()
         # Transfer to normal wallet
         [tx] = await wallet.generate_signed_transaction(
-            uint64(500),
+            uint64(tx_amount),
             normal_puzhash,
             DEFAULT_TX_CONFIG,
             uint64(0),
@@ -523,16 +524,16 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": -500,
-                            "<=#spendable_balance": -500,
-                            "<=#max_send_amount": -500,
+                            "unconfirmed_wallet_balance": -1 * tx_amount,
+                            "<=#spendable_balance": -1 * tx_amount,
+                            "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -500,
+                            "confirmed_wallet_balance": -1 * tx_amount,
                             ">=#spendable_balance": 1,  # any amount increase
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
@@ -550,11 +551,11 @@ class TestWalletSimulator:
         # Check merkle coins
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
         # Claim merkle coin
-        merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
+        merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
+        test_fee = 10
         resp = await api_0.spend_clawback_coins(
-            dict({"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 10})
+            {"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": test_fee}
         )
-        json.dumps(resp)
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
         # Wait mempool update
@@ -563,7 +564,7 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": 500 - 10,  # 10 for fee
+                            "unconfirmed_wallet_balance": tx_amount - test_fee,
                             "<=#spendable_balance": -1,
                             "<=#max_send_amount": -1,
                             ">=#pending_change": 1,
@@ -572,7 +573,7 @@ class TestWalletSimulator:
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": 500 - 10,
+                            "confirmed_wallet_balance": tx_amount - test_fee,
                             ">=#spendable_balance": 1,
                             ">=#max_send_amount": 1,
                             "<=#pending_change": -1,
@@ -621,10 +622,11 @@ class TestWalletSimulator:
         api_0 = env.rpc_api
         api_1 = env_2.rpc_api
 
+        tx_amount = 500
         normal_puzhash = await wallet_1.get_new_puzzlehash()
         # Transfer to normal wallet
         [tx] = await wallet.generate_signed_transaction(
-            uint64(500),
+            uint64(tx_amount),
             normal_puzhash,
             DEFAULT_TX_CONFIG,
             uint64(0),
@@ -638,16 +640,16 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": -500,
-                            "<=#spendable_balance": -500,
-                            "<=#max_send_amount": -500,
+                            "unconfirmed_wallet_balance": -1 * tx_amount,
+                            "<=#spendable_balance": -1 * tx_amount,
+                            "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -500,
+                            "confirmed_wallet_balance": -1 * tx_amount,
                             ">=#spendable_balance": 1,  # any amount increase
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
@@ -681,9 +683,10 @@ class TestWalletSimulator:
         )
 
         # Claim merkle coin
-        merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
+        merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
+        test_fee = 10
         resp = await api_1.spend_clawback_coins(
-            dict({"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 10})
+            {"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": test_fee}
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
@@ -697,16 +700,16 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": 500 - 10,  # -10 for fee
-                            "<=#spendable_balance": -500,
-                            "<=#max_send_amount": -500,
+                            "unconfirmed_wallet_balance": tx_amount - test_fee,
+                            "<=#spendable_balance": -1 * tx_amount,
+                            "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 2,  # 1 for fee, 1 for clawback
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": 500 - 10,  # -10 for fee
+                            "confirmed_wallet_balance": tx_amount - test_fee,
                             ">=#spendable_balance": 1,  # any amount increase
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
@@ -751,10 +754,11 @@ class TestWalletSimulator:
         wallet = env.xch_wallet
         wallet_1 = env_2.xch_wallet
 
+        tx_amount = 500
         normal_puzhash = await wallet_1.get_new_puzzlehash()
         # Transfer to normal wallet
         [tx] = await wallet.generate_signed_transaction(
-            uint64(500),
+            uint64(tx_amount),
             normal_puzhash,
             DEFAULT_TX_CONFIG,
             uint64(0),
@@ -768,16 +772,16 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": -500,
-                            "<=#spendable_balance": -500,
-                            "<=#max_send_amount": -500,
+                            "unconfirmed_wallet_balance": -1 * tx_amount,
+                            "<=#spendable_balance": -1 * tx_amount,
+                            "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -500,
+                            "confirmed_wallet_balance": -1 * tx_amount,
                             ">=#spendable_balance": 1,  # any amount increase
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
@@ -811,17 +815,17 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": 500,  # confirmed balance comes back
+                            "confirmed_wallet_balance": tx_amount,  # confirmed balance comes back
                             # clawback transaction is now outstanding
-                            "<=#spendable_balance": -500,
-                            "<=#max_send_amount": -500,
+                            "<=#spendable_balance": -1 * tx_amount,
+                            "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -500,
+                            "confirmed_wallet_balance": -1 * tx_amount,
                             ">=#spendable_balance": 1,  # any amount increase
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
@@ -850,8 +854,8 @@ class TestWalletSimulator:
                     # After auto claim is set, the next block will trigger submission of clawback claims
                     post_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": 500,
-                            "pending_change": 500,  # This is a little weird but I think intentional and correct
+                            "unconfirmed_wallet_balance": tx_amount,
+                            "pending_change": tx_amount,  # This is a little weird but I think intentional and correct
                             "pending_coin_removal_count": 1,
                         }
                     },
@@ -865,11 +869,11 @@ class TestWalletSimulator:
                     pre_block_balance_updates={},
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": 500,
-                            "spendable_balance": 500,
-                            "max_send_amount": 500,
+                            "confirmed_wallet_balance": tx_amount,
+                            "spendable_balance": tx_amount,
+                            "max_send_amount": tx_amount,
                             "unspent_coin_count": 1,
-                            "pending_change": -500,
+                            "pending_change": -1 * tx_amount,
                             "pending_coin_removal_count": -1,
                         }
                     },
@@ -897,21 +901,21 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -500,
-                            "spendable_balance": -500,
-                            "max_send_amount": -500,
+                            "confirmed_wallet_balance": -1 * tx_amount,
+                            "spendable_balance": -1 * tx_amount,
+                            "max_send_amount": -1 * tx_amount,
                             "unspent_coin_count": -1,
-                            "pending_change": 500,
+                            "pending_change": tx_amount,
                             "pending_coin_removal_count": 1,
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": 500,
-                            "spendable_balance": 500,
-                            "max_send_amount": 500,
+                            "confirmed_wallet_balance": tx_amount,
+                            "spendable_balance": tx_amount,
+                            "max_send_amount": tx_amount,
                             "unspent_coin_count": 1,
-                            "pending_change": -500,
+                            "pending_change": -1 * tx_amount,
                             "pending_coin_removal_count": -1,
                         }
                     },
@@ -934,9 +938,10 @@ class TestWalletSimulator:
         wsm = env.wallet_state_manager
         wallet = env.xch_wallet
 
+        tx_amount = 500
         # Transfer to normal wallet
         [tx] = await wallet.generate_signed_transaction(
-            uint64(500),
+            uint64(tx_amount),
             bytes32([0] * 32),
             DEFAULT_TX_CONFIG,
             uint64(0),
@@ -950,16 +955,16 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": -500,
-                            "<=#spendable_balance": -500,
-                            "<=#max_send_amount": -500,
+                            "unconfirmed_wallet_balance": -1 * tx_amount,
+                            "<=#spendable_balance": -1 * tx_amount,
+                            "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -500,
+                            "confirmed_wallet_balance": -1 * tx_amount,
                             ">=#spendable_balance": 1,  # any amount increase
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
@@ -977,7 +982,7 @@ class TestWalletSimulator:
         # Check merkle coins
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
         # clawback merkle coin
-        merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
+        merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         resp = await env.rpc_api.get_coin_records(dict({"wallet_id": 1, "coin_type": 1}))
         assert len(resp["coin_records"]) == 1
         assert resp["coin_records"][0]["id"][2:] == merkle_coin.name().hex()
@@ -1002,9 +1007,10 @@ class TestWalletSimulator:
         wallet_1_puzhash = await wallet_1.get_new_puzzlehash()
         wallet_2_puzhash = await wallet_2.get_new_puzzlehash()
 
+        tx_amount = 500
         # Transfer to normal wallet
         [tx1] = await wallet_1.generate_signed_transaction(
-            uint64(500),
+            uint64(tx_amount),
             wallet_2_puzhash,
             DEFAULT_TX_CONFIG,
             uint64(0),
@@ -1020,16 +1026,16 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": -500,
-                            "<=#spendable_balance": -500,
-                            "<=#max_send_amount": -500,
+                            "unconfirmed_wallet_balance": -1 * tx_amount,
+                            "<=#spendable_balance": -1 * tx_amount,
+                            "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -500,
+                            "confirmed_wallet_balance": -1 * tx_amount,
                             ">=#spendable_balance": 1,  # any amount increase
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
