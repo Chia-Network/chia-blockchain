@@ -13,7 +13,7 @@ from pytest_mock import MockerFixture
 
 from chia._tests.util.misc import Marks, datacases
 from chia._tests.util.time_out_assert import time_out_assert_not_none
-from chia.daemon.client import connect_to_daemon
+from chia.daemon.client import DaemonProxy, connect_to_daemon
 from chia.daemon.keychain_server import (
     DeleteLabelRequest,
     GetKeyRequest,
@@ -582,6 +582,17 @@ async def test_get_routes(mock_lonely_daemon):
     assert response == {
         "success": True,
         "routes": ["get_routes", "example_one", "example_two", "example_three"],
+    }
+
+
+@pytest.mark.anyio
+async def test_get_network_info(daemon_client_with_config_and_keys: DaemonProxy):
+    client = daemon_client_with_config_and_keys
+    response = await client.get_network_info()
+    assert response["data"] == {
+        "success": True,
+        "network_name": "testnet0",
+        "network_prefix": "txch",
     }
 
 
