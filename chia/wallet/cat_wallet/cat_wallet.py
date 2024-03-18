@@ -567,7 +567,6 @@ class CATWallet:
         )
         if record is None:
             raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {cat_hash}")
-        assert isinstance(record.pubkey, G1Element)
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
         return inner_puzzle
 
@@ -687,7 +686,6 @@ class CATWallet:
                 list(cat_coins)[0].puzzle_hash
             )
             if derivation_record is not None and tx_config.reuse_puzhash:
-                assert isinstance(derivation_record.pubkey, G1Element)
                 change_puzhash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
                 for payment in payments:
                     if change_puzhash == payment.puzzle_hash and change == payment.amount:

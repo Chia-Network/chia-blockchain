@@ -435,7 +435,6 @@ class DataLayerWallet:
         )
 
         # Construct the current puzzles
-        assert isinstance(inner_puzzle_derivation.pubkey, G1Element)
         current_inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_puzzle_derivation.pubkey)
         current_full_puz = create_host_fullpuz(
             current_inner_puzzle,
@@ -772,7 +771,6 @@ class DataLayerWallet:
         if inner_puzzle_derivation is None:
             raise ValueError(f"DL Wallet does not have permission to delete mirror with ID {mirror_id}")
 
-        assert isinstance(inner_puzzle_derivation.pubkey, G1Element)
         parent_inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_puzzle_derivation.pubkey)
         new_puzhash: bytes32 = await self.standard_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash)
         excess_fee: int = fee - mirror_coin.amount
@@ -1089,9 +1087,9 @@ class DataLayerWallet:
         return self.standard_wallet.puzzle_for_pk(pubkey)
 
     async def get_new_puzzle(self) -> Program:
-        record: DerivationRecord = await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)
-        assert isinstance(record.pubkey, G1Element)
-        return self.puzzle_for_pk(record.pubkey)
+        return self.puzzle_for_pk(
+            (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
+        )
 
     async def get_new_puzzlehash(self) -> bytes32:
         return (await self.get_new_puzzle()).get_tree_hash()

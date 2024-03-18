@@ -950,7 +950,6 @@ class WalletStateManager:
                 amount = uint64(amount + coin.amount)
                 # Remove the clawback hint since it is unnecessary for the XCH coin
                 memos: List[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1][1:]
-                assert isinstance(derivation_record.pubkey, G1Element)
                 inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
                 inner_solution: Program = self.main_wallet.make_solution(
                     primaries=[
@@ -1103,7 +1102,6 @@ class WalletStateManager:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             return None
         else:
-            assert isinstance(derivation_record.pubkey, G1Element)
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             asset_id: bytes32 = parent_data.tail_program_hash
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
@@ -1229,7 +1227,6 @@ class WalletStateManager:
                 self.state_changed("wallet_removed", remove_id)
             return None
         else:
-            assert isinstance(derivation_record.pubkey, G1Element)
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
 
             self.log.info(f"Found DID, launch_id {launch_id}.")

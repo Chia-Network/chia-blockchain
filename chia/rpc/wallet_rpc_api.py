@@ -2314,7 +2314,6 @@ class WalletRpcApi:
         if derivation_record is None:
             return {"success": False, "error": f"This DID {launcher_id} is not belong to the connected wallet"}
         else:
-            assert isinstance(derivation_record.pubkey, G1Element)
             our_inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
                 derivation_record.pubkey
             )
@@ -2367,9 +2366,6 @@ class WalletRpcApi:
                             uint32(index), uint32(1), False
                         )
                         while derivation_record is not None:
-                            # The assert is needed for the updated DerivationRecord to include secp keys
-                            # No cover added for mypy since there is no test case that reaches this code.
-                            assert isinstance(derivation_record.pubkey, G1Element)  # pragma: no cover
                             our_inner_puzzle = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
                                 derivation_record.pubkey
                             )

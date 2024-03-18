@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Union
 
 from chia_rs import G1Element
 
@@ -19,7 +18,7 @@ class DerivationRecord:
 
     index: uint32
     puzzle_hash: bytes32
-    pubkey: Union[G1Element, bytes]
+    pubkey: G1Element
     wallet_type: WalletType
     wallet_id: uint32
     hardened: bool
