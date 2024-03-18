@@ -7,8 +7,8 @@ import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 from ecdsa import NIST256p, SigningKey
-from tests.clvm.test_puzzles import secret_exponent_for_index
 
+from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
