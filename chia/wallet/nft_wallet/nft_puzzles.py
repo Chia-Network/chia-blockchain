@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
@@ -295,16 +295,16 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: 
     return new_ownership_puzzle
 
 
-def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Optional[bytes32]:
+def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Union[None, Literal[b""], bytes32]:
     conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution))
-    new_did_id = None
+    new_did_id: Union[None, Literal[b""], bytes32] = None
     for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
-            atom = condition.at("rf").atom
-            if atom is None or atom == b"":
+            atom = condition.at("rf").as_atom()
+            if atom == b"":
                 # TODO: 0193847 something seems to depend on retaining b"" and not None
-                new_did_id = atom
+                new_did_id = b""
             else:
                 new_did_id = bytes32(atom)
     return new_did_id
