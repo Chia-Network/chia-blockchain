@@ -363,10 +363,11 @@ class TestWalletSimulator:
         api_0 = env.rpc_api
         api_1 = env_2.rpc_api
 
+        tx_amount = 500
         normal_puzhash = await wallet_1.get_new_puzzlehash()
         # Transfer to normal wallet
         [tx] = await wallet.generate_signed_transaction(
-            uint64(500),
+            uint64(tx_amount),
             normal_puzhash,
             DEFAULT_TX_CONFIG,
             uint64(0),
@@ -381,16 +382,16 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": -500,
-                            "<=#spendable_balance": -500,
-                            "<=#max_send_amount": -500,
+                            "unconfirmed_wallet_balance": -1 * tx_amount,
+                            "<=#spendable_balance": -1 * tx_amount,
+                            "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -500,
+                            "confirmed_wallet_balance": -1 * tx_amount,
                             ">=#spendable_balance": 1,  # any amount increase
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
@@ -412,7 +413,7 @@ class TestWalletSimulator:
             dict(type_filter={"values": [TransactionType.INCOMING_CLAWBACK_SEND], "mode": 1}, wallet_id=1)
         )
         # clawback merkle coin
-        merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
+        merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         interested_coins = await wsm_2.interested_store.get_interested_coin_ids()
         assert merkle_coin.name() in set(interested_coins)
         assert len(txs["transactions"]) == 1
@@ -422,10 +423,10 @@ class TestWalletSimulator:
         with pytest.raises(ValueError):
             await api_0.spend_clawback_coins({})
 
+        test_fee = 10
         resp = await api_0.spend_clawback_coins(
-            dict({"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": 10})
+            {"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": test_fee}
         )
-        json.dumps(resp)
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
 
@@ -434,7 +435,7 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": 500 - 10,  # 10 for fee
+                            "unconfirmed_wallet_balance": tx_amount - test_fee,
                             "<=#spendable_balance": -1,
                             "<=#max_send_amount": -1,
                             ">=#pending_change": 1,
@@ -443,7 +444,7 @@ class TestWalletSimulator:
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": 500 - 10,
+                            "confirmed_wallet_balance": tx_amount - test_fee,
                             ">=#spendable_balance": 1,
                             ">=#max_send_amount": 1,
                             "<=#pending_change": -1,
