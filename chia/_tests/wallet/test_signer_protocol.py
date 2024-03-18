@@ -8,8 +8,8 @@ from typing import List, Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
-from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 
+from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia.rpc.wallet_request_types import ApplySignatures, GatherSigningInfo, SubmitTransactions
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin

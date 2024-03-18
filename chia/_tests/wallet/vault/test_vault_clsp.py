@@ -5,8 +5,8 @@ from hashlib import sha256
 import pytest
 from chia_rs import PrivateKey
 from ecdsa import NIST256p, SigningKey
-from tests.clvm.test_puzzles import secret_exponent_for_index
 
+from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32

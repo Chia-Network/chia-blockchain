@@ -4,9 +4,9 @@ from hashlib import sha256
 
 import pytest
 from ecdsa import NIST256p, SigningKey
-from tests.conftest import ConsensusMode
-from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 
+from chia._tests.conftest import ConsensusMode
+from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia.util.ints import uint32, uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
