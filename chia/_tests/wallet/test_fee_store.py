@@ -3,12 +3,12 @@ from __future__ import annotations
 import dataclasses
 
 import pytest
+from tests.util.db_connection import DBConnection
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.fee_record import FeePerCost, FeeRecord, FeeRecordKey
 from chia.wallet.wallet_fee_store import FeeStore
-from tests.util.db_connection import DBConnection
 
 FPC_ZERO = FeePerCost(uint64(0), uint64(1))
 FPC_ONE = FeePerCost(uint64(1), uint64(1))
