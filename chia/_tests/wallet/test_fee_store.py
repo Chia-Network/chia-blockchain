@@ -65,4 +65,3 @@ async def test_add_fee_record() -> None:
         # test adding duplicates when allowed to overwrite
         await store.add_fee_record(key1, replacing_record, replace=True)
         assert (await store.get_fee_record(key1)) == replacing_record
-
