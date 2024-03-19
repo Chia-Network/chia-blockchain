@@ -12,4 +12,3 @@ echo -n "flake8: "
 flake8 --version
 echo -n "isort: "
 isort --version
-
