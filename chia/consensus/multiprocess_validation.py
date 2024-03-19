@@ -61,14 +61,14 @@ def batch_pre_validate_blocks(
 ) -> List[bytes]:
     blocks: Dict[bytes32, BlockRecord] = {}
     for k, v in blocks_pickled.items():
-        blocks[bytes32(k)] = BlockRecord.from_bytes(v)
+        blocks[bytes32(k)] = BlockRecord.from_bytes_unchecked(v)
     results: List[PreValidationResult] = []
 
     # In this case, we are validating full blocks, not headers
     for i in range(len(full_blocks_pickled)):
         try:
             validation_start = time.monotonic()
-            block: FullBlock = FullBlock.from_bytes(full_blocks_pickled[i])
+            block: FullBlock = FullBlock.from_bytes_unchecked(full_blocks_pickled[i])
             tx_additions: List[Coin] = []
             removals: List[bytes32] = []
             npc_result: Optional[NPCResult] = None
