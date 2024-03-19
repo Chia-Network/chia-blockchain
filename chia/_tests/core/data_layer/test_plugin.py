@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import contextlib
 import json
-import pytest
-import anyio
-
 from pathlib import Path
-from typing import List
+
+import pytest
 
 from chia.data_layer.util.plugin import load_plugin_configurations
 

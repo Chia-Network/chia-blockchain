@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import List
 
+
 async def load_plugin_configurations(root_path: Path, config_type: str) -> List[str]:
     """
     Loads plugin configurations from the specified directory and validates that the contents
