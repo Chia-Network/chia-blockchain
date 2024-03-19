@@ -1767,16 +1767,16 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": -tx_amount,
-                            "<=#spendable_balance": -tx_amount,
-                            "<=#max_send_amount": -tx_amount,
+                            "unconfirmed_wallet_balance": -1 * tx_amount,
+                            "<=#spendable_balance": -1 * tx_amount,
+                            "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -tx_amount,
+                            "confirmed_wallet_balance": -1 * tx_amount,
                             ">=#spendable_balance": 1,  # any amount increase
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
@@ -1827,7 +1827,7 @@ class TestWalletSimulator:
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -tx_amount,
+                            "confirmed_wallet_balance": -1 * tx_amount,
                             ">=#spendable_balance": -1,  # any amount increase
                             ">=#max_send_amount": -1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
@@ -1838,10 +1838,10 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -tx_amount,
-                            "unconfirmed_wallet_balance": -tx_amount,
-                            "spendable_balance": -tx_amount,
-                            "max_send_amount": -tx_amount,
+                            "confirmed_wallet_balance": -1 * tx_amount,
+                            "unconfirmed_wallet_balance": -1 * tx_amount,
+                            "spendable_balance": -1 * tx_amount,
+                            "max_send_amount": -1 * tx_amount,
                             "unspent_coin_count": -1,
                         }
                     },
