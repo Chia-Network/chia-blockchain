@@ -26,7 +26,7 @@ from chia.util.network import is_trusted_peer
         ("localhost", bytes32(b"0" * 32), {}, False, True),
         ("127.0.0.1", bytes32(b"0" * 32), {}, True, False),
         ("localhost", bytes32(b"0" * 32), {}, True, False),
-        # loalhost testing with testing True but with matching node_id
+        # localhost testing with testing True but with matching node_id
         ("127.0.0.1", bytes32(b"0" * 32), {bytes32(b"0" * 32).hex(): "0"}, True, True),
         # misc
         ("2000:1000::1234:abcd", bytes32(b"0" * 32), {}, True, False),
