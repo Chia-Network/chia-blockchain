@@ -1726,9 +1726,7 @@ class TestWalletSimulator:
         async def transaction_has_failed(tx_id: bytes32) -> bool:
             tx = await wallet.wallet_state_manager.tx_store.get_transaction_record(tx_id)
             assert tx is not None
-            return (
-                len(tuple(True for sent_to in tx.sent_to if sent_to[2] == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED.name)) > 0
-            )
+            return any(error_str == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED.name for _, _, error_str in tx.sent_to)
 
         await time_out_assert(10, transaction_has_failed, True, stolen_tx.name)
 
