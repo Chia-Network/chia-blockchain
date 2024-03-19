@@ -982,7 +982,7 @@ class TestWalletSimulator:
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
-        resp = await env.rpc_api.get_coin_records(dict({"wallet_id": 1, "coin_type": 1}))
+        resp = await env.rpc_api.get_coin_records({"wallet_id": 1, "coin_type": 1})
         assert len(resp["coin_records"]) == 1
         assert resp["coin_records"][0]["id"][2:] == merkle_coin.name().hex()
 
@@ -1097,10 +1097,10 @@ class TestWalletSimulator:
         await time_out_assert(20, wsm_1.coin_store.count_small_unspent, 2, 1000, CoinType.CLAWBACK)
         await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
         # clawback merkle coin
-        resp = await api_1.spend_clawback_coins(dict({"coin_ids": [clawback_coin_id_1.hex()], "fee": 0}))
+        resp = await api_1.spend_clawback_coins({"coin_ids": [clawback_coin_id_1.hex()], "fee": 0})
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
-        resp = await api_1.spend_clawback_coins(dict({"coin_ids": [clawback_coin_id_2.hex()], "fee": 0}))
+        resp = await api_1.spend_clawback_coins({"coin_ids": [clawback_coin_id_2.hex()], "fee": 0})
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
 
