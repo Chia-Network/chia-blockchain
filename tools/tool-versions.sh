@@ -1,5 +1,7 @@
 #!/bin/bash
 
+from __future__ import annotations
+
 echo -n "OS: "
 uname -a
 echo -n "sqlite3: "
