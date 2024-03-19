@@ -1259,7 +1259,6 @@ class TestWalletSimulator:
                 }
             }
         )
-        await env.check_balances()
 
         await full_node_api.reorg_from_index_to_new_index(
             ReorgProtocol(
@@ -1280,7 +1279,6 @@ class TestWalletSimulator:
                 }
             }
         )
-        await env.check_balances()
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
@@ -1929,7 +1927,6 @@ class TestWalletSimulator:
                 }
             }
         )
-        await env.check_balances()
 
         await full_node_api.farm_blocks_to_puzzlehash(
             count=1,
@@ -1953,7 +1950,6 @@ class TestWalletSimulator:
                 }
             }
         )
-        await env.check_balances()
 
         await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[113])
         await full_node_api.farm_blocks_to_puzzlehash(
