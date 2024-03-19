@@ -1053,8 +1053,9 @@ class TestWalletSimulator:
         await time_out_assert(20, wsm_1.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
         await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
 
+        tx_amount2 = 700
         [tx2] = await wallet_1.generate_signed_transaction(
-            uint64(700),
+            uint64(tx_amount2),
             wallet_1_puzhash,
             DEFAULT_TX_CONFIG,
             uint64(0),
@@ -1069,16 +1070,16 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": -700,
-                            "<=#spendable_balance": -700,
-                            "<=#max_send_amount": -700,
+                            "unconfirmed_wallet_balance": -1 * tx_amount2,
+                            "<=#spendable_balance": -1 * tx_amount2,
+                            "<=#max_send_amount": -1 * tx_amount2,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -700,
+                            "confirmed_wallet_balance": -1 * tx_amount2,
                             ">=#spendable_balance": 1,  # any amount increase
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
@@ -1109,17 +1110,17 @@ class TestWalletSimulator:
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
-                            "unconfirmed_wallet_balance": 1200,
-                            "pending_change": 1200,
+                            "unconfirmed_wallet_balance": tx_amount + tx_amount2,
+                            "pending_change": tx_amount + tx_amount2,
                             "pending_coin_removal_count": 2,
                         }
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": 1200,
-                            "max_send_amount": 1200,
-                            "spendable_balance": 1200,
-                            "pending_change": -1200,
+                            "confirmed_wallet_balance": tx_amount + tx_amount2,
+                            "max_send_amount": tx_amount + tx_amount2,
+                            "spendable_balance": tx_amount + tx_amount2,
+                            "pending_change": -1 * (tx_amount + tx_amount2),
                             "unspent_coin_count": 2,
                             "pending_coin_removal_count": -2,
                         }
