@@ -497,11 +497,11 @@ async def load_plugin_configurations(root_path: Path, config_type: str) -> List[
         try:
             with open(conf_file) as file:
                 data = json.load(file)
-                # Validate that data is a list of strings
-                if isinstance(data, list) and all(isinstance(item, str) for item in data):
-                    valid_configs.extend(data)
-                    # Print each valid configuration
-                    print(f"Valid configurations in {conf_file.name}: {data}")
+            # Validate that data is a list of strings
+            if isinstance(data, list) and all(isinstance(item, str) for item in data):
+                valid_configs.extend(data)
+                # Print each valid configuration
+                print(f"Valid configurations in {conf_file.name}: {data}")
         except (OSError, json.JSONDecodeError, Exception) as e:
             # Log or print the error based on your logging strategy
             print(f"Error loading or parsing {conf_file}: {e}, skipping this file.")
