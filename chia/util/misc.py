@@ -475,20 +475,20 @@ def satisfies_hint(obj: T, type_hint: Type[T]) -> bool:
     return True
 
 
-async def load_plugin_configurations(root_path: str, config_type: str) -> List[str]:
+async def load_plugin_configurations(root_path: Path, config_type: str) -> List[str]:
     """
     Loads plugin configurations from the specified directory and validates that the contents
     are in the expected JSON format (an array of strings). It gracefully handles errors and ensures
     that the necessary directories exist, creating them if they do not.
 
     Args:
-        root_path (str): The root path where the plugins directory is located.
+        root_path (Path): The root path where the plugins directory is located.
         config_type (str): The type of plugins to load ('downloaders' or 'uploaders').
 
     Returns:
         List[str]: A list of valid configurations for the specified plugin type.
     """
-    config_path = Path(root_path) / "plugins" / config_type
+    config_path = root_path / "plugins" / config_type
     # Ensure the config directory exists, create if not
     config_path.mkdir(parents=True, exist_ok=True)
 
