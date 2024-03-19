@@ -21,7 +21,7 @@ _T_Streamable = TypeVar("_T_Streamable", bound=Streamable)
 
 def clvm_streamable(cls: Type[Streamable]) -> Type[Streamable]:
     wrapped_cls: Type[Streamable] = streamable(cls)
-    setattr(wrapped_cls, "__clvm_streamable__", True)
+    setattr(wrapped_cls, "_clvm_streamable", True)
 
     hints = get_type_hints(cls)
     # no way to hint that wrapped_cls is a dataclass here but @streamable checks that
@@ -46,7 +46,7 @@ def json_serialize_with_clvm_streamable(
 ) -> Union[str, Dict[str, Any]]:
     if next_recursion_step is None:
         next_recursion_step = recurse_jsonify
-    if hasattr(streamable, "__clvm_streamable__"):
+    if hasattr(streamable, "_clvm_streamable"):
         # If we are using clvm_serde, we stop JSON serialization at this point and instead return the clvm blob
         return byte_serialize_clvm_streamable(streamable).hex()
     else:
@@ -87,7 +87,7 @@ def json_deserialize_with_clvm_streamable(
         for old_field in old_streamable_fields:
             if is_compound_type(old_field.type):
                 inner_type = get_args(old_field.type)[0]
-                if hasattr(inner_type, "__clvm_streamable__"):
+                if hasattr(inner_type, "_clvm_streamable"):
                     new_streamable_fields.append(
                         dataclasses.replace(
                             old_field,
@@ -98,7 +98,7 @@ def json_deserialize_with_clvm_streamable(
                     )
                 else:
                     new_streamable_fields.append(old_field)
-            elif hasattr(old_field.type, "__clvm_streamable__"):
+            elif hasattr(old_field.type, "_clvm_streamable"):
                 new_streamable_fields.append(
                     dataclasses.replace(old_field, convert_function=bind_type_to_this_function(old_field.type))
                 )
