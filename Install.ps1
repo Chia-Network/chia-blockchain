@@ -53,7 +53,7 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-$supportedPythonVersions = "3.11", "3.10", "3.9", "3.8"
+$supportedPythonVersions = "3.12", "3.11", "3.10", "3.9", "3.8"
 if ("$env:INSTALL_PYTHON_VERSION" -ne "")
 {
     $pythonVersion = $env:INSTALL_PYTHON_VERSION
@@ -117,6 +117,10 @@ if (-not $i)
 else
 {
     $pip_parameters += "chia-blockchain$extras_cli @ ."
+}
+else
+{
+    $pip_parameters += "."
 }
 
 py -$pythonVersion -m venv venv

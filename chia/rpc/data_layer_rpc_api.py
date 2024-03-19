@@ -86,6 +86,7 @@ class DataLayerRpcApi:
             "/create_data_store": self.create_data_store,
             "/get_owned_stores": self.get_owned_stores,
             "/batch_update": self.batch_update,
+            "/submit_pending_root": self.submit_pending_root,
             "/get_value": self.get_value,
             "/get_keys": self.get_keys,
             "/get_keys_values": self.get_keys_values,
@@ -240,12 +241,24 @@ class DataLayerRpcApi:
         fee = get_fee(self.service.config, request)
         changelist = [process_change(change) for change in request["changelist"]]
         store_id = bytes32(hexstr_to_bytes(request["id"]))
+        submit_on_chain = request.get("submit_on_chain", True)
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
-        if transaction_record is None:
-            raise Exception(f"Batch update failed for: {store_id}")
+        transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee), submit_on_chain)
+        if submit_on_chain:
+            if transaction_record is None:
+                raise Exception(f"Batch update failed for: {store_id}")
+            return {"tx_id": transaction_record.name}
+        else:
+            if transaction_record is not None:
+                raise Exception("Transaction submitted on chain, but submit_on_chain set to False")
+            return {}
+
+    async def submit_pending_root(self, request: Dict[str, Any]) -> EndpointResult:
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        fee = get_fee(self.service.config, request)
+        transaction_record = await self.service.submit_pending_root(store_id, uint64(fee))
         return {"tx_id": transaction_record.name}
 
     async def insert(self, request: Dict[str, Any]) -> EndpointResult:
@@ -262,6 +275,7 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         changelist = [{"action": "insert", "key": key, "value": value}]
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
+        assert transaction_record is not None
         return {"tx_id": transaction_record.name}
 
     async def delete_key(self, request: Dict[str, Any]) -> EndpointResult:
@@ -277,6 +291,7 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         changelist = [{"action": "delete", "key": key}]
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
+        assert transaction_record is not None
         return {"tx_id": transaction_record.name}
 
     async def get_root(self, request: Dict[str, Any]) -> EndpointResult:

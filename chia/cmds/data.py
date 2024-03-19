@@ -166,12 +166,14 @@ def get_value(
 @create_rpc_port_option()
 @create_fee_option()
 @options.create_fingerprint()
+@click.option("--submit/--no-submit", default=True, help="Submit the result on chain")
 def update_data_store(
     id: str,
     changelist_string: str,
     data_rpc_port: int,
     fee: str,
     fingerprint: Optional[int],
+    submit: bool,
 ) -> None:
     from chia.cmds.data_funcs import update_data_store_cmd
 
@@ -180,6 +182,30 @@ def update_data_store(
             rpc_port=data_rpc_port,
             store_id=id,
             changelist=json.loads(changelist_string),
+            fee=fee,
+            fingerprint=fingerprint,
+            submit_on_chain=submit,
+        )
+    )
+
+
+@data_cmd.command("submit_pending_root", help="Submit on chain a locally stored batch")
+@create_data_store_id_option()
+@create_rpc_port_option()
+@create_fee_option()
+@options.create_fingerprint()
+def submit_pending_root(
+    id: str,
+    data_rpc_port: int,
+    fee: str,
+    fingerprint: Optional[int],
+) -> None:
+    from chia.cmds.data_funcs import submit_pending_root_cmd
+
+    run(
+        submit_pending_root_cmd(
+            rpc_port=data_rpc_port,
+            store_id=id,
             fee=fee,
             fingerprint=fingerprint,
         )

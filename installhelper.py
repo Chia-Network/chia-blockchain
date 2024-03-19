@@ -67,7 +67,7 @@ def update_version(package_json_path: str):
     data["version"] = get_chia_version()
 
     with open(package_json_path, "w") as w:
-        json.dump(data, indent=4, fp=w)
+        json.dump(data, indent=2, fp=w)
 
 
 if __name__ == "__main__":

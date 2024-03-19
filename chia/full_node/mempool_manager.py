@@ -706,7 +706,7 @@ class MempoolManager:
         else:
             log.warning(
                 "updating the mempool using the slow-path. "
-                f"peak: {self.peak.header_hash} "
+                f"peak: {self.peak.header_hash.hex()} "
                 f"new-peak-prev: {new_peak.prev_transaction_block_hash} "
                 f"coins: {'not set' if spent_coins is None else 'set'}"
             )

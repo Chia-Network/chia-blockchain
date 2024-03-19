@@ -19,13 +19,11 @@ _T_Condition = TypeVar("_T_Condition", bound="Condition")
 
 class Condition(Streamable, ABC):
     @abstractmethod
-    def to_program(self) -> Program:
-        ...
+    def to_program(self) -> Program: ...
 
     @classmethod
     @abstractmethod
-    def from_program(cls: Type[_T_Condition], program: Program) -> _T_Condition:
-        ...
+    def from_program(cls: Type[_T_Condition], program: Program) -> _T_Condition: ...
 
 
 @final
@@ -243,9 +241,11 @@ class CreateCoin(Condition):
         return cls(
             bytes32(program.at("rf").as_atom()),
             uint64(program.at("rrf").as_int()),
-            None
-            if potential_memos == Program.to(None)
-            else [memo.as_atom() for memo in potential_memos.at("f").as_iter()],
+            (
+                None
+                if potential_memos == Program.to(None)
+                else [memo.as_atom() for memo in potential_memos.at("f").as_iter()]
+            ),
         )
 
 

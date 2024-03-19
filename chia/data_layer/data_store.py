@@ -160,6 +160,11 @@ class DataStore:
                     CREATE INDEX IF NOT EXISTS node_hash ON root(node_hash)
                     """
                 )
+                await writer.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS node_key_index ON node(key)
+                    """
+                )
 
             yield self
 
@@ -374,8 +379,15 @@ class DataStore:
     async def get_pending_root(self, tree_id: bytes32) -> Optional[Root]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id AND status == :status LIMIT 2",
-                {"tree_id": tree_id, "status": Status.PENDING.value},
+                """
+                SELECT * FROM root WHERE tree_id == :tree_id
+                AND status IN (:pending_status, :pending_batch_status) LIMIT 2
+                """,
+                {
+                    "tree_id": tree_id,
+                    "pending_status": Status.PENDING.value,
+                    "pending_batch_status": Status.PENDING_BATCH.value,
+                },
             )
 
             row = await cursor.fetchone()
@@ -395,8 +407,12 @@ class DataStore:
 
             if pending_root is not None:
                 await writer.execute(
-                    "DELETE FROM root WHERE tree_id == :tree_id AND status == :status",
-                    {"tree_id": tree_id, "status": Status.PENDING.value},
+                    "DELETE FROM root WHERE tree_id == :tree_id AND status IN (:pending_status, :pending_batch_status)",
+                    {
+                        "tree_id": tree_id,
+                        "pending_status": Status.PENDING.value,
+                        "pending_batch_status": Status.PENDING_BATCH.value,
+                    },
                 )
 
         return pending_root
@@ -1314,7 +1330,7 @@ class DataStore:
             """
             WITH RECURSIVE pending_nodes AS (
                 SELECT node_hash AS hash FROM root
-                WHERE status = ?
+                WHERE status IN (:pending_status, :pending_batch_status)
                 UNION ALL
                 SELECT n.left FROM node n
                 INNER JOIN pending_nodes pn ON n.hash = pn.hash
@@ -1328,7 +1344,10 @@ class DataStore:
             WHERE hash NOT IN (SELECT hash FROM ancestors)
             AND hash NOT IN (SELECT hash FROM pending_nodes)
             """,
-            (Status.PENDING.value,),
+            {
+                "pending_status": Status.PENDING.value,
+                "pending_batch_status": Status.PENDING_BATCH.value,
+            },
         )
 
     async def insert_batch(
@@ -1339,14 +1358,28 @@ class DataStore:
     ) -> Optional[bytes32]:
         async with self.db_wrapper.writer() as writer:
             old_root = await self.get_tree_root(tree_id)
-            root_hash = old_root.node_hash
-            if old_root.node_hash is None:
+            pending_root = await self.get_pending_root(tree_id=tree_id)
+            if pending_root is None:
+                latest_local_root: Optional[Root] = old_root
+            else:
+                if pending_root.status == Status.PENDING_BATCH:
+                    # We have an unfinished batch, continue the current batch on top of it.
+                    if pending_root.generation != old_root.generation + 1:
+                        raise Exception("Internal error")
+                    await self.change_root_status(pending_root, Status.COMMITTED)
+                    await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
+                    latest_local_root = pending_root
+                else:
+                    raise Exception("Internal error")
+
+            assert latest_local_root is not None
+            root_hash = latest_local_root.node_hash
+            if latest_local_root.node_hash is None:
                 hint_keys_values = {}
             else:
                 kv_compressed = await self.get_keys_values_compressed(tree_id, root_hash=root_hash)
                 hint_keys_values = kv_compressed.keys_values_hashed
 
-            intermediate_root: Optional[Root] = old_root
             for change in changelist:
                 if change["action"] == "insert":
                     key = change["key"]
@@ -1355,9 +1388,9 @@ class DataStore:
                     side = change.get("side", None)
                     if reference_node_hash is None and side is None:
                         insert_result = await self.autoinsert(
-                            key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
+                            key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=latest_local_root
                         )
-                        intermediate_root = insert_result.root
+                        latest_local_root = insert_result.root
                     else:
                         if reference_node_hash is None or side is None:
                             raise Exception("Provide both reference_node_hash and side or neither.")
@@ -1370,21 +1403,21 @@ class DataStore:
                             hint_keys_values,
                             True,
                             Status.COMMITTED,
-                            root=intermediate_root,
+                            root=latest_local_root,
                         )
-                        intermediate_root = insert_result.root
+                        latest_local_root = insert_result.root
                 elif change["action"] == "delete":
                     key = change["key"]
-                    intermediate_root = await self.delete(
-                        key, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
+                    latest_local_root = await self.delete(
+                        key, tree_id, hint_keys_values, True, Status.COMMITTED, root=latest_local_root
                     )
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
                     insert_result = await self.upsert(
-                        key, new_value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
+                        key, new_value, tree_id, hint_keys_values, True, Status.COMMITTED, root=latest_local_root
                     )
-                    intermediate_root = insert_result.root
+                    latest_local_root = insert_result.root
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
@@ -1396,7 +1429,7 @@ class DataStore:
             # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
             await self.rollback_to_generation(tree_id, old_root.generation)
             await self.insert_root_with_ancestor_table(tree_id=tree_id, node_hash=root.node_hash, status=status)
-            if status == Status.PENDING:
+            if status in (Status.PENDING, Status.PENDING_BATCH):
                 new_root = await self.get_pending_root(tree_id=tree_id)
                 assert new_root is not None
             elif status == Status.COMMITTED:
@@ -1480,12 +1513,50 @@ class DataStore:
             if status == Status.COMMITTED:
                 await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
 
+    async def get_node_by_key_latest_generation(self, key: bytes, tree_id: bytes32) -> TerminalNode:
+        async with self.db_wrapper.reader() as reader:
+            root = await self.get_tree_root(tree_id=tree_id)
+            if root.node_hash is None:
+                raise KeyNotFoundError(key=key)
+
+            cursor = await reader.execute(
+                """
+                SELECT a.hash FROM ancestors a
+                JOIN node n ON a.hash = n.hash
+                WHERE n.key = :key
+                AND a.tree_id = :tree_id
+                ORDER BY a.generation DESC
+                LIMIT 1
+                """,
+                {"key": key, "tree_id": tree_id},
+            )
+
+            row = await cursor.fetchone()
+            if row is None:
+                raise KeyNotFoundError(key=key)
+
+            node = await self.get_node(row["hash"])
+            node_hash = node.hash
+            while True:
+                internal_node = await self._get_one_ancestor(node_hash, tree_id)
+                if internal_node is None:
+                    break
+                node_hash = internal_node.hash
+
+            if node_hash != root.node_hash:
+                raise KeyNotFoundError(key=key)
+            assert isinstance(node, TerminalNode)
+            return node
+
     async def get_node_by_key(
         self,
         key: bytes,
         tree_id: bytes32,
         root_hash: Optional[bytes32] = None,
     ) -> TerminalNode:
+        if root_hash is None:
+            return await self.get_node_by_key_latest_generation(key, tree_id)
+
         nodes = await self.get_keys_values(tree_id=tree_id, root_hash=root_hash)
 
         for node in nodes:
@@ -1724,7 +1795,7 @@ class DataStore:
                 ),
                 pending_nodes AS (
                     SELECT node_hash AS hash FROM root
-                    WHERE status = :status
+                    WHERE status IN (:pending_status, :pending_batch_status)
                     UNION ALL
                     SELECT n.left FROM node n
                     INNER JOIN pending_nodes pn ON n.hash = pn.hash
@@ -1740,7 +1811,11 @@ class DataStore:
                 WHERE hash NOT IN (SELECT hash FROM ancestors WHERE tree_id != :tree_id)
                 AND hash NOT IN (SELECT hash from pending_nodes)
                 """,
-                {"tree_id": tree_id, "status": Status.PENDING.value},
+                {
+                    "tree_id": tree_id,
+                    "pending_status": Status.PENDING.value,
+                    "pending_batch_status": Status.PENDING_BATCH.value,
+                },
             )
             to_delete: Dict[bytes, Tuple[bytes, bytes]] = {}
             ref_counts: Dict[bytes, int] = {}
