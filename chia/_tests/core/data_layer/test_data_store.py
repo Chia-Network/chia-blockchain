@@ -1953,5 +1953,5 @@ async def test_insert_from_delta_file_incorrect_file_exists(
     root = await data_store.get_tree_root(tree_id=tree_id)
     assert root.generation == 1
     with os.scandir(tmp_path) as entries:
-        filenames = {entry.name for entry in entries}
+        filenames = [entry.name for entry in entries]
         assert len(filenames) == 0
