@@ -613,8 +613,8 @@ class CoinStore:
                 coin_id, coin_amount, parent_id, parent_amount, parent_parent_id = rows[0]
                 return UnspentLineageInfo(
                     coin_id=bytes32(coin_id),
-                    coin_amount=int_from_bytes(coin_amount),
+                    coin_amount=uint64(int_from_bytes(coin_amount)),
                     parent_id=bytes32(parent_id),
-                    parent_amount=int_from_bytes(parent_amount),
+                    parent_amount=uint64(int_from_bytes(parent_amount)),
                     parent_parent_id=bytes32(parent_parent_id),
                 )
