@@ -8,6 +8,7 @@ from typing import AsyncGenerator, Dict, List, Optional, OrderedDict, Set, Tuple
 import pytest
 from chia_rs import Coin, CoinState
 
+from chia._tests.connection_utils import add_dummy_connection
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message, NodeType
@@ -20,7 +21,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
-from tests.connection_utils import add_dummy_connection
 
 OneNode = Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]
 
@@ -285,7 +285,7 @@ async def test_request_coin_state_reorg(one_node: OneNode, self_hostname: str) -
 
     # Reorg
     await simulator.reorg_from_index_to_new_index(
-        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\0" * 32), bytes32(b"\0" * 32))
+        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\1" * 32), bytes32(b"\0" * 32))
     )
 
     # Request coin state, should reject due to reorg
@@ -364,8 +364,8 @@ async def test_request_coin_state_limit(one_node: OneNode, self_hostname: str) -
 async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> None:
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
 
-    # Farm block
-    await simulator.farm_blocks_to_puzzlehash(3)
+    # Farm block to a puzzle hash we aren't looking at
+    await simulator.farm_blocks_to_puzzlehash(3, farm_to=bytes32(b"\x0A" * 32))
 
     genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
 
@@ -486,7 +486,7 @@ async def test_request_puzzle_state_reorg(one_node: OneNode, self_hostname: str)
 
     # Reorg
     await simulator.reorg_from_index_to_new_index(
-        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\0" * 32), bytes32(b"\0" * 32))
+        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\1" * 32), bytes32(b"\0" * 32))
     )
 
     # Request coin state, should reject due to reorg
