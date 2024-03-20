@@ -78,6 +78,10 @@ jobs:
         id: pip-cache
         shell: bash
         run: |
+          for d in / /github/ /github/home/ /github/home/.cache/ /github/home/.cache/pip/; do echo ==== checking $d; ls -dl $d; done
+          echo ==== pip cache dir
+          pip cache dir
+          echo ==== original
           echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pip
