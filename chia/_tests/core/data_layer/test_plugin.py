@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from chia.data_layer.data_layer_util import PluginRemote
 from chia.data_layer.util.plugin import load_plugin_configurations
 
 
@@ -17,7 +18,10 @@ async def test_load_plugin_configurations(tmp_path: Path) -> None:
     config_path.mkdir(parents=True)
 
     # Create valid and invalid config files
-    valid_config = ["config1", "config2"]
+    valid_config = [
+        {"url": "https://example.com/plugin1"},
+        {"url": "https://example.com/plugin2", "headers": {"Authorization": "Bearer token"}},
+    ]
     invalid_config = {"config": "invalid"}
     with open(config_path / "valid.conf", "w") as file:
         json.dump(valid_config, file)
@@ -27,7 +31,12 @@ async def test_load_plugin_configurations(tmp_path: Path) -> None:
     # Test loading configurations
     loaded_configs = await load_plugin_configurations(root_path, plugin_type)
 
-    assert set(loaded_configs) == set(valid_config), "Should only load valid configurations"
+    expected_configs = [
+        PluginRemote.unmarshal(marshalled=config) if isinstance(config, dict) else None for config in valid_config
+    ]
+    # Filter out None values that may have been added due to invalid config structures
+    expected_configs = list(filter(None, expected_configs))
+    assert set(loaded_configs) == set(expected_configs), "Should only load valid configurations"
 
 
 @pytest.mark.anyio

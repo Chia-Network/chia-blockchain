@@ -109,16 +109,16 @@ async def async_main() -> int:
     uploaders: List[PluginRemote] = [
         *(PluginRemote(url=url) for url in old_uploaders),
         *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_uploaders),
-        *(PluginRemote(url=url) for url in conf_file_uploaders),
+        *conf_file_uploaders,
     ]
 
     old_downloaders = config["data_layer"].get("downloaders", [])
     new_downloaders = plugins_config.get("downloaders", [])
-    conf_file_downloaders = await load_plugin_configurations(service_dir, "downloaders")
+    conf_file_uploaders = await load_plugin_configurations(service_dir, "downloaders")
     downloaders: List[PluginRemote] = [
         *(PluginRemote(url=url) for url in old_downloaders),
         *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_downloaders),
-        *(PluginRemote(url=url) for url in conf_file_downloaders),
+        *conf_file_uploaders,
     ]
 
     service = create_data_layer_service(DEFAULT_ROOT_PATH, config, downloaders, uploaders)
