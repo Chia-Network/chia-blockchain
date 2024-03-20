@@ -91,6 +91,11 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
     return " ".join(mnemonics)
 
 
+def check_mnemonic_validity(mnemonic_str: str) -> bool:
+    mnemonic: List[str] = mnemonic_str.split(" ")
+    return len(mnemonic) in [12, 15, 18, 21, 24]
+
+
 def mnemonic_from_short_words(mnemonic_str: str) -> str:
     """
     Since the first 4 letters of each word is unique (or the full word, if less than 4 characters), and its common
