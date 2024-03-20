@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
-from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program
@@ -255,10 +254,9 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: SerializedProgram) -> Tup
             metadata = update_metadata(metadata, condition)
             metadata = Program.to(metadata)
         elif condition_code == 51:
-            atom = condition.rest().rest().first().atom
-            assert atom is not None
+            atom = condition.rest().rest().first().as_int()
 
-            if int_from_bytes(atom) == 1:
+            if atom == 1:
                 # destination puzhash
                 if puzhash_for_derivation is not None:
                     # ignore duplicated create coin conditions
