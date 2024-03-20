@@ -50,7 +50,17 @@ jobs:
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
   test:
+    uses: ./.github/workflows/test-single.yml
     needs: configure
+    with:
+      emoji: ${{ matrix.os.emoji }}
+      matrix: ${{ matrix.os.matrix }}
+      name: ${{ matrix.os.name }}
+      file_name: ${{ matrix.os.file_name }}
+      concurrency_name: ${{ matrix.os.concurency_name }}
+      configuration: ${{ matrix.os.configuration }}
+      matrix_mode: ${{ matrix.os.matrix_mode }}
+      runs-on: ${{ matrix.os.runs-on }}
     strategy:
       fail-fast: false
       matrix:
@@ -79,9 +89,6 @@ jobs:
             configuration: ${{ needs.configure.outputs.configuration }}
             matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
             runs-on: windows-latest
-    uses: ./.github/workflows/test-single.yml
-    with: 
-      garbage: ${{ matrix.os }}
 
   coverage:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
