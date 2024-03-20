@@ -340,27 +340,28 @@ class Keychain:
         if read_str is None or len(read_str) == 0:
             raise KeychainUserNotFound(self.service, user)
         str_bytes = bytes.fromhex(read_str)
-
-        pk_bytes: bytes = str_bytes[: G1Element.SIZE]
-        if len(pk_bytes) == 32:
-            observation_root: ObservationRoot = VaultRoot.from_bytes(pk_bytes)
+        pk = str_bytes
+        entropy = None
+        if len(str_bytes) == 32:
+            observation_root: ObservationRoot = VaultRoot.from_bytes(str_bytes)
             fingerprint = observation_root.get_fingerprint()
-            entropy = None
             key_type = KeyTypes.VAULT_LAUNCHER.value
-        elif len(pk_bytes) == 48:
-            observation_root = G1Element.from_bytes(pk_bytes)
+        elif len(str_bytes) == 48:
+            observation_root = G1Element.from_bytes(str_bytes)
             fingerprint = observation_root.get_fingerprint()
-            if len(str_bytes) == G1Element.SIZE + 32:
-                entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
-            else:
-                entropy = None
+            key_type = KeyTypes.G1_ELEMENT.value
+        elif len(str_bytes) == G1Element.SIZE + 32:
+            pk = str_bytes[: G1Element.SIZE]
+            observation_root = G1Element.from_bytes(pk)
+            fingerprint = observation_root.get_fingerprint()
+            entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
             key_type = KeyTypes.G1_ELEMENT.value
         else:
-            raise ValueError(f"Public key must be either 32 or 48 bytes, got {len(pk_bytes)} bytes")
+            raise ValueError(f"Public key must be either 32 or 48 bytes, got {len(pk)} bytes")
 
         return KeyData(
             fingerprint=uint32(fingerprint),
-            public_key=pk_bytes,
+            public_key=pk,
             label=self.keyring_wrapper.get_label(fingerprint),
             secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
             key_type=key_type,

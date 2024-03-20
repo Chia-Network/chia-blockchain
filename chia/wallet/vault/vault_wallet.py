@@ -79,7 +79,7 @@ class Vault(Wallet):
     @vault_info.setter
     def vault_info(self, new_vault_info: VaultInfo) -> None:
         self._vault_info = new_vault_info
-    
+
     @staticmethod
     async def create(
         wallet_state_manager: Any,
@@ -125,7 +125,6 @@ class Vault(Wallet):
         """
         Creates Un-signed transactions to be passed into signer.
         """
-        negative_change_allowed: bool = kwargs.get("negative_change_allowed", False)
         if primaries is None:
             non_change_amount: int = amount
         else:
@@ -140,7 +139,7 @@ class Vault(Wallet):
             coins=coins,
             primaries_input=primaries,
             memos=memos,
-            negative_change_allowed=negative_change_allowed,
+            negative_change_allowed=kwargs.get("negative_change_allowed", False),
             puzzle_decorator_override=puzzle_decorator_override,
             extra_conditions=extra_conditions,
         )
