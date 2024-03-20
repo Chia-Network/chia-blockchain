@@ -141,6 +141,7 @@ class ChiaServer:
     received_message_callback: Optional[ConnectionCallback] = None
     banned_peers: Dict[str, float] = field(default_factory=dict)
     invalid_protocol_ban_seconds = INVALID_PROTOCOL_BAN_SECONDS
+    allow_banning_localhost: bool = False
 
     @classmethod
     def create(
@@ -529,7 +530,7 @@ class ChiaServer:
         # in this case we still want to do the banning logic and remove the conection from the list
         # but the other cleanup should already have been done so we skip that
 
-        if is_localhost(connection.peer_info.host) and ban_time != 0:
+        if is_localhost(connection.peer_info.host) and not self.allow_banning_localhost and ban_time != 0:
             self.log.warning(f"Trying to ban localhost for {ban_time}, but will not ban")
             ban_time = 0
         if ban_time > 0:

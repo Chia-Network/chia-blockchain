@@ -5,7 +5,15 @@ import asyncio
 import logging
 
 import pytest
-from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, WSMessage, WSMsgType
+from aiohttp import (
+    ClientSession,
+    ClientTimeout,
+    ServerDisconnectedError,
+    WSCloseCode,
+    WSMessage,
+    WSMsgType,
+    WSServerHandshakeError,
+)
 
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
@@ -44,6 +52,8 @@ class TestDos:
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
+        server_1.allow_banning_localhost = True
+
         # Use the server_2 ssl information to connect to server_1, and send a huge message
         timeout = ClientTimeout(total=10)
         session = ClientSession(timeout=timeout)
@@ -71,18 +81,14 @@ class TestDos:
         assert response.data == WSCloseCode.MESSAGE_TOO_BIG
         await ws.close()
 
+        assert self_hostname in server_1.banned_peers.keys()
+
         # Now test that the ban is active
-        await asyncio.sleep(5)
         assert ws.closed
-        try:
-            ws = await session.ws_connect(
+        with pytest.raises(WSServerHandshakeError):
+            await session.ws_connect(
                 url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
-            response: WSMessage = await ws.receive()
-            assert response.type == WSMsgType.CLOSE
-        except ServerDisconnectedError:
-            pass
-        await session.close()
 
     @pytest.mark.anyio
     async def test_bad_handshake_and_ban(self, setup_two_nodes_fixture, self_hostname):
@@ -90,6 +96,7 @@ class TestDos:
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
+        server_1.allow_banning_localhost = True
         server_1.invalid_protocol_ban_seconds = 10
         # Use the server_2 ssl information to connect to server_1, and send a huge message
         timeout = ClientTimeout(total=10)
@@ -108,18 +115,15 @@ class TestDos:
         assert response.data == WSCloseCode.PROTOCOL_ERROR
         await ws.close()
 
+        assert self_hostname in server_1.banned_peers.keys()
+
         # Now test that the ban is active
-        await asyncio.sleep(5)
         assert ws.closed
-        try:
-            ws = await session.ws_connect(
+        with pytest.raises(WSServerHandshakeError):
+            await session.ws_connect(
                 url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
-            response: WSMessage = await ws.receive()
-            assert response.type == WSMsgType.CLOSE
-        except ServerDisconnectedError:
-            pass
-        await asyncio.sleep(6)
+        await asyncio.sleep(server_1.invalid_protocol_ban_seconds + 1)
 
         # Ban expired
         await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024)
