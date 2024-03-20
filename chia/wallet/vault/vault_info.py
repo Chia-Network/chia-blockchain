@@ -23,7 +23,6 @@ class RecoveryInfo(Streamable):
 @dataclass(frozen=True)
 class VaultInfo(Streamable):
     coin: Coin
-    launcher_id: bytes32
     pubkey: bytes
     hidden_puzzle_hash: bytes32
     inner_puzzle_hash: bytes32

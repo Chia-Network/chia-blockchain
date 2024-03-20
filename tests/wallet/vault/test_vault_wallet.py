@@ -47,7 +47,7 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
     assert vault_tx
 
     eve_coin = [item for item in vault_tx.additions if item not in vault_tx.removals and item.amount == 1][0]
-    launcher_id = eve_coin.name()
+    launcher_id = eve_coin.parent_coin_info
     vault_root = VaultRoot.from_bytes(launcher_id)
     await wallet_environments.process_pending_states(
         [
