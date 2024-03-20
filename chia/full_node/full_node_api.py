@@ -1776,7 +1776,7 @@ class FullNodeAPI:
 
         if request.puzzle_hashes is None:
             removed = list(subs.puzzle_subscriptions(peer_id))
-            subs.remove_puzzle_subscriptions(peer_id, removed)
+            subs.clear_puzzle_subscriptions(peer_id)
         else:
             removed = list(subs.remove_puzzle_subscriptions(peer_id, request.puzzle_hashes))
 
@@ -1796,7 +1796,7 @@ class FullNodeAPI:
 
         if request.coin_ids is None:
             removed = list(subs.coin_subscriptions(peer_id))
-            subs.remove_coin_subscriptions(peer_id, removed)
+            subs.clear_coin_subscriptions(peer_id)
         else:
             removed = list(subs.remove_coin_subscriptions(peer_id, request.coin_ids))
 
