@@ -88,6 +88,7 @@ class TestDos:
         # Now test that the ban is active
         assert ws.closed
         # make sure that the ban time is not terminating "soon"
+        assert self_hostname in server_1.banned_peers
         server_1.banned_peers[self_hostname] = time.time() + adjusted_timeout(10)
         with pytest.raises(WSServerHandshakeError):
             await session.ws_connect(
@@ -124,6 +125,7 @@ class TestDos:
         # Now test that the ban is active
         assert ws.closed
         # make sure that the ban time is not terminating "soon"
+        assert self_hostname in server_1.banned_peers
         server_1.banned_peers[self_hostname] = time.time() + adjusted_timeout(10)
         with pytest.raises(WSServerHandshakeError):
             await session.ws_connect(
@@ -131,6 +133,9 @@ class TestDos:
             )
         await asyncio.sleep(10 + 1)
 
+        # make sure that the ban time has passed
+        assert self_hostname in server_1.banned_peers
+        server_1.banned_peers[self_hostname] = time.time() - 1
         # Ban expired
         await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024)
 
