@@ -232,7 +232,7 @@ def test_typing() -> None:
 
         @chia_command(cmd, "temp_cmd_optional_bad", "blah")
         class TempCMDOptionalBad3:
-            optional: Optional[int] = option("--optional", default="string")
+            optional: Optional[int] = option("--optional", default="string", required=False)
 
             def run(self) -> None:
                 ...
@@ -301,6 +301,46 @@ def test_typing() -> None:
 
             def run(self) -> None:
                 ...
+
+    # Test invalid default
+    with pytest.raises(TypeError):
+
+        @chia_command(cmd, "temp_cmd_bad_default", "blah")
+        class TempCMDBadDefault:
+            integer: int = option("--int", default="string")
+
+            def run(self) -> None:
+                ...
+
+    # Test bytes parsing
+    @chia_command(cmd, "temp_cmd_bad_bytes", "blah")
+    class TempCMDBadBytes:
+        blob: bytes = option("--blob", required=True)
+
+        def run(self) -> None:
+            ...
+
+    @chia_command(cmd, "temp_cmd_bad_bytes32", "blah")
+    class TempCMDBadBytes32:
+        blob32: bytes = option("--blob32", required=True)
+
+        def run(self) -> None:
+            ...
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cmd,
+        ["temp_cmd_bad_bytes", "--blob", "not a blob"],
+        catch_exceptions=False,
+    )
+    assert "not a valid hex string" in result.output
+
+    result = runner.invoke(
+        cmd,
+        ["temp_cmd_bad_bytes32", "--blob32", "not a blob"],
+        catch_exceptions=False,
+    )
+    assert "not a valid hex string" in result.output
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="doesn't matter")
