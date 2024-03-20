@@ -187,10 +187,6 @@ class TerminalNode:
 
     atom: None = field(init=False, default=None)
 
-    @property
-    def pair(self) -> Tuple[bytes32, bytes32]:
-        return Program.to(self.key), Program.to(self.value)
-
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
         return cls(
