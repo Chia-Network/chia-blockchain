@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Tuple
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
-from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.server.server import ChiaServer
@@ -1280,7 +1279,6 @@ class TestWalletSimulator:
             }
         )
 
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
     async def test_wallet_send_to_three_peers(

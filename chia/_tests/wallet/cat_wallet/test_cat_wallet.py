@@ -754,7 +754,6 @@ async def test_cat_spend_multiple(
             assert list(memos.keys())[0] in [a.name() for a in tx.spend_bundle.additions()]
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_cat_max_amount_send(
@@ -848,7 +847,6 @@ async def test_cat_max_amount_send(
         await cat_wallet.generate_signed_transaction([uint64(max_sent_amount + 1)], [ph], DEFAULT_TX_CONFIG)
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("autodiscovery", [True, False])
 @pytest.mark.anyio

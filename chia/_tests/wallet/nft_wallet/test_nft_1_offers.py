@@ -7,7 +7,6 @@ from typing import Any, Callable, Coroutine, Optional, Tuple
 
 import pytest
 
-from chia._tests.conftest import ConsensusMode
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -67,7 +66,6 @@ def trusted_setup_helper(
         wallet_node_taker.config["trusted_peers"] = {}
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
@@ -207,7 +205,6 @@ async def test_nft_offer_sell_nft(
     await time_out_assert(20, wallet_taker.get_confirmed_balance, expected_taker_balance)
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
@@ -345,7 +342,6 @@ async def test_nft_offer_request_nft(
     await time_out_assert(20, wallet_taker.get_confirmed_balance, expected_taker_balance)
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
@@ -506,7 +502,6 @@ async def test_nft_offer_sell_did_to_did(
     await time_out_assert(20, wallet_taker.get_confirmed_balance, expected_taker_balance)
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
@@ -688,7 +683,6 @@ async def test_nft_offer_sell_nft_for_cat(
     await time_out_assert(20, cat_wallet_taker.get_confirmed_balance, expected_taker_cat_balance)
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("test_change", [True, False])
 @pytest.mark.anyio
@@ -1120,7 +1114,6 @@ async def test_nft_offer_sell_cancel_in_batch(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize(
     "royalty_pts",

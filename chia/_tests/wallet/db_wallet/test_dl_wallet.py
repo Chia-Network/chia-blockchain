@@ -6,7 +6,6 @@ from typing import Any, List
 
 import pytest
 
-from chia._tests.conftest import ConsensusMode
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
@@ -142,7 +141,6 @@ class TestDLWallet:
         owned_launcher_ids = sorted(singleton.launcher_id for singleton in owned_singletons)
         assert owned_launcher_ids == sorted(expected_launcher_ids)
 
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
     async def test_tracking_non_owned(
