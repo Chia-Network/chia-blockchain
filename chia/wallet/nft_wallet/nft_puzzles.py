@@ -261,7 +261,7 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: SerializedProgram) -> Tup
                 if puzhash_for_derivation is not None:
                     # ignore duplicated create coin conditions
                     continue
-                memo = bytes32(condition.at("rrrfrf").as_atom())
+                memo = bytes32(condition.at("rrrff").as_atom())
                 puzhash_for_derivation = memo
                 log.debug("Got back puzhash from solution: %s", puzhash_for_derivation)
     assert puzhash_for_derivation
