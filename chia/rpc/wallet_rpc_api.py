@@ -2243,8 +2243,6 @@ class WalletRpcApi:
         if coin_memos is not None:
             for memo in coin_memos:
                 hints.append(memo.hex())
-        assert recovery_list_hash.atom is not None
-        assert public_key.atom is not None
         return {
             "success": True,
             "did_id": encode_puzzle_hash(launcher_id, AddressType.DID.hrp(self.service.config)),
@@ -2284,7 +2282,6 @@ class WalletRpcApi:
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
-        assert recovery_list_hash.atom is not None
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
             bytes32(recovery_list_hash.as_atom()),

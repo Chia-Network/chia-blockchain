@@ -33,10 +33,9 @@ class CATOuterPuzzle:
         if args is None:
             return None
         _, tail_hash, inner_puzzle = args
-        assert tail_hash.atom is not None
         constructor_dict: Dict[str, Any] = {
             "type": "CAT",
-            "tail": "0x" + tail_hash.atom.hex(),
+            "tail": "0x" + tail_hash.as_atom().hex(),
         }
         next_constructor = self._match(uncurry_puzzle(inner_puzzle))
         if next_constructor is not None:

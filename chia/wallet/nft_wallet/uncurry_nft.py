@@ -118,7 +118,6 @@ class UncurriedNFT(Streamable):
         try:
             # Set nft parameters
             nft_mod_hash, metadata, metadata_updater_hash, inner_puzzle = curried_args.as_iter()
-            assert nft_mod_hash.atom is not None
             data_uris = Program.to([])
             data_hash = Program.to(0)
             meta_uris = Program.to([])
@@ -160,8 +159,7 @@ class UncurriedNFT(Streamable):
                 transfer_program_mod, transfer_program_args = transfer_program.uncurry()
                 _, royalty_address_p, royalty_percentage_program = transfer_program_args.as_iter()
                 royalty_percentage = uint16(royalty_percentage_program.as_int())
-                assert royalty_address_p.atom is not None
-                royalty_address = bytes32(royalty_address_p.atom)
+                royalty_address = bytes32(royalty_address_p.as_atom())
                 atom = current_did_program.atom
                 if atom == b"":
                     # For unassigned NFT, set owner DID to None
@@ -175,11 +173,10 @@ class UncurriedNFT(Streamable):
             log.debug("Cannot uncurry NFT state layer: Args %s Error: %s", curried_args, e)
             return None
 
-        assert singleton_launcher_id.atom is not None
-        singleton_launcher_id_bytes32 = bytes32(singleton_launcher_id.atom)
+        singleton_launcher_id_bytes32 = bytes32(singleton_launcher_id.as_atom())
 
         return cls(
-            nft_mod_hash=bytes32(nft_mod_hash.atom),
+            nft_mod_hash=bytes32(nft_mod_hash.as_atom()),
             nft_state_layer=nft_state_layer,
             singleton_struct=singleton_struct,
             singleton_mod_hash=singleton_mod_hash,
