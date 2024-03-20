@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 import pytest
 from aiohttp import (
@@ -82,11 +83,12 @@ class TestDos:
         assert response.data == WSCloseCode.MESSAGE_TOO_BIG
         await ws.close()
 
-        await asyncio.sleep(adjusted_timeout(1))
-        assert self_hostname in server_1.banned_peers.keys()
+        await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
 
         # Now test that the ban is active
         assert ws.closed
+        # make sure that the ban time is not terminating "soon"
+        server_1.banned_peers[self_hostname] = time.time() + adjusted_timeout(10)
         with pytest.raises(WSServerHandshakeError):
             await session.ws_connect(
                 url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
@@ -99,7 +101,7 @@ class TestDos:
         server_2 = nodes[1].full_node.server
 
         server_1.allow_banning_localhost = True
-        server_1.invalid_protocol_ban_seconds = 10
+        server_1.invalid_protocol_ban_seconds = 10 + adjusted_timeout(1)
         # Use the server_2 ssl information to connect to server_1, and send a huge message
         timeout = ClientTimeout(total=10)
         session = ClientSession(timeout=timeout)
@@ -117,16 +119,17 @@ class TestDos:
         assert response.data == WSCloseCode.PROTOCOL_ERROR
         await ws.close()
 
-        await asyncio.sleep(adjusted_timeout(1))
-        assert self_hostname in server_1.banned_peers.keys()
+        await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
 
         # Now test that the ban is active
         assert ws.closed
+        # make sure that the ban time is not terminating "soon"
+        server_1.banned_peers[self_hostname] = time.time() + adjusted_timeout(10)
         with pytest.raises(WSServerHandshakeError):
             await session.ws_connect(
                 url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
-        await asyncio.sleep(server_1.invalid_protocol_ban_seconds + 1)
+        await asyncio.sleep(10 + 1)
 
         # Ban expired
         await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024)
