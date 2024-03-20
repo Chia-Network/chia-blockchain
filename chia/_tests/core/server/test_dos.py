@@ -26,6 +26,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err
 from chia.util.ints import uint64
+from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)
 
@@ -81,6 +82,7 @@ class TestDos:
         assert response.data == WSCloseCode.MESSAGE_TOO_BIG
         await ws.close()
 
+        await asyncio.sleep(adjusted_timeout(1))
         assert self_hostname in server_1.banned_peers.keys()
 
         # Now test that the ban is active
@@ -115,6 +117,7 @@ class TestDos:
         assert response.data == WSCloseCode.PROTOCOL_ERROR
         await ws.close()
 
+        await asyncio.sleep(adjusted_timeout(1))
         assert self_hostname in server_1.banned_peers.keys()
 
         # Now test that the ban is active
