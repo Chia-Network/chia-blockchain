@@ -80,7 +80,8 @@ jobs:
             matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
             runs-on: windows-latest
     uses: ./.github/workflows/test-single.yml
-    with: ${{ matrix.os }}
+    with: 
+      garbage: ${{ matrix.os }}
 
   coverage:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
