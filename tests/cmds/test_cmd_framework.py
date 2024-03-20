@@ -322,7 +322,7 @@ def test_typing() -> None:
 
     @chia_command(cmd, "temp_cmd_bad_bytes32", "blah")
     class TempCMDBadBytes32:
-        blob32: bytes = option("--blob32", required=True)
+        blob32: bytes32 = option("--blob32", required=True)
 
         def run(self) -> None:
             ...
@@ -337,10 +337,10 @@ def test_typing() -> None:
 
     result = runner.invoke(
         cmd,
-        ["temp_cmd_bad_bytes32", "--blob32", "not a blob"],
+        ["temp_cmd_bad_bytes32", "--blob32", "0xdeadbeef"],
         catch_exceptions=False,
     )
-    assert "not a valid hex string" in result.output
+    assert "not a valid 32-byte hex string" in result.output
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="doesn't matter")
