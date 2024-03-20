@@ -552,7 +552,9 @@ def random_coin_records() -> RandomCoinRecords:
 @pytest.mark.parametrize("include_spent", [True, False])
 @pytest.mark.parametrize("include_unspent", [True, False])
 @pytest.mark.parametrize("include_hinted", [True, False])
-@pytest.mark.parametrize("min_amount", [uint64(0), uint64(30000)])
+@pytest.mark.parametrize(
+    "min_amount", [uint64(0), uint64(30000), uint64(0xFFFF), uint64(0x7FFF), uint64(0x8000), uint64(0x8000000000000000)]
+)
 async def test_coin_state_batches(
     db_version: int,
     random_coin_records: RandomCoinRecords,
