@@ -50,6 +50,7 @@ jobs:
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
   test:
+    name: ${{ matrix.os.emoji }} ${{ matrix.os.name }}
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
