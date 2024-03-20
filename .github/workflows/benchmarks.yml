@@ -78,6 +78,8 @@ jobs:
         id: pip-cache
         shell: bash
         run: |
+          echo ==== whoami
+          whoami
           for d in / /github/ /github/home/ /github/home/.cache/ /github/home/.cache/pip/; do echo ==== checking $d; ls -dl $d; done
           echo ==== pip cache dir
           pip cache dir
