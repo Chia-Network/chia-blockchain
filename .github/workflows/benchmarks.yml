@@ -80,7 +80,13 @@ jobs:
         run: |
           echo ==== whoami
           whoami
-          for d in / /github/ /github/home/ /github/home/.cache/ /github/home/.cache/pip/; do echo ==== checking $d; ls -dl $d; done
+          for d in / /github/ /github/home/ /github/home/.cache/ /github/home/.cache/pip/; do echo ==== checking $d; ls -dl $d || true; done
+          echo ==== creating directory
+          mkdir -p /github/home/.cache/pip/
+          echo ==== touching
+          touch /github/home/.cache/pip/something
+          echo ==== checking
+          ls -l /github/home/.cache/pip/something
           echo ==== pip cache dir
           pip cache dir
           echo ==== original
