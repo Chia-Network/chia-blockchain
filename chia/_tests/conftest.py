@@ -569,7 +569,9 @@ async def two_nodes(db_version: int, self_hostname, blockchain_constants: Consen
 
 
 @pytest.fixture(scope="function")
-async def setup_two_nodes_fixture(db_version: int, blockchain_constants: ConsensusConstants):
+async def setup_two_nodes_fixture(
+    db_version: int, blockchain_constants: ConsensusConstants
+) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
     async with setup_simulators_and_wallets(2, 0, blockchain_constants, db_version=db_version) as new:
         yield make_old_setup_simulators_and_wallets(new=new)
 
