@@ -259,7 +259,7 @@ class S3Plugin:
                         log.error(f"failed uploading file {store_id}-{file_name}, invalid file name")
                         continue
 
-                    file_path = self.server_files_path.joinpath(store_id).joinpath(file_name)
+                    file_path = self.server_files_path.joinpath(f"{store_id}").joinpath(file_name)
                     if not os.path.isfile(file_path):
                         log.error(f"failed uploading file to aws, file {file_path} does not exist")
                         continue
