@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, get_args, get_type_hints
 
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
@@ -72,16 +73,6 @@ def json_deserialize_with_clvm_streamable(
     if isinstance(json_dict, str):
         return byte_deserialize_clvm_streamable(bytes.fromhex(json_dict), streamable_type)
     else:
-
-        def bind_type_to_this_function(
-            type: Type[object],
-        ) -> Callable[[object], Streamable]:
-            def convert_function(item: object) -> Streamable:
-                # Type ignore due to underlying incompatibilites with streamable library
-                return json_deserialize_with_clvm_streamable(item, type)  # type: ignore
-
-            return convert_function
-
         old_streamable_fields = streamable_type.streamable_fields()
         new_streamable_fields = []
         for old_field in old_streamable_fields:
@@ -92,7 +83,8 @@ def json_deserialize_with_clvm_streamable(
                         dataclasses.replace(
                             old_field,
                             convert_function=function_to_convert_one_item(
-                                old_field.type, bind_type_to_this_function(inner_type)
+                                old_field.type,
+                                functools.partial(json_deserialize_with_clvm_streamable, streamable_type=inner_type),
                             ),
                         )
                     )
@@ -100,7 +92,12 @@ def json_deserialize_with_clvm_streamable(
                     new_streamable_fields.append(old_field)
             elif hasattr(old_field.type, "_clvm_streamable"):
                 new_streamable_fields.append(
-                    dataclasses.replace(old_field, convert_function=bind_type_to_this_function(old_field.type))
+                    dataclasses.replace(
+                        old_field,
+                        convert_function=functools.partial(
+                            json_deserialize_with_clvm_streamable, streamable_type=old_field.type
+                        ),
+                    )
                 )
             else:
                 new_streamable_fields.append(old_field)
