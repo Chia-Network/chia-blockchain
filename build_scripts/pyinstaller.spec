@@ -170,7 +170,7 @@ def add_binary(name, path_to_script, collect_args):
 
 COLLECT_ARGS = []
 
-add_binary("chia", f"{ROOT}/chia/cmds/chia.py", COLLECT_ARGS)
+add_binary("chia", f"{ROOT}/chia/cmds/main.py", COLLECT_ARGS)
 add_binary("daemon", f"{ROOT}/chia/daemon/server.py", COLLECT_ARGS)
 
 for server in SERVERS:
