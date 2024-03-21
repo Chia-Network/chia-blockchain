@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 
 import pytest
-from tests.util.db_connection import DBConnection
+from chia._tests.util.db_connection import DBConnection
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64
