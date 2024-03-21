@@ -3,8 +3,8 @@ from __future__ import annotations
 import dataclasses
 
 import pytest
-from chia._tests.util.db_connection import DBConnection
 
+from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.fee_record import FeePerCost, FeeRecord, FeeRecordKey
