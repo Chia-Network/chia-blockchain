@@ -43,7 +43,7 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
             *args,
             **kwargs,
         )
-        if request.get("full_jsonify", False):
+        if not request.get("chip-29", True):
             return response_obj.to_json_dict()
         else:
             response_dict = json_serialize_with_clvm_streamable(response_obj)
