@@ -79,7 +79,7 @@ jobs:
         shell: bash
         run: |
           # this is a workaround until https://github.com/Chia-Network/actions/pull/157 is ready
-          chown -R $UID ~
+          chown -R "$(whoami):$(whoami)" "${HOME}"
           echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pip
