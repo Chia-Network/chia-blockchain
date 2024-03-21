@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import List, Tuple
 
 import pytest
@@ -49,6 +50,30 @@ class FakeRateLimiter:
 
 
 class TestDos:
+    @pytest.mark.anyio
+    async def test_banned_host_can_not_connect(
+        self,
+        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        nodes, _, _ = setup_two_nodes_fixture
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+
+        # Use the server_2 ssl information to connect to server_1, and send a huge message
+        timeout = ClientTimeout(total=10)
+        session = ClientSession(timeout=timeout)
+        url = f"wss://{self_hostname}:{server_1._port}/ws"
+
+        server_1.banned_peers[self_hostname] = int(time.time() + 999_999_999)
+
+        ssl_context = server_2.ssl_client_context
+        with pytest.raises(WSServerHandshakeError):
+            await session.ws_connect(
+                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            )
+
     @pytest.mark.anyio
     async def test_large_message_disconnect_and_ban(
         self,
