@@ -6,13 +6,37 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from chia.cmds.passphrase_funcs import get_current_passphrase
 from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
 from chia.util.errors import KeychainMaxUnlockAttempts
 from chia.util.keychain import Keychain
 from chia.util.service_groups import services_for_groups
+
+
+def get_launcher_args() -> List[str]:
+    venv_dir = os.environ.get("VIRTUAL_ENV", None)
+    argv0_original = sys.argv[0]
+
+    if not venv_dir:
+        # If this function is executed from installed package,
+        # `sys.argv[0]` should be `chia` because this function is expected to be called during
+        # `chia start ...` command
+        # Thus below should be `["chia", "run_daemon", "--wait-for-unlock"]`
+        return [argv0_original, "run_daemon", "--wait-for-unlock"]
+
+    # If in dev context(venv), launcher should be `python` executable
+    venv_path = Path(venv_dir)
+
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        argv0_new = venv_path / "Scripts" / "python.exe"
+    else:
+        argv0_new = venv_path / "bin" / "python"
+
+    # This expected to be
+    # `[".../python", ".../chia/cmds/main.py", "run_daemon", "--wait-for-unlock"]`
+    return [str(argv0_new), argv0_original, "run_daemon", "--wait-for-unlock"]
 
 
 def launch_start_daemon(root_path: Path) -> subprocess.Popen:
@@ -22,7 +46,7 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
 
     process = subprocess.Popen(
-        [sys.argv[0], "run_daemon", "--wait-for-unlock"],
+        get_launcher_args(),
         encoding="utf-8",
         stdout=subprocess.PIPE,
         creationflags=creationflags,

@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 import pytest
 from click.testing import CliRunner
 
-from chia.cmds.chia import cli
+from chia.cmds.main import cli
 from chia.cmds.keys import delete_all_cmd, generate_and_print_cmd, sign_cmd, verify_cmd
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH

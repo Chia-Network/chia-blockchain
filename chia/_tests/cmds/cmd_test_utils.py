@@ -10,8 +10,8 @@ from chia_rs import Coin, G2Element
 
 import chia.cmds.wallet_funcs
 from chia._tests.cmds.testing_classes import create_test_block_record
-from chia.cmds.chia import cli as chia_cli
 from chia.cmds.cmds_util import _T_RpcClient, node_config_section_names
+from chia.cmds.main import cli as chia_cli
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient

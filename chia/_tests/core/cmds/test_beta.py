@@ -8,7 +8,7 @@ import pytest
 from click.testing import CliRunner, Result
 
 from chia.cmds.beta_funcs import default_beta_root_path
-from chia.cmds.chia import cli
+from chia.cmds.main import cli
 from chia.util.beta_metrics import metrics_log_interval_default, metrics_log_interval_max, metrics_log_interval_min
 from chia.util.config import lock_and_load_config, save_config
 

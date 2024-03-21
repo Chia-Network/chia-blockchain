@@ -6,7 +6,7 @@ from shutil import rmtree
 import pytest
 from click.testing import CliRunner
 
-from chia.cmds.chia import cli
+from chia.cmds.main import cli
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.default_root import SIMULATOR_ROOT_PATH
 

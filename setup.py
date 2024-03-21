@@ -91,7 +91,7 @@ kwargs = dict(
     packages=find_packages(include=["build_scripts", "chia", "chia.*", "mozilla-ca"]),
     entry_points={
         "console_scripts": [
-            "chia = chia.cmds.chia:main",
+            "chia = chia.cmds.main:main",
             "chia_daemon = chia.daemon.server:main",
             "chia_wallet = chia.server.start_wallet:main",
             "chia_full_node = chia.server.start_full_node:main",

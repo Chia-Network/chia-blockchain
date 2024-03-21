@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from chia.cmds.chia import main
+from chia.cmds.main import main
 
 main()
