@@ -76,12 +76,6 @@ jobs:
 
       - uses: chia-network/actions/cache-pip@main
 
-      - name: check env var
-        run: |
-          echo PIP_CACHE_DIR=${PIP_CACHE_DIR}
-          echo ====
-          pip cache dir
-
       - name: Checkout test blocks and plots
         uses: actions/checkout@v4
         with:
