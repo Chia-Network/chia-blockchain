@@ -198,7 +198,7 @@ if len(messages) > 0:
 
 configuration_json = json.dumps(configuration)
 
-for line in json.dumps(configuration, indent=4).splitlines():
+for line in json.dumps(configuration, indent=2).splitlines():
     logging.info(line)
 
 print(f"{configuration_json}")

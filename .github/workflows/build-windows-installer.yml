@@ -447,8 +447,12 @@ jobs:
           $env:INSTALLER_PATH = (Get-ChildItem packages/windows-installer/ChiaSetup-*.exe)
           Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:INSTALL_PATH)
 
-      - name: Run chia version
+      - name: List installed files
+        run: |
+          Get-ChildItem -Recurse $env:INSTALL_PATH | Select FullName
+
+      - name: Run chia dev installers test
         env:
           INSTALL_PATH: ${{ github.workspace }}\installed
         run: |
-          & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") version
+          & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"

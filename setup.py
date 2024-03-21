@@ -17,14 +17,14 @@ dependencies = [
     "chia_rs==0.5.2",
     "clvm-tools-rs==0.1.40",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.9.2",  # HTTP server for full node rpc
-    "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
+    "aiosqlite==0.20.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.1.4",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.8.2",  # Adds color to logs
     "concurrent-log-handler==0.9.25",  # Concurrently log and rotate logs
-    "cryptography==42.0.4",  # Python cryptography library for TLS - keyring conflict
+    "cryptography==42.0.5",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.13.1",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
-    "keyring==24.3.0",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "keyring==24.3.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0.1",  # Used for config file format
     "setproctitle==1.3.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
@@ -47,7 +47,7 @@ dev_dependencies = [
     "coverage==7.4.3",
     "diff-cover==8.0.3",
     "pre-commit==3.5.0; python_version < '3.9'",
-    "pre-commit==3.6.0; python_version >= '3.9'",
+    "pre-commit==3.6.2; python_version >= '3.9'",
     "py3createtorrent==1.2.0",
     "pylint==3.0.3",
     "pytest==8.0.2",
@@ -63,10 +63,10 @@ dev_dependencies = [
     "lxml==5.1.0",
     "aiohttp_cors==0.7.0",  # For blackd
     "pyinstaller==6.5.0",
-    "types-aiofiles==23.2.0.20240106",
+    "types-aiofiles==23.2.0.20240311",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.12",
-    "types-setuptools==69.1.0.20240217",
+    "types-setuptools==69.1.0.20240310",
 ]
 
 legacy_keyring_dependencies = [
