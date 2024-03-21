@@ -78,7 +78,9 @@ jobs:
         id: pip-cache
         shell: bash
         run: |
-          echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
+          DIR=$(pip cache dir)
+          mkdir -p "${DIR}"
+          echo "dir=${DIR}" >> "$GITHUB_OUTPUT"
 
       - name: Cache pip
         uses: actions/cache@v4
