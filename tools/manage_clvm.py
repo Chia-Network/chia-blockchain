@@ -98,7 +98,7 @@ def load_cache(file: typing.IO[str]) -> Cache:
 
 
 def dump_cache(cache: Cache, file: typing.IO[str]) -> None:
-    json.dump(cache, file, indent=4)
+    json.dump(cache, file, indent=2)
 
 
 def generate_hash_bytes(hex_bytes: bytes) -> bytes32:
@@ -414,7 +414,7 @@ def build() -> int:
     hashes_path.write_text(
         json.dumps(
             {key: value for key, value in new_hashes.items() if key in hash_stems},  # filter out not found files
-            indent=4,
+            indent=2,
             sort_keys=True,
         )
         + "\n"

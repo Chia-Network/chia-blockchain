@@ -411,19 +411,15 @@ jobs:
       - name: Install package
         run: |
           ls -l "${{ steps.download.outputs.download-path }}"
-          yum install -y "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
+          yum install -y numactl-libs "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
 
-      - name: Run chia version
+      - name: List /opt/chia contents
         run: |
-          ACTUAL=$(chia version)
-          echo "  actual version: ${ACTUAL}"
-          if [ "${ACTUAL}" = "None" ]
-          then
-            echo "  !!! should not be None"
-            false
-          else
-            echo "  :] at least it isn't None"
-          fi
+          find /opt/chia
+
+      - name: Run chia dev installers test
+        run: |
+          chia dev installers test --require-no-madmax --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"
 
       - name: Verify /opt/chia present
         run: |

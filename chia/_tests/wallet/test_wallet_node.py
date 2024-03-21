@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 import sys
 import time
@@ -357,7 +356,7 @@ async def test_get_timestamp_for_height_from_peer(
     modified_foliage_transaction_block = block_at_peak.foliage_transaction_block.replace(
         timestamp=uint64(timestamp_at_peak + 1)
     )
-    modified_peak = dataclasses.replace(peak, foliage_transaction_block=modified_foliage_transaction_block)
+    modified_peak = peak.replace(foliage_transaction_block=modified_foliage_transaction_block)
     cache.add_to_blocks(modified_peak)
     # Now the call should make use of the cached, modified block
     assert await get_timestamp(peak.height) == timestamp_at_peak + 1
