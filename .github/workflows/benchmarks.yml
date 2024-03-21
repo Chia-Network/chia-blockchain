@@ -74,7 +74,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: chia-network/actions/cache-pip@add_cache_pip
+      - uses: chia-network/actions/cache-pip@main
 
       - name: check env var
         run: |
