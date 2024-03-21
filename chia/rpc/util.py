@@ -146,7 +146,7 @@ def tx_endpoint(
             ]
             unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(tx_records)
 
-            if request.get("full_jsonify", False):
+            if not request.get("chip-29", True):
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
             else:
                 response["unsigned_transactions"] = [byte_serialize_clvm_streamable(tx).hex() for tx in unsigned_txs]
