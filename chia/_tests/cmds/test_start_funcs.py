@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import sys
+from typing import Any
 from unittest.mock import patch
 
 from chia.cmds.start_funcs import get_launcher_args
 
 
-def test_get_launcher_args(monkeypatch) -> None:
+def test_get_launcher_args(monkeypatch: Any) -> None:
     with patch.object(sys, "argv", ["chia", "start", "daemon"]):
         monkeypatch.setenv("VIRTUAL_ENV", "")
         assert get_launcher_args() == ["chia", "run_daemon", "--wait-for-unlock"]
