@@ -601,6 +601,7 @@ async def test_coin_state_batches(
                     include_unspent=include_unspent,
                     include_hinted=include_hinted,
                     min_amount=min_amount,
+                    max_items=7000,
                 )
 
                 # Ensure that all of the returned coin states are in order.
