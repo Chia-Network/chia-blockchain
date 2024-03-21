@@ -92,7 +92,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - uses: chia-network/actions/cache-pip@add_cache_pip
+      - uses: chia-network/actions/cache-pip@main
 
       - uses: Chia-Network/actions/setup-python@main
         name: Install Python ${{ matrix.python-version }}
