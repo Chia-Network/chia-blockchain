@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, TextIO, Type, Union
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, TextIO, Tuple, Type, Union
 
 import aiosqlite
 import anyio
@@ -29,10 +29,22 @@ class DBWrapperError(Exception):
 
 
 class ForeignKeyError(DBWrapperError):
-    # TODO: but not always a row object...  sometimes a lovely tuple
-    def __init__(self, violations: Iterable[aiosqlite.Row]) -> None:
-        self.violations: List[Dict[str, object]] = [dict(violation) for violation in violations]
+    def __init__(self, violations: Iterable[Union[aiosqlite.Row, Tuple[str, object, str, object]]]) -> None:
+        self.violations: List[Dict[str, object]] = []
+
+        for violation in violations:
+            if isinstance(violation, tuple):
+                violation_dict = dict(zip(["table", "rowid", "parent", "fkid"], violation))
+            else:
+                violation_dict = dict(violation)
+            self.violations.append(violation_dict)
+
         super().__init__(f"Found {len(self.violations)} FK violations: {self.violations}")
+
+
+class ForeignKeyDelayedRequestError(DBWrapperError):
+    def __init__(self) -> None:
+        super().__init__("Unable to enable delayed foreign key enforcement in a nested request.")
 
 
 def generate_in_memory_db_uri() -> str:
@@ -279,9 +291,13 @@ class DBWrapper2:
         if self._current_writer == task:
             # we allow nesting writers within the same task
             if foreign_keys is not None:
-                # TODO: better exception
-                # TODO: technically this is complaining even if the requested state is already in place
-                raise Exception("already in a connection so this won't work")
+                # NOTE: Technically this is complaining even if the requested state is
+                #       already in place.  This could be adjusted to allow nesting
+                #       when the existing and requested states agree.  In this case,
+                #       probably skip the nested foreign key check when exiting since
+                #       we don't have many foreign key errors and so it is likely ok
+                #       to save the extra time checking twice.
+                raise ForeignKeyDelayedRequestError()
             async with self._savepoint_ctx():
                 yield self._write_connection
             return

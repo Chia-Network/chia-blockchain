@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import TYPE_CHECKING, Callable, List
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Callable, List, Optional, Type
 
 import aiosqlite
 import pytest
@@ -11,7 +12,7 @@ import pytest
 from _pytest.fixtures import SubRequest
 
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
-from chia._tests.util.misc import boolean_datacases
+from chia._tests.util.misc import Marks, boolean_datacases, datacases
 from chia.util.db_wrapper import DBWrapper2, ForeignKeyError
 
 if TYPE_CHECKING:
@@ -489,3 +490,54 @@ async def test_foreign_key_pragma_rolls_back_on_foreign_key_error() -> None:
 
         # make sure the delete was rolled back
         assert dict(person) == {"id": 1, "friend": None}
+
+
+@dataclass
+class RowFactoryCase:
+    id: str
+    factory: Optional[Type[aiosqlite.Row]]
+    marks: Marks = ()
+
+
+row_factory_cases: List[RowFactoryCase] = [
+    RowFactoryCase(id="default named tuple", factory=None),
+    RowFactoryCase(id="aiosqlite row", factory=aiosqlite.Row),
+]
+
+
+@datacases(*row_factory_cases)
+@pytest.mark.anyio
+async def test_foreign_key_error_message(case: RowFactoryCase) -> None:
+    async with DBConnection(2, foreign_keys=True, row_factory=case.factory) as db_wrapper:
+        async with db_wrapper.writer() as writer:
+            async with writer.execute(
+                """
+                CREATE TABLE people(
+                    id INTEGER NOT NULL,
+                    friend INTEGER,
+                    PRIMARY KEY (id),
+                    FOREIGN KEY (friend) REFERENCES people
+                )
+                """
+            ):
+                pass
+
+            async with writer.execute(
+                "INSERT INTO people(id, friend) VALUES (:id, :friend)",
+                {"id": 1, "friend": None},
+            ):
+                pass
+
+            async with writer.execute(
+                "INSERT INTO people(id, friend) VALUES (:id, :friend)",
+                {"id": 2, "friend": 1},
+            ):
+                pass
+
+        # make sure the writer raises a foreign key error on exit
+        with pytest.raises(ForeignKeyError) as error:
+            async with db_wrapper.writer(foreign_keys=False) as writer:
+                async with writer.execute("DELETE FROM people WHERE id = 1"):
+                    pass
+
+        assert error.value.violations == [{"table": "people", "rowid": 2, "parent": "people", "fkid": 0}]
