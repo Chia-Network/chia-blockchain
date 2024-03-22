@@ -3,21 +3,21 @@ name: 🧪 test
 on:
   push:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
-    - long_lived/**
-    - main
-    - release/**
+      - long_lived/**
+      - main
+      - release/**
     tags:
-    - '**'
+      - "**"
   pull_request:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
-    - '**'
+      - "**"
   workflow_dispatch: null
   schedule:
-    - cron: '0 13 * * *'
+    - cron: "0 13 * * *"
 
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}--${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
@@ -35,12 +35,12 @@ jobs:
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - name: Generate matrix configuration
         id: configure
         run: |
-          python tests/build-job-matrix.py --per directory --verbose > matrix.json
+          python chia/_tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> "$GITHUB_OUTPUT"
           echo matrix_mode=${{ ( github.event_name == 'schedule' ) && 'all' || ( github.event_name == 'workflow_dispatch' ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') ) && 'all' || 'main' }} >> "$GITHUB_OUTPUT"
@@ -102,11 +102,11 @@ jobs:
             name: Ubuntu
             runs-on: ubuntu-latest
         python:
-          - name: '3.10'
-            action: '3.10'
-            apt: '3.10'
-            install_sh: '3.10'
-            matrix: '3.10'
+          - name: "3.10"
+            action: "3.10"
+            apt: "3.10"
+            install_sh: "3.10"
+            matrix: "3.10"
 
     steps:
       - uses: actions/checkout@v4
@@ -164,8 +164,8 @@ jobs:
       - name: Add time out assert results to workflow summary
         if: always()
         run: |
-          python -m tests.process_junit --limit 50 --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
-          python -m tests.process_junit            --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> junit-results/time_out_assert.md
+          python -m chia._tests.process_junit --limit 50 --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
+          python -m chia._tests.process_junit            --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> junit-results/time_out_assert.md
 
       - name: Publish JUnit results
         if: always()
@@ -190,13 +190,13 @@ jobs:
         if: always()
         run: |
           set -o pipefail
-          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='chia/**/*' --show-missing | tee coverage-reports/coverage-chia-stdout
+          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='chia/**/*' --omit='chia/_tests/**/*' --show-missing | tee coverage-reports/coverage-chia-stdout
 
-      - name: Coverage report (tests/)
+      - name: Coverage report (chia/_tests/)
         if: always()
         run: |
           set -o pipefail
-          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='tests/**/*' --show-missing | tee coverage-reports/coverage-tests-stdout
+          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='chia/_tests/**/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
       - name: Coverage report (diff)
         if: (github.base_ref != '' || github.event.before != '') && always()

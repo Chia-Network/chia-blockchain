@@ -172,30 +172,25 @@ class KeychainProxy(DaemonProxy):
                 raise Exception(f"{error}")
 
     @overload
-    async def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]:
-        ...
+    async def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]: ...
 
     @overload
-    async def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]:
-        ...
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]: ...
 
     @overload
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]
-    ) -> Tuple[PrivateKey, KeyTypes]:
-        ...
+    ) -> Tuple[PrivateKey, KeyTypes]: ...
 
     @overload
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]
-    ) -> Tuple[ObservationRoot, KeyTypes]:
-        ...
+    ) -> Tuple[ObservationRoot, KeyTypes]: ...
 
     @overload
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: bool
-    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
-        ...
+    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]: ...
 
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
@@ -340,24 +335,22 @@ class KeychainProxy(DaemonProxy):
         return key
 
     @overload
-    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
-        ...
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]: ...
 
     @overload
-    async def get_key_for_fingerprint(self, fingerprint: Optional[int], private: Literal[True]) -> Optional[PrivateKey]:
-        ...
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: Literal[True]
+    ) -> Optional[PrivateKey]: ...
 
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: Literal[False]
-    ) -> Optional[ObservationRoot]:
-        ...
+    ) -> Optional[ObservationRoot]: ...
 
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool
-    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
-        ...
+    ) -> Optional[Union[PrivateKey, ObservationRoot]]: ...
 
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool = True

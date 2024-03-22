@@ -6,14 +6,14 @@ from typing import Any, AsyncIterator, Dict, List
 
 import pytest
 
+from chia._tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
+from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia.consensus.constants import ConsensusConstants
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
-from tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
-from tests.util.setup_nodes import setup_simulators_and_wallets_service
 
 
 @pytest.fixture(scope="function", params=[True, False])
@@ -59,9 +59,11 @@ async def wallet_environments(
             for service in wallet_services:
                 service._node.config = {
                     **service._node.config,
-                    "trusted_peers": {full_node[0]._api.server.node_id.hex(): full_node[0]._api.server.node_id.hex()}
-                    if trusted_full_node
-                    else {},
+                    "trusted_peers": (
+                        {full_node[0]._api.server.node_id.hex(): full_node[0]._api.server.node_id.hex()}
+                        if trusted_full_node
+                        else {}
+                    ),
                     **config_overrides,
                 }
                 service._node.wallet_state_manager.config = service._node.config
