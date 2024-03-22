@@ -369,6 +369,7 @@ class Receiver:
                 "node_id": self._connection.peer_node_id,
                 "host": self._connection.peer_info.host,
                 "port": self._connection.peer_info.port,
+                "version": self._connection.get_version(),
             },
             "plots": get_list_or_len(list(self._plots.values()), counts_only),
             "failed_to_open_filenames": get_list_or_len(self._invalid, counts_only),
