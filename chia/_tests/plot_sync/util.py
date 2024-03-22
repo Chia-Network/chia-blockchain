@@ -29,7 +29,7 @@ class WSChiaConnectionDummy:
 
     def get_peer_logging(self) -> PeerInfo:
         return self.peer_info
-    
+
     def get_version(self) -> str:
         return "Dummy-1.0.0"
 
