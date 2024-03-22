@@ -62,8 +62,8 @@ from chia.util.keychain import bytes_to_mnemonic
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_protocol import MainWalletProtocol
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
@@ -802,7 +802,7 @@ async def offer_setup_fixture(
 ) -> AsyncIterator[OfferSetup]:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
-    wallets: List[Wallet] = []
+    wallets: List[MainWalletProtocol] = []
     for wallet_service in wallet_services:
         wallet_node = wallet_service._node
         assert wallet_node.server is not None

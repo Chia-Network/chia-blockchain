@@ -37,8 +37,8 @@ from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_protocol import WalletProtocol
 
 OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 
@@ -604,7 +604,7 @@ class TradeManager:
             if key is None:
                 continue
             # ATTENTION: new_wallets
-            exists: Optional[Wallet] = await wsm.get_wallet_for_puzzle_info(offer.driver_dict[key])
+            exists: Optional[WalletProtocol[Any]] = await wsm.get_wallet_for_puzzle_info(offer.driver_dict[key])
             if exists is None:
                 await wsm.create_wallet_for_puzzle_info(offer.driver_dict[key])
 
