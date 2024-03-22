@@ -4,8 +4,8 @@ from typing import Any, List
 
 import click
 from click.testing import CliRunner
-from tests.cmds.wallet.test_consts import STD_TX
 
+from chia._tests.cmds.wallet.test_consts import STD_TX
 from chia.cmds.cmds_util import TransactionBundle, tx_out_cmd
 from chia.wallet.transaction_record import TransactionRecord
 
