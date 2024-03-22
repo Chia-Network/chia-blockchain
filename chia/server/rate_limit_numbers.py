@@ -80,7 +80,7 @@ rate_limits = {
             ProtocolMessageTypes.respond_signatures: RLSettings(100, 2048),
             ProtocolMessageTypes.new_signage_point: RLSettings(200, 2048),
             ProtocolMessageTypes.declare_proof_of_space: RLSettings(100, 10 * 1024),
-            ProtocolMessageTypes.request_signed_values: RLSettings(100, 512),
+            ProtocolMessageTypes.request_signed_values: RLSettings(100, 10 * 1024),
             ProtocolMessageTypes.farming_info: RLSettings(100, 1024),
             ProtocolMessageTypes.signed_values: RLSettings(100, 1024),
             ProtocolMessageTypes.new_peak_timelord: RLSettings(100, 20 * 1024),

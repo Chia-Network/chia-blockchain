@@ -249,8 +249,9 @@ class Blockchain(BlockchainInterface):
         # from the current block down to the fork's current peak
         chain, peak_hash = await lookup_fork_chain(
             self,
-            (uint32(fork_info.peak_height), fork_info.peak_hash),
-            (uint32(block.height - 1), block.prev_header_hash),
+            (fork_info.peak_height, fork_info.peak_hash),
+            (block.height - 1, block.prev_header_hash),
+            self.constants,
         )
         # the ForkInfo object is expected to be valid, just having its peak
         # behind the current block
@@ -364,7 +365,10 @@ class Blockchain(BlockchainInterface):
                 # the block we're trying to add doesn't exist in the chain yet,
                 # so we need to start traversing from its prev_header_hash
                 fork_chain, fork_hash = await lookup_fork_chain(
-                    self, (peak.height, peak.header_hash), (uint32(block.height - 1), block.prev_header_hash)
+                    self,
+                    (peak.height, peak.header_hash),
+                    (block.height - 1, block.prev_header_hash),
+                    self.constants,
                 )
                 # now we know how long the fork is, and can compute the fork
                 # height.
@@ -1086,6 +1090,7 @@ class Blockchain(BlockchainInterface):
                     self,
                     (peak.height, peak.header_hash),
                     (prev_block_record.height, prev_block_record.header_hash),
+                    self.constants,
                 )
                 reorg_chain.update(height_to_hash)
 

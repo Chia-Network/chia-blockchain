@@ -633,6 +633,9 @@ wallet:
   # The amount someone has to pay you in mojos for you to see their notification
   required_notification_amount: 10000000
 
+  # Enabling the delta sync can under certain circumstances lead to missing coin states during re-orgs
+  use_delta_sync: False
+
   #################################
   #  Inner puzzle decorators      #
   #################################
