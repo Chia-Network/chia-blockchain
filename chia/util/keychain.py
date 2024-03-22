@@ -94,6 +94,11 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
     return " ".join(mnemonics)
 
 
+def check_mnemonic_validity(mnemonic_str: str) -> bool:
+    mnemonic: List[str] = mnemonic_str.split(" ")
+    return len(mnemonic) in [12, 15, 18, 21, 24]
+
+
 def mnemonic_from_short_words(mnemonic_str: str) -> str:
     """
     Since the first 4 letters of each word is unique (or the full word, if less than 4 characters), and its common
@@ -362,29 +367,30 @@ class Keychain:
             except KeychainUserNotFound:
                 return index
 
+    # pylint requires these NotImplementedErrors for some reason
     @overload
     def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]:
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]:
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> Tuple[PrivateKey, KeyTypes]:
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]
     ) -> Tuple[ObservationRoot, KeyTypes]:
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: bool
     ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True

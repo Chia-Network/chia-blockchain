@@ -47,6 +47,7 @@ from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
@@ -427,27 +428,25 @@ class FullNodeAPI:
             return None
 
         # This prevents us from downloading the same block from many peers
-        if block_hash in self.full_node.full_node_store.requesting_unfinished_blocks:
-            return None
-
-        # if we've already learned about an unfinished block with this reward
-        # hash via the v2 protocol, and we've requested it. Assume it's the same
-        # block
-        if block_hash in self.full_node.full_node_store.requesting_unfinished_blocks2:
+        requesting, count = self.full_node.full_node_store.is_requesting_unfinished_block(block_hash, None)
+        if requesting:
+            self.log.debug(
+                f"Already have or requesting {count} Unfinished Blocks with partial "
+                f"hash {block_hash}. Ignoring this one"
+            )
             return None
 
         msg = make_msg(
             ProtocolMessageTypes.request_unfinished_block,
             full_node_protocol.RequestUnfinishedBlock(block_hash),
         )
-        self.full_node.full_node_store.requesting_unfinished_blocks.add(block_hash)
+        self.full_node.full_node_store.mark_requesting_unfinished_block(block_hash, None)
 
         # However, we want to eventually download from other peers, if this peer does not respond
         # Todo: keep track of who it was
         async def eventually_clear() -> None:
             await asyncio.sleep(5)
-            if block_hash in self.full_node.full_node_store.requesting_unfinished_blocks:
-                self.full_node.full_node_store.requesting_unfinished_blocks.remove(block_hash)
+            self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, None)
 
         asyncio.create_task(eventually_clear())
 
@@ -496,7 +495,13 @@ class FullNodeAPI:
             return None
 
         # This prevents us from downloading the same block from many peers
-        if self.full_node.full_node_store.is_requesting_unfinished_block(block_hash, foliage_hash):
+        requesting, count = self.full_node.full_node_store.is_requesting_unfinished_block(block_hash, foliage_hash)
+        if requesting:
+            return None
+        if count >= max_duplicate_unfinished_blocks:
+            self.log.info(
+                f"Already requesting {count} Unfinished Blocks with partial hash {block_hash} ignoring another one"
+            )
             return None
 
         msg = make_msg(
@@ -910,10 +915,10 @@ class FullNodeAPI:
                     return None
 
             try:
-                finished_sub_slots: Optional[
-                    List[EndOfSubSlotBundle]
-                ] = self.full_node.full_node_store.get_finished_sub_slots(
-                    self.full_node.blockchain, prev_b, cc_challenge_hash
+                finished_sub_slots: Optional[List[EndOfSubSlotBundle]] = (
+                    self.full_node.full_node_store.get_finished_sub_slots(
+                        self.full_node.blockchain, prev_b, cc_challenge_hash
+                    )
                 )
                 if finished_sub_slots is None:
                     return None
@@ -1020,8 +1025,10 @@ class FullNodeAPI:
 
             foliage_block_data: Optional[FoliageBlockData] = None
             foliage_transaction_block_data: Optional[FoliageTransactionBlock] = None
+            rc_block_unfinished: Optional[RewardChainBlockUnfinished] = None
             if request.include_signature_source_data:
                 foliage_block_data = unfinished_block.foliage.foliage_block_data
+                rc_block_unfinished = unfinished_block.reward_chain_block
                 if unfinished_block.is_transaction_block():
                     foliage_transaction_block_data = unfinished_block.foliage_transaction_block
 
@@ -1029,8 +1036,9 @@ class FullNodeAPI:
                 quality_string,
                 foliage_sb_data_hash,
                 foliage_transaction_block_hash,
-                foliage_block_data,
-                foliage_transaction_block_data,
+                foliage_block_data=foliage_block_data,
+                foliage_transaction_block_data=foliage_transaction_block_data,
+                rc_block_unfinished=rc_block_unfinished,
             )
             await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
 

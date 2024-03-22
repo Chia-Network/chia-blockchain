@@ -516,15 +516,15 @@ class TradeManager:
                 requested_payments, driver_dict, taking
             )
 
-            potential_special_offer: Optional[
-                Tuple[Offer, List[TransactionRecord]]
-            ] = await self.check_for_special_offer_making(
-                offer_dict_no_ints,
-                driver_dict,
-                tx_config,
-                solver,
-                fee,
-                extra_conditions,
+            potential_special_offer: Optional[Tuple[Offer, List[TransactionRecord]]] = (
+                await self.check_for_special_offer_making(
+                    offer_dict_no_ints,
+                    driver_dict,
+                    tx_config,
+                    solver,
+                    fee,
+                    extra_conditions,
+                )
             )
 
             if potential_special_offer is not None:
@@ -988,23 +988,25 @@ class TradeManager:
                         raise ValueError("Cannot request CR-CATs that you cannot approve with a VC")  # pragma: no cover
 
             return {
-                asset_id: [
-                    dataclasses.replace(
-                        payment,
-                        puzzle_hash=construct_pending_approval_state(
-                            payment.puzzle_hash, payment.amount
-                        ).get_tree_hash(),
-                    )
-                    for payment in payments
-                ]
-                if asset_id is not None
-                and driver_dict[asset_id].check_type(
+                asset_id: (
                     [
-                        AssetType.CAT.value,
-                        AssetType.CR.value,
+                        dataclasses.replace(
+                            payment,
+                            puzzle_hash=construct_pending_approval_state(
+                                payment.puzzle_hash, payment.amount
+                            ).get_tree_hash(),
+                        )
+                        for payment in payments
                     ]
+                    if asset_id is not None
+                    and driver_dict[asset_id].check_type(
+                        [
+                            AssetType.CAT.value,
+                            AssetType.CR.value,
+                        ]
+                    )
+                    else payments
                 )
-                else payments
                 for asset_id, payments in requested_payments.items()
             }
         else:

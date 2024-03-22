@@ -4,25 +4,15 @@
   "asar": true,
   "asarUnpack": "**/daemon/**",
   "npmRebuild": false,
-  "files": [
-    "build",
-    "daemon",
-    "!node_modules",
-    "!src",
-    "!public"
-  ],
+  "files": ["build", "daemon", "!node_modules", "!src", "!public"],
   "protocols": [
     {
       "name": "Chia URL",
-      "schemes": [
-        "chia"
-      ]
+      "schemes": ["chia"]
     },
     {
       "name": "Chia XCH Address",
-      "schemes": [
-        "xch"
-      ]
+      "schemes": ["xch"]
     }
   ],
   "win": {
