@@ -42,10 +42,10 @@ from pathlib import Path
 
 import click
 
+from chia._tests.util.run_block import run_json_block
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from tests.util.run_block import run_json_block
 
 
 @click.command()

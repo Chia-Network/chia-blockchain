@@ -136,12 +136,12 @@ async def get_full_chia_simulator(
     with Lockfile.create(daemon_launch_lock_path(chia_root)):
         mnemonic, fingerprint = mnemonic_fingerprint(keychain)
 
-        ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
-            SSLTestCACertAndPrivateKey
-        ] = get_next_private_ca_cert_and_key()
-        ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
-            SSLTestNodeCertsAndKeys
-        ] = get_next_nodes_certs_and_keys()
+        ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[SSLTestCACertAndPrivateKey] = (
+            get_next_private_ca_cert_and_key()
+        )
+        ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[SSLTestNodeCertsAndKeys] = (
+            get_next_nodes_certs_and_keys()
+        )
         if config is None:
             config = create_config(
                 chia_root,

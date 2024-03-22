@@ -361,28 +361,25 @@ class Keychain:
                 return index
 
     @overload
-    def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]:
-        raise NotImplementedError()  # pragma: no cover
+    def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]: ...
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]:
-        raise NotImplementedError()  # pragma: no cover
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]: ...
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> Tuple[PrivateKey, KeyTypes]:
-        raise NotImplementedError()  # pragma: no cover
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]
+    ) -> Tuple[PrivateKey, KeyTypes]: ...
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]
-    ) -> Tuple[ObservationRoot, KeyTypes]:
-        raise NotImplementedError()  # pragma: no cover
+    ) -> Tuple[ObservationRoot, KeyTypes]: ...
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: bool
-    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
-        raise NotImplementedError()  # pragma: no cover
+    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]: ...
 
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True

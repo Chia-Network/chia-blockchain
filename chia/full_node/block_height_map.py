@@ -73,6 +73,7 @@ class BlockHeightMap:
             async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
                 peak_row = await cursor.fetchone()
                 if peak_row is None:
+                    log.info("blockchain database is missing a peak. Not loading height-to-hash or sub-epoch-summaries")
                     return self
 
             async with conn.execute(
@@ -81,20 +82,23 @@ class BlockHeightMap:
             ) as cursor:
                 row = await cursor.fetchone()
                 if row is None:
+                    log.info("blockchain database is missing blocks. Not loading height-to-hash or sub-epoch-summaries")
                     return self
 
         try:
             async with aiofiles.open(self.__height_to_hash_filename, "rb") as f:
                 self.__height_to_hash = bytearray(await f.read())
-        except Exception:
+        except Exception as e:
             # it's OK if this file doesn't exist, we can rebuild it
+            log.info(f"Failed to load height-to-hash: {e}")
             pass
 
         try:
             async with aiofiles.open(self.__ses_filename, "rb") as f:
                 self.__sub_epoch_summaries = {k: v for (k, v) in SesCache.from_bytes(await f.read()).content}
-        except Exception:
+        except Exception as e:
             # it's OK if this file doesn't exist, we can rebuild it
+            log.info(f"Failed to load sub-epoch-summaries: {e}")
             pass
 
         peak: bytes32 = row[0]
@@ -117,6 +121,11 @@ class BlockHeightMap:
 
         if row[3] is not None:
             self.__sub_epoch_summaries[height] = row[3]
+
+        log.info(
+            f"Loaded sub-epoch-summaries: {len(self.__sub_epoch_summaries)} "
+            f"height-to-hash: {len(self.__height_to_hash)//32}"
+        )
 
         # prepopulate the height -> hash mapping
         # run this unconditionally in to ensure both the height-to-hash and sub
@@ -170,6 +179,7 @@ class BlockHeightMap:
         # on mainnet, every 384th block has a sub-epoch summary. This should
         # guarantee that we find at least one in the first iteration. If it
         # matches, we're done reconciliating the cache with the DB.
+        log.info(f"validating height-to-hash and sub-epoch-summaries. peak: {height}")
         window_size = 400
         while height > 0:
             # load 5000 blocks at a time
@@ -203,6 +213,7 @@ class BlockHeightMap:
                         and height in self.__sub_epoch_summaries
                         and self.__sub_epoch_summaries[height] == entry[2]
                     ):
+                        log.info(f"Done validating. height {height} matches")
                         # we only terminate the loop if we encounter a block
                         # that has a sub epoch summary matching the cache and
                         # the block hash matches the cache
@@ -215,6 +226,7 @@ class BlockHeightMap:
                     del self.__sub_epoch_summaries[height]
                 self.__set_hash(height, prev_hash)
                 prev_hash = entry[1]
+            log.info(f"Done validating at height {height}")
 
     def __set_hash(self, height: int, block_hash: bytes32) -> None:
         idx = height * 32
@@ -234,6 +246,10 @@ class BlockHeightMap:
         # fork height may be -1, in which case all blocks are different and we
         # should clear all sub epoch summaries
         heights_to_delete = []
+        log.log(
+            logging.WARNING if fork_height < 100 else logging.INFO,
+            f"rolling back height-to-hash and sub-epoch-summaries cache to {fork_height}",
+        )
         for ses_included_height in self.__sub_epoch_summaries.keys():
             if ses_included_height > fork_height:
                 heights_to_delete.append(ses_included_height)
