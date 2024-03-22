@@ -275,6 +275,7 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
         "node_id": receiver.connection().peer_node_id,
         "host": receiver.connection().peer_info.host,
         "port": receiver.connection().peer_info.port,
+        "version": receiver.connection().get_version(),
     }
     assert plot_sync_dict_1["harvesting_mode"] is None
 
