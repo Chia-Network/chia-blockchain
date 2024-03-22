@@ -1351,7 +1351,7 @@ class DataStore:
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
     ) -> Optional[bytes32]:
-        async with self.db_wrapper.writer():
+        async with self.db_wrapper.writer() as writer:
             old_root = await self.get_tree_root(tree_id)
             pending_root = await self.get_pending_root(tree_id=tree_id)
             if pending_root is None:
@@ -1440,8 +1440,6 @@ class DataStore:
                     "Didn't get the expected generation after batch update: "
                     f"Expected: {old_root.generation + 1}. Got: {new_root.generation}"
                 )
-
-        async with self.db_wrapper.writer(foreign_keys=False) as writer:
             await self.clean_node_table(writer)
         return root.node_hash
 
