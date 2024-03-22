@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import time
-from typing import Optional
+from typing import Optional, cast
 
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32
@@ -49,10 +49,8 @@ class FeeStore:
         self.max_cache_size = max_cache_size
         self.db_wrapper = db_wrapper
 
-        # REVIEW: Use two tables: one for mempool data, one for estimates?
+        # REVIEW: Should we use two tables: one for mempool data, one for estimates?
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            # REVIEW: Rather than a composite key, would it be better to use an int
-            #         primary key, and guarantee unique for estimate_type & estimate_version
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS fee_records("
                 " block_hash text,"  # block_hash is stored as bytes, not hex
@@ -86,9 +84,7 @@ class FeeStore:
                 if existing_entries_with_same_block_hash:
                     raise ValueError(f"FeeRecord for {key} already exists. Not replacing.")
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO fee_records "
-                "(block_hash, estimator_name, estimator_version, fee_record, block_index, block_time) "
-                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                f"INSERT OR REPLACE INTO fee_records " f"({', '.join(FeeRecord.columns)}) " f"VALUES(?, ?, ?, ?, ?, ?)",
                 (
                     key.block_hash,  # block_hash stored as bytes, not hex
                     key.estimator_name,
@@ -102,19 +98,35 @@ class FeeStore:
 
     @classmethod
     def _row_to_fee_record(cls, row: sqlite3.Row) -> FeeRecord:
-        return FeeRecord(**{k: row[k] for k in row.keys()})
+        return FeeRecord.from_bytes(cast(FeeRecord, row[0]))
 
-    # Note: front-end might need "async def get_between_blocks(a, b)" or "get_last_n"
     async def get_fee_record(self, key: FeeRecordKey) -> Optional[FeeRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
+            conn.row_factory = sqlite3.Row
             cursor = await conn.execute(
-                "SELECT fee_record from fee_records WHERE block_hash=? AND estimate_type=? AND estimate_version=?",
+                "SELECT fee_record from fee_records WHERE block_hash=? AND estimator_name=? AND estimator_version=?",
+                (key.block_hash, key.estimator_name, key.estimator_version),
+            )
+            row = await cursor.fetchone()
+            await cursor.close()
+        if row is not None:
+
+            return self._row_to_fee_record(row)
+        logging.getLogger(__name__).error(f"Dumping whole DB: {str()}")
+        return None
+
+    async def get_fee_record2(self, key: FeeRecordKey) -> Optional[FeeRecord]:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = await conn.execute(
+                "SELECT fee_record from fee_records WHERE block_hash=? AND estimator_name=? AND estimator_version=?",
                 (key.block_hash, key.estimator_name, key.estimator_version),
             )
             row = await cursor.fetchone()
             await cursor.close()
         if row is not None:
             return self._row_to_fee_record(row)
+        logging.getLogger(__name__).error(f"Dumping whole DB: {str()}")
         return None
 
     async def rollback_to_block(self, block_index: int) -> None:

@@ -20,8 +20,8 @@ class FeePerCost(Streamable):
         return float(self.fee) / float(self.cost)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class FeeRecordKey(Streamable):
     block_hash: bytes32
     estimator_name: str
@@ -50,3 +50,4 @@ class FeeRecord(Streamable):
     current_mempool_cost: uint64
     current_mempool_fees: uint64
     minimum_fee_per_cost_to_replace: FeePerCost
+    columns = ["block_hash", "estimator_name", "estimator_version", "fee_record", "block_index", "block_time"]
