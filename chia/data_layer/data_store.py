@@ -1441,9 +1441,9 @@ class DataStore:
                     f"Expected: {old_root.generation + 1}. Got: {new_root.generation}"
                 )
 
-            async with self.db_wrapper.writer(foreign_keys=False) as writer:
-                await self.clean_node_table(writer)
-            return root.node_hash
+        async with self.db_wrapper.writer(foreign_keys=False) as writer:
+            await self.clean_node_table(writer)
+        return root.node_hash
 
     async def _get_one_ancestor(
         self,
