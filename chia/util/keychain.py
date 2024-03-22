@@ -360,26 +360,30 @@ class Keychain:
             except KeychainUserNotFound:
                 return index
 
+    # pylint requires these NotImplementedErrors for some reason
     @overload
-    def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]: ...
+    def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]: ...
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
-    def add_key(
-        self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]
-    ) -> Tuple[PrivateKey, KeyTypes]: ...
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> Tuple[PrivateKey, KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]
-    ) -> Tuple[ObservationRoot, KeyTypes]: ...
+    ) -> Tuple[ObservationRoot, KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: bool
-    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]: ...
+    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
 
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
