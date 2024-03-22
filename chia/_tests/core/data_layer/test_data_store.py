@@ -1780,3 +1780,14 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
                     await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
                     with pytest.raises(KeyNotFoundError, match=f"Key not found: {key.hex()}"):
                         await raw_data_store.get_node_by_key(tree_id=tree_id, key=key)
+
+
+@pytest.mark.anyio
+async def test_insert_key_already_present(data_store: DataStore, tree_id: bytes32) -> None:
+    key = b"foo"
+    value = b"bar"
+    await data_store.insert(
+        key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None, status=Status.COMMITTED
+    )
+    with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
+        await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
