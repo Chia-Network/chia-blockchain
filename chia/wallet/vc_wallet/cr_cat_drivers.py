@@ -6,7 +6,6 @@ from enum import IntEnum
 from typing import Iterable, List, Optional, Tuple, Type, TypeVar
 
 from clvm.casts import int_to_bytes
-from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -51,12 +50,12 @@ PENDING_VC_ANNOUNCEMENT: Program = load_clvm_maybe_recompile(
     package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
     include_standard_libraries=True,
 )
-something_a: CastableType = [
+something_a = [
     4,
     (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
     [4, (1, create_did_tp()), 1],
 ]
-something_b: CastableType = (
+something_b = (
     something_a,
     None,
 )
@@ -212,7 +211,7 @@ class CRCAT:
             new_cr_layer_hash
         )
 
-        something_a: List[List[CastableType]] = [
+        something_a = [
             [51, new_cr_layer_hash, payment.amount, payment.memos],
             [51, None, -113, tail, tail_solution],
             [60, None],
@@ -227,7 +226,7 @@ class CRCAT:
         eve_cat_puzzle_hash: bytes32 = eve_cat_puzzle.get_tree_hash()
 
         eve_coin: Coin = Coin(origin_coin.name(), eve_cat_puzzle_hash, payment.amount)
-        something_b: CastableType = [
+        something_b = [
             [51, eve_cat_puzzle_hash, payment.amount],
             [61, std_hash(eve_coin.name())],
         ]

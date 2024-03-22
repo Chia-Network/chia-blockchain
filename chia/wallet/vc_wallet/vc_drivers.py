@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import List, Optional, Tuple, Type, TypeVar
 
-from clvm.SExp import CastableType
-
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -385,7 +383,7 @@ class VerifiedCredential(Streamable):
             launcher_coin.name(),
             metadata_layer_hash,  # type: ignore
         ).get_tree_hash_precalc(metadata_layer_hash)
-        something: List[List[CastableType]] = [
+        something = [
             [51, wrapped_inner_puzzle_hash, uint64(1), memos],
             [1, new_inner_puzzle_hash],
             [-10, provider_id, transfer_program.get_tree_hash()],

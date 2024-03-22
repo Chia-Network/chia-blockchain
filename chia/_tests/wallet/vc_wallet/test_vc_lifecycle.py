@@ -5,7 +5,6 @@ from typing import List, Optional, Tuple
 
 import pytest
 from chia_rs import G2Element
-from clvm.SExp import CastableType
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
@@ -667,8 +666,8 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             "attempt_honest_cat_piggyback",
             None,
         ):
-            something_a: List[CastableType] = [[60, b"\xcd" + bytes(32)]] if error == "make_banned_announcement" else []
-            something_b: CastableType = [
+            something_a = [[60, b"\xcd" + bytes(32)]] if error == "make_banned_announcement" else []
+            something_b = [
                 [
                     51,
                     ACS_PH,

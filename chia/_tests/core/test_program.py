@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import List
+from typing import Any
 
-from clvm.SExp import CastableType
 from clvm_tools import binutils
 
 from chia.types.blockchain_format.program import Program
@@ -11,7 +10,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 
 
-def program_roundtrip(o: CastableType) -> None:
+def program_roundtrip(o: Any) -> None:
     prg1 = Program.to(o)
     prg2 = SerializedProgram.to(o)
     prg3 = SerializedProgram.from_program(prg1)
@@ -26,7 +25,7 @@ def program_roundtrip(o: CastableType) -> None:
 
 def test_serialized_program_to() -> None:
     prg = "(q ((0x0101010101010101010101010101010101010101010101010101010101010101 80 123 (() (q . ())))))"  # noqa
-    tests: List[CastableType] = [
+    tests = [
         0,
         1,
         (1, 2),

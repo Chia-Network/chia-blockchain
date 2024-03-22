@@ -6,7 +6,6 @@ from typing import List, Tuple
 
 import pytest
 from chia_rs import G2Element
-from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -60,7 +59,7 @@ def create_spends(num: int) -> Tuple[List[CoinSpend], List[Coin]]:
 
     for i in range(num):
         target_ph = rand_hash(rng)
-        conditions: List[CastableType] = [[ConditionOpcode.CREATE_COIN, target_ph, 1]]
+        conditions = [[ConditionOpcode.CREATE_COIN, target_ph, 1]]
         coin = Coin(rand_hash(rng), puzzle_hash, uint64(1000))
         new_coin = Coin(coin.name(), target_ph, uint64(1))
         create_coin.append(new_coin)

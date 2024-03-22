@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 
 from chia_rs import G1Element, G2Element
 from clvm.EvalError import EvalError
-from clvm.SExp import CastableType
 from typing_extensions import Unpack, final
 
 from chia.consensus.block_record import BlockRecord
@@ -468,7 +467,7 @@ class DataLayerWallet:
 
         # Optionally add an ephemeral spend to announce
         if announce_new_state:
-            announce_only_python: Tuple[int, List[List[CastableType]]] = (
+            announce_only_python = (
                 1,
                 [
                     [

@@ -6,7 +6,6 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVa
 
 from chia_rs import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
-from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -230,7 +229,7 @@ class CreateCoin(Condition):
     memos: Optional[List[bytes]] = None
 
     def to_program(self) -> Program:
-        condition_args: List[CastableType] = [ConditionOpcode.CREATE_COIN, self.puzzle_hash, self.amount]
+        condition_args = [ConditionOpcode.CREATE_COIN, self.puzzle_hash, self.amount]
         if self.memos is not None:
             condition_args.append(self.memos)
         condition: Program = Program.to(condition_args)

@@ -8,7 +8,7 @@ from clvm.casts import int_from_bytes
 from clvm.CLVMObject import CLVMStorage
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from clvm.SExp import CastableType, SExp
+from clvm.SExp import SExp
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -90,7 +90,7 @@ class Program(SExp):
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
 
-    def replace(self: T_Program, **kwargs: CastableType) -> T_Program:
+    def replace(self: T_Program, **kwargs: Any) -> T_Program:
         """
         Create a new program replacing the given paths (using `at` syntax).
         Example:
@@ -123,15 +123,15 @@ class Program(SExp):
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(bytes(self)))
 
-    def _run(self, max_cost: int, flags: int, args: CastableType) -> Tuple[int, Program]:
+    def _run(self, max_cost: int, flags: int, args: Any) -> Tuple[int, Program]:
         prog_args = Program.to(args)
         cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, flags)
         return cost, Program.to(r)
 
-    def run_with_cost(self, max_cost: int, args: CastableType) -> Tuple[int, Program]:
+    def run_with_cost(self, max_cost: int, args: Any) -> Tuple[int, Program]:
         return self._run(max_cost, 0, args)
 
-    def run(self, args: CastableType) -> Program:
+    def run(self, args: Any) -> Program:
         cost, r = self.run_with_cost(INFINITE_COST, args)
         return r
 
@@ -231,9 +231,7 @@ NIL = Program.from_bytes(b"\x80")
 
 
 # real return type is more like Union[T_Program, CastableType] when considering corner and terminal cases
-def _sexp_replace(
-    sexp: T_CLVMStorage, to_sexp: Callable[[CastableType], T_Program], **kwargs: CastableType
-) -> T_Program:
+def _sexp_replace(sexp: T_CLVMStorage, to_sexp: Callable[[Any], T_Program], **kwargs: Any) -> T_Program:
     # if `kwargs == {}` then `return sexp` unchanged
     if len(kwargs) == 0:
         # yes, the terminal case is hinted incorrectly for now
@@ -243,13 +241,13 @@ def _sexp_replace(
         if len(kwargs) > 1:
             raise ValueError("conflicting paths")
         # yes, the terminal case is hinted incorrectly for now
-        return kwargs[""]  # type: ignore[return-value]
+        return kwargs[""]
 
     # we've confirmed that no `kwargs` is the empty string.
     # Now split `kwargs` into two groups: those
     # that start with `f` and those that start with `r`
 
-    args_by_prefix: Dict[str, Dict[str, CastableType]] = {}
+    args_by_prefix: Dict[str, Dict[str, Any]] = {}
     for k, v in kwargs.items():
         c = k[0]
         if c not in "fr":

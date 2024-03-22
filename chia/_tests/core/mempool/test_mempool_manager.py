@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple
 
 import pytest
 from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, G1Element, G2Element
 from chiabip158 import PyBIP158
-from clvm.SExp import CastableType
 
 from chia._tests.util.misc import invariant_check_mempool
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
@@ -1329,14 +1328,14 @@ async def test_replacing_one_with_an_eligible_coin() -> None:
 
 @pytest.mark.parametrize("amount", [0, 1])
 def test_run_for_cost(amount: int) -> None:
-    conditions: List[List[Union[bytes, int]]] = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, amount]]
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, amount]]
     solution = SerializedProgram.to(conditions)
     cost = run_for_cost(IDENTITY_PUZZLE, solution, additions_count=1, max_cost=uint64(10000000))
     assert cost == uint64(1800044)
 
 
 def test_run_for_cost_max_cost() -> None:
-    conditions: List[List[Union[bytes, int]]] = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     solution = SerializedProgram.to(conditions)
     with pytest.raises(ValueError, match="cost exceeded"):
         run_for_cost(IDENTITY_PUZZLE, solution, additions_count=1, max_cost=uint64(43))
@@ -1363,7 +1362,7 @@ def test_dedup_info_nothing_to_do() -> None:
 
 def test_dedup_info_eligible_1st_time() -> None:
     # Eligible coin encountered for the first time
-    conditions: List[List[Union[bytes, int]]] = [
+    conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
@@ -1386,7 +1385,7 @@ def test_dedup_info_eligible_1st_time() -> None:
 
 def test_dedup_info_eligible_but_different_solution() -> None:
     # Eligible coin but different solution from the one we encountered
-    initial_conditions: List[List[Union[bytes, int]]] = [
+    initial_conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
@@ -1404,14 +1403,14 @@ def test_dedup_info_eligible_but_different_solution() -> None:
 
 def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     # Eligible coin encountered a second time, and another for the first time
-    initial_conditions: List[List[Union[bytes, int]]] = [
+    initial_conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
     initial_solution = SerializedProgram.to(initial_conditions)
     eligible_coin_spends = EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
     sb1 = spend_bundle_from_conditions(initial_conditions, TEST_COIN)
-    second_conditions: List[List[Union[bytes, int]]] = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
+    second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
     second_solution = SerializedProgram.to(second_conditions)
     sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
     sb = SpendBundle.aggregate([sb1, sb2])
@@ -1438,12 +1437,12 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
 
 def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() -> None:
     # Eligible coin encountered a third time, another for the second time and one non eligible
-    initial_conditions: List[List[Union[bytes, int]]] = [
+    initial_conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
     initial_solution = SerializedProgram.to(initial_conditions)
-    second_conditions: List[List[Union[bytes, int]]] = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
+    second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
     second_solution = SerializedProgram.to(second_conditions)
     saved_cost = uint64(3600044)
     eligible_coin_spends = EligibleCoinSpends(
@@ -1845,7 +1844,7 @@ async def test_identical_spend_aggregation_e2e(
         ),
     ],
 )
-async def test_mempool_timelocks(cond1: List[CastableType], cond2: List[CastableType], expected: Optional[Err]) -> None:
+async def test_mempool_timelocks(cond1: List[object], cond2: List[object], expected: Optional[Err]) -> None:
     coins = []
     test_coin_records = {}
 

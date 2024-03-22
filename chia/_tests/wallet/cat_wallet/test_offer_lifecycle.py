@@ -4,7 +4,6 @@ from typing import Dict, List, Optional
 
 import pytest
 from chia_rs import G2Element
-from clvm.SExp import CastableType
 
 from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
@@ -121,7 +120,7 @@ def generate_secure_bundle(
     announcement_assertions = [a.to_program() for a in announcements]
     selected_coin_amount = sum([c.amount for c in selected_coins])
     non_primaries = [] if len(selected_coins) < 2 else selected_coins[1:]
-    inner_solution: List[CastableType] = [
+    inner_solution = [
         [51, Offer.ph(), offered_amount],  # Offered coin
         [51, acs_ph, uint64(selected_coin_amount - offered_amount)],  # Change
         *announcement_assertions,

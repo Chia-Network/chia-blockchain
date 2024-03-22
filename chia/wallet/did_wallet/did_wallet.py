@@ -8,7 +8,6 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
-from clvm.SExp import CastableType
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -843,7 +842,7 @@ class DIDWallet:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
-        message_puz_python: Tuple[int, List[CastableType]] = (
+        message_puz_python = (
             1,
             [[51, puzhash, coin.amount - 1, [puzhash]], [51, 0x00, -113]],
         )

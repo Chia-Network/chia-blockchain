@@ -4,7 +4,6 @@ from typing import Dict, List, Tuple
 
 import pytest
 from chia_rs import G2Element
-from clvm.SExp import CastableType
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
@@ -45,8 +44,8 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
         # Create the coin we're testing
         all_values: List[bytes32] = [bytes32([x] * 32) for x in range(0, 100)]
         root, proofs = build_merkle_tree(all_values)
-        something_a: CastableType = [51, ACS_PH, 0]
-        something_b: CastableType = (1, [something_a])
+        something_a = [51, ACS_PH, 0]
+        something_b = (1, [something_a])
         p2_conditions = Program.to(something_b)  # An coin to create to make sure this hits the blockchain
         desired_key_values = ((bytes32([0] * 32), bytes32([1] * 32)), (bytes32([7] * 32), bytes32([8] * 32)))
         desired_row_hashes: List[bytes32] = [build_merkle_tree_from_binary_tree(kv)[0] for kv in desired_key_values]

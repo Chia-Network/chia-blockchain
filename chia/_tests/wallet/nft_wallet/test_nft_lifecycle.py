@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import itertools
-from typing import List, Tuple
+from typing import List
 
 import pytest
 from chia_rs import G2Element
-from clvm.SExp import CastableType
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.program import Program
@@ -319,7 +318,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
             Program.to([[[62, FAKE_LAUNCHER_ID]]]),
         )
 
-        expected_announcement_python: Tuple[bytes32, List[List[CastableType]]] = (
+        expected_announcement_python = (
             FAKE_LAUNCHER_ID,
             [[ROYALTY_ADDRESS, 50, [ROYALTY_ADDRESS]]],
         )
