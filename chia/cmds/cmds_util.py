@@ -339,9 +339,11 @@ class CMDCoinSelectionConfigLoader(Streamable):
         return CoinSelectionConfigLoader(
             uint64(int(Decimal(self.min_coin_amount) * mojo_per_unit)) if self.min_coin_amount is not None else None,
             uint64(int(Decimal(self.max_coin_amount) * mojo_per_unit)) if self.max_coin_amount is not None else None,
-            [uint64(int(Decimal(a) * mojo_per_unit)) for a in self.excluded_coin_amounts]
-            if self.excluded_coin_amounts is not None
-            else None,
+            (
+                [uint64(int(Decimal(a) * mojo_per_unit)) for a in self.excluded_coin_amounts]
+                if self.excluded_coin_amounts is not None
+                else None
+            ),
             [bytes32.from_hexstr(id) for id in self.excluded_coin_ids] if self.excluded_coin_ids is not None else None,
         ).autofill(constants=DEFAULT_CONSTANTS)
 

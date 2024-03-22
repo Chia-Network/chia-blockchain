@@ -13,11 +13,9 @@ _T = TypeVar("_T")
 
 class MarshallableProtocol(Protocol):
     @classmethod
-    def unmarshal(cls: Type[_T], marshalled: Dict[str, Any]) -> _T:
-        ...
+    def unmarshal(cls: Type[_T], marshalled: Dict[str, Any]) -> _T: ...
 
-    def marshal(self) -> Dict[str, Any]:
-        ...
+    def marshal(self) -> Dict[str, Any]: ...
 
 
 class UnboundRoute(Protocol):
@@ -49,12 +47,12 @@ def marshal() -> RouteDecorator:
         async def wrapper(self: object, request: Dict[str, object]) -> Dict[str, object]:
             # import json
             # name = route.__name__
-            # print(f"\n ==== {name} request.json\n{json.dumps(request, indent=4)}")
+            # print(f"\n ==== {name} request.json\n{json.dumps(request, indent=2)}")
             unmarshalled_request = request_class.unmarshal(request)
 
             response = await route(self, request=unmarshalled_request)
             marshalled_response = response.marshal()
-            # print(f"\n ==== {name} response.json\n{json.dumps(marshalled_response, indent=4)}")
+            # print(f"\n ==== {name} response.json\n{json.dumps(marshalled_response, indent=2)}")
 
             return marshalled_response
 

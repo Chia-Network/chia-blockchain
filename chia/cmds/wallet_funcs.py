@@ -314,11 +314,11 @@ async def send(
                 ).to_tx_config(mojo_per_unit, config, fingerprint),
                 final_fee,
                 memos,
-                puzzle_decorator_override=[
-                    {"decorator": PuzzleDecoratorType.CLAWBACK.name, "clawback_timelock": clawback_time_lock}
-                ]
-                if clawback_time_lock > 0
-                else None,
+                puzzle_decorator_override=(
+                    [{"decorator": PuzzleDecoratorType.CLAWBACK.name, "clawback_timelock": clawback_time_lock}]
+                    if clawback_time_lock > 0
+                    else None
+                ),
             )
         elif typ in {WalletType.CAT, WalletType.CRCAT}:
             print("Submitting transaction...")
@@ -1473,10 +1473,12 @@ async def mint_vc(
         res = await wallet_client.vc_mint(
             decode_puzzle_hash(ensure_valid_address(did, allowed_types={AddressType.DID}, config=config)),
             CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
-            None
-            if target_address is None
-            else decode_puzzle_hash(
-                ensure_valid_address(target_address, allowed_types={AddressType.XCH}, config=config)
+            (
+                None
+                if target_address is None
+                else decode_puzzle_hash(
+                    ensure_valid_address(target_address, allowed_types={AddressType.XCH}, config=config)
+                )
             ),
             uint64(int(d_fee * units["chia"])),
         )
@@ -1511,7 +1513,7 @@ async def get_vcs(
             print(f"Coin ID: {record.vc.coin.name().hex()}")
             print(
                 f"Inner Address:"
-                f" {encode_puzzle_hash(record.vc.inner_puzzle_hash,selected_network_address_prefix(config))}"
+                f" {encode_puzzle_hash(record.vc.inner_puzzle_hash, selected_network_address_prefix(config))}"
             )
             if record.vc.proof_hash is None:
                 pass
