@@ -27,7 +27,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
-from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.condition_tools import pkm_pairs
@@ -52,8 +51,7 @@ class PreValidationResult(Streamable):
 def batch_pre_validate_blocks(
     constants: ConsensusConstants,
     blocks_pickled: Dict[bytes, bytes],
-    full_blocks_pickled: Optional[List[bytes]],
-    header_blocks_pickled: Optional[List[bytes]],
+    full_blocks_pickled: List[bytes],
     prev_transaction_generators: List[Optional[bytes]],
     npc_results: Dict[uint32, bytes],
     check_filter: bool,
@@ -63,128 +61,97 @@ def batch_pre_validate_blocks(
 ) -> List[bytes]:
     blocks: Dict[bytes32, BlockRecord] = {}
     for k, v in blocks_pickled.items():
-        blocks[bytes32(k)] = BlockRecord.from_bytes(v)
+        blocks[bytes32(k)] = BlockRecord.from_bytes_unchecked(v)
     results: List[PreValidationResult] = []
-    if full_blocks_pickled is not None and header_blocks_pickled is not None:
-        assert ValueError("Only one should be passed here")
 
     # In this case, we are validating full blocks, not headers
-    if full_blocks_pickled is not None:
-        for i in range(len(full_blocks_pickled)):
-            try:
-                validation_start = time.monotonic()
-                block: FullBlock = FullBlock.from_bytes(full_blocks_pickled[i])
-                tx_additions: List[Coin] = []
-                removals: List[bytes32] = []
-                npc_result: Optional[NPCResult] = None
-                if block.height in npc_results:
-                    npc_result = NPCResult.from_bytes(npc_results[block.height])
-                    assert npc_result is not None
-                    if npc_result.conds is not None:
-                        removals, tx_additions = tx_removals_and_additions(npc_result.conds)
-                    else:
-                        removals, tx_additions = [], []
-
-                if block.transactions_generator is not None and npc_result is None:
-                    prev_generator_bytes = prev_transaction_generators[i]
-                    assert prev_generator_bytes is not None
-                    assert block.transactions_info is not None
-                    block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
-                    assert block_generator.program == block.transactions_generator
-                    npc_result = get_name_puzzle_conditions(
-                        block_generator,
-                        min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
-                        mempool_mode=False,
-                        height=block.height,
-                        constants=constants,
-                    )
+    for i in range(len(full_blocks_pickled)):
+        try:
+            validation_start = time.monotonic()
+            block: FullBlock = FullBlock.from_bytes_unchecked(full_blocks_pickled[i])
+            tx_additions: List[Coin] = []
+            removals: List[bytes32] = []
+            npc_result: Optional[NPCResult] = None
+            if block.height in npc_results:
+                npc_result = NPCResult.from_bytes(npc_results[block.height])
+                assert npc_result is not None
+                if npc_result.conds is not None:
                     removals, tx_additions = tx_removals_and_additions(npc_result.conds)
-                if npc_result is not None and npc_result.error is not None:
-                    validation_time = time.monotonic() - validation_start
-                    results.append(
-                        PreValidationResult(
-                            uint16(npc_result.error), None, npc_result, False, uint32(validation_time * 1000)
-                        )
-                    )
-                    continue
+                else:
+                    removals, tx_additions = [], []
 
-                header_block = get_block_header(block, tx_additions, removals)
-                required_iters, error = validate_finished_header_block(
-                    constants,
-                    BlockCache(blocks),
-                    header_block,
-                    check_filter,
-                    expected_difficulty[i],
-                    expected_sub_slot_iters[i],
+            if block.transactions_generator is not None and npc_result is None:
+                prev_generator_bytes = prev_transaction_generators[i]
+                assert prev_generator_bytes is not None
+                assert block.transactions_info is not None
+                block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
+                assert block_generator.program == block.transactions_generator
+                npc_result = get_name_puzzle_conditions(
+                    block_generator,
+                    min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
+                    mempool_mode=False,
+                    height=block.height,
+                    constants=constants,
                 )
-                error_int: Optional[uint16] = None
-                if error is not None:
-                    error_int = uint16(error.code.value)
-
-                successfully_validated_signatures = False
-                # If we failed CLVM, no need to validate signature, the block is already invalid
-                if error_int is None:
-                    # If this is False, it means either we don't have a signature (not a tx block) or we have an invalid
-                    # signature (which also puts in an error) or we didn't validate the signature because we want to
-                    # validate it later. add_block will attempt to validate the signature later.
-                    if validate_signatures:
-                        if npc_result is not None and block.transactions_info is not None:
-                            assert npc_result.conds
-                            pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
-                            # Using AugSchemeMPL.aggregate_verify, so it's safe to use from_bytes_unchecked
-                            pks_objects: List[G1Element] = [G1Element.from_bytes_unchecked(pk) for pk in pairs_pks]
-                            if not AugSchemeMPL.aggregate_verify(
-                                pks_objects, pairs_msgs, block.transactions_info.aggregated_signature
-                            ):
-                                error_int = uint16(Err.BAD_AGGREGATE_SIGNATURE.value)
-                            else:
-                                successfully_validated_signatures = True
-
+                removals, tx_additions = tx_removals_and_additions(npc_result.conds)
+            if npc_result is not None and npc_result.error is not None:
                 validation_time = time.monotonic() - validation_start
                 results.append(
                     PreValidationResult(
-                        error_int,
-                        required_iters,
-                        npc_result,
-                        successfully_validated_signatures,
-                        uint32(validation_time * 1000),
+                        uint16(npc_result.error), None, npc_result, False, uint32(validation_time * 1000)
                     )
                 )
-            except Exception:
-                error_stack = traceback.format_exc()
-                log.error(f"Exception: {error_stack}")
-                validation_time = time.monotonic() - validation_start
-                results.append(
-                    PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False, uint32(validation_time * 1000))
+                continue
+
+            header_block = get_block_header(block, tx_additions, removals)
+            required_iters, error = validate_finished_header_block(
+                constants,
+                BlockCache(blocks),
+                header_block,
+                check_filter,
+                expected_difficulty[i],
+                expected_sub_slot_iters[i],
+            )
+            error_int: Optional[uint16] = None
+            if error is not None:
+                error_int = uint16(error.code.value)
+
+            successfully_validated_signatures = False
+            # If we failed CLVM, no need to validate signature, the block is already invalid
+            if error_int is None:
+                # If this is False, it means either we don't have a signature (not a tx block) or we have an invalid
+                # signature (which also puts in an error) or we didn't validate the signature because we want to
+                # validate it later. add_block will attempt to validate the signature later.
+                if validate_signatures:
+                    if npc_result is not None and block.transactions_info is not None:
+                        assert npc_result.conds
+                        pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+                        # Using AugSchemeMPL.aggregate_verify, so it's safe to use from_bytes_unchecked
+                        pks_objects: List[G1Element] = [G1Element.from_bytes_unchecked(pk) for pk in pairs_pks]
+                        if not AugSchemeMPL.aggregate_verify(
+                            pks_objects, pairs_msgs, block.transactions_info.aggregated_signature
+                        ):
+                            error_int = uint16(Err.BAD_AGGREGATE_SIGNATURE.value)
+                        else:
+                            successfully_validated_signatures = True
+
+            validation_time = time.monotonic() - validation_start
+            results.append(
+                PreValidationResult(
+                    error_int,
+                    required_iters,
+                    npc_result,
+                    successfully_validated_signatures,
+                    uint32(validation_time * 1000),
                 )
-    # In this case, we are validating header blocks
-    elif header_blocks_pickled is not None:
-        for i in range(len(header_blocks_pickled)):
-            try:
-                validation_start = time.monotonic()
-                header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
-                required_iters, error = validate_finished_header_block(
-                    constants,
-                    BlockCache(blocks),
-                    header_block,
-                    check_filter,
-                    expected_difficulty[i],
-                    expected_sub_slot_iters[i],
-                )
-                error_int = None
-                if error is not None:
-                    error_int = uint16(error.code.value)
-                validation_time = time.monotonic() - validation_start
-                results.append(
-                    PreValidationResult(error_int, required_iters, None, False, uint32(validation_time * 1000))
-                )
-            except Exception:
-                validation_time = time.monotonic() - validation_start
-                error_stack = traceback.format_exc()
-                log.error(f"Exception: {error_stack}")
-                results.append(
-                    PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False, uint32(validation_time * 1000))
-                )
+            )
+        except Exception:
+            error_stack = traceback.format_exc()
+            log.error(f"Exception: {error_stack}")
+            validation_time = time.monotonic() - validation_start
+            results.append(
+                PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False, uint32(validation_time * 1000))
+            )
     return [bytes(r) for r in results]
 
 
@@ -346,8 +313,7 @@ async def pre_validate_blocks_multiprocessing(
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
-        b_pickled: Optional[List[bytes]] = None
-        hb_pickled: Optional[List[bytes]] = None
+        b_pickled: List[bytes] = []
         previous_generators: List[Optional[bytes]] = []
         for block in blocks_to_validate:
             # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
@@ -361,27 +327,21 @@ async def pre_validate_blocks_multiprocessing(
                 curr_b = block_dict[curr_b.prev_header_hash]
                 prev_blocks_dict[header_hash] = curr_b
 
-            if isinstance(block, FullBlock):
-                assert get_block_generator is not None
-                if b_pickled is None:
-                    b_pickled = []
-                b_pickled.append(bytes(block))
-                try:
-                    block_generator: Optional[BlockGenerator] = await get_block_generator(block, prev_blocks_dict)
-                except ValueError:
-                    return [
-                        PreValidationResult(
-                            uint16(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING.value), None, None, False, uint32(0)
-                        )
-                    ]
-                if block_generator is not None:
-                    previous_generators.append(bytes(block_generator))
-                else:
-                    previous_generators.append(None)
+            assert isinstance(block, FullBlock)
+            assert get_block_generator is not None
+            b_pickled.append(bytes(block))
+            try:
+                block_generator: Optional[BlockGenerator] = await get_block_generator(block, prev_blocks_dict)
+            except ValueError:
+                return [
+                    PreValidationResult(
+                        uint16(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING.value), None, None, False, uint32(0)
+                    )
+                ]
+            if block_generator is not None:
+                previous_generators.append(bytes(block_generator))
             else:
-                if hb_pickled is None:
-                    hb_pickled = []
-                hb_pickled.append(bytes(block))
+                previous_generators.append(None)
 
         futures.append(
             asyncio.get_running_loop().run_in_executor(
@@ -390,7 +350,6 @@ async def pre_validate_blocks_multiprocessing(
                 constants,
                 recent_blocks_bytes,
                 b_pickled,
-                hb_pickled,
                 previous_generators,
                 npc_results_pickled,
                 check_filter,

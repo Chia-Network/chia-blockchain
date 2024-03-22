@@ -52,8 +52,7 @@ def _convert_plot_info_list(plot_infos: List[PlotInfo]) -> List[Plot]:
 
 
 class PayloadType(Protocol):
-    def __init__(self, identifier: PlotSyncIdentifier, *args: object) -> None:
-        ...
+    def __init__(self, identifier: PlotSyncIdentifier, *args: object) -> None: ...
 
     def __bytes__(self) -> bytes:
         pass

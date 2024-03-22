@@ -60,6 +60,12 @@ class CrawlerAPI:
     ) -> Optional[Message]:
         pass
 
+    @api_request()
+    async def new_unfinished_block2(
+        self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock2
+    ) -> Optional[Message]:
+        pass
+
     @api_request(peer_required=True)
     async def new_compact_vdf(
         self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection
