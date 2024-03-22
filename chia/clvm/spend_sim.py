@@ -86,7 +86,7 @@ class CostLogger:
             "standard cost": self.cost_dict,
             "no puzzle reveals": self.cost_dict_no_puzs,
         }
-        return json.dumps(merged_dict, indent=4)
+        return json.dumps(merged_dict, indent=2)
 
 
 @streamable

@@ -51,7 +51,7 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
-from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -130,13 +130,17 @@ class Wallet:
         addition_amount = 0
 
         for record in unconfirmed_tx:
+            if record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                # We do not wish to consider clawback-able funds as pending change.
+                # That is reserved for when the action to actually claw a tx back or forward is initiated.
+                continue
             if not record.is_in_mempool():
                 if record.spend_bundle is not None:
                     self.log.warning(
                         f"TransactionRecord SpendBundle ID: {record.spend_bundle.name()} not in mempool. "
                         f"(peer, included, error) list: {record.sent_to}"
                     )
-                continue
+                    continue
             our_spend = False
             for coin in record.removals:
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
@@ -177,9 +181,9 @@ class Wallet:
         if new:
             return await self.get_new_puzzle()
         else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            record: Optional[DerivationRecord] = (
+                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            )
             if record is None:
                 return await self.get_new_puzzle()  # pragma: no cover
             puzzle = puzzle_for_pk(record.pubkey)
@@ -189,9 +193,9 @@ class Wallet:
         if new:
             return await self.get_new_puzzlehash()
         else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            record: Optional[DerivationRecord] = (
+                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            )
             if record is None:
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
@@ -502,9 +506,9 @@ class Wallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         if hint == coin.puzzle_hash:
-            wallet_identifier: Optional[
-                WalletIdentifier
-            ] = await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
+            wallet_identifier: Optional[WalletIdentifier] = (
+                await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
+            )
             if wallet_identifier is not None and wallet_identifier.id == self.id():
                 return True
         return False

@@ -1,0 +1,7 @@
+overrides:
+  - files: ["*.yaml", "*.yml", "*.toml", "*.json", "*.ini"]
+    options:
+      tabWidth: 2
+      singleQuote: false
+      experimentalTernaries: true
+      useTabs: false
