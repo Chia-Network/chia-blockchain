@@ -1351,7 +1351,7 @@ class DataStore:
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
     ) -> Optional[bytes32]:
-        async with self.db_wrapper.writer() as writer:
+        async with self.db_wrapper.writer():
             old_root = await self.get_tree_root(tree_id)
             pending_root = await self.get_pending_root(tree_id=tree_id)
             if pending_root is None:
@@ -1441,7 +1441,8 @@ class DataStore:
                     f"Expected: {old_root.generation + 1}. Got: {new_root.generation}"
                 )
 
-            await self.clean_node_table(writer)
+            async with self.db_wrapper.writer(foreign_keys=False) as writer:
+                await self.clean_node_table(writer)
             return root.node_hash
 
     async def _get_one_ancestor(
@@ -1740,7 +1741,7 @@ class DataStore:
                 )
 
     async def delete_store_data(self, tree_id: bytes32) -> None:
-        async with self.db_wrapper.writer() as writer:
+        async with self.db_wrapper.writer(foreign_keys=False) as writer:
             await self.clean_node_table(writer)
             cursor = await writer.execute(
                 """
