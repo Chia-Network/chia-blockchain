@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pytest
 from chia_rs import G2Element
@@ -117,10 +117,10 @@ def generate_secure_bundle(
     offered_amount: uint64,
     tail_str: Optional[str] = None,
 ) -> SpendBundle:
-    announcement_assertions = [a.to_program() for a in announcements]
+    announcement_assertions: List[Any] = [a.to_program() for a in announcements]
     selected_coin_amount = sum([c.amount for c in selected_coins])
     non_primaries = [] if len(selected_coins) < 2 else selected_coins[1:]
-    inner_solution = [
+    inner_solution: List[List[Any]] = [
         [51, Offer.ph(), offered_amount],  # Offered coin
         [51, acs_ph, uint64(selected_coin_amount - offered_amount)],  # Change
         *announcement_assertions,

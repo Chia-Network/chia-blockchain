@@ -383,12 +383,16 @@ class VerifiedCredential(Streamable):
             launcher_coin.name(),
             metadata_layer_hash,  # type: ignore
         ).get_tree_hash_precalc(metadata_layer_hash)
-        something = [
-            [51, wrapped_inner_puzzle_hash, uint64(1), memos],
-            [1, new_inner_puzzle_hash],
-            [-10, provider_id, transfer_program.get_tree_hash()],
-        ]
-        launch_dpuz: Program = Program.to((1, something))
+        launch_dpuz: Program = Program.to(
+            (
+                1,
+                [
+                    [51, wrapped_inner_puzzle_hash, uint64(1), memos],
+                    [1, new_inner_puzzle_hash],
+                    [-10, provider_id, transfer_program.get_tree_hash()],
+                ],
+            )
+        )
         second_launcher_solution = Program.to([launch_dpuz, None])
         second_launcher_coin: Coin = Coin(
             launcher_coin.name(),

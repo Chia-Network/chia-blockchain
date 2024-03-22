@@ -144,10 +144,7 @@ def get_updated_nft_puzzle(puzzle: Program, solution: Program) -> bytes32:
 
 
 def test_transfer_puzzle_builder() -> None:
-    metadata = [
-        ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-        ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
-    ]
+    metadata = [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", 0xD4584AD463139FA8C0D9F68F4B59F185)]
     sp2_puzzle, solution = make_a_new_solution()
     p2_puzzle, ownership_puzzle = make_a_new_ownership_layer_puzzle()
     clvm_nft_puzzle = create_nft_layer_puzzle_with_curry_params(

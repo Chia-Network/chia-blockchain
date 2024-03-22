@@ -318,11 +318,9 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
             Program.to([[[62, FAKE_LAUNCHER_ID]]]),
         )
 
-        expected_announcement_python = (
-            FAKE_LAUNCHER_ID,
-            [[ROYALTY_ADDRESS, 50, [ROYALTY_ADDRESS]]],
-        )
-        expected_announcement_data = Program.to(expected_announcement_python).get_tree_hash()
+        expected_announcement_data = Program.to(
+            (FAKE_LAUNCHER_ID, [[ROYALTY_ADDRESS, 50, [ROYALTY_ADDRESS]]])
+        ).get_tree_hash()
         xch_announcement_spend = make_spend(
             xch_coin,
             ACS,

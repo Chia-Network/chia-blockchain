@@ -467,20 +467,20 @@ class DataLayerWallet:
 
         # Optionally add an ephemeral spend to announce
         if announce_new_state:
-            announce_only_python = (
-                1,
-                [
+            announce_only: Program = Program.to(
+                (
+                    1,
                     [
-                        51,
-                        new_puz_hash,
-                        singleton_record.lineage_proof.amount,
-                        [launcher_id, root_hash, new_puz_hash],
+                        [
+                            51,
+                            new_puz_hash,
+                            singleton_record.lineage_proof.amount,
+                            [launcher_id, root_hash, new_puz_hash],
+                        ],
+                        [62, b"$"],
                     ],
-                    [62, b"$"],
-                ],
+                )
             )
-
-            announce_only: Program = Program.to(announce_only_python)
             second_full_puz: Program = create_host_fullpuz(
                 announce_only,
                 root_hash,

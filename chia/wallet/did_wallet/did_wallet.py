@@ -842,11 +842,7 @@ class DIDWallet:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
-        message_puz_python = (
-            1,
-            [[51, puzhash, coin.amount - 1, [puzhash]], [51, 0x00, -113]],
-        )
-        message_puz = Program.to(message_puz_python)
+        message_puz = Program.to((1, [[51, puzhash, coin.amount - 1, [puzhash]], [51, 0x00, -113]]))
 
         # innerpuz solution is (mode p2_solution)
         innersol: Program = Program.to([1, [[], message_puz, []]])

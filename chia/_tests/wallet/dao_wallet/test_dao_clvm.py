@@ -542,7 +542,7 @@ def test_validator() -> None:
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
     parent_amt_list = [[parent_id, locked_amount]]
-    cat_parent_amt_list: List[Any] = []
+    cat_parent_amt_list: List[Optional[Any]] = []
     spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner.get_tree_hash()])
 
     output_conds = spend_p2_singleton.run(spend_p2_singleton_solution)
@@ -737,8 +737,7 @@ def test_merge_p2_singleton() -> None:
     agg_acas = [x.vars[0] for x in agg_conds[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT]]
 
     for coin_id, ppa in zip(merge_coin_ids, parent_puzhash_amounts):
-        something = [[coin_id, ppa[1], ppa[2], 0, output_parent_amount]]
-        sol = Program.to(something)
+        sol = Program.to([[coin_id, ppa[1], ppa[2], 0, output_parent_amount]])
         merge_conds = conditions_dict_for_solution(p2_singleton, sol, INFINITE_COST)
         # merge coin announces 0
         cca = std_hash(coin_id + merge_conds[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT][0].vars[0])
@@ -826,9 +825,8 @@ def test_treasury() -> None:
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
     parent_amt_list = [[parent_id, locked_amount]]
-    cat_parent_amt_list: List[Any] = []
-    something = [parent_amt_list, cat_parent_amt_list, treasury_inner.get_tree_hash()]
-    spend_p2_singleton_solution = Program.to(something)
+    cat_parent_amt_list: List[Optional[Any]] = []
+    spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner.get_tree_hash()])
 
     proposal: Program = proposal_curry_one.curry(
         proposal_curry_one.get_tree_hash(),
@@ -1074,9 +1072,8 @@ def test_proposal_lifecycle() -> None:
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
     parent_amt_list = [[parent_id, locked_amount]]
-    cat_parent_amt_list: List[Any] = []
-    something = [parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash]
-    spend_p2_singleton_solution = Program.to(something)
+    cat_parent_amt_list: List[Optional[Any]] = []
+    spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash])
 
     # Setup Proposal
     proposal_id = Program.to("proposal_id").get_tree_hash()
