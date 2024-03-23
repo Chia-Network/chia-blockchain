@@ -74,6 +74,7 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
       SOFT_FORK2_HEIGHT: 3000000
+      SOFT_FORK3_HEIGHT: 4465000
       # planned 2.0 release is July 26, height 2965036 on testnet
       # 1 week later
       HARD_FORK_HEIGHT: 2997292
@@ -100,6 +101,7 @@ network_overrides: &network_overrides
       # Forks activated from the beginning on this network
       HARD_FORK_HEIGHT: 0
       HARD_FORK_FIX_HEIGHT: 0
+      SOFT_FORK3_HEIGHT: 641500
       PLOT_FILTER_128_HEIGHT: 6029568
       PLOT_FILTER_64_HEIGHT: 11075328
       PLOT_FILTER_32_HEIGHT: 16121088
