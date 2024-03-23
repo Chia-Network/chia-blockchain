@@ -25,7 +25,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import api_request
-from chia.util.chia_version import chia_version_str_from_str
 from chia.util.errors import ApiError, Err
 from chia.util.ints import int16, uint32
 

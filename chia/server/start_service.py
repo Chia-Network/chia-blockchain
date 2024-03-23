@@ -43,7 +43,7 @@ from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
 from ..protocols.shared_protocol import capabilities
-from ..util.chia_version import chia_version_str
+from ..util.chia_version import chia_short_version
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -105,7 +105,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
 
         self._log = logging.getLogger(service_name)
         self._log.info(f"Starting service {self._service_name} ...")
-        self._log.info(f"chia-blockchain version: {chia_version_str()}")
+        self._log.info(f"chia-blockchain version: {chia_short_version()}")
 
         self.service_config = self.config[service_name]
 

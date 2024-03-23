@@ -33,7 +33,7 @@ from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_server
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.chia_version import chia_version_str
+from chia.util.chia_version import chia_short_version
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.ints import uint32
@@ -1548,7 +1548,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     sys.stdout.flush()
     try:
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
-            log.info(f"chia-blockchain version: {chia_version_str()}")
+            log.info(f"chia-blockchain version: {chia_short_version()}")
 
             beta_metrics = None
             if config.get("beta", {}).get("enabled", False):

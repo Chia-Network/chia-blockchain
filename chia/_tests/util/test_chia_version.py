@@ -6,7 +6,7 @@ import pytest
 from packaging.version import Version
 
 from chia import __version__
-from chia.util.chia_version import chia_version_str, chia_version_str_from_str, chia_version_str_from_version
+from chia.util.chia_version import chia_short_version
 
 
 @pytest.mark.parametrize(
@@ -22,12 +22,12 @@ from chia.util.chia_version import chia_version_str, chia_version_str_from_str, 
         (Version("1.8.2"), "1.8.2"),
     ],
 )
-def test_chia_version_str_from_version(version: Version, result: str) -> None:
-    assert chia_version_str_from_version(version) == result
+def test_chia_short_version_from_version(version: Version, result: str) -> None:
+    assert chia_short_version(version) == result
 
 
-def test_chia_version_str() -> None:
-    assert chia_version_str() == chia_version_str_from_version(Version(__version__))
+def test_chia_short_version() -> None:
+    assert chia_short_version() == chia_short_version(Version(__version__))
 
 
 @pytest.mark.parametrize(
@@ -41,8 +41,9 @@ def test_chia_version_str() -> None:
         ("2.0.0.1", "2.0.0"),
         ("1.8.2+og-1.4.0", "1.8.2"),
         ("1.8.2", "1.8.2"),
-        ("something", None),
+        ("2.1.4.giga32", "2.1.4.giga32"),
+        ("something", "something"),
     ],
 )
-def test_chia_version_str_from_str(version: str, result: Optional[str]) -> None:
-    assert chia_version_str_from_str(version) == result
+def test_chia_short_version_from_str(version: str, result: Optional[str]) -> None:
+    assert chia_short_version(version) == result
