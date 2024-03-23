@@ -30,7 +30,6 @@ from chia.server.rate_limits import RateLimiter
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
-from chia.util.chia_version import chia_version_str_from_str
 from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
 from chia.util.ints import int16, uint8, uint16
 from chia.util.log_exceptions import log_exceptions
@@ -695,8 +694,8 @@ class WSChiaConnection:
         return None
 
     # Used by the Chia Seeder.
-    def get_chia_version_str(self) -> str:
-        return chia_version_str_from_str(self.version) or self.version
+    def get_version(self) -> str:
+        return self.version
 
     def get_tls_version(self) -> str:
         ssl_obj = self._get_extra_info("ssl_object")

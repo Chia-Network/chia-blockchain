@@ -83,7 +83,7 @@ async def test_connection_versions(
     for connection in [outgoing_connection, incoming_connection]:
         assert connection.protocol_version == Version(protocol_version)
         assert connection.version == __version__
-        assert connection.get_chia_version_str() == chia_version_str_from_str(connection.version)
+        assert connection.get_version() == connection.version
 
 
 @pytest.mark.anyio
