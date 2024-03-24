@@ -10,7 +10,6 @@ from chia_rs import Coin, CoinState
 
 from chia._tests.connection_utils import add_dummy_connection
 from chia.protocols import wallet_protocol
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator import simulator_protocol
@@ -581,8 +580,7 @@ class PuzzleStateData:
     coin_states: List[CoinState]
     end_of_batch: bool
     previous_height: Optional[uint32]
-    header_hash: Optional[bytes32]
-    reorg: bool
+    header_hash: bytes32
 
 
 async def sync_puzzle_hashes(
@@ -616,50 +614,39 @@ async def sync_puzzle_hashes(
             )
             assert resp is not None
 
-            if ProtocolMessageTypes(resp.type).name == "reject_puzzle_state":
-                # Validate response
-                wallet_protocol.RejectPuzzleState.from_bytes(resp.data)
+            response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
 
+            consumed = len(response.puzzle_hashes)
+            assert set(response.puzzle_hashes) == set(remaining[:consumed])
+
+            if not response.is_finished:
+                previous_height = response.height
+                previous_header_hash = response.header_hash
                 yield PuzzleStateData(
-                    coin_states=[],
-                    end_of_batch=True,
-                    previous_height=initial_previous_height,
-                    header_hash=initial_header_hash,
-                    reorg=True,
+                    coin_states=response.coin_states,
+                    end_of_batch=False,
+                    previous_height=previous_height,
+                    header_hash=previous_header_hash,
                 )
-                return
             else:
-                response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
-
-                consumed = len(response.puzzle_hashes)
-                assert set(response.puzzle_hashes) == set(remaining[:consumed])
-
-                if not response.is_finished:
-                    previous_height = response.height
-                    previous_header_hash = response.header_hash
-                    yield PuzzleStateData(
-                        coin_states=response.coin_states,
-                        end_of_batch=False,
-                        previous_height=previous_height,
-                        header_hash=previous_header_hash,
-                        reorg=False,
-                    )
-                else:
-                    remaining = remaining[consumed:]
-                    yield PuzzleStateData(
-                        coin_states=response.coin_states,
-                        end_of_batch=True,
-                        previous_height=previous_height,
-                        header_hash=previous_header_hash,
-                        reorg=False,
-                    )
-                    is_finished = True
+                remaining = remaining[consumed:]
+                yield PuzzleStateData(
+                    coin_states=response.coin_states,
+                    end_of_batch=True,
+                    previous_height=previous_height,
+                    header_hash=previous_header_hash,
+                )
+                is_finished = True
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("block_count,coins_per_block", [(0, 0), (5, 100), (3000, 3), (25000, 1)])
-async def test_sync_puzzle_state(one_node: OneNode, self_hostname: str, block_count: int, coins_per_block: int) -> None:
+@pytest.mark.parametrize("puzzle_hash_count,coins_per_block", [(0, 0), (5, 100), (3000, 3), (25000, 1)])
+async def test_sync_puzzle_state(
+    one_node: OneNode, self_hostname: str, puzzle_hash_count: int, coins_per_block: int
+) -> None:
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
+
+    simulator.full_node.config["max_subscribe_response_items"] = 7400
 
     # Generate coin records
     puzzle_hashes: List[bytes32] = []
@@ -669,7 +656,7 @@ async def test_sync_puzzle_state(one_node: OneNode, self_hostname: str, block_co
     rng = Random(0)
 
     # Skip block 0 because it's skipped by `RequestPuzzleState`.
-    for i in range(1, block_count + 1):
+    for i in range(1, puzzle_hash_count + 1):
         puzzle_hash = std_hash(i.to_bytes(4, "big"))
         puzzle_hashes.append(puzzle_hash)
 
@@ -686,8 +673,8 @@ async def test_sync_puzzle_state(one_node: OneNode, self_hostname: str, block_co
 
             coin_records[coin.name()] = CoinRecord(
                 coin=coin,
-                confirmed_block_index=uint32(i),
-                spent_block_index=uint32(i + 100 if rng.choice([True, False]) else 0),
+                confirmed_block_index=uint32(rng.randrange(1, 10)),
+                spent_block_index=uint32(rng.randrange(11, 20) if rng.choice([True, False]) else 0),
                 coinbase=False,
                 timestamp=uint64(rng.randint(1000, 100000000)),
             )
@@ -699,7 +686,7 @@ async def test_sync_puzzle_state(one_node: OneNode, self_hostname: str, block_co
     await simulator.full_node.hint_store.add_hints(hints)
 
     # Farm peak
-    await simulator.farm_blocks_to_puzzlehash(1)
+    await simulator.farm_blocks_to_puzzlehash(30)
 
     genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
 
@@ -731,8 +718,6 @@ async def test_sync_puzzle_state(one_node: OneNode, self_hostname: str, block_co
             simulator=simulator,
             peer=peer,
         ):
-            assert not batch.reorg
-
             for coin_state in batch.coin_states:
                 coin_id = coin_state.coin.name()
                 coin_ids.add(coin_id)
