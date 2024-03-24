@@ -1718,54 +1718,6 @@ class FullNodeAPI:
 
     @api_request(
         peer_required=True,
-        reply_types=[ProtocolMessageTypes.respond_add_puzzle_subscriptions],
-    )
-    async def request_add_puzzle_subscriptions(
-        self, request: wallet_protocol.RequestAddPuzzleSubscriptions, peer: WSChiaConnection
-    ) -> Message:
-        peer_id = peer.peer_node_id
-        max_subscriptions = self.max_subscriptions(peer)
-        subs = self.full_node.subscriptions
-
-        peak_height = self.full_node.blockchain.get_peak_height()
-        assert peak_height is not None
-
-        header_hash = self.full_node.blockchain.height_to_hash(peak_height)
-        assert header_hash is not None
-
-        new_subscriptions = set(request.puzzle_hashes) - subs.puzzle_subscriptions(peer_id)
-        added = subs.add_puzzle_subscriptions(peer_id, list(new_subscriptions), max_subscriptions)
-
-        response = wallet_protocol.RespondAddPuzzleSubscriptions(list(added), peak_height, header_hash)
-        msg = make_msg(ProtocolMessageTypes.respond_add_puzzle_subscriptions, response)
-        return msg
-
-    @api_request(
-        peer_required=True,
-        reply_types=[ProtocolMessageTypes.respond_add_coin_subscriptions],
-    )
-    async def request_add_coin_subscriptions(
-        self, request: wallet_protocol.RequestAddCoinSubscriptions, peer: WSChiaConnection
-    ) -> Message:
-        peer_id = peer.peer_node_id
-        max_subscriptions = self.max_subscriptions(peer)
-        subs = self.full_node.subscriptions
-
-        peak_height = self.full_node.blockchain.get_peak_height()
-        assert peak_height is not None
-
-        header_hash = self.full_node.blockchain.height_to_hash(peak_height)
-        assert header_hash is not None
-
-        new_subscriptions = set(request.coin_ids) - subs.coin_subscriptions(peer_id)
-        added = subs.add_coin_subscriptions(peer_id, list(new_subscriptions), max_subscriptions)
-
-        response = wallet_protocol.RespondAddCoinSubscriptions(list(added), peak_height, header_hash)
-        msg = make_msg(ProtocolMessageTypes.respond_add_coin_subscriptions, response)
-        return msg
-
-    @api_request(
-        peer_required=True,
         reply_types=[ProtocolMessageTypes.respond_remove_puzzle_subscriptions],
     )
     async def request_remove_puzzle_subscriptions(

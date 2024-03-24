@@ -148,16 +148,6 @@ def test_protocol_json() -> None:
     assert type(respond_ses_info).from_json_dict(respond_ses_info_json) == respond_ses_info
     assert str(coin_state_filters_json) == str(coin_state_filters.to_json_dict())
     assert type(coin_state_filters).from_json_dict(coin_state_filters_json) == coin_state_filters
-    assert str(request_add_puzzle_subscriptions_json) == str(request_add_puzzle_subscriptions.to_json_dict())
-    assert (
-        type(request_add_puzzle_subscriptions).from_json_dict(request_add_puzzle_subscriptions_json)
-        == request_add_puzzle_subscriptions
-    )
-    assert str(respond_add_puzzle_subscriptions_json) == str(respond_add_puzzle_subscriptions.to_json_dict())
-    assert (
-        type(respond_add_puzzle_subscriptions).from_json_dict(respond_add_puzzle_subscriptions_json)
-        == respond_add_puzzle_subscriptions
-    )
     assert str(request_remove_puzzle_subscriptions_json) == str(request_remove_puzzle_subscriptions.to_json_dict())
     assert (
         type(request_remove_puzzle_subscriptions).from_json_dict(request_remove_puzzle_subscriptions_json)
@@ -167,16 +157,6 @@ def test_protocol_json() -> None:
     assert (
         type(respond_remove_puzzle_subscriptions).from_json_dict(respond_remove_puzzle_subscriptions_json)
         == respond_remove_puzzle_subscriptions
-    )
-    assert str(request_add_coin_subscriptions_json) == str(request_add_coin_subscriptions.to_json_dict())
-    assert (
-        type(request_add_coin_subscriptions).from_json_dict(request_add_coin_subscriptions_json)
-        == request_add_coin_subscriptions
-    )
-    assert str(respond_add_coin_subscriptions_json) == str(respond_add_coin_subscriptions.to_json_dict())
-    assert (
-        type(respond_add_coin_subscriptions).from_json_dict(respond_add_coin_subscriptions_json)
-        == respond_add_coin_subscriptions
     )
     assert str(request_remove_coin_subscriptions_json) == str(request_remove_coin_subscriptions.to_json_dict())
     assert (

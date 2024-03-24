@@ -280,34 +280,6 @@ class RespondFeeEstimates(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class RequestAddPuzzleSubscriptions(Streamable):
-    puzzle_hashes: List[bytes32]
-
-
-@streamable
-@dataclass(frozen=True)
-class RespondAddPuzzleSubscriptions(Streamable):
-    puzzle_hashes: List[bytes32]
-    height: uint32
-    header_hash: bytes32
-
-
-@streamable
-@dataclass(frozen=True)
-class RequestAddCoinSubscriptions(Streamable):
-    coin_ids: List[bytes32]
-
-
-@streamable
-@dataclass(frozen=True)
-class RespondAddCoinSubscriptions(Streamable):
-    coin_ids: List[bytes32]
-    height: uint32
-    header_hash: bytes32
-
-
-@streamable
-@dataclass(frozen=True)
 class RequestRemovePuzzleSubscriptions(Streamable):
     puzzle_hashes: Optional[List[bytes32]]
 

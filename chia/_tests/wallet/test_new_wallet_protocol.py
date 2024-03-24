@@ -42,6 +42,7 @@ async def connect_to_simulator(
 async def test_puzzle_subscriptions(one_node: OneNode, self_hostname: str) -> None:
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
     subs = simulator.full_node.subscriptions
+    genesis_challenge = simulator.full_node.constants.GENESIS_CHALLENGE
 
     await simulator.farm_blocks_to_puzzlehash(1)
 
@@ -51,23 +52,37 @@ async def test_puzzle_subscriptions(one_node: OneNode, self_hostname: str) -> No
 
     # Add puzzle subscriptions, ignore duplicates
     # Response can be in any order
-    resp = await simulator.request_add_puzzle_subscriptions(
-        wallet_protocol.RequestAddPuzzleSubscriptions([ph1, ph2, ph2]), peer
+    resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState(
+            [ph1, ph2, ph2],
+            None,
+            genesis_challenge,
+            wallet_protocol.CoinStateFilters(False, False, False, uint64(0)),
+            True,
+        ),
+        peer,
     )
     assert resp is not None
 
-    add_response = wallet_protocol.RespondAddPuzzleSubscriptions.from_bytes(resp.data)
+    add_response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
     assert set(add_response.puzzle_hashes) == {ph1, ph2}
 
     assert subs.puzzle_subscriptions(peer.peer_node_id) == {ph1, ph2}
 
     # Add another puzzle hash and existing ones
-    resp = await simulator.request_add_puzzle_subscriptions(
-        wallet_protocol.RequestAddPuzzleSubscriptions([ph1, ph2, ph3]), peer
+    resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState(
+            [ph1, ph2, ph3],
+            None,
+            genesis_challenge,
+            wallet_protocol.CoinStateFilters(False, False, False, uint64(0)),
+            True,
+        ),
+        peer,
     )
     assert resp is not None
 
-    add_response = wallet_protocol.RespondAddPuzzleSubscriptions.from_bytes(resp.data)
+    add_response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
     assert set(add_response.puzzle_hashes) == {ph3}
 
     assert subs.puzzle_subscriptions(peer.peer_node_id) == {ph1, ph2, ph3}
@@ -100,6 +115,7 @@ async def test_puzzle_subscriptions(one_node: OneNode, self_hostname: str) -> No
 async def test_coin_subscriptions(one_node: OneNode, self_hostname: str) -> None:
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
     subs = simulator.full_node.subscriptions
+    genesis_challenge = simulator.full_node.constants.GENESIS_CHALLENGE
 
     await simulator.farm_blocks_to_puzzlehash(1)
 
@@ -109,23 +125,23 @@ async def test_coin_subscriptions(one_node: OneNode, self_hostname: str) -> None
 
     # Add coin subscriptions, ignore duplicates
     # Response can be in any order
-    resp = await simulator.request_add_coin_subscriptions(
-        wallet_protocol.RequestAddCoinSubscriptions([coin1, coin2, coin2]), peer
+    resp = await simulator.request_coin_state(
+        wallet_protocol.RequestCoinState([coin1, coin2, coin2], None, genesis_challenge, True), peer
     )
     assert resp is not None
 
-    add_response = wallet_protocol.RespondAddCoinSubscriptions.from_bytes(resp.data)
+    add_response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
     assert set(add_response.coin_ids) == {coin1, coin2}
 
     assert subs.coin_subscriptions(peer.peer_node_id) == {coin1, coin2}
 
     # Add another puzzle hash and existing ones
-    resp = await simulator.request_add_coin_subscriptions(
-        wallet_protocol.RequestAddCoinSubscriptions([coin1, coin2, coin3]), peer
+    resp = await simulator.request_coin_state(
+        wallet_protocol.RequestCoinState([coin1, coin2, coin3], None, genesis_challenge, True), peer
     )
     assert resp is not None
 
-    add_response = wallet_protocol.RespondAddCoinSubscriptions.from_bytes(resp.data)
+    add_response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
     assert set(add_response.coin_ids) == {coin3}
 
     assert subs.coin_subscriptions(peer.peer_node_id) == {coin1, coin2, coin3}
@@ -156,6 +172,7 @@ async def test_coin_subscriptions(one_node: OneNode, self_hostname: str) -> None
 async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> None:
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
     subs = simulator.full_node.subscriptions
+    genesis_challenge = simulator.full_node.constants.GENESIS_CHALLENGE
 
     await simulator.farm_blocks_to_puzzlehash(1)
 
@@ -166,34 +183,44 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
     first_batch = puzzle_hashes[:max_subs]
     first_batch_set = set(first_batch)
 
-    resp = await simulator.request_add_puzzle_subscriptions(
-        wallet_protocol.RequestAddPuzzleSubscriptions(first_batch), peer
+    resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState(
+            first_batch, None, genesis_challenge, wallet_protocol.CoinStateFilters(False, False, False, uint64(0)), True
+        ),
+        peer,
     )
     assert resp is not None
 
-    add_ph_response = wallet_protocol.RespondAddPuzzleSubscriptions.from_bytes(resp.data)
+    add_ph_response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
     assert set(add_ph_response.puzzle_hashes) == first_batch_set
 
     assert subs.puzzle_subscriptions(peer.peer_node_id) == first_batch_set
 
     # Try to add the remaining subscriptions
-    resp = await simulator.request_add_puzzle_subscriptions(
-        wallet_protocol.RequestAddPuzzleSubscriptions(puzzle_hashes[max_subs:]), peer
+    resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState(
+            puzzle_hashes[max_subs:],
+            None,
+            genesis_challenge,
+            wallet_protocol.CoinStateFilters(False, False, False, uint64(0)),
+            True,
+        ),
+        peer,
     )
     assert resp is not None
 
-    overflow_ph_response = wallet_protocol.RespondAddPuzzleSubscriptions.from_bytes(resp.data)
+    overflow_ph_response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
     assert len(overflow_ph_response.puzzle_hashes) == 0
 
     assert subs.puzzle_subscriptions(peer.peer_node_id) == first_batch_set
 
     # Try to overflow with coin subscriptions
-    resp = await simulator.request_add_coin_subscriptions(
-        wallet_protocol.RequestAddCoinSubscriptions([bytes32(b"coin" * 8)]), peer
+    resp = await simulator.request_coin_state(
+        wallet_protocol.RequestCoinState([bytes32(b"coin" * 8)], None, genesis_challenge, True), peer
     )
     assert resp is not None
 
-    overflow_coin_response = wallet_protocol.RespondAddCoinSubscriptions.from_bytes(resp.data)
+    overflow_coin_response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
     assert len(overflow_coin_response.coin_ids) == 0
 
 

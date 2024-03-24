@@ -47,8 +47,6 @@ VALID_REPLY_MESSAGE_MAP = {
     pmt.request_peers_introducer: [pmt.respond_peers_introducer],
     pmt.request_puzzle_solution: [pmt.respond_puzzle_solution, pmt.reject_puzzle_solution],
     pmt.send_transaction: [pmt.transaction_ack],
-    pmt.request_add_puzzle_subscriptions: [pmt.respond_add_puzzle_subscriptions],
-    pmt.request_add_coin_subscriptions: [pmt.respond_add_coin_subscriptions],
     pmt.request_remove_puzzle_subscriptions: [pmt.respond_remove_puzzle_subscriptions],
     pmt.request_remove_coin_subscriptions: [pmt.respond_remove_coin_subscriptions],
     pmt.request_puzzle_state: [pmt.respond_puzzle_state, pmt.reject_puzzle_state],
