@@ -2019,24 +2019,6 @@ coin_state_filters_json: Dict[str, Any] = {
     "min_amount": 0,
 }
 
-request_add_puzzle_subscriptions_json: Dict[str, Any] = {
-    "puzzle_hashes": [
-        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
-        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
-        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
-    ]
-}
-
-respond_add_puzzle_subscriptions_json: Dict[str, Any] = {
-    "puzzle_hashes": [
-        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
-        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
-        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
-    ],
-    "height": 164324,
-    "header_hash": "0xdfa10e11f1e2f99dbe9087815b10fa12f3826a56ec5af7bb46e7a4794ee6d015",
-}
-
 request_remove_puzzle_subscriptions_json: Dict[str, Any] = {
     "puzzle_hashes": [
         "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
@@ -2051,24 +2033,6 @@ respond_remove_puzzle_subscriptions_json: Dict[str, Any] = {
         "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
         "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
     ]
-}
-
-request_add_coin_subscriptions_json: Dict[str, Any] = {
-    "coin_ids": [
-        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
-        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
-        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
-    ]
-}
-
-respond_add_coin_subscriptions_json: Dict[str, Any] = {
-    "coin_ids": [
-        "0x59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7",
-        "0xd4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca",
-        "0x0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1",
-    ],
-    "height": 481956,
-    "header_hash": "0xdf6c4b2f5cf738990b3811bc343428474e1513c1c66533f8803594a7d7d4d83f",
 }
 
 request_remove_coin_subscriptions_json: Dict[str, Any] = {
