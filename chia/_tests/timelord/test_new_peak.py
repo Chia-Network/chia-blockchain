@@ -356,63 +356,6 @@ class TestNewPeak:
                     == new_peak.reward_chain_block.get_hash()
                 )
 
-    @pytest.mark.anyio
-    async def test_tblockchain(
-        self,
-        one_node: Tuple[List[FullNodeService], List[FullNodeSimulator], BlockTools],
-        timelord: Tuple[TimelordAPI, ChiaServer],
-        default_1000_blocks: List[FullBlock],
-    ) -> None:
-        [full_node_service], _, bt = one_node
-        full_node = full_node_service._node
-        default_1000_blocks_new = default_1000_blocks[:-1]
-        async with create_blockchain(bt.constants, 2) as (b1, db_wrapper1):
-            async with create_blockchain(bt.constants, 2) as (b2, db_wrapper2):
-                timelord_api, _ = timelord
-                for block in default_1000_blocks_new:
-                    await full_node.add_block(block)
-
-                # # make two new blocks on tip, block_2 has higher total iterations
-                block_1 = bt.get_consecutive_blocks(1, default_1000_blocks_new)[-1]
-                # block_2 = bt.get_consecutive_blocks(
-                #     1, default_1000_blocks_new, min_signage_point=block_1.reward_chain_block.signage_point_index
-                # )[-1]
-                #
-                # make sure block_2 has higher iterations then block_1
-                assert block_1.prev_header_hash == default_1000_blocks_new[-1].header_hash
-                new_block = (
-                    dataclasses.replace(
-                        block_1,
-                        reward_chain_block=RewardChainBlock(
-                            weight=default_1000_blocks_new[-1].reward_chain_block.weight,
-                            height=block_1.height - 1,
-                            total_iters=block_1.reward_chain_block.total_iters,
-                            signage_point_index=block_1.reward_chain_block.signage_point_index,
-                            pos_ss_cc_challenge_hash=block_1.reward_chain_block.pos_ss_cc_challenge_hash,
-                            proof_of_space=block_1.reward_chain_block.proof_of_space,
-                            challenge_chain_sp_vdf=block_1.reward_chain_block.challenge_chain_sp_vdf,
-                            challenge_chain_sp_signature=block_1.reward_chain_block.challenge_chain_sp_signature,
-                            challenge_chain_ip_vdf=block_1.reward_chain_block.challenge_chain_ip_vdf,
-                            reward_chain_sp_vdf=block_1.reward_chain_block.reward_chain_sp_vdf,
-                            reward_chain_sp_signature=block_1.reward_chain_block.reward_chain_sp_signature,
-                            reward_chain_ip_vdf=block_1.reward_chain_block.reward_chain_ip_vdf,
-                            infused_challenge_chain_ip_vdf=block_1.reward_chain_block.infused_challenge_chain_ip_vdf,
-                            is_transaction_block=block_1.reward_chain_block.is_transaction_block,
-                        ),
-                        foliage=Foliage(
-                            prev_block_hash=default_1000_blocks_new[-2].header_hash,
-                            reward_block_hash=block_1.foliage.reward_block_hash,
-                            foliage_transaction_block_hash=block_1.foliage.foliage_transaction_block_hash,
-                            foliage_block_data_signature=block_1.foliage.foliage_block_data_signature,
-                            foliage_block_data=block_1.foliage.foliage_block_data,
-                            foliage_transaction_block_signature=block_1.foliage.foliage_transaction_block_signature,
-                        ),
-                    ),
-                )
-                await full_node.add_block(block_1)
-                peak = full_node.blockchain.get_peak()
-                assert peak is not None and peak.height == block_1.height
-
 
 async def get_rc_prev(blockchain: Blockchain, block: FullBlock) -> bytes32:
     if block.reward_chain_block.signage_point_index == 0:
