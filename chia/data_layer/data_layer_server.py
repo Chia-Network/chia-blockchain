@@ -107,8 +107,7 @@ class DataLayerServer:
         filename = request.match_info["filename"]
         if not is_filename_valid(tree_id + "-" + filename):
             raise Exception("Invalid file format requested.")
-        file_path = self.server_dir.joinpath(tree_id)
-        file_path = self.server_dir.joinpath(filename)
+        file_path = self.server_dir.joinpath(tree_id).joinpath(filename)
         with open(file_path, "rb") as reader:
             content = reader.read()
         response = web.Response(
