@@ -42,10 +42,7 @@ def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: by
 
 
 def leaf_hash(key: bytes, value: bytes) -> bytes32:
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to((key, value)).get_tree_hash()  # type: ignore[no-any-return]
+    return SerializedProgram.to((key, value)).get_tree_hash()
 
 
 def key_hash(key: bytes) -> bytes32:
