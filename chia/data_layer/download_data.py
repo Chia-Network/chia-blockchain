@@ -188,6 +188,7 @@ async def download_file(
             await http_download(client_foldername, filename, proxy_url, server_info, timeout, log)
         except (asyncio.TimeoutError, aiohttp.ClientError):
             return False
+        return True
 
     log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
     request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
@@ -252,7 +253,7 @@ async def insert_from_delta_file(
             if not success:
                 new_server_info = await data_store.server_misses_file(tree_id, server_info, timestamp)
                 log.info(
-                    f"Failed to download {filename} from {new_server_info.url}."
+                    f"Failed to download {target_filename_path.name} from {new_server_info.url}."
                     f"Miss {new_server_info.num_consecutive_failures}."
                 )
                 log.info(f"Next attempt from {new_server_info.url} in {new_server_info.ignore_till - timestamp}s.")
