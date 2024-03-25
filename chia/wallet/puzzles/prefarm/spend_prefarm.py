@@ -53,14 +53,10 @@ async def main() -> None:
         ph2 = decode_puzzle_hash(address2)
 
         p_farmer_2 = SerializedProgram.to(
-            binutils.assemble(
-                f"(q . ((51 0x{ph1.hex()} {farmer_amounts}) " f"(51 0x{ph2.hex()} {farmer_amounts})))"
-            )  # type: ignore[no-untyped-call]
+            binutils.assemble(f"(q . ((51 0x{ph1.hex()} {farmer_amounts}) " f"(51 0x{ph2.hex()} {farmer_amounts})))")
         )
         p_pool_2 = SerializedProgram.to(
-            binutils.assemble(
-                f"(q . ((51 0x{ph1.hex()} {pool_amounts}) " f"(51 0x{ph2.hex()} {pool_amounts})))"
-            )  # type: ignore[no-untyped-call]
+            binutils.assemble(f"(q . ((51 0x{ph1.hex()} {pool_amounts}) " f"(51 0x{ph2.hex()} {pool_amounts})))")
         )
 
         print(f"Ph1: {ph1.hex()}")
@@ -68,7 +64,7 @@ async def main() -> None:
         assert ph1.hex() == "1b7ab2079fa635554ad9bd4812c622e46ee3b1875a7813afba127bb0cc9794f9"
         assert ph2.hex() == "6f184a7074c925ef8688ce56941eb8929be320265f824ec7e351356cc745d38a"
 
-        p_solution = SerializedProgram.to(binutils.assemble("()"))  # type: ignore[no-untyped-call]
+        p_solution = SerializedProgram.to(binutils.assemble("()"))
 
         sb_farmer = SpendBundle([CoinSpend(farmer_prefarm, p_farmer_2, p_solution)], G2Element())
         sb_pool = SpendBundle([CoinSpend(pool_prefarm, p_pool_2, p_solution)], G2Element())

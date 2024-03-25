@@ -12,13 +12,13 @@ from typing import Iterator, List, Optional
 import click
 import zstd
 
+from chia._tests.util.constants import test_constants
 from chia.simulator.block_tools import create_block_tools
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.coin import Coin
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chia_logging import initialize_logging
 from chia.util.ints import uint32, uint64
-from tests.util.constants import test_constants
 
 
 @contextmanager

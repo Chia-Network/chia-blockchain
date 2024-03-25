@@ -1,26 +1,26 @@
 name: ⚡️ Benchmarks
 
 on:
- workflow_dispatch:
+  workflow_dispatch:
     inputs:
       repeats:
         description: "The number of times to execute each benchmark"
         type: int
         default: 1
- push:
-   paths-ignore:
-       - '**.md'
-   branches:
-     - 'long_lived/**'
-     - main
-     - 'release/**'
- release:
-   types: [published]
- pull_request:
-   paths-ignore:
-       - '**.md'
-   branches:
-     - '**'
+  push:
+    paths-ignore:
+      - "**.md"
+    branches:
+      - "long_lived/**"
+      - main
+      - "release/**"
+  release:
+    types: [published]
+  pull_request:
+    paths-ignore:
+      - "**.md"
+    branches:
+      - "**"
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -57,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.10" ]
+        python-version: ["3.10"]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       BLOCKS_AND_PLOTS_VERSION: 0.38.0
@@ -91,8 +91,8 @@ jobs:
       - name: Checkout test blocks and plots
         uses: actions/checkout@v4
         with:
-          repository: 'Chia-Network/test-cache'
-          path: '.chia'
+          repository: "Chia-Network/test-cache"
+          path: ".chia"
           ref: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
           fetch-depth: 1
 
@@ -106,7 +106,7 @@ jobs:
 
       - name: pytest
         run: |
-          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml --benchmark-repeats ${{ needs.setup.outputs.repeats }} tests
+          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml --benchmark-repeats ${{ needs.setup.outputs.repeats }} chia/_tests/
 
       - name: Format JUnit data and prepare results
         if: always()
@@ -124,4 +124,4 @@ jobs:
       - name: Add benchmark results to workflow summary
         if: always()
         run: |
-          python -m tests.process_junit --type benchmark --xml junit-data/benchmarks.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
+          python -m chia._tests.process_junit --type benchmark --xml junit-data/benchmarks.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
