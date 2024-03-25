@@ -123,9 +123,11 @@ class WalletNftStore:
                     int(wallet_id),
                     did_id.hex() if did_id else None,
                     json.dumps(nft_coin_info.coin.to_json_dict()),
-                    json.dumps(nft_coin_info.lineage_proof.to_json_dict())
-                    if nft_coin_info.lineage_proof is not None
-                    else None,
+                    (
+                        json.dumps(nft_coin_info.lineage_proof.to_json_dict())
+                        if nft_coin_info.lineage_proof is not None
+                        else None
+                    ),
                     int(nft_coin_info.mint_height),
                     IN_TRANSACTION_STATUS if nft_coin_info.pending_transaction else DEFAULT_STATUS,
                     bytes(nft_coin_info.full_puzzle),

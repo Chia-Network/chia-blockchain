@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +18,15 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
 
 _T_RpcClient = TypeVar("_T_RpcClient", bound="RpcClient")
+
+
+# It would be better to not inherit from ValueError.  This is being done to separate
+# the possibility to identify these errors in new code from having to review and
+# clean up existing code.
+class ResponseFailureError(ValueError):
+    def __init__(self, response: Dict[str, Any]):
+        self.response = response
+        super().__init__(f"RPC response failure: {json.dumps(response)}")
 
 
 @dataclass
@@ -100,7 +110,7 @@ class RpcClient:
             response.raise_for_status()
             res_json = await response.json()
             if not res_json["success"]:
-                raise ValueError(res_json)
+                raise ResponseFailureError(res_json)
             return res_json
 
     async def get_connections(self, node_type: Optional[NodeType] = None) -> List[Dict]:

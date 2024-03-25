@@ -80,7 +80,7 @@ def make_aggsig_final_message(
     if isinstance(spend, Coin):
         coin = spend
     elif isinstance(spend, Spend):
-        coin = Coin(spend.parent_id, spend.puzzle_hash, spend.coin_amount)
+        coin = Coin(spend.parent_id, spend.puzzle_hash, uint64(spend.coin_amount))
     else:
         raise ValueError(f"Expected Coin or Spend, got {type(spend)}")  # pragma: no cover
 

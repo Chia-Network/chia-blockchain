@@ -2,8 +2,9 @@
 max-line-length = 120
 exclude = ./typings/**/*
 ignore = E203,W503
+extend-ignore = E226,E704,E701
 per-file-ignores =
-    tests/util/build_network_protocol_files.py:F405
-    tests/util/test_network_protocol_files.py:F405
-    tests/util/test_network_protocol_json.py:F405
-    tests/util/protocol_messages_json.py:E501
+    chia/_tests/util/build_network_protocol_files.py:F405
+    chia/_tests/util/test_network_protocol_files.py:F405
+    chia/_tests/util/test_network_protocol_json.py:F405
+    chia/_tests/util/protocol_messages_json.py:E501
