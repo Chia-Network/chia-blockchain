@@ -937,8 +937,9 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             tx_config: TXConfig,
             solver: Optional[Dict[str, Any]] = None,
             fee: uint64 = uint64(0),
+            push: bool = True,
         ) -> TakeOfferResponse:
-            self.add_to_log("take_offer", (offer, tx_config, solver, fee))
+            self.add_to_log("take_offer", (offer, tx_config, solver, fee, push))
             return TakeOfferResponse(
                 [STD_UTX],
                 [STD_TX],
@@ -981,7 +982,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             (cat2,),
             (bytes32.from_hexstr("accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d"),),
         ],
-        "take_offer": [(Offer.from_bech32(test_offer_file_bech32), DEFAULT_TX_CONFIG, None, 1000000000000)],
+        "take_offer": [(Offer.from_bech32(test_offer_file_bech32), DEFAULT_TX_CONFIG, None, 1000000000000, True)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -1010,9 +1011,14 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
             )
 
         async def cancel_offer(
-            self, trade_id: bytes32, tx_config: TXConfig, fee: uint64 = uint64(0), secure: bool = True
+            self,
+            trade_id: bytes32,
+            tx_config: TXConfig,
+            fee: uint64 = uint64(0),
+            secure: bool = True,
+            push: bool = True,
         ) -> CancelOfferResponse:
-            self.add_to_log("cancel_offer", (trade_id, tx_config, fee, secure))
+            self.add_to_log("cancel_offer", (trade_id, tx_config, fee, secure, push))
             return CancelOfferResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = CancelOfferRpcClient()  # pylint: disable=no-value-for-parameter
@@ -1033,7 +1039,7 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "get_offer": [(test_offer_id_bytes, True)],
-        "cancel_offer": [(test_offer_id_bytes, DEFAULT_TX_CONFIG, 1000000000000, True)],
+        "cancel_offer": [(test_offer_id_bytes, DEFAULT_TX_CONFIG, 1000000000000, True, True)],
         "cat_asset_id_to_name": [
             (cat1,),
             (cat2,),

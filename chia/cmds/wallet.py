@@ -467,6 +467,8 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     default=False,
 )
 @click.option("--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
+# This command looks like a good candidate for @tx_out_cmd however, pushing an incomplete tx is nonsensical and
+# we already have a canonical offer file format which the idea of exporting a different transaction conflicts with
 def make_offer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -564,17 +566,19 @@ def get_offers_cmd(
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def take_offer_cmd(
     path_or_hex: str,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     examine_only: bool,
     fee: str,
-    reuse: bool,
-) -> None:
+    reuse: bool,  # reuse is not used
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import take_offer
 
-    asyncio.run(take_offer(wallet_rpc_port, fingerprint, Decimal(fee), path_or_hex, examine_only))  # reuse is not used
+    return asyncio.run(take_offer(wallet_rpc_port, fingerprint, Decimal(fee), path_or_hex, examine_only, push=push))
 
 
 @wallet_cmd.command("cancel_offer", help="Cancel an existing offer")
@@ -591,10 +595,13 @@ def take_offer_cmd(
 @click.option(
     "-m", "--fee", help="The fee to use when cancelling the offer securely, in XCH", default="0", show_default=True
 )
-def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str) -> None:
+@tx_out_cmd
+def cancel_offer_cmd(
+    wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str, push: bool
+) -> List[TransactionRecord]:
     from .wallet_funcs import cancel_offer
 
-    asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, not insecure))
+    return asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, not insecure, push=push))
 
 
 @wallet_cmd.command("check", short_help="Check wallet DB integrity", help=check_help_text)
