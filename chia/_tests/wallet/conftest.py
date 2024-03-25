@@ -126,7 +126,10 @@ async def wallet_environments(
     else:  # pragma: no cover
         config_overrides = {}
     async with setup_simulators_and_wallets_service(
-        1, request.param["num_environments"], blockchain_constants
+        1,
+        request.param["num_environments"],
+        blockchain_constants,
+        initial_num_public_keys=config_overrides.get("initial_num_public_keys", 5),
     ) as wallet_nodes_services:
         full_node, wallet_services, bt = wallet_nodes_services
 
