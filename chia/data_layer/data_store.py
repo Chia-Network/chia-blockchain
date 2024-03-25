@@ -922,7 +922,6 @@ class DataStore:
         key: bytes,
         value: bytes,
         tree_id: bytes32,
-        hint_keys_values: Optional[Dict[bytes32, bytes32]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
@@ -947,7 +946,6 @@ class DataStore:
                 tree_id=tree_id,
                 reference_node_hash=reference_node_hash,
                 side=side,
-                hint_keys_values=hint_keys_values,
                 use_optimized=use_optimized,
                 status=status,
                 root=root,
@@ -1068,7 +1066,6 @@ class DataStore:
         tree_id: bytes32,
         reference_node_hash: Optional[bytes32],
         side: Optional[Side],
-        hint_keys_values: Optional[Dict[bytes32, bytes32]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
@@ -1077,18 +1074,13 @@ class DataStore:
             if root is None:
                 root = await self.get_tree_root(tree_id=tree_id)
 
+            try:
+                await self.get_node_by_key(key=key, tree_id=tree_id)
+                raise Exception(f"Key already present: {key.hex()}")
+            except KeyNotFoundError:
+                pass
+
             was_empty = root.node_hash is None
-
-            if not was_empty:
-                if hint_keys_values is None:
-                    # TODO: is there any way the db can enforce this?
-                    pairs = await self.get_keys_values(tree_id=tree_id)
-                    if any(key == node.key for node in pairs):
-                        raise Exception(f"Key already present: {key.hex()}")
-                else:
-                    if key_hash(key) in hint_keys_values:
-                        raise Exception(f"Key already present: {key.hex()}")
-
             if reference_node_hash is None:
                 if not was_empty:
                     raise Exception(f"Reference node hash must be specified for non-empty tree: {tree_id.hex()}")
@@ -1141,31 +1133,25 @@ class DataStore:
                     root=root,
                 )
 
-            if hint_keys_values is not None:
-                hint_keys_values[key_hash(key)] = leaf_hash(key, value)
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def delete(
         self,
         key: bytes,
         tree_id: bytes32,
-        hint_keys_values: Optional[Dict[bytes32, bytes32]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
     ) -> Optional[Root]:
         root_hash = None if root is None else root.node_hash
         async with self.db_wrapper.writer():
-            if hint_keys_values is None:
+            try:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id)
                 node_hash = node.hash
                 assert isinstance(node, TerminalNode)
-            else:
-                if key_hash(key) not in hint_keys_values:
-                    log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
-                    return root
-                node_hash = hint_keys_values[key_hash(key)]
-                del hint_keys_values[key_hash(key)]
+            except KeyNotFoundError:
+                log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
+                return root
 
             ancestors: List[InternalNode] = await self.get_ancestors_common(
                 node_hash=node_hash,
@@ -1233,7 +1219,6 @@ class DataStore:
         key: bytes,
         new_value: bytes,
         tree_id: bytes32,
-        hint_keys_values: Optional[Dict[bytes32, bytes32]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
@@ -1242,51 +1227,27 @@ class DataStore:
             if root is None:
                 root = await self.get_tree_root(tree_id=tree_id)
 
-            if hint_keys_values is None:
-                try:
-                    old_node = await self.get_node_by_key(key=key, tree_id=tree_id)
-                except KeyNotFoundError:
-                    log.debug(f"Key not found: {key.hex()}. Doing an autoinsert instead")
-                    return await self.autoinsert(
-                        key=key,
-                        value=new_value,
-                        tree_id=tree_id,
-                        hint_keys_values=hint_keys_values,
-                        use_optimized=use_optimized,
-                        status=status,
-                        root=root,
-                    )
-                if old_node.value == new_value:
-                    log.debug(f"New value matches old value in upsert operation: {key.hex()}. Ignoring upsert")
-                    return InsertResult(leaf_hash(key, new_value), root)
-                old_node_hash = old_node.hash
-            else:
-                if key_hash(key) not in hint_keys_values:
-                    log.debug(f"Key not found: {key.hex()}. Doing an autoinsert instead")
-                    return await self.autoinsert(
-                        key=key,
-                        value=new_value,
-                        tree_id=tree_id,
-                        hint_keys_values=hint_keys_values,
-                        use_optimized=use_optimized,
-                        status=status,
-                        root=root,
-                    )
-                node_hash = hint_keys_values[key_hash(key)]
-                node = await self.get_node(node_hash)
-                assert isinstance(node, TerminalNode)
-                value = node.value
-                if value == new_value:
-                    log.debug(f"New value matches old value in upsert operation: {key.hex()}")
-                    return InsertResult(leaf_hash(key, new_value), root)
-                old_node_hash = leaf_hash(key=key, value=value)
-                del hint_keys_values[key_hash(key)]
+            try:
+                old_node = await self.get_node_by_key(key=key, tree_id=tree_id)
+            except KeyNotFoundError:
+                log.debug(f"Key not found: {key.hex()}. Doing an autoinsert instead")
+                return await self.autoinsert(
+                    key=key,
+                    value=new_value,
+                    tree_id=tree_id,
+                    use_optimized=use_optimized,
+                    status=status,
+                    root=root,
+                )
+            if old_node.value == new_value:
+                log.debug(f"New value matches old value in upsert operation: {key.hex()}. Ignoring upsert")
+                return InsertResult(leaf_hash(key, new_value), root)
 
             # create new terminal node
             new_terminal_node_hash = await self._insert_terminal_node(key=key, value=new_value)
 
             ancestors = await self.get_ancestors_common(
-                node_hash=old_node_hash,
+                node_hash=old_node.hash,
                 tree_id=tree_id,
                 root_hash=root.node_hash,
                 generation=root.generation,
@@ -1302,10 +1263,10 @@ class DataStore:
                 )
             else:
                 parent = ancestors[0]
-                if parent.left_hash == old_node_hash:
+                if parent.left_hash == old_node.hash:
                     left = new_terminal_node_hash
                     right = parent.right_hash
-                elif parent.right_hash == old_node_hash:
+                elif parent.right_hash == old_node.hash:
                     left = parent.left_hash
                     right = new_terminal_node_hash
                 else:
@@ -1321,8 +1282,6 @@ class DataStore:
                     root=root,
                 )
 
-            if hint_keys_values is not None:
-                hint_keys_values[key_hash(key)] = leaf_hash(key, new_value)
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def clean_node_table(self, writer: aiosqlite.Connection) -> None:
@@ -1373,12 +1332,6 @@ class DataStore:
                     raise Exception("Internal error")
 
             assert latest_local_root is not None
-            root_hash = latest_local_root.node_hash
-            if latest_local_root.node_hash is None:
-                hint_keys_values = {}
-            else:
-                kv_compressed = await self.get_keys_values_compressed(tree_id, root_hash=root_hash)
-                hint_keys_values = kv_compressed.keys_values_hashed
 
             for change in changelist:
                 if change["action"] == "insert":
@@ -1388,7 +1341,7 @@ class DataStore:
                     side = change.get("side", None)
                     if reference_node_hash is None and side is None:
                         insert_result = await self.autoinsert(
-                            key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=latest_local_root
+                            key, value, tree_id, True, Status.COMMITTED, root=latest_local_root
                         )
                         latest_local_root = insert_result.root
                     else:
@@ -1400,7 +1353,6 @@ class DataStore:
                             tree_id,
                             reference_node_hash,
                             side,
-                            hint_keys_values,
                             True,
                             Status.COMMITTED,
                             root=latest_local_root,
@@ -1408,14 +1360,12 @@ class DataStore:
                         latest_local_root = insert_result.root
                 elif change["action"] == "delete":
                     key = change["key"]
-                    latest_local_root = await self.delete(
-                        key, tree_id, hint_keys_values, True, Status.COMMITTED, root=latest_local_root
-                    )
+                    latest_local_root = await self.delete(key, tree_id, True, Status.COMMITTED, root=latest_local_root)
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
                     insert_result = await self.upsert(
-                        key, new_value, tree_id, hint_keys_values, True, Status.COMMITTED, root=latest_local_root
+                        key, new_value, tree_id, True, Status.COMMITTED, root=latest_local_root
                     )
                     latest_local_root = insert_result.root
                 else:
