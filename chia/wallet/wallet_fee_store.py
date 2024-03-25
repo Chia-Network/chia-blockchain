@@ -98,7 +98,7 @@ class FeeStore:
 
     @classmethod
     def _row_to_fee_record(cls, row: sqlite3.Row) -> FeeRecord:
-        return FeeRecord.from_bytes(cast(FeeRecord, row[0]))
+        return cast(FeeRecord, FeeRecord.from_bytes(row[0]))  # cast: mypy limitation
 
     async def get_fee_record(self, key: FeeRecordKey) -> Optional[FeeRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
