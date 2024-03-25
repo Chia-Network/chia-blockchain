@@ -195,16 +195,6 @@ async def download_file(
             log.info(f"Next attempt from {new_server_info.url} in {new_server_info.ignore_till - timestamp}s.")
             return False
 
-    if downloader is None:
-        return await http_download(
-            target_filename_path,
-            filename,
-            proxy_url,
-            server_info,
-            timeout,
-            log,
-        )
-
     log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
     request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
     async with aiohttp.ClientSession() as session:
@@ -267,6 +257,7 @@ async def insert_from_delta_file(
             )
             if not success:
                 await data_store.server_misses_file(tree_id, server_info, timestamp)
+                return False
 
         log.info(f"Successfully downloaded delta file {target_filename_path.name}.")
         try:
