@@ -1616,11 +1616,19 @@ class DataStore:
         node_hash: bytes32,
         tree_id: bytes32,
         root_hash: Optional[bytes32] = None,
+        use_optimized: bool = False,
     ) -> ProofOfInclusion:
         """Collect the information for a proof of inclusion of a hash in the Merkle
         tree.
         """
-        ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash)
+
+        # Ideally this would use get_ancestors_common, but this _common function has this interesting property
+        # when used with use_optimized=False - it will compare both methods in this case and raise an exception.
+        # this is undesirable in the DL Offers flow where PENDING roots can cause the optimized code to fail.
+        if use_optimized:
+            ancestors = await self.get_ancestors_optimized(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash)
+        else:
+            ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash)
 
         layers: List[ProofOfInclusionLayer] = []
         child_hash = node_hash
