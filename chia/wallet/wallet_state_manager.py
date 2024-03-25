@@ -1740,6 +1740,7 @@ class WalletStateManager:
                                 coin_name,
                                 coin_data,
                             )
+                            await self.add_interested_coin_ids([coin_name])
 
                     # if the coin has been spent
                     elif coin_state.created_height is not None and coin_state.spent_height is not None:
