@@ -17,6 +17,7 @@ from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyri
 from typing_extensions import final
 from watchdog.events import DirModifiedEvent, FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
+from watchdog.observers.api import BaseObserver
 
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.errors import KeychainFingerprintNotFound, KeychainLabelExists, KeychainLabelInvalid
@@ -171,7 +172,7 @@ class FileKeyringContent:
 
 @final
 @dataclass
-class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot subclass "" (has type "Any")
+class FileKeyring(FileSystemEventHandler):
     """
     FileKeyring provides a file-based keyring store to manage a FileKeyringContent .The public interface is intended
     to align with the API provided by the keyring module such that the KeyringWrapper class can pick an appropriate
@@ -181,7 +182,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
     keyring_path: Path
     # Cache of the whole plaintext YAML file contents (never encrypted)
     cached_file_content: FileKeyringContent
-    keyring_observer: Observer = field(default_factory=Observer)
+    keyring_observer: BaseObserver = field(default_factory=Observer)
     load_keyring_lock: threading.RLock = field(default_factory=threading.RLock)  # Guards access to needs_load_keyring
     needs_load_keyring: bool = False
     # Cache of the decrypted YAML contained in keyring.data
@@ -227,12 +228,16 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
     def setup_keyring_file_watcher(self) -> None:
         # recursive=True necessary for macOS support
         if not self.keyring_observer.is_alive():
-            self.keyring_observer.schedule(self, self.keyring_path.parent, recursive=True)
-            self.keyring_observer.start()
+            self.keyring_observer.schedule(  # type: ignore[no-untyped-call]
+                self,
+                self.keyring_path.parent,
+                recursive=True,
+            )
+            self.keyring_observer.start()  # type: ignore[no-untyped-call]
 
     def cleanup_keyring_file_watcher(self) -> None:
         if self.keyring_observer.is_alive():
-            self.keyring_observer.stop()
+            self.keyring_observer.stop()  # type: ignore[no-untyped-call]
             self.keyring_observer.join()
 
     def on_modified(self, event: Union[FileSystemEvent, DirModifiedEvent]) -> None:

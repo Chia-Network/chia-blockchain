@@ -115,9 +115,9 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
         assert isinstance(f, BytesIO)
         translation_layer: Optional[TranslationLayer] = _ClvmSerializationMode.get_config().translation_layer
         if translation_layer is not None:
-            cls_mapping: Optional[
-                TranslationLayerMapping[_T_ClvmStreamable, ClvmStreamable]
-            ] = translation_layer.get_mapping(cls)
+            cls_mapping: Optional[TranslationLayerMapping[_T_ClvmStreamable, ClvmStreamable]] = (
+                translation_layer.get_mapping(cls)
+            )
             if cls_mapping is not None:
                 new_cls: Type[Union[_T_ClvmStreamable, ClvmStreamable]] = cls_mapping.to_type
             else:
@@ -160,9 +160,9 @@ class ClvmStreamable(Streamable, metaclass=ClvmStreamableMeta):
     def from_json_dict(cls: Type[_T_ClvmStreamable], json_dict: Any) -> _T_ClvmStreamable:
         translation_layer: Optional[TranslationLayer] = _ClvmSerializationMode.get_config().translation_layer
         if translation_layer is not None:
-            cls_mapping: Optional[
-                TranslationLayerMapping[_T_ClvmStreamable, ClvmStreamable]
-            ] = translation_layer.get_mapping(cls)
+            cls_mapping: Optional[TranslationLayerMapping[_T_ClvmStreamable, ClvmStreamable]] = (
+                translation_layer.get_mapping(cls)
+            )
             if cls_mapping is not None:
                 new_cls: Type[Union[_T_ClvmStreamable, ClvmStreamable]] = cls_mapping.to_type
             else:
