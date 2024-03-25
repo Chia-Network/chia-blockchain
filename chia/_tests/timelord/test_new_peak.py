@@ -24,7 +24,6 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.ints import uint128
 
 
-
 class TestNewPeak:
     @pytest.mark.anyio
     async def test_timelord_new_peak_basic(
