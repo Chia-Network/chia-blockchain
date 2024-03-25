@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import List, Optional, Tuple
 
 import pytest
@@ -18,8 +17,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.timelord.timelord_api import TimelordAPI
 from chia.types.aliases import FullNodeService
-from chia.types.blockchain_format.foliage import Foliage
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
