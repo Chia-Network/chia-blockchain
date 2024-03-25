@@ -695,7 +695,8 @@ async def take_offer(
     d_fee: Decimal,
     file: str,
     examine_only: bool,
-) -> None:
+    push: bool = True,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if os.path.exists(file):
             filepath = pathlib.Path(file)
@@ -711,7 +712,7 @@ async def take_offer(
             offer = Offer.from_bech32(offer_hex)
         except ValueError:
             print("Please enter a valid offer file or hex blob")
-            return
+            return []
 
         offered, requested, _, _ = offer.summary()
         cat_name_resolver = wallet_client.cat_asset_id_to_name
@@ -776,15 +777,21 @@ async def take_offer(
         if not examine_only:
             print()
             cli_confirm("Would you like to take this offer? (y/n): ")
-            trade_record = (
-                await wallet_client.take_offer(
-                    offer,
-                    fee=fee,
-                    tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
+            res = await wallet_client.take_offer(
+                offer,
+                fee=fee,
+                tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
+                push=push,
+            )
+            if push:
+                print(f"Accepted offer with ID {res.trade_record.trade_id}")
+                print(
+                    f"Use chia wallet get_offers --id {res.trade_record.trade_id} -f {fingerprint} to view its status"
                 )
-            ).trade_record
-            print(f"Accepted offer with ID {trade_record.trade_id}")
-            print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
+
+            return res.transactions
+        else:
+            return []
 
 
 async def cancel_offer(
@@ -793,7 +800,8 @@ async def cancel_offer(
     d_fee: Decimal,
     offer_id_hex: str,
     secure: bool,
-) -> None:
+    push: bool = True,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         offer_id = bytes32.from_hexstr(offer_id_hex)
         fee: int = int(d_fee * units["chia"])
@@ -802,12 +810,19 @@ async def cancel_offer(
         await print_trade_record(trade_record, wallet_client, summaries=True)
 
         cli_confirm(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
-        await wallet_client.cancel_offer(
-            offer_id, CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint), secure=secure, fee=fee
+        res = await wallet_client.cancel_offer(
+            offer_id,
+            CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
+            secure=secure,
+            fee=fee,
+            push=push,
         )
-        print(f"Cancelled offer with ID {trade_record.trade_id}")
-        if secure:
+        if push or not secure:
+            print(f"Cancelled offer with ID {trade_record.trade_id}")
+        if secure and push:
             print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")
+
+        return res.transactions
 
 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:  # pragma: no cover
