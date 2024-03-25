@@ -25,10 +25,7 @@ CAT_MOD_HASH_HASH: bytes32 = Program.to(CAT_MOD_HASH).get_tree_hash()
 
 
 def empty_program() -> Program:
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to([])  # type: ignore[no-any-return]
+    return Program.to([])
 
 
 # information needed to spend a cc
@@ -102,9 +99,7 @@ def subtotals_for_deltas(deltas: List[int]) -> List[int]:
 def next_info_for_spendable_cat(spendable_cat: SpendableCAT) -> Program:
     c = spendable_cat.coin
     list = [c.parent_coin_info, spendable_cat.inner_puzzle.get_tree_hash(), c.amount]
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    return Program.to(list)  # type: ignore[no-any-return]
+    return Program.to(list)
 
 
 # This should probably return UnsignedSpendBundle if that type ever exists

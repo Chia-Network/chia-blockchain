@@ -169,7 +169,7 @@ def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
             if op != ConditionOpcode.CREATE_COIN.value:
                 continue
             puzzle_hash = next(atoms).as_atom()
-            amount = next(atoms).as_int()
+            amount = uint64(next(atoms).as_int())
             ret.append(Coin(parent_id, puzzle_hash, amount))
     return ret
 

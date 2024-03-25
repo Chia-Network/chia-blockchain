@@ -812,8 +812,8 @@ class WalletStateManager:
         if cat_curried_args is not None:
             cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
             cat_data: CATCoinData = CATCoinData(
-                bytes32(cat_mod_hash.atom),
-                bytes32(tail_program_hash.atom),
+                bytes32(cat_mod_hash.as_atom()),
+                bytes32(tail_program_hash.as_atom()),
                 cat_inner_puzzle,
                 parent_coin_state.coin.parent_coin_info,
                 uint64(parent_coin_state.coin.amount),
@@ -844,7 +844,7 @@ class WalletStateManager:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
-                bytes32(recovery_list_hash.atom),
+                bytes32(recovery_list_hash.as_atom()),
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
@@ -1213,7 +1213,9 @@ class WalletStateManager:
         assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
-        launch_id: bytes32 = bytes32(parent_data.singleton_struct.rest().first().atom)
+        launcher_id_atom = parent_data.singleton_struct.rest().first().atom
+        assert launcher_id_atom is not None
+        launch_id: bytes32 = bytes32(launcher_id_atom)
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             # Check if it was owned by us
@@ -1426,7 +1428,7 @@ class WalletStateManager:
         """
         wallet_identifier = None
         # DID ID determines which NFT wallet should process the NFT
-        new_did_id = None
+        new_did_id: Optional[bytes32] = None
         old_did_id = None
         # P2 puzzle hash determines if we should ignore the NFT
         uncurried_nft: UncurriedNFT = nft_data.uncurried_nft
@@ -1436,12 +1438,14 @@ class WalletStateManager:
             nft_data.parent_coin_spend.solution,
         )
         if uncurried_nft.supports_did:
-            new_did_id = get_new_owner_did(uncurried_nft, nft_data.parent_coin_spend.solution.to_program())
+            _new_did_id = get_new_owner_did(uncurried_nft, nft_data.parent_coin_spend.solution.to_program())
             old_did_id = uncurried_nft.owner_did
-            if new_did_id is None:
+            if _new_did_id is None:
                 new_did_id = old_did_id
-            if new_did_id == b"":
+            elif _new_did_id == b"":
                 new_did_id = None
+            else:
+                new_did_id = _new_did_id
         self.log.debug(
             "Handling NFT: %s， old DID:%s, new DID:%s, old P2:%s, new P2:%s",
             nft_data.parent_coin_spend,

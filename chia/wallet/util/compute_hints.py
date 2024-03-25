@@ -49,7 +49,10 @@ def compute_spend_hints_and_additions(
             continue
         cost += ConditionCost.CREATE_COIN.value
 
-        coin: Coin = Coin(cs.coin.name(), bytes32(condition.at("rf").atom), uint64(condition.at("rrf").as_int()))
+        rf = condition.at("rf").atom
+        assert rf is not None
+
+        coin: Coin = Coin(cs.coin.name(), bytes32(rf), uint64(condition.at("rrf").as_int()))
         hint: Optional[bytes32] = None
         if (
             condition.at("rrr") != Program.to(None)  # There's more than two arguments

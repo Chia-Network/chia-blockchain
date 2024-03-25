@@ -102,8 +102,7 @@ def solve_launcher(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwa
     destination_puzzle_hash = from_kwargs(kwargs, "destination_puzzle_hash", bytes32)
     metadata = from_kwargs(kwargs, "metadata", List[Tuple[str, str]])
     solution = Program.to([destination_puzzle_hash, launcher_amount, metadata])
-    # TODO: Remove cast when we improve typing
-    return cast(Program, solution)
+    return solution
 
 
 def solve_anyone_can_spend(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
@@ -113,8 +112,7 @@ def solve_anyone_can_spend(solver: Solver, puzzle_db: PuzzleDB, args: List[Progr
     """
     conditions = from_kwargs(kwargs, "conditions", List[Program])
     solution = Program.to(conditions)
-    # TODO: Remove cast when we improve typing
-    return cast(Program, solution)
+    return solution
 
 
 def solve_anyone_can_spend_with_padding(
@@ -123,8 +121,7 @@ def solve_anyone_can_spend_with_padding(
     """This is the puzzle `(a (q . 1) 3)`. It's only for testing."""
     conditions = from_kwargs(kwargs, "conditions", List[Program])
     solution = Program.to((0, conditions))
-    # TODO: Remove cast when we improve typing
-    return cast(Program, solution)
+    return solution
 
 
 def solve_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
@@ -137,8 +134,7 @@ def solve_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kw
     lineage_proof = from_kwargs(kwargs, "lineage_proof", Program)
     coin_amount = from_kwargs(kwargs, "coin_amount", uint64)
     solution = inner_solution.to([lineage_proof, coin_amount, inner_solution.rest()])
-    # TODO: Remove cast when we improve typing
-    return cast(Program, solution)
+    return solution
 
 
 def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
@@ -149,14 +145,12 @@ def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], 
     to_waiting_room = pool_member_spend_type == "to-waiting-room"
     if to_waiting_room:
         key_value_list = from_kwargs(kwargs, "key_value_list", Program)
-        # TODO: Remove cast when we improve typing
-        return cast(Program, Program.to([0, 1, 0, 0, key_value_list]))
+        return Program.to([0, 1, 0, 0, key_value_list])
     # it's an "absorb_pool_reward" type
     pool_reward_amount = from_kwargs(kwargs, "pool_reward_amount", uint64)
     pool_reward_height = from_kwargs(kwargs, "pool_reward_height", int)
     solution = Program.to([0, pool_reward_amount, pool_reward_height])
-    # TODO: Remove cast when we improve typing
-    return cast(Program, solution)
+    return solution
 
 
 def solve_pool_waiting_room(
@@ -170,14 +164,12 @@ def solve_pool_waiting_room(
     if exit_waiting_room:
         key_value_list = from_kwargs(kwargs, "key_value_list", List[Tuple[str, str]])
         destination_puzzle_hash = from_kwargs(kwargs, "destination_puzzle_hash", bytes32)
-        # TODO: Remove cast when we improve typing
-        return cast(Program, Program.to([0, 1, key_value_list, destination_puzzle_hash]))
+        return Program.to([0, 1, key_value_list, destination_puzzle_hash])
     # it's an "absorb_pool_reward" type
     pool_reward_amount = from_kwargs(kwargs, "pool_reward_amount", uint64)
     pool_reward_height = from_kwargs(kwargs, "pool_reward_height", int)
     solution = Program.to([0, 0, pool_reward_amount, pool_reward_height])
-    # TODO: Remove cast when we improve typing
-    return cast(Program, solution)
+    return solution
 
 
 def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
@@ -190,8 +182,7 @@ def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program],
         singleton_inner_puzzle_hash = from_kwargs(kwargs, "singleton_inner_puzzle_hash", bytes32)
         p2_singleton_coin_name = from_kwargs(kwargs, "p2_singleton_coin_name", bytes)
         solution = Program.to([singleton_inner_puzzle_hash, p2_singleton_coin_name])
-        # TODO: Remove cast when we improve typing
-        return cast(Program, solution)
+        return solution
     raise ValueError("can't solve `delayed-spend` yet")
 
 
@@ -228,8 +219,7 @@ class SingletonWallet:
         template, args = puzzle.uncurry()
         assert bytes(template) == bytes(SINGLETON_MOD)
         _, inner_puzzle = list(args.as_iter())
-        # TODO: Remove cast when we improve typing
-        return cast(Program, inner_puzzle)
+        return inner_puzzle
 
     def coin_spend_for_conditions(self, puzzle_db: PuzzleDB, **kwargs: object) -> CoinSpend:
         coin = self.current_state
@@ -274,8 +264,7 @@ def adaptor_for_singleton_inner_puzzle(puzzle: Program) -> Program:
     """
     # this is pretty slow and lame
     program = binutils.assemble("(a (q . %s) 3)" % binutils.disassemble(puzzle))
-    # TODO: Remove cast when we improve typing
-    return cast(Program, Program.to(program))
+    return Program.to(program)
 
 
 def launcher_conditions_and_spend_bundle(
@@ -323,8 +312,7 @@ def singleton_puzzle_hash(launcher_id: bytes32, launcher_puzzle_hash: bytes32, i
 
 
 def solution_for_singleton_puzzle(lineage_proof: Program, my_amount: int, inner_solution: Program) -> Program:
-    # TODO: Remove cast when we improve typing
-    return cast(Program, Program.to([lineage_proof, my_amount, inner_solution]))
+    return Program.to([lineage_proof, my_amount, inner_solution])
 
 
 def p2_singleton_puzzle_for_launcher(
@@ -391,16 +379,14 @@ def lineage_proof_for_coin_spend(coin_spend: CoinSpend) -> Program:
 
     inner_puzzle_hash = None
     if coin.puzzle_hash == LAUNCHER_PUZZLE_HASH:
-        # TODO: Remove cast when we improve typing
-        return cast(Program, Program.to([parent_name, amount]))
+        return Program.to([parent_name, amount])
 
     full_puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
     _, args = full_puzzle.uncurry()
     _, __, ___, inner_puzzle = list(args.as_iter())
     inner_puzzle_hash = inner_puzzle.get_tree_hash()
 
-    # TODO: Remove cast when we improve typing
-    return cast(Program, Program.to([parent_name, inner_puzzle_hash, amount]))
+    return Program.to([parent_name, inner_puzzle_hash, amount])
 
 
 def create_throwaway_pubkey(seed: bytes) -> G1Element:

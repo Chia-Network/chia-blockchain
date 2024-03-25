@@ -129,8 +129,16 @@ def match_clawback_puzzle(
     # Check if the inner puzzle is a P2 puzzle
     if MOD != uncurried.mod:
         return None
+    if not isinstance(inner_puzzle, SerializedProgram):
+        inner_puzzle = SerializedProgram.from_program(inner_puzzle)
+    if not isinstance(inner_solution, SerializedProgram):
+        inner_solution = SerializedProgram.from_program(inner_solution)
     # Fetch Remark condition
-    conditions = conditions_for_solution(inner_puzzle, inner_solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8)
+    conditions = conditions_for_solution(
+        inner_puzzle,
+        inner_solution,
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8,
+    )
     metadata: Optional[ClawbackMetadata] = None
     new_puzhash: Set[bytes32] = set()
     if conditions is not None:

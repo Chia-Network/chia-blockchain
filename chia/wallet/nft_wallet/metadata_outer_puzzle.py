@@ -28,7 +28,7 @@ def puzzle_for_metadata_layer(metadata: Program, updater_hash: bytes32, inner_pu
 
 
 def solution_for_metadata_layer(amount: uint64, inner_solution: Program) -> Program:
-    return Program.to([inner_solution, amount])  # type: ignore
+    return Program.to([inner_solution, amount])
 
 
 @dataclass(frozen=True)

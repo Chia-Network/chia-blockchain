@@ -1278,7 +1278,7 @@ class DAOWallet:
                         if cond.rest().first().as_atom() == cat_launcher.get_tree_hash():
                             cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
                             cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
-                            mint_amount = cond.rest().rest().first().as_int()
+                            mint_amount = uint64(cond.rest().rest().first().as_int())
                             new_cat_puzhash = bytes32(cond.rest().rest().rest().first().first().as_atom())
                             eve_puzzle = curry_cat_eve(new_cat_puzhash)
                             if genesis_id is None:
