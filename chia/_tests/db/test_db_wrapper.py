@@ -13,7 +13,7 @@ from _pytest.fixtures import SubRequest
 
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
-from chia.util.db_wrapper import DBWrapper2, ForeignKeyError, InternalError
+from chia.util.db_wrapper import DBWrapper2, ForeignKeyError, InternalError, NestedForeignKeyDelayedRequestError
 
 if TYPE_CHECKING:
     ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
@@ -544,11 +544,22 @@ async def test_foreign_key_check_failure_error_message(case: RowFactoryCase) -> 
 
 
 @pytest.mark.anyio
-async def test_foreign_key_fails_within_acquired_writer() -> None:
+async def test_set_foreign_keys_fails_within_acquired_writer() -> None:
     async with DBConnection(2, foreign_keys=True) as db_wrapper:
         async with db_wrapper.writer():
             with pytest.raises(
-                InternalError, match="Unable to set foreign key enforcement state while a writer is held"
+                InternalError,
+                match="Unable to set foreign key enforcement state while a writer is held",
             ):
-                async with db_wrapper._set_foreign_keys(enabled=False):
-                    pass
+                async with db_wrapper._set_foreign_key_enforcement(enabled=False):
+                    pass  # pragma: no cover
+
+
+@boolean_datacases(name="initial", false="initially disabled", true="initially enabled")
+@pytest.mark.anyio
+async def test_delayed_foreign_key_request_fails_when_nested(initial: bool) -> None:
+    async with DBConnection(2, foreign_keys=initial) as db_wrapper:
+        async with db_wrapper.writer():
+            with pytest.raises(NestedForeignKeyDelayedRequestError):
+                async with db_wrapper.writer(foreign_keys=True):
+                    pass  # pragma: no cover

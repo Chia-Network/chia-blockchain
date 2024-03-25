@@ -309,7 +309,7 @@ class DBWrapper2:
         async with self._lock:
             async with contextlib.AsyncExitStack() as exit_stack:
                 if foreign_keys is not None:
-                    await exit_stack.enter_async_context(self._set_foreign_keys(enabled=foreign_keys))
+                    await exit_stack.enter_async_context(self._set_foreign_key_enforcement(enabled=foreign_keys))
 
                 async with self._savepoint_ctx():
                     self._current_writer = task
@@ -322,7 +322,7 @@ class DBWrapper2:
                         self._current_writer = None
 
     @contextlib.asynccontextmanager
-    async def _set_foreign_keys(self, enabled: bool) -> AsyncIterator[None]:
+    async def _set_foreign_key_enforcement(self, enabled: bool) -> AsyncIterator[None]:
         if self._current_writer is not None:
             raise InternalError("Unable to set foreign key enforcement state while a writer is held")
 
