@@ -1643,7 +1643,6 @@ async def test_nft_bulk_transfer(self_hostname: str, two_wallet_nodes: OldSimula
     assert coins[2].owner_did is None
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_nft_set_did(self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool) -> None:
