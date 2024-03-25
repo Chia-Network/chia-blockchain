@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import time
-from typing import Optional, cast
+from typing import Optional
 
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32
