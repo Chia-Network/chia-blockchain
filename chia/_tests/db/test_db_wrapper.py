@@ -13,7 +13,7 @@ from _pytest.fixtures import SubRequest
 
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
-from chia.util.db_wrapper import DBWrapper2, ForeignKeyError
+from chia.util.db_wrapper import DBWrapper2, ForeignKeyError, InternalError
 
 if TYPE_CHECKING:
     ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
@@ -507,7 +507,7 @@ row_factory_cases: List[RowFactoryCase] = [
 
 @datacases(*row_factory_cases)
 @pytest.mark.anyio
-async def test_foreign_key_error_message(case: RowFactoryCase) -> None:
+async def test_foreign_key_check_failure_error_message(case: RowFactoryCase) -> None:
     async with DBConnection(2, foreign_keys=True, row_factory=case.factory) as db_wrapper:
         async with db_wrapper.writer() as writer:
             async with writer.execute(
@@ -541,3 +541,14 @@ async def test_foreign_key_error_message(case: RowFactoryCase) -> None:
                     pass
 
         assert error.value.violations == [{"table": "people", "rowid": 2, "parent": "people", "fkid": 0}]
+
+
+@pytest.mark.anyio
+async def test_foreign_key_fails_within_acquired_writer() -> None:
+    async with DBConnection(2, foreign_keys=True) as db_wrapper:
+        async with db_wrapper.writer():
+            with pytest.raises(
+                InternalError, match="Unable to set foreign key enforcement state while a writer is held"
+            ):
+                async with db_wrapper._set_foreign_keys(enabled=False):
+                    pass

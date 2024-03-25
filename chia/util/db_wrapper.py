@@ -42,9 +42,13 @@ class ForeignKeyError(DBWrapperError):
         super().__init__(f"Found {len(self.violations)} FK violations: {self.violations}")
 
 
-class ForeignKeyDelayedRequestError(DBWrapperError):
+class NestedForeignKeyDelayedRequestError(DBWrapperError):
     def __init__(self) -> None:
         super().__init__("Unable to enable delayed foreign key enforcement in a nested request.")
+
+
+class InternalError(DBWrapperError):
+    pass
 
 
 def generate_in_memory_db_uri() -> str:
@@ -297,7 +301,7 @@ class DBWrapper2:
                 #       probably skip the nested foreign key check when exiting since
                 #       we don't have many foreign key errors and so it is likely ok
                 #       to save the extra time checking twice.
-                raise ForeignKeyDelayedRequestError()
+                raise NestedForeignKeyDelayedRequestError()
             async with self._savepoint_ctx():
                 yield self._write_connection
             return
@@ -319,15 +323,16 @@ class DBWrapper2:
 
     @contextlib.asynccontextmanager
     async def _set_foreign_keys(self, enabled: bool) -> AsyncIterator[None]:
-        # TODO: protections around when this is ok to run
+        if self._current_writer is not None:
+            raise InternalError("Unable to set foreign key enforcement state while a writer is held")
+
         async with self._write_connection.execute("PRAGMA foreign_keys") as cursor:
             result = await cursor.fetchone()
-            if result is None:
-                # TODO: better exception
-                raise Exception("unable to query foreign_keys value")
+            if result is None:  # pragma: no cover
+                raise InternalError("No results when querying for present foreign key enforcement state")
             [original_value] = result
 
-        if bool(original_value) == enabled:
+        if original_value == enabled:
             yield
             return
 
@@ -339,7 +344,6 @@ class DBWrapper2:
                 await self._write_connection.execute(f"PRAGMA foreign_keys={original_value}")
 
     async def _check_foreign_keys(self) -> None:
-        # TODO: protections around when this is ok to run
         async with self._write_connection.execute("PRAGMA foreign_key_check") as cursor:
             violations = list(await cursor.fetchall())
 
