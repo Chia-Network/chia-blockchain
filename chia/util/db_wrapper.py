@@ -279,7 +279,10 @@ class DBWrapper2:
             await self._write_connection.execute(f"RELEASE {name}")
 
     @contextlib.asynccontextmanager
-    async def writer(self, foreign_keys: Optional[bool] = None) -> AsyncIterator[aiosqlite.Connection]:
+    async def writer(
+        self,
+        foreign_key_enforcement_enabled: Optional[bool] = None,
+    ) -> AsyncIterator[aiosqlite.Connection]:
         """
         Initiates a new, possibly nested, transaction. If this task is already
         in a transaction, none of the changes made as part of this transaction
@@ -294,7 +297,7 @@ class DBWrapper2:
         assert task is not None
         if self._current_writer == task:
             # we allow nesting writers within the same task
-            if foreign_keys is not None:
+            if foreign_key_enforcement_enabled is not None:
                 # NOTE: Technically this is complaining even if the requested state is
                 #       already in place.  This could be adjusted to allow nesting
                 #       when the existing and requested states agree.  In this case,
@@ -308,15 +311,17 @@ class DBWrapper2:
 
         async with self._lock:
             async with contextlib.AsyncExitStack() as exit_stack:
-                if foreign_keys is not None:
-                    await exit_stack.enter_async_context(self._set_foreign_key_enforcement(enabled=foreign_keys))
+                if foreign_key_enforcement_enabled is not None:
+                    await exit_stack.enter_async_context(
+                        self._set_foreign_key_enforcement(enabled=foreign_key_enforcement_enabled),
+                    )
 
                 async with self._savepoint_ctx():
                     self._current_writer = task
                     try:
                         yield self._write_connection
 
-                        if foreign_keys is not None and not foreign_keys:
+                        if foreign_key_enforcement_enabled is not None and not foreign_key_enforcement_enabled:
                             await self._check_foreign_keys()
                     finally:
                         self._current_writer = None
