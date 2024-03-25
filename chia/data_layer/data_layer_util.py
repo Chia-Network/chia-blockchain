@@ -12,6 +12,7 @@ from typing_extensions import final
 from chia.data_layer.data_layer_errors import ProofIntegrityError
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
@@ -48,7 +49,7 @@ def leaf_hash(key: bytes, value: bytes) -> bytes32:
 
 
 def key_hash(key: bytes) -> bytes32:
-    return Program.to(key).get_tree_hash()  # type: ignore[no-any-return]
+    return SerializedProgram.to(key).get_tree_hash()
 
 
 @dataclasses.dataclass(frozen=True)
