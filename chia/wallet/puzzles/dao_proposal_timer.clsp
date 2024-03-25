@@ -1,0 +1,78 @@
+; This is a persistent timer for a proposal which allows it to have a relative time that survives despite it being recreated.
+; The closing time is contained in the timelock and passed in to the solution, and confirmed via an announcement from the Proposal
+; It creates/asserts announcements to pair it with the finishing spend of a proposal
+
+(mod (
+    PROPOSAL_SELF_HASH
+    MY_PARENT_SINGLETON_STRUCT
+    proposal_yes_votes
+    proposal_total_votes
+    proposal_innerpuzhash
+    proposal_timelock
+    parent_parent
+    parent_amount
+  )
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+  (include *standard-cl-21*)
+
+  (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
+    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+      inner_puzzle_hash
+      (sha256tree PROPOSAL_SINGLETON_STRUCT)
+    )
+  )
+
+  (defun calculate_proposal_puzzlehash (
+      PROPOSAL_SINGLETON_STRUCT
+      PROPOSAL_SELF_HASH
+      proposal_yes_votes
+      proposal_total_votes
+      proposal_innerpuzhash
+    )
+    (calculate_singleton_puzzle_hash
+      PROPOSAL_SINGLETON_STRUCT
+      (puzzle-hash-of-curried-function PROPOSAL_SELF_HASH
+        (sha256 ONE proposal_total_votes)
+        (sha256 ONE proposal_yes_votes)
+        (sha256 ONE proposal_innerpuzhash)
+        (sha256 ONE (f (r PROPOSAL_SINGLETON_STRUCT)))
+        (sha256 ONE PROPOSAL_SELF_HASH)
+      )
+    )
+  )
+
+  ; main
+  (list
+    (list ASSERT_HEIGHT_RELATIVE proposal_timelock)
+    (list CREATE_PUZZLE_ANNOUNCEMENT (f (r MY_PARENT_SINGLETON_STRUCT)))
+    (list
+      ASSERT_PUZZLE_ANNOUNCEMENT
+      (sha256
+        (calculate_proposal_puzzlehash
+          MY_PARENT_SINGLETON_STRUCT
+          PROPOSAL_SELF_HASH
+          proposal_yes_votes
+          proposal_total_votes
+          proposal_innerpuzhash
+        )
+        proposal_timelock
+      )
+    )
+    (list
+      ASSERT_MY_PARENT_ID
+      (sha256
+        parent_parent
+        (calculate_proposal_puzzlehash
+          MY_PARENT_SINGLETON_STRUCT
+          PROPOSAL_SELF_HASH
+          0
+          0
+          proposal_innerpuzhash
+        )
+        parent_amount
+      )
+
+    )
+  )
+)

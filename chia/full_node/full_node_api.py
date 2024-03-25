@@ -1,36 +1,53 @@
+from __future__ import annotations
+
 import asyncio
-import dataclasses
+import functools
+import logging
 import time
 import traceback
-from secrets import token_bytes
-from typing import Dict, List, Optional, Tuple, Set
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, G2Element
+import anyio
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
 
-import chia.server.ws_connection as ws
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
-from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
-from chia.full_node.full_node import FullNode
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.full_node.bundle_tools import (
+    best_solution_generator_from_template,
+    simple_solution_generator,
+    simple_solution_generator_backrefs,
+)
+from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
+from chia.full_node.tx_processing_queue import TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
+    CoinState,
     PuzzleSolutionResponse,
     RejectBlockHeaders,
     RejectHeaderBlocks,
     RejectHeaderRequest,
-    CoinState,
+    RespondFeeEstimates,
     RespondSESInfo,
 )
 from chia.server.outbound_message import Message, make_msg
+from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
+from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
+from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
@@ -38,94 +55,94 @@ from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
+from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
+from chia.util.api_decorators import api_request
 from chia.util.full_block_utils import header_block_from_block
-from chia.util.generator_tools import get_block_header
+from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.merkle_set import MerkleSet
+
+if TYPE_CHECKING:
+    from chia.full_node.full_node import FullNode
+else:
+    FullNode = object
 
 
 class FullNodeAPI:
+    log: logging.Logger
     full_node: FullNode
+    executor: ThreadPoolExecutor
 
-    def __init__(self, full_node) -> None:
+    def __init__(self, full_node: FullNode) -> None:
+        self.log = logging.getLogger(__name__)
         self.full_node = full_node
+        self.executor = ThreadPoolExecutor(max_workers=1)
 
     @property
-    def server(self):
+    def server(self) -> ChiaServer:
+        assert self.full_node.server is not None
         return self.full_node.server
 
-    @property
-    def log(self):
-        return self.full_node.log
-
-    @property
-    def api_ready(self):
+    def ready(self) -> bool:
         return self.full_node.initialized
 
-    @peer_required
-    @api_request
-    @reply_type([ProtocolMessageTypes.respond_peers])
-    async def request_peers(self, _request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection):
+    @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_peers])
+    async def request_peers(
+        self, _request: full_node_protocol.RequestPeers, peer: WSChiaConnection
+    ) -> Optional[Message]:
         if peer.peer_server_port is None:
             return None
-        peer_info = PeerInfo(peer.peer_host, peer.peer_server_port)
+        peer_info = PeerInfo(peer.peer_info.host, peer.peer_server_port)
         if self.full_node.full_node_peers is not None:
             msg = await self.full_node.full_node_peers.request_peers(peer_info)
             return msg
+        return None
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def respond_peers(
-        self, request: full_node_protocol.RespondPeers, peer: ws.WSChiaConnection
+        self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection
     ) -> Optional[Message]:
         self.log.debug(f"Received {len(request.peer_list)} peers")
         if self.full_node.full_node_peers is not None:
-            await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), True)
+            await self.full_node.full_node_peers.add_peers(request.peer_list, peer.get_peer_info(), True)
         return None
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def respond_peers_introducer(
-        self, request: introducer_protocol.RespondPeersIntroducer, peer: ws.WSChiaConnection
+        self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
     ) -> Optional[Message]:
         self.log.debug(f"Received {len(request.peer_list)} peers from introducer")
         if self.full_node.full_node_peers is not None:
-            await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), False)
+            await self.full_node.full_node_peers.add_peers(request.peer_list, peer.get_peer_info(), False)
 
         await peer.close()
         return None
 
-    @execute_task
-    @peer_required
-    @api_request
-    async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection) -> Optional[Message]:
+    @api_request(peer_required=True, execute_task=True)
+    async def new_peak(self, request: full_node_protocol.NewPeak, peer: WSChiaConnection) -> None:
         """
         A peer notifies us that they have added a new peak to their blockchain. If we don't have it,
         we can ask for it.
         """
         # this semaphore limits the number of tasks that can call new_peak() at
         # the same time, since it can be expensive
-        waiter_count = len(self.full_node.new_peak_sem._waiters)
-
-        if waiter_count > 0:
-            self.full_node.log.debug(f"new_peak Waiters: {waiter_count}")
-
-        if waiter_count > 20:
+        try:
+            async with self.full_node.new_peak_sem.acquire():
+                await self.full_node.new_peak(request, peer)
+        except LimitedSemaphoreFullError:
+            self.log.debug("Ignoring NewPeak, limited semaphore full: %s %s", peer.get_peer_logging(), request)
             return None
 
-        async with self.full_node.new_peak_sem:
-            return await self.full_node.new_peak(request, peer)
+        return None
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def new_transaction(
-        self, transaction: full_node_protocol.NewTransaction, peer: ws.WSChiaConnection
+        self, transaction: full_node_protocol.NewTransaction, peer: WSChiaConnection
     ) -> Optional[Message]:
         """
         A peer notifies us of a new transaction.
@@ -161,28 +178,28 @@ class FullNodeAPI:
             new_set.add(peer.peer_node_id)
             self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = new_set
 
-            async def tx_request_and_timeout(full_node: FullNode, transaction_id, task_id):
+            async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, task_id: bytes32) -> None:
                 counter = 0
                 try:
                     while True:
-                        # Limit to asking to a few peers, it's possible that this tx got included on chain already
+                        # Limit to asking a few peers, it's possible that this tx got included on chain already
                         # Highly unlikely that the peers that advertised a tx don't respond to a request. Also, if we
-                        # drop some transactions, we don't want to refetch too many times
+                        # drop some transactions, we don't want to re-fetch too many times
                         if counter == 5:
                             break
                         if transaction_id not in full_node.full_node_store.peers_with_tx:
                             break
-                        peers_with_tx: Set = full_node.full_node_store.peers_with_tx[transaction_id]
+                        peers_with_tx: Set[bytes32] = full_node.full_node_store.peers_with_tx[transaction_id]
                         if len(peers_with_tx) == 0:
                             break
                         peer_id = peers_with_tx.pop()
                         assert full_node.server is not None
                         if peer_id not in full_node.server.all_connections:
                             continue
-                        peer = full_node.server.all_connections[peer_id]
+                        random_peer = full_node.server.all_connections[peer_id]
                         request_tx = full_node_protocol.RequestTransaction(transaction.transaction_id)
                         msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
-                        await peer.send_message(msg)
+                        await random_peer.send_message(msg)
                         await asyncio.sleep(5)
                         counter += 1
                         if full_node.mempool_manager.seen(transaction_id):
@@ -198,7 +215,7 @@ class FullNodeAPI:
                     if task_id in full_node.full_node_store.tx_fetch_tasks:
                         full_node.full_node_store.tx_fetch_tasks.pop(task_id)
 
-            task_id: bytes32 = bytes32(token_bytes(32))
+            task_id: bytes32 = bytes32.secret()
             fetch_task = asyncio.create_task(
                 tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
             )
@@ -206,8 +223,7 @@ class FullNodeAPI:
             return None
         return None
 
-    @api_request
-    @reply_type([ProtocolMessageTypes.respond_transaction])
+    @api_request(reply_types=[ProtocolMessageTypes.respond_transaction])
     async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
         """Peer has requested a full transaction from us."""
         # Ignore if syncing
@@ -222,13 +238,11 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_transaction, transaction)
         return msg
 
-    @peer_required
-    @api_request
-    @bytes_required
+    @api_request(peer_required=True, bytes_required=True)
     async def respond_transaction(
         self,
         tx: full_node_protocol.RespondTransaction,
-        peer: ws.WSChiaConnection,
+        peer: WSChiaConnection,
         tx_bytes: bytes = b"",
         test: bool = False,
     ) -> Optional[Message]:
@@ -243,20 +257,16 @@ class FullNodeAPI:
         if spend_name in self.full_node.full_node_store.peers_with_tx:
             self.full_node.full_node_store.peers_with_tx.pop(spend_name)
 
-        if self.full_node.transaction_queue.qsize() % 100 == 0 and not self.full_node.transaction_queue.empty():
-            self.full_node.log.debug(f"respond_transaction Waiters: {self.full_node.transaction_queue.qsize()}")
-
-        if self.full_node.transaction_queue.full():
-            self.full_node.dropped_tx.add(spend_name)
-            return None
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
-        await self.full_node.transaction_queue.put(
-            (1, TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test))
-        )
+        try:
+            await self.full_node.transaction_queue.put(
+                TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test), peer.peer_node_id
+            )
+        except TransactionQueueFull:
+            pass  # we can't do anything here, the tx will be dropped. We might do something in the future.
         return None
 
-    @api_request
-    @reply_type([ProtocolMessageTypes.respond_proof_of_weight])
+    @api_request(reply_types=[ProtocolMessageTypes.respond_proof_of_weight])
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         if self.full_node.weight_proof_handler is None:
             return None
@@ -296,13 +306,12 @@ class FullNodeAPI:
         self.full_node.full_node_store.serialized_wp_message = message
         return message
 
-    @api_request
+    @api_request()
     async def respond_proof_of_weight(self, request: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
         self.log.warning("Received proof of weight too late.")
         return None
 
-    @api_request
-    @reply_type([ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
+    @api_request(reply_types=[ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
     async def request_block(self, request: full_node_protocol.RequestBlock) -> Optional[Message]:
         if not self.full_node.blockchain.contains_height(request.height):
             reject = RejectBlock(request.height)
@@ -315,14 +324,19 @@ class FullNodeAPI:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
             if not request.include_transaction_block and block.transactions_generator is not None:
-                block = dataclasses.replace(block, transactions_generator=None)
+                block = block.replace(transactions_generator=None)
             return make_msg(ProtocolMessageTypes.respond_block, full_node_protocol.RespondBlock(block))
         return make_msg(ProtocolMessageTypes.reject_block, RejectBlock(request.height))
 
-    @api_request
-    @reply_type([ProtocolMessageTypes.respond_blocks, ProtocolMessageTypes.reject_blocks])
+    @api_request(reply_types=[ProtocolMessageTypes.respond_blocks, ProtocolMessageTypes.reject_blocks])
     async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Optional[Message]:
-        if request.end_height < request.start_height or request.end_height - request.start_height > 32:
+        # note that we treat the request range as *inclusive*, but we check the
+        # size before we bump end_height. So MAX_BLOCK_COUNT_PER_REQUESTS is off
+        # by one
+        if (
+            request.end_height < request.start_height
+            or request.end_height - request.start_height > self.full_node.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+        ):
             reject = RejectBlocks(request.start_height, request.end_height)
             msg: Message = make_msg(ProtocolMessageTypes.reject_blocks, reject)
             return msg
@@ -344,7 +358,7 @@ class FullNodeAPI:
                 if block is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     return make_msg(ProtocolMessageTypes.reject_blocks, reject)
-                block = dataclasses.replace(block, transactions_generator=None)
+                block = block.replace(transactions_generator=None)
                 blocks.append(block)
             msg = make_msg(
                 ProtocolMessageTypes.respond_blocks,
@@ -366,9 +380,9 @@ class FullNodeAPI:
                 blocks_bytes.append(block_bytes)
 
             respond_blocks_manually_streamed: bytes = (
-                bytes(uint32(request.start_height))
-                + bytes(uint32(request.end_height))
-                + len(blocks_bytes).to_bytes(4, "big", signed=False)
+                uint32(request.start_height).stream_to_bytes()
+                + uint32(request.end_height).stream_to_bytes()
+                + uint32(len(blocks_bytes)).stream_to_bytes()
             )
             for block_bytes in blocks_bytes:
                 respond_blocks_manually_streamed += block_bytes
@@ -376,25 +390,24 @@ class FullNodeAPI:
 
         return msg
 
-    @api_request
-    async def reject_block(self, request: full_node_protocol.RejectBlock):
+    @api_request()
+    async def reject_block(self, request: full_node_protocol.RejectBlock) -> None:
         self.log.debug(f"reject_block {request.height}")
 
-    @api_request
-    async def reject_blocks(self, request: full_node_protocol.RejectBlocks):
+    @api_request()
+    async def reject_blocks(self, request: full_node_protocol.RejectBlocks) -> None:
         self.log.debug(f"reject_blocks {request.start_height} {request.end_height}")
 
-    @api_request
+    @api_request()
     async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
         self.log.warning("Received unsolicited/late blocks")
         return None
 
-    @api_request
-    @peer_required
+    @api_request(peer_required=True)
     async def respond_block(
         self,
         respond_block: full_node_protocol.RespondBlock,
-        peer: ws.WSChiaConnection,
+        peer: WSChiaConnection,
     ) -> Optional[Message]:
         """
         Receive a full block from a peer full node (or ourselves).
@@ -403,7 +416,7 @@ class FullNodeAPI:
         self.log.warning(f"Received unsolicited/late block from peer {peer.get_peer_logging()}")
         return None
 
-    @api_request
+    @api_request()
     async def new_unfinished_block(
         self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock
     ) -> Optional[Message]:
@@ -415,28 +428,31 @@ class FullNodeAPI:
             return None
 
         # This prevents us from downloading the same block from many peers
-        if block_hash in self.full_node.full_node_store.requesting_unfinished_blocks:
+        requesting, count = self.full_node.full_node_store.is_requesting_unfinished_block(block_hash, None)
+        if requesting:
+            self.log.debug(
+                f"Already have or requesting {count} Unfinished Blocks with partial "
+                f"hash {block_hash}. Ignoring this one"
+            )
             return None
 
         msg = make_msg(
             ProtocolMessageTypes.request_unfinished_block,
             full_node_protocol.RequestUnfinishedBlock(block_hash),
         )
-        self.full_node.full_node_store.requesting_unfinished_blocks.add(block_hash)
+        self.full_node.full_node_store.mark_requesting_unfinished_block(block_hash, None)
 
         # However, we want to eventually download from other peers, if this peer does not respond
         # Todo: keep track of who it was
-        async def eventually_clear():
+        async def eventually_clear() -> None:
             await asyncio.sleep(5)
-            if block_hash in self.full_node.full_node_store.requesting_unfinished_blocks:
-                self.full_node.full_node_store.requesting_unfinished_blocks.remove(block_hash)
+            self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, None)
 
         asyncio.create_task(eventually_clear())
 
         return msg
 
-    @api_request
-    @reply_type([ProtocolMessageTypes.respond_unfinished_block])
+    @api_request(reply_types=[ProtocolMessageTypes.respond_unfinished_block])
     async def request_unfinished_block(
         self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock
     ) -> Optional[Message]:
@@ -451,26 +467,93 @@ class FullNodeAPI:
             return msg
         return None
 
-    @peer_required
-    @api_request
-    @bytes_required
+    @api_request()
+    async def new_unfinished_block2(
+        self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock2
+    ) -> Optional[Message]:
+        # Ignore if syncing
+        if self.full_node.sync_store.get_sync_mode():
+            return None
+        block_hash = new_unfinished_block.unfinished_reward_hash
+        foliage_hash = new_unfinished_block.foliage_hash
+        entry, count, have_better = self.full_node.full_node_store.get_unfinished_block2(block_hash, foliage_hash)
+
+        if entry is not None:
+            return None
+
+        if have_better:
+            self.log.info(
+                f"Already have a better Unfinished Block with partial hash {block_hash.hex()} ignoring this one"
+            )
+            return None
+
+        max_duplicate_unfinished_blocks = self.full_node.config.get("max_duplicate_unfinished_blocks", 3)
+        if count > max_duplicate_unfinished_blocks:
+            self.log.info(
+                f"Already have {count} Unfinished Blocks with partial hash {block_hash.hex()} ignoring another one"
+            )
+            return None
+
+        # This prevents us from downloading the same block from many peers
+        requesting, count = self.full_node.full_node_store.is_requesting_unfinished_block(block_hash, foliage_hash)
+        if requesting:
+            return None
+        if count >= max_duplicate_unfinished_blocks:
+            self.log.info(
+                f"Already requesting {count} Unfinished Blocks with partial hash {block_hash} ignoring another one"
+            )
+            return None
+
+        msg = make_msg(
+            ProtocolMessageTypes.request_unfinished_block2,
+            full_node_protocol.RequestUnfinishedBlock2(block_hash, foliage_hash),
+        )
+        self.full_node.full_node_store.mark_requesting_unfinished_block(block_hash, foliage_hash)
+
+        # However, we want to eventually download from other peers, if this peer does not respond
+        # Todo: keep track of who it was
+        async def eventually_clear() -> None:
+            await asyncio.sleep(5)
+            self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, foliage_hash)
+
+        asyncio.create_task(eventually_clear())
+
+        return msg
+
+    @api_request(reply_types=[ProtocolMessageTypes.respond_unfinished_block])
+    async def request_unfinished_block2(
+        self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock2
+    ) -> Optional[Message]:
+        unfinished_block: Optional[UnfinishedBlock]
+        unfinished_block, _, _ = self.full_node.full_node_store.get_unfinished_block2(
+            request_unfinished_block.unfinished_reward_hash,
+            request_unfinished_block.foliage_hash,
+        )
+        if unfinished_block is not None:
+            msg = make_msg(
+                ProtocolMessageTypes.respond_unfinished_block,
+                full_node_protocol.RespondUnfinishedBlock(unfinished_block),
+            )
+            return msg
+        return None
+
+    @api_request(peer_required=True, bytes_required=True)
     async def respond_unfinished_block(
         self,
         respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock,
-        peer: ws.WSChiaConnection,
+        peer: WSChiaConnection,
         respond_unfinished_block_bytes: bytes = b"",
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.respond_unfinished_block(
-            respond_unfinished_block, peer, block_bytes=respond_unfinished_block_bytes
+        await self.full_node.add_unfinished_block(
+            respond_unfinished_block.unfinished_block, peer, block_bytes=respond_unfinished_block_bytes
         )
         return None
 
-    @api_request
-    @peer_required
+    @api_request(peer_required=True)
     async def new_signage_point_or_end_of_sub_slot(
-        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: ws.WSChiaConnection
+        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: WSChiaConnection
     ) -> Optional[Message]:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
@@ -504,7 +587,9 @@ class FullNodeAPI:
                     full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
                         challenge_hash_to_request, uint8(0), last_rc
                     )
-                    response = await peer.request_signage_point_or_end_of_sub_slot(full_node_request, timeout=10)
+                    response = await peer.call_api(
+                        FullNodeAPI.request_signage_point_or_end_of_sub_slot, full_node_request, timeout=10
+                    )
                     if not isinstance(response, full_node_protocol.RespondEndOfSubSlot):
                         self.full_node.log.debug(f"Invalid response for slot {response}")
                         return None
@@ -550,12 +635,10 @@ class FullNodeAPI:
 
         return make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request)
 
-    @api_request
-    @reply_type([ProtocolMessageTypes.respond_signage_point, ProtocolMessageTypes.respond_end_of_sub_slot])
+    @api_request(reply_types=[ProtocolMessageTypes.respond_signage_point, ProtocolMessageTypes.respond_end_of_sub_slot])
     async def request_signage_point_or_end_of_sub_slot(
         self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
     ) -> Optional[Message]:
-
         if request.index_from_challenge == 0:
             sub_slot: Optional[Tuple[EndOfSubSlotBundle, int, uint128]] = self.full_node.full_node_store.get_sub_slot(
                 request.challenge_hash
@@ -568,7 +651,7 @@ class FullNodeAPI:
         else:
             if self.full_node.full_node_store.get_sub_slot(request.challenge_hash) is None:
                 if request.challenge_hash != self.full_node.constants.GENESIS_CHALLENGE:
-                    self.log.info(f"Don't have challenge hash {request.challenge_hash}")
+                    self.log.info(f"Don't have challenge hash {request.challenge_hash.hex()}")
 
             sp: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index(
                 request.challenge_hash,
@@ -594,10 +677,9 @@ class FullNodeAPI:
                 self.log.info(f"Don't have signage point {request}")
         return None
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def respond_signage_point(
-        self, request: full_node_protocol.RespondSignagePoint, peer: ws.WSChiaConnection
+        self, request: full_node_protocol.RespondSignagePoint, peer: WSChiaConnection
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -617,7 +699,6 @@ class FullNodeAPI:
                 return None
             peak = self.full_node.blockchain.get_peak()
             if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_BLOCKS:
-
                 next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
                 sub_slots_for_peak = await self.full_node.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
                 assert sub_slots_for_peak is not None
@@ -645,43 +726,41 @@ class FullNodeAPI:
             else:
                 self.log.debug(
                     f"Signage point {request.index_from_challenge} not added, CC challenge: "
-                    f"{request.challenge_chain_vdf.challenge}, RC challenge: {request.reward_chain_vdf.challenge}"
+                    f"{request.challenge_chain_vdf.challenge.hex()}, "
+                    f"RC challenge: {request.reward_chain_vdf.challenge.hex()}"
                 )
 
             return None
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def respond_end_of_sub_slot(
-        self, request: full_node_protocol.RespondEndOfSubSlot, peer: ws.WSChiaConnection
+        self, request: full_node_protocol.RespondEndOfSubSlot, peer: WSChiaConnection
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        msg, _ = await self.full_node.respond_end_of_sub_slot(request, peer)
+        msg, _ = await self.full_node.add_end_of_sub_slot(request.end_of_slot_bundle, peer)
         return msg
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def request_mempool_transactions(
         self,
         request: full_node_protocol.RequestMempoolTransactions,
-        peer: ws.WSChiaConnection,
+        peer: WSChiaConnection,
     ) -> Optional[Message]:
         received_filter = PyBIP158(bytearray(request.filter))
 
-        items: List[MempoolItem] = await self.full_node.mempool_manager.get_items_not_in_filter(received_filter)
+        items: List[SpendBundle] = self.full_node.mempool_manager.get_items_not_in_filter(received_filter)
 
         for item in items:
-            transaction = full_node_protocol.RespondTransaction(item.spend_bundle)
+            transaction = full_node_protocol.RespondTransaction(item)
             msg = make_msg(ProtocolMessageTypes.respond_transaction, transaction)
             await peer.send_message(msg)
         return None
 
     # FARMER PROTOCOL
-    @api_request
-    @peer_required
+    @api_request(peer_required=True)
     async def declare_proof_of_space(
-        self, request: farmer_protocol.DeclareProofOfSpace, peer: ws.WSChiaConnection
+        self, request: farmer_protocol.DeclareProofOfSpace, peer: WSChiaConnection
     ) -> Optional[Message]:
         """
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
@@ -703,7 +782,7 @@ class FullNodeAPI:
                 if sp_vdfs.rc_vdf.output.get_hash() != request.reward_chain_sp:
                     self.log.debug(
                         f"Received proof of space for a potentially old signage point {request.challenge_chain_sp}. "
-                        f"Current sp: {sp_vdfs.rc_vdf.output.get_hash()}"
+                        f"Current sp: {sp_vdfs.rc_vdf.output.get_hash().hex()}"
                     )
                     return None
 
@@ -730,19 +809,29 @@ class FullNodeAPI:
             # 2. In the same sub-slot as the peak
             # 3. In a future sub-slot that we already know of
 
-            # Checks that the proof of space is valid
-            quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(
-                self.full_node.constants, cc_challenge_hash, request.challenge_chain_sp
-            )
-            assert quality_string is not None and len(quality_string) == 32
-
             # Grab best transactions from Mempool for given tip target
             aggregate_signature: G2Element = G2Element()
             block_generator: Optional[BlockGenerator] = None
             additions: Optional[List[Coin]] = []
             removals: Optional[List[Coin]] = []
-            async with self.full_node._blockchain_lock_high_priority:
+            async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
+
+                # Checks that the proof of space is valid
+                height: uint32
+                if peak is None:
+                    height = uint32(0)
+                else:
+                    height = peak.height
+                quality_string: Optional[bytes32] = verify_and_get_quality_string(
+                    request.proof_of_space,
+                    self.full_node.constants,
+                    cc_challenge_hash,
+                    request.challenge_chain_sp,
+                    height=height,
+                )
+                assert quality_string is not None and len(quality_string) == 32
+
                 if peak is not None:
                     # Finds the last transaction block before this one
                     curr_l_tb: BlockRecord = peak
@@ -750,37 +839,42 @@ class FullNodeAPI:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
                         mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
-                            curr_l_tb.header_hash
+                            curr_l_tb.header_hash, self.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
                         )
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
                         mempool_bundle = None
                     if mempool_bundle is not None:
-                        spend_bundle = mempool_bundle[0]
-                        additions = mempool_bundle[1]
-                        removals = mempool_bundle[2]
+                        spend_bundle, additions = mempool_bundle
+                        removals = spend_bundle.removals()
                         self.full_node.log.info(f"Add rem: {len(additions)} {len(removals)}")
                         aggregate_signature = spend_bundle.aggregated_signature
-                        if self.full_node.full_node_store.previous_generator is not None:
-                            self.log.info(
-                                f"Using previous generator for height "
-                                f"{self.full_node.full_node_store.previous_generator}"
-                            )
-                            block_generator = best_solution_generator_from_template(
-                                self.full_node.full_node_store.previous_generator, spend_bundle
-                            )
+                        # when the hard fork activates, block generators are
+                        # allowed to be serialized with the improved CLVM
+                        # serialization format, supporting back-references
+                        if peak.height >= self.full_node.constants.HARD_FORK_HEIGHT:
+                            block_generator = simple_solution_generator_backrefs(spend_bundle)
                         else:
-                            block_generator = simple_solution_generator(spend_bundle)
+                            if self.full_node.full_node_store.previous_generator is not None:
+                                self.log.info(
+                                    f"Using previous generator for height "
+                                    f"{self.full_node.full_node_store.previous_generator}"
+                                )
+                                block_generator = best_solution_generator_from_template(
+                                    self.full_node.full_node_store.previous_generator, spend_bundle
+                                )
+                            else:
+                                block_generator = simple_solution_generator(spend_bundle)
 
-            def get_plot_sig(to_sign, _) -> G2Element:
+            def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
                     return request.challenge_chain_sp_signature
                 elif to_sign == request.reward_chain_sp:
                     return request.reward_chain_sp_signature
                 return G2Element()
 
-            def get_pool_sig(_1, _2) -> Optional[G2Element]:
+            def get_pool_sig(_1: PoolTarget, _2: Optional[G1Element]) -> Optional[G2Element]:
                 return request.pool_signature
 
             prev_b: Optional[BlockRecord] = peak
@@ -821,10 +915,10 @@ class FullNodeAPI:
                     return None
 
             try:
-                finished_sub_slots: Optional[
-                    List[EndOfSubSlotBundle]
-                ] = self.full_node.full_node_store.get_finished_sub_slots(
-                    self.full_node.blockchain, prev_b, cc_challenge_hash
+                finished_sub_slots: Optional[List[EndOfSubSlotBundle]] = (
+                    self.full_node.full_node_store.get_finished_sub_slots(
+                        self.full_node.blockchain, prev_b, cc_challenge_hash
+                    )
                 )
                 if finished_sub_slots is None:
                     return None
@@ -917,7 +1011,7 @@ class FullNodeAPI:
             )
             self.log.info("Made the unfinished block")
             if prev_b is not None:
-                height: uint32 = uint32(prev_b.height + 1)
+                height = uint32(prev_b.height + 1)
             else:
                 height = uint32(0)
             self.full_node.full_node_store.add_candidate_block(quality_string, height, unfinished_block)
@@ -929,10 +1023,22 @@ class FullNodeAPI:
                 foliage_transaction_block_hash = bytes32([0] * 32)
             assert foliage_transaction_block_hash is not None
 
+            foliage_block_data: Optional[FoliageBlockData] = None
+            foliage_transaction_block_data: Optional[FoliageTransactionBlock] = None
+            rc_block_unfinished: Optional[RewardChainBlockUnfinished] = None
+            if request.include_signature_source_data:
+                foliage_block_data = unfinished_block.foliage.foliage_block_data
+                rc_block_unfinished = unfinished_block.reward_chain_block
+                if unfinished_block.is_transaction_block():
+                    foliage_transaction_block_data = unfinished_block.foliage_transaction_block
+
             message = farmer_protocol.RequestSignedValues(
                 quality_string,
                 foliage_sb_data_hash,
                 foliage_transaction_block_hash,
+                foliage_block_data=foliage_block_data,
+                foliage_transaction_block_data=foliage_transaction_block_data,
+                rc_block_unfinished=rc_block_unfinished,
             )
             await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
 
@@ -968,10 +1074,9 @@ class FullNodeAPI:
                 )
         return None
 
-    @api_request
-    @peer_required
+    @api_request(peer_required=True)
     async def signed_values(
-        self, farmer_request: farmer_protocol.SignedValues, peer: ws.WSChiaConnection
+        self, farmer_request: farmer_protocol.SignedValues, peer: WSChiaConnection
     ) -> Optional[Message]:
         """
         Signature of header hash, by the harvester. This is enough to create an unfinished
@@ -995,27 +1100,21 @@ class FullNodeAPI:
             self.log.warning("Signature not valid. There might be a collision in plots. Ignore this during tests.")
             return None
 
-        fsb2 = dataclasses.replace(
-            candidate.foliage,
-            foliage_block_data_signature=farmer_request.foliage_block_data_signature,
-        )
+        fsb2 = candidate.foliage.replace(foliage_block_data_signature=farmer_request.foliage_block_data_signature)
         if candidate.is_transaction_block():
-            fsb2 = dataclasses.replace(
-                fsb2, foliage_transaction_block_signature=farmer_request.foliage_transaction_block_signature
-            )
+            fsb2 = fsb2.replace(foliage_transaction_block_signature=farmer_request.foliage_transaction_block_signature)
 
-        new_candidate = dataclasses.replace(candidate, foliage=fsb2)
+        new_candidate = candidate.replace(foliage=fsb2)
         if not self.full_node.has_valid_pool_sig(new_candidate):
             self.log.warning("Trying to make a pre-farm block but height is not 0")
             return None
 
         # Propagate to ourselves (which validates and does further propagations)
-        request = full_node_protocol.RespondUnfinishedBlock(new_candidate)
         try:
-            await self.full_node.respond_unfinished_block(request, None, True)
+            await self.full_node.add_unfinished_block(new_candidate, None, True)
         except Exception as e:
             # If we have an error with this block, try making an empty block
-            self.full_node.log.error(f"Error farming block {e} {request}")
+            self.full_node.log.error(f"Error farming block {e} {new_candidate}")
             candidate_tuple = self.full_node.full_node_store.get_candidate_block(
                 farmer_request.quality_string, backup=True
             )
@@ -1035,10 +1134,9 @@ class FullNodeAPI:
         return None
 
     # TIMELORD PROTOCOL
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def new_infusion_point_vdf(
-        self, request: timelord_protocol.NewInfusionPointVDF, peer: ws.WSChiaConnection
+        self, request: timelord_protocol.NewInfusionPointVDF, peer: WSChiaConnection
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -1046,10 +1144,9 @@ class FullNodeAPI:
         async with self.full_node.timelord_lock:
             return await self.full_node.new_infusion_point_vdf(request, peer)
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def new_signage_point_vdf(
-        self, request: timelord_protocol.NewSignagePointVDF, peer: ws.WSChiaConnection
+        self, request: timelord_protocol.NewSignagePointVDF, peer: WSChiaConnection
     ) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -1063,10 +1160,9 @@ class FullNodeAPI:
         )
         await self.respond_signage_point(full_node_message, peer)
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def new_end_of_sub_slot_vdf(
-        self, request: timelord_protocol.NewEndOfSubSlotVDF, peer: ws.WSChiaConnection
+        self, request: timelord_protocol.NewEndOfSubSlotVDF, peer: WSChiaConnection
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -1076,12 +1172,11 @@ class FullNodeAPI:
         ):
             return None
         # Calls our own internal message to handle the end of sub slot, and potentially broadcasts to other peers.
-        full_node_message = full_node_protocol.RespondEndOfSubSlot(request.end_of_sub_slot_bundle)
-        msg, added = await self.full_node.respond_end_of_sub_slot(full_node_message, peer)
+        msg, added = await self.full_node.add_end_of_sub_slot(request.end_of_sub_slot_bundle, peer)
         if not added:
             self.log.error(
                 f"Was not able to add end of sub-slot: "
-                f"{request.end_of_sub_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}. "
+                f"{request.end_of_sub_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge.hex()}. "
                 f"Re-sending new-peak to timelord"
             )
             await self.full_node.send_peak_to_timelords(peer=peer)
@@ -1089,24 +1184,48 @@ class FullNodeAPI:
         else:
             return msg
 
-    @api_request
+    @api_request()
     async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Optional[Message]:
         header_hash = self.full_node.blockchain.height_to_hash(request.height)
         if header_hash is None:
             msg = make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(request.height))
             return msg
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
-        if block is not None:
-            tx_removals, tx_additions, _ = await self.full_node.blockchain.get_tx_removals_and_additions(block)
-            header_block = get_block_header(block, tx_additions, tx_removals)
-            msg = make_msg(
-                ProtocolMessageTypes.respond_block_header,
-                wallet_protocol.RespondBlockHeader(header_block),
-            )
-            return msg
-        return None
+        if block is None:
+            return None
 
-    @api_request
+        tx_removals: List[bytes32] = []
+        tx_additions: List[Coin] = []
+
+        if block.transactions_generator is not None:
+            block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
+            # get_block_generator() returns None in case the block we specify
+            # does not have a generator (i.e. is not a transaction block).
+            # in this case we've already made sure `block` does have a
+            # transactions_generator, so the block_generator should always be set
+            assert block_generator is not None, "failed to get block_generator for tx-block"
+
+            npc_result = await asyncio.get_running_loop().run_in_executor(
+                self.executor,
+                functools.partial(
+                    get_name_puzzle_conditions,
+                    block_generator,
+                    self.full_node.constants.MAX_BLOCK_COST_CLVM,
+                    mempool_mode=False,
+                    height=request.height,
+                    constants=self.full_node.constants,
+                ),
+            )
+
+            tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
+        header_block = get_block_header(block, tx_additions, tx_removals)
+        msg = make_msg(
+            ProtocolMessageTypes.respond_block_header,
+            wallet_protocol.RespondBlockHeader(header_block),
+        )
+        return msg
+
+    @api_request()
     async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
         if request.header_hash is None:
             header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(request.height)
@@ -1161,7 +1280,7 @@ class FullNodeAPI:
             response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, proofs_map)
         return make_msg(ProtocolMessageTypes.respond_additions, response)
 
-    @api_request
+    @api_request()
     async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Optional[Message]:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
 
@@ -1195,7 +1314,7 @@ class FullNodeAPI:
 
         # If there are no transactions, respond with empty lists
         if block.transactions_generator is None:
-            proofs: Optional[List]
+            proofs: Optional[List[Tuple[bytes32, bytes]]]
             if request.coin_names is None:
                 proofs = None
             else:
@@ -1226,30 +1345,22 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_removals, response)
         return msg
 
-    @api_request
-    async def send_transaction(self, request: wallet_protocol.SendTransaction, *, test=False) -> Optional[Message]:
+    @api_request()
+    async def send_transaction(
+        self, request: wallet_protocol.SendTransaction, *, test: bool = False
+    ) -> Optional[Message]:
         spend_name = request.transaction.name()
         if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
             self.full_node.mempool_manager.remove_seen(spend_name)
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS), None)
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
-        await self.full_node.transaction_queue.put(
-            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, test))
-        )
-        # Waits for the transaction to go into the mempool, times out after 45 seconds.
-        status, error = None, None
-        sleep_time = 0.01
-        for i in range(int(45 / sleep_time)):
-            await asyncio.sleep(sleep_time)
-            for potential_name, potential_status, potential_error in self.full_node.transaction_responses:
-                if spend_name == potential_name:
-                    status = potential_status
-                    error = potential_error
-                    break
-            if status is not None:
-                break
-        if status is None:
+        queue_entry = TransactionQueueEntry(request.transaction, None, spend_name, None, test)
+        await self.full_node.transaction_queue.put(queue_entry, peer_id=None, high_priority=True)
+        try:
+            with anyio.fail_after(delay=45):
+                status, error = await queue_entry.done.wait()
+        except TimeoutError:
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.PENDING), None)
         else:
             error_name = error.name if error is not None else None
@@ -1265,7 +1376,7 @@ class FullNodeAPI:
                     response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
-    @api_request
+    @api_request()
     async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
         coin_name = request.coin_name
         height = request.height
@@ -1279,29 +1390,30 @@ class FullNodeAPI:
         if header_hash is None:
             return reject_msg
 
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
+        block: Optional[BlockInfo] = await self.full_node.block_store.get_block_info(header_hash)
 
         if block is None or block.transactions_generator is None:
             return reject_msg
 
         block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
         assert block_generator is not None
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(
-            block_generator, coin_name, self.full_node.constants.MAX_BLOCK_COST_CLVM
-        )
-
-        if error is not None:
+        try:
+            spend_info = await asyncio.get_running_loop().run_in_executor(
+                self.executor,
+                get_puzzle_and_solution_for_coin,
+                block_generator,
+                coin_record.coin,
+                height,
+                self.full_node.constants,
+            )
+        except ValueError:
             return reject_msg
-
-        pz = Program.to(puzzle)
-        sol = Program.to(solution)
-
-        wrapper = PuzzleSolutionResponse(coin_name, height, pz, sol)
+        wrapper = PuzzleSolutionResponse(coin_name, height, spend_info.puzzle, spend_info.solution)
         response = wallet_protocol.RespondPuzzleSolution(wrapper)
         response_msg = make_msg(ProtocolMessageTypes.respond_puzzle_solution, response)
         return response_msg
 
-    @api_request
+    @api_request()
     async def request_block_headers(self, request: wallet_protocol.RequestBlockHeaders) -> Optional[Message]:
         """Returns header blocks by directly streaming bytes into Message
 
@@ -1340,18 +1452,21 @@ class FullNodeAPI:
         # we start building RespondBlockHeaders response (start_height, end_height)
         # and then need to define size of list object
         respond_header_blocks_manually_streamed: bytes = (
-            bytes(uint32(request.start_height))
-            + bytes(uint32(request.end_height))
-            + len(header_blocks_bytes).to_bytes(4, "big", signed=False)
+            uint32(request.start_height).stream_to_bytes()
+            + uint32(request.end_height).stream_to_bytes()
+            + uint32(len(header_blocks_bytes)).stream_to_bytes()
         )
         # and now stream the whole list in bytes
         respond_header_blocks_manually_streamed += b"".join(header_blocks_bytes)
         return make_msg(ProtocolMessageTypes.respond_block_headers, respond_header_blocks_manually_streamed)
 
-    @api_request
+    @api_request()
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
         """DEPRECATED: please use RequestBlockHeaders"""
-        if request.end_height < request.start_height or request.end_height - request.start_height > 32:
+        if (
+            request.end_height < request.start_height
+            or request.end_height - request.start_height > self.full_node.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+        ):
             return None
         height_to_hash = self.full_node.blockchain.height_to_hash
         header_hashes: List[bytes32] = []
@@ -1382,128 +1497,170 @@ class FullNodeAPI:
         )
         return msg
 
-    @api_request
-    async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
+    @api_request(bytes_required=True, execute_task=True)
+    async def respond_compact_proof_of_time(
+        self, request: timelord_protocol.RespondCompactProofOfTime, request_bytes: bytes = b""
+    ) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.respond_compact_proof_of_time(request)
-
-    @execute_task
-    @peer_required
-    @api_request
-    @bytes_required
-    async def new_compact_vdf(
-        self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection, request_bytes: bytes = b""
-    ):
-        if self.full_node.sync_store.get_sync_mode():
-            return None
-
-        if len(self.full_node.compact_vdf_sem._waiters) > 20:
-            self.log.debug(f"Ignoring NewCompactVDF: {request}, _waiters")
-            return
-
         name = std_hash(request_bytes)
         if name in self.full_node.compact_vdf_requests:
-            self.log.debug(f"Ignoring NewCompactVDF: {request}, already requested")
-            return
+            self.log.debug(f"Ignoring CompactProofOfTime: {request}, already requested")
+            return None
+
         self.full_node.compact_vdf_requests.add(name)
 
         # this semaphore will only allow a limited number of tasks call
         # new_compact_vdf() at a time, since it can be expensive
-        async with self.full_node.compact_vdf_sem:
-            try:
-                await self.full_node.new_compact_vdf(request, peer)
-            finally:
-                self.full_node.compact_vdf_requests.remove(name)
+        try:
+            async with self.full_node.compact_vdf_sem.acquire():
+                try:
+                    await self.full_node.add_compact_proof_of_time(request)
+                finally:
+                    self.full_node.compact_vdf_requests.remove(name)
+        except LimitedSemaphoreFullError:
+            self.log.debug(f"Ignoring CompactProofOfTime: {request}, _waiters")
 
-    @peer_required
-    @api_request
-    @reply_type([ProtocolMessageTypes.respond_compact_vdf])
-    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection):
+        return None
+
+    @api_request(peer_required=True, bytes_required=True, execute_task=True)
+    async def new_compact_vdf(
+        self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection, request_bytes: bytes = b""
+    ) -> None:
+        if self.full_node.sync_store.get_sync_mode():
+            return None
+
+        name = std_hash(request_bytes)
+        if name in self.full_node.compact_vdf_requests:
+            self.log.debug("Ignoring NewCompactVDF, already requested: %s %s", peer.get_peer_logging(), request)
+            return None
+        self.full_node.compact_vdf_requests.add(name)
+
+        # this semaphore will only allow a limited number of tasks call
+        # new_compact_vdf() at a time, since it can be expensive
+        try:
+            async with self.full_node.compact_vdf_sem.acquire():
+                try:
+                    await self.full_node.new_compact_vdf(request, peer)
+                finally:
+                    self.full_node.compact_vdf_requests.remove(name)
+        except LimitedSemaphoreFullError:
+            self.log.debug("Ignoring NewCompactVDF, limited semaphore full: %s %s", peer.get_peer_logging(), request)
+            return None
+
+        return None
+
+    @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_compact_vdf])
+    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
         await self.full_node.request_compact_vdf(request, peer)
+        return None
 
-    @peer_required
-    @api_request
-    async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: ws.WSChiaConnection):
+    @api_request(peer_required=True)
+    async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.respond_compact_vdf(request, peer)
+        await self.full_node.add_compact_vdf(request, peer)
+        return None
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def register_interest_in_puzzle_hash(
-        self, request: wallet_protocol.RegisterForPhUpdates, peer: ws.WSChiaConnection
-    ):
-        if peer.peer_node_id not in self.full_node.peer_puzzle_hash:
-            self.full_node.peer_puzzle_hash[peer.peer_node_id] = set()
+        self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
+    ) -> Message:
+        trusted = self.is_trusted(peer)
+        if trusted:
+            max_subscriptions = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
+            max_items = self.full_node.config.get("trusted_max_subscribe_response_items", 500000)
+        else:
+            max_subscriptions = self.full_node.config.get("max_subscribe_items", 200000)
+            max_items = self.full_node.config.get("max_subscribe_response_items", 100000)
 
-        if peer.peer_node_id not in self.full_node.peer_sub_counter:
-            self.full_node.peer_sub_counter[peer.peer_node_id] = 0
-
-        hint_coin_ids = []
-        # Add peer to the "Subscribed" dictionary
-        max_items = self.full_node.config.get("max_subscribe_items", 200000)
-        for puzzle_hash in request.puzzle_hashes:
-            ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash)
-            hint_coin_ids.extend(ph_hint_coins)
-            if puzzle_hash not in self.full_node.ph_subscriptions:
-                self.full_node.ph_subscriptions[puzzle_hash] = set()
-            if (
-                peer.peer_node_id not in self.full_node.ph_subscriptions[puzzle_hash]
-                and self.full_node.peer_sub_counter[peer.peer_node_id] < max_items
-            ):
-                self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
-                self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
-                self.full_node.peer_sub_counter[peer.peer_node_id] += 1
-
-        # Send all coins with requested puzzle hash that have been created after the specified height
-        states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
-            include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, min_height=request.min_height
+        # the returned puzzle hashes are the ones we ended up subscribing to.
+        # It will have filtered duplicates and ones exceeding the subscription
+        # limit.
+        puzzle_hashes = self.full_node.subscriptions.add_puzzle_subscriptions(
+            peer.peer_node_id, request.puzzle_hashes, max_subscriptions
         )
 
+        start_time = time.monotonic()
+
+        # Note that coin state updates may arrive out-of-order on the client side.
+        # We add the subscription before we're done collecting all the coin
+        # state that goes into the response. CoinState updates may be sent
+        # before we send the response
+
+        # Send all coins with requested puzzle hash that have been created after the specified height
+        states: Set[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
+            include_spent_coins=True, puzzle_hashes=puzzle_hashes, min_height=request.min_height, max_items=max_items
+        )
+        max_items -= len(states)
+
+        hint_coin_ids: Set[bytes32] = set()
+        if max_items > 0:
+            for puzzle_hash in puzzle_hashes:
+                ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash, max_items=max_items)
+                hint_coin_ids.update(ph_hint_coins)
+                max_items -= len(ph_hint_coins)
+                if max_items <= 0:
+                    break
+
+        hint_states: List[CoinState] = []
         if len(hint_coin_ids) > 0:
             hint_states = await self.full_node.coin_store.get_coin_states_by_ids(
-                include_spent_coins=True, coin_ids=hint_coin_ids, min_height=request.min_height
+                include_spent_coins=True,
+                coin_ids=hint_coin_ids,
+                min_height=request.min_height,
+                max_items=len(hint_coin_ids),
             )
-            states.extend(hint_states)
+            states.update(hint_states)
 
-        response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, states)
+        end_time = time.monotonic()
+
+        truncated = max_items <= 0
+
+        if truncated or end_time - start_time > 5:
+            self.log.log(
+                logging.WARNING if trusted and truncated else logging.INFO,
+                "RegisterForPhUpdates resulted in %d coin states. "
+                "Request had %d (unique) puzzle hashes and matched %d hints. %s"
+                "The request took %0.2fs",
+                len(states),
+                len(puzzle_hashes),
+                len(hint_states),
+                "The response was truncated. " if truncated else "",
+                end_time - start_time,
+            )
+
+        response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, list(states))
         msg = make_msg(ProtocolMessageTypes.respond_to_ph_update, response)
         return msg
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def register_interest_in_coin(
-        self, request: wallet_protocol.RegisterForCoinUpdates, peer: ws.WSChiaConnection
-    ):
-        if peer.peer_node_id not in self.full_node.peer_coin_ids:
-            self.full_node.peer_coin_ids[peer.peer_node_id] = set()
+        self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
+    ) -> Message:
+        if self.is_trusted(peer):
+            max_subscriptions = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
+            max_items = self.full_node.config.get("trusted_max_subscribe_response_items", 500000)
+        else:
+            max_subscriptions = self.full_node.config.get("max_subscribe_items", 200000)
+            max_items = self.full_node.config.get("max_subscribe_response_items", 100000)
 
-        if peer.peer_node_id not in self.full_node.peer_sub_counter:
-            self.full_node.peer_sub_counter[peer.peer_node_id] = 0
-        max_items = self.full_node.config.get("max_subscribe_items", 200000)
-        for coin_id in request.coin_ids:
-            if coin_id not in self.full_node.coin_subscriptions:
-                self.full_node.coin_subscriptions[coin_id] = set()
-            if (
-                peer.peer_node_id not in self.full_node.coin_subscriptions[coin_id]
-                and self.full_node.peer_sub_counter[peer.peer_node_id] < max_items
-            ):
-                self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
-                self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
-                self.full_node.peer_sub_counter[peer.peer_node_id] += 1
+        # TODO: apparently we have tests that expect to receive a
+        # RespondToCoinUpdates even when subscribing to the same coin multiple
+        # times, so we can't optimize away such DB lookups (yet)
+        self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, request.coin_ids, max_subscriptions)
 
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
-            include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height
+            include_spent_coins=True, coin_ids=set(request.coin_ids), min_height=request.min_height, max_items=max_items
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
         msg = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
         return msg
 
-    @api_request
+    @api_request()
     async def request_children(self, request: wallet_protocol.RequestChildren) -> Optional[Message]:
         coin_records: List[CoinRecord] = await self.full_node.coin_store.get_coin_records_by_parent_ids(
             True, [request.coin_name]
@@ -1513,8 +1670,8 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_children, response)
         return msg
 
-    @api_request
-    async def request_ses_hashes(self, request: wallet_protocol.RequestSESInfo):
+    @api_request()
+    async def request_ses_hashes(self, request: wallet_protocol.RequestSESInfo) -> Message:
         """Returns the start and end height of a sub-epoch for the height specified in request"""
 
         ses_height = self.full_node.blockchain.get_ses_heights()
@@ -1548,3 +1705,24 @@ class FullNodeAPI:
         response = RespondSESInfo(ses_reward_hashes, ses_hash_heights)
         msg = make_msg(ProtocolMessageTypes.respond_ses_hashes, response)
         return msg
+
+    @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_fee_estimates])
+    async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates) -> Message:
+        def get_fee_estimates(est: FeeEstimatorInterface, req_times: List[uint64]) -> List[FeeEstimate]:
+            now = datetime.now(timezone.utc)
+            utc_time = now.replace(tzinfo=timezone.utc)
+            utc_now = int(utc_time.timestamp())
+            deltas = [max(0, req_ts - utc_now) for req_ts in req_times]
+            fee_rates = [est.estimate_fee_rate(time_offset_seconds=d) for d in deltas]
+            v1_fee_rates = [fee_rate_v2_to_v1(est) for est in fee_rates]
+            return [FeeEstimate(None, req_ts, fee_rate) for req_ts, fee_rate in zip(req_times, v1_fee_rates)]
+
+        fee_estimates: List[FeeEstimate] = get_fee_estimates(
+            self.full_node.mempool_manager.mempool.fee_estimator, request.time_targets
+        )
+        response = RespondFeeEstimates(FeeEstimateGroup(error=None, estimates=fee_estimates))
+        msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, response)
+        return msg
+
+    def is_trusted(self, peer: WSChiaConnection) -> bool:
+        return self.server.is_trusted_peer(peer, self.full_node.config.get("trusted_peers", {}))

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Optional, Union
 
 from chia.consensus.block_record import BlockRecord
@@ -25,7 +27,6 @@ def block_to_block_record(
     header_block: Optional[HeaderBlock],
     sub_slot_iters: Optional[uint64] = None,
 ) -> BlockRecord:
-
     if full_block is None:
         assert header_block is not None
         block: Union[HeaderBlock, FullBlock] = header_block
@@ -97,7 +98,6 @@ def header_block_to_sub_block_record(
     prev_transaction_block_height: uint32,
     ses: Optional[SubEpochSummary],
 ) -> BlockRecord:
-
     reward_claims_incorporated = (
         block.transactions_info.reward_claims_incorporated if block.transactions_info is not None else None
     )

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Dict, List, Union
 
@@ -32,7 +34,7 @@ class PathListDelta(DeltaType):
     removals: List[str] = field(default_factory=list)
 
     @staticmethod
-    def from_lists(old: List[str], new: List[str]) -> "PathListDelta":
+    def from_lists(old: List[str], new: List[str]) -> PathListDelta:
         return PathListDelta([x for x in new if x not in old], [x for x in old if x not in new])
 
 

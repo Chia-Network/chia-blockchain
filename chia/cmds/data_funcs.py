@@ -1,76 +1,67 @@
+from __future__ import annotations
+
+import contextlib
+import json
 from decimal import Decimal
 from pathlib import Path
-from types import TracebackType
-from typing import Dict, List, Optional, Tuple, Type
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
-import aiohttp
-
+from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.units import units
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint64
-
-# TODO: there seems to be a large amount of repetition in these to dedupe
+from chia.util.ints import uint64
 
 
-class get_client:
-    _port: Optional[int]
-    _client: Optional[DataLayerRpcClient] = None
-
-    def __init__(self, rpc_port: Optional[int]):
-        self._port = rpc_port
-
-    async def __aenter__(self) -> Tuple[DataLayerRpcClient, int]:
-        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-        self_hostname = config["self_hostname"]
-        if self._port is None:
-            self._port = config["data_layer"]["rpc_port"]
-        self._client = await DataLayerRpcClient.create(self_hostname, uint16(self._port), DEFAULT_ROOT_PATH, config)
-        assert self._client is not None
-        return self._client, int(self._port)
-
-    async def __aexit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> None:
-        if self._client is None:
-            return
-        self._client.close()
-        await self._client.await_closed()
+@contextlib.asynccontextmanager
+async def get_client(
+    rpc_port: Optional[int], fingerprint: Optional[int] = None, root_path: Optional[Path] = None
+) -> AsyncIterator[Tuple[DataLayerRpcClient, Dict[str, Any]]]:
+    async with get_any_service_client(
+        client_type=DataLayerRpcClient,
+        rpc_port=rpc_port,
+        root_path=root_path,
+    ) as (client, _):
+        if fingerprint is not None:
+            await client.wallet_log_in(fingerprint=fingerprint)
+        yield client, _
 
 
-async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
-    final_fee = None
-    if fee is not None:
-        final_fee = uint64(int(Decimal(fee) * units["chia"]))
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.create_data_store(fee=final_fee)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
-    return
+async def wallet_log_in_cmd(
+    rpc_port: Optional[int],
+    fingerprint: int,
+    root_path: Optional[Path] = None,
+) -> None:
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        pass
 
 
-async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str) -> None:
+async def create_data_store_cmd(
+    rpc_port: Optional[int],
+    fee: Optional[str],
+    verbose: bool,
+    fingerprint: Optional[int],
+) -> None:
+    final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.create_data_store(fee=final_fee, verbose=verbose)
+        print(json.dumps(res, indent=2, sort_keys=True))
+
+
+async def get_value_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+    key: str,
+    root_hash: Optional[str],
+    fingerprint: Optional[int],
+) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     key_bytes = hexstr_to_bytes(key)
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_value(store_id=store_id_bytes, key=key_bytes)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
-    return
+    root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.get_value(store_id=store_id_bytes, key=key_bytes, root_hash=root_hash_bytes)
+        print(json.dumps(res, indent=2, sort_keys=True))
 
 
 async def update_data_store_cmd(
@@ -78,115 +69,133 @@ async def update_data_store_cmd(
     store_id: str,
     changelist: List[Dict[str, str]],
     fee: Optional[str],
-) -> None:
+    fingerprint: Optional[int],
+    submit_on_chain: bool,
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     store_id_bytes = bytes32.from_hexstr(store_id)
-    final_fee = None
-    if fee is not None:
-        final_fee = uint64(int(Decimal(fee) * units["chia"]))
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.update_data_store(store_id=store_id_bytes, changelist=changelist, fee=final_fee)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
-    return
+    final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
+    res = dict()
+
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.update_data_store(
+            store_id=store_id_bytes,
+            changelist=changelist,
+            fee=final_fee,
+            submit_on_chain=submit_on_chain,
+        )
+        print(json.dumps(res, indent=2, sort_keys=True))
+
+    return res
+
+
+async def submit_pending_root_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+    fee: Optional[str],
+    fingerprint: Optional[int],
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
+    res = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.submit_pending_root(
+            store_id=store_id_bytes,
+            fee=final_fee,
+        )
+        print(json.dumps(res, indent=2, sort_keys=True))
+
+    return res
 
 
 async def get_keys_cmd(
     rpc_port: Optional[int],
     store_id: str,
-) -> None:
+    root_hash: Optional[str],
+    fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     store_id_bytes = bytes32.from_hexstr(store_id)
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_keys(store_id=store_id_bytes)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
-    return
+    root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
+    res = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.get_keys(
+            store_id=store_id_bytes, root_hash=root_hash_bytes, page=page, max_page_size=max_page_size
+        )
+        print(json.dumps(res, indent=2, sort_keys=True))
+
+    return res
 
 
 async def get_keys_values_cmd(
     rpc_port: Optional[int],
     store_id: str,
-) -> None:
+    root_hash: Optional[str],
+    fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     store_id_bytes = bytes32.from_hexstr(store_id)
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_keys_values(store_id=store_id_bytes)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
-    return
+    root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
+    res = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.get_keys_values(
+            store_id=store_id_bytes, root_hash=root_hash_bytes, page=page, max_page_size=max_page_size
+        )
+        print(json.dumps(res, indent=2, sort_keys=True))
+
+    return res
 
 
 async def get_root_cmd(
     rpc_port: Optional[int],
     store_id: str,
+    fingerprint: Optional[int],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_root(store_id=store_id_bytes)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
-    return
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.get_root(store_id=store_id_bytes)
+        print(json.dumps(res, indent=2, sort_keys=True))
 
 
 async def subscribe_cmd(
     rpc_port: Optional[int],
     store_id: str,
     urls: List[str],
+    fingerprint: Optional[int],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.subscribe(store_id=store_id_bytes, urls=urls)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.subscribe(store_id=store_id_bytes, urls=urls)
+        print(json.dumps(res, indent=2, sort_keys=True))
 
 
 async def unsubscribe_cmd(
     rpc_port: Optional[int],
     store_id: str,
+    fingerprint: Optional[int],
+    retain: bool,
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.unsubscribe(store_id=store_id_bytes)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.unsubscribe(store_id=store_id_bytes, retain=retain)
+        print(json.dumps(res, indent=2, sort_keys=True))
 
 
 async def remove_subscriptions_cmd(
     rpc_port: Optional[int],
     store_id: str,
     urls: List[str],
+    fingerprint: Optional[int],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.remove_subscriptions(store_id=store_id_bytes, urls=urls)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.remove_subscriptions(store_id=store_id_bytes, urls=urls)
+        print(json.dumps(res, indent=2, sort_keys=True))
 
 
 async def get_kv_diff_cmd(
@@ -194,122 +203,171 @@ async def get_kv_diff_cmd(
     store_id: str,
     hash_1: str,
     hash_2: str,
-) -> None:
+    fingerprint: Optional[int],
+    page: Optional[int],
+    max_page_size: Optional[int],
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     store_id_bytes = bytes32.from_hexstr(store_id)
     hash_1_bytes = bytes32.from_hexstr(hash_1)
     hash_2_bytes = bytes32.from_hexstr(hash_2)
+    res = dict()
 
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_kv_diff(store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.get_kv_diff(
+            store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes, page=page, max_page_size=max_page_size
+        )
+        print(json.dumps(res, indent=2, sort_keys=True))
+
+    return res
 
 
 async def get_root_history_cmd(
     rpc_port: Optional[int],
     store_id: str,
+    fingerprint: Optional[int],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_root_history(store_id=store_id_bytes)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.get_root_history(store_id=store_id_bytes)
+        print(json.dumps(res, indent=2, sort_keys=True))
 
 
 async def add_missing_files_cmd(
-    rpc_port: Optional[int], ids: Optional[List[str]], overwrite: bool, foldername: Optional[Path]
+    rpc_port: Optional[int],
+    ids: Optional[List[str]],
+    overwrite: bool,
+    foldername: Optional[Path],
+    fingerprint: Optional[int],
 ) -> None:
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.add_missing_files(
-                store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]),
-                overwrite=overwrite,
-                foldername=foldername,
-            )
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.add_missing_files(
+            store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]),
+            overwrite=overwrite,
+            foldername=foldername,
+        )
+        print(json.dumps(res, indent=2, sort_keys=True))
 
 
 async def add_mirror_cmd(
-    rpc_port: Optional[int], store_id: str, urls: List[str], amount: int, fee: Optional[str]
+    rpc_port: Optional[int],
+    store_id: str,
+    urls: List[str],
+    amount: int,
+    fee: Optional[str],
+    fingerprint: Optional[int],
 ) -> None:
-    try:
-        store_id_bytes = bytes32.from_hexstr(store_id)
-        final_fee = None
-        if fee is not None:
-            final_fee = uint64(int(Decimal(fee) * units["chia"]))
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.add_mirror(
-                store_id=store_id_bytes,
-                urls=urls,
-                amount=amount,
-                fee=final_fee,
-            )
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.add_mirror(
+            store_id=store_id_bytes,
+            urls=urls,
+            amount=amount,
+            fee=final_fee,
+        )
+        print(json.dumps(res, indent=2, sort_keys=True))
 
 
-async def delete_mirror_cmd(rpc_port: Optional[int], coin_id: str, fee: Optional[str]) -> None:
-    try:
-        coin_id_bytes = bytes32.from_hexstr(coin_id)
-        final_fee = None
-        if fee is not None:
-            final_fee = uint64(int(Decimal(fee) * units["chia"]))
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.delete_mirror(
-                coin_id=coin_id_bytes,
-                fee=final_fee,
-            )
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
+async def delete_mirror_cmd(
+    rpc_port: Optional[int],
+    coin_id: str,
+    fee: Optional[str],
+    fingerprint: Optional[int],
+) -> None:
+    coin_id_bytes = bytes32.from_hexstr(coin_id)
+    final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.delete_mirror(
+            coin_id=coin_id_bytes,
+            fee=final_fee,
+        )
+        print(json.dumps(res, indent=2, sort_keys=True))
 
 
-async def get_mirrors_cmd(rpc_port: Optional[int], store_id: str) -> None:
-    try:
-        store_id_bytes = bytes32.from_hexstr(store_id)
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_mirrors(store_id=store_id_bytes)
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
+async def get_mirrors_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+    fingerprint: Optional[int],
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.get_mirrors(store_id=store_id_bytes)
+        print(json.dumps(res, indent=2, sort_keys=True))
 
 
-async def get_subscriptions_cmd(rpc_port: Optional[int]) -> None:
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_subscriptions()
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
+async def get_subscriptions_cmd(
+    rpc_port: Optional[int],
+    fingerprint: Optional[int],
+) -> None:
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.get_subscriptions()
+        print(json.dumps(res, indent=2, sort_keys=True))
 
 
-async def get_owned_stores_cmd(rpc_port: Optional[int]) -> None:
-    try:
-        async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_owned_stores()
-            print(res)
-    except aiohttp.ClientConnectorError:
-        print(f"Connection error. Check if data is running at {rpc_port}")
-    except Exception as e:
-        print(f"Exception from 'data': {e}")
+async def get_owned_stores_cmd(
+    rpc_port: Optional[int],
+    fingerprint: Optional[int],
+) -> None:
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.get_owned_stores()
+        print(json.dumps(res, indent=2, sort_keys=True))
+
+
+async def get_sync_status_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+    fingerprint: Optional[int],
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
+        res = await client.get_sync_status(store_id=store_id_bytes)
+        print(json.dumps(res, indent=2, sort_keys=True))
+
+
+async def check_plugins_cmd(rpc_port: Optional[int]) -> None:
+    async with get_client(rpc_port=rpc_port) as (client, _):
+        res = await client.check_plugins()
+        print(json.dumps(res, indent=2, sort_keys=True))
+
+
+async def clear_pending_roots(
+    store_id: bytes32,
+    rpc_port: Optional[int],
+    root_path: Optional[Path] = None,
+    fingerprint: Optional[int] = None,
+) -> Dict[str, Any]:
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        result = await client.clear_pending_roots(store_id=store_id)
+        print(json.dumps(result, indent=2, sort_keys=True))
+
+    return result
+
+
+async def get_proof_cmd(
+    store_id: bytes32,
+    key_strings: List[str],
+    rpc_port: Optional[int],
+    root_path: Optional[Path] = None,
+    fingerprint: Optional[int] = None,
+) -> Dict[str, Any]:
+    result = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        result = await client.get_proof(store_id=store_id, keys=[hexstr_to_bytes(key) for key in key_strings])
+        print(json.dumps(result, indent=2, sort_keys=True))
+
+    return result
+
+
+async def verify_proof_cmd(
+    proof: Dict[str, Any],
+    rpc_port: Optional[int],
+    root_path: Optional[Path] = None,
+    fingerprint: Optional[int] = None,
+) -> Dict[str, Any]:
+    result = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        result = await client.verify_proof(proof=proof)
+        print(json.dumps(result, indent=2, sort_keys=True))
+
+    return result

@@ -1,0 +1,22 @@
+(mod
+  (
+    MERKLE_ROOT
+    merkle_proof
+    puzzle_to_execute
+    inner_solution
+  )
+
+  (include utility_macros.clib)
+  (include merkle_utils.clib)
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree (TREE)
+    (if (l TREE)
+        (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+  (sha256 1 TREE)))
+
+  (assert (= MERKLE_ROOT (simplify_merkle_proof (sha256tree puzzle_to_execute) merkle_proof))
+    (a puzzle_to_execute inner_solution)
+  )
+
+)

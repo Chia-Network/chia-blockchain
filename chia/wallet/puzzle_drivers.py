@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -51,7 +53,7 @@ class PuzzleInfo:
     def type(self) -> str:
         return str(self.info["type"])
 
-    def also(self) -> Optional["PuzzleInfo"]:
+    def also(self) -> Optional[PuzzleInfo]:
         if "also" in self.info:
             return PuzzleInfo(self.info["also"])
         else:
@@ -97,10 +99,12 @@ def decode_info_value(cls: Any, value: Any) -> Any:
         return cls(value)
     elif isinstance(value, list):
         return [decode_info_value(cls, v) for v in value]
+    elif isinstance(value, Program) and value.atom is None:
+        return value
     else:
         if value == "()":  # special case
             return Program.to([])
-        expression: SExp = assemble(value)  # type: ignore
+        expression: SExp = assemble(value)
         if expression.atom is None:
             return Program(expression)
         else:

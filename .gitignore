@@ -11,7 +11,6 @@
 nohup.out
 mongod.log*
 fndb_test*
-blockchain_test*
 *.db
 *.db-journal
 
@@ -97,6 +96,8 @@ build/
 # https://pytest-monitor.readthedocs.io/en/latest/operating.html?highlight=.pymon#storage
 .pymon
 
+# cache for tooling such as tools/manage_clvm.py
+.chia_cache/
 
 #       =====                       =====
 #     DO NOT EDIT BELOW - GENERATED
@@ -259,6 +260,7 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+mypy.ini
 
 # Pyre type checker
 .pyre/

@@ -11,11 +11,18 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
+    labels:
+      - dependencies
+      - python
+      - "Changed"
     target-branch: "main"
     pull-request-branch-name:
       # Separate sections of the branch name with a hyphen
       # for example, `dependabot-npm_and_yarn-next_js-acorn-6.4.1`
       separator: "-"
+    reviewers:
+      - "emlowe"
+      - "altendky"
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
@@ -24,8 +31,34 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
+    labels:
+      - dependencies
+      - github_actions
+      - "Changed"
     target-branch: "main"
     pull-request-branch-name:
       # Separate sections of the branch name with a hyphen
       # for example, `dependabot-npm_and_yarn-next_js-acorn-6.4.1`
       separator: "-"
+    reviewers:
+      - "cmmarslender"
+      - "altendky"
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    # Check for updates once a week
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    labels:
+      - dependencies
+      - javascript
+      - "Changed"
+    target-branch: "main"
+    pull-request-branch-name:
+      # Separate sections of the branch name with a hyphen
+      # for example, `dependabot-npm_and_yarn-next_js-acorn-6.4.1`
+      separator: "-"
+    reviewers:
+      - "cmmarslender"
+      - "paninaro"

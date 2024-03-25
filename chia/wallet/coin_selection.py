@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import random
 from typing import Dict, List, Optional, Set
@@ -5,27 +7,21 @@ from typing import Dict, List, Optional, Set
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64, uint128
+from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
 async def select_coins(
     spendable_amount: uint128,
-    max_coin_amount: uint64,
+    coin_selection_config: CoinSelectionConfig,
     spendable_coins: List[WalletCoinRecord],
     unconfirmed_removals: Dict[bytes32, Coin],
     log: logging.Logger,
     amount: uint128,
-    exclude: Optional[List[Coin]] = None,
-    min_coin_amount: Optional[uint64] = None,
 ) -> Set[Coin]:
     """
     Returns a set of coins that can be used for generating a new transaction.
     """
-    if exclude is None:
-        exclude = []
-    if min_coin_amount is None:
-        min_coin_amount = uint64(0)
-
     if amount > spendable_amount:
         error_msg = (
             f"Can't select amount higher than our spendable balance.  Amount: {amount}, spendable: {spendable_amount}"
@@ -40,11 +36,17 @@ async def select_coins(
     valid_spendable_coins: List[Coin] = []
 
     for coin_record in spendable_coins:  # remove all the unconfirmed coins, excluded coins and dust.
-        if coin_record.coin.name() in unconfirmed_removals:
+        coin_name: bytes32 = coin_record.coin.name()
+        if coin_name in unconfirmed_removals:
             continue
-        if coin_record.coin in exclude:
+        if coin_name in coin_selection_config.excluded_coin_ids:
             continue
-        if coin_record.coin.amount < min_coin_amount or coin_record.coin.amount > max_coin_amount:
+        if (
+            coin_record.coin.amount < coin_selection_config.min_coin_amount
+            or coin_record.coin.amount > coin_selection_config.max_coin_amount
+        ):
+            continue
+        if coin_record.coin.amount in coin_selection_config.excluded_coin_amounts:
             continue
         valid_spendable_coins.append(coin_record.coin)
         sum_spendable_coins += coin_record.coin.amount
@@ -53,7 +55,7 @@ async def select_coins(
     # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
     if sum_spendable_coins < amount:
         raise ValueError(
-            f"Transaction for {amount} is greater than spendable balance of {sum_spendable_coins}. "
+            f"Transaction for {amount} is greater than max spendable balance in a block of {sum_spendable_coins}. "
             "There may be other transactions pending or our minimum coin amount is too high."
         )
     if amount == 0 and sum_spendable_coins == 0:
@@ -88,7 +90,9 @@ async def select_coins(
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
     elif smaller_coin_sum > amount:
-        coin_set: Optional[Set[Coin]] = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount, max_num_coins)
+        coin_set: Optional[Set[Coin]] = knapsack_coin_algorithm(
+            smaller_coins, amount, coin_selection_config.max_coin_amount, max_num_coins
+        )
         log.debug(f"Selected coins from knapsack algorithm: {coin_set}")
         if coin_set is None:
             coin_set = sum_largest_coins(amount, smaller_coins)
@@ -113,6 +117,7 @@ async def select_coins(
 # These algorithms were based off of the algorithms in:
 # https://murch.one/wp-content/uploads/2016/11/erhardt2016coinselection.pdf
 
+
 # we use this to check if one of the coins exactly matches the target.
 def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coin]:
     for coin in coin_list:
@@ -135,10 +140,12 @@ def select_smallest_coin_over_target(target: uint128, sorted_coin_list: List[Coi
 # we use this to find the set of coins which have total value closest to the target, but at least the target.
 # IMPORTANT: The coins have to be sorted in descending order or else this function will not work.
 def knapsack_coin_algorithm(
-    smaller_coins: List[Coin], target: uint128, max_coin_amount: int, max_num_coins: int
+    smaller_coins: List[Coin], target: uint128, max_coin_amount: int, max_num_coins: int, seed: bytes = b"knapsack seed"
 ) -> Optional[Set[Coin]]:
     best_set_sum = max_coin_amount
     best_set_of_coins: Optional[Set[Coin]] = None
+    ran: random.Random = random.Random()
+    ran.seed(seed)
     for i in range(1000):
         # reset these variables every loop.
         selected_coins: Set[Coin] = set()
@@ -150,7 +157,7 @@ def knapsack_coin_algorithm(
                 # run 2 passes where the first pass may select a coin 50% of the time.
                 # the second pass runs to finish the set if the first pass didn't finish the set.
                 # this makes each trial random and increases the chance of getting a perfect set.
-                if (n_pass == 0 and bool(random.getrandbits(1))) or (n_pass == 1 and coin not in selected_coins):
+                if (n_pass == 0 and bool(ran.getrandbits(1))) or (n_pass == 1 and coin not in selected_coins):
                     if len(selected_coins) > max_num_coins:
                         break
                     selected_coins_sum += coin.amount

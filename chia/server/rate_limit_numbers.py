@@ -1,4 +1,6 @@
 # All of these rate limits scale with the number of transactions so the aggregate amounts are higher
+from __future__ import annotations
+
 import copy
 import dataclasses
 import functools
@@ -72,13 +74,13 @@ rate_limits = {
         "rate_limits_other": {
             ProtocolMessageTypes.handshake: RLSettings(5, 10 * 1024, 5 * 10 * 1024),
             ProtocolMessageTypes.harvester_handshake: RLSettings(5, 1024 * 1024),
-            ProtocolMessageTypes.new_signage_point_harvester: RLSettings(100, 1024),
+            ProtocolMessageTypes.new_signage_point_harvester: RLSettings(100, 4886),  # Size with 100 pool list
             ProtocolMessageTypes.new_proof_of_space: RLSettings(100, 2048),
             ProtocolMessageTypes.request_signatures: RLSettings(100, 2048),
             ProtocolMessageTypes.respond_signatures: RLSettings(100, 2048),
             ProtocolMessageTypes.new_signage_point: RLSettings(200, 2048),
             ProtocolMessageTypes.declare_proof_of_space: RLSettings(100, 10 * 1024),
-            ProtocolMessageTypes.request_signed_values: RLSettings(100, 512),
+            ProtocolMessageTypes.request_signed_values: RLSettings(100, 10 * 1024),
             ProtocolMessageTypes.farming_info: RLSettings(100, 1024),
             ProtocolMessageTypes.signed_values: RLSettings(100, 1024),
             ProtocolMessageTypes.new_peak_timelord: RLSettings(100, 20 * 1024),
@@ -99,6 +101,8 @@ rate_limits = {
             ProtocolMessageTypes.respond_block: RLSettings(200, 2 * 1024 * 1024, 10 * 2 * 1024 * 1024),
             ProtocolMessageTypes.new_unfinished_block: RLSettings(200, 100),
             ProtocolMessageTypes.request_unfinished_block: RLSettings(200, 100),
+            ProtocolMessageTypes.new_unfinished_block2: RLSettings(200, 100),
+            ProtocolMessageTypes.request_unfinished_block2: RLSettings(200, 100),
             ProtocolMessageTypes.respond_unfinished_block: RLSettings(200, 2 * 1024 * 1024, 10 * 2 * 1024 * 1024),
             ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot: RLSettings(200, 200),
             ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot: RLSettings(200, 200),
@@ -176,6 +180,8 @@ rate_limits = {
             ProtocolMessageTypes.request_puzzle_solution: RLSettings(5000, 100),
             ProtocolMessageTypes.respond_puzzle_solution: RLSettings(5000, 1024 * 1024),
             ProtocolMessageTypes.reject_puzzle_solution: RLSettings(5000, 100),
+            ProtocolMessageTypes.none_response: RLSettings(500, 100),
+            ProtocolMessageTypes.error: RLSettings(50000, 100),
         },
         "rate_limits_other": {  # These will have a lower cap since they don't scale with high TPS (NON_TX_FREQ)
             ProtocolMessageTypes.request_header_blocks: RLSettings(5000, 100),

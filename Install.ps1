@@ -1,6 +1,10 @@
 param(
     [Parameter(HelpMessage="install development dependencies")]
-    [switch]$d = $False
+    [switch]$d = $False,
+    [Parameter()]
+    [switch]$i = $False,
+    [Parameter()]
+    [switch]$p = $False
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,6 +13,12 @@ $extras = @()
 if ($d)
 {
     $extras += "dev"
+}
+
+$pip_parameters = @()
+if (-not $i)
+{
+    $pip_parameters += "--editable"
 }
 
 if ([Environment]::Is64BitOperatingSystem -eq $false)
@@ -43,7 +53,7 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-$supportedPythonVersions = "3.10", "3.9", "3.8", "3.7"
+$supportedPythonVersions = "3.12", "3.11", "3.10", "3.9", "3.8"
 if ("$env:INSTALL_PYTHON_VERSION" -ne "")
 {
     $pythonVersion = $env:INSTALL_PYTHON_VERSION
@@ -93,27 +103,36 @@ if ($openSSLVersion -lt 269488367)
 if ($extras.length -gt 0)
 {
     $extras_cli = $extras -join ","
-    $extras_cli = "[$extras_cli]"
+    $pip_parameters += ".[$extras_cli]"
 }
 else
 {
-    $extras_cli = ""
+    $pip_parameters += "."
 }
 
 py -$pythonVersion -m venv venv
 
 venv\scripts\python -m pip install --upgrade pip setuptools wheel
 venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-venv\scripts\pip install --editable ".$extras_cli" --extra-index-url https://pypi.chia.net/simple/
+& venv\scripts\pip install @pip_parameters --extra-index-url https://pypi.chia.net/simple/
+
+if ($p)
+{
+    $PREV_VIRTUAL_ENV = "$env:VIRTUAL_ENV"
+    $env:VIRTUAL_ENV = "venv"
+    .\Install-plotter.ps1 bladebit
+    .\Install-plotter.ps1 madmax
+    $env:VIRTUAL_ENV = "$PREV_VIRTUAL_ENV"
+}
 
 Write-Output ""
 Write-Output "Chia blockchain .\Install.ps1 complete."
-Write-Output "For assistance join us on Keybase in the #support chat channel:"
-Write-Output "https://keybase.io/team/chia_network.public"
+Write-Output "For assistance join us on Discord in the #support chat channel:"
+Write-Output "https://discord.gg/chia"
 Write-Output ""
 Write-Output "Try the Quick Start Guide to running chia-blockchain:"
 Write-Output "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
 Write-Output ""
-Write-Output "To install the GUI type '.\Install-gui.ps1' after '.\venv\scripts\Activate.ps1'."
+Write-Output "To install the GUI run '.\venv\scripts\Activate.ps1' then '.\Install-gui.ps1'."
 Write-Output ""
 Write-Output "Type '.\venv\Scripts\Activate.ps1' and then 'chia init' to begin."

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Iterable, List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -37,4 +39,12 @@ class KeyNotFoundError(Exception):
 
 
 class OfferIntegrityError(Exception):
+    pass
+
+
+class ProofIntegrityError(Exception):
+    pass
+
+
+class LauncherCoinNotFoundError(Exception):
     pass

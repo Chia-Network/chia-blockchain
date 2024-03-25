@@ -1,20 +1,23 @@
+from __future__ import annotations
+
 from typing import Iterator, List, Optional, Tuple
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
+SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
-P2_SINGLETON_OR_DELAYED_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
-SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
+P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton.clsp")
+P2_SINGLETON_OR_DELAYED_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clsp")
+SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
 SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 ESCAPE_VALUE = -113
 MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
@@ -56,7 +59,7 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 # ...
 #
 #
-# == Practial use of singleton_top_layer.py ==
+# == Practical use of singleton_top_layer.py ==
 #
 # 1) Designate some coin as coin A
 #
@@ -157,10 +160,9 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 #
 
 
-def match_singleton_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
-    mod, curried_args = puzzle.uncurry()
-    if mod == SINGLETON_MOD:
-        return True, curried_args.as_iter()
+def match_singleton_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, Iterator[Program]]:
+    if puzzle.mod == SINGLETON_MOD:
+        return True, puzzle.args.as_iter()
     else:
         return False, iter(())
 
@@ -168,11 +170,6 @@ def match_singleton_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
 # Given the parent and amount of the launcher coin, return the launcher coin
 def generate_launcher_coin(coin: Coin, amount: uint64) -> Coin:
     return Coin(coin.name(), SINGLETON_LAUNCHER_HASH, amount)
-
-
-def remove_singleton_truth_wrapper(puzzle: Program) -> Program:
-    inner_puzzle: Program = puzzle.rest().first().rest()
-    return inner_puzzle
 
 
 # Take standard coin and amount -> launch conditions & launcher coin solution
@@ -214,7 +211,7 @@ def launch_conditions_and_coinsol(
 
     conditions = [create_launcher, assert_launcher_announcement]
 
-    launcher_coin_spend = CoinSpend(
+    launcher_coin_spend = make_spend(
         launcher_coin,
         SINGLETON_LAUNCHER,
         launcher_solution,
@@ -323,7 +320,7 @@ def claim_p2_singleton(
             delay_time,
             delay_ph,
         )
-    claim_coinsol = CoinSpend(
+    claim_coinsol = make_spend(
         p2_singleton_coin,
         puzzle,
         solution_for_p2_singleton(p2_singleton_coin, singleton_inner_puzhash),
@@ -339,7 +336,7 @@ def spend_to_delayed_puzzle(
     delay_time: uint64,
     delay_ph: bytes32,
 ) -> CoinSpend:
-    claim_coinsol = CoinSpend(
+    claim_coinsol = make_spend(
         p2_singleton_coin,
         pay_to_singleton_or_delay_puzzle(launcher_id, delay_time, delay_ph),
         solution_for_p2_delayed_puzzle(output_amount),

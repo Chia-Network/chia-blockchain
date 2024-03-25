@@ -1,0 +1,16 @@
+; This is a generalization of the idea behind singleton_launcher.clsp
+
+; Given a delegated puzzle and solution, just run them and announce the hash of the delegated puzzle.
+; A parent can rely on this announcement so if the exact delegated_puzzle it is expecting is not run, the whole bundle
+; fails due to a grandparent paradox.
+(mod
+  (
+    delegated_puzzle
+    delegated_solution
+  )
+
+  (include condition_codes.clib)
+  (include sha256tree.clib)
+
+  (c (list CREATE_COIN_ANNOUNCEMENT (sha256tree delegated_puzzle)) (a delegated_puzzle delegated_solution))
+)

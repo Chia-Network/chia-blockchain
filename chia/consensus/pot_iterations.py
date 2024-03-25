@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pos_quality import _expected_plot_size
 from chia.types.blockchain_format.sized_bytes import bytes32

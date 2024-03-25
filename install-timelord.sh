@@ -44,16 +44,17 @@ fi
 
 export BUILD_VDF_BENCH=Y # Installs the useful vdf_bench test of CPU squaring speed
 THE_PATH=$(python -c 'import pkg_resources; print( pkg_resources.get_distribution("chiavdf").location)' 2>/dev/null)/vdf_client
-CHIAVDF_VERSION=$(python -c 'from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chiavdf")][0]; print(t)')
+CHIAVDF_VERSION=$(python -c 'import os; os.environ["CHIA_SKIP_SETUP"] = "1"; from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chiavdf")][0]; print(t)')
 
 ubuntu_cmake_install() {
-	UBUNTU_PRE_2004=$(python -c 'import subprocess; process = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(float(process.stdout) < float(20.04))')
+	UBUNTU_PRE_2004=$(python -c 'import subprocess; id = subprocess.run(["lsb_release", "-is"], stdout=subprocess.PIPE); version = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(id.stdout.decode("ascii") == "Ubuntu\n" and float(version.stdout) < float(20.04))')
 	if [ "$UBUNTU_PRE_2004" = "True" ]; then
 		echo "Installing CMake with snap."
 		sudo apt-get install snapd -y
 		sudo apt-get remove --purge cmake -y
 		hash -r
 		sudo snap install cmake --classic
+		# shellcheck disable=SC1091
 		. /etc/profile
 	else
 		echo "Ubuntu 20.04LTS and newer support CMake 3.16+"
@@ -75,19 +76,28 @@ symlink_vdf_bench() {
 if [ "$(uname)" = "Linux" ] && type apt-get; then
 	UBUNTU_DEBIAN=true
 	echo "Found Ubuntu/Debian."
+
 elif [ "$(uname)" = "Linux" ] && type dnf || yum; then
 	RHEL_BASED=true
 	echo "Found RedHat."
+
+	if [ "$INSTALL_PYTHON_DEV" ]; then
+		yumcmd="sudo yum install $PYTHON_VERSION-devel gcc gcc-c++ gmp-devel libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y"
+  	else
+		yumcmd="sudo yum install gcc gcc-c++ gmp-devel libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y"
+	fi
+
 elif [ "$(uname)" = "Darwin" ]; then
 	MACOS=true
 	echo "Found MacOS."
 fi
 
+
 if [ -e "$THE_PATH" ]; then
 	echo "$THE_PATH"
 	echo "vdf_client already exists, no action taken"
 else
-	if [ -e venv/bin/python ] && test $UBUNTU_DEBIAN; then
+	if [ -e venv/bin/python ] && test "$UBUNTU_DEBIAN"; then
 		echo "Installing chiavdf dependencies on Ubuntu/Debian"
 		# If Ubuntu version is older than 20.04LTS then upgrade CMake
 		ubuntu_cmake_install
@@ -98,16 +108,16 @@ else
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
-	elif [ -e venv/bin/python ] && test $RHEL_BASED; then
+	elif [ -e venv/bin/python ] && test "$RHEL_BASED"; then
 		echo "Installing chiavdf dependencies on RedHat/CentOS/Fedora"
 		# Install remaining needed development tools - assumes venv and prior run of install.sh
-		echo "yum install gcc gcc-c++ gmp-devel $PYTHON_DEV_DEPENDENCY libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y"
-		sudo yum install gcc gcc-c++ gmp-devel "$PYTHON_DEV_DEPENDENCY" libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y
+		echo "$yumcmd"
+		${yumcmd}
 		echo "Installing chiavdf from source on RedHat/CentOS/Fedora"
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
-	elif [ -e venv/bin/python ] && test $MACOS; then
+	elif [ -e venv/bin/python ] && test "$MACOS"; then
 		echo "Installing chiavdf dependencies for MacOS."
 		brew install boost cmake gmp
 		echo "Installing chiavdf from source."

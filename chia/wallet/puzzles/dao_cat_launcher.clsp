@@ -1,0 +1,36 @@
+(mod (
+    TREASURY_SINGLETON_STRUCT
+    treasury_inner_puz_hash
+    parent_parent
+    new_puzzle_hash  ; the full CAT puzzle
+    amount
+  )
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+
+  (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
+    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+      inner_puzzle_hash
+      (sha256tree PROPOSAL_SINGLETON_STRUCT)
+    )
+  )
+
+  (defun create_parent_conditions (parent_id new_puzzle_hash amount)
+    (list
+      (list ASSERT_COIN_ANNOUNCEMENT (sha256 parent_id (sha256tree (list 'm' new_puzzle_hash))))
+      (list ASSERT_MY_PARENT_ID parent_id)
+    )
+  )
+
+  (c
+    (list CREATE_COIN new_puzzle_hash amount (list new_puzzle_hash))
+    (c
+      (list ASSERT_MY_AMOUNT amount)
+      (create_parent_conditions
+        (sha256 parent_parent (calculate_singleton_puzzle_hash TREASURY_SINGLETON_STRUCT treasury_inner_puz_hash) ONE)
+        new_puzzle_hash
+        amount
+      )
+    )
+  )
+)

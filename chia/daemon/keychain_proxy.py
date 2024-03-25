@@ -1,37 +1,36 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import ssl
 import traceback
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from aiohttp import ClientSession, ClientConnectorError
-from blspy import AugSchemeMPL, PrivateKey
+from aiohttp import ClientConnectorError, ClientSession
+from chia_rs import AugSchemeMPL, PrivateKey
+
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
 from chia.daemon.keychain_server import (
+    KEYCHAIN_ERR_KEY_NOT_FOUND,
     KEYCHAIN_ERR_KEYERROR,
     KEYCHAIN_ERR_LOCKED,
     KEYCHAIN_ERR_MALFORMED_REQUEST,
     KEYCHAIN_ERR_NO_KEYS,
-    KEYCHAIN_ERR_KEY_NOT_FOUND,
 )
 from chia.server.server import ssl_context_for_client
 from chia.util.config import load_config
 from chia.util.errors import (
-    KeychainIsLocked,
     KeychainIsEmpty,
+    KeychainIsLocked,
     KeychainKeyNotFound,
     KeychainMalformedRequest,
     KeychainMalformedResponse,
-    KeychainProxyConnectionFailure,
+    KeychainProxyConnectionTimeout,
 )
-from chia.util.keychain import (
-    Keychain,
-    bytes_to_mnemonic,
-    mnemonic_to_seed,
-)
+from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, mnemonic_to_seed
 from chia.util.ws_message import WsRpcMessage
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
 
 
 class KeychainProxy(DaemonProxy):
@@ -45,13 +44,14 @@ class KeychainProxy(DaemonProxy):
     def __init__(
         self,
         log: logging.Logger,
-        uri: Optional[str] = None,
+        uri: str = "",
         ssl_context: Optional[ssl.SSLContext] = None,
         local_keychain: Optional[Keychain] = None,
         user: Optional[str] = None,
         service: Optional[str] = None,
+        heartbeat: int = 300,
     ):
-        super().__init__(uri or "", ssl_context)
+        super().__init__(uri, ssl_context, heartbeat=heartbeat)
         self.log = log
         if local_keychain:
             self.keychain = local_keychain
@@ -61,7 +61,7 @@ class KeychainProxy(DaemonProxy):
         self.keychain_service = service
         # these are used to track and close the keychain connection
         self.keychain_connection_task: Optional[asyncio.Task[None]] = None
-        self.disconnect: bool = False
+        self.shut_down: bool = False
         self.connection_established: asyncio.Event = asyncio.Event()
 
     def use_local_keychain(self) -> bool:
@@ -88,29 +88,29 @@ class KeychainProxy(DaemonProxy):
         Overrides DaemonProxy._get() to handle the connection state
         """
         try:
-            if not self.disconnect:  # if we are disconnected, and we send a request we should throw original error.
-                await asyncio.wait_for(self.connection_established.wait(), timeout=10)  # is 10 seconds too long?
+            if not self.shut_down:  # if we are shut down, and we send a request we should throw original error.
+                await asyncio.wait_for(self.connection_established.wait(), timeout=30)  # in case of heavy swap usage.
             else:
                 self.log.error("Attempting to send request to a keychain-proxy that has shut down.")
             self.log.debug(f"Sending request to keychain command: {request['command']} from {request['origin']}.")
             return await super()._get(request)
         except asyncio.TimeoutError:
-            raise KeychainProxyConnectionFailure()
+            raise KeychainProxyConnectionTimeout()
 
     async def start(self) -> None:
         self.keychain_connection_task = asyncio.create_task(self.connect_to_keychain())
         await self.connection_established.wait()  # wait until connection is established.
 
     async def connect_to_keychain(self) -> None:
-        while not self.disconnect:
+        while not self.shut_down:
             try:
                 self.client_session = ClientSession()
                 self.websocket = await self.client_session.ws_connect(
                     self._uri,
                     autoclose=True,
                     autoping=True,
-                    heartbeat=60,
-                    ssl_context=self.ssl_context,
+                    heartbeat=self.heartbeat,
+                    ssl=self.ssl_context,
                     max_msg_size=self.max_message_size,
                 )
                 await self.listener()
@@ -135,7 +135,7 @@ class KeychainProxy(DaemonProxy):
         self.log.info("Close signal received from keychain, we probably timed out.")
 
     async def close(self) -> None:
-        self.disconnect = True
+        self.shut_down = True
         await super().close()
         if self.keychain_connection_task is not None:
             await self.keychain_connection_task
@@ -169,19 +169,19 @@ class KeychainProxy(DaemonProxy):
                     raise Exception(f"{err}")
                 raise Exception(f"{error}")
 
-    async def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
+    async def add_private_key(self, mnemonic: str, label: Optional[str] = None) -> PrivateKey:
         """
         Forwards to Keychain.add_private_key()
         """
         key: PrivateKey
         if self.use_local_keychain():
-            key = self.keychain.add_private_key(mnemonic, passphrase)
+            key = self.keychain.add_private_key(mnemonic, label)
         else:
             response, success = await self.get_response_for_request(
-                "add_private_key", {"mnemonic": mnemonic, "passphrase": passphrase}
+                "add_private_key", {"mnemonic": mnemonic, "label": label}
             )
             if success:
-                seed = mnemonic_to_seed(mnemonic, passphrase)
+                seed = mnemonic_to_seed(mnemonic)
                 key = AugSchemeMPL.key_gen(seed)
             else:
                 error = response["data"].get("error", None)
@@ -254,7 +254,7 @@ class KeychainProxy(DaemonProxy):
                             continue  # We'll skip the incomplete key entry
                         ent = bytes.fromhex(ent_str)
                         mnemonic = bytes_to_mnemonic(ent)
-                        seed = mnemonic_to_seed(mnemonic, passphrase="")
+                        seed = mnemonic_to_seed(mnemonic)
                         key = AugSchemeMPL.key_gen(seed)
                         if bytes(key.get_g1()).hex() == pk:
                             keys.append((key, ent))
@@ -292,7 +292,7 @@ class KeychainProxy(DaemonProxy):
                         raise KeychainMalformedResponse(f"{err}")
                     ent = bytes.fromhex(ent_str)
                     mnemonic = bytes_to_mnemonic(ent)
-                    seed = mnemonic_to_seed(mnemonic, passphrase="")
+                    seed = mnemonic_to_seed(mnemonic)
                     sk = AugSchemeMPL.key_gen(seed)
                     if bytes(sk.get_g1()).hex() == pk:
                         key = sk
@@ -336,7 +336,7 @@ class KeychainProxy(DaemonProxy):
                     raise KeychainMalformedResponse(f"{err}")
                 else:
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
-                    seed = mnemonic_to_seed(mnemonic, passphrase="")
+                    seed = mnemonic_to_seed(mnemonic)
                     private_key = AugSchemeMPL.key_gen(seed)
                     if bytes(private_key.get_g1()).hex() == pk:
                         key = private_key
@@ -347,6 +347,38 @@ class KeychainProxy(DaemonProxy):
                 self.handle_error(response)
 
         return key
+
+    async def get_key(self, fingerprint: int, include_secrets: bool = False) -> Optional[KeyData]:
+        """
+        Locates and returns KeyData matching the provided fingerprint
+        """
+        key_data: Optional[KeyData] = None
+        if self.use_local_keychain():
+            key_data = self.keychain.get_key(fingerprint, include_secrets)
+        else:
+            response, success = await self.get_response_for_request(
+                "get_key", {"fingerprint": fingerprint, "include_secrets": include_secrets}
+            )
+            if success:
+                key_data = KeyData.from_json_dict(response["data"]["key"])
+            else:
+                self.handle_error(response)
+        return key_data
+
+    async def get_keys(self, include_secrets: bool = False) -> List[KeyData]:
+        """
+        Returns all KeyData
+        """
+        keys: List[KeyData] = []
+        if self.use_local_keychain():
+            keys = self.keychain.get_keys(include_secrets)
+        else:
+            response, success = await self.get_response_for_request("get_keys", {"include_secrets": include_secrets})
+            if success:
+                keys = [KeyData.from_json_dict(key) for key in response["data"]["keys"]]
+            else:
+                self.handle_error(response)
+        return keys
 
 
 def wrap_local_keychain(keychain: Keychain, log: logging.Logger) -> KeychainProxy:
@@ -360,6 +392,7 @@ def wrap_local_keychain(keychain: Keychain, log: logging.Logger) -> KeychainProx
 async def connect_to_keychain(
     self_hostname: str,
     daemon_port: int,
+    daemon_heartbeat: int,
     ssl_context: Optional[ssl.SSLContext],
     log: logging.Logger,
     user: Optional[str] = None,
@@ -370,7 +403,12 @@ async def connect_to_keychain(
     """
 
     client = KeychainProxy(
-        uri=f"wss://{self_hostname}:{daemon_port}", ssl_context=ssl_context, log=log, user=user, service=service
+        uri=f"wss://{self_hostname}:{daemon_port}",
+        heartbeat=daemon_heartbeat,
+        ssl_context=ssl_context,
+        log=log,
+        user=user,
+        service=service,
     )
     # Connect to the service if the proxy isn't using a local keychain
     if not client.use_local_keychain():
@@ -381,7 +419,6 @@ async def connect_to_keychain(
 async def connect_to_keychain_and_validate(
     root_path: Path,
     log: logging.Logger,
-    *,
     user: Optional[str] = None,
     service: Optional[str] = None,
 ) -> Optional[KeychainProxy]:
@@ -396,8 +433,9 @@ async def connect_to_keychain_and_validate(
         ca_crt_path = root_path / net_config["private_ssl_ca"]["crt"]
         ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
         ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path, log=log)
+        daemon_heartbeat = net_config.get("daemon_heartbeat", 300)
         connection = await connect_to_keychain(
-            net_config["self_hostname"], net_config["daemon_port"], ssl_context, log, user, service
+            net_config["self_hostname"], net_config["daemon_port"], daemon_heartbeat, ssl_context, log, user, service
         )
 
         # If proxying to a local keychain, don't attempt to ping
@@ -410,5 +448,4 @@ async def connect_to_keychain_and_validate(
             return connection
     except Exception as e:
         print(f"Keychain(daemon) not started yet: {e}")
-        return None
     return None

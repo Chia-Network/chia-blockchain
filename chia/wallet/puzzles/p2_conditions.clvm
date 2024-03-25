@@ -1,3 +1,0 @@
-(mod (conditions)
-    (qq (q . (unquote conditions)))
-)

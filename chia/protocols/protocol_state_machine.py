@@ -1,10 +1,14 @@
-from chia.protocols.protocol_message_types import ProtocolMessageTypes as pmt, ProtocolMessageTypes
+from __future__ import annotations
+
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.protocol_message_types import ProtocolMessageTypes as pmt
 
 NO_REPLY_EXPECTED = [
     # full_node -> full_node messages
     pmt.new_peak,
     pmt.new_transaction,
     pmt.new_unfinished_block,
+    pmt.new_unfinished_block2,
     pmt.new_signage_point_or_end_of_sub_slot,
     pmt.request_mempool_transactions,
     pmt.new_compact_vdf,
@@ -27,6 +31,7 @@ VALID_REPLY_MESSAGE_MAP = {
     pmt.request_block: [pmt.respond_block, pmt.reject_block],
     pmt.request_blocks: [pmt.respond_blocks, pmt.reject_blocks],
     pmt.request_unfinished_block: [pmt.respond_unfinished_block],
+    pmt.request_unfinished_block2: [pmt.respond_unfinished_block],
     pmt.request_block_header: [pmt.respond_block_header, pmt.reject_header_request],
     pmt.request_removals: [pmt.respond_removals, pmt.reject_removals_request],
     pmt.request_additions: [pmt.respond_additions, pmt.reject_additions_request],

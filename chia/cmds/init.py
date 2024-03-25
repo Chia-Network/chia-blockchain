@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import click
 
 
-@click.command("init", short_help="Create or migrate the configuration")
+@click.command("init", help="Create or migrate the configuration")
 @click.option(
     "--create-certs",
     "-c",
@@ -22,7 +24,14 @@ import click
     help="Initialize the blockchain database in v1 format (compatible with older versions of the full node)",
 )
 @click.pass_context
-def init_cmd(ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, testnet: bool, v1_db: bool, **kwargs):
+def init_cmd(
+    ctx: click.Context,
+    create_certs: str,
+    fix_ssl_permissions: bool,
+    testnet: bool,
+    set_passphrase: bool,
+    v1_db: bool,
+) -> None:
     """
     Create a new configuration or migrate from previous versions to current
 
@@ -36,10 +45,11 @@ def init_cmd(ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, t
       https://github.com/Chia-Network/chia-blockchain/wiki/Farming-on-many-machines
     """
     from pathlib import Path
-    from .init_funcs import init
+
     from chia.cmds.passphrase_funcs import initialize_passphrase
 
-    set_passphrase = kwargs.get("set_passphrase")
+    from .init_funcs import init
+
     if set_passphrase:
         initialize_passphrase()
 
@@ -53,7 +63,8 @@ def init_cmd(ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, t
 
 
 if __name__ == "__main__":
-    from .init_funcs import chia_init
     from chia.util.default_root import DEFAULT_ROOT_PATH
+
+    from .init_funcs import chia_init
 
     chia_init(DEFAULT_ROOT_PATH)

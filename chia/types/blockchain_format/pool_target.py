@@ -1,12 +1,5 @@
-from dataclasses import dataclass
+from __future__ import annotations
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
-from chia.util.streamable import Streamable, streamable
+import chia_rs
 
-
-@streamable
-@dataclass(frozen=True)
-class PoolTarget(Streamable):
-    puzzle_hash: bytes32
-    max_height: uint32  # A max height of 0 means it is valid forever
+PoolTarget = chia_rs.PoolTarget

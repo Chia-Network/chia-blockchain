@@ -1,12 +1,18 @@
-from typing import List, Callable
+from __future__ import annotations
+
+from typing import Awaitable, Callable, List
 
 from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.server.ws_connection import WSChiaConnection
 from chia.util.ints import uint32
 
 
 async def check_fork_next_block(
-    blockchain: BlockchainInterface, fork_point_height: uint32, peers_with_peak: List, check_block_future: Callable
-):
+    blockchain: BlockchainInterface,
+    fork_point_height: uint32,
+    peers_with_peak: List[WSChiaConnection],
+    check_block_future: Callable[[WSChiaConnection, uint32, BlockchainInterface], Awaitable[bool]],
+) -> uint32:
     our_peak_height = blockchain.get_peak_height()
     ses_heigths = blockchain.get_ses_heights()
     if len(ses_heigths) > 2 and our_peak_height is not None:

@@ -17,8 +17,13 @@ Write-Output "   ---"
 Write-Output "   ---"
 Write-Output "Use pyinstaller to create chia .exe's"
 Write-Output "   ---"
-$SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join "`n"
+$SPEC_FILE = (py -c 'import sys; from pathlib import Path; path = Path(sys.argv[1]); print(path.absolute().as_posix())' "pyinstaller.spec")
 pyinstaller --log-level INFO $SPEC_FILE
+
+Write-Output "   ---"
+Write-Output "Creating a directory of licenses from pip and npm packages"
+Write-Output "   ---"
+bash ./build_win_license_dir.sh
 
 Write-Output "   ---"
 Write-Output "Copy chia executables to chia-blockchain-gui\"
@@ -30,13 +35,8 @@ Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
 npm ci
-$Env:Path = $(npm bin) + ";" + $Env:Path
 
-Set-Location -Path "..\..\chia-blockchain-gui" -PassThru
-# We need the code sign cert in the gui subdirectory so we can actually sign the UI package
-If ($env:HAS_SECRET) {
-    Copy-Item "..\win_code_sign_cert.p12" -Destination "packages\gui\"
-}
+Set-Location -Path "..\..\" -PassThru
 
 Write-Output "   ---"
 Write-Output "Prepare Electron packager"
@@ -44,7 +44,7 @@ Write-Output "   ---"
 $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 
 # Change to the GUI directory
-Set-Location -Path "packages\gui" -PassThru
+Set-Location -Path "chia-blockchain-gui\packages\gui" -PassThru
 
 Write-Output "   ---"
 Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
@@ -67,37 +67,48 @@ mv temp.json package.json
 Write-Output "   ---"
 
 Write-Output "   ---"
-Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**\daemon\**" `
---overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion `
---no-prune --no-deref-symlinks `
---ignore="/node_modules/(?!ws(/|$))(?!@electron(/|$))" --ignore="^/src$" --ignore="^/public$"
-# Note: `node_modules/ws` and `node_modules/@electron/remote` are dynamic dependencies
-# which GUI calls by `window.require('...')` at runtime.
-# So `ws` and `@electron/remote` cannot be ignored at this time.
-Get-ChildItem Chia-win32-x64\resources
+Write-Output "electron-builder create package directory"
+npx electron-builder build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
+Get-ChildItem dist\win-unpacked\resources
 Write-Output "   ---"
 
+If ($env:HAS_SIGNING_SECRET) {
+   Write-Output "   ---"
+   Write-Output "Sign all EXEs"
+   Get-ChildItem ".\dist\win-unpacked" -Recurse | Where-Object { $_.Extension -eq ".exe" } | ForEach-Object {
+      $exePath = $_.FullName
+      Write-Output "Signing $exePath"
+      signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 $exePath
+      Write-Output "Verify signature"
+      signtool.exe verify /v /pa $exePath
+  }
+}    Else    {
+   Write-Output "Skipping verify signatures - no authorization to install certificates"
+}
+
 Write-Output "   ---"
-Write-Output "node winstaller.js"
-node winstaller.js
+Write-Output "electron-builder create installer"
+npx electron-builder build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked" --config ../../../build_scripts/electron-builder.json
 Write-Output "   ---"
 
-If ($env:HAS_SECRET) {
+If ($env:HAS_SIGNING_SECRET) {
    Write-Output "   ---"
-   Write-Output "Add timestamp and verify signature"
+   Write-Output "Sign Final Installer App"
+   signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 .\dist\ChiaSetup-$packageVersion.exe
    Write-Output "   ---"
-   signtool.exe timestamp /v /t http://timestamp.comodoca.com/ .\release-builds\windows-installer\ChiaSetup-$packageVersion.exe
-   signtool.exe verify /v /pa .\release-builds\windows-installer\ChiaSetup-$packageVersion.exe
-   }   Else    {
-   Write-Output "Skipping timestamp and verify signatures - no authorization to install certificates"
+   Write-Output "Verify signature"
+   Write-Output "   ---"
+   signtool.exe verify /v /pa .\dist\ChiaSetup-$packageVersion.exe
+}   Else    {
+   Write-Output "Skipping verify signatures - no authorization to install certificates"
 }
 
 Write-Output "   ---"
 Write-Output "Moving final installers to expected location"
 Write-Output "   ---"
-Copy-Item ".\Chia-win32-x64" -Destination "$env:GITHUB_WORKSPACE\chia-blockchain-gui\" -Recurse
-Copy-Item ".\release-builds" -Destination "$env:GITHUB_WORKSPACE\chia-blockchain-gui\" -Recurse
+Copy-Item ".\dist\win-unpacked" -Destination "$env:GITHUB_WORKSPACE\chia-blockchain-gui\Chia-win32-x64" -Recurse
+mkdir "$env:GITHUB_WORKSPACE\chia-blockchain-gui\release-builds\windows-installer" -ea 0
+Copy-Item ".\dist\ChiaSetup-$packageVersion.exe" -Destination "$env:GITHUB_WORKSPACE\chia-blockchain-gui\release-builds\windows-installer"
 
 Write-Output "   ---"
 Write-Output "Windows Installer complete"

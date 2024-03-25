@@ -4,8 +4,10 @@ import dataclasses
 import io
 import os
 import pprint
+import traceback
 from enum import Enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     BinaryIO,
     Callable,
@@ -21,7 +23,6 @@ from typing import (
     get_type_hints,
 )
 
-from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal, get_args, get_origin
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -29,10 +30,17 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
 
+if TYPE_CHECKING:
+    from _typeshed import DataclassInstance
+
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
 
 class StreamableError(Exception):
+    pass
+
+
+class UnsupportedType(StreamableError):
     pass
 
 
@@ -44,20 +52,34 @@ class DefinitionError(StreamableError):
         )
 
 
-# TODO: Remove hack, this allows streaming these objects from binary
-size_hints = {
-    "PrivateKey": PrivateKey.PRIVATE_KEY_SIZE,
-    "G1Element": G1Element.SIZE,
-    "G2Element": G2Element.SIZE,
-    "ConditionOpcode": 1,
-}
-unhashable_types = [
-    "PrivateKey",
-    "G1Element",
-    "G2Element",
-    "Program",
-    "SerializedProgram",
-]
+class ParameterMissingError(StreamableError):
+    def __init__(self, cls: type, missing: List[str]):
+        super().__init__(
+            f"{len(missing)} field{'s' if len(missing) != 1 else ''} missing for {cls.__name__}: {', '.join(missing)}"
+        )
+
+
+class InvalidTypeError(StreamableError):
+    def __init__(self, expected: type, actual: type):
+        super().__init__(
+            f"Invalid type: Expected {expected.__name__}, Actual: {actual.__name__}",
+        )
+
+
+class InvalidSizeError(StreamableError):
+    def __init__(self, expected: int, actual: int):
+        super().__init__(
+            f"Invalid size: Expected {expected}, Actual: {actual}",
+        )
+
+
+class ConversionError(StreamableError):
+    def __init__(self, value: object, to_type: type, exception: Exception):
+        super().__init__(
+            f"Failed to convert {value!r} from type {type(value).__name__} to {to_type.__name__}: "
+            + "".join(traceback.format_exception_only(type(exception), value=exception)).strip()
+        )
+
 
 _T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
@@ -80,7 +102,7 @@ class Field:
 StreamableFields = Tuple[Field, ...]
 
 
-def create_fields(cls: Type[object]) -> StreamableFields:
+def create_fields(cls: Type[DataclassInstance]) -> StreamableFields:
     hints = get_type_hints(cls)
     fields = []
     for field in dataclasses.fields(cls):
@@ -123,26 +145,26 @@ def convert_optional(convert_func: ConvertFunctionType, item: Any) -> Any:
 
 
 def convert_tuple(convert_funcs: List[ConvertFunctionType], items: Collection[Any]) -> Tuple[Any, ...]:
-    if len(items) != len(convert_funcs):
-        raise ValueError(f"Invalid size. Expected: {len(convert_funcs)}, got: {len(items)}")
     if not isinstance(items, (list, tuple)):
-        raise TypeError(f"expected: tuple or list, actual: {type(items).__name__}")
+        raise InvalidTypeError(tuple, type(items))
+    if len(items) != len(convert_funcs):
+        raise InvalidSizeError(len(convert_funcs), len(items))
     return tuple(convert_func(item) for convert_func, item in zip(convert_funcs, items))
 
 
 def convert_list(convert_func: ConvertFunctionType, items: List[Any]) -> List[Any]:
     if not isinstance(items, list):
-        raise TypeError(f"expected: list, actual: {type(items).__name__}")
+        raise InvalidTypeError(list, type(items))
     return [convert_func(item) for item in items]
 
 
 def convert_hex_string(item: str) -> bytes:
     if not isinstance(item, str):
-        raise TypeError(f"expected: hex-string, actual: {type(item).__name__}")
+        raise InvalidTypeError(str, type(item))
     try:
         return hexstr_to_bytes(item)
     except Exception as e:
-        raise TypeError(f"Can't convert the string {item!r} to bytes: {e}") from e
+        raise ConversionError(item, bytes, e) from e
 
 
 def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
@@ -153,21 +175,7 @@ def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
     try:
         return f_type(item)
     except Exception as e:
-        raise TypeError(f"Can't convert {type(item).__name__} to {f_type.__name__}: {e}") from e
-
-
-def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:
-    if isinstance(item, f_type):
-        return item
-    if not isinstance(item, bytes):
-        item = convert_hex_string(item)
-    try:
-        if hasattr(f_type, "from_bytes_unchecked"):
-            return f_type.from_bytes_unchecked(item)
-        else:
-            return f_type.from_bytes(item)
-    except Exception as e:
-        raise TypeError(f"Can't convert {type(item).__name__} to {f_type.__name__}: {e}") from e
+        raise ConversionError(item, f_type, e) from e
 
 
 def convert_primitive(f_type: Type[Any], item: Any) -> Any:
@@ -176,7 +184,7 @@ def convert_primitive(f_type: Type[Any], item: Any) -> Any:
     try:
         return f_type(item)
     except Exception as e:
-        raise TypeError(f"Can't convert type {type(item).__name__} to {f_type.__name__}: {e}") from e
+        raise ConversionError(item, f_type, e) from e
 
 
 def streamable_from_dict(klass: Type[_T_Streamable], item: Any) -> _T_Streamable:
@@ -187,7 +195,7 @@ def streamable_from_dict(klass: Type[_T_Streamable], item: Any) -> _T_Streamable
     if isinstance(item, klass):
         return item
     if not isinstance(item, dict):
-        raise TypeError(f"expected: dict, actual: {type(item).__name__}")
+        raise InvalidTypeError(dict, type(item))
 
     fields = klass.streamable_fields()
     try:
@@ -195,10 +203,7 @@ def streamable_from_dict(klass: Type[_T_Streamable], item: Any) -> _T_Streamable
     except TypeError as e:
         missing_fields = [field.name for field in fields if field.name not in item and not field.has_default]
         if len(missing_fields) > 0:
-            raise KeyError(
-                f"{len(missing_fields)} field{'s' if len(missing_fields) > 1 else ''} missing for {klass.__name__}: "
-                + ", ".join(missing_fields)
-            ) from e
+            raise ParameterMissingError(klass, missing_fields) from e
         raise
 
 
@@ -223,9 +228,6 @@ def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
     elif issubclass(f_type, bytes):
         # Type is bytes, data is a hex string or bytes
         return lambda item: convert_byte_type(f_type, item)
-    elif f_type.__name__ in unhashable_types:
-        # Type is unhashable (bls type), so cast from hex string
-        return lambda item: convert_unhashable_type(f_type, item)
     else:
         # Type is a primitive, cast with correct class
         return lambda item: convert_primitive(f_type, item)
@@ -245,7 +247,7 @@ def post_init_process_item(f_type: Type[Any], item: Any) -> object:
             except Exception:
                 item = from_bytes_method(bytes(item))
     if not isinstance(item, f_type):
-        raise ValueError(f"Wrong type for {f_type}")
+        raise InvalidTypeError(f_type, type(item))
     return item
 
 
@@ -268,8 +270,7 @@ def function_to_post_init_process_one_item(f_type: Type[object]) -> ConvertFunct
 
 def recurse_jsonify(d: Any) -> Any:
     """
-    Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
-    strings.
+    Makes bytes objects into strings with 0x, and makes large ints into strings.
     """
     if dataclasses.is_dataclass(d):
         new_dict = {}
@@ -289,7 +290,7 @@ def recurse_jsonify(d: Any) -> Any:
             new_dict[name] = recurse_jsonify(val)
         return new_dict
 
-    elif type(d).__name__ in unhashable_types or issubclass(type(d), bytes):
+    elif issubclass(type(d), bytes):
         return f"0x{bytes(d).hex()}"
     elif isinstance(d, Enum):
         return d.name
@@ -297,12 +298,12 @@ def recurse_jsonify(d: Any) -> Any:
         return d
     elif isinstance(d, int):
         return int(d)
-    elif d is None or type(d) == str:
+    elif d is None or type(d) is str:
         return d
     elif hasattr(d, "to_json_dict"):
         ret: Union[List[Any], Dict[str, Any], str, None, int] = d.to_json_dict()
         return ret
-    raise ValueError(f"failed to jsonify {d} (type: {type(d)})")
+    raise UnsupportedType(f"failed to jsonify {d} (type: {type(d)})")
 
 
 def parse_bool(f: BinaryIO) -> bool:
@@ -340,7 +341,7 @@ def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> Option
 def parse_rust(f: BinaryIO, f_type: Type[Any]) -> Any:
     assert isinstance(f, io.BytesIO)
     buf = f.getbuffer()
-    ret, advance = f_type.parse_rust(bytes(buf[f.tell() :]))
+    ret, advance = f_type.parse_rust(buf[f.tell() :])
     f.seek(advance, os.SEEK_CUR)
     return ret
 
@@ -366,15 +367,6 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[ParseFunctionType]) -
     for parse_f in list_parse_inner_type_f:
         full_list.append(parse_f(f))
     return tuple(full_list)
-
-
-def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int, unchecked: bool) -> Any:
-    bytes_read = f.read(bytes_to_read)
-    assert bytes_read is not None and len(bytes_read) == bytes_to_read
-    if unchecked:
-        return f_type.from_bytes_unchecked(bytes_read)
-    else:
-        return f_type.from_bytes(bytes_read)
 
 
 def parse_str(f: BinaryIO) -> str:
@@ -411,15 +403,9 @@ def function_to_parse_one_item(f_type: Type[Any]) -> ParseFunctionType:
         inner_types = get_args(f_type)
         list_parse_inner_type_f = [function_to_parse_one_item(_) for _ in inner_types]
         return lambda f: parse_tuple(f, list_parse_inner_type_f)
-    if hasattr(f_type, "from_bytes_unchecked") and f_type.__name__ in size_hints:
-        bytes_to_read = size_hints[f_type.__name__]
-        return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=True)
-    if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
-        bytes_to_read = size_hints[f_type.__name__]
-        return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=False)
     if f_type is str:
         return parse_str
-    raise NotImplementedError(f"Type {f_type} does not have parse")
+    raise UnsupportedType(f"Type {f_type} does not have parse")
 
 
 def stream_optional(stream_inner_type_func: StreamFunctionType, item: Any, f: BinaryIO) -> None:
@@ -492,7 +478,7 @@ def function_to_stream_one_item(f_type: Type[Any]) -> StreamFunctionType:
     elif f_type is bool:
         return stream_bool
     else:
-        raise NotImplementedError(f"can't stream {f_type}")
+        raise UnsupportedType(f"can't stream {f_type}")
 
 
 def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
@@ -528,7 +514,7 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
 
     cls._streamable_fields = create_fields(cls)
 
-    return cls
+    return cls  # type: ignore[return-value]
 
 
 class Streamable:
@@ -544,7 +530,6 @@ class Streamable:
     * BLS signatures serialized in bls format (96 bytes)
     * bool serialized into 1 byte (0x01 or 0x00)
     * bytes serialized as a 4 byte size prefix and then the bytes.
-    * ConditionOpcode is serialized as a 1 byte value.
     * str serialized as a 4 byte size prefix and then the utf-8 representation in bytes.
 
     An item is one of:
@@ -584,10 +569,14 @@ class Streamable:
 
     def __post_init__(self) -> None:
         data = self.__dict__
-        for field in self._streamable_fields:
-            if field.name not in data:
-                raise ValueError(f"Field {field.name} not present")
-            object.__setattr__(self, field.name, field.post_init_function(data[field.name]))
+        try:
+            for field in self._streamable_fields:
+                object.__setattr__(self, field.name, field.post_init_function(data[field.name]))
+        except TypeError as e:
+            missing_fields = [field.name for field in self._streamable_fields if field.name not in data]
+            if len(missing_fields) > 0:
+                raise ParameterMissingError(type(self), missing_fields) from e
+            raise
 
     @classmethod
     def parse(cls: Type[_T_Streamable], f: BinaryIO) -> _T_Streamable:
@@ -605,11 +594,16 @@ class Streamable:
         return std_hash(bytes(self), skip_bytes_conversion=True)
 
     @classmethod
-    def from_bytes(cls: Any, blob: bytes) -> Any:
+    def from_bytes(cls: Type[_T_Streamable], blob: bytes) -> _T_Streamable:
         f = io.BytesIO(blob)
         parsed = cls.parse(f)
         assert f.read() == b""
         return parsed
+
+    def stream_to_bytes(self) -> bytes:
+        f = io.BytesIO()
+        self.stream(f)
+        return bytes(f.getvalue())
 
     def __bytes__(self: Any) -> bytes:
         f = io.BytesIO()

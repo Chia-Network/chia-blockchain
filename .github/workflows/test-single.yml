@@ -26,15 +26,21 @@ on:
       configuration:
         required: true
         type: string
+      matrix_mode:
+        required: true
+        type: string
       runs-on:
         required: true
         type: string
-
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
   group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency_name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   test:
@@ -52,39 +58,53 @@ jobs:
             file_name: ${{ inputs.file_name }}
             runs-on: ${{ inputs.runs-on }}
         python:
-          - name: '3.7'
-            file_name: '3.7'
-            action: '3.7'
-            apt: '3.7'
-            install_sh: '3.7'
-            matrix: '3.7'
-          - name: '3.8'
-            file_name: '3.8'
-            action: '3.8'
-            apt: '3.8'
-            install_sh: '3.8'
-            matrix: '3.8'
-          - name: '3.9'
-            file_name: '3.9'
-            action: '3.9'
-            apt: '3.9'
-            install_sh: '3.9'
-            matrix: '3.9'
-          - name: '3.10'
-            file_name: '3.10'
-            action: '3.10'
-            apt: '3.10'
-            install_sh: '3.10'
-            matrix: '3.10'
+          - name: "3.8"
+            file_name: "3.8"
+            action: "3.8"
+            apt: "3.8"
+            install_sh: "3.8"
+            matrix: "3.8"
+            exclude_from:
+              limited: True
+              main: True
+          - name: "3.9"
+            file_name: "3.9"
+            action: "3.9"
+            apt: "3.9"
+            install_sh: "3.9"
+            matrix: "3.9"
+            exclude_from:
+              limited: True
+              main: True
+          - name: "3.10"
+            file_name: "3.10"
+            action: "3.10"
+            apt: "3.10"
+            install_sh: "3.10"
+            matrix: "3.10"
+          - name: "3.11"
+            file_name: "3.11"
+            action: "3.11"
+            apt: "3.11"
+            install_sh: "3.11"
+            matrix: "3.11"
+            exclude_from:
+              limited: True
+              main: True
+          - name: "3.12"
+            file_name: "3.12"
+            action: "3.12"
+            apt: "3.12"
+            install_sh: "3.12"
+            matrix: "3.12"
+            exclude_from:
+              limited: True
+              main: True
         exclude:
           - os:
               matrix: macos
             python:
-              matrix: '3.7'
-          - os:
-              matrix: macos
-            python:
-              matrix: '3.8'
+              matrix: "3.8"
           - os:
               matrix: windows
             configuration:
@@ -93,11 +113,15 @@ jobs:
               matrix: windows
             configuration:
               name: core.full_node
+          - python:
+              exclude_from:
+                ${{ inputs.matrix_mode }}: True
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
-      BLOCKS_AND_PLOTS_VERSION: 0.29.0
+      CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
+      JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.module_import_path }}${{ matrix.configuration.file_name_index }}
+      BLOCKS_AND_PLOTS_VERSION: 0.38.0
 
     steps:
       - name: Configure git
@@ -105,12 +129,17 @@ jobs:
           git config --global core.autocrlf false
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Set Env
+        uses: Chia-Network/actions/setjobenv@main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup Python environment
-        uses: actions/setup-python@v3
+        uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python.action }}
 
@@ -124,30 +153,22 @@ jobs:
 
       - name: Cache npm (Ubuntu)
         if: matrix.os.matrix == 'ubuntu'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Get pip cache dir
-        id: pip-cache
-        run: |
-          echo "::set-output name=dir::$(pip cache dir)"
-
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          # Note that new runners may break this https://github.com/actions/cache/issues/292
-          path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+      - uses: chia-network/actions/cache-pip@main
 
       - name: Cache test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots
-        uses: actions/cache@v3
+        uses: actions/cache@v4
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
         id: test-blocks-plots
         with:
           path: |
@@ -155,19 +176,14 @@ jobs:
             ${{ github.workspace }}/.chia/test-plots
           key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
 
-      - name: Checkout test blocks and plots (macOS, Ubuntu)
-        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && (matrix.os.matrix == 'ubuntu' || matrix.os.matrix == 'macos')
+      - name: Checkout test blocks and plots
+        if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.tar.gz | tar xzf -
-          mkdir ${{ github.workspace }}/.chia
-          mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
-
-      - name: Checkout test blocks and plots (Windows)
-        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && matrix.os.matrix == 'windows'
-        run: |
-          Invoke-WebRequest -OutFile blocks_and_plots.zip https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.zip; Expand-Archive blocks_and_plots.zip -DestinationPath .
-          mkdir ${{ github.workspace }}/.chia
-          mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
+          gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=tar.gz -O - | tar xzf -
+          mkdir "${GITHUB_WORKSPACE}/.chia"
+          mv "${GITHUB_WORKSPACE}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/"* "${GITHUB_WORKSPACE}/.chia"
 
       - name: Install boost (macOS)
         if: matrix.os.matrix == 'macos'
@@ -178,6 +194,8 @@ jobs:
         with:
           python-version: ${{ matrix.python.install_sh }}
           development: true
+          editable: false
+          legacy_keyring: ${{ matrix.configuration.legacy_keyring_required }}
 
       - uses: chia-network/actions/activate-venv@main
 
@@ -187,30 +205,53 @@ jobs:
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
 
+      - name: Verify source and installed tests match
+        run: |
+          echo '==== collecting source tests ===='
+          pytest --collect-only -qq --import-mode=prepend chia/_tests/ | sed -n 's;^\(chia/_tests/.*\);\1;p' | sort | tee source_tests
+          echo '==== collecting installed tests ===='
+          pytest --collect-only -qq --import-mode=append --pyargs chia._tests | sed -n 's;^venv/.*/\(chia/_tests/.*\);\1;p' | sort | tee installed_tests
+          echo '==== diffing collected tests ===='
+          diff --unified source_tests installed_tests
+
+      - name: Move chia/ so we test the installed code
+        run: |
+          mv chia/ notchia/
+
       - name: Test blockchain code with pytest
         env:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
         run: |
-          coverage run --rcfile=.coveragerc --module pytest --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+          pytest --cov=chia --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml='junit-data/junit.${{ env.JOB_FILE_NAME }}.xml' --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+
+      - name: Move back to chia/ for coverage
+        run: |
+          mv notchia/ chia/
+
+      - name: Publish JUnit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-data-${{ env.JOB_FILE_NAME }}
+          path: junit-data/*
+          if-no-files-found: error
 
       - name: Process coverage data
         run: |
-          coverage combine --rcfile=.coveragerc
           coverage xml --rcfile=.coveragerc -o coverage.xml
-          mkdir coverage_reports
-          cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
-          cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
+          mkdir coverage-data
+          cp .coverage "coverage-data/.coverage.${{ env.JOB_FILE_NAME }}"
+          cp coverage.xml "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
           coverage report --rcfile=.coveragerc --show-missing
 
-      - name: Publish coverage
-        uses: actions/upload-artifact@v3
+      - name: Publish coverage data
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage
-          path: coverage_reports/*
+          name: coverage-data-${{ env.JOB_FILE_NAME }}
+          path: coverage-data/*
           if-no-files-found: error
 
       - name: Check resource usage
         if: matrix.os.matrix == 'ubuntu' && matrix.configuration.check_resource_usage
         run: |
           sqlite3 -readonly -separator " " .pymon "select item,cpu_usage,total_time,mem_usage from TEST_METRICS order by mem_usage desc;" >metrics.out
-          ./tests/check_pytest_monitor_output.py <metrics.out
+          ./chia/_tests/check_pytest_monitor_output.py <metrics.out
