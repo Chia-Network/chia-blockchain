@@ -14,7 +14,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
 from chia.wallet import singleton
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
@@ -104,7 +104,7 @@ class WalletSingletonStore:
 
         cc_cond = [cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1][0]
 
-        coin = Coin(coin_state.coin.name(), cc_cond.vars[0], int_from_bytes(cc_cond.vars[1]))
+        coin = Coin(coin_state.coin.name(), cc_cond.vars[0], uint64(int_from_bytes(cc_cond.vars[1])))
         inner_puz = get_inner_puzzle_from_singleton(coin_state.puzzle_reveal)
         if inner_puz is None:  # pragma: no cover
             raise RuntimeError("Could not get inner puzzle from puzzle reveal in coin spend %s", coin_state)
