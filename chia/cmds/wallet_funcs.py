@@ -1457,20 +1457,27 @@ async def sign_message(
 
 
 async def spend_clawback(
-    *, wallet_rpc_port: Optional[int], fp: Optional[int], fee: Decimal, tx_ids_str: str, force: bool = False
-) -> None:  # pragma: no cover
+    *,
+    wallet_rpc_port: Optional[int],
+    fp: Optional[int],
+    fee: Decimal,
+    tx_ids_str: str,
+    force: bool = False,
+    push: bool = True,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         tx_ids = []
         for tid in tx_ids_str.split(","):
             tx_ids.append(bytes32.from_hexstr(tid))
         if len(tx_ids) == 0:
             print("Transaction ID is required.")
-            return
+            return []
         if fee < 0:
             print("Batch fee cannot be negative.")
-            return
-        response = await wallet_client.spend_clawback_coins(tx_ids, int(fee * units["chia"]), force)
+            return []
+        response = await wallet_client.spend_clawback_coins(tx_ids, int(fee * units["chia"]), force, push=push)
         print(str(response))
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
 
 async def mint_vc(

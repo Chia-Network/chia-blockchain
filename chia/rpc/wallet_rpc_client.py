@@ -298,6 +298,7 @@ class WalletRpcClient(RpcClient):
         coin_ids: List[bytes32],
         fee: int = 0,
         force: bool = False,
+        push: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Dict[str, Any]:
@@ -306,6 +307,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "force": force,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
+            "push": push,
             **timelock_info.to_json_dict(),
         }
         response = await self.fetch("spend_clawback_coins", request)
