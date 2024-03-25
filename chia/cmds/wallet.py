@@ -9,8 +9,10 @@ import click
 
 from chia.cmds import options
 from chia.cmds.check_wallet_db import help_text as check_help_text
+from chia.cmds.cmds_util import tx_out_cmd
 from chia.cmds.coins import coins_cmd
 from chia.cmds.plotnft import validate_fee
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
@@ -192,6 +194,7 @@ def get_transactions_cmd(
     type=int,
     default=0,
 )
+@tx_out_cmd
 def send_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -206,10 +209,11 @@ def send_cmd(
     coins_to_exclude: Sequence[str],
     reuse: bool,
     clawback_time: int,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import send
 
-    asyncio.run(
+    return asyncio.run(
         send(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -224,6 +228,7 @@ def send_cmd(
             excluded_coin_ids=coins_to_exclude,
             reuse_puzhash=True if reuse else None,
             clawback_time_lock=clawback_time,
+            push=push,
         )
     )
 

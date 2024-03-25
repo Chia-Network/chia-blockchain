@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import pkg_resources
 import pytest
 from chia_rs import Coin, G2Element
+from click.testing import CliRunner
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import (
@@ -19,6 +20,7 @@ from chia._tests.cmds.wallet.test_consts import (
     bytes32_hexstr,
     get_bytes32,
 )
+from chia.cmds.cmds_util import TransactionBundle
 from chia.rpc.wallet_request_types import (
     CancelOfferResponse,
     CATSpendResponse,
@@ -405,9 +407,18 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
         "Transaction submitted to nodes: [{'peer_id': 'aaaaa'",
         f"-f 789101 -tx 0x{get_bytes32(2).hex()}",
     ]
+    with CliRunner().isolated_filesystem():
+        run_cli_command_and_assert(
+            capsys, root_dir, command_args + [FINGERPRINT_ARG] + ["--transaction-file=temp"], assert_list
+        )
+        run_cli_command_and_assert(
+            capsys, root_dir, command_args + [CAT_FINGERPRINT_ARG] + ["--transaction-file=temp2"], cat_assert_list
+        )
 
-    run_cli_command_and_assert(capsys, root_dir, command_args + [FINGERPRINT_ARG], assert_list)
-    run_cli_command_and_assert(capsys, root_dir, command_args + [CAT_FINGERPRINT_ARG], cat_assert_list)
+        with open("temp", "rb") as file:
+            assert TransactionBundle.from_bytes(file.read()) == TransactionBundle([STD_TX])
+        with open("temp2", "rb") as file:
+            assert TransactionBundle.from_bytes(file.read()) == TransactionBundle([STD_TX])
 
     # these are various things that should be in the output
     expected_calls: logType = {
