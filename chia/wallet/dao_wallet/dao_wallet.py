@@ -345,7 +345,7 @@ class DAOWallet:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
-        There is no need for max/min coin amount or excluded amount becuase the dao treasury should
+        There is no need for max/min coin amount or excluded amount because the dao treasury should
         always be a single coin with amount 1
         """
         spendable_amount: uint128 = await self.get_spendable_balance()

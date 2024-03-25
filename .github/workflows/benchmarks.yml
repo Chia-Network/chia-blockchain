@@ -74,21 +74,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get pip cache dir
-        id: pip-cache
-        shell: bash
-        run: |
-          # this is a workaround until https://github.com/Chia-Network/actions/pull/157 is ready
-          chown -R "$(whoami):$(whoami)" "${HOME}"
-          echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+      - uses: chia-network/actions/cache-pip@main
 
       - name: Checkout test blocks and plots
         uses: actions/checkout@v4
