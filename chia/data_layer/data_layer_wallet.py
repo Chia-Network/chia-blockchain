@@ -1332,6 +1332,12 @@ class DataLayerWallet:
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return coin.amount % 2 == 1 and await self.wallet_state_manager.dl_store.get_launcher(hint) is not None
 
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()
+
 
 def verify_offer(
     maker: Tuple[StoreProofs, ...],

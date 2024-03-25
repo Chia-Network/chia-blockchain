@@ -30,6 +30,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_innerpuz_from_lockup_puzzle,
     get_lockup_puzzle,
 )
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
@@ -670,3 +671,9 @@ class DAOCATWallet:
 
     def get_name(self) -> str:
         return self.wallet_info.name
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()

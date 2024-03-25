@@ -228,7 +228,6 @@ class WalletStateManager:
         server: ChiaServer,
         root_path: Path,
         wallet_node: WalletNode,
-        main_wallet_driver: Type[MainWalletProtocol],
         observation_root: Optional[ObservationRoot] = None,
     ) -> WalletStateManager:
         self = WalletStateManager()
@@ -298,7 +297,7 @@ class WalletStateManager:
         puzzle_decorators = self.config.get("puzzle_decorators", {}).get(fingerprint, [])
         self.decorator_manager = PuzzleDecoratorManager.create(puzzle_decorators)
 
-        self.main_wallet = await main_wallet_driver.create(self, main_wallet_info)
+        self.main_wallet = await self.get_main_wallet_driver(self.observation_root).create(self, main_wallet_info)
 
         self.wallets = {main_wallet_info.id: self.main_wallet}
 
@@ -370,6 +369,15 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
 
         return self
+
+    def get_main_wallet_driver(self, observation_root: ObservationRoot) -> Type[MainWalletProtocol]:
+        root_bytes: bytes = bytes(observation_root)
+        if len(root_bytes) == 48:
+            return Wallet
+
+        raise ValueError(  # pragma: no cover
+            f"Could not find a valid wallet type for observation_root: {root_bytes.hex()}"
+        )
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         if not isinstance(self.observation_root, G1Element):  # pragma: no cover
@@ -455,52 +463,55 @@ class WalletStateManager:
                     f"Creating puzzle hashes from {start_index} to {last_index - 1} for wallet_id: {wallet_id}"
                 )
                 self.log.info(f"Start: {creating_msg}")
-                if self.private_key is not None:
-                    intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
-                # This function shoul work for other types of observation roots too
-                # However to generalize this function beyond pubkeys is beyond the scope of current work
-                # So we're just going to sanitize and move on
-                assert isinstance(self.observation_root, G1Element)
-                intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.observation_root)
-                for index in range(start_index, last_index):
-                    if target_wallet.type() == WalletType.POOLING_WALLET:
-                        continue
-
+                if not target_wallet.handle_own_derivation():
                     if self.private_key is not None:
-                        # Hardened
-                        pubkey: G1Element = _derive_path(intermediate_sk, [index]).get_g1()
-                        puzzlehash: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
-                        self.log.debug(f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
-                        new_paths = True
+                        intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
+                    # This function shoul work for other types of observation roots too
+                    # However to generalize this function beyond pubkeys is beyond the scope of current work
+                    # So we're just going to sanitize and move on
+                    assert isinstance(self.observation_root, G1Element)
+                    intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.observation_root)
+                for index in range(start_index, last_index):
+                    if target_wallet.handle_own_derivation():
+                        derivation_paths.extend(target_wallet.derivation_for_index(index))
+                    else:
+                        if self.private_key is not None:
+                            # Hardened
+                            pubkey: G1Element = _derive_path(intermediate_sk, [index]).get_g1()
+                            puzzlehash: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
+                            self.log.debug(
+                                f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}"
+                            )
+                            new_paths = True
+                            derivation_paths.append(
+                                DerivationRecord(
+                                    uint32(index),
+                                    puzzlehash,
+                                    pubkey,
+                                    target_wallet.type(),
+                                    uint32(target_wallet.id()),
+                                    True,
+                                )
+                            )
+                        # Unhardened
+                        pubkey_unhardened: G1Element = _derive_pk_unhardened(intermediate_pk_un, [index])
+                        puzzlehash_unhardened: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey_unhardened)
+                        self.log.debug(
+                            f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
+                        )
                         derivation_paths.append(
                             DerivationRecord(
                                 uint32(index),
-                                puzzlehash,
-                                pubkey,
+                                puzzlehash_unhardened,
+                                pubkey_unhardened,
                                 target_wallet.type(),
                                 uint32(target_wallet.id()),
-                                True,
+                                False,
                             )
                         )
-                    # Unhardened
-                    pubkey_unhardened: G1Element = _derive_pk_unhardened(intermediate_pk_un, [index])
-                    puzzlehash_unhardened: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey_unhardened)
-                    self.log.debug(
-                        f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
-                    )
                     # We await sleep here to allow an asyncio context switch (since the other parts of this loop do
                     # not have await and therefore block). This can prevent networking layer from responding to ping.
                     await asyncio.sleep(0)
-                    derivation_paths.append(
-                        DerivationRecord(
-                            uint32(index),
-                            puzzlehash_unhardened,
-                            pubkey_unhardened,
-                            target_wallet.type(),
-                            uint32(target_wallet.id()),
-                            False,
-                        )
-                    )
                 self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
             await self.puzzle_store.add_derivation_paths(derivation_paths)
             if len(derivation_paths) > 0:
