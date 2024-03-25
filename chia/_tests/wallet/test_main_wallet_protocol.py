@@ -231,7 +231,7 @@ async def bls_got_setup(wallet_environments: WalletTestFramework, monkeypatch: p
     [
         {
             "num_environments": 1,
-            "blocks_needed": [1],
+            "blocks_needed": [0],
         }
     ],
     indirect=True,
