@@ -9,8 +9,7 @@ _T_StructStream = TypeVar("_T_StructStream", bound="StructStream")
 
 # https://github.com/python/typeshed/blob/c2182fdd3e572a1220c70ad9c28fd908b70fb19b/stdlib/_typeshed/__init__.pyi#L68-L69
 class SupportsTrunc(Protocol):
-    def __trunc__(self) -> int:
-        ...
+    def __trunc__(self) -> int: ...
 
 
 def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream]:

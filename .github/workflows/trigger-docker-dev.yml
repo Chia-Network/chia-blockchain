@@ -3,13 +3,13 @@ name: 📦🚀 Trigger Dev Docker Build
 on:
   push:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
-      - 'long_lived/**'
-      - 'release/**'
+      - "long_lived/**"
+      - "release/**"
   pull_request:
     paths-ignore:
-    - '**.md'
+      - "**.md"
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
