@@ -83,11 +83,11 @@ kwargs = dict(
     python_requires=">=3.8.1, <4",
     keywords="chia blockchain node",
     install_requires=dependencies,
-    extras_require=dict(
-        dev=dev_dependencies,
-        upnp=upnp_dependencies,
-        legacy_keyring=legacy_keyring_dependencies,
-    ),
+    extras_require={
+        "dev": dev_dependencies,
+        "upnp": upnp_dependencies,
+        "legacy-keyring": legacy_keyring_dependencies,
+    },
     packages=find_packages(include=["build_scripts", "chia", "chia.*", "mozilla-ca"]),
     entry_points={
         "console_scripts": [

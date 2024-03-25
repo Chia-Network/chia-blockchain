@@ -32,7 +32,7 @@ do
     # non-editable
     i) EDITABLE='';;
     # legacy keyring
-    l) EXTRAS=${EXTRAS}legacy_keyring,;;
+    l) EXTRAS=${EXTRAS}legacy-keyring,;;
     p) PLOTTER_INSTALL=1;;
     # simple install
     s) :;;
