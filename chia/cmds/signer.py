@@ -254,7 +254,7 @@ class ApplySignaturesCMD:
                 replace(
                     self.txs_in.transaction_bundle.txs[0], spend_bundle=new_spend_bundle, name=new_spend_bundle.name()
                 ),
-                *(replace(tx, spend_bundle=None) for tx in self.txs_in.transaction_bundle.txs),
+                *(replace(tx, spend_bundle=None) for tx in self.txs_in.transaction_bundle.txs[1:]),
             ]
             self.txs_out.handle_transaction_output(new_transactions)
 
