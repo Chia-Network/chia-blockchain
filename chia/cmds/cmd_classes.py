@@ -34,13 +34,11 @@ SyncCmd = Callable[..., None]
 
 
 class SyncChiaCommand(Protocol):
-    def run(self) -> None:
-        ...
+    def run(self) -> None: ...
 
 
 class AsyncChiaCommand(Protocol):
-    async def run(self) -> None:
-        ...
+    async def run(self) -> None: ...
 
 
 ChiaCommand = Union[SyncChiaCommand, AsyncChiaCommand]

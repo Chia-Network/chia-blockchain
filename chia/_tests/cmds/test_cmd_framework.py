@@ -6,10 +6,10 @@ from typing import Any, Dict, List, Optional, Sequence
 import click
 import pytest
 from click.testing import CliRunner
-from tests.conftest import ConsensusMode
-from tests.environments.wallet import WalletTestFramework
-from tests.wallet.conftest import *  # noqa
 
+from chia._tests.conftest import ConsensusMode
+from chia._tests.environments.wallet import WalletTestFramework
+from chia._tests.wallet.conftest import *  # noqa
 from chia.cmds.cmd_classes import ChiaCommand, Context, NeedsWalletRPC, chia_command, option
 from chia.types.blockchain_format.sized_bytes import bytes32
 
