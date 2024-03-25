@@ -92,19 +92,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Get pip cache dir
-        id: pip-cache
-        shell: bash
-        run: |
-          echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+      - uses: chia-network/actions/cache-pip@main
 
       - uses: Chia-Network/actions/setup-python@main
         name: Install Python ${{ matrix.python-version }}
@@ -447,8 +435,12 @@ jobs:
           $env:INSTALLER_PATH = (Get-ChildItem packages/windows-installer/ChiaSetup-*.exe)
           Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:INSTALL_PATH)
 
-      - name: Run chia version
+      - name: List installed files
+        run: |
+          Get-ChildItem -Recurse $env:INSTALL_PATH | Select FullName
+
+      - name: Run chia dev installers test
         env:
           INSTALL_PATH: ${{ github.workspace }}\installed
         run: |
-          & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") version
+          & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"

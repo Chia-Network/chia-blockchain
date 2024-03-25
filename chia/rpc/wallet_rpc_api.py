@@ -1174,6 +1174,10 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
+        # This is required because this is a "@tx_endpoint" that calls other @tx_endpoints
+        request.setdefault("push", True)
+        request.setdefault("merge_spends", True)
+
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 

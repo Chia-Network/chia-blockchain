@@ -78,7 +78,7 @@ async def call_daemon_command(
 
 
 def print_result(json_dict: Dict[str, Any]) -> None:
-    print(json.dumps(json_dict, indent=4, sort_keys=True))
+    print(json.dumps(json_dict, indent=2, sort_keys=True))
 
 
 def get_routes(service: str, config: Dict[str, Any], quiet: bool = False) -> Dict[str, Any]:
@@ -126,7 +126,7 @@ def status_cmd(json_output: bool) -> None:
 
     if json_output:
         # If --json-output option is used, print the status data as JSON
-        print(json.dumps(status_data, indent=4))
+        print(json.dumps(status_data, indent=2))
     else:
         print("╭──────────────┬───────────╮")
         print_row("SERVICE", "STATUS")

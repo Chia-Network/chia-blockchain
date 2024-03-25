@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import List
 
 import pytest
@@ -99,7 +98,7 @@ async def test_wallet_blockchain(
         assert res == AddBlockResult.DISCONNECTED_BLOCK
 
         res, err = await chain.add_block(
-            dataclasses.replace(header_blocks[506], challenge_chain_ip_proof=VDFProof(uint8(2), b"123", True))
+            header_blocks[506].replace(challenge_chain_ip_proof=VDFProof(uint8(2), b"123", True))
         )
         assert res == AddBlockResult.INVALID_BLOCK
 
