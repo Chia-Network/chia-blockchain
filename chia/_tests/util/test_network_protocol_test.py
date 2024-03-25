@@ -41,7 +41,7 @@ def test_missing_messages_state_machine() -> None:
     # to the visitor in build_network_protocol_files.py and rerun it. Then
     # update this test
     assert (
-        len(VALID_REPLY_MESSAGE_MAP) == 27
+        len(VALID_REPLY_MESSAGE_MAP) == 25
     ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
     assert (
         len(NO_REPLY_EXPECTED) == 8
