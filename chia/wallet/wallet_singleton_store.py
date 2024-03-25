@@ -111,10 +111,10 @@ class WalletSingletonStore:
 
         lineage_bytes = [x.as_atom() for x in coin_state.solution.to_program().first().as_iter()]
         if len(lineage_bytes) == 2:
-            lineage_proof = LineageProof(bytes32(lineage_bytes[0]), None, int_from_bytes(lineage_bytes[1]))
+            lineage_proof = LineageProof(bytes32(lineage_bytes[0]), None, uint64(int_from_bytes(lineage_bytes[1])))
         else:
             lineage_proof = LineageProof(
-                bytes32(lineage_bytes[0]), bytes32(lineage_bytes[1]), int_from_bytes(lineage_bytes[2])
+                bytes32(lineage_bytes[0]), bytes32(lineage_bytes[1]), uint64(int_from_bytes(lineage_bytes[2]))
             )
         # Create and save the new singleton record
         new_record = SingletonRecord(
