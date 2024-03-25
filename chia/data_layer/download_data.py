@@ -345,10 +345,7 @@ async def http_download(
         async with session.get(
             server_info.url + "/" + filename, headers=headers, timeout=timeout, proxy=proxy_url
         ) as resp:
-            try:
-                resp.raise_for_status()
-            except aiohttp.ClientResponseError:
-                return False
+            resp.raise_for_status()
             size = int(resp.headers.get("content-length", 0))
             log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
             progress_byte = 0
