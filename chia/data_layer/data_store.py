@@ -1859,7 +1859,7 @@ class DataStore:
         )
         await self.update_server_info(tree_id, new_server_info)
 
-    async def server_misses_file(self, tree_id: bytes32, server_info: ServerInfo, timestamp: int) -> None:
+    async def server_misses_file(self, tree_id: bytes32, server_info: ServerInfo, timestamp: int) -> ServerInfo:
         # Max banned time is 1 hour.
         BAN_TIME_BY_MISSING_COUNT = [5 * 60] * 3 + [15 * 60] * 3 + [30 * 60] * 2 + [60 * 60]
         index = min(server_info.num_consecutive_failures, len(BAN_TIME_BY_MISSING_COUNT) - 1)
@@ -1869,6 +1869,7 @@ class DataStore:
             ignore_till=max(server_info.ignore_till, timestamp + BAN_TIME_BY_MISSING_COUNT[index]),
         )
         await self.update_server_info(tree_id, new_server_info)
+        return new_server_info
 
     async def get_available_servers_for_store(self, tree_id: bytes32, timestamp: int) -> List[ServerInfo]:
         subscriptions = await self.get_subscriptions()

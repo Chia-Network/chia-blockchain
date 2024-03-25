@@ -11,6 +11,7 @@ from pathlib import Path
 from random import Random
 from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
 
+import aiohttp
 import aiosqlite
 import pytest
 
@@ -1335,8 +1336,8 @@ async def test_server_http_ban(
         server_info: ServerInfo,
         timeout: int,
         log: logging.Logger,
-    ) -> bool:
-        return False
+    ) -> None:
+        raise aiohttp.ClientConnectionError()
 
     start_timestamp = int(time.time())
     with monkeypatch.context() as m:
