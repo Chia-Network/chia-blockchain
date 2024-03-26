@@ -185,7 +185,7 @@ async def download_file(
     if downloader is None:
         # use http downloader - this raises on any error
         try:
-            await http_download(client_foldername, filename, proxy_url, server_info, timeout, log)
+            await http_download(target_filename_path, filename, proxy_url, server_info, timeout, log)
         except (asyncio.TimeoutError, aiohttp.ClientError):
             return False
         return True
