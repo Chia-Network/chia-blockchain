@@ -1280,6 +1280,7 @@ class WalletRpcClient(RpcClient):
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
+        push: bool = True,
     ) -> TransactionRecord:
         response = await self.fetch(
             "send_notification",
@@ -1289,6 +1290,7 @@ class WalletRpcClient(RpcClient):
                 "amount": amount,
                 "fee": fee,
                 "extra_conditions": conditions_to_json_dicts(extra_conditions),
+                "push": push,
                 **timelock_info.to_json_dict(),
             },
         )
