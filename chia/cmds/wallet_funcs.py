@@ -1530,8 +1530,13 @@ async def spend_clawback(
 
 
 async def mint_vc(
-    wallet_rpc_port: Optional[int], fp: Optional[int], did: str, d_fee: Decimal, target_address: Optional[str]
-) -> None:  # pragma: no cover
+    wallet_rpc_port: Optional[int],
+    fp: Optional[int],
+    did: str,
+    d_fee: Decimal,
+    target_address: Optional[str],
+    push: bool,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.vc_mint(
             decode_puzzle_hash(ensure_valid_address(did, allowed_types={AddressType.DID}, config=config)),
@@ -1544,9 +1549,11 @@ async def mint_vc(
                 )
             ),
             uint64(int(d_fee * units["chia"])),
+            push=push,
         )
 
-        print(f"New VC with launcher ID minted: {res.vc_record.vc.launcher_id.hex()}")
+        if push:
+            print(f"New VC with launcher ID minted: {res.vc_record.vc.launcher_id.hex()}")
         print("Relevant TX records:")
         print("")
         for tx in res.transactions:
@@ -1557,6 +1564,7 @@ async def mint_vc(
                 address_prefix=selected_network_address_prefix(config),
                 mojo_per_unit=get_mojo_per_unit(wallet_type=WalletType.STANDARD_WALLET),
             )
+        return res.transactions
 
 
 async def get_vcs(
@@ -1593,7 +1601,8 @@ async def spend_vc(
     new_puzhash: Optional[str],
     new_proof_hash: str,
     reuse_puzhash: bool,
-) -> None:  # pragma: no cover
+    push: bool = True,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         txs = (
             await wallet_client.vc_spend(
@@ -1604,10 +1613,12 @@ async def spend_vc(
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
+                push=push,
             )
         ).transactions
 
-        print("Proofs successfully updated!")
+        if push:
+            print("Proofs successfully updated!")
         print("Relevant TX records:")
         print("")
         for tx in txs:
@@ -1618,6 +1629,7 @@ async def spend_vc(
                 address_prefix=selected_network_address_prefix(config),
                 mojo_per_unit=get_mojo_per_unit(wallet_type=WalletType.STANDARD_WALLET),
             )
+        return txs
 
 
 async def add_proof_reveal(
@@ -1655,16 +1667,17 @@ async def revoke_vc(
     vc_id: Optional[str],
     fee: Decimal,
     reuse_puzhash: bool,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if parent_coin_id is None:
             if vc_id is None:
                 print("Must specify either --parent-coin-id or --vc-id")
-                return
+                return []
             record = await wallet_client.vc_get(bytes32.from_hexstr(vc_id))
             if record is None:
                 print(f"Cannot find a VC with ID {vc_id}")
-                return
+                return []
             parent_id: bytes32 = bytes32(record.vc.coin.parent_coin_info)
         else:
             parent_id = bytes32.from_hexstr(parent_coin_id)
@@ -1675,10 +1688,12 @@ async def revoke_vc(
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
+                push=push,
             )
         ).transactions
 
-        print("VC successfully revoked!")
+        if push:
+            print("VC successfully revoked!")
         print("Relevant TX records:")
         print("")
         for tx in txs:
@@ -1689,6 +1704,7 @@ async def revoke_vc(
                 address_prefix=selected_network_address_prefix(config),
                 mojo_per_unit=get_mojo_per_unit(wallet_type=WalletType.STANDARD_WALLET),
             )
+        return txs
 
 
 async def approve_r_cats(
@@ -1700,7 +1716,8 @@ async def approve_r_cats(
     min_coin_amount: Optional[Decimal],
     max_coin_amount: Optional[Decimal],
     reuse: bool,
-) -> None:  # pragma: no cover
+    push: bool = True,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         if wallet_client is None:
             return
@@ -1713,9 +1730,11 @@ async def approve_r_cats(
                 max_coin_amount=None if max_coin_amount is None else str(max_coin_amount),
                 reuse_puzhash=reuse,
             ).to_tx_config(units["cat"], config, fingerprint),
+            push=push,
         )
 
-        print("VC successfully approved R-CATs!")
+        if push:
+            print("VC successfully approved R-CATs!")
         print("Relevant TX records:")
         print("")
         for tx in txs:
@@ -1730,7 +1749,7 @@ async def approve_r_cats(
                 )
             except LookupError as e:
                 print(e.args[0])
-                return
+                return txs
 
             print_transaction(
                 tx,
@@ -1739,3 +1758,4 @@ async def approve_r_cats(
                 address_prefix=selected_network_address_prefix(config),
                 mojo_per_unit=mojo_per_unit,
             )
+        return txs

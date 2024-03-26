@@ -1386,16 +1386,18 @@ def vcs_cmd() -> None:  # pragma: no cover
 @click.option("-d", "--did", help="The DID of the VC's proof provider", type=str, required=True)
 @click.option("-t", "--target-address", help="The address to send the VC to once it's minted", type=str, required=False)
 @click.option("-m", "--fee", help="Blockchain fee for mint transaction, in XCH", type=str, required=False, default="0")
+@tx_out_cmd
 def mint_vc_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     did: str,
     target_address: Optional[str],
     fee: str,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import mint_vc
 
-    asyncio.run(mint_vc(wallet_rpc_port, fingerprint, did, Decimal(fee), target_address))
+    return asyncio.run(mint_vc(wallet_rpc_port, fingerprint, did, Decimal(fee), target_address, push=push))
 
 
 @vcs_cmd.command("get", short_help="Get a list of existing VCs")
@@ -1451,6 +1453,7 @@ def get_vcs_cmd(
     default=False,
     show_default=True,
 )
+@tx_out_cmd
 def spend_vc_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1459,10 +1462,11 @@ def spend_vc_cmd(
     new_proof_hash: str,
     fee: str,
     reuse_puzhash: bool,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import spend_vc
 
-    asyncio.run(
+    return asyncio.run(
         spend_vc(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -1471,6 +1475,7 @@ def spend_vc_cmd(
             new_puzhash=new_puzhash,
             new_proof_hash=new_proof_hash,
             reuse_puzhash=reuse_puzhash,
+            push=push,
         )
     )
 
@@ -1549,6 +1554,7 @@ def get_proofs_for_root_cmd(
     default=False,
     show_default=True,
 )
+@tx_out_cmd
 def revoke_vc_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1556,10 +1562,13 @@ def revoke_vc_cmd(
     vc_id: Optional[str],
     fee: str,
     reuse_puzhash: bool,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import revoke_vc
 
-    asyncio.run(revoke_vc(wallet_rpc_port, fingerprint, parent_coin_id, vc_id, Decimal(fee), reuse_puzhash))
+    return asyncio.run(
+        revoke_vc(wallet_rpc_port, fingerprint, parent_coin_id, vc_id, Decimal(fee), reuse_puzhash, push=push)
+    )
 
 
 @vcs_cmd.command("approve_r_cats", help="Claim any R-CATs that are currently pending VC approval")
@@ -1586,6 +1595,7 @@ def revoke_vc_cmd(
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def approve_r_cats_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1595,11 +1605,20 @@ def approve_r_cats_cmd(
     min_coin_amount: Optional[Decimal],
     max_coin_amount: Optional[Decimal],
     reuse: bool,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import approve_r_cats
 
-    asyncio.run(
+    return asyncio.run(
         approve_r_cats(
-            wallet_rpc_port, fingerprint, id, min_amount_to_claim, Decimal(fee), min_coin_amount, max_coin_amount, reuse
+            wallet_rpc_port,
+            fingerprint,
+            id,
+            min_amount_to_claim,
+            Decimal(fee),
+            min_coin_amount,
+            max_coin_amount,
+            reuse,
+            push,
         )
     )
