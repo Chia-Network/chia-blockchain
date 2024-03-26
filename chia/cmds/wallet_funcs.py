@@ -1125,7 +1125,8 @@ async def mint_nft(
     d_fee: Decimal,
     royalty_percentage: int,
     reuse_puzhash: Optional[bool],
-) -> None:
+    push: bool = True,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         royalty_address = (
             None
@@ -1171,11 +1172,15 @@ async def mint_nft(
                 fee,
                 royalty_percentage,
                 did_id,
+                push=push,
             )
             spend_bundle = mint_response.spend_bundle
-            print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
+            if push:
+                print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
+            return mint_response.transactions
         except Exception as e:
             print(f"Failed to mint NFT: {e}")
+            return []
 
 
 async def add_uri_to_nft(
@@ -1189,7 +1194,8 @@ async def add_uri_to_nft(
     metadata_uri: Optional[str],
     license_uri: Optional[str],
     reuse_puzhash: Optional[bool],
-) -> None:
+    push: bool = True,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             if len([x for x in (uri, metadata_uri, license_uri) if x is not None]) > 1:
@@ -1215,11 +1221,15 @@ async def add_uri_to_nft(
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
+                push=push,
             )
             spend_bundle = response.spend_bundle.to_json_dict()
-            print(f"URI added successfully with spend bundle: {spend_bundle}")
+            if push:
+                print(f"URI added successfully with spend bundle: {spend_bundle}")
+            return response.transactions
         except Exception as e:
             print(f"Failed to add URI to NFT: {e}")
+            return []
 
 
 async def transfer_nft(
@@ -1231,7 +1241,8 @@ async def transfer_nft(
     nft_coin_id: str,
     target_address: str,
     reuse_puzhash: Optional[bool],
-) -> None:
+    push: bool = True,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             target_address = ensure_valid_address(target_address, allowed_types={AddressType.XCH}, config=config)
@@ -1244,11 +1255,16 @@ async def transfer_nft(
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
+                push=push,
             )
             spend_bundle = response.spend_bundle.to_json_dict()
-            print(f"NFT transferred successfully with spend bundle: {spend_bundle}")
+            if push:
+                print("NFT transferred successfully")
+            print(f"spend bundle: {spend_bundle}")
+            return response.transactions
         except Exception as e:
             print(f"Failed to transfer NFT: {e}")
+            return []
 
 
 def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
