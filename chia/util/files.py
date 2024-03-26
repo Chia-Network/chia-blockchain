@@ -70,7 +70,7 @@ async def write_file_async(
     # Create the parent directory if necessary
     os.makedirs(file_path.parent, mode=dir_mode, exist_ok=True)
 
-    mode: Literal["w+", "w+b"] = "w+" if type(data) == str else "w+b"
+    mode: Literal["w+", "w+b"] = "w+" if type(data) is str else "w+b"
     temp_file_path: Path
     async with tempfile.NamedTemporaryFile(dir=file_path.parent, mode=mode, delete=False) as f:
         # Ignoring type error since it is not obvious how to tie the type of the data

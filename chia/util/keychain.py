@@ -5,14 +5,14 @@ import unicodedata
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple
 
 import pkg_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
-from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from typing_extensions import final
 
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
     KeychainException,
     KeychainFingerprintExists,
@@ -57,7 +57,7 @@ def bip39_word_list() -> str:
 
 
 def generate_mnemonic() -> str:
-    mnemonic_bytes = token_bytes(32)
+    mnemonic_bytes = bytes32.secret()
     mnemonic = bytes_to_mnemonic(mnemonic_bytes)
     return mnemonic
 
@@ -87,10 +87,30 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
     return " ".join(mnemonics)
 
 
-def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
+def mnemonic_from_short_words(mnemonic_str: str) -> str:
+    """
+    Since the first 4 letters of each word is unique (or the full word, if less than 4 characters), and its common
+    practice to only store the first 4 letters of each word in many offline storage solutions, also support looking
+    up words by the first 4 characters
+    """
     mnemonic: List[str] = mnemonic_str.split(" ")
     if len(mnemonic) not in [12, 15, 18, 21, 24]:
         raise ValueError("Invalid mnemonic length")
+
+    four_char_dict = {word[:4]: word for word in bip39_word_list().splitlines()}
+    full_words: List[str] = []
+    for word in mnemonic:
+        full_word = four_char_dict.get(word[:4])
+        if full_word is None:
+            raise ValueError(f"{word!r} is not in the mnemonic dictionary; may be misspelled")
+        full_words.append(full_word)
+
+    return " ".join(full_words)
+
+
+def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
+    full_mnemonic_str = mnemonic_from_short_words(mnemonic_str)
+    mnemonic: List[str] = full_mnemonic_str.split(" ")
 
     word_list = {word: i for i, word in enumerate(bip39_word_list().splitlines())}
     bit_array = BitArray()
@@ -106,7 +126,8 @@ def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
     assert len(bit_array) == len(mnemonic) * 11
     assert ENT % 32 == 0
 
-    entropy_bytes = bit_array[:ENT].bytes
+    # mypy doesn't seem to understand the `property()` call used not as a decorator
+    entropy_bytes: bytes = bit_array[:ENT].bytes
     checksum_bytes = bit_array[ENT:]
     checksum = BitArray(std_hash(entropy_bytes))[:CS]
 
@@ -122,6 +143,10 @@ def mnemonic_to_seed(mnemonic: str) -> bytes:
     """
     Uses BIP39 standard to derive a seed from entropy bytes.
     """
+    # If there are only ASCII characters (as typically expected in a seed phrase), we can check if its just shortened
+    # 4 letter versions of each word
+    if not any(ord(c) >= 128 for c in mnemonic):
+        mnemonic = mnemonic_from_short_words(mnemonic)
     salt_str: str = "mnemonic"
     salt = unicodedata.normalize("NFKD", salt_str).encode("utf-8")
     mnemonic_normalized = unicodedata.normalize("NFKD", mnemonic).encode("utf-8")
@@ -202,14 +227,14 @@ class KeyData(Streamable):
         # an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of keys here.
         if self.secrets is not None and self.public_key != self.private_key.get_g1():
             raise KeychainKeyDataMismatch("public_key")
-        if self.public_key.get_fingerprint() != self.fingerprint:
+        if uint32(self.public_key.get_fingerprint()) != self.fingerprint:
             raise KeychainKeyDataMismatch("fingerprint")
 
     @classmethod
     def from_mnemonic(cls, mnemonic: str, label: Optional[str] = None) -> KeyData:
         private_key = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic))
         return cls(
-            fingerprint=private_key.get_g1().get_fingerprint(),
+            fingerprint=uint32(private_key.get_g1().get_fingerprint()),
             public_key=private_key.get_g1(),
             label=label,
             secrets=KeyDataSecrets.from_mnemonic(mnemonic),
@@ -285,7 +310,7 @@ class Keychain:
         entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
 
         return KeyData(
-            fingerprint=fingerprint,
+            fingerprint=uint32(fingerprint),
             public_key=public_key,
             label=self.keyring_wrapper.get_label(fingerprint),
             secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets else None,
@@ -451,7 +476,7 @@ class Keychain:
                 pass
         return removed
 
-    def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]):
+    def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]) -> None:
         """
         Deletes all keys in the list.
         """
@@ -500,14 +525,14 @@ class Keychain:
         """
         Returns whether a user-supplied passphrase is optional, as specified by the passphrase requirements.
         """
-        return passphrase_requirements().get("is_optional", False)
+        return passphrase_requirements().get("is_optional", False)  # type: ignore[no-any-return]
 
     @staticmethod
     def minimum_passphrase_length() -> int:
         """
         Returns the minimum passphrase length, as specified by the passphrase requirements.
         """
-        return passphrase_requirements().get("min_length", 0)
+        return passphrase_requirements().get("min_length", 0)  # type: ignore[no-any-return]
 
     @staticmethod
     def passphrase_meets_requirements(passphrase: Optional[str]) -> bool:

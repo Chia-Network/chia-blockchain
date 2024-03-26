@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import enum
-from typing import Any
 
 
 # See chia/wallet/puzzles/condition_codes.clib
@@ -10,6 +9,12 @@ class ConditionOpcode(bytes, enum.Enum):
 
     # the conditions below require bls12-381 signatures
 
+    AGG_SIG_PARENT = bytes([43])
+    AGG_SIG_PUZZLE = bytes([44])
+    AGG_SIG_AMOUNT = bytes([45])
+    AGG_SIG_PUZZLE_AMOUNT = bytes([46])
+    AGG_SIG_PARENT_AMOUNT = bytes([47])
+    AGG_SIG_PARENT_PUZZLE = bytes([48])
     AGG_SIG_UNSAFE = bytes([49])
     AGG_SIG_ME = bytes([50])
 
@@ -61,11 +66,3 @@ class ConditionOpcode(bytes, enum.Enum):
 
     # A condition that is always true and always ignore all arguments
     REMARK = bytes([1])
-
-    def __bytes__(self) -> bytes:
-        return bytes(self.value)
-
-    @classmethod
-    def from_bytes(cls: Any, blob: bytes) -> Any:
-        assert len(blob) == 1
-        return cls(blob)

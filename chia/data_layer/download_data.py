@@ -11,7 +11,7 @@ from typing import List, Optional
 import aiohttp
 from typing_extensions import Literal
 
-from chia.data_layer.data_layer_util import NodeType, Root, SerializedNode, ServerInfo, Status
+from chia.data_layer.data_layer_util import NodeType, PluginRemote, Root, SerializedNode, ServerInfo, Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -90,7 +90,7 @@ async def insert_into_data_store_from_file(
 @dataclass
 class WriteFilesResult:
     result: bool
-    full_tree: Path
+    full_tree: Optional[Path]
     diff_tree: Path
 
 
@@ -99,6 +99,7 @@ async def write_files_for_root(
     tree_id: bytes32,
     root: Root,
     foldername: Path,
+    full_tree_first_publish_generation: int,
     overwrite: bool = False,
 ) -> WriteFilesResult:
     if root.node_hash is not None:
@@ -112,12 +113,15 @@ async def write_files_for_root(
     written = False
     mode: Literal["wb", "xb"] = "wb" if overwrite else "xb"
 
-    try:
-        with open(filename_full_tree, mode) as writer:
-            await data_store.write_tree_to_file(root, node_hash, tree_id, False, writer)
-        written = True
-    except FileExistsError:
-        pass
+    written_full_file = False
+    if root.generation >= full_tree_first_publish_generation:
+        try:
+            with open(filename_full_tree, mode) as writer:
+                await data_store.write_tree_to_file(root, node_hash, tree_id, False, writer)
+            written = True
+            written_full_file = True
+        except FileExistsError:
+            pass
 
     try:
         last_seen_generation = await data_store.get_last_tree_root_by_hash(
@@ -132,7 +136,7 @@ async def write_files_for_root(
     except FileExistsError:
         pass
 
-    return WriteFilesResult(written, filename_full_tree, filename_diff_tree)
+    return WriteFilesResult(written, filename_full_tree if written_full_file else None, filename_diff_tree)
 
 
 async def insert_from_delta_file(
@@ -145,7 +149,7 @@ async def insert_from_delta_file(
     timeout: int,
     log: logging.Logger,
     proxy_url: str,
-    downloader: Optional[str],
+    downloader: Optional[PluginRemote],
 ) -> bool:
     for root_hash in root_hashes:
         timestamp = int(time.time())
@@ -153,13 +157,25 @@ async def insert_from_delta_file(
         filename = get_delta_filename(tree_id, root_hash, existing_generation)
         request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
         if downloader is None:
-            # use http downloader
-            if not await http_download(client_foldername, filename, proxy_url, server_info, timeout, log):
-                break
+            # use http downloader - this raises on any error
+            try:
+                await http_download(client_foldername, filename, proxy_url, server_info, timeout, log)
+            except (asyncio.TimeoutError, aiohttp.ClientError):
+                new_server_info = await data_store.server_misses_file(tree_id, server_info, timestamp)
+                log.info(
+                    f"Failed to download {filename} from {new_server_info.url}."
+                    f"Miss {new_server_info.num_consecutive_failures}."
+                )
+                log.info(f"Next attempt from {new_server_info.url} in {new_server_info.ignore_till - timestamp}s.")
+                return False
         else:
             log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
             async with aiohttp.ClientSession() as session:
-                async with session.post(downloader + "/download", json=request_json) as response:
+                async with session.post(
+                    downloader.url + "/download",
+                    json=request_json,
+                    headers=downloader.headers,
+                ) as response:
                     res_json = await response.json()
                     if not res_json["downloaded"]:
                         log.error(f"Failed to download delta file {filename} from {downloader}: {res_json}")
@@ -186,14 +202,31 @@ async def insert_from_delta_file(
                 await data_store.write_tree_to_file(root, root_hash, tree_id, False, writer)
             log.info(f"Successfully written full tree filename {filename_full_tree}.")
             await data_store.received_correct_file(tree_id, server_info)
-        except asyncio.CancelledError:
-            raise
         except Exception:
             target_filename = client_foldername.joinpath(filename)
             os.remove(target_filename)
-            await data_store.received_incorrect_file(tree_id, server_info, timestamp)
+            # await data_store.received_incorrect_file(tree_id, server_info, timestamp)
+            # incorrect file bans for 7 days which in practical usage
+            # is too long given this file might be incorrect for various reasons
+            # therefore, use the misses file logic instead
+            await data_store.server_misses_file(tree_id, server_info, timestamp)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
             raise
+
+    return True
+
+
+def delete_full_file_if_exists(foldername: Path, tree_id: bytes32, root: Root) -> bool:
+    if root.node_hash is not None:
+        node_hash = root.node_hash
+    else:
+        node_hash = bytes32([0] * 32)  # todo change
+
+    filename_full_tree = foldername.joinpath(get_full_tree_filename(tree_id, node_hash, root.generation))
+    try:
+        filename_full_tree.unlink()
+    except FileNotFoundError:
+        return False
 
     return True
 
@@ -205,7 +238,11 @@ async def http_download(
     server_info: ServerInfo,
     timeout: int,
     log: logging.Logger,
-) -> bool:
+) -> None:
+    """
+    Download a file from a server using aiohttp.
+    Raises exceptions on errors
+    """
     async with aiohttp.ClientSession() as session:
         headers = {"accept-encoding": "gzip"}
         async with session.get(
@@ -215,15 +252,13 @@ async def http_download(
             size = int(resp.headers.get("content-length", 0))
             log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
             progress_byte = 0
-            progress_percentage = "{:.0%}".format(0)
+            progress_percentage = f"{0:.0%}"
             target_filename = client_folder.joinpath(filename)
             with target_filename.open(mode="wb") as f:
                 async for chunk, _ in resp.content.iter_chunks():
                     f.write(chunk)
                     progress_byte += len(chunk)
-                    new_percentage = "{:.0%}".format(progress_byte / size)
+                    new_percentage = f"{progress_byte / size:.0%}"
                     if new_percentage != progress_percentage:
                         progress_percentage = new_percentage
                         log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
-
-    return True

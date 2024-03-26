@@ -7,6 +7,7 @@ from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional
 
 from typing_extensions import Protocol
 
+from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.exceptions import (
     InvalidIdentifierError,
@@ -17,6 +18,7 @@ from chia.plot_sync.exceptions import (
     SyncIdsMatchError,
 )
 from chia.plot_sync.util import ErrorCodes, State, T_PlotSyncMessage
+from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
     Plot,
     PlotSyncDone,
@@ -82,7 +84,9 @@ class Receiver:
     _keys_missing: List[str]
     _duplicates: List[str]
     _total_plot_size: int
+    _total_effective_plot_size: int
     _update_callback: ReceiverUpdateCallback
+    _harvesting_mode: Optional[HarvestingMode]
 
     def __init__(
         self,
@@ -97,7 +101,9 @@ class Receiver:
         self._keys_missing = []
         self._duplicates = []
         self._total_plot_size = 0
+        self._total_effective_plot_size = 0
         self._update_callback = update_callback
+        self._harvesting_mode = None
 
     async def trigger_callback(self, update: Optional[Delta] = None) -> None:
         try:
@@ -114,6 +120,8 @@ class Receiver:
         self._keys_missing.clear()
         self._duplicates.clear()
         self._total_plot_size = 0
+        self._total_effective_plot_size = 0
+        self._harvesting_mode = None
 
     def connection(self) -> WSChiaConnection:
         return self._connection
@@ -141,6 +149,12 @@ class Receiver:
 
     def total_plot_size(self) -> int:
         return self._total_plot_size
+
+    def total_effective_plot_size(self) -> int:
+        return self._total_effective_plot_size
+
+    def harvesting_mode(self) -> Optional[HarvestingMode]:
+        return self._harvesting_mode
 
     async def _process(
         self, method: Callable[[T_PlotSyncMessage], Any], message_type: ProtocolMessageTypes, message: T_PlotSyncMessage
@@ -196,6 +210,7 @@ class Receiver:
         self._current_sync.delta.clear()
         self._current_sync.state = State.loaded
         self._current_sync.plots_total = data.plot_file_count
+        self._harvesting_mode = HarvestingMode(data.harvesting_mode)
         self._current_sync.bump_next_message_id()
 
     async def sync_started(self, data: PlotSyncStart) -> None:
@@ -329,6 +344,9 @@ class Receiver:
         self._keys_missing = self._current_sync.delta.keys_missing.additions.copy()
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
+        self._total_effective_plot_size = int(
+            sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in self._plots.values())
+        )
         # Save current sync as last sync and create a new current sync
         self._last_sync = self._current_sync
         self._current_sync = Sync()
@@ -357,6 +375,8 @@ class Receiver:
             "no_key_filenames": get_list_or_len(self._keys_missing, counts_only),
             "duplicates": get_list_or_len(self._duplicates, counts_only),
             "total_plot_size": self._total_plot_size,
+            "total_effective_plot_size": self._total_effective_plot_size,
             "syncing": syncing,
             "last_sync_time": self._last_sync.time_done,
+            "harvesting_mode": self._harvesting_mode,
         }

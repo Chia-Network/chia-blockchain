@@ -59,6 +59,7 @@ class LastState:
                 state.reward_chain_block,
                 state.sub_slot_iters,
                 state.difficulty,
+                state.reward_chain_block.height,
             )
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary

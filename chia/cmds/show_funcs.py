@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[str, Any]) -> bool:
@@ -36,7 +37,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
 
     if synced:
         print("Current Blockchain Status: Full Node Synced")
-        print("\nPeak: Hash:", peak.header_hash if peak is not None else "")
+        print("\nPeak: Hash:", bytes32(peak.header_hash) if peak is not None else "")
     elif peak is not None and sync_mode:
         sync_max_block = blockchain_state["sync"]["sync_tip_height"]
         sync_current_block = blockchain_state["sync"]["sync_progress_height"]
@@ -44,7 +45,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
             f"Current Blockchain Status: Syncing {sync_current_block}/{sync_max_block} "
             f"({sync_max_block - sync_current_block} behind)."
         )
-        print("Peak: Hash:", peak.header_hash if peak is not None else "")
+        print("Peak: Hash:", bytes32(peak.header_hash) if peak is not None else "")
     elif peak is not None:
         print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
     else:
@@ -55,7 +56,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
         if peak.is_transaction_block:
             peak_time = peak.timestamp
         else:
-            peak_hash = peak.header_hash
+            peak_hash = bytes32(peak.header_hash)
             curr = await node_client.get_block_record(peak_hash)
             while curr is not None and not curr.is_transaction_block:
                 curr = await node_client.get_block_record(curr.prev_hash)
@@ -84,7 +85,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
             curr = await node_client.get_block_record(curr.prev_hash)
 
         for b in added_blocks:
-            print(f"{b.height:>9} | {b.header_hash}")
+            print(f"{b.height:>9} | {bytes32(b.header_hash)}")
     else:
         print("Blockchain has no blocks yet")
     return False
@@ -121,7 +122,7 @@ async def print_block_from_hash(
             cost = str(full_block.transactions_info.cost)
             tx_filter_hash: Union[str, bytes32] = "Not a transaction block"
             if full_block.foliage_transaction_block:
-                tx_filter_hash = full_block.foliage_transaction_block.filter_hash
+                tx_filter_hash = bytes32(full_block.foliage_transaction_block.filter_hash)
             fees: Any = block.fees
         else:
             block_time_string = "Not a transaction block"
@@ -196,19 +197,18 @@ async def show_async(
     from chia.cmds.cmds_util import get_any_service_client
 
     async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (node_client, config):
-        if node_client is not None:
-            # Check State
-            if print_state:
-                if await print_blockchain_state(node_client, config) is True:
-                    return None  # if no blockchain is found
-            if print_fee_info_flag:
-                await print_fee_info(node_client)
-            # Get Block Information
-            if block_header_hash_by_height is not None:
-                block_header = await node_client.get_block_record_by_height(block_header_hash_by_height)
-                if block_header is not None:
-                    print(f"Header hash of block {block_header_hash_by_height}: {block_header.header_hash.hex()}")
-                else:
-                    print("Block height", block_header_hash_by_height, "not found")
-            if block_by_header_hash != "":
-                await print_block_from_hash(node_client, config, block_by_header_hash)
+        # Check State
+        if print_state:
+            if await print_blockchain_state(node_client, config) is True:
+                return None  # if no blockchain is found
+        if print_fee_info_flag:
+            await print_fee_info(node_client)
+        # Get Block Information
+        if block_header_hash_by_height is not None:
+            block_header = await node_client.get_block_record_by_height(block_header_hash_by_height)
+            if block_header is not None:
+                print(f"Header hash of block {block_header_hash_by_height}: {block_header.header_hash.hex()}")
+            else:
+                print("Block height", block_header_hash_by_height, "not found")
+        if block_by_header_hash != "":
+            await print_block_from_hash(node_client, config, block_by_header_hash)

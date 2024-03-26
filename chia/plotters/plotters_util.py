@@ -82,13 +82,17 @@ async def run_plotter(root_path, plotter, args, progress_dict):
         try:
             await asyncio.wait(
                 [
-                    _read_stream(
-                        process.stdout,
-                        process_stdout_line,
+                    asyncio.create_task(
+                        _read_stream(
+                            process.stdout,
+                            process_stdout_line,
+                        )
                     ),
-                    _read_stream(
-                        process.stderr,
-                        process_stderr_line,
+                    asyncio.create_task(
+                        _read_stream(
+                            process.stderr,
+                            process_stderr_line,
+                        )
                     ),
                 ]
             )

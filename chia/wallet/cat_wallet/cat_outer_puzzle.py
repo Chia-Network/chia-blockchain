@@ -100,8 +100,8 @@ class CATOuterPuzzle:
             parent_coin: Coin = parent_spend.coin
             also = constructor.also()
             if also is not None:
+                solution = self._solve(also, solver, puzzle, solution)
                 puzzle = self._construct(also, puzzle)
-                solution = self._solve(also, solver, inner_puzzle, inner_solution)
             args = match_cat_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal.to_program()))
             assert args is not None
             _, _, parent_inner_puzzle = args

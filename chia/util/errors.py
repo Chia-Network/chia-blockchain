@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, Optional
+
+from click import ClickException
 
 
 class Err(Enum):
@@ -184,6 +186,7 @@ class Err(Enum):
     # raised if a spend issues too many assert spend, assert puzzle,
     # assert announcement or create announcement
     TOO_MANY_ANNOUNCEMENTS = 144
+    CHIP_0013_VALIDATION = 145
 
 
 class ValidationError(Exception):
@@ -193,9 +196,16 @@ class ValidationError(Exception):
         self.error_msg = error_msg
 
 
+class TimestampError(Exception):
+    def __init__(self) -> None:
+        self.code = Err.TIMESTAMP_TOO_FAR_IN_FUTURE
+        super().__init__(f"Error code: {self.code}")
+
+
 class ConsensusError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):
         super().__init__(f"Error code: {code.name} {errors}")
+        self.code = code
         self.errors = errors
 
 
@@ -204,6 +214,14 @@ class ProtocolError(Exception):
         super().__init__(f"Error code: {code.name} {errors}")
         self.code = code
         self.errors = errors
+
+
+class ApiError(Exception):
+    def __init__(self, code: Err, message: str, data: Optional[bytes] = None):
+        super().__init__(f"{code.name}: {message}")
+        self.code: Err = code
+        self.message: str = message
+        self.data: Optional[bytes] = data
 
 
 ##
@@ -318,3 +336,11 @@ class InvalidPathError(Exception):
     def __init__(self, path: Path, error_message: str):
         super().__init__(f"{error_message}: {str(path)!r}")
         self.path = path
+
+
+class CliRpcConnectionError(ClickException):
+    """
+    This error is raised when a rpc server cant be reached by the cli async generator
+    """
+
+    pass

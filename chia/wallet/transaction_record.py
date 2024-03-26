@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Generic, List, Optional, Tuple, TypeVar
+from typing import Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.types.blockchain_format.coin import Coin
@@ -12,9 +12,11 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.util.transaction_type import TransactionType
 
 T = TypeVar("T")
+_T_TransactionRecord = TypeVar("_T_TransactionRecord", bound="TransactionRecordOld")
 
 minimum_send_attempts = 6
 
@@ -22,12 +24,12 @@ minimum_send_attempts = 6
 @dataclass
 class ItemAndTransactionRecords(Generic[T]):
     item: T
-    transaction_records: List["TransactionRecord"]
+    transaction_records: List[TransactionRecord]
 
 
 @streamable
 @dataclass(frozen=True)
-class TransactionRecord(Streamable):
+class TransactionRecordOld(Streamable):
     """
     Used for storing transaction data and status in wallets.
     """
@@ -55,11 +57,10 @@ class TransactionRecord(Streamable):
     memos: List[Tuple[bytes32, List[bytes]]]
 
     def is_in_mempool(self) -> bool:
-        # If one of the nodes we sent it to responded with success, we set it to success
+        # If one of the nodes we sent it to responded with success or pending, we return True
         for _, mis, _ in self.sent_to:
-            if MempoolInclusionStatus(mis) == MempoolInclusionStatus.SUCCESS:
+            if MempoolInclusionStatus(mis) in (MempoolInclusionStatus.SUCCESS, MempoolInclusionStatus.PENDING):
                 return True
-        # Note, transactions pending inclusion (pending) return false
         return False
 
     def height_farmed(self, genesis_challenge: bytes32) -> Optional[uint32]:
@@ -81,7 +82,7 @@ class TransactionRecord(Streamable):
         return {coin_id: ms for coin_id, ms in self.memos}
 
     @classmethod
-    def from_json_dict_convenience(cls, modified_tx_input: Dict):
+    def from_json_dict_convenience(cls: Type[_T_TransactionRecord], modified_tx_input: Dict) -> _T_TransactionRecord:
         modified_tx = modified_tx_input.copy()
         if "to_address" in modified_tx:
             modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
@@ -124,3 +125,12 @@ class TransactionRecord(Streamable):
             # we tried to push it to mempool and got a fee error so it's a temporary error
             return True
         return False
+
+    def hint_dict(self) -> Dict[bytes32, bytes32]:
+        return {coin_id: bytes32(memos[0]) for coin_id, memos in self.memos if len(memos) > 0 and len(memos[0]) == 32}
+
+
+@streamable
+@dataclass(frozen=True)
+class TransactionRecord(TransactionRecordOld):
+    valid_times: ConditionValidTimes

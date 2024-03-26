@@ -33,12 +33,9 @@ def translate_path(p_):
 
 # Handle optional use of python clvm_tools if available and requested
 if "CLVM_TOOLS" in os.environ:
-    try:
-        from clvm_tools.clvmc import compile_clvm as compile_clvm_py_candidate
+    from clvm_tools.clvmc import compile_clvm as compile_clvm_py_candidate
 
-        compile_clvm_py = compile_clvm_py_candidate
-    finally:
-        pass
+    compile_clvm_py = compile_clvm_py_candidate
 
 
 def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_paths: List[pathlib.Path]):
@@ -66,11 +63,11 @@ def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_p
         rs256 = sha256file(output)
 
         if orig256 != rs256:
-            print("Compiled original %s: %s vs rust %s\n" % (full_path, orig256, rs256))
+            print(f"Compiled original {full_path}: {orig256} vs rust {rs256}\n")
             print("Aborting compilation due to mismatch with rust")
             assert orig256 == rs256
         else:
-            print("Compilation match %s: %s\n" % (full_path, orig256))
+            print(f"Compilation match {full_path}: {orig256}\n")
 
     return res
 
@@ -81,7 +78,7 @@ def compile_clvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: Li
 
 
 def load_serialized_clvm(
-    clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = False, recompile: bool = True
+    clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = True, recompile: bool = True
 ) -> SerializedProgram:
     """
     This function takes a .clsp file in the given package and compiles it to a
@@ -125,7 +122,7 @@ def load_serialized_clvm(
 def load_clvm(
     clvm_filename,
     package_or_requirement=__name__,
-    include_standard_libraries: bool = False,
+    include_standard_libraries: bool = True,
     recompile: bool = True,
 ) -> Program:
     return Program.from_bytes(
@@ -143,7 +140,7 @@ def load_clvm(
 def load_clvm_maybe_recompile(
     clvm_filename,
     package_or_requirement=__name__,
-    include_standard_libraries: bool = False,
+    include_standard_libraries: bool = True,
     recompile: bool = recompile_requested,
 ) -> Program:
     return load_clvm(
@@ -157,7 +154,7 @@ def load_clvm_maybe_recompile(
 def load_serialized_clvm_maybe_recompile(
     clvm_filename,
     package_or_requirement=__name__,
-    include_standard_libraries: bool = False,
+    include_standard_libraries: bool = True,
     recompile: bool = recompile_requested,
 ) -> SerializedProgram:
     return load_serialized_clvm(

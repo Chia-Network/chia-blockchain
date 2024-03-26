@@ -4,8 +4,17 @@ from pathlib import Path
 from typing import Optional
 
 import click
+import yaml
 
-from chia.util.config import load_defaults_for_missing_services, lock_and_load_config, save_config, str2bool
+from chia.server.outbound_message import NodeType
+from chia.util.config import (
+    initial_config_file,
+    load_defaults_for_missing_services,
+    lock_and_load_config,
+    save_config,
+    set_peer_info,
+    str2bool,
+)
 
 
 def configure(
@@ -51,10 +60,7 @@ def configure(
                         ":".join(set_farmer_peer.split(":")[:-1]),
                         set_farmer_peer.split(":")[-1],
                     )
-                    config["full_node"]["farmer_peer"]["host"] = host
-                    config["full_node"]["farmer_peer"]["port"] = int(port)
-                    config["harvester"]["farmer_peer"]["host"] = host
-                    config["harvester"]["farmer_peer"]["port"] = int(port)
+                    set_peer_info(config["harvester"], peer_type=NodeType.FARMER, peer_host=host, peer_port=int(port))
                     print("Farmer peer updated, make sure your harvester has the proper cert installed")
                     change_made = True
             except ValueError:
@@ -62,16 +68,15 @@ def configure(
         if set_fullnode_port:
             config["full_node"]["port"] = int(set_fullnode_port)
             config["full_node"]["introducer_peer"]["port"] = int(set_fullnode_port)
-            config["farmer"]["full_node_peer"]["port"] = int(set_fullnode_port)
-            config["timelord"]["full_node_peer"]["port"] = int(set_fullnode_port)
-            config["wallet"]["full_node_peer"]["port"] = int(set_fullnode_port)
+            set_peer_info(config["farmer"], peer_type=NodeType.FULL_NODE, peer_port=int(set_fullnode_port))
+            set_peer_info(config["timelord"], peer_type=NodeType.FULL_NODE, peer_port=int(set_fullnode_port))
+            set_peer_info(config["wallet"], peer_type=NodeType.FULL_NODE, peer_port=int(set_fullnode_port))
             config["wallet"]["introducer_peer"]["port"] = int(set_fullnode_port)
             config["introducer"]["port"] = int(set_fullnode_port)
             print("Default full node port updated")
             change_made = True
         if set_harvester_port:
             config["harvester"]["port"] = int(set_harvester_port)
-            config["farmer"]["harvester_peer"]["port"] = int(set_harvester_port)
             print("Default harvester port updated")
             change_made = True
         if set_log_level:
@@ -100,11 +105,31 @@ def configure(
         if testnet:
             if testnet == "true" or testnet == "t":
                 print("Setting Testnet")
+                # check if network_overrides.constants.testnet11 exists
+                if (
+                    "testnet11" not in config["network_overrides"]["constants"]
+                    or "testnet11" not in config["network_overrides"]["config"]
+                ):
+                    print("Testnet11 constants missing. Adding to config...")
+                    initial_config_str: str = initial_config_file("config.yaml")
+                    initial_config = yaml.safe_load(initial_config_str)
+                    if "testnet11" not in config["network_overrides"]["constants"]:
+                        config["network_overrides"]["constants"]["testnet11"] = initial_config["network_overrides"][
+                            "constants"
+                        ]["testnet11"]
+
+                    if "testnet11" not in config["network_overrides"]["config"]:
+                        config["network_overrides"]["config"]["testnet11"] = initial_config["network_overrides"][
+                            "config"
+                        ]["testnet11"]
+
                 testnet_port = "58444"
-                testnet_introducer = "introducer-testnet10.chia.net"
-                testnet_dns_introducer = "dns-introducer-testnet10.chia.net"
-                bootstrap_peers = ["testnet10-node.chia.net"]
-                testnet = "testnet10"
+                testnet_introducer = "introducer-testnet11.chia.net"
+                testnet_dns_introducer = "dns-introducer-testnet11.chia.net"
+                bootstrap_peers = ["testnet11-node-us-west-2.chia.net"]
+                testnet = "testnet11"
+                config["full_node"]["peers_file_path"] = "db/peers-testnet11.dat"
+                config["wallet"]["wallet_peers_file_path"] = "wallet/db/wallet_peers-testnet11.dat"
                 config["full_node"]["port"] = int(testnet_port)
                 if config["full_node"]["introducer_peer"] is None:
                     config["full_node"]["introducer_peer"] = {}
@@ -113,9 +138,9 @@ def configure(
                     config["wallet"]["introducer_peer"] = {}
                 assert config["wallet"]["introducer_peer"] is not None  # mypy
                 config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
-                config["farmer"]["full_node_peer"]["port"] = int(testnet_port)
-                config["timelord"]["full_node_peer"]["port"] = int(testnet_port)
-                config["wallet"]["full_node_peer"]["port"] = int(testnet_port)
+                set_peer_info(config["farmer"], peer_type=NodeType.FULL_NODE, peer_port=int(testnet_port))
+                set_peer_info(config["timelord"], peer_type=NodeType.FULL_NODE, peer_port=int(testnet_port))
+                set_peer_info(config["wallet"], peer_type=NodeType.FULL_NODE, peer_port=int(testnet_port))
                 config["wallet"]["introducer_peer"]["port"] = int(testnet_port)
                 config["introducer"]["port"] = int(testnet_port)
                 config["full_node"]["introducer_peer"]["host"] = testnet_introducer
@@ -149,11 +174,13 @@ def configure(
                 mainnet_dns_introducer = "dns-introducer.chia.net"
                 bootstrap_peers = ["node.chia.net"]
                 net = "mainnet"
+                config["full_node"]["peers_file_path"] = "db/peers.dat"
+                config["wallet"]["wallet_peers_file_path"] = "wallet/db/wallet_peers.dat"
                 config["full_node"]["port"] = int(mainnet_port)
                 config["full_node"]["introducer_peer"]["port"] = int(mainnet_port)
-                config["farmer"]["full_node_peer"]["port"] = int(mainnet_port)
-                config["timelord"]["full_node_peer"]["port"] = int(mainnet_port)
-                config["wallet"]["full_node_peer"]["port"] = int(mainnet_port)
+                set_peer_info(config["farmer"], peer_type=NodeType.FULL_NODE, peer_port=int(mainnet_port))
+                set_peer_info(config["timelord"], peer_type=NodeType.FULL_NODE, peer_port=int(mainnet_port))
+                set_peer_info(config["wallet"], peer_type=NodeType.FULL_NODE, peer_port=int(mainnet_port))
                 config["wallet"]["introducer_peer"]["port"] = int(mainnet_port)
                 config["introducer"]["port"] = int(mainnet_port)
                 config["full_node"]["introducer_peer"]["host"] = mainnet_introducer

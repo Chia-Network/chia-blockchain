@@ -10,8 +10,9 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.misc import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.util.wallet_types import CoinType, StreamableWalletIdentifier, WalletType
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCATMetadata, CRCATVersion
 
-MetadataTypes = Union[ClawbackMetadata]
+MetadataTypes = Union[ClawbackMetadata, CRCATMetadata]
 
 
 @dataclass(frozen=True)
@@ -42,7 +43,11 @@ class WalletCoinRecord:
             raise ValueError("Can't parse None metadata")
         if self.coin_type == CoinType.CLAWBACK and self.metadata.version == ClawbackVersion.V1.value:
             return ClawbackMetadata.from_bytes(self.metadata.blob)
-
+        if (
+            self.coin_type in {CoinType.CRCAT_PENDING, CoinType.CRCAT}
+            and self.metadata.version == CRCATVersion.V1.value
+        ):
+            return CRCATMetadata.from_bytes(self.metadata.blob)
         raise ValueError(f"Unknown metadata {self.metadata} for coin_type {self.coin_type}")
 
     def name(self) -> bytes32:

@@ -4,6 +4,8 @@ from typing import Optional, Tuple
 
 import click
 
+from chia.cmds import options
+
 
 @click.group("keys", help="Manage your keys")
 @click.pass_context
@@ -57,14 +59,7 @@ def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
     show_default=True,
     is_flag=True,
 )
-@click.option(
-    "--fingerprint",
-    "-f",
-    help="Enter the fingerprint of the key you want to view",
-    type=int,
-    required=False,
-    default=None,
-)
+@options.create_fingerprint()
 @click.pass_context
 def show_cmd(
     ctx: click.Context,
@@ -123,13 +118,7 @@ def show_label_cmd() -> None:
 
 
 @label_cmd.command("set", help="Set the label of a key")
-@click.option(
-    "--fingerprint",
-    "-f",
-    help="Enter the fingerprint of the key you want to use",
-    type=int,
-    required=True,
-)
+@options.create_fingerprint(required=True)
 @click.option(
     "--label",
     "-l",
@@ -144,13 +133,7 @@ def set_label_cmd(fingerprint: int, label: str) -> None:
 
 
 @label_cmd.command("delete", help="Delete the label of a key")
-@click.option(
-    "--fingerprint",
-    "-f",
-    help="Enter the fingerprint of the key you want to use",
-    type=int,
-    required=True,
-)
+@options.create_fingerprint(required=True)
 def delete_label_cmd(fingerprint: int) -> None:
     from .keys_funcs import delete_key_label
 
@@ -158,14 +141,7 @@ def delete_label_cmd(fingerprint: int) -> None:
 
 
 @keys_cmd.command("delete", help="Delete a key by its pk fingerprint in hex form")
-@click.option(
-    "--fingerprint",
-    "-f",
-    default=None,
-    help="Enter the fingerprint of the key you want to use",
-    type=int,
-    required=True,
-)
+@options.create_fingerprint(required=True)
 @click.pass_context
 def delete_cmd(ctx: click.Context, fingerprint: int) -> None:
     from .init_funcs import check_keys
@@ -191,14 +167,7 @@ def generate_and_print_cmd() -> None:
 
 @keys_cmd.command("sign", help="Sign a message with a private key")
 @click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str, required=True)
-@click.option(
-    "--fingerprint",
-    "-f",
-    default=None,
-    help="Enter the fingerprint of the key you want to use",
-    type=int,
-    required=False,
-)
+@options.create_fingerprint()
 @click.option(
     "--mnemonic-seed-filename",
     "filename",  # Rename the target argument
@@ -283,14 +252,7 @@ def verify_cmd(message: str, public_key: str, signature: str, as_bytes: bool, js
 
 
 @keys_cmd.group("derive", help="Derive child keys or wallet addresses")
-@click.option(
-    "--fingerprint",
-    "-f",
-    default=None,
-    help="Enter the fingerprint of the key you want to use.",
-    type=int,
-    required=False,
-)
+@options.create_fingerprint()
 @click.option(
     "--mnemonic-seed-filename",
     "filename",  # Rename the target argument
@@ -356,7 +318,7 @@ def search_cmd(
 ) -> None:
     import sys
 
-    from blspy import PrivateKey
+    from chia_rs import PrivateKey
 
     from .keys_funcs import resolve_derivation_master_key, search_derive
 

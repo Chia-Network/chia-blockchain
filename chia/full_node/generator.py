@@ -9,15 +9,15 @@ from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorB
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
-DECOMPRESS_BLOCK = load_clvm_maybe_recompile("block_program_zero.clsp", package_or_requirement="chia.wallet.puzzles")
-DECOMPRESS_PUZZLE = load_clvm_maybe_recompile("decompress_puzzle.clsp", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_BLOCK = load_clvm_maybe_recompile("block_program_zero.clsp", package_or_requirement="chia.full_node.puzzles")
+DECOMPRESS_PUZZLE = load_clvm_maybe_recompile("decompress_puzzle.clsp", package_or_requirement="chia.full_node.puzzles")
 # DECOMPRESS_CSE = load_clvm_maybe_recompile(
 #     "decompress_coin_spend_entry.clsp",
-#     package_or_requirement="chia.wallet.puzzles",
+#     package_or_requirement="chia.full_node.puzzles",
 # )
 
 DECOMPRESS_CSE_WITH_PREFIX = load_clvm_maybe_recompile(
-    "decompress_coin_spend_entry_with_prefix.clsp", package_or_requirement="chia.wallet.puzzles"
+    "decompress_coin_spend_entry_with_prefix.clsp", package_or_requirement="chia.full_node.puzzles"
 )
 log = logging.getLogger(__name__)
 
@@ -51,4 +51,6 @@ def create_compressed_generator(
     program = DECOMPRESS_BLOCK.curry(
         DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, Program.to(start), Program.to(end), compressed_cse_list
     )
-    return BlockGenerator(program, [original_generator.generator], [original_generator.block_height])
+    return BlockGenerator(
+        SerializedProgram.from_program(program), [original_generator.generator], [original_generator.block_height]
+    )

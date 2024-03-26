@@ -5,8 +5,9 @@ In this puzzle program, the solution must be a signed list of conditions, which
 is returned literally.
 """
 
-
 from __future__ import annotations
+
+from typing import cast
 
 from chia.types.blockchain_format.program import Program
 
@@ -20,4 +21,5 @@ def puzzle_for_pk(public_key: Program) -> Program:
 
 
 def solution_for_conditions(conditions: Program) -> Program:
-    return conditions.to([conditions])
+    # TODO: Remove cast when we improve typing
+    return cast(Program, conditions.to([conditions]))

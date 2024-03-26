@@ -6,7 +6,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 from chia.data_layer.data_layer_util import Side, TerminalNode, leaf_hash
 from chia.data_layer.data_store import DataStore
@@ -22,9 +22,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
         if os.path.exists(db_path):
             os.remove(db_path)
 
-        data_store = await DataStore.create(database=db_path)
-        try:
-            hint_keys_values: Dict[bytes, bytes] = {}
+        async with DataStore.managed(database=db_path) as data_store:
 
             tree_id = bytes32(b"0" * 32)
             await data_store.create_tree(tree_id)
@@ -55,7 +53,6 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                             tree_id=tree_id,
                             reference_node_hash=reference_node_hash,
                             side=side,
-                            hint_keys_values=hint_keys_values,
                         )
                     else:
                         await data_store.insert(
@@ -72,12 +69,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                 elif i % 3 == 1:
                     t1 = time.time()
                     if not slow_mode:
-                        await data_store.autoinsert(
-                            key=key,
-                            value=value,
-                            tree_id=tree_id,
-                            hint_keys_values=hint_keys_values,
-                        )
+                        await data_store.autoinsert(key=key, value=value, tree_id=tree_id)
                     else:
                         await data_store.autoinsert(
                             key=key,
@@ -94,7 +86,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                     node = await data_store.get_node(reference_node_hash)
                     assert isinstance(node, TerminalNode)
                     if not slow_mode:
-                        await data_store.delete(key=node.key, tree_id=tree_id, hint_keys_values=hint_keys_values)
+                        await data_store.delete(key=node.key, tree_id=tree_id)
                     else:
                         await data_store.delete(key=node.key, tree_id=tree_id, use_optimized=False)
                     t2 = time.time()
@@ -107,8 +99,6 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
             print(f"Total time for {num_nodes} operations: {insert_time + autoinsert_time + delete_time}")
             root = await data_store.get_tree_root(tree_id=tree_id)
             print(f"Root hash: {root.node_hash}")
-        finally:
-            await data_store.close()
 
 
 if __name__ == "__main__":

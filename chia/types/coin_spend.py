@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
-from clvm.casts import int_from_bytes
+import chia_rs
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -11,22 +11,32 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.errors import Err, ValidationError
+from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
+CoinSpend = chia_rs.CoinSpend
 
-@streamable
-@dataclass(frozen=True)
-class CoinSpend(Streamable):
-    """
-    This is a rather disparate data structure that validates coin transfers. It's generally populated
-    with data from different sources, since burned coins are identified by name, so it is built up
-    more often that it is streamed.
-    """
 
-    coin: Coin
-    puzzle_reveal: SerializedProgram
-    solution: SerializedProgram
+def make_spend(
+    coin: Coin,
+    puzzle_reveal: Union[Program, SerializedProgram],
+    solution: Union[Program, SerializedProgram],
+) -> CoinSpend:
+    pr: SerializedProgram
+    sol: SerializedProgram
+    if isinstance(puzzle_reveal, SerializedProgram):
+        pr = puzzle_reveal
+    elif isinstance(puzzle_reveal, Program):
+        pr = SerializedProgram.from_program(puzzle_reveal)
+
+    if isinstance(solution, SerializedProgram):
+        sol = solution
+    elif isinstance(solution, Program):
+        sol = SerializedProgram.from_program(solution)
+
+    return CoinSpend(coin, pr, sol)
 
 
 def compute_additions_with_cost(
@@ -50,15 +60,24 @@ def compute_additions_with_cost(
             raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions() for CoinSpend")
         atoms = cond.as_iter()
         op = next(atoms).atom
-        if op in [ConditionOpcode.AGG_SIG_ME, ConditionOpcode.AGG_SIG_UNSAFE]:
+        if op in [
+            ConditionOpcode.AGG_SIG_PARENT,
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+            ConditionOpcode.AGG_SIG_UNSAFE,
+            ConditionOpcode.AGG_SIG_ME,
+        ]:
             cost += ConditionCost.AGG_SIG.value
             continue
         if op != ConditionOpcode.CREATE_COIN.value:
             continue
         cost += ConditionCost.CREATE_COIN.value
-        puzzle_hash = next(atoms).atom
-        amount = int_from_bytes(next(atoms).atom)
-        ret.append(Coin(parent_id, puzzle_hash, amount))
+        puzzle_hash = next(atoms).as_atom()
+        amount = next(atoms).as_int()
+        ret.append(Coin(parent_id, puzzle_hash, uint64(amount)))
 
     return ret, cost
 
@@ -72,3 +91,22 @@ def compute_additions(cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BL
 class SpendInfo(Streamable):
     puzzle: SerializedProgram
     solution: SerializedProgram
+
+
+@dataclass(frozen=True)
+class CoinSpendWithConditions:
+    coin_spend: CoinSpend
+    conditions: List[ConditionWithArgs]
+
+    @staticmethod
+    def from_json_dict(dict: Dict[str, Any]) -> CoinSpendWithConditions:
+        return CoinSpendWithConditions(
+            CoinSpend.from_json_dict(dict["coin_spend"]),
+            [
+                ConditionWithArgs(
+                    ConditionOpcode(bytes.fromhex(condition["opcode"][2:])),
+                    [bytes.fromhex(var) for var in condition["vars"]],
+                )
+                for condition in dict["conditions"]
+            ],
+        )

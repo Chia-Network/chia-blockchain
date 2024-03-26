@@ -28,8 +28,7 @@ if TYPE_CHECKING:
     class _ProtocolFactory(Protocol):
         # https://github.com/python/mypy/issues/6910#issuecomment-1081107831
         # https://github.com/python/typeshed/pull/5718/files
-        def __call__(self) -> asyncio.protocols.BaseProtocol:
-            ...
+        def __call__(self) -> asyncio.protocols.BaseProtocol: ...
 
     _SSLContext: TypeAlias = Union[bool, None, ssl.SSLContext]
 
@@ -47,13 +46,12 @@ if TYPE_CHECKING:
             backlog: int = ...,
             # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/constants.py#L16
             ssl_handshake_timeout: Optional[float] = ...,
-        ) -> None:
-            ...
+        ) -> None: ...
 
     # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/base_events.py#L278
     # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/base_events.pyi#L27
     class BaseEventsServer(asyncio.base_events.Server):
-        if sys.platform == "win32" and sys.version_info >= (3, 8):
+        if sys.platform == "win32":
             _loop: ChiaProactorEventLoop
         else:
             _loop: EventsAbstractEventLoop
@@ -64,38 +62,31 @@ if TYPE_CHECKING:
         _ssl_context: _SSLContext
         _ssl_handshake_timeout: Optional[float]
 
-        def _attach(self) -> None:
-            ...
+        def _attach(self) -> None: ...
 
-        def _detach(self) -> None:
-            ...
+        def _detach(self) -> None: ...
 
-        def _start_serving(self) -> None:
-            ...
+        def _start_serving(self) -> None: ...
 
     if sys.platform == "win32":
         # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/windows_events.py#L48
-        class _OverlappedFuture(asyncio.Future[Any]):
-            ...
+        class _OverlappedFuture(asyncio.Future[Any]): ...
 
         # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/windows_events.py#L410
         # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/windows_events.pyi#L44
         class IocpProactor(asyncio.windows_events.IocpProactor):
             _loop: Optional[asyncio.events.AbstractEventLoop]
 
-            def _register_with_iocp(self, obj: object) -> None:
-                ...
+            def _register_with_iocp(self, obj: object) -> None: ...
 
             def _register(
                 self,
                 ov: _overlapped.Overlapped,
                 obj: socket.socket,
                 callback: Callable[[object, socket.socket, _overlapped.Overlapped], Tuple[socket.socket, object]],
-            ) -> _OverlappedFuture:
-                ...
+            ) -> _OverlappedFuture: ...
 
-            def _get_accept_socket(self, family: socket.AddressFamily) -> socket.socket:
-                ...
+            def _get_accept_socket(self, family: socket.AddressFamily) -> socket.socket: ...
 
         # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/windows_events.py#L309
         # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/windows_events.pyi#L35
@@ -160,7 +151,7 @@ class PausableServer(BaseEventsServer):
     def _chia_pause(self) -> None:
         """Pause future calls to accept()."""
         self._paused = True
-        if sys.platform == "win32" and sys.version_info >= (3, 8):
+        if sys.platform == "win32":
             # proactor
             self._loop.disable_connections()
         else:
@@ -172,7 +163,7 @@ class PausableServer(BaseEventsServer):
     def _chia_resume(self) -> None:
         """Resume use of accept() on listening socket(s)."""
         self._paused = False
-        if sys.platform == "win32" and sys.version_info >= (3, 8):
+        if sys.platform == "win32":
             # proactor
             self._loop.enable_connections()
         else:
@@ -268,8 +259,11 @@ if sys.platform == "win32":
 
                 try:
                     return await self._chia_accept(listener)
-                except WindowsError as exc:  # pylint: disable=E0602
-                    if exc.winerror not in (_winapi.ERROR_NETNAME_DELETED, _winapi.ERROR_OPERATION_ABORTED):
+                except OSError as exc:
+                    if exc.winerror not in (  # pylint: disable=E1101
+                        _winapi.ERROR_NETNAME_DELETED,
+                        _winapi.ERROR_OPERATION_ABORTED,
+                    ):
                         raise
 
         def _chia_accept(self, listener: socket.socket) -> asyncio.Future[Tuple[socket.socket, Tuple[object, ...]]]:
@@ -295,9 +289,12 @@ if sys.platform == "win32":
                 except asyncio.CancelledError:
                     conn.close()
                     raise
-                except WindowsError as exc:  # pylint: disable=E0602
+                except OSError as exc:
                     # https://github.com/python/cpython/issues/93821#issuecomment-1157945855
-                    if exc.winerror not in (_winapi.ERROR_NETNAME_DELETED, _winapi.ERROR_OPERATION_ABORTED):
+                    if exc.winerror not in (  # pylint: disable=E1101
+                        _winapi.ERROR_NETNAME_DELETED,
+                        _winapi.ERROR_OPERATION_ABORTED,
+                    ):
                         raise
 
             future = self._register(ov, listener, finish_accept)  # pylint: disable=assignment-from-no-return
@@ -334,13 +331,7 @@ class ChiaPolicy(asyncio.DefaultEventLoopPolicy):
     def new_event_loop(self) -> asyncio.AbstractEventLoop:
         # overriding https://github.com/python/cpython/blob/v3.11.0/Lib/asyncio/events.py#L689-L695
         if sys.platform == "win32":
-            if sys.version_info >= (3, 8):
-                # https://docs.python.org/3.11/library/asyncio-policy.html#asyncio.DefaultEventLoopPolicy
-                # Changed in version 3.8: On Windows, ProactorEventLoop is now used by default.
-                loop_factory = ChiaProactorEventLoop
-            else:
-                # separate condition so coverage can report when this is no longer used
-                loop_factory = ChiaSelectorEventLoop
+            loop_factory = ChiaProactorEventLoop
         else:
             loop_factory = ChiaSelectorEventLoop
 

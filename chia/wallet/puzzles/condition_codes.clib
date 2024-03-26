@@ -1,6 +1,16 @@
 ; See chia/types/condition_opcodes.py
 
 (
+
+  ; Unavailable until after 2.0 hard fork
+  (defconstant AGG_SIG_PARENT 43)
+  (defconstant AGG_SIG_PUZZLE 44)
+  (defconstant AGG_SIG_AMOUNT 45)
+  (defconstant AGG_SIG_PUZZLE_AMOUNT 46)
+  (defconstant AGG_SIG_PARENT_AMOUNT 47)
+  (defconstant AGG_SIG_PARENT_PUZZLE 48)
+  ;
+
   (defconstant AGG_SIG_UNSAFE 49)
   (defconstant AGG_SIG_ME 50)
 

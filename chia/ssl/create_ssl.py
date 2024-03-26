@@ -60,7 +60,7 @@ def ensure_ssl_dirs(dirs: List[Path]):
     """Create SSL dirs with a default 755 mode if necessary"""
     for dir in dirs:
         if not dir.exists():
-            dir.mkdir(mode=0o755)
+            dir.mkdir(mode=0o755, parents=True)
 
 
 def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_out: Path):
@@ -117,8 +117,8 @@ def make_ca_cert(cert_path: Path, key_path: Path):
         .issuer_name(issuer)
         .public_key(root_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=3650))
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=3650))
         .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
         .sign(root_key, hashes.SHA256(), default_backend())
     )

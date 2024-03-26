@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession
-from blspy import AugSchemeMPL, PrivateKey
+from chia_rs import AugSchemeMPL, PrivateKey
 
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
@@ -110,7 +110,7 @@ class KeychainProxy(DaemonProxy):
                     autoclose=True,
                     autoping=True,
                     heartbeat=self.heartbeat,
-                    ssl_context=self.ssl_context,
+                    ssl=self.ssl_context,
                     max_msg_size=self.max_message_size,
                 )
                 await self.listener()

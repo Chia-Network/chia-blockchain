@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Iterator, List, Tuple, Union
 
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
@@ -16,7 +17,9 @@ ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
 ACS_MU_PH = ACS_MU.get_tree_hash()
 SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
 SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
-GRAFTROOT_DL_OFFERS = load_clvm_maybe_recompile("graftroot_dl_offers.clsp")
+GRAFTROOT_DL_OFFERS = load_clvm_maybe_recompile(
+    "graftroot_dl_offers.clsp", package_or_requirement="chia.data_layer.puzzles"
+)
 P2_PARENT = load_clvm_maybe_recompile("p2_parent.clsp")
 
 
@@ -37,7 +40,7 @@ def create_host_layer_puzzle(innerpuz: Union[Program, bytes32], current_root: by
     )
 
 
-def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
+def match_dl_singleton(puzzle: Union[Program, SerializedProgram]) -> Tuple[bool, Iterator[Program]]:
     """
     Given a puzzle test if it's a CAT and, if it is, return the curried arguments
     """

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from blspy import AugSchemeMPL, G1Element
+from chia_rs import AugSchemeMPL, G1Element
 from clvm import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
 
@@ -12,8 +12,9 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101
+CONDITIONS = {k: bytes(v)[0] for k, v in ConditionOpcode.__members__.items()}  # pylint: disable=E1101
 KFA = {v: k for k, v in CONDITIONS.items()}
 
 
@@ -42,6 +43,30 @@ def dump_coin(coin: Coin) -> str:
     return disassemble(coin_as_program(coin))
 
 
+def recursive_uncurry_dump(puzzle: Program, layer: int, prefix: str, uncurried_already: UncurriedPuzzle) -> None:
+    mod = uncurried_already.mod
+    curried_args = uncurried_already.args
+    if mod != puzzle:
+        print(f"{prefix}- Layer {layer}:")
+        print(f"{prefix}  - Mod hash: {mod.get_tree_hash().hex()}")
+        for arg in curried_args.as_iter():
+            uncurry_dump(arg, prefix=f"{prefix}  ")
+        mod2, curried_args2 = mod.uncurry()
+        if mod2 != mod:
+            recursive_uncurry_dump(mod, layer + 1, prefix, UncurriedPuzzle(mod2, curried_args2))
+    else:
+        print(f"{prefix}- {bu_disassemble(puzzle)}")
+
+
+def uncurry_dump(puzzle: Program, prefix: str = "") -> None:
+    mod, curried_args = puzzle.uncurry()
+    if mod != puzzle:
+        print(f"{prefix}- <curried puzzle>")
+        prefix = f"{prefix}  "
+
+    recursive_uncurry_dump(puzzle, 1, prefix, UncurriedPuzzle(mod, curried_args))
+
+
 def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
     """
     Print a lot of useful information about a `SpendBundle` that might help with debugging
@@ -68,6 +93,10 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
         print()
         print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
 
+        print()
+        print("--- Uncurried Args ---")
+        uncurry_dump(puzzle_reveal)
+
         if puzzle_reveal.get_tree_hash() != coin_spend.coin.puzzle_hash:
             print()
             print("*** BAD PUZZLE REVEAL")
@@ -77,7 +106,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             continue
 
         conditions = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
-        for pk_bytes, m in pkm_pairs_for_conditions_dict(conditions, coin_name, agg_sig_additional_data):
+        for pk_bytes, m in pkm_pairs_for_conditions_dict(conditions, coin, agg_sig_additional_data):
             pks.append(G1Element.from_bytes(pk_bytes))
             msgs.append(m)
         print()
@@ -130,7 +159,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     created = set(spend_bundle.additions())
     spent = set(spend_bundle.removals())
 
-    zero_coin_set = set(coin.name() for coin in created if coin.amount == 0)
+    zero_coin_set = {coin.name() for coin in created if coin.amount == 0}
 
     ephemeral = created.intersection(spent)
     created.difference_update(ephemeral)
@@ -160,9 +189,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             as_hex = [f"0x{_.hex()}" for _ in announcement]
             print(f"  {as_hex} =>\n      {hashed}")
 
-    eor_coin_announcements = sorted(
-        set(_[-1] for _ in created_coin_announcement_pairs) ^ set(asserted_coin_announcements)
-    )
+    eor_coin_announcements = sorted({_[-1] for _ in created_coin_announcement_pairs} ^ set(asserted_coin_announcements))
 
     created_puzzle_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_puzzle_announcements]
     if created_puzzle_announcements:
@@ -172,7 +199,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             print(f"  {as_hex} =>\n      {hashed}")
 
     eor_puzzle_announcements = sorted(
-        set(_[-1] for _ in created_puzzle_announcement_pairs) ^ set(asserted_puzzle_announcements)
+        {_[-1] for _ in created_puzzle_announcement_pairs} ^ set(asserted_puzzle_announcements)
     )
 
     print()

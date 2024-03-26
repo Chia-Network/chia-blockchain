@@ -9,6 +9,7 @@ from chia import __version__
 from chia.cmds.beta import beta_cmd
 from chia.cmds.completion import completion
 from chia.cmds.configure import configure_cmd
+from chia.cmds.dao import dao_cmd
 from chia.cmds.data import data_cmd
 from chia.cmds.db import db_cmd
 from chia.cmds.dev import dev_cmd
@@ -62,7 +63,7 @@ def cli(
         set_keys_root_path(Path(keys_root_path))
 
     if passphrase_file is not None:
-        from sys import exit
+        import sys
 
         from chia.cmds.passphrase_funcs import cache_passphrase, read_passphrase_from_file
 
@@ -77,7 +78,7 @@ def cli(
                 print(f'Invalid passphrase found in "{passphrase_file.name}"')
             else:
                 print("Invalid passphrase")
-            exit(1)
+            sys.exit(1)
         except Exception as e:
             print(f"Failed to read passphrase: {e}")
 
@@ -128,6 +129,7 @@ cli.add_command(data_cmd)
 cli.add_command(passphrase_cmd)
 cli.add_command(beta_cmd)
 cli.add_command(completion)
+cli.add_command(dao_cmd)
 cli.add_command(dev_cmd)
 
 

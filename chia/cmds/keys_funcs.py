@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.cmds.passphrase_funcs import obtain_current_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk
@@ -174,6 +174,7 @@ def show_keys(
 
         if show_mnemonic:
             key["master_sk"] = bytes(sk).hex()
+            key["farmer_sk"] = bytes(master_sk_to_farmer_sk(sk)).hex()
             key["wallet_sk"] = bytes(master_sk_to_wallet_sk(sk, uint32(0))).hex()
             key["mnemonic"] = bytes_to_mnemonic(key_data.entropy)
         return key
@@ -194,6 +195,7 @@ def show_keys(
             print(f"First wallet address{' (non-observer)' if key['non_observer'] else ''}: {key['wallet_address']}")
             if show_mnemonic:
                 print("Master private key (m):", key["master_sk"])
+                print("Farmer private key (m/12381/8444/0/0):", key["farmer_sk"])
                 print("First wallet secret key (m/12381/8444/2/0):", key["wallet_sk"])
                 print("  Mnemonic seed (24 secret words):")
                 print(key["mnemonic"])
@@ -285,9 +287,9 @@ def sign(message: str, private_key: PrivateKey, hd_path: str, as_bytes: bool, js
 
 def verify(message: str, public_key: str, signature: str, as_bytes: bool) -> None:
     data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
-    public_key = G1Element.from_bytes(bytes.fromhex(public_key))
-    signature = G2Element.from_bytes(bytes.fromhex(signature))
-    print(AugSchemeMPL.verify(public_key, data, signature))
+    pk = G1Element.from_bytes(bytes.fromhex(public_key))
+    sig = G2Element.from_bytes(bytes.fromhex(signature))
+    print(AugSchemeMPL.verify(pk, data, sig))
 
 
 def as_bytes_from_signing_mode(signing_mode_str: str) -> bool:
@@ -361,6 +363,7 @@ def _search_derived(
 
         if search_address:
             # Generate a wallet address using the standard p2_delegated_puzzle_or_hidden_puzzle puzzle
+            assert child_pk is not None
             # TODO: consider generating addresses using other puzzles
             address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), prefix)
 
@@ -741,4 +744,7 @@ def resolve_derivation_master_key(fingerprint_or_filename: Optional[Union[int, s
     ):
         return private_key_from_mnemonic_seed_file(Path(os.fspath(fingerprint_or_filename)))
     else:
-        return get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)
+        ret = get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)
+        if ret is None:
+            raise ValueError("Abort. No private key")
+        return ret

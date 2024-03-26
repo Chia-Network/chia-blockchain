@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 from dataclasses import dataclass, replace
+from enum import IntEnum
 from typing import Iterable, List, Optional, Tuple, Type, TypeVar
 
 from clvm.casts import int_to_bytes
@@ -9,26 +10,30 @@ from clvm.casts import int_to_bytes
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
+from chia.util.ints import uint16, uint64
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
-from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.conditions import AssertCoinAnnouncement
+from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
+from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.vc_wallet.vc_drivers import (
     COVENANT_LAYER_HASH,
     EML_TP_COVENANT_ADAPTER_HASH,
     EXTIGENT_METADATA_LAYER_HASH,
-    GUARANTEED_NIL_TP,
-    P2_ANNOUNCED_DELEGATED_PUZZLE,
+    GUARANTEED_NIL_TP_HASH,
+    P2_ANNOUNCED_DELEGATED_PUZZLE_HASH,
     create_did_tp,
     create_eml_covenant_morpher,
 )
 
 # Mods
+
 CREDENTIAL_RESTRICTION: Program = load_clvm_maybe_recompile(
     "credential_restriction.clsp",
     package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
@@ -40,6 +45,51 @@ PROOF_FLAGS_CHECKER: Program = load_clvm_maybe_recompile(
     package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
     include_standard_libraries=True,
 )
+PENDING_VC_ANNOUNCEMENT: Program = load_clvm_maybe_recompile(
+    "conditions_w_fee_announce.clsp",
+    package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
+    include_standard_libraries=True,
+)
+CREDENTIAL_STRUCT: Program = Program.to(
+    (
+        (
+            (
+                SINGLETON_MOD_HASH,
+                SINGLETON_LAUNCHER_HASH,
+            ),
+            (
+                EXTIGENT_METADATA_LAYER_HASH,
+                EML_TP_COVENANT_ADAPTER_HASH,
+            ),
+        ),
+        (
+            curry_and_treehash(
+                Program.to((1, EXTIGENT_METADATA_LAYER_HASH)).get_tree_hash_precalc(EXTIGENT_METADATA_LAYER_HASH),
+                Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash(),
+                Program.to(None).get_tree_hash(),
+                GUARANTEED_NIL_TP_HASH,
+                Program.to(GUARANTEED_NIL_TP_HASH).get_tree_hash(),
+                P2_ANNOUNCED_DELEGATED_PUZZLE_HASH,
+            ),
+            (
+                Program.to(
+                    int_to_bytes(2) + Program.to((1, COVENANT_LAYER_HASH)).get_tree_hash_precalc(COVENANT_LAYER_HASH)
+                ),
+                Program.to(
+                    (
+                        [
+                            4,
+                            (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
+                            [4, (1, create_did_tp()), 1],
+                        ],
+                        None,
+                    )
+                ).get_tree_hash(),
+            ),
+        ),
+    ),
+)
+CREDENTIAL_STRUCT_HASH: bytes32 = CREDENTIAL_STRUCT.get_tree_hash()
 
 
 # Basic drivers
@@ -49,63 +99,40 @@ def construct_cr_layer(
     inner_puzzle: Program,
 ) -> Program:
     first_curry: Program = CREDENTIAL_RESTRICTION.curry(
-        Program.to(
-            (
-                (
-                    (
-                        SINGLETON_MOD_HASH,
-                        SINGLETON_LAUNCHER_HASH,
-                    ),
-                    (
-                        EXTIGENT_METADATA_LAYER_HASH,
-                        EML_TP_COVENANT_ADAPTER_HASH,
-                    ),
-                ),
-                (
-                    Program.to(EXTIGENT_METADATA_LAYER_HASH)
-                    .curry(
-                        Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash(),
-                        Program.to(None),
-                        GUARANTEED_NIL_TP,
-                        GUARANTEED_NIL_TP.get_tree_hash(),
-                        P2_ANNOUNCED_DELEGATED_PUZZLE,
-                    )
-                    .get_tree_hash_precalc(
-                        EXTIGENT_METADATA_LAYER_HASH, Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash()
-                    ),
-                    (
-                        Program.to(
-                            int_to_bytes(2)
-                            + Program.to((1, COVENANT_LAYER_HASH)).get_tree_hash_precalc(COVENANT_LAYER_HASH)
-                        ),
-                        Program.to(
-                            (
-                                [
-                                    4,
-                                    (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
-                                    [4, (1, create_did_tp()), 1],
-                                ],
-                                None,
-                            )
-                        ).get_tree_hash(),
-                    ),
-                ),
-            ),
-        ),
+        CREDENTIAL_STRUCT,
         authorized_providers,
         proofs_checker,
     )
     return first_curry.curry(first_curry.get_tree_hash(), inner_puzzle)
 
 
-# Coverage coming with CR-CAT Wallet
+def construct_cr_layer_hash(
+    authorized_providers_hash: bytes32,
+    proofs_checker_hash: bytes32,
+    inner_puzzle_hash: bytes32,
+) -> bytes32:
+    first_curry_hash: bytes32 = curry_and_treehash(
+        Program.to((1, CREDENTIAL_RESTRICTION_HASH)).get_tree_hash_precalc(CREDENTIAL_RESTRICTION_HASH),
+        CREDENTIAL_STRUCT_HASH,
+        authorized_providers_hash,
+        proofs_checker_hash,
+    )
+    first_curry_hash_hash: bytes32 = Program.to(first_curry_hash).get_tree_hash()
+    final_hash: bytes32 = curry_and_treehash(
+        Program.to((1, first_curry_hash)).get_tree_hash_precalc(first_curry_hash),
+        first_curry_hash_hash,
+        inner_puzzle_hash,
+    )
+    return final_hash
+
+
 def match_cr_layer(
     uncurried_puzzle: UncurriedPuzzle,
-) -> Optional[Tuple[List[bytes32], Program, Program]]:  # pragma: no cover
-    if uncurried_puzzle.mod == CREDENTIAL_RESTRICTION:
-        extra_uncurried_puzzle = uncurry_puzzle(uncurried_puzzle.mod)
+) -> Optional[Tuple[List[bytes32], Program, Program]]:
+    extra_uncurried_puzzle = uncurry_puzzle(uncurried_puzzle.mod)
+    if extra_uncurried_puzzle.mod == CREDENTIAL_RESTRICTION:
         return (
-            [bytes32(provider.atom) for provider in extra_uncurried_puzzle.args.at("rf").as_iter()],
+            [bytes32(provider.as_atom()) for provider in extra_uncurried_puzzle.args.at("rf").as_iter()],
             extra_uncurried_puzzle.args.at("rrf"),
             uncurried_puzzle.args.at("rf"),
         )
@@ -134,6 +161,11 @@ def solve_cr_layer(
         ]
     )
     return solution
+
+
+# For the "pending approval" state
+def construct_pending_approval_state(puzzle_hash: bytes32, amount: uint64) -> Program:
+    return PENDING_VC_ANNOUNCEMENT.curry(Program.to([[51, puzzle_hash, amount, [puzzle_hash]]]))
 
 
 _T_CRCAT = TypeVar("_T_CRCAT", bound="CRCAT")
@@ -175,11 +207,9 @@ class CRCAT:
             proofs_checker,
             payment.puzzle_hash,  # type: ignore
         ).get_tree_hash_precalc(payment.puzzle_hash)
-        new_cat_puzhash: bytes32 = construct_cat_puzzle(
-            CAT_MOD,
-            tail_hash,
-            new_cr_layer_hash,  # type: ignore
-        ).get_tree_hash_precalc(new_cr_layer_hash)
+        new_cat_puzhash = construct_cat_puzzle(CAT_MOD, tail_hash, new_cr_layer_hash).get_tree_hash_precalc(
+            new_cr_layer_hash
+        )
 
         eve_innerpuz: Program = Program.to(
             (
@@ -218,7 +248,7 @@ class CRCAT:
 
         return (
             dpuz,
-            CoinSpend(
+            make_spend(
                 eve_coin,
                 eve_cat_puzzle,
                 Program.to(  # solve_cat
@@ -265,14 +295,12 @@ class CRCAT:
         """
         if puzzle_reveal.mod != CAT_MOD:
             return False, "top most layer is not a CAT"  # pragma: no cover
-        layer_below_cat: UncurriedPuzzle = uncurry_puzzle(puzzle_reveal.args.at("rrf"))
+        layer_below_cat: UncurriedPuzzle = uncurry_puzzle(uncurry_puzzle(puzzle_reveal.args.at("rrf")).mod)
         if layer_below_cat.mod != CREDENTIAL_RESTRICTION:
             return False, "CAT is not credential restricted"  # pragma: no cover
 
-        # Coverage coming with CR-CAT Wallet
-        return True, ""  # pragma: no cover
+        return True, ""
 
-    # Coverage coming with CR-CAT Wallet
     @staticmethod
     def get_inner_puzzle(puzzle_reveal: UncurriedPuzzle) -> Program:  # pragma: no cover
         return uncurry_puzzle(puzzle_reveal.args.at("rrf")).args.at("rf")
@@ -286,13 +314,17 @@ class CRCAT:
         uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal.to_program())
         first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
         second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
+        lineage_proof = LineageProof.from_program(
+            spend.solution.to_program().at("rf"),
+            [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
+        )
         return CRCAT(
             spend.coin,
-            bytes32(uncurried_puzzle.args.at("rf").atom),
-            spend.solution.to_program().at("rf"),
-            [bytes32(ap.atom) for ap in second_uncurried_cr_layer.args.at("rf").as_iter()],
+            bytes32(uncurried_puzzle.args.at("rf").as_atom()),
+            lineage_proof,
+            [bytes32(ap.as_atom()) for ap in second_uncurried_cr_layer.args.at("rf").as_iter()],
             second_uncurried_cr_layer.args.at("rrf"),
-            first_uncurried_cr_layer.args.at("f").get_tree_hash(),
+            first_uncurried_cr_layer.args.at("rf").get_tree_hash(),
         )
 
     @classmethod
@@ -323,7 +355,7 @@ class CRCAT:
                 conditions = potential_cr_layer.run(inner_solution)
             for condition in conditions.as_iter():
                 if condition.at("f") == Program.to(1):
-                    new_inner_puzzle_hash = bytes32(condition.at("rf").atom)
+                    new_inner_puzzle_hash = bytes32(condition.at("rf").as_atom())
                     authorized_providers_as_prog: Program = condition.at("rrf")
                     proofs_checker: Program = condition.at("rrrf")
                     break
@@ -331,6 +363,7 @@ class CRCAT:
                 raise ValueError(
                     "Previous spend was not a CR-CAT, nor did it properly remark the CR params"
                 )  # pragma: no cover
+            authorized_providers = [bytes32(p.as_atom()) for p in authorized_providers_as_prog.as_iter()]
             lineage_inner_puzhash: bytes32 = potential_cr_layer.get_tree_hash()
         else:
             # Otherwise the info we need will be in the puzzle reveal
@@ -341,31 +374,35 @@ class CRCAT:
             if conditions is None:
                 conditions = inner_puzzle.run(inner_solution)
             inner_puzzle_hash: bytes32 = inner_puzzle.get_tree_hash()
+            authorized_providers = [bytes32(p.as_atom()) for p in authorized_providers_as_prog.as_iter()]
             lineage_inner_puzhash = construct_cr_layer(
-                authorized_providers_as_prog,
+                authorized_providers,
                 proofs_checker,
                 inner_puzzle_hash,  # type: ignore
             ).get_tree_hash_precalc(inner_puzzle_hash)
 
         # Convert all of the old stuff into python
-        authorized_providers: List[bytes32] = [bytes32(p.atom) for p in authorized_providers_as_prog.as_iter()]
         new_lineage_proof: LineageProof = LineageProof(
             parent_spend.coin.parent_coin_info,
             lineage_inner_puzhash,
             uint64(parent_spend.coin.amount),
         )
 
+        all_conditions: List[Program] = list(conditions.as_iter())
+        if len(all_conditions) > 1000:
+            raise RuntimeError("More than 1000 conditions not currently supported by CRCAT drivers")  # pragma: no cover
+
         # Almost complete except the coin's full puzzle hash which we want to use the class method to calculate
         partially_completed_crcats: List[CRCAT] = [
             CRCAT(
                 Coin(coin_name, bytes(32), uint64(condition.at("rrf").as_int())),
-                bytes32(tail_hash_as_prog.atom),
+                bytes32(tail_hash_as_prog.as_atom()),
                 new_lineage_proof,
                 authorized_providers,
                 proofs_checker,
-                bytes32(condition.at("rf").atom) if new_inner_puzzle_hash is None else new_inner_puzzle_hash,
+                bytes32(condition.at("rf").as_atom()) if new_inner_puzzle_hash is None else new_inner_puzzle_hash,
             )
-            for condition in conditions.as_iter()
+            for condition in all_conditions
             if condition.at("f").as_int() == 51 and condition.at("rrf") != Program.to(-113)
         ]
 
@@ -395,13 +432,13 @@ class CRCAT:
         proof_checker_solution: Program,
         provider_id: bytes32,
         vc_launcher_id: bytes32,
-        vc_inner_puzhash: bytes32,
+        vc_inner_puzhash: Optional[bytes32],  # Optional for incomplete spends
         # Inner puzzle and solution
         inner_puzzle: Program,
         inner_solution: Program,
         # For optimization purposes the conditions may already have been run
         conditions: Optional[Iterable[Program]] = None,
-    ) -> Tuple[List[bytes32], CoinSpend, List["CRCAT"]]:
+    ) -> Tuple[List[AssertCoinAnnouncement], CoinSpend, List[CRCAT]]:
         """
         Spend a CR-CAT.
 
@@ -412,23 +449,26 @@ class CRCAT:
         Likely, spend_many is more useful.
         """
         # Gather the output information
-        announcement_ids: List[bytes32] = []
+        announcements: List[AssertCoinAnnouncement] = []
         new_inner_puzzle_hashes_and_amounts: List[Tuple[bytes32, uint64]] = []
         if conditions is None:
             conditions = inner_puzzle.run(inner_solution).as_iter()  # pragma: no cover
         assert conditions is not None
         for condition in conditions:
             if condition.at("f").as_int() == 51 and condition.at("rrf").as_int() != -113:
-                new_inner_puzzle_hash: bytes32 = bytes32(condition.at("rf").atom)
+                new_inner_puzzle_hash: bytes32 = bytes32(condition.at("rf").as_atom())
                 new_amount: uint64 = uint64(condition.at("rrf").as_int())
-                announcement_ids.append(
-                    std_hash(self.coin.name() + b"\xcd" + std_hash(new_inner_puzzle_hash + int_to_bytes(new_amount)))
+                announcements.append(
+                    AssertCoinAnnouncement(
+                        asserted_id=self.coin.name(),
+                        asserted_msg=b"\xcd" + std_hash(new_inner_puzzle_hash + int_to_bytes(new_amount)),
+                    )
                 )
                 new_inner_puzzle_hashes_and_amounts.append((new_inner_puzzle_hash, new_amount))
 
         return (
-            announcement_ids,
-            CoinSpend(
+            announcements,
+            make_spend(
                 self.coin,
                 self.construct_puzzle(inner_puzzle),
                 Program.to(  # solve_cat
@@ -438,7 +478,7 @@ class CRCAT:
                             proof_checker_solution,
                             provider_id,
                             vc_launcher_id,
-                            vc_inner_puzhash,
+                            vc_inner_puzhash,  # type: ignore
                             self.coin.name(),
                             inner_solution,
                         ),
@@ -479,14 +519,14 @@ class CRCAT:
     @classmethod
     def spend_many(
         cls: Type[_T_CRCAT],
-        inner_spends: List[Tuple[_T_CRCAT, Program, Program]],  # CRCAT, inner puzzle, inner solution
+        inner_spends: List[Tuple[_T_CRCAT, int, Program, Program]],  # CRCAT, extra_delta, inner puzzle, inner solution
         # CR layer solving info
         proof_of_inclusions: Program,
         proof_checker_solution: Program,
         provider_id: bytes32,
         vc_launcher_id: bytes32,
-        vc_inner_puzhash: bytes32,
-    ) -> Tuple[List[bytes32], List[CoinSpend], List[CRCAT]]:
+        vc_inner_puzhash: Optional[bytes32],  # Optional for incomplete spends
+    ) -> Tuple[List[AssertCoinAnnouncement], List[CoinSpend], List[CRCAT]]:
         """
         Spend a multiple CR-CATs.
 
@@ -501,28 +541,29 @@ class CRCAT:
         def prev_index(index: int) -> int:
             return index - 1
 
-        sorted_inner_spends: List[Tuple[_T_CRCAT, Program, Program]] = sorted(
+        sorted_inner_spends: List[Tuple[_T_CRCAT, int, Program, Program]] = sorted(
             inner_spends,
             key=lambda spend: spend[0].coin.name(),
         )
 
-        all_expected_announcements: List[bytes32] = []
+        all_expected_announcements: List[AssertCoinAnnouncement] = []
         all_coin_spends: List[CoinSpend] = []
         all_new_crcats: List[CRCAT] = []
 
         subtotal: int = 0
         for i, inner_spend in enumerate(sorted_inner_spends):
-            crcat, inner_puzzle, inner_solution = inner_spend
+            crcat, extra_delta, inner_puzzle, inner_solution = inner_spend
             conditions: List[Program] = list(inner_puzzle.run(inner_solution).as_iter())
-            output_amount: uint64 = uint64(
+            output_amount: int = (
                 sum(
                     c.at("rrf").as_int()
                     for c in conditions
                     if c.at("f").as_int() == 51 and c.at("rrf").as_int() != -113
                 )
+                - extra_delta
             )
-            next_crcat, _, _ = sorted_inner_spends[next_index(i)]
-            prev_crcat, _, _ = sorted_inner_spends[prev_index(i)]
+            next_crcat, _, _, _ = sorted_inner_spends[next_index(i)]
+            prev_crcat, _, _, _ = sorted_inner_spends[prev_index(i)]
             expected_announcements, coin_spend, new_crcats = crcat.do_spend(
                 prev_crcat.coin.name(),
                 LineageProof(
@@ -533,7 +574,7 @@ class CRCAT:
                     uint64(next_crcat.coin.amount),
                 ),
                 subtotal,
-                0,  # TODO: add support for mint/melt
+                extra_delta,
                 proof_of_inclusions,
                 proof_checker_solution,
                 provider_id,
@@ -564,10 +605,10 @@ class CRCATSpend:
     inner_puzzle: Program
     inner_solution: Program
     children: List[CRCAT]
-    provider_specified: bool
+    incomplete: bool
     inner_conditions: List[Program]
+    proof_of_inclusions: Program
 
-    # Coverage coming with CR-CAT wallet
     @classmethod
     def from_coin_spend(cls, spend: CoinSpend) -> CRCATSpend:  # pragma: no cover
         inner_puzzle: Program = CRCAT.get_inner_puzzle(uncurry_puzzle(spend.puzzle_reveal.to_program()))
@@ -580,11 +621,13 @@ class CRCATSpend:
             CRCAT.get_next_from_coin_spend(spend, conditions=inner_conditions),
             spend.solution.to_program().at("f").at("rrrrf") == Program.to(None),
             list(inner_conditions.as_iter()),
+            spend.solution.to_program().at("f").at("f"),
         )
 
 
+@streamable
 @dataclass(frozen=True)
-class ProofsChecker:
+class ProofsChecker(Streamable):
     flags: List[str]
 
     def as_program(self) -> Program:
@@ -593,10 +636,28 @@ class ProofsChecker:
 
         return PROOF_FLAGS_CHECKER.curry(
             [
-                Program.to((flag, 1))
+                Program.to((flag, "1"))
                 for flag in sorted(
                     self.flags,
                     key=functools.cmp_to_key(byte_sort_flags),
                 )
             ]
         )
+
+    @classmethod
+    def from_program(cls, uncurried_puzzle: UncurriedPuzzle) -> ProofsChecker:
+        if uncurried_puzzle.mod != PROOF_FLAGS_CHECKER:
+            raise ValueError("Puzzle was not a proof checker")  # pragma: no cover
+
+        return cls([flag.at("f").as_atom().decode("utf8") for flag in uncurried_puzzle.args.at("f").as_iter()])
+
+
+class CRCATVersion(IntEnum):
+    V1 = uint16(1)
+
+
+@streamable
+@dataclass(frozen=True)
+class CRCATMetadata(Streamable):
+    lineage_proof: LineageProof
+    inner_puzzle_hash: bytes32

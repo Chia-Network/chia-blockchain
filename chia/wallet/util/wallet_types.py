@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from chia.util.ints import uint8, uint32
 from chia.util.streamable import Streamable, streamable
@@ -26,11 +26,16 @@ class WalletType(IntEnum):
     DATA_LAYER = 11
     DATA_LAYER_OFFER = 12
     VC = 13
+    DAO = 14
+    DAO_CAT = 15
+    CRCAT = 57
 
 
 class CoinType(IntEnum):
     NORMAL = 0
     CLAWBACK = 1
+    CRCAT_PENDING = 2
+    CRCAT = 3
 
 
 class RemarkDataType(IntEnum):
@@ -39,13 +44,16 @@ class RemarkDataType(IntEnum):
     CLAWBACK = 2
 
 
+T = TypeVar("T", contravariant=True)
+
+
 @dataclass(frozen=True)
 class WalletIdentifier:
     id: uint32
     type: WalletType
 
     @classmethod
-    def create(cls, wallet: WalletProtocol) -> WalletIdentifier:
+    def create(cls, wallet: WalletProtocol[T]) -> WalletIdentifier:
         return cls(wallet.id(), wallet.type())
 
 

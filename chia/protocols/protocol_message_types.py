@@ -113,3 +113,9 @@ class ProtocolMessageTypes(Enum):
     respond_block_headers = 88
     request_fee_estimates = 89
     respond_fee_estimates = 90
+
+    # new Full Node protocol messages
+    new_unfinished_block2 = 92
+    request_unfinished_block2 = 93
+
+    error = 255

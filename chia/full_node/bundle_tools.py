@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import List, Optional, Tuple, Union
 
-from clvm.casts import int_to_bytes
+from chia_rs import solution_generator, solution_generator_backrefs
 
 from chia.full_node.generator import create_compressed_generator
 from chia.types.blockchain_format.program import Program
@@ -15,47 +15,15 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 
 
-def _serialize_amount(val: int) -> bytes:
-    assert val >= 0
-    assert val < 2**64
-    atom: bytes = int_to_bytes(val)
-    size = len(atom)
-    assert size <= 9
-
-    if size == 0:
-        return b"\x80"
-    if size == 1 and atom[0] <= 0x7F:
-        return atom
-    size_blob = bytes([0x80 | size])
-    return size_blob + atom
-
-
-def spend_bundle_to_serialized_coin_spend_entry_list(bundle: SpendBundle) -> bytes:
-    r = b""
-    # ( ( parent-coin-id puzzle-reveal amount solution ) ... )
-    for coin_spend in bundle.coin_spends:
-        r += b"\xff"
-        # A0 is the length-prefix for the parent coin ID (which is always 32
-        # bytes long)
-        r += b"\xff\xa0" + coin_spend.coin.parent_coin_info
-        r += b"\xff" + bytes(coin_spend.puzzle_reveal)
-        r += b"\xff" + _serialize_amount(coin_spend.coin.amount)
-        r += b"\xff" + bytes(coin_spend.solution)
-        r += b"\x80"
-    r += b"\x80"
-    return r
-
-
 def simple_solution_generator(bundle: SpendBundle) -> BlockGenerator:
-    """
-    Simply quotes the solutions we know.
-    """
-    cse_list = spend_bundle_to_serialized_coin_spend_entry_list(bundle)
-    # this is the serialized form of the lisp structure below. The "q" operator
-    # is has opcode 1.
-    # (q . ( cse_list ))
-    block_program = b"\xff\x01\xff" + cse_list + b"\x80"
+    spends = [(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in bundle.coin_spends]
+    block_program = solution_generator(spends)
+    return BlockGenerator(SerializedProgram.from_bytes(block_program), [], [])
 
+
+def simple_solution_generator_backrefs(bundle: SpendBundle) -> BlockGenerator:
+    spends = [(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in bundle.coin_spends]
+    block_program = solution_generator_backrefs(spends)
     return BlockGenerator(SerializedProgram.from_bytes(block_program), [], [])
 
 
