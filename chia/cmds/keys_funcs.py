@@ -17,7 +17,14 @@ from chia.util.config import load_config
 from chia.util.errors import KeychainException
 from chia.util.file_keyring import MAX_LABEL_LENGTH
 from chia.util.ints import uint32
-from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
+from chia.util.keychain import (
+    Keychain,
+    KeyData,
+    bytes_to_mnemonic,
+    check_mnemonic_validity,
+    generate_mnemonic,
+    mnemonic_to_seed,
+)
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.wallet.derive_keys import (
     master_pk_to_wallet_pk_unhardened,
@@ -78,7 +85,7 @@ def add_key_info(mnemonic_or_pk: str, label: Optional[str]) -> None:
     """
     unlock_keyring()
     try:
-        if mnemonic_or_pk.count(" ") == 23:
+        if check_mnemonic_validity(mnemonic_or_pk):
             sk = Keychain().add_key(mnemonic_or_pk, label, private=True)
             fingerprint = sk.get_g1().get_fingerprint()
             print(f"Added private key with public key fingerprint {fingerprint}")
