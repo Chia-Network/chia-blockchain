@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Optional, Union
+from re import search
+from typing import Union
 
 from packaging.version import InvalidVersion, Version
 
@@ -13,14 +14,20 @@ def _chia_short_version_from_version(version: Version) -> str:
     return release_version_str if version.pre is None else release_version_str + "".join(map(str, version.pre))
 
 
-def chia_short_version(version: Optional[Union[str, Version]] = None) -> str:
-    if version is None:
-        return chia_short_version(__version__)
-
-    if isinstance(version, Version):
-        return _chia_short_version_from_version(version)
-
+def _chia_short_version_from_str(version: str) -> str:
     try:
         return chia_short_version(Version(version))
     except InvalidVersion:
-        return version
+        pass
+    match = search(r"^(\d+\.\d+\.\d+)", version)
+    if match is not None:
+        return match.group(1)
+
+    return version
+
+
+def chia_short_version(version: Union[str, Version] = __version__) -> str:
+    if isinstance(version, Version):
+        return _chia_short_version_from_version(version)
+
+    return _chia_short_version_from_str(version)
