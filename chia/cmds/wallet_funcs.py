@@ -923,18 +923,20 @@ async def print_balances(
 
 
 async def create_did_wallet(
-    wallet_rpc_port: Optional[int], fp: Optional[int], d_fee: Decimal, name: Optional[str], amount: int
-) -> None:
+    wallet_rpc_port: Optional[int], fp: Optional[int], d_fee: Decimal, name: Optional[str], amount: int, push: bool
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         fee: int = int(d_fee * units["chia"])
         try:
-            response = await wallet_client.create_new_did_wallet(amount, fee, name)
+            response = await wallet_client.create_new_did_wallet(amount, fee, name, push=push)
             wallet_id = response["wallet_id"]
             my_did = response["my_did"]
             print(f"Successfully created a DID wallet with name {name} and id {wallet_id} on key {fingerprint}")
             print(f"Successfully created a DID {my_did} in the newly created DID wallet")
+            return []  # TODO: fix this endpoint to return transactions
         except Exception as e:
             print(f"Failed to create DID wallet: {e}")
+            return []
 
 
 async def did_set_wallet_name(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, name: str) -> None:
@@ -985,7 +987,8 @@ async def update_did_metadata(
     did_wallet_id: int,
     metadata: str,
     reuse_puzhash: bool,
-) -> None:
+    push: bool = True,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.update_did_metadata(
@@ -995,12 +998,15 @@ async def update_did_metadata(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
             )
-            print(
-                f"Successfully updated DID wallet ID: {response.wallet_id}, "
-                f"Spend Bundle: {response.spend_bundle.to_json_dict()}"
-            )
+            if push:
+                print(
+                    f"Successfully updated DID wallet ID: {response.wallet_id}, "
+                    f"Spend Bundle: {response.spend_bundle.to_json_dict()}"
+                )
+            return response.transactions
         except Exception as e:
             print(f"Failed to update DID metadata: {e}")
+            return []
 
 
 async def did_message_spend(
@@ -1009,7 +1015,8 @@ async def did_message_spend(
     did_wallet_id: int,
     puzzle_announcements: List[str],
     coin_announcements: List[str],
-) -> None:
+    push: bool = True,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.did_message_spend(
@@ -1019,10 +1026,13 @@ async def did_message_spend(
                     *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in coin_announcements),
                     *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in puzzle_announcements),
                 ),
+                push=push,
             )
             print(f"Message Spend Bundle: {response.spend_bundle.to_json_dict()}")
+            return response.transactions
         except Exception as e:
             print(f"Failed to update DID metadata: {e}")
+            return []
 
 
 async def transfer_did(
@@ -1033,7 +1043,8 @@ async def transfer_did(
     target_address: str,
     with_recovery: bool,
     reuse_puzhash: Optional[bool],
-) -> None:
+    push: bool = True,
+) -> List[TransactionRecord]:
     fee: int = int(d_fee * units["chia"])
 
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
@@ -1046,12 +1057,16 @@ async def transfer_did(
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
+                push=push,
             )
-            print(f"Successfully transferred DID to {target_address}")
+            if push:
+                print(f"Successfully transferred DID to {target_address}")
             print(f"Transaction ID: {response.transaction_id.hex()}")
             print(f"Transaction: {response.transaction.to_json_dict_convenience(config)}")
+            return response.transactions
         except Exception as e:
             print(f"Failed to transfer DID: {e}")
+            return []
 
 
 async def find_lost_did(
