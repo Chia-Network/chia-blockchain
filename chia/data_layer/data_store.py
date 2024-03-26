@@ -1300,8 +1300,12 @@ class DataStore:
                 WHERE n.right IS NOT NULL
             )
             DELETE FROM node
-            WHERE hash NOT IN (SELECT hash FROM ancestors)
-            AND hash NOT IN (SELECT hash FROM pending_nodes)
+            WHERE hash IN (
+                SELECT n.hash FROM node n
+                LEFT JOIN ancestors a ON n.hash = a.hash
+                LEFT JOIN pending_nodes pn ON n.hash = pn.hash
+                WHERE a.hash IS NULL AND pn.hash IS NULL
+            )
             """,
             {
                 "pending_status": Status.PENDING.value,
