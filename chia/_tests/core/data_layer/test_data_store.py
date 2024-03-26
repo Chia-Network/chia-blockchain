@@ -1323,9 +1323,13 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
         current_timestamp += 1
 
 
+@pytest.mark.parametrize(
+    "error",
+    [True, False],
+)
 @pytest.mark.anyio
 async def test_server_http_ban(
-    data_store: DataStore, tree_id: bytes32, monkeypatch: Any, tmp_path: Path, seeded_random: random.Random
+    data_store: DataStore, tree_id: bytes32, error: bool, monkeypatch: Any, tmp_path: Path, seeded_random: random.Random
 ) -> None:
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
     await data_store.subscribe(Subscription(tree_id, [sinfo]))
@@ -1338,7 +1342,8 @@ async def test_server_http_ban(
         timeout: int,
         log: logging.Logger,
     ) -> None:
-        raise aiohttp.ClientConnectionError()
+        if error:
+            raise aiohttp.ClientConnectionError()
 
     start_timestamp = int(time.time())
     with monkeypatch.context() as m:
