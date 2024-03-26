@@ -4,6 +4,7 @@ from typing import Dict, Tuple, Union
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
@@ -60,19 +61,25 @@ async def find_fork_point_in_chain(
 
 async def lookup_fork_chain(
     blocks: BlockchainInterface,
-    block_1: Tuple[uint32, bytes32],
-    block_2: Tuple[uint32, bytes32],
+    block_1: Tuple[int, bytes32],
+    block_2: Tuple[int, bytes32],
+    constants: ConsensusConstants,
 ) -> Tuple[Dict[uint32, bytes32], bytes32]:
-    """Tries to find height where new chain (block_2) diverged from block_1.
+    """
+    Tries to find height where new chain (block_2) diverged from block_1.
     The inputs are (height, header-hash)-tuples.
     Returns two values:
         1. The height to hash map of block_2's chain down to, but not
            including, the fork height
         2. The header hash of the block at the fork height
+    Note that height -1 is valid. There is never a block at that height, but
+    there is a block hash (GENESIS_CHALLENGE).
+    We never include the fork point in the returned height to hash map, so its
+    key is unsigned
     """
-    height_1 = int(block_1[0])
+    height_1 = block_1[0]
     bh_1 = block_1[1]
-    height_2 = int(block_2[0])
+    height_2 = block_2[0]
     bh_2 = block_2[1]
 
     ret: Dict[uint32, bytes32] = {}
@@ -99,7 +106,6 @@ async def lookup_fork_chain(
     if bh_1 == bh_2:
         return (ret, bh_2)
 
+    # this means the fork point is -1, and its hash is the GENESIS_CHALLENGE
     ret[uint32(0)] = bh_2
-    # TODO: if we would pass in the consensus constants, we could return the
-    # GENESIS_CHALLENGE hash here, instead of zeros
-    return (ret, bytes32([0] * 32))
+    return (ret, constants.GENESIS_CHALLENGE)
