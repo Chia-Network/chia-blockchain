@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence
 
 import click
 
-from chia.cmds.cmds_util import tx_config_args
+from chia.cmds.cmds_util import tx_config_args, tx_out_cmd
 from chia.cmds.plotnft import validate_fee
+from chia.wallet.transaction_record import TransactionRecord
 
 
 @click.group("dao", short_help="Create, manage or show state of DAOs", no_args_is_help=True)
@@ -155,6 +156,7 @@ def dao_add_cmd(
     callback=validate_fee,
 )
 @tx_config_args
+@tx_out_cmd
 def dao_create_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -175,7 +177,8 @@ def dao_create_cmd(
     coins_to_exclude: Sequence[str],
     amounts_to_exclude: Sequence[str],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import create_dao_wallet
 
     if self_destruct == proposal_timelock:
@@ -201,8 +204,9 @@ def dao_create_cmd(
         "coins_to_exclude": coins_to_exclude,
         "amounts_to_exclude": amounts_to_exclude,
         "reuse_puzhash": reuse,
+        "push": push,
     }
-    asyncio.run(create_dao_wallet(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(create_dao_wallet(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
@@ -266,6 +270,7 @@ def dao_get_id_cmd(
     callback=validate_fee,
 )
 @tx_config_args
+@tx_out_cmd
 def dao_add_funds_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -278,7 +283,8 @@ def dao_add_funds_cmd(
     coins_to_exclude: Sequence[str],
     amounts_to_exclude: Sequence[str],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import add_funds_to_treasury
 
     extra_params = {
@@ -291,8 +297,9 @@ def dao_add_funds_cmd(
         "coins_to_exclude": coins_to_exclude,
         "amounts_to_exclude": amounts_to_exclude,
         "reuse_puzhash": reuse,
+        "push": push,
     }
-    asyncio.run(add_funds_to_treasury(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(add_funds_to_treasury(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_cmd.command("balance", short_help="Get the asset balances for a DAO treasury", no_args_is_help=True)
@@ -455,6 +462,7 @@ def dao_show_proposal_cmd(
     callback=validate_fee,
 )
 @tx_config_args
+@tx_out_cmd
 def dao_vote_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -468,7 +476,8 @@ def dao_vote_cmd(
     coins_to_exclude: Sequence[str],
     amounts_to_exclude: Sequence[str],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import vote_on_proposal
 
     is_yes_vote = False if vote_no else True
@@ -484,8 +493,9 @@ def dao_vote_cmd(
         "coins_to_exclude": coins_to_exclude,
         "amounts_to_exclude": amounts_to_exclude,
         "reuse_puzhash": reuse,
+        "push": push,
     }
-    asyncio.run(vote_on_proposal(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(vote_on_proposal(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
@@ -526,6 +536,7 @@ def dao_vote_cmd(
     callback=validate_fee,
 )
 @tx_config_args
+@tx_out_cmd
 def dao_close_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -538,7 +549,8 @@ def dao_close_proposal_cmd(
     coins_to_exclude: Sequence[str],
     amounts_to_exclude: Sequence[str],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import close_proposal
 
     extra_params = {
@@ -551,8 +563,9 @@ def dao_close_proposal_cmd(
         "coins_to_exclude": coins_to_exclude,
         "amounts_to_exclude": amounts_to_exclude,
         "reuse_puzhash": reuse,
+        "push": push,
     }
-    asyncio.run(close_proposal(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(close_proposal(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
@@ -586,6 +599,7 @@ def dao_close_proposal_cmd(
     callback=validate_fee,
 )
 @tx_config_args
+@tx_out_cmd
 def dao_lockup_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -597,7 +611,8 @@ def dao_lockup_coins_cmd(
     coins_to_exclude: Sequence[str],
     amounts_to_exclude: Sequence[str],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import lockup_coins
 
     extra_params = {
@@ -609,8 +624,9 @@ def dao_lockup_coins_cmd(
         "coins_to_exclude": coins_to_exclude,
         "amounts_to_exclude": amounts_to_exclude,
         "reuse_puzhash": reuse,
+        "push": push,
     }
-    asyncio.run(lockup_coins(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(lockup_coins(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_cmd.command("release_coins", short_help="Release closed proposals from DAO CATs", no_args_is_help=True)
@@ -633,6 +649,7 @@ def dao_lockup_coins_cmd(
     callback=validate_fee,
 )
 @tx_config_args
+@tx_out_cmd
 def dao_release_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -643,7 +660,8 @@ def dao_release_coins_cmd(
     coins_to_exclude: Sequence[str],
     amounts_to_exclude: Sequence[str],
     reuse: Optional[bool],
-) -> None:
+    push: bool = True,
+) -> List[TransactionRecord]:
     from .dao_funcs import release_coins
 
     extra_params = {
@@ -654,8 +672,9 @@ def dao_release_coins_cmd(
         "coins_to_exclude": coins_to_exclude,
         "amounts_to_exclude": amounts_to_exclude,
         "reuse_puzhash": reuse,
+        "push": push,
     }
-    asyncio.run(release_coins(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(release_coins(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_cmd.command("exit_lockup", short_help="Release DAO CATs from voting mode", no_args_is_help=True)
@@ -678,6 +697,7 @@ def dao_release_coins_cmd(
     callback=validate_fee,
 )
 @tx_config_args
+@tx_out_cmd
 def dao_exit_lockup_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -688,7 +708,8 @@ def dao_exit_lockup_cmd(
     coins_to_exclude: Sequence[str],
     amounts_to_exclude: Sequence[str],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import exit_lockup
 
     extra_params = {
@@ -699,8 +720,9 @@ def dao_exit_lockup_cmd(
         "coins_to_exclude": coins_to_exclude,
         "amounts_to_exclude": amounts_to_exclude,
         "reuse_puzhash": reuse,
+        "push": push,
     }
-    asyncio.run(exit_lockup(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(exit_lockup(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
@@ -772,6 +794,7 @@ def dao_proposal(ctx: click.Context) -> None:
     callback=validate_fee,
 )
 @tx_config_args
+@tx_out_cmd
 def dao_create_spend_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -787,7 +810,8 @@ def dao_create_spend_proposal_cmd(
     coins_to_exclude: Sequence[str],
     amounts_to_exclude: Sequence[str],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import create_spend_proposal
 
     extra_params = {
@@ -803,8 +827,9 @@ def dao_create_spend_proposal_cmd(
         "coins_to_exclude": coins_to_exclude,
         "amounts_to_exclude": amounts_to_exclude,
         "reuse_puzhash": reuse,
+        "push": push,
     }
-    asyncio.run(create_spend_proposal(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(create_spend_proposal(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_proposal.command("update", short_help="Create a proposal to change the DAO rules", no_args_is_help=True)
@@ -877,6 +902,7 @@ def dao_create_spend_proposal_cmd(
     callback=validate_fee,
 )
 @tx_config_args
+@tx_out_cmd
 def dao_create_update_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -894,7 +920,8 @@ def dao_create_update_proposal_cmd(
     coins_to_exclude: Sequence[str],
     amounts_to_exclude: Sequence[str],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import create_update_proposal
 
     extra_params = {
@@ -912,8 +939,9 @@ def dao_create_update_proposal_cmd(
         "coins_to_exclude": coins_to_exclude,
         "amounts_to_exclude": amounts_to_exclude,
         "reuse_puzhash": reuse,
+        "push": push,
     }
-    asyncio.run(create_update_proposal(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(create_update_proposal(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_proposal.command("mint", short_help="Create a proposal to mint new DAO CATs", no_args_is_help=True)
@@ -959,6 +987,7 @@ def dao_create_update_proposal_cmd(
     callback=validate_fee,
 )
 @tx_config_args
+@tx_out_cmd
 def dao_create_mint_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -972,7 +1001,8 @@ def dao_create_mint_proposal_cmd(
     coins_to_exclude: Sequence[str],
     amounts_to_exclude: Sequence[str],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import create_mint_proposal
 
     extra_params = {
@@ -986,8 +1016,9 @@ def dao_create_mint_proposal_cmd(
         "coins_to_exclude": coins_to_exclude,
         "amounts_to_exclude": amounts_to_exclude,
         "reuse_puzhash": reuse,
+        "push": push,
     }
-    asyncio.run(create_mint_proposal(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(create_mint_proposal(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
