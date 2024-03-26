@@ -412,6 +412,7 @@ class WalletRpcClient(RpcClient):
         name: Optional[str] = "DID Wallet",
         backup_ids: List[str] = [],
         required_num: int = 0,
+        push: bool = True,
     ) -> Dict[str, Any]:
         request = {
             "wallet_type": "did_wallet",
@@ -421,6 +422,7 @@ class WalletRpcClient(RpcClient):
             "amount": amount,
             "fee": fee,
             "wallet_name": name,
+            "push": push,
         }
         response = await self.fetch("create_new_wallet", request)
         return response
