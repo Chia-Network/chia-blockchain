@@ -6,7 +6,7 @@
 # Pretty Good Practices
 
 Software development is complicated and often requires significant flexibility in terms of the patterns used.
-But...
+But,
 Using that flexibility in all cases results in difficult to read and buggy code.
 The topics covered here are intended to provide good default patterns to use in most cases.
 In exceptional cases, other patterns can be discussed and considered.
