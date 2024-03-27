@@ -8,7 +8,6 @@ import random
 from operator import attrgetter
 from typing import Any, Dict, List, Optional, Tuple, cast
 
-import aiosqlite
 import pytest
 from chia_rs import G2Element
 
@@ -2417,7 +2416,6 @@ async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnv
         db_path, fingerprint
     ), "Schema has been changed, reset sync db won't work, please update WalletNode.reset_sync_db function"
     dbw: DBWrapper2 = wallet_node.wallet_state_manager.db_wrapper
-    conn: aiosqlite.Connection
     async with dbw.writer() as conn:
         await conn.execute("ALTER TABLE coin_record RENAME TO coin_record_temp")
     assert not await wallet_node.reset_sync_db(db_path, fingerprint)
