@@ -140,7 +140,7 @@ class Crawler:
 
         async def peer_action(peer: WSChiaConnection) -> None:
             peer_info = peer.get_peer_info()
-            version = peer.get_version()
+            version = peer.get_version_str()
             if peer_info is not None and version is not None:
                 self.version_cache.append((peer_info.host, version))
             # Ask peer for peers
