@@ -6,17 +6,18 @@ import random
 import re
 import statistics
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from random import Random
 from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
 
 import aiohttp
 import aiosqlite
+import big_o
+import big_o.complexities
 import pytest
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
-from chia._tests.util.misc import BenchmarkRunner, Marks, datacases
+from chia._tests.util.misc import BenchmarkRunner
 from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
@@ -1491,140 +1492,73 @@ async def test_clear_pending_roots_returns_root(
     assert cleared_root == pending_root
 
 
-@dataclass
-class BatchInsertBenchmarkCase:
-    pre: int
-    count: int
-    limit: float
-    marks: Marks = ()
-
-    @property
-    def id(self) -> str:
-        return f"pre={self.pre},count={self.count}"
-
-
-@datacases(
-    # BatchInsertBenchmarkCase(
-    #     pre=0,
-    #     count=100,
-    #     limit=2.2,
-    # ),
-    # BatchInsertBenchmarkCase(
-    #     pre=1_000,
-    #     count=100,
-    #     limit=4,
-    # ),
-    # BatchInsertBenchmarkCase(
-    #     pre=0,
-    #     count=1_000,
-    #     limit=30,
-    # ),
-    # BatchInsertBenchmarkCase(
-    #     pre=1_000,
-    #     count=1_000,
-    #     limit=36,
-    # ),
-    *(
-        BatchInsertBenchmarkCase(
-            pre=1_000,
-            count=n,
-            limit=9999,
-        )
-        for n in [1, 10, 100, 1000]
-    ),
-    # BatchInsertBenchmarkCase(
-    #     pre=1_000,
-    #     count=100,
-    #     limit=9999,
-    # ),
-    # BatchInsertBenchmarkCase(
-    #     pre=2_000,
-    #     count=100,
-    #     limit=9999,
-    # ),
-    # BatchInsertBenchmarkCase(
-    #     pre=3_000,
-    #     count=100,
-    #     limit=9999,
-    # ),
-    # BatchInsertBenchmarkCase(
-    #     pre=4_000,
-    #     count=100,
-    #     limit=9999,
-    # ),
-    # BatchInsertBenchmarkCase(
-    #     pre=5_000,
-    #     count=100,
-    #     limit=9999,
-    # ),
-    # BatchInsertBenchmarkCase(
-    #     pre=10_000,
-    #     count=100,
-    #     limit=9999,
-    # ),
-    # BatchInsertBenchmarkCase(
-    #     pre=100_000,
-    #     count=100,
-    #     limit=9999,
-    # ),
-)
 @pytest.mark.anyio
 async def test_benchmark_batch_insert_speed(
     data_store: DataStore,
     tree_id: bytes32,
     benchmark_runner: BenchmarkRunner,
-    case: BatchInsertBenchmarkCase,
 ) -> None:
     r = random.Random()
     r.seed("shadowlands", version=2)
 
+    test_size = 100
+    max_pre_size = 3000
+    batch_count, remainder = divmod(max_pre_size, test_size)
+    assert remainder == 0, "the last batch would be a different size"
+
+    changelist = [
+        {
+            "action": "insert",
+            "key": x.to_bytes(32, byteorder="big", signed=False),
+            "value": bytes(r.getrandbits(8) for _ in range(1200)),
+        }
+        for x in range(max_pre_size)
+    ]
+
+    pre = changelist[:max_pre_size]
+
+    durations: Dict[int, float] = {}
+
+    total_inserted = 0
+    pre_iter = iter(pre)
     with benchmark_runner.assert_runtime(
-        label="generate changelist",
+        label="overall",
+        # TODO: probably also assert a total runtime, though we are less concerned
+        #       about the exact time than the complexity
         # TODO: this is silly
         seconds=1,
         enable_assertion=False,
         clock=time.monotonic,
-    ):
-        changelist = [
-            {
-                "action": "insert",
-                "key": x.to_bytes(32, byteorder="big", signed=False),
-                "value": bytes(r.getrandbits(8) for _ in range(1200)),
-            }
-            for x in range(case.pre + case.count)
-        ]
-
-        pre = changelist[: case.pre]
-        batch = changelist[case.pre : case.pre + case.count]
-
-    with benchmark_runner.assert_runtime(
-        label="pre",
-        # TODO: this is silly
-        seconds=1,
-        enable_assertion=False,
-        clock=time.monotonic,
-    ):
-        pre_batch_size = 200
-        pre_iter = iter(pre)
+    ) as f:
         while True:
-            pre_batch = [value for _, value in zip(range(pre_batch_size), pre_iter)]
+            pre_batch = list(itertools.islice(pre_iter, test_size))
             if len(pre_batch) == 0:
                 break
-            await data_store.insert_batch(
-                tree_id=tree_id,
-                changelist=pre_batch,
-                status=Status.COMMITTED,
-            )
 
-    with benchmark_runner.assert_runtime(
-        label="count",
-        seconds=case.limit,
-        clock=time.monotonic,
-    ):
-        await data_store.insert_batch(
-            tree_id=tree_id,
-            changelist=batch,
-        )
+            with benchmark_runner.assert_runtime(
+                label="count",
+                # TODO: this is silly
+                seconds=1,
+                enable_assertion=False,
+                clock=time.monotonic,
+            ) as f:
+                await data_store.insert_batch(
+                    tree_id=tree_id,
+                    changelist=pre_batch,
+                    # TODO: does this mess up test accuracy?
+                    status=Status.COMMITTED,
+                )
+
+            total_inserted += len(pre_batch)
+
+            durations[total_inserted] = f.result().duration
+
+    best_class, fitted = big_o.infer_big_o_class(
+        ns=durations.keys(),
+        time=durations.values(),
+    )
+    assert isinstance(best_class, big_o.complexities.Constant), f"must be linear: {best_class}"
+    # TODO: also assert about fit quality
 
 
 @pytest.mark.anyio
