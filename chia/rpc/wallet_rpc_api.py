@@ -776,6 +776,9 @@ class WalletRpcApi:
                     if type(request["metadata"]) is dict:
                         metadata = request["metadata"]
 
+                if not push:
+                    raise ValueError("Creation of DID wallet must be automatically pushed for now.")
+
                 async with self.service.wallet_state_manager.lock:
                     did_wallet_name: str = request.get("wallet_name", None)
                     if did_wallet_name is not None:

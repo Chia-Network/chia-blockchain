@@ -53,7 +53,9 @@ def get_login_link_cmd(launcher_id: str) -> None:
     asyncio.run(get_login_link(launcher_id))
 
 
-# MARK: tx_endpoint
+# Functions with this mark in this file are not being ported to @tx_out_cmd due to lack of observer key support
+# They will therefore not work with observer-only functionality
+# MARK: tx_endpoint  (This creates wallet transactions and should be parametrized by relevant options)
 @plotnft_cmd.command("create", help="Create a plot NFT")
 @click.option("-y", "--yes", "dont_prompt", help="No prompts", is_flag=True)
 @options.create_fingerprint()
