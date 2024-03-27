@@ -30,7 +30,7 @@ def generate_in_memory_db_uri() -> str:
 
 
 async def execute_fetchone(
-    c: aiosqlite.Connection, sql: str, parameters: Optional[Iterable[Any]] = None
+    c: WrapperConnection, sql: str, parameters: Optional[Iterable[Any]] = None
 ) -> Optional[sqlite3.Row]:
     rows = await c.execute_fetchall(sql, parameters)
     for row in rows:
@@ -97,6 +97,21 @@ def get_host_parameter_limit() -> int:
         else:
             host_parameter_limit = 999
     return host_parameter_limit
+
+
+@dataclass
+class WrapperConnection:
+    _connection: aiosqlite.Connection
+
+    def __post_init__(self) -> None:
+        self.commit = self._connection.commit
+        self.execute = self._connection.execute
+        self.execute_insert = self._connection.execute_insert
+        self.execute_fetchall = self._connection.execute_fetchall
+        self.executemany = self._connection.executemany
+        self.rollback = self._connection.rollback
+        # TODO: gotta deal with the property aspect if it is one
+        self.in_transaction = self._connection.in_transaction
 
 
 @final
@@ -249,7 +264,7 @@ class DBWrapper2:
             await self._write_connection.execute(f"RELEASE {name}")
 
     @contextlib.asynccontextmanager
-    async def writer(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def writer(self) -> AsyncIterator[WrapperConnection]:
         """
         Initiates a new, possibly nested, transaction. If this task is already
         in a transaction, none of the changes made as part of this transaction
@@ -265,19 +280,19 @@ class DBWrapper2:
         if self._current_writer == task:
             # we allow nesting writers within the same task
             async with self._savepoint_ctx():
-                yield self._write_connection
+                yield WrapperConnection(_connection=self._write_connection)
             return
 
         async with self._lock:
             async with self._savepoint_ctx():
                 self._current_writer = task
                 try:
-                    yield self._write_connection
+                    yield WrapperConnection(_connection=self._write_connection)
                 finally:
                     self._current_writer = None
 
     @contextlib.asynccontextmanager
-    async def writer_maybe_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def writer_maybe_transaction(self) -> AsyncIterator[WrapperConnection]:
         """
         Initiates a write to the database. If this task is already in a write
         transaction with the DB, this is a no-op. Any changes made to the
@@ -289,19 +304,19 @@ class DBWrapper2:
         assert task is not None
         if self._current_writer == task:
             # just use the existing transaction
-            yield self._write_connection
+            yield WrapperConnection(_connection=self._write_connection)
             return
 
         async with self._lock:
             async with self._savepoint_ctx():
                 self._current_writer = task
                 try:
-                    yield self._write_connection
+                    yield WrapperConnection(_connection=self._write_connection)
                 finally:
                     self._current_writer = None
 
     @contextlib.asynccontextmanager
-    async def reader(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def reader(self) -> AsyncIterator[WrapperConnection]:
         async with self.reader_no_transaction() as connection:
             if connection.in_transaction:
                 yield connection
@@ -315,7 +330,7 @@ class DBWrapper2:
                     await connection.rollback()
 
     @contextlib.asynccontextmanager
-    async def reader_no_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def reader_no_transaction(self) -> AsyncIterator[WrapperConnection]:
         # there should have been read connections added
         assert self._num_read_connections > 0
 
@@ -331,18 +346,18 @@ class DBWrapper2:
         if self._current_writer == task:
             # we allow nesting reading while also having a writer connection
             # open, within the same task
-            yield self._write_connection
+            yield WrapperConnection(_connection=self._write_connection)
             return
 
         if task in self._in_use:
-            yield self._in_use[task]
+            yield WrapperConnection(_connection=self._in_use[task])
         else:
             c = await self._read_connections.get()
             try:
                 # record our connection in this dict to allow nested calls in
                 # the same task to use the same connection
                 self._in_use[task] = c
-                yield c
+                yield WrapperConnection(_connection=c)
             finally:
                 del self._in_use[task]
                 self._read_connections.put_nowait(c)

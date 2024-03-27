@@ -39,7 +39,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, WrapperConnection
 
 log = logging.getLogger(__name__)
 
@@ -694,9 +694,7 @@ class DataStore:
 
         return internal_nodes
 
-    async def get_keys_values_cursor(
-        self, reader: aiosqlite.Connection, root_hash: Optional[bytes32]
-    ) -> aiosqlite.Cursor:
+    async def get_keys_values_cursor(self, reader: WrapperConnection, root_hash: Optional[bytes32]) -> aiosqlite.Cursor:
         return await reader.execute(
             """
             WITH RECURSIVE
@@ -1284,7 +1282,7 @@ class DataStore:
 
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
-    async def clean_node_table(self, writer: aiosqlite.Connection) -> None:
+    async def clean_node_table(self, writer: WrapperConnection) -> None:
         await writer.execute(
             """
             WITH RECURSIVE pending_nodes AS (

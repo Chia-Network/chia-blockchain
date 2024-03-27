@@ -4,6 +4,8 @@ import sqlite3
 
 import aiosqlite
 
+from chia.util.db_wrapper import WrapperConnection
+
 
 async def lookup_db_version(db: aiosqlite.Connection) -> int:
     try:
@@ -18,7 +20,7 @@ async def lookup_db_version(db: aiosqlite.Connection) -> int:
         return 1
 
 
-async def set_db_version_async(db: aiosqlite.Connection, version: int) -> None:
+async def set_db_version_async(db: WrapperConnection, version: int) -> None:
     await db.execute("CREATE TABLE database_version(version int)")
     await db.execute("INSERT INTO database_version VALUES (?)", (version,))
     await db.commit()

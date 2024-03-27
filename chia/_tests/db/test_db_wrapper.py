@@ -11,10 +11,10 @@ import pytest
 from _pytest.fixtures import SubRequest
 
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, WrapperConnection
 
 if TYPE_CHECKING:
-    ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
+    ConnectionContextManager = contextlib.AbstractAsyncContextManager[WrapperConnection]
     GetReaderMethod = Callable[[DBWrapper2], Callable[[], ConnectionContextManager]]
 
 
@@ -75,7 +75,7 @@ async def get_value(cursor: aiosqlite.Cursor) -> int:
     return int(row[0])
 
 
-async def query_value(connection: aiosqlite.Connection) -> int:
+async def query_value(connection: WrapperConnection) -> int:
     async with connection.execute("SELECT value FROM counter") as cursor:
         return await get_value(cursor=cursor)
 
