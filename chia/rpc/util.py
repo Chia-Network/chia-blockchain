@@ -17,7 +17,8 @@ from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_fr
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.clvm_streamable import clvm_serialization_mode
+from chia.wallet.util.blind_signer_tl import BLIND_SIGNER_TRANSLATION
+from chia.wallet.util.clvm_streamable import TranslationLayer, clvm_serialization_mode
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
@@ -28,6 +29,9 @@ log = logging.getLogger(__name__)
 # This definition is weaker than that one however because the arguments can be anything
 RpcEndpoint = Callable[..., Awaitable[Dict[str, Any]]]
 MarshallableRpcEndpoint = Callable[..., Awaitable[Streamable]]
+
+
+ALL_TRANSLATION_LAYERS: Dict[str, TranslationLayer] = {"chip-TBD": BLIND_SIGNER_TRANSLATION}
 
 
 def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
@@ -43,7 +47,12 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
             *args,
             **kwargs,
         )
-        with clvm_serialization_mode(not request.get("full_jsonify", False)):
+        compression: Optional[TranslationLayer] = (
+            None
+            if "translation" not in request or request["translation"] is None
+            else ALL_TRANSLATION_LAYERS[request["translation"]]
+        )
+        with clvm_serialization_mode(not request.get("full_jsonify", False), compression):
             return response_obj.to_json_dict()
 
     return rpc_endpoint
@@ -144,7 +153,13 @@ def tx_endpoint(
             if request.get("full_jsonify", False):
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
             else:
-                response["unsigned_transactions"] = [bytes(tx.as_program()).hex() for tx in unsigned_txs]
+                compression: Optional[TranslationLayer] = (
+                    None
+                    if "compression" not in request or request["compression"] is None
+                    else ALL_TRANSLATION_LAYERS[request["compression"]]
+                )
+                with clvm_serialization_mode(True, compression):
+                    response["unsigned_transactions"] = [bytes(tx.as_program()).hex() for tx in unsigned_txs]
 
             new_txs: List[TransactionRecord] = []
             if request.get("sign", self.service.config.get("auto_sign_txs", True)):
