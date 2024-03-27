@@ -1580,7 +1580,9 @@ async def test_benchmark_batch_insert_speed(
 
     with benchmark_runner.assert_runtime(
         label="generate changelist",
-        seconds=999999999999999,
+        # TODO: this is silly
+        seconds=1,
+        enable_assertion=False,
         clock=time.monotonic,
     ):
         changelist = [
@@ -1597,7 +1599,9 @@ async def test_benchmark_batch_insert_speed(
 
     with benchmark_runner.assert_runtime(
         label="pre",
-        seconds=999999999999999,
+        # TODO: this is silly
+        seconds=1,
+        enable_assertion=False,
         clock=time.monotonic,
     ):
         pre_batch_size = 200
