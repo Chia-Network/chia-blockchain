@@ -114,7 +114,7 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
             break
 
         puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(bytes32(parent.as_atom()), puzzle_hash, amount.as_int())
+        coin = Coin(bytes32(parent.as_atom()), puzzle_hash, uint64(amount.as_int()))
         cat_list.append(
             CAT(
                 asset_id=bytes(asset_id).hex()[2:],

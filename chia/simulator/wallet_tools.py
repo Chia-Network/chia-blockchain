@@ -146,9 +146,7 @@ class WalletTool:
                 message_list = [c.name() for c in coins]
                 for outputs in condition_dic[ConditionOpcode.CREATE_COIN]:
                     coin_to_append = Coin(
-                        coin.name(),
-                        bytes32(outputs.vars[0]),
-                        int_from_bytes(outputs.vars[1]),
+                        coin.name(), bytes32(outputs.vars[0]), uint64(int_from_bytes(outputs.vars[1]))
                     )
                     message_list.append(coin_to_append.name())
                 message = std_hash(b"".join(message_list))

@@ -345,7 +345,7 @@ class DAOWallet:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
-        There is no need for max/min coin amount or excluded amount becuase the dao treasury should
+        There is no need for max/min coin amount or excluded amount because the dao treasury should
         always be a single coin with amount 1
         """
         spendable_amount: uint128 = await self.get_spendable_balance()
@@ -1289,7 +1289,9 @@ class DAOWallet:
                             assert tail_reconstruction.get_tree_hash() == cat_tail_hash
                             assert isinstance(self.dao_info.current_treasury_coin, Coin)
                             cat_launcher_coin = Coin(
-                                self.dao_info.current_treasury_coin.name(), cat_launcher.get_tree_hash(), mint_amount
+                                self.dao_info.current_treasury_coin.name(),
+                                cat_launcher.get_tree_hash(),
+                                uint64(mint_amount),
                             )
                             full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puzzle)
 
@@ -1302,7 +1304,7 @@ class DAOWallet:
                                 ]
                             )
                             coin_spends.append(make_spend(cat_launcher_coin, cat_launcher, solution))
-                            eve_coin = Coin(cat_launcher_coin.name(), full_puz.get_tree_hash(), mint_amount)
+                            eve_coin = Coin(cat_launcher_coin.name(), full_puz.get_tree_hash(), uint64(mint_amount))
                             tail_solution = Program.to([cat_launcher_coin.parent_coin_info, cat_launcher_coin.amount])
                             solution = Program.to([mint_amount, tail_reconstruction, tail_solution])
                             new_spendable_cat = SpendableCAT(

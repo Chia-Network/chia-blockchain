@@ -128,10 +128,11 @@ def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program) ->
     r = puzzle.uncurry()
     if r is None:
         return False
-    inner_f, args = r
-    singleton_mod_hash, launcher_id, launcher_puzzle_hash, seconds_delay, delayed_puzzle_hash = list(args.as_iter())
-    seconds_delay = uint64(seconds_delay.as_int())
-    return seconds_delay, delayed_puzzle_hash.as_atom()
+    _, args = r
+    _, _, _, seconds_delay_prog, delayed_puzzle_hash_prog = args.as_iter()
+    seconds_delay = uint64(seconds_delay_prog.as_int())
+    delayed_puzzle_hash = bytes32(delayed_puzzle_hash_prog.as_atom())
+    return seconds_delay, delayed_puzzle_hash
 
 
 # Verify that a puzzle is a Pool Wallet Singleton

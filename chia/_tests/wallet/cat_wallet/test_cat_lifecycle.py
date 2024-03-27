@@ -83,7 +83,6 @@ async def do_spend(
     return cost
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
 async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
@@ -221,7 +220,6 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
         )
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
 async def test_complex_spend(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
@@ -287,7 +285,6 @@ async def test_complex_spend(cost_logger: CostLogger, consensus_mode: ConsensusM
         )
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
 async def test_genesis_by_id(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
@@ -318,7 +315,6 @@ async def test_genesis_by_id(cost_logger: CostLogger, consensus_mode: ConsensusM
         )
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
 async def test_genesis_by_puzhash(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
@@ -349,7 +345,6 @@ async def test_genesis_by_puzhash(cost_logger: CostLogger, consensus_mode: Conse
         )
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
 async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
@@ -424,7 +419,6 @@ async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode
         )
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
 async def test_delegated_tail(cost_logger: CostLogger, consensus_mode: ConsensusMode) -> None:
     async with sim_and_client() as (sim, sim_client):
