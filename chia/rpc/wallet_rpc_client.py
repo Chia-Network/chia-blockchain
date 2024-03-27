@@ -26,6 +26,8 @@ from chia.rpc.wallet_request_types import (
     DIDTransferDIDResponse,
     DIDUpdateMetadataResponse,
     DIDUpdateRecoveryIDsResponse,
+    ExecuteSigningInstructions,
+    ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GetNotifications,
@@ -1672,6 +1674,14 @@ class WalletRpcClient(RpcClient):
                 "submit_transactions",
                 args.to_json_dict(),
             )
+        )
+
+    async def execute_signing_instructions(
+        self,
+        args: ExecuteSigningInstructions,
+    ) -> ExecuteSigningInstructionsResponse:
+        return ExecuteSigningInstructionsResponse.from_json_dict(
+            await self.fetch("execute_signing_instructions", args.to_json_dict())
         )
 
     async def vault_create(
