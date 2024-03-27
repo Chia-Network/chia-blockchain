@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import List, Optional, Tuple
 
 import chia_rs
@@ -334,7 +335,7 @@ class RespondPuzzleState(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RejectPuzzleState(Streamable):
-    pass
+    reason: uint8  # RejectStateReason
 
 
 @streamable
@@ -356,4 +357,9 @@ class RespondCoinState(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RejectCoinState(Streamable):
-    pass
+    reason: uint8  # RejectStateReason
+
+
+class RejectStateReason(IntEnum):
+    REORG = 0
+    EXCEEDED_SUBSCRIPTION_LIMIT = 1

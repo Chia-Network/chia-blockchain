@@ -19,7 +19,7 @@ from chia.types.aliases import SimulatorFullNodeService, WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 
 OneNode = Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]
 
@@ -83,7 +83,7 @@ async def test_puzzle_subscriptions(one_node: OneNode, self_hostname: str) -> No
     assert resp is not None
 
     add_response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
-    assert set(add_response.puzzle_hashes) == {ph3}
+    assert set(add_response.puzzle_hashes) == {ph1, ph2, ph3}
 
     assert subs.puzzle_subscriptions(peer.peer_node_id) == {ph1, ph2, ph3}
 
@@ -142,7 +142,7 @@ async def test_coin_subscriptions(one_node: OneNode, self_hostname: str) -> None
     assert resp is not None
 
     add_response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
-    assert set(add_response.coin_ids) == {coin3}
+    assert set(add_response.coin_ids) == {coin1, coin2, coin3}
 
     assert subs.coin_subscriptions(peer.peer_node_id) == {coin1, coin2, coin3}
 
@@ -176,11 +176,14 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
 
     await simulator.farm_blocks_to_puzzlehash(1)
 
+    # The max per `RequestPuzzleState` is 15000, so for simplicity set this to it.
+    simulator.full_node.config["max_subscribe_items"] = 15000
+
     max_subs = simulator.max_subscriptions(peer)
     puzzle_hashes = [std_hash(i.to_bytes(4, byteorder="big", signed=False)) for i in range(max_subs + 100)]
 
     # Add puzzle subscriptions to the limit
-    first_batch = puzzle_hashes[:max_subs]
+    first_batch = puzzle_hashes[:15000]
     first_batch_set = set(first_batch)
 
     resp = await simulator.request_puzzle_state(
@@ -199,7 +202,7 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
     # Try to add the remaining subscriptions
     resp = await simulator.request_puzzle_state(
         wallet_protocol.RequestPuzzleState(
-            puzzle_hashes[max_subs:],
+            puzzle_hashes[15000:],
             None,
             genesis_challenge,
             wallet_protocol.CoinStateFilters(False, False, False, uint64(0)),
@@ -209,8 +212,10 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
     )
     assert resp is not None
 
-    overflow_ph_response = wallet_protocol.RespondPuzzleState.from_bytes(resp.data)
-    assert len(overflow_ph_response.puzzle_hashes) == 0
+    overflow_ph_response = wallet_protocol.RejectPuzzleState.from_bytes(resp.data)
+    assert overflow_ph_response == wallet_protocol.RejectPuzzleState(
+        uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
+    )
 
     assert subs.puzzle_subscriptions(peer.peer_node_id) == first_batch_set
 
@@ -220,8 +225,10 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
     )
     assert resp is not None
 
-    overflow_coin_response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
-    assert len(overflow_coin_response.coin_ids) == 0
+    overflow_coin_response = wallet_protocol.RejectCoinState.from_bytes(resp.data)
+    assert overflow_coin_response == wallet_protocol.RejectCoinState(
+        uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
+    )
 
 
 @pytest.mark.anyio
@@ -318,7 +325,9 @@ async def test_request_coin_state_reorg(one_node: OneNode, self_hostname: str) -
     resp = await simulator.request_coin_state(wallet_protocol.RequestCoinState([], uint32(5), header_hash, False), peer)
     assert resp is not None
 
-    assert wallet_protocol.RejectCoinState.from_bytes(resp.data) == wallet_protocol.RejectCoinState()
+    assert wallet_protocol.RejectCoinState.from_bytes(resp.data) == wallet_protocol.RejectCoinState(
+        uint8(wallet_protocol.RejectStateReason.REORG)
+    )
 
 
 @pytest.mark.anyio
@@ -350,7 +359,7 @@ async def test_request_coin_state_limit(one_node: OneNode, self_hostname: str) -
     await simulator.full_node.coin_store._add_coin_records(list(coin_records.values()))
 
     # Fetch the coin records using the wallet protocol,
-    # only after height 10000, so that the limit of 100000 isn't exceeded
+    # with more coin ids than the limit of 100,000, but only after height 10000.
     resp = await simulator.request_coin_state(
         wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(1), h1, False),
         peer,
@@ -359,31 +368,13 @@ async def test_request_coin_state_limit(one_node: OneNode, self_hostname: str) -
 
     response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
 
-    assert set(response.coin_ids) == set(coin_records.keys())
-    assert len(response.coin_states) == len(coin_records) - 10000
+    assert response.coin_ids == list(coin_records.keys())[:100000]
+    assert len(response.coin_states) == len(coin_records) - 20000
 
     for coin_state in response.coin_states:
         coin_record = coin_records[coin_state.coin.name()]
         assert coin_record.coin_state == coin_state
         assert coin_record.confirmed_block_index > 1
-
-    # The expected behavior when the limit is exceeded, is to skip the rest
-    # The order is not guaranteed, so it can't be relied upon here
-    # Just request the remaining coin ids in subsequent request(s)
-    resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(0), h0, False),
-        peer,
-    )
-    assert resp is not None
-
-    response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
-
-    assert set(response.coin_ids) == set(coin_records.keys())
-    assert len(response.coin_states) == len(coin_records) - 10000
-
-    for coin_state in response.coin_states:
-        coin_record = coin_records[coin_state.coin.name()]
-        assert coin_record.coin_state == coin_state
 
 
 @pytest.mark.anyio
@@ -524,7 +515,9 @@ async def test_request_puzzle_state_reorg(one_node: OneNode, self_hostname: str)
     )
     assert resp is not None
 
-    assert wallet_protocol.RejectPuzzleState.from_bytes(resp.data) == wallet_protocol.RejectPuzzleState()
+    assert wallet_protocol.RejectPuzzleState.from_bytes(resp.data) == wallet_protocol.RejectPuzzleState(
+        uint8(wallet_protocol.RejectStateReason.REORG)
+    )
 
 
 @pytest.mark.anyio

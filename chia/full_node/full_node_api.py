@@ -1592,14 +1592,9 @@ class FullNodeAPI:
         )
         max_items -= len(states)
 
-        hint_coin_ids: Set[bytes32] = set()
-        if max_items > 0:
-            for puzzle_hash in puzzle_hashes:
-                ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash, max_items=max_items)
-                hint_coin_ids.update(ph_hint_coins)
-                max_items -= len(ph_hint_coins)
-                if max_items <= 0:
-                    break
+        hint_coin_ids = await self.full_node.hint_store.get_coin_ids_multi(
+            cast(set[bytes], puzzle_hashes), max_items=max_items
+        )
 
         hint_states: List[CoinState] = []
         if len(hint_coin_ids) > 0:
@@ -1762,6 +1757,15 @@ class FullNodeAPI:
     ) -> Message:
         max_items = self.max_subscribe_response_items(peer)
         max_subscriptions = self.max_subscriptions(peer)
+        subs = self.full_node.subscriptions
+
+        request_puzzle_hashes = list(dict.fromkeys(request.puzzle_hashes))
+
+        # This is a limit imposed by `batch_coin_states_by_puzzle_hashes`, due to the SQLite variable limit.
+        # It can be increased in the future, and this protocol should be written and tested in a way that
+        # this increase would not break the API.
+        count = 15000
+        puzzle_hashes = request_puzzle_hashes[:count]
 
         previous_header_hash = (
             self.full_node.blockchain.height_to_hash(request.previous_height)
@@ -1771,17 +1775,28 @@ class FullNodeAPI:
         assert previous_header_hash is not None
 
         if request.header_hash != previous_header_hash:
-            rejection = wallet_protocol.RejectPuzzleState()
+            rejection = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
             msg = make_msg(ProtocolMessageTypes.reject_puzzle_state, rejection)
             return msg
 
-        min_height = uint32((request.previous_height + 1) if request.previous_height is not None else 0)
+        # Check if the request would exceed the subscription limit now.
+        def check_subscription_limit() -> Optional[Message]:
+            new_subscription_count = len(puzzle_hashes) + subs.peer_subscription_count(peer.peer_node_id)
 
-        # This is a limit imposed by `batch_coin_states_by_puzzle_hashes`, due to the SQLite variable limit.
-        # It can be increased in the future, and this protocol should be written and tested in a way that
-        # this increase would not break the API.
-        count = 15000
-        puzzle_hashes = request.puzzle_hashes[:count]
+            if request.subscribe_when_finished and new_subscription_count > max_subscriptions:
+                rejection = wallet_protocol.RejectPuzzleState(
+                    uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
+                )
+                msg = make_msg(ProtocolMessageTypes.reject_puzzle_state, rejection)
+                return msg
+
+            return None
+
+        sub_rejection = check_subscription_limit()
+        if sub_rejection is not None:
+            return sub_rejection
+
+        min_height = uint32((request.previous_height + 1) if request.previous_height is not None else 0)
 
         (coin_states, next_min_height) = await self.full_node.coin_store.batch_coin_states_by_puzzle_hashes(
             puzzle_hashes,
@@ -1801,16 +1816,16 @@ class FullNodeAPI:
         header_hash = self.full_node.blockchain.height_to_hash(height)
         assert header_hash is not None
 
-        if is_done and request.subscribe_when_finished:
-            added = list(
-                self.full_node.subscriptions.add_puzzle_subscriptions(
-                    peer.peer_node_id, puzzle_hashes, max_subscriptions
-                )
-            )
-        else:
-            added = puzzle_hashes
+        # Check if the request would exceed the subscription limit.
+        # We do this again since we've crossed an `await` point, to prevent a race condition.
+        sub_rejection = check_subscription_limit()
+        if sub_rejection is not None:
+            return sub_rejection
 
-        response = wallet_protocol.RespondPuzzleState(added, height, header_hash, is_done, coin_states)
+        if is_done and request.subscribe_when_finished:
+            subs.add_puzzle_subscriptions(peer.peer_node_id, puzzle_hashes, max_subscriptions)
+
+        response = wallet_protocol.RespondPuzzleState(puzzle_hashes, height, header_hash, is_done, coin_states)
         msg = make_msg(ProtocolMessageTypes.respond_puzzle_state, response)
         return msg
 
@@ -1818,6 +1833,10 @@ class FullNodeAPI:
     async def request_coin_state(self, request: wallet_protocol.RequestCoinState, peer: WSChiaConnection) -> Message:
         max_items = self.max_subscribe_response_items(peer)
         max_subscriptions = self.max_subscriptions(peer)
+        subs = self.full_node.subscriptions
+
+        request_coin_ids = list(dict.fromkeys(request.coin_ids))
+        coin_ids = request_coin_ids[:max_items]
 
         previous_header_hash = (
             self.full_node.blockchain.height_to_hash(request.previous_height)
@@ -1827,28 +1846,43 @@ class FullNodeAPI:
         assert previous_header_hash is not None
 
         if request.header_hash != previous_header_hash:
-            rejection = wallet_protocol.RejectCoinState()
+            rejection = wallet_protocol.RejectCoinState(uint8(wallet_protocol.RejectStateReason.REORG))
             msg = make_msg(ProtocolMessageTypes.reject_coin_state, rejection)
             return msg
+
+        # Check if the request would exceed the subscription limit now.
+        def check_subscription_limit() -> Optional[Message]:
+            new_subscription_count = len(coin_ids) + subs.peer_subscription_count(peer.peer_node_id)
+
+            if request.subscribe and new_subscription_count > max_subscriptions:
+                rejection = wallet_protocol.RejectCoinState(
+                    uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
+                )
+                msg = make_msg(ProtocolMessageTypes.reject_coin_state, rejection)
+                return msg
+
+            return None
+
+        sub_rejection = check_subscription_limit()
+        if sub_rejection is not None:
+            return sub_rejection
 
         min_height = uint32(request.previous_height + 1 if request.previous_height is not None else 0)
 
         coin_states = await self.full_node.coin_store.get_coin_states_by_ids(
-            True,
-            set(request.coin_ids),
-            min_height=min_height,
-            max_items=max_items,
+            True, coin_ids, min_height=min_height, max_items=max_items
         )
 
-        if request.subscribe:
-            peer_id = peer.peer_node_id
-            added = list(
-                self.full_node.subscriptions.add_coin_subscriptions(peer_id, request.coin_ids, max_subscriptions)
-            )
-        else:
-            added = request.coin_ids
+        # Check if the request would exceed the subscription limit.
+        # We do this again since we've crossed an `await` point, to prevent a race condition.
+        sub_rejection = check_subscription_limit()
+        if sub_rejection is not None:
+            return sub_rejection
 
-        response = wallet_protocol.RespondCoinState(added, coin_states)
+        if request.subscribe:
+            subs.add_coin_subscriptions(peer.peer_node_id, coin_ids, max_subscriptions)
+
+        response = wallet_protocol.RespondCoinState(coin_ids, coin_states)
         msg = make_msg(ProtocolMessageTypes.respond_coin_state, response)
         return msg
 
