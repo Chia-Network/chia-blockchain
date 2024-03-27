@@ -14,7 +14,7 @@ from aiohttp.web import WebSocketResponse
 from packaging.version import Version
 from typing_extensions import Protocol, final
 
-from chia.cmds.init_funcs import chia_full_version_str
+from chia import __version__
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import (
@@ -197,7 +197,7 @@ class WSChiaConnection:
             Handshake(
                 network_id,
                 protocol_version,
-                chia_full_version_str(),
+                __version__,
                 uint16(server_port),
                 uint8(local_type.value),
                 self.local_capabilities_for_handshake,
@@ -616,15 +616,7 @@ class WSChiaConnection:
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Message]:
-        try:
-            message: WSMessage = await self.ws.receive(30)
-        except asyncio.TimeoutError:
-            # self.ws._closed if we didn't receive a ping / pong
-            if self.ws.closed:
-                asyncio.create_task(self.close())
-                await asyncio.sleep(3)
-                return None
-            return None
+        message: WSMessage = await self.ws.receive()
 
         if self.connection_type is not None:
             connection_type_str = NodeType(self.connection_type).name.lower()

@@ -69,8 +69,7 @@ def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
 def get_fee(config: Dict[str, Any], request: Dict[str, Any]) -> uint64:
     fee = request.get("fee")
     if fee is None:
-        config_fee = config.get("fee", 0)
-        return uint64(config_fee)
+        fee = 0  # DL no longer reads the fee from the config
     return uint64(fee)
 
 

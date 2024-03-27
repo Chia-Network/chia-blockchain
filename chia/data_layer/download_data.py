@@ -178,6 +178,8 @@ async def download_file(
     log: logging.Logger,
     grouped_by_store: bool,
 ) -> bool:
+    if target_filename_path.exists():
+        return True
     filename = get_delta_filename(tree_id, root_hash, generation)
     if grouped_by_store:
         filename = filename.replace("-", "/", 1)
@@ -221,7 +223,7 @@ async def insert_from_delta_file(
         timestamp = int(time.time())
         existing_generation += 1
         target_filename_path = get_delta_filename_path(client_foldername, tree_id, root_hash, existing_generation, True)
-
+        filename_exists = target_filename_path.exists()
         success = await download_file(
             target_filename_path=target_filename_path,
             tree_id=tree_id,
@@ -299,9 +301,11 @@ async def insert_from_delta_file(
             # incorrect file bans for 7 days which in practical usage
             # is too long given this file might be incorrect for various reasons
             # therefore, use the misses file logic instead
-            await data_store.server_misses_file(tree_id, server_info, timestamp)
+            if not filename_exists:
+                # Don't penalize this server if we didn't download the file from it.
+                await data_store.server_misses_file(tree_id, server_info, timestamp)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
-            raise
+            return False
 
     return True
 
