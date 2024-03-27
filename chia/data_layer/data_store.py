@@ -1284,35 +1284,34 @@ class DataStore:
 
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
-    async def clean_node_table(self) -> None:
-        async with self.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
-            await writer.execute(
-                """
-                WITH RECURSIVE pending_nodes AS (
-                    SELECT node_hash AS hash FROM root
-                    WHERE status IN (:pending_status, :pending_batch_status)
-                    UNION ALL
-                    SELECT n.left FROM node n
-                    INNER JOIN pending_nodes pn ON n.hash = pn.hash
-                    WHERE n.left IS NOT NULL
-                    UNION ALL
-                    SELECT n.right FROM node n
-                    INNER JOIN pending_nodes pn ON n.hash = pn.hash
-                    WHERE n.right IS NOT NULL
-                )
-                DELETE FROM node
-                WHERE hash IN (
-                    SELECT n.hash FROM node n
-                    LEFT JOIN ancestors a ON n.hash = a.hash
-                    LEFT JOIN pending_nodes pn ON n.hash = pn.hash
-                    WHERE a.hash IS NULL AND pn.hash IS NULL
-                )
-                """,
-                {
-                    "pending_status": Status.PENDING.value,
-                    "pending_batch_status": Status.PENDING_BATCH.value,
-                },
+    async def clean_node_table(self, writer: Optional[aiosqlite.Connection] = None) -> None:
+        query = """
+            WITH RECURSIVE pending_nodes AS (
+                SELECT node_hash AS hash FROM root
+                WHERE status IN (:pending_status, :pending_batch_status)
+                UNION ALL
+                SELECT n.left FROM node n
+                INNER JOIN pending_nodes pn ON n.hash = pn.hash
+                WHERE n.left IS NOT NULL
+                UNION ALL
+                SELECT n.right FROM node n
+                INNER JOIN pending_nodes pn ON n.hash = pn.hash
+                WHERE n.right IS NOT NULL
             )
+            DELETE FROM node
+            WHERE hash IN (
+                SELECT n.hash FROM node n
+                LEFT JOIN ancestors a ON n.hash = a.hash
+                LEFT JOIN pending_nodes pn ON n.hash = pn.hash
+                WHERE a.hash IS NULL AND pn.hash IS NULL
+            )
+        """
+        params = {"pending_status": Status.PENDING.value, "pending_batch_status": Status.PENDING_BATCH.value}
+        if writer is None:
+            async with self.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+                await writer.execute(query, params)
+        else:
+            await writer.execute(query, params)
 
     async def insert_batch(
         self,
@@ -1744,8 +1743,8 @@ class DataStore:
                 )
 
     async def delete_store_data(self, tree_id: bytes32) -> None:
-        await self.clean_node_table()
         async with self.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+            await self.clean_node_table(writer)
             cursor = await writer.execute(
                 """
                 WITH RECURSIVE all_nodes AS (
