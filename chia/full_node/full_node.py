@@ -1136,10 +1136,6 @@ class FullNode:
                 )
                 if success is False:
                     await peer.close(600)
-                    # check CHIP-0013 exception
-                    if err == Err.CHIP_0013_VALIDATION:
-                        self.add_to_bad_peak_cache(peak_hash, target_peak_sb_height)
-                        raise ValidationError(err, f"Failed to validate block batch {start_height} to {end_height}")
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
                 peak = self.blockchain.get_peak()
