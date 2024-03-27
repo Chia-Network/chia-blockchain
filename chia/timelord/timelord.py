@@ -1112,14 +1112,14 @@ class Timelord:
                         # Select randomly the field_vdf we're creating a compact vdf for.
                         # This is done because CC_SP and CC_IP are more frequent than
                         # CC_EOS and ICC_EOS. This guarantees everything is picked uniformly.
-                        target_field_vdf = random.randint(1, 4)
-                        info = next(
-                            (info for info in self.pending_bluebox_info if info[1].field_vdf == target_field_vdf),
-                            None,
-                        )
-                        if info is None:
-                            # Nothing found with target_field_vdf, just pick the first VDFInfo.
-                            info = self.pending_bluebox_info[0]
+                        # target_field_vdf = random.randint(1, 4)
+                        # info = next(
+                        #     (info for info in self.pending_bluebox_info if info[1].field_vdf == target_field_vdf),
+                        #     None,
+                        # )
+                        # if info is None:
+                        #     # Nothing found with target_field_vdf, just pick the first VDFInfo.
+                        info = self.pending_bluebox_info[0]
                         ip, reader, writer = self.free_clients[0]
                         self.process_communication_tasks.append(
                             create_referenced_task(
