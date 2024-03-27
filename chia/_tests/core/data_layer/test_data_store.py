@@ -1557,7 +1557,7 @@ async def test_benchmark_batch_insert_speed(
         ns=list(durations.keys()),
         time=list(durations.values()),
     )
-    assert isinstance(best_class, big_o.complexities.Constant), f"must be linear: {best_class}"
+    assert isinstance(best_class, big_o.complexities.Constant), f"must be constant: {best_class}"
     # TODO: also assert about fit quality
 
 
