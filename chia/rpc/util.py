@@ -43,7 +43,7 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
             *args,
             **kwargs,
         )
-        if not request.get("chip-29", True):
+        if not request.get("CHIP-0029", True):
             return response_obj.to_json_dict()
         else:
             response_dict = json_serialize_with_clvm_streamable(response_obj)
@@ -146,7 +146,7 @@ def tx_endpoint(
             ]
             unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(tx_records)
 
-            if not request.get("chip-29", True):
+            if not request.get("CHIP-0029", True):
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
             else:
                 response["unsigned_transactions"] = [byte_serialize_clvm_streamable(tx).hex() for tx in unsigned_txs]

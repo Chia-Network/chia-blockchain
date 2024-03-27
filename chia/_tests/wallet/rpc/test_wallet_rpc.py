@@ -336,7 +336,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
             "exclude_coin_amounts": [250000000000],
             "exclude_coins": [non_existent_coin.to_json_dict()],
             "reuse_puzhash": True,
-            "chip-29": False,
+            "CHIP-0029": False,
             "push": True,
         },
     )
