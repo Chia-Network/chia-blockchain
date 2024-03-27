@@ -107,7 +107,6 @@ def create_fee_option() -> Callable[[FC], FC]:
     )
 
 
-# MARK: tx_endpoint
 def create_page_option() -> Callable[[FC], FC]:
     return click.option(
         "-p",
@@ -127,6 +126,9 @@ def create_max_page_size_option() -> Callable[[FC], FC]:
     )
 
 
+# Functions with this mark in this file are not being ported to @tx_out_cmd due to API peculiarities
+# They will therefore not work with observer-only functionality
+# MARK: tx_endpoint  (This creates wallet transactions and should be parametrized by relevant options)
 @data_cmd.command("create_data_store", help="Create a new data store")
 @create_rpc_port_option()
 @create_fee_option()
