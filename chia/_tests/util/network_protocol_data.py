@@ -718,7 +718,7 @@ respond_puzzle_state = wallet_protocol.RespondPuzzleState(
     [coin_state],
 )
 
-reject_puzzle_state = wallet_protocol.RejectPuzzleState()
+reject_puzzle_state = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
 
 request_coin_state = wallet_protocol.RequestCoinState(
     hashes,
@@ -729,7 +729,9 @@ request_coin_state = wallet_protocol.RequestCoinState(
 
 respond_coin_state = wallet_protocol.RespondCoinState(hashes, [coin_state])
 
-reject_coin_state = wallet_protocol.RejectCoinState()
+reject_coin_state = wallet_protocol.RejectCoinState(
+    uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
+)
 
 
 ### HARVESTER PROTOCOL

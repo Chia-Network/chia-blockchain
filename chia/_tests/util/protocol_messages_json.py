@@ -2063,7 +2063,7 @@ request_puzzle_state_json: Dict[str, Any] = {
     "subscribe_when_finished": True,
 }
 
-reject_puzzle_state_json: Dict[str, Any] = {}
+reject_puzzle_state_json: Dict[str, Any] = {"reason": 0}
 
 respond_puzzle_state_json: Dict[str, Any] = {
     "puzzle_hashes": [
@@ -2117,7 +2117,7 @@ respond_coin_state_json: Dict[str, Any] = {
     ],
 }
 
-reject_coin_state_json: Dict[str, Any] = {}
+reject_coin_state_json: Dict[str, Any] = {"reason": 1}
 
 pool_difficulty_json: Dict[str, Any] = {
     "difficulty": 14819251421858580996,

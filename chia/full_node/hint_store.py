@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import List, Tuple
+from typing import List, Set, Tuple
 
 import typing_extensions
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
+from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +38,23 @@ class HintStore:
             rows = await cursor.fetchall()
             await cursor.close()
         return [bytes32(row[0]) for row in rows]
+
+    async def get_coin_ids_multi(self, hints: Set[bytes], *, max_items: int = 50000) -> List[bytes32]:
+        coin_ids: List[bytes32] = []
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            for batch in to_batches(hints, SQLITE_MAX_VARIABLE_NUMBER):
+                hints_db: Tuple[bytes, ...] = tuple(batch.entries)
+                cursor = await conn.execute(
+                    f"SELECT coin_id from hints INDEXED BY hint_index "
+                    f'WHERE hint IN ({"?," * (len(batch.entries) - 1)}?) LIMIT ?',
+                    hints_db + (max_items,),
+                )
+                rows = await cursor.fetchall()
+                coin_ids.extend([bytes32(row[0]) for row in rows])
+                await cursor.close()
+
+        return coin_ids
 
     async def add_hints(self, coin_hint_list: List[Tuple[bytes32, bytes]]) -> None:
         if len(coin_hint_list) == 0:
