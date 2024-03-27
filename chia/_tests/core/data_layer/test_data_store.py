@@ -1504,26 +1504,69 @@ class BatchInsertBenchmarkCase:
 
 
 @datacases(
-    BatchInsertBenchmarkCase(
-        pre=0,
-        count=100,
-        limit=2.2,
+    # BatchInsertBenchmarkCase(
+    #     pre=0,
+    #     count=100,
+    #     limit=2.2,
+    # ),
+    # BatchInsertBenchmarkCase(
+    #     pre=1_000,
+    #     count=100,
+    #     limit=4,
+    # ),
+    # BatchInsertBenchmarkCase(
+    #     pre=0,
+    #     count=1_000,
+    #     limit=30,
+    # ),
+    # BatchInsertBenchmarkCase(
+    #     pre=1_000,
+    #     count=1_000,
+    #     limit=36,
+    # ),
+    *(
+        BatchInsertBenchmarkCase(
+            pre=1_000,
+            count=n,
+            limit=9999,
+        )
+        for n in [1, 10, 100, 1000]
     ),
-    BatchInsertBenchmarkCase(
-        pre=1_000,
-        count=100,
-        limit=4,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=0,
-        count=1_000,
-        limit=30,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=1_000,
-        count=1_000,
-        limit=36,
-    ),
+    # BatchInsertBenchmarkCase(
+    #     pre=1_000,
+    #     count=100,
+    #     limit=9999,
+    # ),
+    # BatchInsertBenchmarkCase(
+    #     pre=2_000,
+    #     count=100,
+    #     limit=9999,
+    # ),
+    # BatchInsertBenchmarkCase(
+    #     pre=3_000,
+    #     count=100,
+    #     limit=9999,
+    # ),
+    # BatchInsertBenchmarkCase(
+    #     pre=4_000,
+    #     count=100,
+    #     limit=9999,
+    # ),
+    # BatchInsertBenchmarkCase(
+    #     pre=5_000,
+    #     count=100,
+    #     limit=9999,
+    # ),
+    # BatchInsertBenchmarkCase(
+    #     pre=10_000,
+    #     count=100,
+    #     limit=9999,
+    # ),
+    # BatchInsertBenchmarkCase(
+    #     pre=100_000,
+    #     count=100,
+    #     limit=9999,
+    # ),
 )
 @pytest.mark.anyio
 async def test_benchmark_batch_insert_speed(
@@ -1535,26 +1578,45 @@ async def test_benchmark_batch_insert_speed(
     r = random.Random()
     r.seed("shadowlands", version=2)
 
-    changelist = [
-        {
-            "action": "insert",
-            "key": x.to_bytes(32, byteorder="big", signed=False),
-            "value": bytes(r.getrandbits(8) for _ in range(1200)),
-        }
-        for x in range(case.pre + case.count)
-    ]
+    with benchmark_runner.assert_runtime(
+        label="generate changelist",
+        seconds=999999999999999,
+        clock=time.monotonic,
+    ):
+        changelist = [
+            {
+                "action": "insert",
+                "key": x.to_bytes(32, byteorder="big", signed=False),
+                "value": bytes(r.getrandbits(8) for _ in range(1200)),
+            }
+            for x in range(case.pre + case.count)
+        ]
 
-    pre = changelist[: case.pre]
-    batch = changelist[case.pre : case.pre + case.count]
+        pre = changelist[: case.pre]
+        batch = changelist[case.pre : case.pre + case.count]
 
-    if case.pre > 0:
-        await data_store.insert_batch(
-            tree_id=tree_id,
-            changelist=pre,
-            status=Status.COMMITTED,
-        )
+    with benchmark_runner.assert_runtime(
+        label="pre",
+        seconds=999999999999999,
+        clock=time.monotonic,
+    ):
+        pre_batch_size = 200
+        pre_iter = iter(pre)
+        while True:
+            pre_batch = [value for _, value in zip(range(pre_batch_size), pre_iter)]
+            if len(pre_batch) == 0:
+                break
+            await data_store.insert_batch(
+                tree_id=tree_id,
+                changelist=pre_batch,
+                status=Status.COMMITTED,
+            )
 
-    with benchmark_runner.assert_runtime(seconds=case.limit):
+    with benchmark_runner.assert_runtime(
+        label="count",
+        seconds=case.limit,
+        clock=time.monotonic,
+    ):
         await data_store.insert_batch(
             tree_id=tree_id,
             changelist=batch,
