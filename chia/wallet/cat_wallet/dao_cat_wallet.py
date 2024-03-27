@@ -357,9 +357,7 @@ class DAOCATWallet:
             spendable_cat_list.append(new_spendable_cat)
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
-        spend_bundle = await self.wallet_state_manager.sign_transaction(cat_spend_bundle.coin_spends)
-        assert isinstance(spend_bundle, SpendBundle)
-        return spend_bundle
+        return cat_spend_bundle
 
     async def enter_dao_cat_voting_mode(
         self,
@@ -451,8 +449,7 @@ class DAOCATWallet:
             spendable_cat_list.append(new_spendable_cat)
             spent_coins.append(coin)
 
-        cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
-        spend_bundle: SpendBundle = await self.wallet_state_manager.sign_transaction(cat_spend_bundle.coin_spends)
+        spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
 
         if fee > 0:  # pragma: no cover
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
@@ -557,8 +554,7 @@ class DAOCATWallet:
             )
             spendable_cat_list.append(new_spendable_cat)
 
-        cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
-        spend_bundle = await self.wallet_state_manager.sign_transaction(cat_spend_bundle.coin_spends)
+        spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
 
         if fee > 0:  # pragma: no cover
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config=tx_config)

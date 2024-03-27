@@ -201,7 +201,7 @@ class VCWallet:
         solution = solution_for_conditions(dpuz.rest())
         original_puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(original_coin.puzzle_hash)
         coin_spends.append(make_spend(original_coin, original_puzzle, solution))
-        spend_bundle = await self.wallet_state_manager.sign_transaction(coin_spends)
+        spend_bundle = SpendBundle(coin_spends, G2Element())
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
         rem_list: List[Coin] = list(spend_bundle.removals())
@@ -299,7 +299,7 @@ class VCWallet:
             conditions=extra_conditions,
         )
         did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
-        spend_bundles = [await self.wallet_state_manager.sign_transaction([coin_spend])]
+        spend_bundles = [SpendBundle([coin_spend], G2Element())]
         tx_list: List[TransactionRecord] = []
         if did_announcement is not None:
             # Need to spend DID

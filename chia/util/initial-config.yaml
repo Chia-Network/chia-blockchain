@@ -654,6 +654,8 @@ wallet:
     min_amount: 0
     batch_size: 50
 
+  auto_sign_txs: True
+
 data_layer:
   # TODO: consider name
   # TODO: organize consistently with other sections

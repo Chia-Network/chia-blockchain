@@ -67,10 +67,17 @@ from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.conditions import ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement, Remark
+from chia.wallet.conditions import (
+    ConditionValidTimes,
+    CreateCoinAnnouncement,
+    CreatePuzzleAnnouncement,
+    Remark,
+    conditions_to_json_dicts,
+)
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.signer_protocol import UnsignedTransaction
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -301,19 +308,43 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
         await client.send_transaction(1, uint64(100000000000000001), addr, DEFAULT_TX_CONFIG)
 
     # Tests sending a basic transaction
-    tx = await client.send_transaction(
+    extra_conditions = (Remark(Program.to(("test", None))),)
+    non_existent_coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+    tx_no_push = await client.send_transaction(
         1,
         tx_amount,
         addr,
         memos=["this is a basic tx"],
         tx_config=DEFAULT_TX_CONFIG.override(
             excluded_coin_amounts=[uint64(250000000000)],
-            excluded_coin_ids=[bytes32([0] * 32)],
+            excluded_coin_ids=[non_existent_coin.name()],
+            reuse_puzhash=True,
         ),
-        extra_conditions=(Remark(Program.to(("test", None))),),
+        extra_conditions=extra_conditions,
+        push=False,
     )
+    response = await client.fetch(
+        "send_transaction",
+        {
+            "wallet_id": 1,
+            "amount": tx_amount,
+            "address": addr,
+            "fee": 0,
+            "memos": ["this is a basic tx"],
+            "puzzle_decorator": None,
+            "extra_conditions": conditions_to_json_dicts(extra_conditions),
+            "exclude_coin_amounts": [250000000000],
+            "exclude_coins": [non_existent_coin.to_json_dict()],
+            "reuse_puzhash": True,
+            "chip-29": False,
+            "push": True,
+        },
+    )
+    assert response["success"]
+    tx = TransactionRecord.from_json_dict_convenience(response["transactions"][0])
+    [UnsignedTransaction.from_json_dict(utx) for utx in response["unsigned_transactions"]]
+    assert tx == dataclasses.replace(tx_no_push, created_at_time=tx.created_at_time)
     transaction_id = tx.name
-
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
 
@@ -424,7 +455,7 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
         tx_config=DEFAULT_TX_CONFIG,
         fee=uint64(fee_amount),
     )
-    await wallet.wallet_state_manager.add_pending_transactions([tx])
+    [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
     our_ph = await wallet.get_new_puzzlehash()
     await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
@@ -1600,11 +1631,11 @@ async def _check_delete_key(
     # set farmer to first private key
     create_sk = master_sk_to_wallet_sk_unhardened if observer else master_sk_to_wallet_sk
 
-    sk = await wallet_node.get_key_for_fingerprint(farmer_fp)
+    sk = await wallet_node.get_key_for_fingerprint(farmer_fp, private=True)
     assert sk is not None
     farmer_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
 
-    sk = await wallet_node.get_key_for_fingerprint(pool_fp)
+    sk = await wallet_node.get_key_for_fingerprint(pool_fp, private=True)
     assert sk is not None
     pool_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
 

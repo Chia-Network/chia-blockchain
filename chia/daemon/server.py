@@ -46,10 +46,10 @@ from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 from chia.wallet.derive_keys import (
+    master_pk_to_wallet_pk_unhardened,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
-    master_sk_to_wallet_sk_unhardened,
 )
 
 io_pool_exc = ThreadPoolExecutor()
@@ -655,16 +655,17 @@ class WebSocketServer:
         for key in keys:
             address_entries = []
 
-            # we require access to the private key to generate wallet addresses
-            if key.secrets is None:
+            # we require access to the private key to generate wallet addresses for non observer
+            if key.secrets is None and non_observer_derivation:
                 return {"success": False, "error": f"missing private key for key with fingerprint {key.fingerprint}"}
 
             for i in range(index, index + count):
                 if non_observer_derivation:
-                    sk = master_sk_to_wallet_sk(key.secrets.private_key, uint32(i))
+                    sk = master_sk_to_wallet_sk(key.private_key, uint32(i))
+                    pk = sk.get_g1()
                 else:
-                    sk = master_sk_to_wallet_sk_unhardened(key.secrets.private_key, uint32(i))
-                wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(sk.get_g1()), prefix)
+                    pk = master_pk_to_wallet_pk_unhardened(key.public_key, uint32(i))
+                wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(pk), prefix)
                 if non_observer_derivation:
                     hd_path = f"m/12381n/8444n/2n/{i}n"
                 else:
@@ -685,6 +686,8 @@ class WebSocketServer:
 
         keys_for_plot: Dict[uint32, Any] = {}
         for key in keys:
+            if key.secrets is None:
+                continue
             sk = key.private_key
             farmer_public_key: G1Element = master_sk_to_farmer_sk(sk).get_g1()
             pool_public_key: G1Element = master_sk_to_pool_sk(sk).get_g1()

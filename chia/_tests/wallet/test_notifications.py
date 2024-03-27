@@ -135,7 +135,7 @@ async def test_notifications(
         if case == "allow_larger":
             allow_larger_height = peak.height + 1
         tx = await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, DEFAULT_TX_CONFIG, fee=FEE)
-        await wsm_1.add_pending_transactions([tx])
+        [tx] = await wsm_1.add_pending_transactions([tx])
         await time_out_assert_not_none(
             5,
             full_node_api.full_node.mempool_manager.get_spendbundle,

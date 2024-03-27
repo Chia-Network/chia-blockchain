@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
 from chia.cmds.chia import cli
 from chia.cmds.keys import delete_all_cmd, generate_and_print_cmd, sign_cmd, verify_cmd
@@ -21,13 +21,16 @@ TEST_MNEMONIC_SEED = (
     "another venue evidence spread season bright private "
     "tomato remind jaguar original blur embody project can"
 )
+TEST_PUBLIC_KEY = "8a37cad4c5edf0a7544cbdb9f9383f7c5e82567d0236dc4f5b0547137afff9a5ce33aece3358d0202cafb9a12607ab53"
+TEST_PK_FINGERPRINT = 2167729070
 TEST_FINGERPRINT = 2877570395
 
 
 @pytest.fixture(scope="function")
-def keyring_with_one_key(empty_keyring):
+def keyring_with_one_public_one_private_key(empty_keyring):
     keychain = empty_keyring
-    keychain.add_private_key(TEST_MNEMONIC_SEED)
+    keychain.add_key(TEST_MNEMONIC_SEED)
+    keychain.add_key(TEST_PUBLIC_KEY, private=False)
     return keychain
 
 
@@ -191,6 +194,7 @@ class TestKeysCommands:
             (["add", "--label", "key_0"], "key_0", f"{TEST_MNEMONIC_SEED}\n"),
             (["add", "-l", ""], None, f"{TEST_MNEMONIC_SEED}\n"),
             (["add", "--label", ""], None, f"{TEST_MNEMONIC_SEED}\n"),
+            (["add", "-l", "key_0"], "key_0", f"{TEST_PUBLIC_KEY}\n"),
         ],
     )
     def test_generate_and_add_label_parameter(
@@ -218,8 +222,8 @@ class TestKeysCommands:
         # And make sure the label was set to the expected label
         assert_label(keychain, label, 0)
 
-    def test_set_label(self, keyring_with_one_key, tmp_path):
-        keychain = keyring_with_one_key
+    def test_set_label(self, keyring_with_one_public_one_private_key, tmp_path):
+        keychain = keyring_with_one_public_one_private_key
         keys_root_path = keychain.keyring_wrapper.keys_root_path
         base_params = [
             "--root-path",
@@ -245,8 +249,8 @@ class TestKeysCommands:
         # Change the label
         set_and_validate("changed")
 
-    def test_delete_label(self, keyring_with_one_key, tmp_path):
-        keychain = keyring_with_one_key
+    def test_delete_label(self, keyring_with_one_public_one_private_key, tmp_path):
+        keychain = keyring_with_one_public_one_private_key
         keys_root_path = keychain.keyring_wrapper.keys_root_path
         base_params = [
             "--root-path",
@@ -287,7 +291,7 @@ class TestKeysCommands:
         # Add 10 keys to the keychain, give every other a label
         keys = [KeyData.generate(f"key_{i}" if i % 2 == 0 else None) for i in range(10)]
         for key in keys:
-            keychain.add_private_key(key.mnemonic_str(), key.label)
+            keychain.add_key(key.mnemonic_str(), key.label)
         # Make sure all 10 keys are printed correct
         result = runner.invoke(cli, [*base_params, *cmd_params], catch_exceptions=False)
         assert result.exit_code == 0
@@ -302,14 +306,15 @@ class TestKeysCommands:
             else:
                 assert label == key.label
 
-    def test_show(self, keyring_with_one_key, tmp_path):
+    def test_show(self, keyring_with_one_public_one_private_key, tmp_path):
         """
         Test that the `chia keys show` command shows the correct key.
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
 
         assert len(keychain.get_all_private_keys()) == 1
+        assert len(keychain.get_all_public_keys()) == 2
 
         keys_root_path = keychain.keyring_wrapper.keys_root_path
         base_params = [
@@ -327,17 +332,25 @@ class TestKeysCommands:
 
         # assert result.exit_code == 0
         assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
+        assert result.output.find(f"Fingerprint: {TEST_PK_FINGERPRINT}") != -1
 
-    def test_show_fingerprint(self, keyring_with_one_key, tmp_path):
+        # Try with non_observer_derivation
+        result = runner.invoke(cli, [*base_params, *cmd_params, "--non-observer-derivation"])
+        assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
+        assert result.output.find(f"Fingerprint: {TEST_PK_FINGERPRINT}") != -1
+        assert result.output.find("First wallet address (non-observer): N/A") != -1
+
+    def test_show_fingerprint(self, keyring_with_one_public_one_private_key, tmp_path):
         """
         Test that the `chia keys show --fingerprint` command shows the correct key.
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
 
         # add a key
-        keychain.add_private_key(generate_mnemonic())
+        keychain.add_key(generate_mnemonic())
         assert len(keychain.get_all_private_keys()) == 2
+        assert len(keychain.get_all_public_keys()) == 3
 
         keys_root_path = keychain.keyring_wrapper.keys_root_path
         base_params = [
@@ -358,14 +371,15 @@ class TestKeysCommands:
         assert len(fingerprints) == 1
         assert str(TEST_FINGERPRINT) in fingerprints[0]
 
-    def test_show_json(self, keyring_with_one_key, tmp_path):
+    def test_show_json(self, keyring_with_one_public_one_private_key, tmp_path):
         """
         Test that the `chia keys show --json` command shows the correct key.
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
 
         assert len(keychain.get_all_private_keys()) == 1
+        assert len(keychain.get_all_public_keys()) == 2
 
         keys_root_path = keychain.keyring_wrapper.keys_root_path
         base_params = [
@@ -385,13 +399,14 @@ class TestKeysCommands:
 
         # assert result.exit_code == 0
         assert json_result["keys"][0]["fingerprint"] == TEST_FINGERPRINT
+        assert json_result["keys"][1]["fingerprint"] == TEST_PK_FINGERPRINT
 
-    def test_show_mnemonic(self, keyring_with_one_key, tmp_path):
+    def test_show_mnemonic(self, keyring_with_one_public_one_private_key, tmp_path):
         """
         Test that the `chia keys show --show-mnemonic-seed` command shows the key's mnemonic seed.
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
 
         assert len(keychain.get_all_private_keys()) == 1
 
@@ -413,13 +428,15 @@ class TestKeysCommands:
         assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
         assert result.output.find("Mnemonic seed (24 secret words):") != -1
         assert result.output.find(TEST_MNEMONIC_SEED) != -1
+        assert result.output.find(f"Fingerprint: {TEST_PK_FINGERPRINT}") != -1
+        assert result.output.find("Mnemonic seed (24 secret words):\nN/A") != -1
 
-    def test_show_mnemonic_json(self, keyring_with_one_key, tmp_path):
+    def test_show_mnemonic_json(self, keyring_with_one_public_one_private_key, tmp_path):
         """
         Test that the `chia keys show --show-mnemonic-seed --json` command shows the key's mnemonic seed.
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
 
         assert len(keychain.get_all_private_keys()) == 1
 
@@ -441,6 +458,8 @@ class TestKeysCommands:
         # assert result.exit_code == 0
         assert json_result["keys"][0]["fingerprint"] == TEST_FINGERPRINT
         assert json_result["keys"][0]["mnemonic"] == TEST_MNEMONIC_SEED
+        assert json_result["keys"][1]["fingerprint"] == TEST_PK_FINGERPRINT
+        assert json_result["keys"][1]["mnemonic"] is None
 
     def test_add_interactive(self, tmp_path, empty_keyring):
         """
@@ -584,7 +603,7 @@ class TestKeysCommands:
 
         for i in range(5):
             mnemonic: str = generate_mnemonic()
-            keychain.add_private_key(mnemonic)
+            keychain.add_key(mnemonic)
 
         assert len(keychain.get_all_private_keys()) == 5
 
@@ -605,7 +624,7 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert result.output.find("Mnemonic (24 secret words):") != -1
 
-    def test_sign(self, keyring_with_one_key):
+    def test_sign(self, keyring_with_one_public_one_private_key):
         """
         Test the `chia keys sign` command.
         """
@@ -636,7 +655,7 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_sign_non_observer(self, keyring_with_one_key):
+    def test_sign_non_observer(self, keyring_with_one_public_one_private_key):
         """
         Test the `chia keys sign` command with a non-observer key.
         """
@@ -726,12 +745,12 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert result.output.find("True") == 0
 
-    def test_derive_search(self, tmp_path, keyring_with_one_key):
+    def test_derive_search(self, tmp_path, keyring_with_one_public_one_private_key):
         """
         Test the `chia keys derive search` command, searching a public and private key
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
         keys_root_path = keychain.keyring_wrapper.keys_root_path
 
         runner = CliRunner()
@@ -763,11 +782,13 @@ class TestKeysCommands:
                 "all",
                 "a4601f992f24047097a30854ef656382911575694439108723698972941e402d737c13df76fdf43597f7b3c2fa9ed27a",
                 "028e33fa3f8caa3102c028f3bff6b6680e528d9a0c543c479ef0b0339060ef36",
+                "--show-progress",
             ],
             catch_exceptions=False,
         )
 
         assert result.exit_code == 0
+        assert result.output.find(f"Searching keys derived from: {TEST_FINGERPRINT}") != -1
         assert (
             result.output.find(
                 "Found public key: a4601f992f24047097a30854ef656382911575694439108723698"
@@ -783,12 +804,191 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_derive_search_wallet_address(self, tmp_path, keyring_with_one_key):
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_FINGERPRINT),
+                "search",
+                "--limit",
+                "10",
+                "--search-type",
+                "all",
+                "83062a1b26d27820600eac4e31c1a890a6ba026b28bb96bb66454e9ce1033f4cba8824259dc17dc3b643ab1003e6b961",
+                "--show-progress",
+                "--non-observer-derivation",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert result.output.find(f"Searching keys derived from: {TEST_FINGERPRINT}") != -1
+        assert (
+            result.output.find(
+                "Found public key: 83062a1b26d27820600eac4e31c1a890a6ba026b28bb96bb66454"
+                "e9ce1033f4cba8824259dc17dc3b643ab1003e6b961 (HD path: m/12381n/8444n/2n/9n)"
+            )
+            != -1
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_FINGERPRINT),
+                "search",
+                "--limit",
+                "10",
+                "--search-type",
+                "private_key",
+                "028e33fa3f8caa3102c028f3bff6b6680e528d9a0c543c479ef0b0339060ef36",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                "Found private key: 028e33fa3f8caa3102c028f3bff6b6680e528d9a0c543c479ef0b0339060ef36"
+                " (HD path: m/12381/8444/2/9)"
+            )
+            != -1
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_PK_FINGERPRINT),
+                "search",
+                "--limit",
+                "10",
+                "--search-type",
+                "all",
+                "a272d5aaa6046e64bd7fd69bae288b9f9e5622c13058ec7d1b85e3d4d1acfa5d63d6542336c7b24d2fceab991919e989",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                "Found public key: a272d5aaa6046e64bd7fd69bae288b9f9e5622c13058ec7d1b85e"
+                "3d4d1acfa5d63d6542336c7b24d2fceab991919e989 (HD path: m/12381/8444/2/9)"
+            )
+            != -1
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "search",
+                "--limit",
+                "10",
+                "--search-type",
+                "all",
+                "a272d5aaa6046e64bd7fd69bae288b9f9e5622c13058ec7d1b85e3d4d1acfa5d63d6542336c7b24d2fceab991919e989",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                "Found public key: a272d5aaa6046e64bd7fd69bae288b9f9e5622c13058ec7d1b85e"
+                "3d4d1acfa5d63d6542336c7b24d2fceab991919e989 (HD path: m/12381/8444/2/9)"
+            )
+            != -1
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "search",
+                "--limit",
+                "10",
+                "--search-type",
+                "all",
+                "83062a1b26d27820600eac4e31c1a890a6ba026b28bb96bb66454e9ce1033f4cba8824259dc17dc3b643ab1003e6b961",
+                "a272d5aaa6046e64bd7fd69bae288b9f9e5622c13058ec7d1b85e3d4d1acfa5d63d6542336c7b24d2fceab991919e989",
+                "--non-observer-derivation",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert (
+            result.output.find(
+                "Found public key: 83062a1b26d27820600eac4e31c1a890a6ba026b28bb96bb66454"
+                "e9ce1033f4cba8824259dc17dc3b643ab1003e6b961 (HD path: m/12381n/8444n/2n/9n)"
+            )
+            != -1
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_PK_FINGERPRINT),
+                "search",
+                "--limit",
+                "10",
+                "--search-type",
+                "all",
+                "a4601f992f24047097a30854ef656382911575694439108723698972941e402d737c13df76fdf43597f7b3c2fa9ed27a",
+                "--show-progress",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert result.output.find(f"Searching keys derived from: {TEST_PK_FINGERPRINT}") != -1
+        assert (
+            result.output.find(
+                "Could not find 'a4601f992f24047097a30854ef656382911575694439108723698972941e402d73"
+                "7c13df76fdf43597f7b3c2fa9ed27a'"
+            )
+            != -1
+        )
+
+        # 83062a1b26d27820600eac4e31c1a890a6ba026b28bb96bb66454e9ce1033f4cba8824259dc17dc3b643ab1003e6b961
+
+    def test_derive_search_wallet_address(self, tmp_path, keyring_with_one_public_one_private_key):
         """
         Test the `chia keys derive search` command, searching for a wallet address
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
         keys_root_path = keychain.keyring_wrapper.keys_root_path
 
         runner = CliRunner()
@@ -832,12 +1032,41 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_derive_search_wallet_testnet_address(self, tmp_path, keyring_with_one_key):
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_PK_FINGERPRINT),
+                "search",
+                "--limit",
+                "40",
+                "--search-type",
+                "address",
+                "xch1p33y7kv48u7l68m490mr8levl6nkyxm3x8tfcnnec555egxzd3gs829wkl",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                "Found wallet address: "
+                "xch1p33y7kv48u7l68m490mr8levl6nkyxm3x8tfcnnec555egxzd3gs829wkl (HD path: m/12381/8444/2/9)"
+            )
+            != -1
+        )
+
+    def test_derive_search_wallet_testnet_address(self, tmp_path, keyring_with_one_public_one_private_key):
         """
         Test the `chia keys derive search` command, searching for a testnet wallet address
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
         keys_root_path = keychain.keyring_wrapper.keys_root_path
 
         runner = CliRunner()
@@ -883,12 +1112,43 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_derive_search_failure(self, tmp_path, keyring_with_one_key):
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_PK_FINGERPRINT),
+                "search",
+                "--limit",
+                "40",
+                "--search-type",
+                "address",
+                "txch1p33y7kv48u7l68m490mr8levl6nkyxm3x8tfcnnec555egxzd3gs2dzchv",
+                "--prefix",
+                "txch",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                "Found wallet address: "
+                "txch1p33y7kv48u7l68m490mr8levl6nkyxm3x8tfcnnec555egxzd3gs2dzchv (HD path: m/12381/8444/2/9)"
+            )
+            != -1
+        )
+
+    def test_derive_search_failure(self, tmp_path, keyring_with_one_public_one_private_key):
         """
         Test the `chia keys derive search` command with a failing search.
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
         keys_root_path = keychain.keyring_wrapper.keys_root_path
 
         runner = CliRunner()
@@ -976,12 +1236,12 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_derive_wallet_address(self, tmp_path, keyring_with_one_key):
+    def test_derive_wallet_address(self, tmp_path, keyring_with_one_public_one_private_key, mnemonic_seed_file):
         """
         Test the `chia keys derive wallet-address` command, generating a couple of wallet addresses.
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
         keys_root_path = keychain.keyring_wrapper.keys_root_path
 
         runner = CliRunner()
@@ -1004,8 +1264,8 @@ class TestKeysCommands:
                 os.fspath(keys_root_path),
                 "keys",
                 "derive",
-                "--fingerprint",
-                str(TEST_FINGERPRINT),
+                "--mnemonic-seed-filename",
+                str(mnemonic_seed_file),
                 "wallet-address",
                 "--index",
                 "50",
@@ -1033,12 +1293,63 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_derive_wallet_testnet_address(self, tmp_path, keyring_with_one_key):
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_PK_FINGERPRINT),
+                "wallet-address",
+                "--index",
+                "9",
+                "--count",
+                "1",
+                "--show-hd-path",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                "Wallet address 9 (m/12381/8444/2/9): " "xch1p33y7kv48u7l68m490mr8levl6nkyxm3x8tfcnnec555egxzd3gs829wkl"
+            )
+            != -1
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_PK_FINGERPRINT),
+                "wallet-address",
+                "--index",
+                "9",
+                "--count",
+                "1",
+                "--show-hd-path",
+                "--non-observer-derivation",
+            ],
+        )
+        assert result.exit_code == 0
+        assert result.output.find("Need a private key for non observer derivation of wallet addresses") != -1
+
+    def test_derive_wallet_testnet_address(self, tmp_path, keyring_with_one_public_one_private_key):
         """
         Test the `chia keys derive wallet-address` command, generating a couple of testnet wallet addresses.
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
         keys_root_path = keychain.keyring_wrapper.keys_root_path
 
         runner = CliRunner()
@@ -1092,12 +1403,43 @@ class TestKeysCommands:
             != -1
         )
 
-    def test_derive_child_keys(self, tmp_path, keyring_with_one_key):
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_PK_FINGERPRINT),
+                "wallet-address",
+                "--index",
+                "9",
+                "--count",
+                "1",
+                "--show-hd-path",
+                "--prefix",
+                "txch",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                "Wallet address 9 (m/12381/8444/2/9): "
+                "txch1p33y7kv48u7l68m490mr8levl6nkyxm3x8tfcnnec555egxzd3gs2dzchv"
+            )
+            != -1
+        )
+
+    def test_derive_child_keys(self, tmp_path, keyring_with_one_public_one_private_key, mnemonic_seed_file):
         """
         Test the `chia keys derive child-keys` command, generating a couple of derived keys.
         """
 
-        keychain = keyring_with_one_key
+        keychain = keyring_with_one_public_one_private_key
         keys_root_path = keychain.keyring_wrapper.keys_root_path
 
         runner = CliRunner()
@@ -1120,8 +1462,8 @@ class TestKeysCommands:
                 os.fspath(keys_root_path),
                 "keys",
                 "derive",
-                "--fingerprint",
-                str(TEST_FINGERPRINT),
+                "--mnemonic-seed-filename",
+                str(mnemonic_seed_file),
                 "child-key",
                 "--derive-from-hd-path",
                 "m/12381n/8444n/2/3/4/",
@@ -1163,4 +1505,205 @@ class TestKeysCommands:
                 "113610b39c2151fd68d7f795d5dd596b94889a3cf7825a56da5c6d2c7e5141a1"
             )
             != -1
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_FINGERPRINT),
+                "child-key",
+                "--type",
+                "wallet",
+                "--index",
+                "9",
+                "--count",
+                "1",
+                "--show-hd-path",
+                "--show-private-keys",
+                "--non-observer-derivation",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                "Wallet public key 9 (m/12381n/8444n/2n/9n): "
+                "83062a1b26d27820600eac4e31c1a890a6ba026b28bb96bb66454e9ce1033f4cba8824259dc17dc3b643ab1003e6b961"
+            )
+            != -1
+        )
+        assert (
+            result.output.find(
+                "Wallet private key 9 (m/12381n/8444n/2n/9n): "
+                "522f45786db6446d2f617a0c7df894385a21d05c7fbbfb34ee5aaaa417d8f41f"
+            )
+            != -1
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_FINGERPRINT),
+                "child-key",
+                "--type",
+                "wallet",
+                "--index",
+                "9",
+                "--count",
+                "1",
+                "--show-hd-path",
+                "--show-private-keys",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                "Wallet public key 9 (m/12381/8444/2/9): "
+                "a4601f992f24047097a30854ef656382911575694439108723698972941e402d737c13df76fdf43597f7b3c2fa9ed27a"
+            )
+            != -1
+        )
+        assert (
+            result.output.find(
+                "Wallet private key 9 (m/12381/8444/2/9): "
+                "028e33fa3f8caa3102c028f3bff6b6680e528d9a0c543c479ef0b0339060ef36"
+            )
+            != -1
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_PK_FINGERPRINT),
+                "child-key",
+                "--derive-from-hd-path",
+                "m/12381/8444/2/3/4/",
+                "--index",
+                "30",
+                "--count",
+                "2",
+                "--show-hd-path",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                "Observer public key 30 (m/12381/8444/2/3/4/30): "
+                "b64b1c85bacc8fe3509a559d0178ce8373d8ea1dfcdb0c4b76fa03540da31d01276f7f000306d576c1c29468cf13b45a"
+            )
+            != -1
+        )
+        assert (
+            result.output.find(
+                "Observer public key 31 (m/12381/8444/2/3/4/31): "
+                "92ba067175f2e87dd47336302ef8331a05ee0a737a92deec1b23dcd49eeb783d7feafdd055e3cba24fd6c94b39eb7bf3"
+            )
+            != -1
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_PK_FINGERPRINT),
+                "child-key",
+                "--type",
+                "wallet",
+                "--index",
+                "9",
+                "--count",
+                "1",
+                "--show-hd-path",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                "Wallet public key 9 (m/12381/8444/2/9): "
+                "a272d5aaa6046e64bd7fd69bae288b9f9e5622c13058ec7d1b85e3d4d1acfa5d63d6542336c7b24d2fceab991919e989"
+            )
+            != -1
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_PK_FINGERPRINT),
+                "child-key",
+                "--type",
+                "wallet",
+                "--index",
+                "9",
+                "--count",
+                "1",
+                "--show-hd-path",
+                "--non-observer-derivation",
+            ],
+        )
+
+        assert isinstance(result.exception, ValueError) and result.exception.args == (
+            "Cannot perform non-observer derivation on an observer-only key",
+        )
+
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_PK_FINGERPRINT),
+                "child-key",
+                "--derive-from-hd-path",
+                "m/12381n/8444/2/3/4/",
+                "--index",
+                "30",
+                "--count",
+                "2",
+                "--show-hd-path",
+            ],
+        )
+
+        assert isinstance(result.exception, ValueError) and result.exception.args == (
+            "Hardened path specified for observer key",
         )
