@@ -207,24 +207,28 @@ def streamable_from_dict(klass: Type[_T_Streamable], item: Any) -> _T_Streamable
         raise
 
 
-def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
+def function_to_convert_one_item(
+    f_type: Type[Any], json_parser: Optional[Callable[[object], Streamable]] = None
+) -> ConvertFunctionType:
     if is_type_SpecificOptional(f_type):
-        convert_inner_func = function_to_convert_one_item(get_args(f_type)[0])
+        convert_inner_func = function_to_convert_one_item(get_args(f_type)[0], json_parser)
         return lambda item: convert_optional(convert_inner_func, item)
     elif is_type_Tuple(f_type):
         args = get_args(f_type)
         convert_inner_tuple_funcs = []
         for arg in args:
-            convert_inner_tuple_funcs.append(function_to_convert_one_item(arg))
+            convert_inner_tuple_funcs.append(function_to_convert_one_item(arg, json_parser))
         # Ignoring for now as the proper solution isn't obvious
         return lambda items: convert_tuple(convert_inner_tuple_funcs, items)  # type: ignore[arg-type]
     elif is_type_List(f_type):
         inner_type = get_args(f_type)[0]
-        convert_inner_func = function_to_convert_one_item(inner_type)
+        convert_inner_func = function_to_convert_one_item(inner_type, json_parser)
         # Ignoring for now as the proper solution isn't obvious
         return lambda items: convert_list(convert_inner_func, items)  # type: ignore[arg-type]
     elif hasattr(f_type, "from_json_dict"):
-        return lambda item: f_type.from_json_dict(item)
+        if json_parser is None:
+            json_parser = f_type.from_json_dict
+        return lambda item: json_parser(item)
     elif issubclass(f_type, bytes):
         # Type is bytes, data is a hex string or bytes
         return lambda item: convert_byte_type(f_type, item)
@@ -268,26 +272,28 @@ def function_to_post_init_process_one_item(f_type: Type[object]) -> ConvertFunct
     return lambda item: post_init_process_item(f_type, item)
 
 
-def recurse_jsonify(d: Any) -> Any:
+def recurse_jsonify(d: Any, next_recursion_step: Optional[Callable[[Any, Any], Any]] = None) -> Any:
     """
     Makes bytes objects into strings with 0x, and makes large ints into strings.
     """
+    if next_recursion_step is None:
+        next_recursion_step = recurse_jsonify
     if dataclasses.is_dataclass(d):
         new_dict = {}
         for field in dataclasses.fields(d):
-            new_dict[field.name] = recurse_jsonify(getattr(d, field.name))
+            new_dict[field.name] = next_recursion_step(getattr(d, field.name), None)
         return new_dict
 
     elif isinstance(d, list) or isinstance(d, tuple):
         new_list = []
         for item in d:
-            new_list.append(recurse_jsonify(item))
+            new_list.append(next_recursion_step(item, None))
         return new_list
 
     elif isinstance(d, dict):
         new_dict = {}
         for name, val in d.items():
-            new_dict[name] = recurse_jsonify(val)
+            new_dict[name] = next_recursion_step(val, None)
         return new_dict
 
     elif issubclass(type(d), bytes):

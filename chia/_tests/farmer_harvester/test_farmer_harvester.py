@@ -60,7 +60,7 @@ async def test_start_with_empty_keychain(
         assert not farmer.started
         # Add a key to the keychain, this should lead to the start task passing
         # `setup_keys` and set `Farmer.initialized`
-        bt.local_keychain.add_private_key(generate_mnemonic())
+        bt.local_keychain.add_key(generate_mnemonic())
         await time_out_assert(5, farmer_is_started, True, farmer)
     assert not farmer.started
 
@@ -127,7 +127,7 @@ async def test_harvester_handshake(
         async with farmer_service.manage():
             await time_out_assert(5, handshake_task_active, True)
             assert not await handshake_done()
-            bt.local_keychain.add_private_key(generate_mnemonic())
+            bt.local_keychain.add_key(generate_mnemonic())
             await time_out_assert(5, farmer_is_started, True, farmer)
             await time_out_assert(5, handshake_task_active, False)
             await time_out_assert(5, handshake_done, True)

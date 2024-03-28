@@ -1332,7 +1332,7 @@ class TestWalletSimulator:
             uint64(0),
         )
         assert tx.spend_bundle is not None
-        await wallet_0.wallet_state_manager.main_wallet.wallet_state_manager.add_pending_transactions([tx])
+        [tx] = await wallet_0.wallet_state_manager.main_wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api_0.wait_transaction_records_entered_mempool(records=[tx])
 
         # wallet0 <-> sever1
@@ -1530,13 +1530,13 @@ class TestWalletSimulator:
         [tx] = await wallet_0.generate_signed_transaction(
             uint64(tx_amount), ph_2, DEFAULT_TX_CONFIG, uint64(tx_fee), memos=[ph_2]
         )
-        tx_id = tx.name.hex()
         assert tx.spend_bundle is not None
 
         fees = estimate_fees(tx.spend_bundle)
         assert fees == tx_fee
 
         [tx] = await wallet_0.wallet_state_manager.add_pending_transactions([tx])
+        tx_id = tx.name.hex()
         memos = await env_0.rpc_api.get_transaction_memo(dict(transaction_id=tx_id))
         # test json serialization
         assert len(memos[tx_id]) == 1
@@ -1696,7 +1696,7 @@ class TestWalletSimulator:
             if compute_additions(cs) == []:
                 stolen_cs = cs
         # get a legit signature
-        stolen_sb = await wallet.wallet_state_manager.sign_transaction([stolen_cs])
+        stolen_sb, _ = await wallet.wallet_state_manager.sign_bundle([stolen_cs])
         name = stolen_sb.name()
         stolen_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -1892,7 +1892,6 @@ class TestWalletSimulator:
     async def test_address_sliding_window(self, wallet_environments: WalletTestFramework) -> None:
         full_node_api = wallet_environments.full_node
         env = wallet_environments.environments[0]
-        wsm = env.wallet_state_manager
         wallet = env.xch_wallet
 
         peak = full_node_api.full_node.blockchain.get_peak_height()
@@ -1900,7 +1899,7 @@ class TestWalletSimulator:
 
         puzzle_hashes = []
         for i in range(211):
-            pubkey = master_sk_to_wallet_sk(wsm.private_key, uint32(i)).get_g1()
+            pubkey = master_sk_to_wallet_sk(wallet.wallet_state_manager.get_master_private_key(), uint32(i)).get_g1()
             puzzle: Program = wallet.puzzle_for_pk(pubkey)
             puzzle_hash: bytes32 = puzzle.get_tree_hash()
             puzzle_hashes.append(puzzle_hash)

@@ -5,7 +5,7 @@ import unicodedata
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
 
 import pkg_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
@@ -13,6 +13,7 @@ from chia_rs import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissin
 from typing_extensions import final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import (
     KeychainException,
     KeychainFingerprintExists,
@@ -85,6 +86,11 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
         mnemonics.append(m_word)
 
     return " ".join(mnemonics)
+
+
+def check_mnemonic_validity(mnemonic_str: str) -> bool:
+    mnemonic: List[str] = mnemonic_str.split(" ")
+    return len(mnemonic) in [12, 15, 18, 21, 24]
 
 
 def mnemonic_from_short_words(mnemonic_str: str) -> str:
@@ -307,13 +313,16 @@ class Keychain:
 
         public_key = G1Element.from_bytes(str_bytes[: G1Element.SIZE])
         fingerprint = public_key.get_fingerprint()
-        entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+        if len(str_bytes) == G1Element.SIZE + 32:
+            entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+        else:
+            entropy = None
 
         return KeyData(
             fingerprint=uint32(fingerprint),
             public_key=public_key,
             label=self.keyring_wrapper.get_label(fingerprint),
-            secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets else None,
+            secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
         )
 
     def _get_free_private_key_index(self) -> int:
@@ -328,17 +337,45 @@ class Keychain:
             except KeychainUserNotFound:
                 return index
 
-    def add_private_key(self, mnemonic: str, label: Optional[str] = None) -> PrivateKey:
+    @overload
+    def add_key(self, mnemonic_or_pk: str) -> PrivateKey: ...
+
+    @overload
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> PrivateKey: ...
+
+    @overload
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> PrivateKey: ...
+
+    @overload
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]) -> G1Element: ...
+
+    @overload
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: bool) -> Union[PrivateKey, G1Element]: ...
+
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
+    ) -> Union[PrivateKey, G1Element]:
         """
-        Adds a private key to the keychain, with the given entropy and passphrase. The
-        keychain itself will store the public key, and the entropy bytes,
+        Adds a key to the keychain. The keychain itself will store the public key, and the entropy bytes (if given),
         but not the passphrase.
         """
-        seed = mnemonic_to_seed(mnemonic)
-        entropy = bytes_from_mnemonic(mnemonic)
-        index = self._get_free_private_key_index()
-        key = AugSchemeMPL.key_gen(seed)
-        fingerprint = key.get_g1().get_fingerprint()
+        key: Union[PrivateKey, G1Element]
+        if private:
+            seed = mnemonic_to_seed(mnemonic_or_pk)
+            entropy = bytes_from_mnemonic(mnemonic_or_pk)
+            index = self._get_free_private_key_index()
+            key = AugSchemeMPL.key_gen(seed)
+            assert isinstance(key, PrivateKey)
+            pk = key.get_g1()
+            key_data = bytes(pk).hex() + entropy.hex()
+            fingerprint = pk.get_fingerprint()
+        else:
+            index = self._get_free_private_key_index()
+            pk_bytes = hexstr_to_bytes(mnemonic_or_pk)
+            key = G1Element.from_bytes(pk_bytes)
+            assert isinstance(key, G1Element)
+            key_data = pk_bytes.hex()
+            fingerprint = key.get_fingerprint()
 
         if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
             # Prevents duplicate add
@@ -353,7 +390,7 @@ class Keychain:
             self.keyring_wrapper.set_passphrase(
                 self.service,
                 get_private_key_user(self.user, index),
-                bytes(key.get_g1()).hex() + entropy.hex(),
+                key_data,
             )
         except Exception:
             if label is not None:
@@ -410,7 +447,7 @@ class Keychain:
             try:
                 key_data = self._get_key_data(index)
                 all_keys.append((key_data.private_key, key_data.entropy))
-            except KeychainUserNotFound:
+            except (KeychainUserNotFound, KeychainSecretsMissing):
                 pass
         return all_keys
 
@@ -444,7 +481,14 @@ class Keychain:
         """
         Returns all public keys.
         """
-        return [key_data[0].get_g1() for key_data in self.get_all_private_keys()]
+        all_keys: List[G1Element] = []
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index)
+                all_keys.append(key_data.public_key)
+            except KeychainUserNotFound:
+                pass
+        return all_keys
 
     def get_first_public_key(self) -> Optional[G1Element]:
         """

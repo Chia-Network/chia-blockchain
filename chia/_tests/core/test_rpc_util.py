@@ -8,6 +8,7 @@ import pytest
 from chia.rpc.util import marshal
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.util.clvm_streamable import clvm_streamable
 
 
 @streamable
@@ -51,3 +52,36 @@ async def test_rpc_marshalling() -> None:
             },
         },
     ) == {"qat": ["foofoo", "1", "ff", "qux"], "sub": {"qux": "qux"}}
+
+
+@clvm_streamable
+@dataclass(frozen=True)
+class ClvmSubObject(Streamable):
+    qux: bytes
+
+
+@streamable
+@dataclass(frozen=True)
+class TestClvmRequestType(Streamable):
+    sub: ClvmSubObject
+
+
+@streamable
+@dataclass(frozen=True)
+class TestClvmResponseObject(Streamable):
+    sub: ClvmSubObject
+
+
+@pytest.mark.anyio
+async def test_clvm_streamable_marshalling() -> None:
+    @marshal
+    async def test_rpc_endpoint(self: None, request: TestClvmRequestType) -> TestClvmResponseObject:
+        return TestClvmResponseObject(request.sub)
+
+    assert await test_rpc_endpoint(
+        None,
+        {
+            "sub": "ff81ff80",
+            "CHIP-0029": True,
+        },
+    ) == {"sub": "ff81ff80"}

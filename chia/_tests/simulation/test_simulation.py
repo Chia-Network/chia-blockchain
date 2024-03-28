@@ -220,7 +220,7 @@ class TestSimulation:
             DEFAULT_TX_CONFIG,
             uint64(0),
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
+        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
         # wait till out of mempool
         await time_out_assert(10, full_node_api.full_node.mempool_manager.get_spendbundle, None, tx.name)
         # wait until the transaction is confirmed
@@ -395,7 +395,7 @@ class TestSimulation:
                 tx_config=DEFAULT_TX_CONFIG,
                 coins={coin},
             )
-            await wallet.wallet_state_manager.add_pending_transactions([tx])
+            [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
             await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
             assert tx.spend_bundle is not None
@@ -447,7 +447,8 @@ class TestSimulation:
             ]
             for tx in transactions:
                 assert tx.spend_bundle is not None, "the above created transaction is missing the expected spend bundle"
-                await wallet.wallet_state_manager.add_pending_transactions([tx])
+
+            transactions = await wallet.wallet_state_manager.add_pending_transactions(transactions)
 
             if records_or_bundles_or_coins == "records":
                 await full_node_api.process_transaction_records(records=transactions)

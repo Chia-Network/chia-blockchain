@@ -177,7 +177,7 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
     spent_coin = tx_record.spend_bundle.removals()[0]
     assert spent_coin.puzzle_hash == puzzle_hash
 
-    await wallet.wallet_state_manager.add_pending_transactions([tx_record])
+    [tx_record] = await wallet.wallet_state_manager.add_pending_transactions([tx_record])
 
     await full_node_api.process_transaction_records(records=[tx_record])
 
@@ -189,7 +189,7 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
     [tx_record] = await wallet.generate_signed_transaction(
         uint64(10), SINGLETON_LAUNCHER_HASH, DEFAULT_TX_CONFIG, uint64(0)
     )
-    await wallet.wallet_state_manager.add_pending_transactions([tx_record])
+    [tx_record] = await wallet.wallet_state_manager.add_pending_transactions([tx_record])
 
     await full_node_api.process_transaction_records(records=[tx_record])
 
@@ -197,7 +197,7 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
 
     # Send a transaction to make sure the wallet is still running
     [tx_record] = await wallet.generate_signed_transaction(uint64(10), junk_ph, DEFAULT_TX_CONFIG, uint64(0))
-    await wallet.wallet_state_manager.add_pending_transactions([tx_record])
+    [tx_record] = await wallet.wallet_state_manager.add_pending_transactions([tx_record])
 
     await full_node_api.process_transaction_records(records=[tx_record])
 
@@ -258,7 +258,7 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
     [tx_record] = await standard_wallet.generate_signed_transaction(
         uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0), coins=coins
     )
-    await standard_wallet.wallet_state_manager.add_pending_transactions([tx_record])
+    [tx_record] = await standard_wallet.wallet_state_manager.add_pending_transactions([tx_record])
 
     await full_node_api.process_transaction_records(records=[tx_record])
 
@@ -296,7 +296,7 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
     data_response = RespondToCoinUpdates.from_bytes(msg_response.data)
     assert len(data_response.coin_states) == 0
 
-    await standard_wallet.wallet_state_manager.add_pending_transactions([tx_record])
+    [tx_record] = await standard_wallet.wallet_state_manager.add_pending_transactions([tx_record])
 
     await full_node_api.process_transaction_records(records=[tx_record])
 

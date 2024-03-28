@@ -133,7 +133,7 @@ async def test_wait_transaction_records_entered_mempool(
             tx_config=DEFAULT_TX_CONFIG,
             coins={coin},
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
+        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
         assert tx.spend_bundle is not None
@@ -168,7 +168,7 @@ async def test_process_transaction_records(
             tx_config=DEFAULT_TX_CONFIG,
             coins={coin},
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
+        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
         await full_node_api.process_transaction_records(records=[tx])
         assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None

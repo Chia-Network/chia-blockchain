@@ -6,7 +6,7 @@ import time
 import traceback
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import G1Element, G2Element
 from typing_extensions import Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -18,7 +18,6 @@ from chia.types.coin_spend import compute_additions_with_cost
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
@@ -46,10 +45,6 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_secret_key,
-)
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -200,8 +195,8 @@ class CATWallet:
             valid_times=ConditionValidTimes(),
         )
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle, name=spend_bundle.name())
-        await self.wallet_state_manager.add_pending_transactions([chia_tx, cat_record])
-        return self, [chia_tx, cat_record]
+        tx_list = await self.wallet_state_manager.add_pending_transactions([chia_tx, cat_record])
+        return self, tx_list
 
     @staticmethod
     async def get_or_create_wallet_for_cat(
@@ -536,31 +531,6 @@ class CATWallet:
         assert sum(c.amount for c in coins) >= amount
         return coins
 
-    async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
-        sigs: List[G2Element] = []
-        for spend in spend_bundle.coin_spends:
-            args = match_cat_puzzle(uncurry_puzzle(spend.puzzle_reveal.to_program()))
-            if args is not None:
-                _, _, inner_puzzle = args
-                puzzle_hash = inner_puzzle.get_tree_hash()
-                private = await self.wallet_state_manager.get_private_key(puzzle_hash)
-                synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-                conditions = conditions_dict_for_solution(
-                    spend.puzzle_reveal, spend.solution, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
-                )
-                synthetic_pk = synthetic_secret_key.get_g1()
-                for pk, msg in pkm_pairs_for_conditions_dict(
-                    conditions, spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                ):
-                    try:
-                        assert bytes(synthetic_pk) == pk
-                        sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
-                    except AssertionError:
-                        raise ValueError("This spend bundle cannot be signed by the CAT wallet")
-
-        agg_sig = AugSchemeMPL.aggregate(sigs)
-        return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
-
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
         record: Optional[DerivationRecord] = (
             await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
@@ -806,7 +776,7 @@ class CATWallet:
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])
-        unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
+        spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             tx_config,
             fee,
@@ -814,8 +784,6 @@ class CATWallet:
             coins=coins,
             extra_conditions=extra_conditions,
         )
-        spend_bundle = await self.sign(unsigned_spend_bundle)
-
         if chia_tx is not None:
             other_tx_removals: Set[Coin] = {removal for removal in chia_tx.removals}
             other_tx_additions: Set[Coin] = {removal for removal in chia_tx.additions}
