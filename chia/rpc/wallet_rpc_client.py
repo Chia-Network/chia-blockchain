@@ -28,6 +28,7 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
@@ -1621,33 +1622,36 @@ class WalletRpcClient(RpcClient):
         self,
         args: GatherSigningInfo,
     ) -> GatherSigningInfoResponse:
-        return GatherSigningInfoResponse.from_json_dict(
+        return json_deserialize_with_clvm_streamable(
             await self.fetch(
                 "gather_signing_info",
                 args.to_json_dict(),
-            )
+            ),
+            GatherSigningInfoResponse,
         )
 
     async def apply_signatures(
         self,
         args: ApplySignatures,
     ) -> ApplySignaturesResponse:
-        return ApplySignaturesResponse.from_json_dict(
+        return json_deserialize_with_clvm_streamable(
             await self.fetch(
                 "apply_signatures",
                 args.to_json_dict(),
-            )
+            ),
+            ApplySignaturesResponse,
         )
 
     async def submit_transactions(
         self,
         args: SubmitTransactions,
     ) -> SubmitTransactionsResponse:
-        return SubmitTransactionsResponse.from_json_dict(
+        return json_deserialize_with_clvm_streamable(
             await self.fetch(
                 "submit_transactions",
                 args.to_json_dict(),
-            )
+            ),
+            SubmitTransactionsResponse,
         )
 
     async def vault_create(
