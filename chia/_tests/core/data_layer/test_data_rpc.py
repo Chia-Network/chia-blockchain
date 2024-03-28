@@ -43,7 +43,7 @@ from chia.data_layer.data_layer_util import (
     leaf_hash,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
-from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
+from chia.data_layer.download_data import get_delta_filename_path, get_full_tree_filename_path
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -2203,20 +2203,30 @@ async def test_maximum_full_file_count(
             await asyncio.sleep(manage_data_interval * 2)
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
-            with os.scandir(data_layer.server_files_location) as entries:
+            expected_files_count = min(batch_count, maximum_full_file_count) + batch_count
+            with os.scandir(data_layer.server_files_location.joinpath(f"{store_id}")) as entries:
                 filenames = {entry.name for entry in entries}
-                expected_files_count = min(batch_count, maximum_full_file_count) + batch_count
-
                 assert len(filenames) == expected_files_count
-
-                for generation, hash in enumerate(root_hashes):
-                    filename = get_delta_filename(store_id, hash, generation + 1)
-                    assert filename in filenames
-                    filename = get_full_tree_filename(store_id, hash, generation + 1)
-                    if generation + 1 > batch_count - maximum_full_file_count:
-                        assert filename in filenames
-                    else:
-                        assert filename not in filenames
+            for generation, hash in enumerate(root_hashes):
+                delta_path = get_delta_filename_path(
+                    data_layer.server_files_location,
+                    store_id,
+                    hash,
+                    generation + 1,
+                    True,
+                )
+                assert delta_path.exists()
+                full_file_path = get_full_tree_filename_path(
+                    data_layer.server_files_location,
+                    store_id,
+                    hash,
+                    generation + 1,
+                    True,
+                )
+                if generation + 1 > batch_count - maximum_full_file_count:
+                    assert full_file_path.exists()
+                else:
+                    assert not full_file_path.exists()
 
 
 @pytest.mark.parametrize("retain", [True, False])
@@ -2258,18 +2268,21 @@ async def test_unsubscribe_removes_files(
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
 
-        filenames = {path.name for path in data_layer.server_files_location.iterdir()}
+        store_path = data_layer.server_files_location.joinpath(f"{store_id}")
+        filenames = {path.name for path in store_path.iterdir()}
         assert len(filenames) == 2 * update_count
         for generation, hash in enumerate(root_hashes):
-            assert get_delta_filename(store_id, hash, generation + 1) in filenames
-            assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
+            path = get_delta_filename_path(data_layer.server_files_location, store_id, hash, generation + 1, True)
+            assert path.exists()
+            path = get_full_tree_filename_path(data_layer.server_files_location, store_id, hash, generation + 1, True)
+            assert path.exists()
 
         res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})
 
         # wait for unsubscribe to be processed
         await asyncio.sleep(manage_data_interval * 3)
 
-        filenames = {path.name for path in data_layer.server_files_location.iterdir()}
+        filenames = {path.name for path in store_path.iterdir()}
         assert len(filenames) == (2 * update_count if retain else 0)
 
 
