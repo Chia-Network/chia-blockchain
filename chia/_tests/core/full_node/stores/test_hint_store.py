@@ -112,8 +112,8 @@ async def test_duplicates(db_version: int) -> None:
 async def test_coin_ids_multi(db_version: int) -> None:
     async with DBConnection(db_version) as db_wrapper:
         hint_store = await HintStore.create(db_wrapper)
-        hints = [32 * i.to_bytes() for i in range(256)]
-        coin_ids = [bytes32(32 * i.to_bytes()) for i in range(256)]
+        hints = [32 * i.to_bytes(1, byteorder="big", signed=False) for i in range(256)]
+        coin_ids = [bytes32(32 * i.to_bytes(1, byteorder="big", signed=False)) for i in range(256)]
 
         expected: dict[bytes, list[bytes32]] = {}
         expected[hints[0]] = coin_ids[0:10]
