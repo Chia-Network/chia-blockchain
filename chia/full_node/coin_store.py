@@ -380,7 +380,7 @@ class CoinStore:
     async def get_coin_states_by_ids(
         self,
         include_spent_coins: bool,
-        coin_ids: Set[bytes32],
+        coin_ids: Collection[bytes32],
         min_height: uint32 = uint32(0),
         *,
         max_height: uint32 = uint32.MAXIMUM,
@@ -413,6 +413,8 @@ class CoinStore:
 
         return coins
 
+    MAX_PUZZLE_HASH_BATCH_SIZE = SQLITE_MAX_VARIABLE_NUMBER - 10
+
     async def batch_coin_states_by_puzzle_hashes(
         self,
         puzzle_hashes: List[bytes32],
@@ -421,29 +423,30 @@ class CoinStore:
         include_spent: bool = True,
         include_unspent: bool = True,
         include_hinted: bool = True,
+        min_amount: uint64 = uint64(0),
         max_items: int = 50000,
     ) -> Tuple[List[CoinState], Optional[uint32]]:
         """
         Returns the coin states, as well as the next block height (or `None` if finished).
-        Note that the maximum number of puzzle hashes is currently set to 15000.
+        You cannot exceed `CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE` puzzle hashes in the query.
         """
 
-        # This number is chosen such that it's below half of the Python 3.8+ SQLite variable limit.
-        # It can be changed later without breaking the protocol, but this is a practical limit for now.
-        assert len(puzzle_hashes) <= 15000
+        # This should be able to be changed later without breaking the protocol.
+        # We have a small deduction for other variables to be added to the query.
+        assert len(puzzle_hashes) <= CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
+
+        if len(puzzle_hashes) == 0:
+            return [], None
 
         coin_states: List[CoinState] = []
 
-        async with self.db_wrapper.reader_no_transaction() as conn:
+        async with self.db_wrapper.reader() as conn:
             puzzle_hashes_db = tuple(puzzle_hashes)
             puzzle_hash_count = len(puzzle_hashes_db)
 
-            if include_hinted:
-                require_spent = "cr.spent_index>0"
-                require_unspent = "cr.spent_index=0"
-            else:
-                require_spent = "spent_index>0"
-                require_unspent = "spent_index=0"
+            require_spent = "spent_index>0"
+            require_unspent = "spent_index=0"
+            amount_filter = "AND amount>=? " if min_amount > 0 else ""
 
             if include_spent and include_unspent:
                 height_filter = ""
@@ -455,33 +458,49 @@ class CoinStore:
                 # There are no coins which are both spent and unspent, so we're finished.
                 return [], None
 
-            if include_hinted:
-                cursor = await conn.execute(
-                    f"SELECT cr.confirmed_index, cr.spent_index, cr.coinbase, cr.puzzle_hash, "
-                    f"cr.coin_parent, cr.amount, cr.timestamp FROM coin_record cr "
-                    f"LEFT JOIN hints h ON cr.coin_name = h.coin_id "
-                    f'WHERE (cr.puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
-                    f'OR h.hint in ({"?," * (puzzle_hash_count - 1)}?)) '
-                    f"AND (cr.confirmed_index>=? OR cr.spent_index>=?) "
-                    f"{height_filter} "
-                    f"ORDER BY MAX(cr.confirmed_index, cr.spent_index) ASC "
-                    f"LIMIT ?",
-                    puzzle_hashes_db + puzzle_hashes_db + (min_height, min_height, max_items + 1),
-                )
-            else:
-                cursor = await conn.execute(
-                    f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                    f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
-                    f'WHERE puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
-                    f"AND (confirmed_index>=? OR spent_index>=?) "
-                    f"{height_filter} "
-                    f"ORDER BY MAX(confirmed_index, spent_index) ASC "
-                    f"LIMIT ?",
-                    puzzle_hashes_db + (min_height, min_height, max_items + 1),
-                )
+            cursor = await conn.execute(
+                f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
+                f'WHERE puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
+                f"AND (confirmed_index>=? OR spent_index>=?) "
+                f"{height_filter} {amount_filter}"
+                f"ORDER BY MAX(confirmed_index, spent_index) ASC "
+                f"LIMIT ?",
+                (
+                    puzzle_hashes_db
+                    + (min_height, min_height)
+                    + ((min_amount.to_bytes(8, "big"),) if min_amount > 0 else ())
+                    + (max_items + 1,)
+                ),
+            )
 
             for row in await cursor.fetchall():
                 coin_states.append(self.row_to_coin_state(row))
+
+            if include_hinted:
+                cursor = await conn.execute(
+                    f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                    f"coin_parent, amount, timestamp FROM coin_record "
+                    f"WHERE coin_name IN (SELECT coin_id FROM hints "
+                    f'WHERE hint IN ({"?," * (puzzle_hash_count - 1)}?)) '
+                    f"AND (confirmed_index>=? OR spent_index>=?) "
+                    f"{height_filter} {amount_filter}"
+                    f"ORDER BY MAX(confirmed_index, spent_index) ASC "
+                    f"LIMIT ?",
+                    (
+                        puzzle_hashes_db
+                        + (min_height, min_height)
+                        + ((min_amount.to_bytes(8, "big"),) if min_amount > 0 else ())
+                        + (max_items + 1,)
+                    ),
+                )
+
+                for row in await cursor.fetchall():
+                    coin_states.append(self.row_to_coin_state(row))
+
+                coin_states.sort(key=lambda cr: max(cr.created_height or uint32(0), cr.spent_height or uint32(0)))
+                while len(coin_states) > max_items + 1:
+                    coin_states.pop()
 
         # If there aren't too many coin states, we've finished syncing these hashes.
         # There is no next height to start from, so return `None`.

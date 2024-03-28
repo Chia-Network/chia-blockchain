@@ -686,6 +686,53 @@ respond_ses_info = wallet_protocol.RespondSESInfo(
     [[uint32(1), uint32(2), uint32(3)], [uint32(4), uint32(606340525)]],
 )
 
+coin_state_filters = wallet_protocol.CoinStateFilters(True, True, True, uint64(0))
+
+hashes = [
+    bytes32(bytes.fromhex("59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7")),
+    bytes32(bytes.fromhex("d4a68c9dc42d625092c3e71a657cce469ae4180d1b0632256d2da8ffc0a9beca")),
+    bytes32(bytes.fromhex("0e03ce4c43d7d60886f27af7da0ea9749a46b977b3743f3fd2e97b169dc539c1")),
+]
+
+request_remove_puzzle_subscriptions = wallet_protocol.RequestRemovePuzzleSubscriptions(hashes)
+
+respond_remove_puzzle_subscriptions = wallet_protocol.RespondRemovePuzzleSubscriptions(hashes)
+
+request_remove_coin_subscriptions = wallet_protocol.RequestRemoveCoinSubscriptions(hashes)
+
+respond_remove_coin_subscriptions = wallet_protocol.RespondRemoveCoinSubscriptions(hashes)
+
+request_puzzle_state = wallet_protocol.RequestPuzzleState(
+    hashes,
+    uint32(0),
+    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
+    coin_state_filters,
+    True,
+)
+
+respond_puzzle_state = wallet_protocol.RespondPuzzleState(
+    hashes,
+    uint32(432487),
+    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
+    True,
+    [coin_state],
+)
+
+reject_puzzle_state = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
+
+request_coin_state = wallet_protocol.RequestCoinState(
+    hashes,
+    uint32(0),
+    bytes32(bytes.fromhex("9620d602399252a8401a44669a9d7a6fc328358868a427e827d721c233e2b411")),
+    False,
+)
+
+respond_coin_state = wallet_protocol.RespondCoinState(hashes, [coin_state])
+
+reject_coin_state = wallet_protocol.RejectCoinState(
+    uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
+)
+
 
 ### HARVESTER PROTOCOL
 pool_difficulty = harvester_protocol.PoolDifficulty(
