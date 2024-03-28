@@ -1795,8 +1795,8 @@ async def test_insert_from_delta_file(
         server_info: ServerInfo,
         timeout: int,
         log: logging.Logger,
-    ) -> bool:
-        return True
+    ) -> None:
+        pass
 
     async def mock_http_download_2(
         target_filename_path: Path,
@@ -1805,7 +1805,7 @@ async def test_insert_from_delta_file(
         server_info: ServerInfo,
         timeout: int,
         log: logging.Logger,
-    ) -> bool:
+    ) -> None:
         os.rename(tmp_path.joinpath("tmp"), tmp_path.joinpath(f"{tree_id}"))
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
@@ -1824,6 +1824,9 @@ async def test_insert_from_delta_file(
             downloader=None,
         )
         assert not success
+
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    assert root.generation == 0
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
     with monkeypatch.context() as m:
