@@ -438,6 +438,16 @@ def named_datacases(name: str) -> DataCasesDecorator:
     return functools.partial(datacases, _name=name)
 
 
+def boolean_datacases(name: str, false: str, true: str) -> pytest.MarkDecorator:
+    return pytest.mark.parametrize(
+        argnames=name,
+        argvalues=[
+            pytest.param(False, id=false),
+            pytest.param(True, id=true),
+        ],
+    )
+
+
 @dataclasses.dataclass
 class CoinGenerator:
     _seed: int = -1

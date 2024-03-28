@@ -8,6 +8,7 @@ from chia_rs import (
     ALLOW_BACKREFS,
     ENABLE_BLS_OPS_OUTSIDE_GUARD,
     ENABLE_FIXED_DIV,
+    ENABLE_MESSAGE_CONDITIONS,
     ENABLE_SOFTFORK_CONDITION,
     MEMPOOL_MODE,
     NO_RELATIVE_CONDITIONS_ON_EPHEMERAL,
@@ -43,6 +44,9 @@ def get_flags_for_height_and_constants(height: int, constants: ConsensusConstant
 
     if height >= constants.SOFT_FORK2_HEIGHT:
         flags = flags | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+
+    if height >= constants.SOFT_FORK3_HEIGHT:
+        flags = flags | ENABLE_MESSAGE_CONDITIONS
 
     if height >= constants.HARD_FORK_HEIGHT:
         # the hard-fork initiated with 2.0. To activate June 2024
