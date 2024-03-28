@@ -413,6 +413,8 @@ class CoinStore:
 
         return coins
 
+    MAX_PUZZLE_HASH_BATCH_SIZE = SQLITE_MAX_VARIABLE_NUMBER - 10
+
     async def batch_coin_states_by_puzzle_hashes(
         self,
         puzzle_hashes: List[bytes32],
@@ -426,12 +428,12 @@ class CoinStore:
     ) -> Tuple[List[CoinState], Optional[uint32]]:
         """
         Returns the coin states, as well as the next block height (or `None` if finished).
-        Note that the maximum number of puzzle hashes is currently set to 15000.
+        You cannot exceed `CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE` puzzle hashes in the query.
         """
 
-        # This number is chosen such that it's below half of the Python 3.8+ SQLite variable limit.
-        # It can be changed later without breaking the protocol, but this is a practical limit for now.
-        assert len(puzzle_hashes) <= 15000
+        # This should be able to be changed later without breaking the protocol.
+        # We have a small deduction for other variables to be added to the query.
+        assert len(puzzle_hashes) <= CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
 
         if len(puzzle_hashes) == 0:
             return [], None

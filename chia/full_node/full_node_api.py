@@ -22,6 +22,7 @@ from chia.full_node.bundle_tools import (
     simple_solution_generator,
     simple_solution_generator_backrefs,
 )
+from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
@@ -1764,7 +1765,7 @@ class FullNodeAPI:
         # This is a limit imposed by `batch_coin_states_by_puzzle_hashes`, due to the SQLite variable limit.
         # It can be increased in the future, and this protocol should be written and tested in a way that
         # this increase would not break the API.
-        count = 15000
+        count = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
         puzzle_hashes = request_puzzle_hashes[:count]
 
         previous_header_hash = (
