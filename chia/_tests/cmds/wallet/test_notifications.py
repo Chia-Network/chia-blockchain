@@ -21,9 +21,9 @@ def test_notifications_send(capsys: object, get_test_cli_clients: Tuple[TestRpcC
     # set RPC Client
     class NotificationsSendRpcClient(TestWalletRpcClient):
         async def send_notification(
-            self, target: bytes32, msg: bytes, amount: uint64, fee: uint64 = uint64(0)
+            self, target: bytes32, msg: bytes, amount: uint64, fee: uint64 = uint64(0), push: bool = True
         ) -> TransactionRecord:
-            self.add_to_log("send_notification", (target, msg, amount, fee))
+            self.add_to_log("send_notification", (target, msg, amount, fee, push))
 
             class FakeTransactionRecord:
                 def __init__(self, name: str) -> None:
@@ -53,7 +53,7 @@ def test_notifications_send(capsys: object, get_test_cli_clients: Tuple[TestRpcC
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "send_notification": [(target_ph, bytes(msg, "utf8"), 20000000, 1000000000)],
+        "send_notification": [(target_ph, bytes(msg, "utf8"), 20000000, 1000000000, True)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 

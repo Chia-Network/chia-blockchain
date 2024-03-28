@@ -48,6 +48,7 @@ def test_dao_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             name: Optional[str] = None,
             fee: uint64 = uint64(0),
             fee_for_cat: uint64 = uint64(0),
+            push: bool = True,
         ) -> CreateNewDAOWalletResponse:
             if not treasury_id:
                 treasury_id = bytes32(token_bytes(32))
@@ -140,6 +141,7 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
             tx_config: TXConfig,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
+            push: bool = True,
         ) -> DAOAddFundsToTreasuryResponse:
             return DAOAddFundsToTreasuryResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
@@ -278,6 +280,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             tx_config: TXConfig,
             is_yes_vote: bool,
             fee: uint64 = uint64(0),
+            push: bool = True,
         ) -> DAOVoteOnProposalResponse:
             return DAOVoteOnProposalResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
@@ -289,6 +292,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             fee: uint64 = uint64(0),
             self_destruct: bool = False,
             reuse_puzhash: Optional[bool] = None,
+            push: bool = True,
         ) -> DAOCloseProposalResponse:
             return DAOCloseProposalResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
@@ -306,6 +310,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             new_dao_rules: Optional[Dict[str, uint64]] = None,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
+            push: bool = True,
         ) -> DAOCreateProposalResponse:
             return DAOCreateProposalResponse([STD_UTX], [STD_TX], bytes32([0] * 32), STD_TX.name, STD_TX)
 
@@ -489,6 +494,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             tx_config: TXConfig,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
+            push: bool = True,
         ) -> DAOSendToLockupResponse:
             return DAOSendToLockupResponse([STD_UTX], [STD_TX], STD_TX.name, [STD_TX])
 
@@ -498,6 +504,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             tx_config: TXConfig,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
+            push: bool = True,
         ) -> DAOFreeCoinsFromFinishedProposalsResponse:
             return DAOFreeCoinsFromFinishedProposalsResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
@@ -508,6 +515,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             coins: Optional[List[Dict[str, Union[str, int]]]] = None,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
+            push: bool = True,
         ) -> DAOExitLockupResponse:
             return DAOExitLockupResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 

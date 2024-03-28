@@ -96,6 +96,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             royalty_percentage: int = 0,
             did_id: Optional[str] = None,
             reuse_puzhash: Optional[bool] = None,
+            push: bool = True,
         ) -> NFTMintNFTResponse:
             self.add_to_log(
                 "mint_nft",
@@ -115,6 +116,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
                     royalty_percentage,
                     did_id,
                     reuse_puzhash,
+                    push,
                 ),
             )
             return NFTMintNFTResponse(
@@ -171,6 +173,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
                 500000000000,
                 0,
                 "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652",
+                True,
             )
         ],
     }
@@ -190,8 +193,9 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
             uri: str,
             fee: int,
             tx_config: TXConfig,
+            push: bool,
         ) -> NFTAddURIResponse:
-            self.add_to_log("add_uri_to_nft", (wallet_id, nft_coin_id, key, uri, fee, tx_config))
+            self.add_to_log("add_uri_to_nft", (wallet_id, nft_coin_id, key, uri, fee, tx_config, push))
             return NFTAddURIResponse([STD_UTX], [STD_TX], uint32(wallet_id), SpendBundle([], G2Element()))
 
     inst_rpc_client = NFTAddUriRpcClient()  # pylint: disable=no-value-for-parameter
@@ -223,6 +227,7 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
                 "https://example.com/nft",
                 500000000000,
                 DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
+                True,
             )
         ],
     }
@@ -241,8 +246,9 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
             target_address: str,
             fee: int,
             tx_config: TXConfig,
+            push: bool,
         ) -> NFTTransferNFTResponse:
-            self.add_to_log("transfer_nft", (wallet_id, nft_coin_id, target_address, fee, tx_config))
+            self.add_to_log("transfer_nft", (wallet_id, nft_coin_id, target_address, fee, tx_config, push))
             return NFTTransferNFTResponse(
                 [STD_UTX],
                 [STD_TX],
@@ -269,11 +275,11 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     ]
     # these are various things that should be in the output
     assert STD_TX.spend_bundle is not None
-    assert_list = [f"NFT transferred successfully with spend bundle: {STD_TX.spend_bundle.to_json_dict()}"]
+    assert_list = ["NFT transferred successfully", f"spend bundle: {STD_TX.spend_bundle.to_json_dict()}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "transfer_nft": [
-            (4, nft_coin_id, target_address, 500000000000, DEFAULT_TX_CONFIG.override(reuse_puzhash=True))
+            (4, nft_coin_id, target_address, 500000000000, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), True)
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)

@@ -31,8 +31,9 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             tx_config: TXConfig,
             target_address: Optional[bytes32] = None,
             fee: uint64 = uint64(0),
+            push: bool = True,
         ) -> VCMintResponse:
-            self.add_to_log("vc_mint", (did_id, tx_config, target_address, fee))
+            self.add_to_log("vc_mint", (did_id, tx_config, target_address, fee, push))
 
             return VCMintResponse(
                 [STD_UTX],
@@ -64,7 +65,7 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
         f"Transaction {get_bytes32(2).hex()}",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {"vc_mint": [(did_bytes, DEFAULT_TX_CONFIG, target_bytes, 500000000000)]}
+    expected_calls: logType = {"vc_mint": [(did_bytes, DEFAULT_TX_CONFIG, target_bytes, 500000000000, True)]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
@@ -117,8 +118,11 @@ def test_vcs_update_proofs(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
             new_proof_hash: Optional[bytes32] = None,
             provider_inner_puzhash: Optional[bytes32] = None,
             fee: uint64 = uint64(0),
+            push: bool = True,
         ) -> VCSpendResponse:
-            self.add_to_log("vc_spend", (vc_id, tx_config, new_puzhash, new_proof_hash, provider_inner_puzhash, fee))
+            self.add_to_log(
+                "vc_spend", (vc_id, tx_config, new_puzhash, new_proof_hash, provider_inner_puzhash, fee, push)
+            )
             return VCSpendResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = VcsUpdateProofsRpcClient()  # pylint: disable=no-value-for-parameter
@@ -145,7 +149,15 @@ def test_vcs_update_proofs(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "vc_spend": [
-            (vc_bytes, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), target_ph, new_proof, None, uint64(500000000000))
+            (
+                vc_bytes,
+                DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
+                target_ph,
+                new_proof,
+                None,
+                uint64(500000000000),
+                True,
+            )
         ]
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -219,8 +231,9 @@ def test_vcs_revoke(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             vc_parent_id: bytes32,
             tx_config: TXConfig,
             fee: uint64 = uint64(0),
+            push: bool = True,
         ) -> VCRevokeResponse:
-            self.add_to_log("vc_revoke", (vc_parent_id, tx_config, fee))
+            self.add_to_log("vc_revoke", (vc_parent_id, tx_config, fee, push))
             return VCRevokeResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = VcsRevokeRpcClient()  # pylint: disable=no-value-for-parameter
@@ -242,8 +255,8 @@ def test_vcs_revoke(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     expected_calls: logType = {
         "vc_get": [(vc_id,)],
         "vc_revoke": [
-            (parent_id, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), uint64(500000000000)),
-            (parent_id, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), uint64(500000000000)),
+            (parent_id, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), uint64(500000000000), True),
+            (parent_id, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), uint64(500000000000), True),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -260,6 +273,7 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcC
             min_amount_to_claim: uint64,
             tx_config: TXConfig,
             fee: uint64 = uint64(0),
+            push: bool = True,
         ) -> List[TransactionRecord]:
             self.add_to_log(
                 "crcat_approve_pending",
@@ -268,6 +282,7 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcC
                     min_amount_to_claim,
                     tx_config,
                     fee,
+                    push,
                 ),
             )
             return [STD_TX]
@@ -305,6 +320,7 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcC
                     reuse_puzhash=True,
                 ),
                 uint64(500000000000),
+                True,
             )
         ],
         "get_wallets": [(None,)],
