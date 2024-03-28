@@ -595,7 +595,7 @@ async def test_coin_state_batches(
         while len(remaining_phs) > 0:
             while height is not None:
                 (coin_states, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
-                    remaining_phs[:15000],
+                    remaining_phs[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE],
                     min_height=height,
                     include_spent=include_spent,
                     include_unspent=include_unspent,
@@ -612,7 +612,7 @@ async def test_coin_state_batches(
                 all_coin_states += coin_states
 
                 if height is None:
-                    remaining_phs = remaining_phs[15000:]
+                    remaining_phs = remaining_phs[CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE :]
 
                     if len(remaining_phs) > 0:
                         height = uint32(0)

@@ -9,6 +9,7 @@ import pytest
 from chia_rs import Coin, CoinState
 
 from chia._tests.connection_utils import add_dummy_connection
+from chia.full_node.coin_store import CoinStore
 from chia.protocols import wallet_protocol
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ws_connection import WSChiaConnection
@@ -176,14 +177,14 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
 
     await simulator.farm_blocks_to_puzzlehash(1)
 
-    # The max per `RequestPuzzleState` is 15000, so for simplicity set this to it.
-    simulator.full_node.config["max_subscribe_items"] = 15000
+    # This is a safe limit for this test that will fit within the current maximum in `RequestPuzzleState`.
+    simulator.full_node.config["max_subscribe_items"] = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
 
     max_subs = simulator.max_subscriptions(peer)
     puzzle_hashes = [std_hash(i.to_bytes(4, byteorder="big", signed=False)) for i in range(max_subs + 100)]
 
     # Add puzzle subscriptions to the limit
-    first_batch = puzzle_hashes[:15000]
+    first_batch = puzzle_hashes[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE]
     first_batch_set = set(first_batch)
 
     resp = await simulator.request_puzzle_state(
@@ -202,7 +203,7 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
     # Try to add the remaining subscriptions
     resp = await simulator.request_puzzle_state(
         wallet_protocol.RequestPuzzleState(
-            puzzle_hashes[15000:],
+            puzzle_hashes[CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE :],
             None,
             genesis_challenge,
             wallet_protocol.CoinStateFilters(False, False, False, uint64(0)),
@@ -610,7 +611,7 @@ async def sync_puzzle_hashes(
     initial_header_hash: bytes32,
     filters: wallet_protocol.CoinStateFilters,
     subscribe_when_finished: bool = False,
-    max_hashes_in_request: int = 15000,
+    max_hashes_in_request: int = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE,
     simulator: FullNodeSimulator,
     peer: WSChiaConnection,
 ) -> AsyncGenerator[PuzzleStateData, None]:
