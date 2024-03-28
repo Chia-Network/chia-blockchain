@@ -28,6 +28,7 @@ from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trade_record import TradeRecord
@@ -720,7 +721,17 @@ async def take_offer(
         royalty_asset_dict: Dict[Any, Tuple[Any, uint16]] = {}
         for royalty_asset_id in nft_coin_ids_supporting_royalties_from_offer(offer):
             if royalty_asset_id.hex() in offered:
-                percentage, address = await get_nft_royalty_percentage_and_address(royalty_asset_id, wallet_client)
+                eve_spend = next(
+                    (cs for cs in offer.coin_spends() if cs.coin.parent_coin_info == royalty_asset_id), None
+                )
+                if eve_spend:
+                    uncurried_nft = UncurriedNFT.uncurry(*eve_spend.puzzle_reveal.uncurry())
+                    assert uncurried_nft is not None
+                    percentage = uncurried_nft.trade_price_percentage or uint16(0)
+                    address = uncurried_nft.royalty_address
+                    assert address is not None
+                else:
+                    percentage, address = await get_nft_royalty_percentage_and_address(royalty_asset_id, wallet_client)
                 royalty_asset_dict[encode_puzzle_hash(royalty_asset_id, AddressType.NFT.hrp(config))] = (
                     encode_puzzle_hash(address, AddressType.XCH.hrp(config)),
                     percentage,
