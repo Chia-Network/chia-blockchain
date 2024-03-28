@@ -2339,6 +2339,7 @@ class WalletRpcApi:
 
             full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launcher_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                # It's unclear whether this path is ever reached, and there is no coverage in the DID wallet tests
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
                 elif (
