@@ -1668,7 +1668,7 @@ async def test_dao_rpc_client(
         fee = uint64(10000)
 
         # create new dao
-        dao_wallet_dict_0 = await client_0.create_new_dao_wallet(
+        dao_wallet_res_0 = await client_0.create_new_dao_wallet(
             mode="new",
             tx_config=DEFAULT_TX_CONFIG,
             dao_rules=dao_rules.to_json_dict(),
@@ -1676,8 +1676,8 @@ async def test_dao_rpc_client(
             filter_amount=filter_amount,
             name="DAO WALLET 0",
         )
-        dao_id_0 = dao_wallet_dict_0.wallet_id
-        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0.cat_wallet_id]
+        dao_id_0 = dao_wallet_res_0.wallet_id
+        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_res_0.cat_wallet_id]
 
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
@@ -1698,15 +1698,15 @@ async def test_dao_rpc_client(
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
         # join dao
-        dao_wallet_dict_1 = await client_1.create_new_dao_wallet(
+        dao_wallet_res_1 = await client_1.create_new_dao_wallet(
             mode="existing",
             tx_config=DEFAULT_TX_CONFIG,
-            treasury_id=dao_wallet_dict_0.treasury_id,
+            treasury_id=dao_wallet_res_0.treasury_id,
             filter_amount=filter_amount,
             name="DAO WALLET 1",
         )
-        dao_id_1 = dao_wallet_dict_1.wallet_id
-        cat_wallet_1 = wallet_node_1.wallet_state_manager.wallets[dao_wallet_dict_1.cat_wallet_id]
+        dao_id_1 = dao_wallet_res_1.wallet_id
+        cat_wallet_1 = wallet_node_1.wallet_state_manager.wallets[dao_wallet_res_1.cat_wallet_id]
 
         # fund treasury
         xch_funds = uint64(10000000000)
@@ -1737,7 +1737,7 @@ async def test_dao_rpc_client(
 
         # send cats to wallet 1
         await client_0.cat_spend(
-            wallet_id=dao_wallet_dict_0.cat_wallet_id,
+            wallet_id=dao_wallet_res_0.cat_wallet_id,
             tx_config=DEFAULT_TX_CONFIG,
             amount=cat_amt,
             inner_address=encode_puzzle_hash(ph_1, "xch"),
@@ -1916,7 +1916,7 @@ async def test_dao_rpc_client(
         await rpc_state(
             20,
             client_1.get_wallet_balance,
-            [dao_wallet_dict_1.cat_wallet_id],
+            [dao_wallet_res_1.cat_wallet_id],
             lambda x: x["confirmed_wallet_balance"],
             100,
         )
@@ -1953,7 +1953,7 @@ async def test_dao_rpc_client(
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
-        bal = await client_0.get_wallet_balance(dao_wallet_dict_0.dao_cat_wallet_id)
+        bal = await client_0.get_wallet_balance(dao_wallet_res_0.dao_cat_wallet_id)
         assert bal["confirmed_wallet_balance"] == cat_amt
 
         exit = await client_0.dao_exit_lockup(dao_id_0, tx_config=DEFAULT_TX_CONFIG)
@@ -1965,14 +1965,14 @@ async def test_dao_rpc_client(
         await rpc_state(
             20,
             client_0.get_wallet_balance,
-            [dao_wallet_dict_0.cat_wallet_id],
+            [dao_wallet_res_0.cat_wallet_id],
             lambda x: x["confirmed_wallet_balance"],
             cat_amt,
         )
 
         # coverage tests for filter amount and get treasury id
         treasury_id_resp = await client_0.dao_get_treasury_id(wallet_id=dao_id_0)
-        assert treasury_id_resp["treasury_id"] == "0x" + dao_wallet_dict_0.treasury_id.hex()
+        assert treasury_id_resp["treasury_id"] == "0x" + dao_wallet_res_0.treasury_id.hex()
         filter_amount_resp = await client_0.dao_adjust_filter_level(wallet_id=dao_id_0, filter_level=30)
         assert filter_amount_resp["dao_info"]["filter_below_vote_amount"] == 30
 
@@ -2056,7 +2056,7 @@ async def test_dao_complex_spends(
         filter_amount = uint64(1)
 
         # create new dao
-        dao_wallet_dict_0 = await client_0.create_new_dao_wallet(
+        dao_wallet_res_0 = await client_0.create_new_dao_wallet(
             mode="new",
             tx_config=DEFAULT_TX_CONFIG,
             dao_rules=dao_rules.to_json_dict(),
@@ -2064,9 +2064,9 @@ async def test_dao_complex_spends(
             filter_amount=filter_amount,
             name="DAO WALLET 0",
         )
-        dao_id_0 = dao_wallet_dict_0.wallet_id
-        treasury_id = dao_wallet_dict_0.treasury_id
-        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0.cat_wallet_id]
+        dao_id_0 = dao_wallet_res_0.wallet_id
+        treasury_id = dao_wallet_res_0.treasury_id
+        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_res_0.cat_wallet_id]
 
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
@@ -2097,14 +2097,14 @@ async def test_dao_complex_spends(
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
         # join dao
-        dao_wallet_dict_1 = await client_1.create_new_dao_wallet(
+        dao_wallet_res_1 = await client_1.create_new_dao_wallet(
             mode="existing",
             tx_config=DEFAULT_TX_CONFIG,
             treasury_id=treasury_id,
             filter_amount=filter_amount,
             name="DAO WALLET 1",
         )
-        dao_id_1 = dao_wallet_dict_1.wallet_id
+        dao_id_1 = dao_wallet_res_1.wallet_id
 
         # fund treasury so there are multiple coins for each asset
         xch_funds = uint64(10000000000)
@@ -2645,7 +2645,7 @@ async def test_dao_cat_exits(
 
         # create new dao
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
-        dao_wallet_dict_0 = await client_0.create_new_dao_wallet(
+        dao_wallet_res_0 = await client_0.create_new_dao_wallet(
             mode="new",
             tx_config=DEFAULT_TX_CONFIG,
             dao_rules=dao_rules.to_json_dict(),
@@ -2653,9 +2653,9 @@ async def test_dao_cat_exits(
             filter_amount=filter_amount,
             name="DAO WALLET 0",
         )
-        dao_id_0 = dao_wallet_dict_0.wallet_id
-        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0.cat_wallet_id]
-        dao_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0.dao_cat_wallet_id]
+        dao_id_0 = dao_wallet_res_0.wallet_id
+        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_res_0.cat_wallet_id]
+        dao_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_res_0.dao_cat_wallet_id]
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         for tx in txs:
             await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
