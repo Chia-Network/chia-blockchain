@@ -257,16 +257,6 @@ class WSChiaConnection:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
             remote_node_type = NodeType(inbound_handshake.node_type)
-            if remote_node_type not in [
-                NodeType.FULL_NODE,
-                NodeType.HARVESTER,
-                NodeType.FARMER,
-                NodeType.TIMELORD,
-                NodeType.INTRODUCER,
-                NodeType.WALLET,
-                NodeType.DATA_LAYER,
-            ]:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if inbound_handshake.protocol_version != protocol_version[remote_node_type]:
                 self.log.warning(
