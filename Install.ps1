@@ -103,7 +103,20 @@ if ($openSSLVersion -lt 269488367)
 if ($extras.length -gt 0)
 {
     $extras_cli = $extras -join ","
-    $pip_parameters += ".[$extras_cli]"
+    $extras_cli = "[$extras_cli]"
+}
+else
+{
+    $extras_cli = ""
+}
+
+if (-not $i)
+{
+    $pip_parameters += ".$extras_cli"
+}
+else
+{
+    $pip_parameters += "chia-blockchain$extras_cli @ ."
 }
 else
 {
@@ -112,18 +125,18 @@ else
 
 py -$pythonVersion -m venv venv
 
-venv\scripts\python -m pip install --upgrade pip setuptools wheel
-venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-& venv\scripts\pip install @pip_parameters --extra-index-url https://pypi.chia.net/simple/
+venv/Scripts/Activate.ps1
+python -m pip install --upgrade pip setuptools wheel uv
+uv pip install --index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
+& uv pip install @pip_parameters --extra-index-url https://pypi.chia.net/simple/
 
 if ($p)
 {
-    $PREV_VIRTUAL_ENV = "$env:VIRTUAL_ENV"
-    $env:VIRTUAL_ENV = "venv"
     .\Install-plotter.ps1 bladebit
     .\Install-plotter.ps1 madmax
-    $env:VIRTUAL_ENV = "$PREV_VIRTUAL_ENV"
 }
+
+deactivate
 
 Write-Output ""
 Write-Output "Chia blockchain .\Install.ps1 complete."
