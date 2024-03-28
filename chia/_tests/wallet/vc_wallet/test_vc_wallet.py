@@ -52,16 +52,18 @@ async def mint_cr_cat(
     CAT_AMOUNT_0 = uint64(100)
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-    tx = await client_0.create_signed_transaction(
-        [
-            {
-                "puzzle_hash": cat_puzzle.get_tree_hash(),
-                "amount": CAT_AMOUNT_0,
-            }
-        ],
-        DEFAULT_TX_CONFIG,
-        wallet_id=1,
-    )
+    tx = (
+        await client_0.create_signed_transactions(
+            [
+                {
+                    "puzzle_hash": cat_puzzle.get_tree_hash(),
+                    "amount": CAT_AMOUNT_0,
+                }
+            ],
+            DEFAULT_TX_CONFIG,
+            wallet_id=1,
+        )
+    ).signed_tx
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
 
@@ -152,9 +154,11 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     )
 
     # Mint a VC
-    vc_record, _ = await client_0.vc_mint(
-        did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
-    )
+    vc_record = (
+        await client_0.vc_mint(
+            did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+        )
+    ).vc_record
 
     await wallet_environments.process_pending_states(
         [
@@ -335,14 +339,16 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert await wallet_node_0.wallet_state_manager.get_wallet_for_asset_id(cr_cat_wallet_0.get_asset_id()) is not None
     wallet_1_ph = await wallet_1.get_new_puzzlehash()
     wallet_1_addr = encode_puzzle_hash(wallet_1_ph, "txch")
-    tx = await client_0.cat_spend(
-        cr_cat_wallet_0.id(),
-        wallet_environments.tx_config,
-        uint64(90),
-        wallet_1_addr,
-        uint64(2000000000),
-        memos=["hey"],
-    )
+    tx = (
+        await client_0.cat_spend(
+            cr_cat_wallet_0.id(),
+            wallet_environments.tx_config,
+            uint64(90),
+            wallet_1_addr,
+            uint64(2000000000),
+            memos=["hey"],
+        )
+    ).transaction
     [tx] = await wallet_node_0.wallet_state_manager.add_pending_transactions([tx])
     await wallet_environments.process_pending_states(
         [
@@ -506,14 +512,16 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         )
 
     # Test melting a CRCAT
-    tx = await client_1.cat_spend(
-        env_1.dealias_wallet_id("crcat"),
-        wallet_environments.tx_config,
-        uint64(20),
-        wallet_1_addr,
-        uint64(0),
-        cat_discrepancy=(-50, Program.to(None), Program.to(None)),
-    )
+    tx = (
+        await client_1.cat_spend(
+            env_1.dealias_wallet_id("crcat"),
+            wallet_environments.tx_config,
+            uint64(20),
+            wallet_1_addr,
+            uint64(0),
+            cat_discrepancy=(-50, Program.to(None), Program.to(None)),
+        )
+    ).transaction
     [tx] = await wallet_node_1.wallet_state_manager.add_pending_transactions([tx])
     await wallet_environments.process_pending_states(
         [
@@ -637,9 +645,11 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     )
     did_id: bytes32 = bytes32.from_hexstr(did_wallet.get_my_DID())
 
-    vc_record, _ = await client_0.vc_mint(
-        did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
-    )
+    vc_record = (
+        await client_0.vc_mint(
+            did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+        )
+    ).vc_record
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(

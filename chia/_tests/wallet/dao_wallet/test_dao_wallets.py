@@ -1311,7 +1311,6 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
             "fee": fee,
         }
     )
-    assert create_proposal["success"]
     txs = [TransactionRecord.from_json_dict(create_proposal["tx"])]
     await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -1401,7 +1400,6 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
             "fee": fee,
         }
     )
-    assert mint_proposal["success"]
     txs = [TransactionRecord.from_json_dict(mint_proposal["tx"])]
     await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -1500,7 +1498,6 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
             "fee": fee,
         }
     )
-    assert update_proposal["success"]
     txs = [TransactionRecord.from_json_dict(update_proposal["tx"])]
     await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
     await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -1671,7 +1668,7 @@ async def test_dao_rpc_client(
         fee = uint64(10000)
 
         # create new dao
-        dao_wallet_dict_0 = await client_0.create_new_dao_wallet(
+        dao_wallet_res_0 = await client_0.create_new_dao_wallet(
             mode="new",
             tx_config=DEFAULT_TX_CONFIG,
             dao_rules=dao_rules.to_json_dict(),
@@ -1679,10 +1676,8 @@ async def test_dao_rpc_client(
             filter_amount=filter_amount,
             name="DAO WALLET 0",
         )
-        assert dao_wallet_dict_0["success"]
-        dao_id_0 = dao_wallet_dict_0["wallet_id"]
-        treasury_id_hex = dao_wallet_dict_0["treasury_id"]
-        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0["cat_wallet_id"]]
+        dao_id_0 = dao_wallet_res_0.wallet_id
+        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_res_0.cat_wallet_id]
 
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
@@ -1693,8 +1688,8 @@ async def test_dao_rpc_client(
 
         # Create a new standard cat for treasury funds
         new_cat_amt = uint64(100000)
-        free_coins_res = await client_0.create_new_cat_and_wallet(new_cat_amt, test=True)
-        new_cat_wallet_id = free_coins_res["wallet_id"]
+        new_cat_res = await client_0.create_new_cat_and_wallet(new_cat_amt, test=True)
+        new_cat_wallet_id = new_cat_res["wallet_id"]
         new_cat_wallet = wallet_node_0.wallet_state_manager.wallets[new_cat_wallet_id]
 
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
@@ -1703,25 +1698,20 @@ async def test_dao_rpc_client(
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
         # join dao
-        dao_wallet_dict_1 = await client_1.create_new_dao_wallet(
+        dao_wallet_res_1 = await client_1.create_new_dao_wallet(
             mode="existing",
             tx_config=DEFAULT_TX_CONFIG,
-            treasury_id=treasury_id_hex,
+            treasury_id=dao_wallet_res_0.treasury_id,
             filter_amount=filter_amount,
             name="DAO WALLET 1",
         )
-        assert dao_wallet_dict_1["success"]
-        dao_id_1 = dao_wallet_dict_1["wallet_id"]
-        cat_wallet_1 = wallet_node_1.wallet_state_manager.wallets[dao_wallet_dict_1["cat_wallet_id"]]
+        dao_id_1 = dao_wallet_res_1.wallet_id
+        cat_wallet_1 = wallet_node_1.wallet_state_manager.wallets[dao_wallet_res_1.cat_wallet_id]
 
         # fund treasury
         xch_funds = uint64(10000000000)
-        funding_tx = await client_0.dao_add_funds_to_treasury(dao_id_0, 1, xch_funds, DEFAULT_TX_CONFIG)
-        cat_funding_tx = await client_0.dao_add_funds_to_treasury(
-            dao_id_0, new_cat_wallet_id, new_cat_amt, DEFAULT_TX_CONFIG
-        )
-        assert funding_tx["success"]
-        assert cat_funding_tx["success"]
+        await client_0.dao_add_funds_to_treasury(dao_id_0, 1, xch_funds, DEFAULT_TX_CONFIG)
+        await client_0.dao_add_funds_to_treasury(dao_id_0, new_cat_wallet_id, new_cat_amt, DEFAULT_TX_CONFIG)
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -1747,7 +1737,7 @@ async def test_dao_rpc_client(
 
         # send cats to wallet 1
         await client_0.cat_spend(
-            wallet_id=dao_wallet_dict_0["cat_wallet_id"],
+            wallet_id=dao_wallet_res_0.cat_wallet_id,
             tx_config=DEFAULT_TX_CONFIG,
             amount=cat_amt,
             inner_address=encode_puzzle_hash(ph_1, "xch"),
@@ -1763,10 +1753,8 @@ async def test_dao_rpc_client(
         await time_out_assert(20, cat_wallet_1.get_confirmed_balance, cat_amt)
 
         # send cats to lockup
-        lockup_0 = await client_0.dao_send_to_lockup(dao_id_0, cat_amt, DEFAULT_TX_CONFIG)
-        lockup_1 = await client_1.dao_send_to_lockup(dao_id_1, cat_amt, DEFAULT_TX_CONFIG)
-        assert lockup_0["success"]
-        assert lockup_1["success"]
+        await client_0.dao_send_to_lockup(dao_id_0, cat_amt, DEFAULT_TX_CONFIG)
+        await client_1.dao_send_to_lockup(dao_id_1, cat_amt, DEFAULT_TX_CONFIG)
 
         txs_0 = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         txs_1 = await wallet_1.wallet_state_manager.tx_store.get_all_unconfirmed()
@@ -1780,7 +1768,7 @@ async def test_dao_rpc_client(
             {"puzzle_hash": ph_0.hex(), "amount": 1000},
             {"puzzle_hash": ph_0.hex(), "amount": 10000, "asset_id": new_cat_asset_id.hex()},
         ]
-        proposal = await client_0.dao_create_proposal(
+        await client_0.dao_create_proposal(
             wallet_id=dao_id_0,
             proposal_type="spend",
             tx_config=DEFAULT_TX_CONFIG,
@@ -1788,7 +1776,6 @@ async def test_dao_rpc_client(
             vote_amount=cat_amt,
             fee=fee,
         )
-        assert proposal["success"]
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -1800,7 +1787,7 @@ async def test_dao_rpc_client(
         proposal_id_hex = props["proposals"][0]["proposal_id"]
 
         # create an update proposal
-        update_proposal = await client_1.dao_create_proposal(
+        await client_1.dao_create_proposal(
             wallet_id=dao_id_1,
             proposal_type="update",
             tx_config=DEFAULT_TX_CONFIG,
@@ -1808,7 +1795,6 @@ async def test_dao_rpc_client(
             new_dao_rules={"proposal_timelock": uint64(10)},
             fee=fee,
         )
-        assert update_proposal["success"]
         txs = await wallet_1.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_1, timeout=60)
@@ -1816,7 +1802,7 @@ async def test_dao_rpc_client(
 
         # create a mint proposal
         mint_addr = await client_1.get_next_address(wallet_id=wallet_1.id(), new_address=False)
-        mint_proposal = await client_1.dao_create_proposal(
+        await client_1.dao_create_proposal(
             wallet_id=dao_id_1,
             proposal_type="mint",
             tx_config=DEFAULT_TX_CONFIG,
@@ -1825,14 +1811,13 @@ async def test_dao_rpc_client(
             cat_target_address=mint_addr,
             fee=fee,
         )
-        assert mint_proposal["success"]
         txs = await wallet_1.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_1, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
         # vote spend
-        vote = await client_1.dao_vote_on_proposal(
+        await client_1.dao_vote_on_proposal(
             wallet_id=dao_id_1,
             proposal_id=proposal_id_hex,
             vote_amount=cat_amt,
@@ -1840,7 +1825,6 @@ async def test_dao_rpc_client(
             is_yes_vote=True,
             fee=fee,
         )
-        assert vote["success"]
         txs = await wallet_1.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_1, timeout=60)
@@ -1884,7 +1868,7 @@ async def test_dao_rpc_client(
         close = await client_0.dao_close_proposal(
             wallet_id=dao_id_0, proposal_id=proposal_id_hex, tx_config=DEFAULT_TX_CONFIG, self_destruct=False, fee=fee
         )
-        tx = TransactionRecord.from_json_dict(close["tx"])
+        tx = close.tx
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
@@ -1919,8 +1903,7 @@ async def test_dao_rpc_client(
         close = await client_0.dao_close_proposal(
             wallet_id=dao_id_0, proposal_id=proposal_id_hex, tx_config=DEFAULT_TX_CONFIG, self_destruct=False, fee=fee
         )
-        assert close["success"]
-        tx = TransactionRecord.from_json_dict(close["tx"])
+        tx = close.tx
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
@@ -1933,7 +1916,7 @@ async def test_dao_rpc_client(
         await rpc_state(
             20,
             client_1.get_wallet_balance,
-            [dao_wallet_dict_1["cat_wallet_id"]],
+            [dao_wallet_res_1.cat_wallet_id],
             lambda x: x["confirmed_wallet_balance"],
             100,
         )
@@ -1946,8 +1929,7 @@ async def test_dao_rpc_client(
         close = await client_0.dao_close_proposal(
             wallet_id=dao_id_0, proposal_id=proposal_id_hex, tx_config=DEFAULT_TX_CONFIG, self_destruct=False, fee=fee
         )
-        assert close["success"]
-        tx = TransactionRecord.from_json_dict(close["tx"])
+        tx = close.tx
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
@@ -1966,18 +1948,16 @@ async def test_dao_rpc_client(
         free_coins_res = await client_0.dao_free_coins_from_finished_proposals(
             wallet_id=dao_id_0, tx_config=DEFAULT_TX_CONFIG
         )
-        assert free_coins_res["success"]
-        free_coins_tx = TransactionRecord.from_json_dict(free_coins_res["tx"])
+        free_coins_tx = free_coins_res.tx
         await full_node_api.wait_transaction_records_entered_mempool(records=[free_coins_tx], timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
-        bal = await client_0.get_wallet_balance(dao_wallet_dict_0["dao_cat_wallet_id"])
+        bal = await client_0.get_wallet_balance(dao_wallet_res_0.dao_cat_wallet_id)
         assert bal["confirmed_wallet_balance"] == cat_amt
 
         exit = await client_0.dao_exit_lockup(dao_id_0, tx_config=DEFAULT_TX_CONFIG)
-        assert exit["success"]
-        exit_tx = TransactionRecord.from_json_dict(exit["tx"])
+        exit_tx = exit.tx
         await full_node_api.wait_transaction_records_entered_mempool(records=[exit_tx], timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
@@ -1985,14 +1965,14 @@ async def test_dao_rpc_client(
         await rpc_state(
             20,
             client_0.get_wallet_balance,
-            [dao_wallet_dict_0["cat_wallet_id"]],
+            [dao_wallet_res_0.cat_wallet_id],
             lambda x: x["confirmed_wallet_balance"],
             cat_amt,
         )
 
         # coverage tests for filter amount and get treasury id
         treasury_id_resp = await client_0.dao_get_treasury_id(wallet_id=dao_id_0)
-        assert treasury_id_resp["treasury_id"] == treasury_id_hex
+        assert treasury_id_resp["treasury_id"] == "0x" + dao_wallet_res_0.treasury_id.hex()
         filter_amount_resp = await client_0.dao_adjust_filter_level(wallet_id=dao_id_0, filter_level=30)
         assert filter_amount_resp["dao_info"]["filter_below_vote_amount"] == 30
 
@@ -2076,7 +2056,7 @@ async def test_dao_complex_spends(
         filter_amount = uint64(1)
 
         # create new dao
-        dao_wallet_dict_0 = await client_0.create_new_dao_wallet(
+        dao_wallet_res_0 = await client_0.create_new_dao_wallet(
             mode="new",
             tx_config=DEFAULT_TX_CONFIG,
             dao_rules=dao_rules.to_json_dict(),
@@ -2084,10 +2064,9 @@ async def test_dao_complex_spends(
             filter_amount=filter_amount,
             name="DAO WALLET 0",
         )
-        assert dao_wallet_dict_0["success"]
-        dao_id_0 = dao_wallet_dict_0["wallet_id"]
-        treasury_id_hex = dao_wallet_dict_0["treasury_id"]
-        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0["cat_wallet_id"]]
+        dao_id_0 = dao_wallet_res_0.wallet_id
+        treasury_id = dao_wallet_res_0.treasury_id
+        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_res_0.cat_wallet_id]
 
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
@@ -2118,29 +2097,25 @@ async def test_dao_complex_spends(
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
         # join dao
-        dao_wallet_dict_1 = await client_1.create_new_dao_wallet(
+        dao_wallet_res_1 = await client_1.create_new_dao_wallet(
             mode="existing",
             tx_config=DEFAULT_TX_CONFIG,
-            treasury_id=treasury_id_hex,
+            treasury_id=treasury_id,
             filter_amount=filter_amount,
             name="DAO WALLET 1",
         )
-        assert dao_wallet_dict_1["success"]
-        dao_id_1 = dao_wallet_dict_1["wallet_id"]
+        dao_id_1 = dao_wallet_res_1.wallet_id
 
         # fund treasury so there are multiple coins for each asset
         xch_funds = uint64(10000000000)
         for _ in range(4):
-            funding_tx = await client_0.dao_add_funds_to_treasury(dao_id_0, 1, uint64(xch_funds / 4), DEFAULT_TX_CONFIG)
-            cat_funding_tx = await client_0.dao_add_funds_to_treasury(
+            await client_0.dao_add_funds_to_treasury(dao_id_0, 1, uint64(xch_funds / 4), DEFAULT_TX_CONFIG)
+            await client_0.dao_add_funds_to_treasury(
                 dao_id_0, new_cat_wallet_id, uint64(new_cat_amt / 4), DEFAULT_TX_CONFIG
             )
-            cat_funding_tx_2 = await client_0.dao_add_funds_to_treasury(
+            await client_0.dao_add_funds_to_treasury(
                 dao_id_0, new_cat_wallet_id_2, uint64(new_cat_amt / 4), DEFAULT_TX_CONFIG
             )
-            assert funding_tx["success"]
-            assert cat_funding_tx["success"]
-            assert cat_funding_tx_2["success"]
             txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
             await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
             await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -2171,8 +2146,7 @@ async def test_dao_complex_spends(
         await client_1.create_wallet_for_existing_cat(new_cat_asset_id_2)
 
         # send cats to lockup
-        lockup_0 = await client_0.dao_send_to_lockup(dao_id_0, cat_amt, DEFAULT_TX_CONFIG)
-        assert lockup_0["success"]
+        await client_0.dao_send_to_lockup(dao_id_0, cat_amt, DEFAULT_TX_CONFIG)
 
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
@@ -2186,14 +2160,13 @@ async def test_dao_complex_spends(
             {"puzzle_hash": ph_0.hex(), "amount": xch_funds / 4},
             {"puzzle_hash": ph_1.hex(), "amount": xch_funds / 4},
         ]
-        proposal = await client_0.dao_create_proposal(
+        await client_0.dao_create_proposal(
             wallet_id=dao_id_0,
             proposal_type="spend",
             tx_config=DEFAULT_TX_CONFIG,
             additions=additions,
             vote_amount=cat_amt,
         )
-        assert proposal["success"]
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -2202,10 +2175,9 @@ async def test_dao_complex_spends(
         props = await client_1.dao_get_proposals(dao_id_1)
         proposal_id_hex = props["proposals"][-1]["proposal_id"]
 
-        close = await client_0.dao_close_proposal(
+        await client_0.dao_close_proposal(
             wallet_id=dao_id_0, proposal_id=proposal_id_hex, tx_config=DEFAULT_TX_CONFIG, self_destruct=False
         )
-        assert close["success"]
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -2236,14 +2208,13 @@ async def test_dao_complex_spends(
             {"puzzle_hash": ph_0.hex(), "amount": cat_spend_amt, "asset_id": new_cat_asset_id.hex()},
             {"puzzle_hash": ph_0.hex(), "amount": cat_spend_amt, "asset_id": new_cat_asset_id_2.hex()},
         ]
-        proposal = await client_0.dao_create_proposal(
+        await client_0.dao_create_proposal(
             wallet_id=dao_id_0,
             proposal_type="spend",
             tx_config=DEFAULT_TX_CONFIG,
             additions=additions,
             vote_amount=cat_amt,
         )
-        assert proposal["success"]
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -2252,10 +2223,9 @@ async def test_dao_complex_spends(
         props = await client_1.dao_get_proposals(dao_id_1)
         proposal_id_hex = props["proposals"][-1]["proposal_id"]
 
-        close = await client_0.dao_close_proposal(
+        await client_0.dao_close_proposal(
             wallet_id=dao_id_0, proposal_id=proposal_id_hex, tx_config=DEFAULT_TX_CONFIG, self_destruct=False
         )
-        assert close["success"]
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -2302,14 +2272,13 @@ async def test_dao_complex_spends(
             {"puzzle_hash": ph_0.hex(), "amount": xch_funds / 4},
             {"puzzle_hash": ph_1.hex(), "amount": xch_funds / 4},
         ]
-        proposal = await client_0.dao_create_proposal(
+        await client_0.dao_create_proposal(
             wallet_id=dao_id_0,
             proposal_type="spend",
             tx_config=DEFAULT_TX_CONFIG,
             additions=additions,
             vote_amount=cat_amt,
         )
-        assert proposal["success"]
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -2318,13 +2287,12 @@ async def test_dao_complex_spends(
         props = await client_0.dao_get_proposals(dao_id_0)
         proposal_id_hex = props["proposals"][-1]["proposal_id"]
 
-        close = await client_0.dao_close_proposal(
+        await client_0.dao_close_proposal(
             wallet_id=dao_id_0,
             proposal_id=proposal_id_hex,
             tx_config=DEFAULT_TX_CONFIG,
             self_destruct=False,
         )
-        assert close["success"]
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
@@ -2677,7 +2645,7 @@ async def test_dao_cat_exits(
 
         # create new dao
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
-        dao_wallet_dict_0 = await client_0.create_new_dao_wallet(
+        dao_wallet_res_0 = await client_0.create_new_dao_wallet(
             mode="new",
             tx_config=DEFAULT_TX_CONFIG,
             dao_rules=dao_rules.to_json_dict(),
@@ -2685,11 +2653,9 @@ async def test_dao_cat_exits(
             filter_amount=filter_amount,
             name="DAO WALLET 0",
         )
-        assert dao_wallet_dict_0["success"]
-        dao_id_0 = dao_wallet_dict_0["wallet_id"]
-        # treasury_id_hex = dao_wallet_dict_0["treasury_id"]
-        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0["cat_wallet_id"]]
-        dao_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0["dao_cat_wallet_id"]]
+        dao_id_0 = dao_wallet_res_0.wallet_id
+        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_res_0.cat_wallet_id]
+        dao_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_res_0.dao_cat_wallet_id]
         txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
         for tx in txs:
             await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
@@ -2702,8 +2668,7 @@ async def test_dao_cat_exits(
         # fund treasury
         xch_funds = uint64(10000000000)
         funding_tx = await client_0.dao_add_funds_to_treasury(dao_id_0, 1, xch_funds, DEFAULT_TX_CONFIG)
-        assert funding_tx["success"]
-        tx = TransactionRecord.from_json_dict(funding_tx["tx"])
+        tx = funding_tx.tx
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
@@ -2712,8 +2677,7 @@ async def test_dao_cat_exits(
 
         # send cats to lockup
         lockup_0 = await client_0.dao_send_to_lockup(dao_id_0, cat_amt, DEFAULT_TX_CONFIG)
-        assert lockup_0["success"]
-        txs = [TransactionRecord.from_json_dict(x) for x in lockup_0["txs"]]
+        txs = lockup_0.txs
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
@@ -2733,8 +2697,7 @@ async def test_dao_cat_exits(
             vote_amount=cat_amt,
             fee=fee,
         )
-        assert proposal["success"]
-        tx = TransactionRecord.from_json_dict(proposal["tx"])
+        tx = proposal.tx
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
@@ -2760,8 +2723,7 @@ async def test_dao_cat_exits(
         close = await client_0.dao_close_proposal(
             wallet_id=dao_id_0, proposal_id=proposal_id_hex, tx_config=DEFAULT_TX_CONFIG, self_destruct=False, fee=fee
         )
-        assert close["success"]
-        tx = TransactionRecord.from_json_dict(close["tx"])
+        tx = close.tx
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
@@ -2771,8 +2733,7 @@ async def test_dao_cat_exits(
 
         # free locked cats from finished proposal
         res = await client_0.dao_free_coins_from_finished_proposals(wallet_id=dao_id_0, tx_config=DEFAULT_TX_CONFIG)
-        assert res["success"]
-        tx = TransactionRecord.from_json_dict(res["tx"])
+        tx = res.tx
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx], timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
@@ -2781,7 +2742,7 @@ async def test_dao_cat_exits(
         assert dao_cat_wallet_0.dao_cat_info.locked_coins[0].active_votes == []
 
         exit = await client_0.dao_exit_lockup(dao_id_0, DEFAULT_TX_CONFIG)
-        exit_tx = TransactionRecord.from_json_dict(exit["tx"])
+        exit_tx = exit.tx
         await full_node_api.wait_transaction_records_entered_mempool(records=[exit_tx], timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)

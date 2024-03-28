@@ -1215,6 +1215,7 @@ class WalletRpcApi:
             "transaction": transaction,
             "transaction_id": TransactionRecord.from_json_dict_convenience(transaction).name,
             "transactions": transactions,
+            "unsigned_transactions": response["unsigned_transactions"],
         }
 
     @tx_endpoint(push=True, merge_spends=False)
