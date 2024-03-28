@@ -480,6 +480,8 @@ class FarmerAPI:
         if isinstance(request, DeclareProofOfSpace):
             self.farmer.state_changed("proof", {"proof": request, "passed_filter": True})
             message = make_msg(ProtocolMessageTypes.declare_proof_of_space, request)
+            await self.farmer.server.send_to_all([message], NodeType.FULL_NODE)  # Send two extras
+            await self.farmer.server.send_to_all([message], NodeType.FULL_NODE)  # Send two extras
         if isinstance(request, SignedValues):
             message = make_msg(ProtocolMessageTypes.signed_values, request)
         await self.farmer.server.send_to_all([message], NodeType.FULL_NODE)
