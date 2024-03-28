@@ -3,15 +3,19 @@ from __future__ import annotations
 import os
 import platform
 import shutil
+import sqlite3
 import sys
+import tempfile
 import textwrap
+from contextlib import closing
 from pathlib import Path
-from time import time
-from typing import Any, Dict, Optional
+from time import monotonic
+from typing import Any, Dict, List, Optional
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+import zstd
+
 from chia.util.config import load_config, lock_and_load_config, save_config
-from chia.util.ints import uint32
+from chia.util.db_wrapper import get_host_parameter_limit
 from chia.util.path import path_from_root
 
 
@@ -47,7 +51,7 @@ def db_upgrade_func(
         out_db_path = path_from_root(root_path, db_path_replaced)
         out_db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    total, used, free = shutil.disk_usage(out_db_path.parent)
+    _, _, free = shutil.disk_usage(out_db_path.parent)
     in_db_size = in_db_path.stat().st_size
     if free < in_db_size:
         no_free: bool = free < in_db_size * 0.6
@@ -110,309 +114,339 @@ def db_upgrade_func(
     print(f"\n\nLEAVING PREVIOUS DB FILE UNTOUCHED {in_db_path}\n")
 
 
-BLOCK_COMMIT_RATE = 10000
-SES_COMMIT_RATE = 2000
-HINT_COMMIT_RATE = 2000
-COIN_COMMIT_RATE = 30000
-
-
 def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
-    import sqlite3
-    from contextlib import closing
-
-    import zstd
-
+    BATCH_SIZE = 300_000
     if not in_path.exists():
-        raise RuntimeError(f"input file doesn't exist. {in_path}")
-
+        raise RuntimeError(f"Input file doesn't exist. {in_path}")
     if in_path == out_path:
-        raise RuntimeError(f"output file is the same as the input {in_path}")
-
+        raise RuntimeError(f"Output file is the same as the input {in_path}")
     if out_path.exists():
-        raise RuntimeError(f"output file already exists. {out_path}")
+        raise RuntimeError(f"Output file already exists. {out_path}")
 
-    print(f"opening file for reading: {in_path}")
-    with closing(sqlite3.connect(in_path)) as in_db:
+    print(f"-- Opening file for reading: {in_path}")
+    with sqlite3.connect(in_path) as conn:
         try:
-            with closing(in_db.execute("SELECT * from database_version")) as cursor:
+            with closing(conn.execute("SELECT version FROM database_version LIMIT 1")) as cursor:
                 row = cursor.fetchone()
-                if row is not None and row[0] != 1:
-                    raise RuntimeError(f"blockchain database already version {row[0]}. Won't convert")
+            if row is not None and row[0] != 1:
+                raise RuntimeError(f"Blockchain database already version {row[0]}. Won't convert")
         except sqlite3.OperationalError:
             pass
-
-        print(f"opening file for writing: {out_path}")
-        with closing(sqlite3.connect(out_path)) as out_db:
-            out_db.execute("pragma journal_mode=OFF")
-            out_db.execute("pragma synchronous=OFF")
-            out_db.execute("pragma cache_size=131072")
-            out_db.execute("pragma locking_mode=exclusive")
-
-            print("initializing v2 version")
-            out_db.execute("CREATE TABLE database_version(version int)")
-            out_db.execute("INSERT INTO database_version VALUES(?)", (2,))
-
-            print("initializing v2 block store")
-            out_db.execute(
-                "CREATE TABLE full_blocks("
-                "header_hash blob PRIMARY KEY,"
-                "prev_hash blob,"
-                "height bigint,"
-                "sub_epoch_summary blob,"
-                "is_fully_compactified tinyint,"
-                "in_main_chain tinyint,"
-                "block blob,"
-                "block_record blob)"
+        try:
+            conn.execute("SELECT unhex('00')")
+        except sqlite3.OperationalError:
+            print("-- No built-in unhex(), falling back to bytes.fromhex()")
+            conn.create_function("unhex", 1, bytes.fromhex)
+        conn.create_function("zstd_compress", 1, zstd.compress)
+        conn.execute("PRAGMA synchronous=off")
+        temp_dir = tempfile.gettempdir()
+        _, _, free = shutil.disk_usage(temp_dir)
+        if free < 50 * 1024 * 1024 * 1024:
+            print(f"-- Setting temp_store_directory to: {out_path.parent}")
+            conn.execute(f"PRAGMA temp_store_directory = '{out_path.parent}'")
+        print(f"-- Opening file for writing: {out_path}")
+        conn.execute("ATTACH DATABASE ? AS out_db", (str(out_path),))
+        conn.execute("PRAGMA out_db.journal_mode=off")
+        conn.execute("PRAGMA out_db.synchronous=off")
+        conn.execute("PRAGMA out_db.locking_mode=exclusive")
+        conn.execute("PRAGMA out_db.cache_size=131072")
+        print("-- Initializing v2 version")
+        conn.execute("CREATE TABLE out_db.database_version(version int)")
+        conn.execute("INSERT INTO out_db.database_version VALUES(?)", (2,))
+        print("-- Initializing current_peak")
+        conn.execute("CREATE TABLE out_db.current_peak(key int PRIMARY KEY, hash blob)")
+        with closing(conn.execute("SELECT header_hash, height FROM block_records WHERE is_peak = 1 LIMIT 1")) as cursor:
+            peak_row = cursor.fetchone()
+        if peak_row is None:
+            raise RuntimeError("v1 database does not have a peak block, there is no blockchain to convert")
+        peak_hash, peak_height = peak_row
+        print(f"-- Peak: {peak_hash} Height: {peak_height}")
+        conn.execute("INSERT INTO out_db.current_peak VALUES(?, ?)", (0, bytes.fromhex(peak_hash)))
+        conn.commit()
+        print("-- DB v1 to v2 conversion started")
+        print("-- [1/4] Converting full_blocks")
+        conn.execute(
+            """
+            CREATE TABLE out_db.full_blocks(
+                header_hash blob PRIMARY KEY,
+                prev_hash blob,
+                height bigint,
+                sub_epoch_summary blob,
+                is_fully_compactified tinyint,
+                in_main_chain tinyint,
+                block blob,
+                block_record blob
             )
-            out_db.execute(
-                "CREATE TABLE sub_epoch_segments_v3(ses_block_hash blob PRIMARY KEY, challenge_segments blob)"
-            )
-            out_db.execute("CREATE TABLE current_peak(key int PRIMARY KEY, hash blob)")
-
-            with closing(in_db.execute("SELECT header_hash, height from block_records WHERE is_peak = 1")) as cursor:
-                peak_row = cursor.fetchone()
-                if peak_row is None:
-                    raise RuntimeError("v1 database does not have a peak block, there is no blockchain to convert")
-            peak_hash = bytes32(bytes.fromhex(peak_row[0]))
-            peak_height = uint32(peak_row[1])
-            print(f"peak: {peak_hash.hex()} height: {peak_height}")
-
-            out_db.execute("INSERT INTO current_peak VALUES(?, ?)", (0, peak_hash))
-            out_db.commit()
-
-            print("[1/5] converting full_blocks")
-            height = peak_height + 1
-            hh = peak_hash
-
-            commit_in = BLOCK_COMMIT_RATE
-            rate = 1.0
-            start_time = time()
-            block_start_time = start_time
-            block_values = []
-
-            with closing(
-                in_db.execute(
-                    "SELECT header_hash, prev_hash, block, sub_epoch_summary FROM block_records ORDER BY height DESC"
-                )
-            ) as cursor:
+            """
+        )
+        conn.commit()
+        parameter_limit = get_host_parameter_limit()
+        start_time = monotonic()
+        block_start_time = start_time
+        rowids: List[int] = []
+        small_batch_size = BATCH_SIZE <= parameter_limit
+        small_chain = peak_height <= parameter_limit
+        current_header_hash = peak_hash
+        current_height = peak_height
+        insertions_vs_batch = 0
+        rate = 1.0
+        while current_height >= 0:
+            while len(rowids) < parameter_limit:
+                if current_height < 0:
+                    break
                 with closing(
-                    in_db.execute(
-                        "SELECT header_hash, height, is_fully_compactified, block FROM full_blocks ORDER BY height DESC"
+                    conn.execute(
+                        "SELECT rowid, prev_hash FROM block_records WHERE header_hash = ? AND height = ? LIMIT 1",
+                        (current_header_hash, current_height),
                     )
-                ) as cursor_2:
-                    out_db.execute("begin transaction")
-                    for row in cursor:
-                        header_hash = bytes.fromhex(row[0])
-                        if header_hash != hh:
-                            continue
-
-                        # progress cursor_2 until we find the header hash
-                        while True:
-                            row_2 = cursor_2.fetchone()
-                            if row_2 is None:
-                                raise RuntimeError(f"block {hh.hex()} not found")
-                            if bytes.fromhex(row_2[0]) == hh:
-                                break
-
-                        assert row_2[1] == height - 1
-                        height = row_2[1]
-                        is_fully_compactified = row_2[2]
-                        block_bytes = row_2[3]
-
-                        prev_hash = bytes32.fromhex(row[1])
-                        block_record = row[2]
-                        ses = row[3]
-
-                        block_values.append(
-                            (
-                                hh,
-                                prev_hash,
-                                height,
-                                ses,
-                                is_fully_compactified,
-                                1,  # in_main_chain
-                                zstd.compress(block_bytes),
-                                block_record,
-                            )
-                        )
-                        hh = prev_hash
-                        if (height % 1000) == 0:
-                            print(
-                                f"\r{height: 10d} {(peak_height-height)*100/peak_height:.2f}% "
-                                f"{rate:0.1f} blocks/s ETA: {height//rate} s    ",
-                                end="",
-                            )
-                            sys.stdout.flush()
-                        commit_in -= 1
-                        if commit_in == 0:
-                            commit_in = BLOCK_COMMIT_RATE
-                            out_db.executemany(
-                                "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)", block_values
-                            )
-                            out_db.commit()
-                            out_db.execute("begin transaction")
-                            block_values = []
-                            end_time = time()
-                            rate = BLOCK_COMMIT_RATE / (end_time - start_time)
-                            start_time = end_time
-
-            out_db.executemany("INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)", block_values)
-            out_db.commit()
-            end_time = time()
-            print(f"\r      {end_time - block_start_time:.2f} seconds                             ")
-
-            print("[2/5] converting sub_epoch_segments_v3")
-
-            commit_in = SES_COMMIT_RATE
-            ses_values = []
-            ses_start_time = time()
-            with closing(
-                in_db.execute("SELECT ses_block_hash, challenge_segments FROM sub_epoch_segments_v3")
-            ) as cursor:
-                count = 0
-                out_db.execute("begin transaction")
-                for row in cursor:
-                    block_hash = bytes32.fromhex(row[0])
-                    ses = row[1]
-                    ses_values.append((block_hash, ses))
-                    count += 1
-                    if (count % 100) == 0:
-                        print(f"\r{count:10d}  ", end="")
-                        sys.stdout.flush()
-
-                    commit_in -= 1
-                    if commit_in == 0:
-                        commit_in = SES_COMMIT_RATE
-                        out_db.executemany("INSERT INTO sub_epoch_segments_v3 VALUES (?, ?)", ses_values)
-                        out_db.commit()
-                        out_db.execute("begin transaction")
-                        ses_values = []
-
-            out_db.executemany("INSERT INTO sub_epoch_segments_v3 VALUES (?, ?)", ses_values)
-            out_db.commit()
-
-            end_time = time()
-            print(f"\r      {end_time - ses_start_time:.2f} seconds                             ")
-
-            print("[3/5] converting hint_store")
-
-            commit_in = HINT_COMMIT_RATE
-            hint_start_time = time()
-            hint_values = []
-            out_db.execute("CREATE TABLE hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
-            out_db.commit()
-            try:
-                with closing(in_db.execute("SELECT coin_id, hint FROM hints")) as cursor:
-                    count = 0
-                    out_db.execute("begin transaction")
-                    for row in cursor:
-                        hint_values.append((row[0], row[1]))
-                        commit_in -= 1
-                        if commit_in == 0:
-                            commit_in = HINT_COMMIT_RATE
-                            out_db.executemany("INSERT OR IGNORE INTO hints VALUES(?, ?)", hint_values)
-                            out_db.commit()
-                            out_db.execute("begin transaction")
-                            hint_values = []
-            except sqlite3.OperationalError:
-                print("      no hints table, skipping")
-
-            out_db.executemany("INSERT OR IGNORE INTO hints VALUES (?, ?)", hint_values)
-            out_db.commit()
-
-            end_time = time()
-            print(f"\r      {end_time - hint_start_time:.2f} seconds                             ")
-
-            print("[4/5] converting coin_store")
-            out_db.execute(
-                "CREATE TABLE coin_record("
-                "coin_name blob PRIMARY KEY,"
-                " confirmed_index bigint,"
-                " spent_index bigint,"  # if this is zero, it means the coin has not been spent
-                " coinbase int,"
-                " puzzle_hash blob,"
-                " coin_parent blob,"
-                " amount blob,"  # we use a blob of 8 bytes to store uint64
-                " timestamp bigint)"
+                ) as cursor:
+                    row = cursor.fetchone()
+                if row is None:
+                    raise RuntimeError(f"rowid not found for {current_header_hash} at height {current_height}")
+                rowid, prev_hash = row
+                rowids.append(rowid)
+                current_header_hash = prev_hash
+                current_height -= 1
+            conn.execute(
+                f"""
+                INSERT INTO out_db.full_blocks
+                    SELECT
+                        unhex(br.header_hash),
+                        unhex(br.prev_hash),
+                        br.height, br.sub_epoch_summary,
+                        fb.is_fully_compactified,
+                        1 AS in_main_chain,
+                        zstd_compress(fb.block),
+                        br.block
+                    FROM block_records br
+                    JOIN full_blocks fb ON br.header_hash = fb.header_hash
+                    WHERE br.rowid IN ({','.join('?' * len(rowids))})
+                """,
+                rowids,
             )
-            out_db.commit()
-
-            commit_in = COIN_COMMIT_RATE
-            rate = 1.0
-            start_time = time()
-            coin_values = []
-            coin_start_time = start_time
-            with closing(
-                in_db.execute(
-                    "SELECT coin_name, confirmed_index, spent_index, coinbase, "
-                    "puzzle_hash, coin_parent, amount, timestamp "
-                    "FROM coin_record WHERE confirmed_index <= ?",
-                    (peak_height,),
+            insertions_vs_batch += len(rowids)
+            rowids = []
+            if insertions_vs_batch >= BATCH_SIZE or small_batch_size or small_chain:
+                conn.commit()
+                end_time = monotonic()
+                rate = BATCH_SIZE / (end_time - start_time)
+                print(
+                    f"\r{current_height:10d} {(peak_height - current_height) * 100 / peak_height:.3f}% "
+                    f"{rate:0.1f} blocks/s ETA: {current_height // rate} s    ",
+                    end="",
                 )
-            ) as cursor:
-                count = 0
-                out_db.execute("begin transaction")
-                for row in cursor:
-                    spent_index = row[2]
-
-                    # in order to convert a consistent snapshot of the
-                    # blockchain state, any coin that was spent *after* our
-                    # cutoff must be converted into an unspent coin
-                    if spent_index > peak_height:
-                        spent_index = 0
-
-                    coin_values.append(
-                        (
-                            bytes.fromhex(row[0]),
-                            row[1],
-                            spent_index,
-                            row[3],
-                            bytes.fromhex(row[4]),
-                            bytes.fromhex(row[5]),
-                            row[6],
-                            row[7],
-                        )
-                    )
-                    count += 1
-                    if (count % 2000) == 0:
-                        print(f"\r{count//1000:10d}k coins {rate:0.1f} coins/s  ", end="")
-                        sys.stdout.flush()
-                    commit_in -= 1
-                    if commit_in == 0:
-                        commit_in = COIN_COMMIT_RATE
-                        out_db.executemany("INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)", coin_values)
-                        out_db.commit()
-                        out_db.execute("begin transaction")
-                        coin_values = []
-                        end_time = time()
-                        rate = COIN_COMMIT_RATE / (end_time - start_time)
-                        start_time = end_time
-
-            out_db.executemany("INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)", coin_values)
-            out_db.commit()
-            end_time = time()
-            print(f"\r      {end_time - coin_start_time:.2f} seconds                             ")
-
-            print("[5/5] build indices")
-            index_start_time = time()
-            print("      block store")
-            out_db.execute("CREATE INDEX height on full_blocks(height)")
-            out_db.execute(
-                "CREATE INDEX is_fully_compactified ON"
-                " full_blocks(is_fully_compactified, in_main_chain) WHERE in_main_chain=1"
+                sys.stdout.flush()
+                start_time = end_time
+                insertions_vs_batch = 0
+        end_time = monotonic()
+        print(
+            "\r-- [1/4] Converting full_blocks SUCCEEDED in "
+            f"{end_time - block_start_time:.2f} seconds                             "
+        )
+        print("-- [1/4] Creating full_blocks height index")
+        height_index_start_time = monotonic()
+        conn.execute("CREATE INDEX out_db.height ON full_blocks(height)")
+        conn.commit()
+        end_time = monotonic()
+        print(
+            "\r-- [1/4] Creating full_blocks height index SUCCEEDED in "
+            f"{end_time - height_index_start_time:.2f} seconds                             "
+        )
+        print("-- [1/4] Creating full_blocks is_fully_compactified index")
+        ifc_index_start_time = monotonic()
+        conn.execute(
+            """
+            CREATE INDEX out_db.is_fully_compactified
+                ON full_blocks(is_fully_compactified, in_main_chain)
+                WHERE in_main_chain=1
+            """
+        )
+        conn.commit()
+        end_time = monotonic()
+        print(
+            "\r-- [1/4] Creating full_blocks is_fully_compactified index SUCCEEDED in "
+            f"{end_time - ifc_index_start_time:.2f} seconds                             "
+        )
+        print("-- [1/4] Creating full_blocks main_chain index")
+        main_chain_index_start_time = monotonic()
+        conn.execute(
+            """
+            CREATE INDEX out_db.main_chain
+                ON full_blocks(height, in_main_chain)
+                WHERE in_main_chain=1
+            """
+        )
+        conn.commit()
+        end_time = monotonic()
+        print(
+            "\r-- [1/4] Creating full_blocks main_chain index SUCCEEDED in "
+            f"{end_time - main_chain_index_start_time:.2f} seconds                             "
+        )
+        print("-- [2/4] Converting sub_epoch_segments_v3")
+        conn.execute(
+            """
+            CREATE TABLE out_db.sub_epoch_segments_v3(
+                ses_block_hash blob PRIMARY KEY,
+                challenge_segments blob
             )
-            out_db.execute("CREATE INDEX main_chain ON full_blocks(height, in_main_chain) WHERE in_main_chain=1")
-            out_db.commit()
-            print("      coin store")
-
-            out_db.execute("CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)")
-            out_db.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
-            out_db.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
-            out_db.execute("CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)")
-            out_db.commit()
-            print("      hint store")
-
-            out_db.execute("CREATE TABLE IF NOT EXISTS hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
-            out_db.commit()
-            end_time = time()
-            print(f"\r      {end_time - index_start_time:.2f} seconds                             ")
+            """
+        )
+        conn.commit()
+        ses_start_time = monotonic()
+        conn.execute(
+            """
+            INSERT INTO out_db.sub_epoch_segments_v3
+                SELECT
+                    unhex(ses_block_hash),
+                    challenge_segments
+                FROM sub_epoch_segments_v3
+            """
+        )
+        conn.commit()
+        end_time = monotonic()
+        print(
+            "\r-- [2/4] Converting sub_epoch_segments_v3 SUCCEEDED in "
+            f"{end_time - ses_start_time:.2f} seconds                             "
+        )
+        print("-- [3/4] Converting hints")
+        conn.execute("CREATE TABLE out_db.hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
+        conn.commit()
+        start_time = monotonic()
+        hint_start_time = start_time
+        hints_count = 0
+        rate = 1.0
+        range_start = 1
+        while True:
+            with closing(
+                conn.execute("SELECT id FROM hints WHERE id >= ? LIMIT ?", (range_start, parameter_limit))
+            ) as cursor:
+                rows = cursor.fetchall()
+            if len(rows) == 0:
+                break
+            conn.execute(
+                f"""
+                INSERT OR IGNORE INTO out_db.hints
+                    SELECT
+                        coin_id,
+                        hint
+                    FROM hints
+                    WHERE id IN ({','.join('?' * len(rows))})
+                """,
+                [id_tuple[0] for id_tuple in rows],
+            )
+            conn.commit()
+            end_time = monotonic()
+            rate = parameter_limit / (end_time - start_time)
+            start_time = end_time
+            hints_count += len(rows)
+            print(f"\r{hints_count // 1000:10d}k hints {rate:0.1f} hints/s  ", end="")
+            sys.stdout.flush()
+            range_start += parameter_limit
+        end_time = monotonic()
+        print(
+            "\r-- [3/4] Converting hints SUCCEEDED in "
+            f"{end_time - hint_start_time:.2f} seconds                             "
+        )
+        print("-- [3/4] Creating hints hint_index index")
+        hint_index_start_time = monotonic()
+        conn.execute("CREATE INDEX out_db.hint_index on hints(hint)")
+        conn.commit()
+        end_time = monotonic()
+        print(
+            "\r-- [3/4] Creating hints hint_index index SUCCEEDED in "
+            f"{end_time - hint_index_start_time:.2f} seconds                             "
+        )
+        print("-- [4/4] Converting coin_record")
+        conn.execute(
+            """
+            CREATE TABLE out_db.coin_record(
+                coin_name blob PRIMARY KEY,
+                confirmed_index bigint,
+                spent_index bigint,
+                coinbase int,
+                puzzle_hash blob,
+                coin_parent blob,
+                amount blob,
+                timestamp bigint
+            )
+            """
+        )
+        conn.commit()
+        start_time = monotonic()
+        coin_start_time = start_time
+        coins_count = 0
+        rate = 1.0
+        print("-- [4/4] Creating temp table (slow, patience)", end="\r")
+        conn.execute(
+            """
+            CREATE TABLE temp.coin_record AS
+            SELECT
+                unhex(coin_name),
+                confirmed_index,
+                CASE WHEN spent_index <= ? THEN spent_index ELSE 0 END AS spent_index,
+                coinbase,
+                unhex(puzzle_hash),
+                unhex(coin_parent),
+                amount,
+                timestamp
+            FROM coin_record
+            WHERE confirmed_index <= ?
+            ORDER BY unhex(coin_name)
+            """,
+            (peak_height, peak_height),
+        )
+        with closing(conn.execute("SELECT * FROM temp.coin_record")) as cursor:
+            while True:
+                rows = cursor.fetchmany(BATCH_SIZE)
+                if len(rows) == 0:
+                    break
+                conn.executemany("INSERT INTO out_db.coin_record VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows)
+                conn.commit()
+                end_time = monotonic()
+                rate = len(rows) / (end_time - start_time)
+                start_time = end_time
+                coins_count += len(rows)
+                print(f"\r{coins_count // 1000:10d}k coins {rate:0.1f} coins/s               ", end="")
+                sys.stdout.flush()
+        end_time = monotonic()
+        print(
+            "\r-- [4/4] Converting coin_record SUCCEEDED in "
+            f"{end_time - coin_start_time:.2f} seconds                             "
+        )
+        print("-- [4/4] Creating coin_record coin_confirmed_index index")
+        coin_confirmed_index_start_time = monotonic()
+        conn.execute("CREATE INDEX out_db.coin_confirmed_index ON coin_record(confirmed_index)")
+        conn.commit()
+        end_time = monotonic()
+        print(
+            "\r-- [4/4] Creating coin_record coin_confirmed_index index SUCCEEDED in "
+            f"{end_time - coin_confirmed_index_start_time:.2f} seconds                             "
+        )
+        print("-- [4/4] Creating coin_record coin_spent_index index")
+        coin_spent_index_start_time = monotonic()
+        conn.execute("CREATE INDEX out_db.coin_spent_index ON coin_record(spent_index)")
+        conn.commit()
+        end_time = monotonic()
+        print(
+            "\r-- [4/4] Creating coin_record coin_spent_index index SUCCEEDED in "
+            f"{end_time - coin_spent_index_start_time:.2f} seconds                             "
+        )
+        print("-- [4/4] Creating coin_record coin_puzzle_hash index")
+        coin_puzzle_hash_index_start_time = monotonic()
+        conn.execute("CREATE INDEX out_db.coin_puzzle_hash ON coin_record(puzzle_hash)")
+        conn.commit()
+        end_time = monotonic()
+        print(
+            "\r-- [4/4] Creating coin_record coin_puzzle_hash index SUCCEEDED in "
+            f"{end_time - coin_puzzle_hash_index_start_time:.2f} seconds                             "
+        )
+        print("-- [4/4] Creating coin_record coin_parent_index index")
+        coin_parent_index_start_time = monotonic()
+        conn.execute("CREATE INDEX out_db.coin_parent_index ON coin_record(coin_parent)")
+        conn.commit()
+        end_time = monotonic()
+        print(
+            "\r-- [4/4] Creating coin_record coin_parent_index index SUCCEEDED in "
+            f"{end_time - coin_parent_index_start_time:.2f} seconds                             "
+        )
+        conn.execute("DETACH DATABASE out_db")
