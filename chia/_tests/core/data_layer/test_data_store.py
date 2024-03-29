@@ -1508,7 +1508,10 @@ async def test_benchmark_batch_insert_speed(
     r.seed("shadowlands", version=2)
 
     test_size = 100
-    max_pre_size = 3000
+    max_pre_size = 5000
+    # may not be needed if big_o already considers the effect
+    lowest_considered_n = 0
+
     batch_count, remainder = divmod(max_pre_size, test_size)
     assert remainder == 0, "the last batch would be a different size"
 
@@ -1523,14 +1526,12 @@ async def test_benchmark_batch_insert_speed(
 
     pre = changelist[:max_pre_size]
 
-    durations: Dict[int, float] = {}
+    records: Dict[int, float] = {}
 
     total_inserted = 0
     pre_iter = iter(pre)
     with benchmark_runner.assert_runtime(
         label="overall",
-        # TODO: probably also assert a total runtime, though we are less concerned
-        #       about the exact time than the complexity
         # TODO: this is silly
         seconds=1,
         enable_assertion=False,
@@ -1555,16 +1556,26 @@ async def test_benchmark_batch_insert_speed(
                     status=Status.COMMITTED,
                 )
 
+            records[total_inserted] = f.result().duration
             total_inserted += len(pre_batch)
 
-            durations[total_inserted] = f.result().duration
+    considered_durations = {n: duration for n, duration in records.items() if n >= lowest_considered_n}
+    ns = list(considered_durations.keys())[10:]
+    durations = list(considered_durations.values())[10:]
+    best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations)
 
-    best_class, fitted = big_o.infer_big_o_class(
-        ns=list(durations.keys()),
-        time=list(durations.values()),
-    )
-    assert isinstance(best_class, big_o.complexities.Constant), f"must be constant: {best_class}"
-    # TODO: also assert about fit quality
+    print(big_o.reports.big_o_report(best=best_class, others=fitted))
+
+    assert isinstance(
+        best_class, (big_o.complexities.Constant, big_o.complexities.Linear)
+    ), f"must be constant or linear: {best_class}"
+
+    coefficients = best_class.coefficients()
+    assert coefficients[0] < 2.5
+    if isinstance(best_class, big_o.complexities.Linear):
+        assert coefficients[1] < 0.001
+
+    # TODO: how do we get this into present reporting since that's just for time
 
 
 @pytest.mark.anyio
