@@ -1,4 +1,4 @@
-# Package: protocols
+# Package: protocol
 
 from __future__ import annotations
 

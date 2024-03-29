@@ -1,4 +1,4 @@
-# Package: supported_wallet
+# Package: supported_wallets
 
 from __future__ import annotations
 

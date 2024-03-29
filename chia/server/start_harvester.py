@@ -1,4 +1,4 @@
-# Package: start_harvester
+# Package: harvester
 
 from __future__ import annotations
 

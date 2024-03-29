@@ -1,4 +1,4 @@
-# Package: obsolete
+# Package: full_node
 
 from __future__ import annotations
 

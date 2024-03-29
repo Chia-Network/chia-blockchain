@@ -1,4 +1,4 @@
-# Package: datalayer
+# Package: data_layer
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-# Package: crypto
+# Package: cryptography
 
 # Copyright (c) 2017 Pieter Wuille
 #

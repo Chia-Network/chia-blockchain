@@ -1,4 +1,4 @@
-# Package: crypto
+# Package: cryptography
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-# Package: machine_state
+# Package: chia-blockchain
 
 from __future__ import annotations
 
