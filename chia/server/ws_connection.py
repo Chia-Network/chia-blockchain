@@ -221,9 +221,13 @@ class WSChiaConnection:
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
-            if inbound_handshake.protocol_version != protocol_version[local_type]:
+            if (
+                local_type in [NodeType.FARMER, NodeType.HARVESTER]
+                and inbound_handshake.protocol_version != protocol_version[local_type]
+            ):
                 self.log.warning(
                     f"protocol version mismatch: "
+                    f"local_type={local_type} "
                     f"incoming={inbound_handshake.protocol_version} "
                     f"our={protocol_version[local_type]}"
                 )
@@ -258,9 +262,15 @@ class WSChiaConnection:
 
             remote_node_type = NodeType(inbound_handshake.node_type)
 
-            if inbound_handshake.protocol_version != protocol_version[remote_node_type]:
+            if (
+                remote_node_type in [NodeType.FARMER, NodeType.HARVESTER]
+                and inbound_handshake.protocol_version != protocol_version[remote_node_type]
+            ):
                 self.log.warning(
-                    f"protocol version mismatch: incoming={inbound_handshake.protocol_version} our={protocol_version}"
+                    f"protocol version mismatch: "
+                    f"remote_type={remote_node_type} "
+                    f"incoming={inbound_handshake.protocol_version} "
+                    f"our={protocol_version[remote_node_type]}"
                 )
 
             outbound_handshake = make_msg(
