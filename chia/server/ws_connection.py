@@ -22,7 +22,7 @@ from chia.protocols.protocol_timing import (
     CONSENSUS_ERROR_BAN_SECONDS,
     INTERNAL_PROTOCOL_ERROR_BAN_SECONDS,
 )
-from chia.protocols.shared_protocol import Capability, Error, Handshake
+from chia.protocols.shared_protocol import Capability, Error, Handshake, protocol_version
 from chia.server.api_protocol import ApiProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -188,22 +188,21 @@ class WSChiaConnection:
     async def perform_handshake(
         self,
         network_id: str,
-        protocol_version: str,
         server_port: int,
         local_type: NodeType,
     ) -> None:
-        outbound_handshake = make_msg(
-            ProtocolMessageTypes.handshake,
-            Handshake(
-                network_id,
-                protocol_version,
-                __version__,
-                uint16(server_port),
-                uint8(local_type.value),
-                self.local_capabilities_for_handshake,
-            ),
-        )
         if self.is_outbound:
+            outbound_handshake = make_msg(
+                ProtocolMessageTypes.handshake,
+                Handshake(
+                    network_id,
+                    protocol_version[local_type],
+                    __version__,
+                    uint16(server_port),
+                    uint8(local_type.value),
+                    self.local_capabilities_for_handshake,
+                ),
+            )
             await self._send_message(outbound_handshake)
             inbound_handshake_msg = await self._read_one_message()
             if inbound_handshake_msg is None:
@@ -221,6 +220,13 @@ class WSChiaConnection:
 
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+            if inbound_handshake.protocol_version != protocol_version[local_type]:
+                self.log.warning(
+                    f"protocol version mismatch: "
+                    f"incoming={inbound_handshake.protocol_version} "
+                    f"our={protocol_version[local_type]}"
+                )
 
             self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
@@ -249,11 +255,30 @@ class WSChiaConnection:
             inbound_handshake = Handshake.from_bytes(message.data)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+            remote_node_type = NodeType(inbound_handshake.node_type)
+
+            if inbound_handshake.protocol_version != protocol_version[remote_node_type]:
+                self.log.warning(
+                    f"protocol version mismatch: incoming={inbound_handshake.protocol_version} our={protocol_version}"
+                )
+
+            outbound_handshake = make_msg(
+                ProtocolMessageTypes.handshake,
+                Handshake(
+                    network_id,
+                    protocol_version[remote_node_type],
+                    __version__,
+                    uint16(server_port),
+                    uint8(local_type.value),
+                    self.local_capabilities_for_handshake,
+                ),
+            )
             await self._send_message(outbound_handshake)
             self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
-            self.connection_type = NodeType(inbound_handshake.node_type)
+            self.connection_type = remote_node_type
             # "1" means capability is enabled
             self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
 

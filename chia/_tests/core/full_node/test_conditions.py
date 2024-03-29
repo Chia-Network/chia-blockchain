@@ -376,7 +376,7 @@ class TestConditions:
         pre-v2-softfork, and rejects more than the announcement limit afterward.
         """
 
-        if condition1.startswith("(66") and consensus_mode != ConsensusMode.SOFT_FORK_3:
+        if condition1.startswith("(66") and consensus_mode != ConsensusMode.SOFT_FORK_4:
             # The message conditions aren't enabled until Soft-fork 3, so there
             # won't be any errors unless it's activated
             expect_err = None

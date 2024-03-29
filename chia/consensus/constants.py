@@ -66,7 +66,7 @@ class ConsensusConstants:
     SOFT_FORK2_HEIGHT: uint32
 
     # soft fork initiated in 2.3.0 release
-    SOFT_FORK3_HEIGHT: uint32
+    SOFT_FORK4_HEIGHT: uint32
 
     # the hard fork planned with the 2.0 release
     # this is the block with the first plot filter adjustment

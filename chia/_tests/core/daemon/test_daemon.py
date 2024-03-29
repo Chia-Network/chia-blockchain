@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 import aiohttp
 import pkg_resources
 import pytest
+from aiohttp import WSMessage
 from aiohttp.web_ws import WebSocketResponse
 from pytest_mock import MockerFixture
 
@@ -2038,17 +2039,32 @@ async def test_plotter_stop_plotting(
     payload = dict_to_json_str(payload_rpc)
     await ws.send_str(payload)
 
-    # 3) removing
-    response = await ws.receive()
-    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "REMOVING")
+    responses: List[WSMessage] = []
 
-    # 4) Finished
-    response = await ws.receive()
-    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "FINISHED")
+    # 3, 4, and 5)
+    #   Removing
+    #   Finished
+    #   Finally, get the "ack" for the stop_plotting payload
+    for _ in range(3):
+        responses.append(await ws.receive())
 
-    # 5) Finally, get the "ack" for the stop_plotting payload
-    response = await ws.receive()
-    assert_response(response, {"success": True}, stop_plotting_request_id)
+    state_changes: List[WSMessage] = []
+    finished: List[WSMessage] = []
+
+    for response in responses:
+        message = json.loads(response.data.strip())
+        command = message.get("command")
+        if command == "state_changed":
+            state_changes.append(response)
+        else:
+            finished.append(response)
+
+    assert len(state_changes) == 2
+    assert len(finished) == 1
+
+    assert_plot_queue_response(state_changes[0], "state_changed", "state_changed", plot_id, "REMOVING")
+    assert_plot_queue_response(state_changes[1], "state_changed", "state_changed", plot_id, "FINISHED")
+    assert_response(finished[0], {"success": True}, stop_plotting_request_id)
 
 
 @datacases(
