@@ -24,7 +24,7 @@ except ImportError:
 
 
 from chia.util.errors import KeychainUserNotFound
-from chia.util.keychain import KeyData, KeyDataSecrets, get_private_key_user
+from chia.util.keychain import KeyData, KeyDataSecrets, KeyTypes, get_private_key_user
 from chia.util.misc import prompt_yes_no
 
 LegacyKeyring = Union[MacKeyring, WinKeyring, CryptFileKeyring]
@@ -62,7 +62,7 @@ def generate_and_add(keyring: LegacyKeyring) -> KeyData:
             keyring.set_password(
                 DEFAULT_SERVICE,
                 get_private_key_user(DEFAULT_USER, index),
-                bytes(key.public_key).hex() + key.entropy.hex(),
+                bytes(key.observation_root).hex() + key.entropy.hex(),
             )
             return key
 
@@ -74,15 +74,17 @@ def get_key_data(keyring: LegacyKeyring, index: int) -> KeyData:
         raise KeychainUserNotFound(DEFAULT_SERVICE, user)
     str_bytes = bytes.fromhex(read_str)
 
-    public_key = G1Element.from_bytes(str_bytes[: G1Element.SIZE])
-    fingerprint = public_key.get_fingerprint()
+    pk_bytes = str_bytes[: G1Element.SIZE]
+    observation_root = G1Element.from_bytes(pk_bytes)
+    fingerprint = observation_root.get_fingerprint()
     entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
 
     return KeyData(
         fingerprint=uint32(fingerprint),
-        public_key=public_key,
+        public_key=pk_bytes,
         label=None,
         secrets=KeyDataSecrets.from_entropy(entropy),
+        key_type=KeyTypes.G1_ELEMENT,
     )
 
 
