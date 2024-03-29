@@ -661,10 +661,10 @@ class FarmerAPI:
 
     def _get_additional_headers_for_partial(self, harvester_peer: WSChiaConnection) -> Dict[str, str]:
         headers: Dict[str, str] = {
-            "x-farmer-peer-id": self.farmer.server.node_id.hex(),
-            "x-farmer-version": __version__,
-            "x-harvester-peer-id": harvester_peer.peer_node_id.hex(),
-            "x-harvester-version": harvester_peer.version,
+            "chia-farmer-peer-id": self.farmer.server.node_id.hex(),
+            "chia-farmer-version": __version__,
+            "chia-harvester-peer-id": harvester_peer.peer_node_id.hex(),
+            "chia-harvester-version": harvester_peer.version,
         }
         receiver = self.farmer.plot_sync_receivers.get(harvester_peer.peer_node_id)
         if receiver is None:
@@ -672,9 +672,9 @@ class FarmerAPI:
 
         return {
             **headers,
-            "x-harvester-raw-capacity-bytes": f"{receiver.total_plot_size()}",
-            "x-harvester-effective-capacity-bytes": f"{receiver.total_effective_plot_size()}",
-            "x-harvester-plot-count": f"{len(receiver.plots())}",
+            "chia-harvester-raw-capacity-bytes": f"{receiver.total_plot_size()}",
+            "chia-harvester-effective-capacity-bytes": f"{receiver.total_effective_plot_size()}",
+            "chia-harvester-plot-count": f"{len(receiver.plots())}",
         }
 
     def _process_respond_signatures(
