@@ -1806,10 +1806,7 @@ async def test_insert_from_delta_file(
         timeout: int,
         log: logging.Logger,
     ) -> None:
-        try:
-            os.rmdir(tmp_path.joinpath(f"{tree_id}"))
-        except FileNotFoundError:
-            pass
+        os.rmdir(tmp_path.joinpath(f"{tree_id}"))
         os.rename(tmp_path.joinpath("tmp"), tmp_path.joinpath(f"{tree_id}"))
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
