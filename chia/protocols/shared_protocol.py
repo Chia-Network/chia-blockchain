@@ -4,10 +4,19 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import List, Optional, Tuple
 
+from chia.server.outbound_message import NodeType
 from chia.util.ints import int16, uint8, uint16
 from chia.util.streamable import Streamable, streamable
 
-protocol_version = "0.0.36"
+protocol_version = {
+    NodeType.FULL_NODE: "0.0.36",
+    NodeType.HARVESTER: "0.0.36",
+    NodeType.FARMER: "0.0.36",
+    NodeType.TIMELORD: "0.0.36",
+    NodeType.INTRODUCER: "0.0.36",
+    NodeType.WALLET: "0.0.36",
+    NodeType.DATA_LAYER: "0.0.36",
+}
 
 
 """
