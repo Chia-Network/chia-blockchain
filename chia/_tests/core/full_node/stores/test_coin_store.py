@@ -702,7 +702,10 @@ async def test_batch_no_puzzle_hashes(db_version: int) -> None:
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(db_wrapper)
         await HintStore.create(db_wrapper)
-        await coin_store.batch_coin_states_by_puzzle_hashes([])
+
+        coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([])
+        assert coin_states == []
+        assert height is None
 
 
 @pytest.mark.anyio
