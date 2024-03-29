@@ -190,12 +190,12 @@ def get_keychain():
 class ConsensusMode(Enum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
-    SOFT_FORK_3 = 2
+    SOFT_FORK_4 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_3],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_4],
 )
 def consensus_mode(request):
     return request.param
@@ -205,10 +205,10 @@ def consensus_mode(request):
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
-    if consensus_mode == ConsensusMode.SOFT_FORK_3:
+    if consensus_mode == ConsensusMode.SOFT_FORK_4:
         return dataclasses.replace(
             test_constants,
-            SOFT_FORK3_HEIGHT=uint32(2),
+            SOFT_FORK4_HEIGHT=uint32(2),
         )
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         return dataclasses.replace(
