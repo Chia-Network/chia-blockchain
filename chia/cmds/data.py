@@ -195,7 +195,7 @@ def update_data_store(
 @create_fee_option()
 @options.create_fingerprint()
 @click.option("--submit/--no-submit", default=True, help="Submit the result on chain")
-def update_data_store(
+def update_multiple_stores(
     changelist_string: str,
     data_rpc_port: int,
     fee: str,
