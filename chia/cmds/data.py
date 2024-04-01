@@ -189,6 +189,32 @@ def update_data_store(
     )
 
 
+@data_cmd.command("update_multiple_stores", help="Update multiple stores by providing the changelist operations")
+@create_changelist_option()
+@create_rpc_port_option()
+@create_fee_option()
+@options.create_fingerprint()
+@click.option("--submit/--no-submit", default=True, help="Submit the result on chain")
+def update_data_store(
+    changelist_string: str,
+    data_rpc_port: int,
+    fee: str,
+    fingerprint: Optional[int],
+    submit: bool,
+) -> None:
+    from chia.cmds.data_funcs import update_multiple_stores_cmd
+
+    run(
+        update_multiple_stores_cmd(
+            rpc_port=data_rpc_port,
+            changelist=json.loads(changelist_string),
+            fee=fee,
+            fingerprint=fingerprint,
+            submit_on_chain=submit,
+        )
+    )
+
+
 @data_cmd.command("submit_pending_root", help="Submit on chain a locally stored batch")
 @create_data_store_id_option()
 @create_rpc_port_option()

@@ -85,6 +85,7 @@ class DataLayerRpcApi:
             "/create_data_store": self.create_data_store,
             "/get_owned_stores": self.get_owned_stores,
             "/batch_update": self.batch_update,
+            "/multistore_batch_update": self.multistore_batch_update,
             "/submit_pending_root": self.submit_pending_root,
             "/get_value": self.get_value,
             "/get_keys": self.get_keys,
@@ -245,6 +246,23 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee), submit_on_chain)
+        if submit_on_chain:
+            if transaction_record is None:
+                raise Exception(f"Batch update failed for: {store_id}")
+            return {"tx_id": transaction_record.name}
+        else:
+            if transaction_record is not None:
+                raise Exception("Transaction submitted on chain, but submit_on_chain set to False")
+            return {}
+
+    async def multistore_batch_update(self, request: Dict[str, Any]) -> EndpointResult:
+        fee = get_fee(self.service.config, request)
+        changelist = [process_change(change) for change in request["changelist"]]
+        submit_on_chain = request.get("submit_on_chain", True)
+        # todo input checks
+        if self.service is None:
+            raise Exception("Data layer not created")
+        transaction_record = await self.service.multistore_batch_update(changelist, uint64(fee), submit_on_chain)
         if submit_on_chain:
             if transaction_record is None:
                 raise Exception(f"Batch update failed for: {store_id}")

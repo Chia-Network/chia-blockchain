@@ -40,6 +40,19 @@ class DataLayerRpcClient(RpcClient):
         )
         return response
 
+    async def update_multiple_stores(
+        self, changelist: List[Dict[str, str]], fee: Optional[uint64], submit_on_chain: bool = True
+    ) -> Dict[str, Any]:
+        response = await self.fetch(
+            "multistore_batch_update",
+            {
+                "changelist": changelist,
+                "fee": fee,
+                "submit_on_chain": submit_on_chain,
+            },
+        )
+        return response
+
     async def submit_pending_root(self, store_id: bytes32, fee: Optional[uint64]) -> Dict[str, Any]:
         response = await self.fetch("submit_pending_root", {"id": store_id.hex(), "fee": fee})
         return response
