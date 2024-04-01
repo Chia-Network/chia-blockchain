@@ -4,9 +4,9 @@ import ast
 import json
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import click
 
@@ -31,28 +31,23 @@ class Annotation:
 @dataclass(frozen=True)
 class ChiaFile:
     path: Path
-    annotations: Annotation
+    annotations: Optional[Annotation] = None
 
     @classmethod
     def parse(cls, file_path: Path) -> ChiaFile:
         with open(file_path, encoding="utf-8", errors="ignore") as f:
-            return cls(file_path, Annotation.parse(f.read()))
-
-
-def is_empty(fp: Path) -> bool:
-    with open(fp, encoding="utf-8", errors="ignore") as file:
-        filestring = file.read()
-        return filestring.strip() == ""
+            file_string = f.read()
+            return cls(file_path, Annotation.parse(file_string) if Annotation.is_annotated(file_string) else None)
 
 
 # Function to build a dependency graph
-def build_dependency_graph(dir_path: Path) -> Dict[Path, List[Path]]:
+def build_dependency_graph(dir_params: DirectoryParameters) -> Dict[Path, List[Path]]:
     dependency_graph: Dict[Path, List[Path]] = {}
-    for file_path in gather_non_empty_files(dir_path):
-        dependency_graph[file_path] = []
-        with open(file_path, encoding="utf-8", errors="ignore") as f:
+    for chia_file in dir_params.gather_non_empty_python_files():
+        dependency_graph[chia_file.path] = []
+        with open(chia_file.path, encoding="utf-8", errors="ignore") as f:
             filestring = f.read()
-            tree = ast.parse(filestring, filename=file_path)
+            tree = ast.parse(filestring, filename=chia_file.path)
             for node in ast.iter_child_nodes(tree):
                 if isinstance(node, ast.ImportFrom):
                     if node.module is not None and node.module.startswith("chia."):
@@ -63,39 +58,70 @@ def build_dependency_graph(dir_path: Path) -> Dict[Path, List[Path]]:
                         ]
                         for path_to_search in paths_to_search:
                             if os.path.exists(path_to_search):
-                                dependency_graph[file_path].append(Path(path_to_search))
+                                dependency_graph[chia_file.path].append(Path(path_to_search))
                 elif isinstance(node, ast.Import):
                     for alias in node.names:
                         if alias.name.startswith("chia."):
                             imported_path = os.path.join("./", alias.name.replace(".", "/") + ".py")
                             if os.path.exists(imported_path):
-                                dependency_graph[file_path].append(Path(imported_path))
+                                dependency_graph[chia_file.path].append(Path(imported_path))
     return dependency_graph
 
 
-def build_virtual_dependency_graph(dir_path: Path) -> Dict[str, List[str]]:
-    graph = build_dependency_graph(dir_path)
+def build_virtual_dependency_graph(dir_params: DirectoryParameters) -> Dict[str, List[str]]:
+    graph = build_dependency_graph(dir_params)
     virtual_graph: Dict[str, List[str]] = {}
     for file, imports in graph.items():
-        parent = ChiaFile.parse(Path(file)).annotations.package
+        parent_file = ChiaFile.parse(Path(file))
+        if parent_file.annotations is None:
+            continue
+        parent = parent_file.annotations.package
         virtual_graph.setdefault(parent, [])
 
-        children = [ChiaFile.parse(Path(imp)).annotations.package for imp in imports]
+        children_files = [ChiaFile.parse(Path(imp)) for imp in imports]
+        children = [f.annotations.package for f in children_files if f.annotations is not None]
 
         virtual_graph[parent].extend(children)
 
     return {k: list({v for v in vs if v != k}) for k, vs in virtual_graph.items()}
 
 
-def find_cycles(graph: Dict[Path, List[Path]]) -> List[str]:
+def is_excluded(file_path: Path, excluded_paths: List[Path]) -> bool:
+    """
+    Checks if a file is in the list of excluded paths or under an excluded directory.
+
+    Parameters:
+    - file_path: Path of the file to check.
+    - excluded_paths: List of Paths to be excluded.
+
+    Returns:
+    - True if the file is excluded, False otherwise.
+    """
+    file_path = file_path.resolve()  # Normalize the file path
+
+    for excluded_path in excluded_paths:
+        excluded_path = excluded_path.resolve()  # Normalize the excluded path
+        # Check if the file path matches the excluded path exactly
+        if file_path == excluded_path:
+            return True
+        # Check if the excluded path is a directory and if the file is under this directory
+        if excluded_path.is_dir() and any(parent == excluded_path for parent in file_path.parents):
+            return True
+
+    return False
+
+
+def find_cycles(graph: Dict[Path, List[Path]], excluded_paths: List[Path]) -> List[str]:
     def recursive_dependency_search(
         top_level_package: str, left_top_level: bool, dependency: Path, already_seen: List[Path]
     ) -> List[List[Tuple[str, Path]]]:
-        if dependency in already_seen:
+        if dependency in already_seen or is_excluded(dependency, excluded_paths):
             return []
         already_seen.append(dependency)
         chia_file = ChiaFile.parse(dependency)
-        if chia_file.annotations.package == top_level_package and left_top_level:
+        if chia_file.annotations is None:
+            return []
+        elif chia_file.annotations.package == top_level_package and left_top_level:
             return [[(chia_file.annotations.package, dependency)]]
         else:
             left_top_level = left_top_level or chia_file.annotations.package != top_level_package
@@ -111,20 +137,15 @@ def find_cycles(graph: Dict[Path, List[Path]]) -> List[str]:
     path_accumulator = []
     for parent in graph:
         chia_file = ChiaFile.parse(parent)
+        if chia_file.annotations is None:
+            continue
         path_accumulator.extend(recursive_dependency_search(chia_file.annotations.package, False, parent, []))
 
     return [" -> ".join([str(d) + f" ({p})" for p, d in stack]) for stack in path_accumulator]
 
 
-def gather_non_empty_files(dir_path: Path) -> List[Path]:
-    non_empty_files = []
-    for root, _, files in os.walk(dir_path):
-        for file in files:
-            full_path = Path(os.path.join(root, file))
-            if file.endswith(".py") and not is_empty(full_path):
-                non_empty_files.append(full_path)
-
-    return non_empty_files
+def print_graph(graph: Union[Dict[str, List[str]], Dict[Path, List[Path]]]) -> None:
+    print(json.dumps({str(k): list(str(v) for v in vs) for k, vs in graph.items()}, indent=4))
 
 
 @click.group(help="A utility for grouping different parts of the repo into separate projects")
@@ -132,34 +153,90 @@ def cli() -> None:
     pass
 
 
+@dataclass(frozen=True)
+class DirectoryParameters:
+    dir_path: Path
+    excluded_paths: List[Path] = field(default_factory=list)
+
+    def gather_non_empty_python_files(self) -> List[ChiaFile]:
+        """
+        Gathers non-empty Python files in the specified directory while
+        ignoring files and directories in the excluded paths.
+
+        Returns:
+            A list of paths to non-empty Python files.
+        """
+        python_files = []
+        for root, dirs, files in os.walk(self.dir_path, topdown=True):
+            # Modify dirs in-place to remove excluded directories from search
+            dirs[:] = [d for d in dirs if Path(os.path.join(root, d)) not in self.excluded_paths]
+
+            for file in files:
+                file_path = Path(os.path.join(root, file))
+                # Check if the file is a Python file and not in the excluded paths
+                if file_path.suffix == ".py" and file_path not in self.excluded_paths:
+                    # Check if the file is non-empty
+                    if os.path.getsize(file_path) > 0:
+                        python_files.append(ChiaFile.parse(file_path))
+
+        return python_files
+
+
+def directory_options(func: Callable[..., None]) -> Callable[..., None]:
+    # The wrapper function
+    def wrapper(*args: Any, **kwargs: Any) -> None:
+        # Instantiate DirectoryParameters with the provided options
+        dir_params = DirectoryParameters(
+            dir_path=kwargs.pop("include_dir"), excluded_paths=[Path(p) for p in kwargs.pop("excluded_paths")]
+        )
+        # Call the inner function with the DirectoryParameters instance
+        return func(dir_params, *args, **kwargs)
+
+    # Apply the click options
+    wrapper = click.option(
+        "--directory",
+        "include_dir",
+        type=click.Path(exists=True, file_okay=False, dir_okay=True),
+        required=True,
+        help="The directory to include.",
+    )(wrapper)
+    wrapper = click.option(
+        "--exclude-path",
+        "excluded_paths",
+        multiple=True,
+        type=click.Path(exists=False, file_okay=True, dir_okay=True),
+        help="Optional paths to exclude.",
+    )(wrapper)
+
+    return wrapper
+
+
 @click.command("find_missing_annotations", short_help="Search a directory for chia files without annotations")
-@click.option("--directory", "-d", type=click.Path(), help="The directory to search in", required=True)
-def find_missing_annotations(directory: Path) -> None:
-    for path in gather_non_empty_files(directory):
-        with open(path, encoding="utf-8", errors="ignore") as file:
-            filestring = file.read()
-            if not Annotation.is_annotated(filestring):
-                print(path)
+@directory_options
+def find_missing_annotations(dir_params: DirectoryParameters) -> None:
+    for file in dir_params.gather_non_empty_python_files():
+        if file.annotations is None:
+            print(file.path)
 
 
 @click.command("print_dependency_graph", short_help="Output a dependency graph of all the files in a directory")
-@click.option("--directory", "-d", type=click.Path(), help="The directory to search in", required=True)
-def print_dependency_graph(directory: Path) -> None:
-    print(json.dumps(build_dependency_graph(directory), indent=4))
+@directory_options
+def print_dependency_graph(dir_params: DirectoryParameters) -> None:
+    print_graph(build_dependency_graph(dir_params))
 
 
 @click.command(
     "print_virtual_dependency_graph", short_help="Output a dependency graph of all the packages in a directory"
 )
-@click.option("--directory", "-d", type=click.Path(), help="The directory to search in", required=True)
-def print_virtual_dependency_graph(directory: Path) -> None:
-    print(json.dumps(build_virtual_dependency_graph(directory), indent=4))
+@directory_options
+def print_virtual_dependency_graph(dir_params: DirectoryParameters) -> None:
+    print_graph(build_virtual_dependency_graph(dir_params))
 
 
 @click.command("print_cycles", short_help="Output cycles found in the virtual dependency graph")
-@click.option("--directory", "-d", type=click.Path(), help="The directory to search in", required=True)
-def print_cycles(directory: Path) -> None:
-    for cycle in find_cycles(build_dependency_graph(directory)):
+@directory_options
+def print_cycles(dir_params: DirectoryParameters) -> None:
+    for cycle in find_cycles(build_dependency_graph(dir_params), dir_params.excluded_paths):
         print(cycle)
 
 
