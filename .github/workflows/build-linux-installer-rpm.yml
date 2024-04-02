@@ -335,6 +335,7 @@ jobs:
       - name: Test generation of a k25 plot
         run:  |
           chia plots create -k 25 -t ./tmp -d ./plot --override-k
+          chia plots check -n 1
 
       - name: Remove package
         run: |

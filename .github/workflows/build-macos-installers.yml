@@ -358,6 +358,7 @@ jobs:
       - name: Test generation of a k25 plot
         run:  |
           /Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" plots create -k 25 -t ./tmp -d ./plot --override-k
+          /Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" chia plots check -n 1
 
       - name: Detach .dmg
         if: always()
