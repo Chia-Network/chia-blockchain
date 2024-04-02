@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, cast, final
 
 import aiohttp
 import aiosqlite
@@ -48,6 +48,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
+from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
 
@@ -1916,3 +1917,268 @@ async def test_insert_key_already_present(data_store: DataStore, tree_id: bytes3
     )
     with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
         await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+
+
+@pytest.mark.anyio
+async def test_benchmark_v2(
+    data_store: DataStore,
+    tree_id: bytes32,
+    benchmark_runner: BenchmarkRunner,
+) -> None:
+    r = random.Random()
+    r.seed("shadowlands", version=2)
+
+    test_size = 1000
+    max_pre_size = 10000
+
+    batch_count, remainder = divmod(max_pre_size, test_size)
+    assert remainder == 0, "the last batch would be a different size"
+
+    changelist = [
+        {
+            "action": "insert",
+            "key": x.to_bytes(32, byteorder="big", signed=False),
+            "value": bytes(r.getrandbits(8) for _ in range(1200)),
+        }
+        for x in range(max_pre_size)
+    ]
+
+    pre = changelist[:max_pre_size]
+
+    records: Dict[int, float] = {}
+
+    total_inserted = 0
+    pre_iter = iter(pre)
+    with benchmark_runner.assert_runtime(
+        label="overall",
+        # TODO: this is silly
+        seconds=1,
+        enable_assertion=False,
+        clock=time.monotonic,
+    ) as f:
+        while True:
+            pre_batch = list(itertools.islice(pre_iter, test_size))
+            if len(pre_batch) == 0:
+                break
+
+            with benchmark_runner.assert_runtime(
+                label="count",
+                # TODO: this is silly
+                seconds=1,
+                enable_assertion=False,
+                clock=time.monotonic,
+            ) as f:
+                await data_store.insert_batch(
+                    tree_id=tree_id,
+                    changelist=pre_batch,
+                    # TODO: does this mess up test accuracy?
+                    status=Status.COMMITTED,
+                )
+
+            records[total_inserted] = f.result().duration
+            total_inserted += len(pre_batch)
+
+    async with data_store.db_wrapper.writer() as writer:
+        async with writer.execute(
+            f"""
+            CREATE TABLE new_node(
+                tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                generation INTEGER NOT NULL CHECK(generation >= 0),
+                hash BLOB NULL CHECK(length(hash) == 32),
+                parent BLOB REFERENCES node,
+                node_type INTEGER NOT NULL CHECK(
+                    (
+                        node_type == {int(NodeType.INTERNAL)}
+                        AND left IS NOT NULL
+                        AND right IS NOT NULL
+                        AND key IS NULL
+                        AND value IS NULL
+                    )
+                    OR
+                    (
+                        node_type == {int(NodeType.TERMINAL)}
+                        AND left IS NULL
+                        AND right IS NULL
+                        AND key IS NOT NULL
+                        AND value IS NOT NULL
+                    )
+                ),
+                left BLOB REFERENCES node,
+                right BLOB REFERENCES node,
+                key BLOB,
+                value BLOB,
+                PRIMARY KEY(tree_id, generation, hash)
+            )
+            """
+        ):
+            pass
+
+        async with writer.execute(
+            """
+            CREATE TABLE blob(
+                hash BLOB PRIMARY KEY NULL CHECK(length(hash) == 32),
+                blob BLOB
+            )
+            """
+        ):
+            pass
+
+    @final
+    @dataclass
+    class NewInternalNode:
+        tree_id: bytes32
+        generation: int
+        hash: bytes32
+        # TODO: or terminal, internal, and root types?
+        parent_hash: Optional[bytes32]
+        left_hash: bytes32
+        right_hash: bytes32
+
+        @classmethod
+        def from_row(cls, row: aiosqlite.Row) -> NewInternalNode:
+            return cls(
+                tree_id=bytes32(row["tree_id"]),
+                generation=row["generation"],
+                hash=bytes32(row["hash"]),
+                parent_hash=bytes32(row["parent"]),
+                left_hash=bytes32(row["left"]),
+                right_hash=bytes32(row["right"]),
+            )
+
+        def to_row(self) -> Dict[str, Union[int, bytes32, None]]:
+            return {
+                "tree_id": self.tree_id,
+                "generation": self.generation,
+                "hash": self.hash,
+                "parent": self.parent_hash,
+                "left": self.left_hash,
+                "right": self.right_hash,
+                # TODO: hmm
+                "node_type": NodeType.INTERNAL,
+                "key": None,
+                "value": None,
+            }
+
+    @dataclass
+    class NewTerminalNode:
+        tree_id: bytes32
+        generation: int
+        hash: bytes32
+        # TODO: or terminal, internal, and root types?
+        parent_hash: Optional[bytes32]
+        key_hash: bytes32
+        value_hash: bytes32
+
+        # @classmethod
+        # def from_row(cls, row: aiosqlite.Row) -> I:
+        #     return cls(
+        #         tree_id=bytes32(row["tree_id"]),
+        #         generation=row["generation"],
+        #         hash=bytes32(row["hash"]),
+        #         parent_hash=bytes32(row["parent"]),
+        #         left_hash=bytes32(row["left"]),
+        #         right_hash=bytes32(row["right"]),
+        #     )
+
+        def to_row(self) -> Dict[str, Union[int, bytes32, None]]:
+            return {
+                "tree_id": self.tree_id,
+                "generation": self.generation,
+                "hash": self.hash,
+                "parent": self.parent_hash,
+                "left": None,
+                "right": None,
+                # TODO: hmm
+                "node_type": NodeType.TERMINAL,
+                "key": bytes32([0] * 32),
+                "value": bytes32([0] * 32),
+            }
+
+    root = await data_store.get_tree_as_program(tree_id=tree_id)
+
+    @dataclass
+    class Entry:
+        parent_hash: Optional[bytes32]
+        node: Union[InternalNode, TerminalNode]
+
+    to_visit: List[Entry] = [Entry(parent_hash=None, node=root)]
+    hash_cache: Dict[bytes32, Union[NewInternalNode, NewTerminalNode]] = {}
+
+    while len(to_visit) > 0:
+        entry = to_visit.pop(0)
+
+        new_node: Union[NewInternalNode, NewTerminalNode]
+        if isinstance(entry.node, InternalNode):
+            new_node = NewInternalNode(
+                tree_id=tree_id,
+                generation=0,
+                hash=entry.node.hash,
+                parent_hash=entry.parent_hash,
+                left_hash=entry.node.left_hash,
+                right_hash=entry.node.right_hash,
+            )
+            hash_cache[new_node.hash] = new_node
+            assert entry.node.pair is not None
+            to_visit.append(Entry(parent_hash=new_node.hash, node=entry.node.pair[0]))
+            to_visit.append(Entry(parent_hash=new_node.hash, node=entry.node.pair[1]))
+        elif isinstance(entry.node, TerminalNode):
+            new_node = NewTerminalNode(
+                tree_id=tree_id,
+                generation=0,
+                hash=entry.node.hash,
+                parent_hash=entry.parent_hash,
+                key_hash=bytes32([0] * 32),
+                value_hash=bytes32([0] * 32),
+            )
+            hash_cache[new_node.hash] = new_node
+        else:
+            assert False, f"some other nifty node type found: ({type(entry.node)}) {entry.node!r}"
+
+    async with data_store.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+        async with writer.executemany(
+            """
+            INSERT INTO new_node(tree_id, generation, hash, parent, node_type, left, right, key, value)
+            VALUES(:tree_id, :generation, :hash, :parent, :node_type, :left, :right, :key, :value)
+            """,
+            (node.to_row() for node in hash_cache.values()),
+        ):
+            pass
+
+        async with writer.executemany(
+            """
+            INSERT INTO blob(hash, blob)
+            VALUES(:hash, :blob)
+            """,
+            (
+                # TODO: what hash should we really use
+                {"hash": std_hash(blob), "blob": blob}
+                for entry in to_visit
+                if isinstance(entry.node, TerminalNode)
+                for blob in [entry.node.key, entry.node.value]
+            ),
+        ):
+            pass
+
+    with benchmark_runner.assert_runtime(
+        label="pure duplicate generation",
+        seconds=1,
+    ):
+        async with data_store.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+            async with writer.execute(
+                """
+                INSERT INTO new_node(tree_id, generation, hash, parent, node_type, left, right, key, value)
+                SELECT
+                    tree_id,
+                    :generation,
+                    hash,
+                    parent,
+                    node_type,
+                    left,
+                    right,
+                    key,
+                    value
+                FROM new_node
+                """,
+                {"generation": 1},
+            ):
+                pass

@@ -1528,7 +1528,7 @@ class DataStore:
         node = row_to_node(row=row)
         return node
 
-    async def get_tree_as_program(self, tree_id: bytes32) -> Program:
+    async def get_tree_as_program(self, tree_id: bytes32) -> Union[InternalNode, TerminalNode]:
         async with self.db_wrapper.reader() as reader:
             root = await self.get_tree_root(tree_id=tree_id)
             # TODO: consider actual proper behavior
@@ -1555,13 +1555,7 @@ class DataStore:
                     node = replace(node, pair=(hash_to_node[node.left_hash], hash_to_node[node.right_hash]))
                 hash_to_node[node.hash] = node
 
-            root_node = hash_to_node[root_node.hash]
-            # TODO: Remove ignore when done.
-            #       https://github.com/Chia-Network/clvm/pull/102
-            #       https://github.com/Chia-Network/clvm/pull/106
-            program: Program = Program.to(root_node)
-
-        return program
+        return hash_to_node[root_node.hash]
 
     async def get_proof_of_inclusion_by_hash(
         self,
