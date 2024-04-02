@@ -1,5 +1,5 @@
 exclude_paths:
-  - _tests
+  - chia/_tests
 ignore_cycles_in:
   - chia-blockchain
   - obsolete
