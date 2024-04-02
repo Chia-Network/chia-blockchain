@@ -50,7 +50,7 @@ class ConsensusConstants:
     # Size of mempool = 10x the size of block
     MEMPOOL_BLOCK_BUFFER: int
     # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M chia.
-    MAX_COIN_AMOUNT: int
+    MAX_COIN_AMOUNT: uint64
     # Max block cost in clvm cost units
     MAX_BLOCK_COST_CLVM: int
     # Cost per byte of generator program
@@ -66,6 +66,9 @@ class ConsensusConstants:
 
     # soft fork initiated in 1.8.0 release
     SOFT_FORK2_HEIGHT: uint32
+
+    # soft fork initiated in 2.3.0 release
+    SOFT_FORK4_HEIGHT: uint32
 
     # the hard fork planned with the 2.0 release
     # this is the block with the first plot filter adjustment

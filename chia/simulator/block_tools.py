@@ -171,7 +171,7 @@ def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
             if op != ConditionOpcode.CREATE_COIN.value:
                 continue
             puzzle_hash = next(atoms).as_atom()
-            amount = next(atoms).as_int()
+            amount = uint64(next(atoms).as_int())
             ret.append(Coin(parent_id, puzzle_hash, amount))
     return ret
 
@@ -234,12 +234,12 @@ class BlockTools:
         if automated_testing:
             # Hold onto the wrappers so that they can keep track of whether the certs/keys
             # are in use by another BlockTools instance.
-            self.ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
-                SSLTestCACertAndPrivateKey
-            ] = get_next_private_ca_cert_and_key()
-            self.ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
-                SSLTestNodeCertsAndKeys
-            ] = get_next_nodes_certs_and_keys()
+            self.ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[SSLTestCACertAndPrivateKey] = (
+                get_next_private_ca_cert_and_key()
+            )
+            self.ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[SSLTestNodeCertsAndKeys] = (
+                get_next_nodes_certs_and_keys()
+            )
             create_default_chia_config(root_path)
             create_all_ssl(
                 root_path,
@@ -983,8 +983,8 @@ class BlockTools:
                 pending_ses = True
                 ses_hash: Optional[bytes32] = sub_epoch_summary.get_hash()
                 # if the last block is the last block of the epoch, we set the new sub-slot iters and difficulty
-                new_sub_slot_iters: Optional[uint64] = uint64.construct_optional(sub_epoch_summary.new_sub_slot_iters)
-                new_difficulty: Optional[uint64] = uint64.construct_optional(sub_epoch_summary.new_difficulty)
+                new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
+                new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
                 self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height+1}")
             else:  # the previous block is not the last block of the sub-epoch or epoch
@@ -1232,7 +1232,7 @@ class BlockTools:
                                 previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
-                        self.log.info(f"Created block {block_record.height } ov=True, iters {block_record.total_iters}")
+                        self.log.info(f"Created block {block_record.height} ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1
 
                         blocks[full_block.header_hash] = block_record
@@ -1254,8 +1254,8 @@ class BlockTools:
                 num_empty_slots_added += 1
 
             if new_sub_slot_iters is not None and new_difficulty is not None:  # new epoch
-                sub_slot_iters = uint64(new_sub_slot_iters)
-                difficulty = uint64(new_difficulty)
+                sub_slot_iters = new_sub_slot_iters
+                difficulty = new_difficulty
 
     def create_genesis_block(
         self,
@@ -1423,7 +1423,7 @@ class BlockTools:
                         + calculate_sp_iters(
                             self.constants,
                             self.constants.SUB_SLOT_ITERS_STARTING,
-                            uint8(unfinished_block.reward_chain_block.signage_point_index),
+                            unfinished_block.reward_chain_block.signage_point_index,
                         )
                     )
                     return unfinished_block_to_full_block(
@@ -1752,7 +1752,7 @@ def get_icc(
     if len(finished_sub_slots) == 0:
         prev_deficit = latest_block.deficit
     else:
-        prev_deficit = uint8(finished_sub_slots[-1].reward_chain.deficit)
+        prev_deficit = finished_sub_slots[-1].reward_chain.deficit
 
     if deficit == prev_deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
         # new slot / overflow sb to new slot / overflow sb
@@ -2062,7 +2062,7 @@ def create_block_tools(
 def make_unfinished_block(
     block: FullBlock, constants: ConsensusConstants, *, force_overflow: bool = False
 ) -> UnfinishedBlock:
-    if force_overflow or is_overflow_block(constants, uint8(block.reward_chain_block.signage_point_index)):
+    if force_overflow or is_overflow_block(constants, block.reward_chain_block.signage_point_index):
         finished_ss = block.finished_sub_slots[:-1]
     else:
         finished_ss = block.finished_sub_slots

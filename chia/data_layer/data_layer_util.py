@@ -14,6 +14,7 @@ from typing_extensions import final
 from chia.data_layer.data_layer_errors import ProofIntegrityError
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
@@ -43,14 +44,40 @@ def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: by
 
 
 def leaf_hash(key: bytes, value: bytes) -> bytes32:
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to((key, value)).get_tree_hash()  # type: ignore[no-any-return]
+    return SerializedProgram.to((key, value)).get_tree_hash()
 
 
 def key_hash(key: bytes) -> bytes32:
-    return Program.to(key).get_tree_hash()  # type: ignore[no-any-return]
+    return SerializedProgram.to(key).get_tree_hash()
+
+
+@dataclasses.dataclass(frozen=True)
+class PaginationData:
+    total_pages: int
+    total_bytes: int
+    hashes: List[bytes32]
+
+
+def get_hashes_for_page(page: int, lengths: Dict[bytes32, int], max_page_size: int) -> PaginationData:
+    current_page = 0
+    current_page_size = 0
+    total_bytes = 0
+    hashes: List[bytes32] = []
+    for hash, length in sorted(lengths.items(), key=lambda x: (-x[1], x[0])):
+        if length > max_page_size:
+            raise RuntimeError(
+                f"Cannot paginate data, item size is larger than max page size: {length} {max_page_size}"
+            )
+        total_bytes += length
+        if current_page_size + length <= max_page_size:
+            current_page_size += length
+        else:
+            current_page += 1
+            current_page_size = length
+        if current_page == page:
+            hashes.append(hash)
+
+    return PaginationData(current_page + 1, total_bytes, hashes)
 
 
 async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
@@ -110,6 +137,7 @@ def row_to_node(row: aiosqlite.Row) -> Node:
 class Status(IntEnum):
     PENDING = 1
     COMMITTED = 2
+    PENDING_BATCH = 3
 
 
 class NodeType(IntEnum):
@@ -741,6 +769,37 @@ class InsertResult:
 class UnsubscribeData:
     tree_id: bytes32
     retain_data: bool
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysValuesCompressed:
+    keys_values_hashed: Dict[bytes32, bytes32]
+    key_hash_to_length: Dict[bytes32, int]
+    leaf_hash_to_length: Dict[bytes32, int]
+    root_hash: Optional[bytes32]
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysPaginationData:
+    total_pages: int
+    total_bytes: int
+    keys: List[bytes]
+    root_hash: Optional[bytes32]
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysValuesPaginationData:
+    total_pages: int
+    total_bytes: int
+    keys_values: List[TerminalNode]
+    root_hash: Optional[bytes32]
+
+
+@dataclasses.dataclass(frozen=True)
+class KVDiffPaginationData:
+    total_pages: int
+    total_bytes: int
+    kv_diff: List[DiffData]
 
 
 #
