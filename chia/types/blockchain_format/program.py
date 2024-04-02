@@ -240,7 +240,6 @@ def _sexp_replace(sexp: T_CLVMStorage, to_sexp: Callable[[Any], T_Program], **kw
     if "" in kwargs:
         if len(kwargs) > 1:
             raise ValueError("conflicting paths")
-        # yes, the terminal case is hinted incorrectly for now
         return kwargs[""]
 
     # we've confirmed that no `kwargs` is the empty string.
