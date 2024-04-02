@@ -25,7 +25,6 @@ ignore_cycles_in:
   - seeder
   - timelord
   - network
-  - service
   - clvm
   - todo
   - testing
