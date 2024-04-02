@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
+from typing import List, Tuple
 
 import pytest
-from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, WSMessage, WSMsgType
+from aiohttp import ClientSession, ClientTimeout, WSCloseCode, WSMessage, WSMsgType, WSServerHandshakeError
 
+import chia.server.server
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
@@ -14,12 +17,21 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Handshake
 from chia.server.outbound_message import Message, make_msg
 from chia.server.rate_limits import RateLimiter
+from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err
 from chia.util.ints import uint64
+from chia.util.timing import adjusted_timeout
+from chia.wallet.wallet_node import WalletNode
 
 log = logging.getLogger(__name__)
+
+
+def not_localhost(host: str) -> bool:
+    return False
 
 
 async def get_block_path(full_node: FullNodeAPI):
@@ -39,7 +51,36 @@ class FakeRateLimiter:
 
 class TestDos:
     @pytest.mark.anyio
-    async def test_large_message_disconnect_and_ban(self, setup_two_nodes_fixture, self_hostname):
+    async def test_banned_host_can_not_connect(
+        self,
+        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        nodes, _, _ = setup_two_nodes_fixture
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+
+        # Use the server_2 ssl information to connect to server_1, and send a huge message
+        timeout = ClientTimeout(total=10)
+        session = ClientSession(timeout=timeout)
+        url = f"wss://{self_hostname}:{server_1._port}/ws"
+
+        server_1.banned_peers[self_hostname] = int(time.time() + 999_999_999)
+
+        ssl_context = server_2.ssl_client_context
+        with pytest.raises(WSServerHandshakeError):
+            await session.ws_connect(
+                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            )
+
+    @pytest.mark.anyio
+    async def test_large_message_disconnect_and_ban(
+        self,
+        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -50,47 +91,36 @@ class TestDos:
         url = f"wss://{self_hostname}:{server_1._port}/ws"
 
         ssl_context = server_2.ssl_client_context
-        ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
-        )
-        assert not ws.closed
-        await ws.close()
-        assert ws.closed
-
         ws = await session.ws_connect(
             url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
         assert not ws.closed
 
         large_msg: bytes = bytes([0] * (60 * 1024 * 1024))
-        await ws.send_bytes(large_msg)
+        with monkeypatch.context() as monkey_patch_context:
+            monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
+            await ws.send_bytes(large_msg)
 
-        response: WSMessage = await ws.receive()
+            response: WSMessage = await ws.receive()
+            await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
+
         print(response)
         assert response.type == WSMsgType.CLOSE
         assert response.data == WSCloseCode.MESSAGE_TOO_BIG
         await ws.close()
 
-        # Now test that the ban is active
-        await asyncio.sleep(5)
-        assert ws.closed
-        try:
-            ws = await session.ws_connect(
-                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
-            )
-            response: WSMessage = await ws.receive()
-            assert response.type == WSMsgType.CLOSE
-        except ServerDisconnectedError:
-            pass
-        await session.close()
-
     @pytest.mark.anyio
-    async def test_bad_handshake_and_ban(self, setup_two_nodes_fixture, self_hostname):
+    async def test_bad_handshake_and_ban(
+        self,
+        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
-        server_1.invalid_protocol_ban_seconds = 10
+        server_1.invalid_protocol_ban_seconds = int(10 + adjusted_timeout(1))
         # Use the server_2 ssl information to connect to server_1, and send a huge message
         timeout = ClientTimeout(total=10)
         session = ClientSession(timeout=timeout)
@@ -100,31 +130,17 @@ class TestDos:
         ws = await session.ws_connect(
             url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
-        await ws.send_bytes(bytes([1] * 1024))
+        with monkeypatch.context() as monkey_patch_context:
+            monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
+            await ws.send_bytes(bytes([1] * 1024))
 
-        response: WSMessage = await ws.receive()
+            response: WSMessage = await ws.receive()
+            await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
+
         print(response)
         assert response.type == WSMsgType.CLOSE
         assert response.data == WSCloseCode.PROTOCOL_ERROR
         await ws.close()
-
-        # Now test that the ban is active
-        await asyncio.sleep(5)
-        assert ws.closed
-        try:
-            ws = await session.ws_connect(
-                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
-            )
-            response: WSMessage = await ws.receive()
-            assert response.type == WSMsgType.CLOSE
-        except ServerDisconnectedError:
-            pass
-        await asyncio.sleep(6)
-
-        # Ban expired
-        await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024)
-
-        await session.close()
 
     @pytest.mark.anyio
     async def test_invalid_protocol_handshake(self, setup_two_nodes_fixture, self_hostname):

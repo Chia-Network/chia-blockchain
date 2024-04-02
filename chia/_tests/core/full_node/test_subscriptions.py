@@ -401,3 +401,22 @@ def test_subscription_list() -> None:
 
     assert sub.coin_subscriptions(peer1) == {coin1, coin2}
     assert sub.puzzle_subscriptions(peer1) == {ph1, ph2}
+
+
+def test_clear_subscriptions() -> None:
+    subs = PeerSubscriptions()
+
+    subs.add_puzzle_subscriptions(peer1, [ph1, ph2], 4)
+    subs.add_coin_subscriptions(peer1, [coin1, coin2], 4)
+
+    subs.clear_puzzle_subscriptions(peer1)
+    assert subs.coin_subscriptions(peer1) == {coin1, coin2}
+    assert subs.puzzle_subscription_count() == 0
+
+    subs.add_puzzle_subscriptions(peer1, [ph1, ph2], 4)
+    subs.clear_coin_subscriptions(peer1)
+    assert subs.puzzle_subscriptions(peer1) == {ph1, ph2}
+    assert subs.coin_subscription_count() == 0
+
+    subs.clear_puzzle_subscriptions(peer1)
+    assert subs.peer_subscription_count(peer1) == 0

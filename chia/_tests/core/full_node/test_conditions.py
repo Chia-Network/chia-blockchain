@@ -336,33 +336,37 @@ class TestConditions:
 
     @pytest.mark.anyio
     @pytest.mark.parametrize(
-        "prefix, condition, num, expect_err",
+        "prefix, condition1, condition2, num, expect_err",
         [
             # CREATE_COIN_ANNOUNCEMENT
-            ("", "(60 'test')", 1024, None),
-            ("", "(60 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            ("", "(60 'test')", "", 1024, None),
+            ("", "(60 'test')", "", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
             # CREATE_PUZZLE_ANNOUNCEMENT
-            ("", "(62 'test')", 1024, None),
-            ("", "(62 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            ("", "(62 'test')", "", 1024, None),
+            ("", "(62 'test')", "", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
             # ASSERT_PUZZLE_ANNOUNCEMENT
-            ("(62 'test')", "(63 {pann})", 1023, None),
-            ("(62 'test')", "(63 {pann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
+            ("(62 'test')", "(63 {pann})", "", 1023, None),
+            ("(62 'test')", "(63 {pann})", "", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
             # ASSERT_COIN_ANNOUNCEMENT
-            ("(60 'test')", "(61 {cann})", 1023, None),
-            ("(60 'test')", "(61 {cann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
+            ("(60 'test')", "(61 {cann})", "", 1023, None),
+            ("(60 'test')", "(61 {cann})", "", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
             # ASSERT_CONCURRENT_SPEND
-            ("", "(64 {coin})", 1024, None),
-            ("", "(64 {coin})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            ("", "(64 {coin})", "", 1024, None),
+            ("", "(64 {coin})", "", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
             # ASSERT_CONCURRENT_PUZZLE
-            ("", "(65 {ph})", 1024, None),
-            ("", "(65 {ph})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            ("", "(65 {ph})", "", 1024, None),
+            ("", "(65 {ph})", "", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            # SEND_MESSAGE
+            ("", "(66 0x3f {msg} {coin})", "(67 0x3f {msg} {coin})", 512, None),
+            ("", "(66 0x3f {msg} {coin})", "(67 0x3f {msg} {coin})", 513, Err.TOO_MANY_ANNOUNCEMENTS),
         ],
     )
     async def test_announce_conditions_limit(
         self,
         consensus_mode: ConsensusMode,
         prefix: str,
-        condition: str,
+        condition1: str,
+        condition2: str,
         num: int,
         expect_err: Optional[Err],
         bt: BlockTools,
@@ -371,6 +375,11 @@ class TestConditions:
         Test that the condition checker accepts more announcements than the new per puzzle limit
         pre-v2-softfork, and rejects more than the announcement limit afterward.
         """
+
+        if condition1.startswith("(66") and consensus_mode != ConsensusMode.SOFT_FORK_4:
+            # The message conditions aren't enabled until Soft-fork 3, so there
+            # won't be any errors unless it's activated
+            expect_err = None
 
         blocks = await initial_blocks(bt)
         coin = blocks[-2].get_included_reward_coins()[0]
@@ -381,15 +390,45 @@ class TestConditions:
         if prefix != "":
             conditions += b"\xff" + assemble(prefix).as_bin()
 
-        cond = condition.format(
-            coin="0x" + coin.name().hex(),
-            ph="0x" + EASY_PUZZLE_HASH.hex(),
-            cann="0x" + coin_announcement.msg_calc.hex(),
-            pann="0x" + puzzle_announcement.msg_calc.hex(),
-        )
+        [cond1, cond2] = [
+            c.format(
+                coin="0x" + coin.name().hex(),
+                ph="0x" + EASY_PUZZLE_HASH.hex(),
+                cann="0x" + coin_announcement.msg_calc.hex(),
+                pann="0x" + puzzle_announcement.msg_calc.hex(),
+                msg="0x1337",
+            )
+            for c in [condition1, condition2]
+        ]
 
-        conditions += (b"\xff" + assemble(cond).as_bin()) * num
+        conditions += (b"\xff" + assemble(cond1).as_bin()) * num
+        if cond2 != "":
+            conditions += (b"\xff" + assemble(cond2).as_bin()) * num
         conditions += b"\x80"
         conditions_program = Program.from_bytes(conditions)
 
         await check_conditions(bt, conditions_program, expected_err=expect_err)
+
+    @pytest.mark.anyio
+    async def test_coin_messages(self, bt: BlockTools, consensus_mode: ConsensusMode) -> None:
+        blocks = await initial_blocks(bt)
+        coin = blocks[-2].get_included_reward_coins()[0]
+        conditions = Program.to(
+            assemble(
+                f"(({ConditionOpcode.SEND_MESSAGE[0]} 0x3f 'test' 0x{coin.name().hex()})"
+                f"({ConditionOpcode.RECEIVE_MESSAGE[0]} 0x3f 'test' 0x{coin.name().hex()}))"
+            )
+        )
+        await check_conditions(bt, conditions)
+
+    @pytest.mark.anyio
+    async def test_parent_messages(self, bt: BlockTools, consensus_mode: ConsensusMode) -> None:
+        blocks = await initial_blocks(bt)
+        coin = blocks[-2].get_included_reward_coins()[0]
+        conditions = Program.to(
+            assemble(
+                f"(({ConditionOpcode.SEND_MESSAGE[0]} 0x24 'test' 0x{coin.parent_coin_info})"
+                f"({ConditionOpcode.RECEIVE_MESSAGE[0]} 0x24 'test' 0x{coin.parent_coin_info}))"
+            )
+        )
+        await check_conditions(bt, conditions)

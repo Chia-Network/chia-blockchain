@@ -257,6 +257,7 @@ class DataLayer:
     ) -> Optional[TransactionRecord]:
         status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
         await self.batch_insert(tree_id=tree_id, changelist=changelist, status=status)
+        await self.data_store.clean_node_table()
 
         if submit_on_chain:
             return await self.publish_update(tree_id=tree_id, fee=fee)
@@ -1002,7 +1003,8 @@ class DataLayer:
 
             verify_offer(maker=offer.maker, taker=offer.taker, summary=summary)
 
-            return offer
+        await self.data_store.clean_node_table()
+        return offer
 
     async def take_offer(
         self,
@@ -1060,6 +1062,8 @@ class DataLayer:
                     for our_offer_store in taker
                 },
             }
+
+        await self.data_store.clean_node_table()
 
         # Excluding wallet from transaction since failures in the wallet may occur
         # after the transaction is submitted to the chain.  If we roll back data we

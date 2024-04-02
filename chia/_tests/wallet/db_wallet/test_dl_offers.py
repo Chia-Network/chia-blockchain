@@ -4,7 +4,6 @@ from typing import Any, List, Tuple
 
 import pytest
 
-from chia._tests.conftest import ConsensusMode
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -38,7 +37,6 @@ def get_parent_branch(value: bytes32, proof: Tuple[int, List[bytes32]]) -> Tuple
     return branch, new_proof
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
@@ -298,7 +296,6 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager, offer)
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:

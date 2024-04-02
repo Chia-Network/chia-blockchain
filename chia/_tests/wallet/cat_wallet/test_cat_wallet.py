@@ -754,7 +754,6 @@ async def test_cat_spend_multiple(
             assert list(memos.keys())[0] in [a.name() for a in tx.spend_bundle.additions()]
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_cat_max_amount_send(
@@ -848,7 +847,6 @@ async def test_cat_max_amount_send(
         await cat_wallet.generate_signed_transaction([uint64(max_sent_amount + 1)], [ph], DEFAULT_TX_CONFIG)
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.parametrize("autodiscovery", [True, False])
 @pytest.mark.anyio
@@ -1115,3 +1113,134 @@ async def test_unacknowledged_cat_table() -> None:
         assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
         await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(0))
         assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == []
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "reuse_puzhash": True,  # Parameter doesn't matter for this test
+            "config_overrides": {"automatically_add_unknown_cats": True},
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes([ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.anyio
+async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> None:
+    # We push spend bundles direct to full node in this test because
+    # we are testing correct observance independent of local state
+    env = wallet_environments.environments[0]
+    wallet = env.xch_wallet
+    simulator = wallet_environments.full_node
+    wallet_ph = await wallet.get_puzzle_hash(new=False)
+
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+
+    ACS = Program.to(1)
+    ACS_TAIL = Program.to([])
+    ACS_TAIL_HASH = ACS_TAIL.get_tree_hash()
+    CAT_w_ACS = construct_cat_puzzle(CAT_MOD, ACS_TAIL_HASH, ACS)
+    CAT_w_ACS_HASH = CAT_w_ACS.get_tree_hash()
+
+    from chia.simulator.simulator_protocol import GetAllCoinsProtocol
+    from chia.wallet.cat_wallet.cat_utils import SpendableCAT, unsigned_spend_bundle_for_spendable_cats
+    from chia.wallet.conditions import UnknownCondition
+    from chia.wallet.payment import Payment
+
+    await simulator.farm_blocks_to_puzzlehash(count=1, farm_to=CAT_w_ACS_HASH, guarantee_transaction_blocks=True)
+    await simulator.farm_blocks_to_puzzlehash(count=1)
+    cat_coin = next(
+        c.coin
+        for c in await simulator.get_all_coins(GetAllCoinsProtocol(include_spent_coins=False))
+        if c.coin.puzzle_hash == CAT_w_ACS_HASH
+    )
+
+    tx_amount = 10
+
+    spend_to_wallet = unsigned_spend_bundle_for_spendable_cats(
+        CAT_MOD,
+        [
+            SpendableCAT(
+                coin=cat_coin,
+                limitations_program_hash=ACS_TAIL_HASH,
+                inner_puzzle=ACS,
+                inner_solution=Program.to([[51, wallet_ph, tx_amount, [wallet_ph]], [51, None, -113, ACS_TAIL, None]]),
+                extra_delta=tx_amount - cat_coin.amount,
+            )
+        ],
+    )
+    await env.rpc_client.push_tx(spend_to_wallet)
+    await time_out_assert(10, simulator.tx_id_in_mempool, True, spend_to_wallet.name())
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates={
+                    "xch": {},
+                    "cat": {
+                        "init": True,
+                        "confirmed_wallet_balance": tx_amount,
+                        "unconfirmed_wallet_balance": tx_amount,
+                        "spendable_balance": tx_amount,
+                        "max_send_amount": tx_amount,
+                        "unspent_coin_count": 1,
+                    },
+                },
+            )
+        ]
+    )
+
+    cat_wallet = env.wallet_state_manager.wallets[uint32(2)]
+    assert isinstance(cat_wallet, CATWallet)
+
+    # Let's test that continuing to melt this CAT results in the correct balance changes
+    for _ in range(0, 5):
+        tx_amount -= 1
+        new_coin = (await cat_wallet.get_cat_spendable_coins())[0].coin
+        new_spend = unsigned_spend_bundle_for_spendable_cats(
+            CAT_MOD,
+            [
+                SpendableCAT(
+                    coin=new_coin,
+                    limitations_program_hash=ACS_TAIL_HASH,
+                    inner_puzzle=await cat_wallet.inner_puzzle_for_cat_puzhash(new_coin.puzzle_hash),
+                    inner_solution=wallet.make_solution(
+                        primaries=[Payment(wallet_ph, uint64(tx_amount), [wallet_ph])],
+                        conditions=(
+                            UnknownCondition(
+                                opcode=Program.to(51),
+                                args=[Program.to(None), Program.to(-113), Program.to(ACS_TAIL), Program.to(None)],
+                            ),
+                        ),
+                    ),
+                    extra_delta=-1,
+                )
+            ],
+        )
+        signed_spend = await env.wallet_state_manager.sign_transaction(new_spend.coin_spends)
+        await env.rpc_client.push_tx(signed_spend)
+        await time_out_assert(10, simulator.tx_id_in_mempool, True, signed_spend.name())
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={},
+                    post_block_balance_updates={
+                        "xch": {},
+                        "cat": {
+                            "confirmed_wallet_balance": -1,
+                            "unconfirmed_wallet_balance": -1,
+                            "spendable_balance": -1,
+                            "max_send_amount": -1,
+                        },
+                    },
+                )
+            ]
+        )
