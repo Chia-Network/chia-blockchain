@@ -1507,10 +1507,12 @@ async def test_benchmark_batch_insert_speed(
     r = random.Random()
     r.seed("shadowlands", version=2)
 
-    test_size = 100
-    max_pre_size = 5000
+    test_size = 1000
+    max_pre_size = 10_000
     # may not be needed if big_o already considers the effect
-    lowest_considered_n = 0
+    # TODO: must be > 0 to avoid an issue with the log class?
+    lowest_considered_n = 2000
+    simplicity_bias_percentage = 10 / 100
 
     batch_count, remainder = divmod(max_pre_size, test_size)
     assert remainder == 0, "the last batch would be a different size"
@@ -1560,20 +1562,26 @@ async def test_benchmark_batch_insert_speed(
             total_inserted += len(pre_batch)
 
     considered_durations = {n: duration for n, duration in records.items() if n >= lowest_considered_n}
-    ns = list(considered_durations.keys())[10:]
-    durations = list(considered_durations.values())[10:]
+    ns = list(considered_durations.keys())
+    durations = list(considered_durations.values())
     best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations)
+    simplicity_bias = simplicity_bias_percentage * fitted[best_class]
+    best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations, simplicity_bias=simplicity_bias)
 
+    print(f"allowed simplicity bias: {simplicity_bias}")
     print(big_o.reports.big_o_report(best=best_class, others=fitted))
 
     assert isinstance(
         best_class, (big_o.complexities.Constant, big_o.complexities.Linear)
     ), f"must be constant or linear: {best_class}"
 
+    coefficient_maximums = [2.5, *(10**-n for n in range(1, 100))]
+
     coefficients = best_class.coefficients()
-    assert coefficients[0] < 2.5
-    if isinstance(best_class, big_o.complexities.Linear):
-        assert coefficients[1] < 0.001
+    paired = list(zip(coefficients, coefficient_maximums))
+    assert len(paired) == len(coefficients)
+    for index, [actual, maximum] in enumerate(paired):
+        assert actual <= maximum, f"(coefficient {index}) {actual} > {maximum}: {paired}"
 
     # TODO: how do we get this into present reporting since that's just for time
 
