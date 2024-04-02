@@ -1,4 +1,4 @@
-# Package: service 
+# Package: service
 
 from __future__ import annotations
 
