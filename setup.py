@@ -43,7 +43,7 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "build==1.0.3",
+    "build==1.2.1",
     "coverage==7.4.3",
     "diff-cover==8.0.3",
     "pre-commit==3.5.0; python_version < '3.9'",
