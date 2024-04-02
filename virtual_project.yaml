@@ -1,5 +1,6 @@
 exclude_paths:
   - chia/_tests
+  - chia/util/dump_keyring.py
 ignore_cycles_in:
   - chia-blockchain
   - obsolete
