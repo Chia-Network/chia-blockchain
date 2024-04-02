@@ -10,5 +10,4 @@ from typing_extensions import Protocol
 class ApiProtocol(Protocol):
     log: Logger
 
-    def ready(self) -> bool:
-        ...
+    def ready(self) -> bool: ...
