@@ -4,6 +4,7 @@ import ast
 import json
 import os
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -246,9 +247,14 @@ def config(func: Callable[..., None]) -> Callable[..., None]:
 @click.command("find_missing_annotations", short_help="Search a directory for chia files without annotations")
 @config
 def find_missing_annotations(config: Config) -> None:
+    flag = False
     for file in config.directory_parameters.gather_non_empty_python_files():
         if file.annotations is None:
             print(file.path)
+            flag = True
+
+    if flag:
+        sys.exit(1)
 
 
 @click.command("print_dependency_graph", short_help="Output a dependency graph of all the files in a directory")
@@ -275,12 +281,17 @@ def print_virtual_dependency_graph(config: Config) -> None:
 )
 @config
 def print_cycles(config: Config) -> None:
+    flag = False
     for cycle in find_cycles(
         build_dependency_graph(config.directory_parameters),
         config.directory_parameters.excluded_paths,
         config.ignore_cycles_in,
     ):
         print(cycle)
+        flag = True
+
+    if flag:
+        sys.exit(1)
 
 
 cli.add_command(find_missing_annotations)
