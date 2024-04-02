@@ -47,7 +47,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult
+from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
@@ -1122,7 +1122,7 @@ class FullNode:
                     # against the CoinStore)
                     if not extending_main_chain:
                         if fork_point_height == 0:
-                            fork_info = ForkInfo(-1, -1, bytes32([0] * 32))
+                            fork_info = ForkInfo(-1, -1, self.constants.GENESIS_CHALLENGE)
                         else:
                             fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
                             assert fork_hash is not None
@@ -1136,10 +1136,6 @@ class FullNode:
                 )
                 if success is False:
                     await peer.close(600)
-                    # check CHIP-0013 exception
-                    if err == Err.CHIP_0013_VALIDATION:
-                        self.add_to_bad_peak_cache(peak_hash, target_peak_sb_height)
-                        raise ValidationError(err, f"Failed to validate block batch {start_height} to {end_height}")
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
                 peak = self.blockchain.get_peak()
@@ -1469,7 +1465,7 @@ class FullNode:
             f"difficulty: {difficulty}, "
             f"sub slot iters: {sub_slot_iters}, "
             f"Generator size: "
-            f"{len(bytes(block.transactions_generator)) if  block.transactions_generator else 'No tx'}, "
+            f"{len(bytes(block.transactions_generator)) if block.transactions_generator else 'No tx'}, "
             f"Generator ref list size: "
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
@@ -1667,19 +1663,27 @@ class FullNode:
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
-            unf_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(unfinished_rh)
+            foliage_hash: Optional[bytes32] = block.foliage.foliage_transaction_block_hash
+            assert foliage_hash is not None
+            unf_entry: Optional[UnfinishedBlockEntry] = self.full_node_store.get_unfinished_block_result(
+                unfinished_rh, foliage_hash
+            )
             if (
-                unf_block is not None
-                and unf_block.transactions_generator is not None
-                and unf_block.foliage_transaction_block == block.foliage_transaction_block
+                unf_entry is not None
+                and unf_entry.unfinished_block is not None
+                and unf_entry.unfinished_block.transactions_generator is not None
+                and unf_entry.unfinished_block.foliage_transaction_block == block.foliage_transaction_block
             ):
                 # We checked that the transaction block is the same, therefore all transactions and the signature
                 # must be identical in the unfinished and finished blocks. We can therefore use the cache.
-                pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
+
+                # this is a transaction block, the foliage hash should be set
+                assert foliage_hash is not None
+                pre_validation_result = unf_entry.result
                 assert pre_validation_result is not None
                 block = block.replace(
-                    transactions_generator=unf_block.transactions_generator,
-                    transactions_generator_ref_list=unf_block.transactions_generator_ref_list,
+                    transactions_generator=unf_entry.unfinished_block.transactions_generator,
+                    transactions_generator_ref_list=unf_entry.unfinished_block.transactions_generator_ref_list,
                 )
             else:
                 # We still do not have the correct information for this block, perhaps there is a duplicate block
@@ -2359,8 +2363,10 @@ class FullNode:
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
                 else:
                     await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
+
                 if self.simulator_transaction_callback is not None:  # callback
                     await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
+
             else:
                 self.mempool_manager.remove_seen(spend_name)
                 self.log.debug(f"Wasn't able to add transaction with id {spend_name}, status {status} error: {error}")

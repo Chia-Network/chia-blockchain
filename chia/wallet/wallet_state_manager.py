@@ -716,6 +716,10 @@ class WalletStateManager:
         all_unspent_coins: Set[Coin] = {cr.coin for cr in unspent_coin_records}
 
         for record in unconfirmed_tx:
+            if record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                # We do not wish to consider clawback-able funds as unconfirmed.
+                # That is reserved for when the action to actually claw a tx back or forward is initiated.
+                continue
             for addition in record.additions:
                 # This change or a self transaction
                 if await self.does_coin_belong_to_wallet(addition, wallet_id, record.hint_dict()):
@@ -737,6 +741,10 @@ class WalletStateManager:
         removals: Dict[bytes32, Coin] = {}
         unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         for record in unconfirmed_tx:
+            if record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                # We do not wish to consider clawback-able funds as pending removal.
+                # That is reserved for when the action to actually claw a tx back or forward is initiated.
+                continue
             for coin in record.removals:
                 removals[coin.name()] = coin
         trade_removals: Dict[bytes32, WalletCoinRecord] = await self.trade_manager.get_locked_coins()
@@ -804,8 +812,8 @@ class WalletStateManager:
         if cat_curried_args is not None:
             cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
             cat_data: CATCoinData = CATCoinData(
-                bytes32(cat_mod_hash.atom),
-                bytes32(tail_program_hash.atom),
+                bytes32(cat_mod_hash.as_atom()),
+                bytes32(tail_program_hash.as_atom()),
                 cat_inner_puzzle,
                 parent_coin_state.coin.parent_coin_info,
                 uint64(parent_coin_state.coin.amount),
@@ -836,7 +844,7 @@ class WalletStateManager:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
-                bytes32(recovery_list_hash.atom),
+                bytes32(recovery_list_hash.as_atom()),
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
@@ -959,9 +967,11 @@ class WalletStateManager:
                             memos,  # Forward memo of the first coin
                         )
                     ],
-                    conditions=extra_conditions
-                    if len(coin_spends) > 0 or fee == 0
-                    else (*extra_conditions, CreateCoinAnnouncement(message)),
+                    conditions=(
+                        extra_conditions
+                        if len(coin_spends) > 0 or fee == 0
+                        else (*extra_conditions, CreateCoinAnnouncement(message))
+                    ),
                 )
                 coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
                 coin_spends.append(coin_spend)
@@ -1203,7 +1213,7 @@ class WalletStateManager:
         assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
-        launch_id: bytes32 = bytes32(parent_data.singleton_struct.rest().first().atom)
+        launch_id = bytes32(parent_data.singleton_struct.rest().first().as_atom())
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             # Check if it was owned by us
@@ -1440,12 +1450,12 @@ class WalletStateManager:
             old_p2_puzhash,
             new_p2_puzhash,
         )
-        new_derivation_record: Optional[
-            DerivationRecord
-        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(new_p2_puzhash)
-        old_derivation_record: Optional[
-            DerivationRecord
-        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
+        new_derivation_record: Optional[DerivationRecord] = (
+            await self.puzzle_store.get_derivation_record_for_puzzle_hash(new_p2_puzhash)
+        )
+        old_derivation_record: Optional[DerivationRecord] = (
+            await self.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
+        )
         if new_derivation_record is None and old_derivation_record is None:
             self.log.debug(
                 "Cannot find a P2 puzzle hash for NFT:%s, this NFT belongs to others.",
@@ -1518,9 +1528,9 @@ class WalletStateManager:
         assert coin_state.created_height is not None
         is_recipient: Optional[bool] = None
         # Check if the wallet is the sender
-        sender_derivation_record: Optional[
-            DerivationRecord
-        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(metadata.sender_puzzle_hash)
+        sender_derivation_record: Optional[DerivationRecord] = (
+            await self.puzzle_store.get_derivation_record_for_puzzle_hash(metadata.sender_puzzle_hash)
+        )
         # Check if the wallet is the recipient
         recipient_derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
             metadata.recipient_puzzle_hash
@@ -1549,9 +1559,11 @@ class WalletStateManager:
                     tx_record = TransactionRecord(
                         confirmed_at_height=uint32(coin_state.spent_height),
                         created_at_time=created_timestamp,
-                        to_puzzle_hash=metadata.sender_puzzle_hash
-                        if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
-                        else metadata.recipient_puzzle_hash,
+                        to_puzzle_hash=(
+                            metadata.sender_puzzle_hash
+                            if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
+                            else metadata.recipient_puzzle_hash
+                        ),
                         amount=uint64(coin_state.coin.amount),
                         fee_amount=uint64(0),
                         confirmed=True,
@@ -1728,6 +1740,7 @@ class WalletStateManager:
                                 coin_name,
                                 coin_data,
                             )
+                            await self.add_interested_coin_ids([coin_name])
 
                     # if the coin has been spent
                     elif coin_state.created_height is not None and coin_state.spent_height is not None:

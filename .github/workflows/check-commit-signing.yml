@@ -3,12 +3,12 @@ name: 🚨 Check commit signing
 on:
   push:
     branches:
-    - long_lived/**
-    - main
-    - release/**
+      - long_lived/**
+      - main
+      - release/**
   pull_request:
     branches:
-    - '**'
+      - "**"
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -22,9 +22,9 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - uses: chia-network/actions/check-commit-signing@main
+      - uses: chia-network/actions/check-commit-signing@main

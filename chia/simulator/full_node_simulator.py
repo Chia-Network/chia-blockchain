@@ -168,10 +168,10 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: List[
-                    PreValidationResult
-                ] = await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                    [genesis], {}, validate_signatures=True
+                pre_validation_results: List[PreValidationResult] = (
+                    await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
+                        [genesis], {}, validate_signatures=True
+                    )
                 )
                 assert pre_validation_results is not None
                 await self.full_node.blockchain.add_block(genesis, pre_validation_results[0])
@@ -219,10 +219,10 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: List[
-                    PreValidationResult
-                ] = await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                    [genesis], {}, validate_signatures=True
+                pre_validation_results: List[PreValidationResult] = (
+                    await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
+                        [genesis], {}, validate_signatures=True
+                    )
                 )
                 assert pre_validation_results is not None
                 await self.full_node.blockchain.add_block(genesis, pre_validation_results[0])
@@ -689,13 +689,15 @@ class FullNodeSimulator(FullNodeAPI):
     async def self_is_synced(self) -> bool:
         return await self.full_node.synced()
 
-    async def wallet_is_synced(self, wallet_node: WalletNode) -> bool:
+    async def wallet_is_synced(self, wallet_node: WalletNode, peak_height: Optional[uint32] = None) -> bool:
         if not self.self_is_synced():
             # Depending on races, may not be covered every time
             return False  # pragma: no cover
         if not await wallet_node.wallet_state_manager.synced():
             return False
         wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
+        if peak_height is not None:
+            return wallet_height >= peak_height
         full_node_height = self.full_node.blockchain.get_peak_height()
         return wallet_height == full_node_height
 
@@ -703,24 +705,31 @@ class FullNodeSimulator(FullNodeAPI):
         self,
         wallet_node: WalletNode,
         timeout: Optional[float] = 5,
+        peak_height: Optional[uint32] = None,
     ) -> None:
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff_time in backoff_times():
-                if await self.wallet_is_synced(wallet_node=wallet_node):
+                if await self.wallet_is_synced(wallet_node=wallet_node, peak_height=peak_height):
                     break
                 await asyncio.sleep(backoff_time)
 
-    async def wallets_are_synced(self, wallet_nodes: List[WalletNode]) -> bool:
-        return all([await self.wallet_is_synced(wallet_node=wallet_node) for wallet_node in wallet_nodes])
+    async def wallets_are_synced(self, wallet_nodes: List[WalletNode], peak_height: Optional[uint32] = None) -> bool:
+        return all(
+            [
+                await self.wallet_is_synced(wallet_node=wallet_node, peak_height=peak_height)
+                for wallet_node in wallet_nodes
+            ]
+        )
 
     async def wait_for_wallets_synced(
         self,
         wallet_nodes: List[WalletNode],
         timeout: Optional[float] = 5,
+        peak_height: Optional[uint32] = None,
     ) -> None:
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff_time in backoff_times():
-                if await self.wallets_are_synced(wallet_nodes=wallet_nodes):
+                if await self.wallets_are_synced(wallet_nodes=wallet_nodes, peak_height=peak_height):
                     break
                 await asyncio.sleep(backoff_time)
 

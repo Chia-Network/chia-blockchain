@@ -23,7 +23,7 @@ from chia_rs import G1Element
 from typing_extensions import Protocol
 
 from chia import __version__
-from chia.cmds.init_funcs import check_keys, chia_full_version_str, chia_init
+from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
@@ -33,6 +33,7 @@ from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_server
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.chia_logging import initialize_service_logging
+from chia.util.chia_version import chia_short_version
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.ints import uint32
@@ -120,8 +121,7 @@ async def ping() -> Dict[str, Any]:
 
 
 class Command(Protocol):
-    async def __call__(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
-        ...
+    async def __call__(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]: ...
 
 
 def _get_keys_by_fingerprints(fingerprints: Optional[List[uint32]]) -> Tuple[List[KeyData], Set[uint32]]:
@@ -460,7 +460,14 @@ class WebSocketServer:
             "get_routes": self.get_routes,
             "get_wallet_addresses": self.get_wallet_addresses,
             "get_keys_for_plotting": self.get_keys_for_plotting,
+            "get_network_info": self.get_network_info,
         }
+
+    async def get_network_info(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        network_name = self.net_config["selected_network"]
+        address_prefix = self.net_config["network_overrides"]["config"][network_name]["address_prefix"]
+        response: Dict[str, Any] = {"success": True, "network_name": network_name, "network_prefix": address_prefix}
+        return response
 
     async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         locked: bool = Keychain.is_keyring_locked()
@@ -1548,7 +1555,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     sys.stdout.flush()
     try:
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
-            log.info(f"chia-blockchain version: {chia_full_version_str()}")
+            log.info(f"chia-blockchain version: {chia_short_version()}")
 
             beta_metrics = None
             if config.get("beta", {}).get("enabled", False):

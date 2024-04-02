@@ -396,8 +396,8 @@ class CATWallet:
                     if cat_curried_args is not None:
                         cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
                         parent_coin_data = CATCoinData(
-                            cat_mod_hash.atom,
-                            tail_program_hash.atom,
+                            bytes32(cat_mod_hash.as_atom()),
+                            bytes32(tail_program_hash.as_atom()),
                             cat_inner_puzzle,
                             coin_state[0].coin.parent_coin_info,
                             uint64(coin_state[0].coin.amount),
@@ -442,9 +442,9 @@ class CATWallet:
         if new:
             return await self.get_new_puzzlehash()
         else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.standard_wallet.id())
+            record: Optional[DerivationRecord] = (
+                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.standard_wallet.id())
+            )
             if record is None:
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
@@ -562,18 +562,18 @@ class CATWallet:
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
-        record: Optional[
-            DerivationRecord
-        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
+        record: Optional[DerivationRecord] = (
+            await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
+        )
         if record is None:
             raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {cat_hash}")
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
         return inner_puzzle
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
-        record: Optional[
-            DerivationRecord
-        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
+        record: Optional[DerivationRecord] = (
+            await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
+        )
         if record is None:
             return puzzle_hash  # TODO: check if we have a test for this case!
         else:
