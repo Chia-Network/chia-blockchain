@@ -1,0 +1,33 @@
+exclude_paths:
+  - _tests
+ignore_cycles_in:
+  - chia-blockchain
+  - obsolete
+  - development
+  - cmds
+  - wallet
+  - supported_wallets
+  - data_layer
+  - farmer
+  - key_management
+  - full_node
+  - service
+  - pooling
+  - plotting
+  - rpc
+  - simulator
+  - consensus
+  - mempool
+  - harvester
+  - introducer
+  - plot_sync
+  - protocol
+  - seeder
+  - timelord
+  - network
+  - service
+  - clvm
+  - todo
+  - testing
+  - chialisp
+  - cryptography

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import click
+import yaml
 
 
 @dataclass(frozen=True)
@@ -111,7 +112,7 @@ def is_excluded(file_path: Path, excluded_paths: List[Path]) -> bool:
     return False
 
 
-def find_cycles(graph: Dict[Path, List[Path]], excluded_paths: List[Path]) -> List[str]:
+def find_cycles(graph: Dict[Path, List[Path]], excluded_paths: List[Path], ignore_cycles_in: List[str]) -> List[str]:
     def recursive_dependency_search(
         top_level_package: str, left_top_level: bool, dependency: Path, already_seen: List[Path]
     ) -> List[List[Tuple[str, Path]]]:
@@ -138,6 +139,8 @@ def find_cycles(graph: Dict[Path, List[Path]], excluded_paths: List[Path]) -> Li
     for parent in graph:
         chia_file = ChiaFile.parse(parent)
         if chia_file.annotations is None:
+            continue
+        if chia_file.annotations.package in ignore_cycles_in:
             continue
         path_accumulator.extend(recursive_dependency_search(chia_file.annotations.package, False, parent, []))
 
@@ -182,61 +185,101 @@ class DirectoryParameters:
         return python_files
 
 
-def directory_options(func: Callable[..., None]) -> Callable[..., None]:
-    # The wrapper function
-    def wrapper(*args: Any, **kwargs: Any) -> None:
-        # Instantiate DirectoryParameters with the provided options
-        dir_params = DirectoryParameters(
-            dir_path=kwargs.pop("include_dir"), excluded_paths=[Path(p) for p in kwargs.pop("excluded_paths")]
-        )
-        # Call the inner function with the DirectoryParameters instance
-        return func(dir_params, *args, **kwargs)
+@dataclass
+class Config:
+    directory_parameters: DirectoryParameters
+    ignore_cycles_in: List[str]
 
-    # Apply the click options
-    wrapper = click.option(
+
+def config(func: Callable[..., None]) -> Callable[..., None]:
+    @click.option(
         "--directory",
         "include_dir",
         type=click.Path(exists=True, file_okay=False, dir_okay=True),
         required=True,
         help="The directory to include.",
-    )(wrapper)
-    wrapper = click.option(
+    )
+    @click.option(
         "--exclude-path",
         "excluded_paths",
         multiple=True,
         type=click.Path(exists=False, file_okay=True, dir_okay=True),
         help="Optional paths to exclude.",
-    )(wrapper)
+    )
+    @click.option(
+        "--config",
+        "config_path",
+        type=click.Path(exists=True),
+        required=False,
+        default=None,
+        help="Path to the YAML configuration file.",
+    )
+    def inner(config_path: Optional[str], *args: Any, **kwargs: Any) -> None:
+        exclude_paths = []
+        ignore_cycles_in = []
+        if config_path is not None:
+            # Reading from the YAML configuration file
+            with open(config_path) as file:
+                config_data = yaml.safe_load(file)
 
-    return wrapper
+            # Extracting required configuration values
+            exclude_paths = [Path(p) for p in config_data.get("exclude_paths", [])]
+            ignore_cycles_in = config_data.get("ignore_cycles_in", [])
+
+        # Instantiate DirectoryParameters with the provided options
+        dir_params = DirectoryParameters(
+            dir_path=kwargs.pop("include_dir"),
+            excluded_paths=[*(Path(p) for p in kwargs.pop("excluded_paths")), *exclude_paths],
+        )
+
+        # Instantiating the Config object
+        config = Config(
+            directory_parameters=dir_params, ignore_cycles_in=[*kwargs.pop("ignore_cycles_in", []), *ignore_cycles_in]
+        )
+
+        # Calling the wrapped function with the Config object, directory, and other arguments
+        return func(config, *args, **kwargs)
+
+    return inner
 
 
 @click.command("find_missing_annotations", short_help="Search a directory for chia files without annotations")
-@directory_options
-def find_missing_annotations(dir_params: DirectoryParameters) -> None:
-    for file in dir_params.gather_non_empty_python_files():
+@config
+def find_missing_annotations(config: Config) -> None:
+    for file in config.directory_parameters.gather_non_empty_python_files():
         if file.annotations is None:
             print(file.path)
 
 
 @click.command("print_dependency_graph", short_help="Output a dependency graph of all the files in a directory")
-@directory_options
-def print_dependency_graph(dir_params: DirectoryParameters) -> None:
-    print_graph(build_dependency_graph(dir_params))
+@config
+def print_dependency_graph(config: Config) -> None:
+    print_graph(build_dependency_graph(config.directory_parameters))
 
 
 @click.command(
     "print_virtual_dependency_graph", short_help="Output a dependency graph of all the packages in a directory"
 )
-@directory_options
-def print_virtual_dependency_graph(dir_params: DirectoryParameters) -> None:
-    print_graph(build_virtual_dependency_graph(dir_params))
+@config
+def print_virtual_dependency_graph(config: Config) -> None:
+    print_graph(build_virtual_dependency_graph(config.directory_parameters))
 
 
 @click.command("print_cycles", short_help="Output cycles found in the virtual dependency graph")
-@directory_options
-def print_cycles(dir_params: DirectoryParameters) -> None:
-    for cycle in find_cycles(build_dependency_graph(dir_params), dir_params.excluded_paths):
+@click.option(
+    "--ignore-cycles-in",
+    "ignore_cycles_in",
+    multiple=True,
+    type=str,
+    help="Ignore dependency cycles in a package",
+)
+@config
+def print_cycles(config: Config) -> None:
+    for cycle in find_cycles(
+        build_dependency_graph(config.directory_parameters),
+        config.directory_parameters.excluded_paths,
+        config.ignore_cycles_in,
+    ):
         print(cycle)
 
 
