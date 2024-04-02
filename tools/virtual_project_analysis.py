@@ -27,7 +27,7 @@ class Annotation:
         if result is None:
             raise ValueError("Annotation not found")
 
-        return cls(result.group(1))
+        return cls(result.group(1).strip())
 
 
 @dataclass(frozen=True)
@@ -42,7 +42,6 @@ class ChiaFile:
             return cls(file_path, Annotation.parse(file_string) if Annotation.is_annotated(file_string) else None)
 
 
-# Function to build a dependency graph
 def build_dependency_graph(dir_params: DirectoryParameters) -> Dict[Path, List[Path]]:
     dependency_graph: Dict[Path, List[Path]] = {}
     for chia_file in dir_params.gather_non_empty_python_files():
@@ -74,31 +73,22 @@ def build_virtual_dependency_graph(dir_params: DirectoryParameters) -> Dict[str,
     graph = build_dependency_graph(dir_params)
     virtual_graph: Dict[str, List[str]] = {}
     for file, imports in graph.items():
-        parent_file = ChiaFile.parse(Path(file))
-        if parent_file.annotations is None:
+        root_file = ChiaFile.parse(Path(file))
+        if root_file.annotations is None:
             continue
-        parent = parent_file.annotations.package
-        virtual_graph.setdefault(parent, [])
+        root = root_file.annotations.package
+        virtual_graph.setdefault(root, [])
 
-        children_files = [ChiaFile.parse(Path(imp)) for imp in imports]
-        children = [f.annotations.package for f in children_files if f.annotations is not None]
+        dependency_files = [ChiaFile.parse(Path(imp)) for imp in imports]
+        dependencies = [f.annotations.package for f in dependency_files if f.annotations is not None]
 
-        virtual_graph[parent].extend(children)
+        virtual_graph[root].extend(dependencies)
 
+    # Filter out self before returning the list
     return {k: list({v for v in vs if v != k}) for k, vs in virtual_graph.items()}
 
 
 def is_excluded(file_path: Path, excluded_paths: List[Path]) -> bool:
-    """
-    Checks if a file is in the list of excluded paths or under an excluded directory.
-
-    Parameters:
-    - file_path: Path of the file to check.
-    - excluded_paths: List of Paths to be excluded.
-
-    Returns:
-    - True if the file is excluded, False otherwise.
-    """
     file_path = file_path.resolve()  # Normalize the file path
 
     for excluded_path in excluded_paths:
@@ -113,20 +103,40 @@ def is_excluded(file_path: Path, excluded_paths: List[Path]) -> bool:
     return False
 
 
+# Define a function to find cycles within a dependency graph.
+# graph: A dictionary mapping each file to its list of dependencies.
+# excluded_paths: A list of paths that should be excluded from the cycle detection.
+# ignore_cycles_in: A list of package names where cycles, if found, should be ignored.
 def find_cycles(graph: Dict[Path, List[Path]], excluded_paths: List[Path], ignore_cycles_in: List[str]) -> List[str]:
+
+    # Define a nested function for recursive dependency searching.
+    # top_level_package: The name of the package at the top of the dependency tree.
+    # left_top_level: A boolean flag indicating whether we have moved beyond the top-level package in our traversal.
+    # dependency: The current dependency path being examined.
+    # already_seen: A list of dependency paths that have already been visited to avoid infinite loops.
     def recursive_dependency_search(
         top_level_package: str, left_top_level: bool, dependency: Path, already_seen: List[Path]
     ) -> List[List[Tuple[str, Path]]]:
+        # Check if the dependency is in the list of already seen dependencies or is excluded.
         if dependency in already_seen or is_excluded(dependency, excluded_paths):
             return []
+
+        # Mark this dependency as seen.
         already_seen.append(dependency)
+        # Parse the dependency file to obtain its annotations.
         chia_file = ChiaFile.parse(dependency)
+
+        # If there are no annotations, return an empty list as there's nothing to process.
         if chia_file.annotations is None:
             return []
+        # If the current dependency package matches the top-level package and we've left the top-level,
+        # return a list containing this dependency.
         elif chia_file.annotations.package == top_level_package and left_top_level:
             return [[(chia_file.annotations.package, dependency)]]
         else:
+            # Update the left_top_level flag if we have moved to a different package.
             left_top_level = left_top_level or chia_file.annotations.package != top_level_package
+            # Recursively search through all dependencies of the current dependency and accumulate the results.
             return [
                 [(chia_file.annotations.package, dependency), *stack]
                 for stack in [
@@ -136,15 +146,19 @@ def find_cycles(graph: Dict[Path, List[Path]], excluded_paths: List[Path], ignor
                 ]
             ]
 
+    # Initialize an accumulator for paths that are part of cycles.
     path_accumulator = []
+    # Iterate over each package (parent) in the graph.
     for parent in graph:
+        # Parse the parent package file.
         chia_file = ChiaFile.parse(parent)
-        if chia_file.annotations is None:
+        # Skip this package if it has no annotations or should be ignored in cycle detection.
+        if chia_file.annotations is None or chia_file.annotations.package in ignore_cycles_in:
             continue
-        if chia_file.annotations.package in ignore_cycles_in:
-            continue
+        # Extend the path_accumulator with results from the recursive search starting from this parent.
         path_accumulator.extend(recursive_dependency_search(chia_file.annotations.package, False, parent, []))
 
+    # Format and return the accumulated paths as strings showing the cycles.
     return [" -> ".join([str(d) + f" ({p})" for p, d in stack]) for stack in path_accumulator]
 
 
@@ -238,7 +252,7 @@ def config(func: Callable[..., None]) -> Callable[..., None]:
             directory_parameters=dir_params, ignore_cycles_in=[*kwargs.pop("ignore_cycles_in", []), *ignore_cycles_in]
         )
 
-        # Calling the wrapped function with the Config object, directory, and other arguments
+        # Calling the wrapped function with the Config object and other arguments
         return func(config, *args, **kwargs)
 
     return inner
