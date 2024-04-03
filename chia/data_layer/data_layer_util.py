@@ -127,9 +127,15 @@ async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32
     return "\n".join(lines)
 
 
-def row_to_node(row: aiosqlite.Row) -> Node:
+def row_to_node(row: aiosqlite.Row, key: bytes, value: bytes) -> Node:
     cls = node_type_to_class[row["node_type"]]
-    return cls.from_row(row=row)
+    if issubclass(cls, InternalNode):
+        return cls.from_row(row=row)
+    elif issubclass(cls, TerminalNode):
+        return cls.from_row(row=row, key=key, value=value)
+    else:
+        # TODO: yeah
+        raise Exception("ack")
 
 
 class Status(IntEnum):
@@ -178,8 +184,14 @@ Node = Union["TerminalNode", "InternalNode"]
 
 @dataclass(frozen=True)
 class TerminalNode:
+    tree_id: bytes32
+    generation: int
     hash: bytes32
-    # generation: int
+    # TODO: or terminal, internal, and root types?
+    parent_hash: Optional[bytes32]
+    key_hash: bytes32
+    value_hash: bytes32
+    # TODO: this is just a quick hack for now, see what fits best
     key: bytes
     value: bytes
 
@@ -190,13 +202,36 @@ class TerminalNode:
         return Program.to(self.key), Program.to(self.value)
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
+    def from_row(cls, row: aiosqlite.Row, key: bytes, value: bytes) -> TerminalNode:
+        parent_hash = row["parent_hash"]
+        if parent_hash is not None:
+            parent_hash = bytes32(parent_hash)
+
         return cls(
+            tree_id=bytes32(row["tree_id"]),
+            generation=row["generation"],
             hash=bytes32(row["hash"]),
-            # generation=row["generation"],
-            key=row["key"],
-            value=row["value"],
+            parent_hash=parent_hash,
+            key_hash=row["key_hash"],
+            value_hash=row["value_hash"],
+            key=key,
+            value=value,
         )
+
+    # TODO: wasn't here before
+    def to_row(self) -> Dict[str, Union[int, bytes32, None]]:
+        return {
+            "tree_id": self.tree_id,
+            "generation": self.generation,
+            "hash": self.hash,
+            "parent": self.parent_hash,
+            "left": None,
+            "right": None,
+            # TODO: hmm
+            "node_type": NodeType.TERMINAL,
+            "key": bytes32([0] * 32),
+            "value": bytes32([0] * 32),
+        }
 
 
 @final
@@ -275,10 +310,14 @@ class ProofOfInclusion:
         return True
 
 
+@final
 @dataclass(frozen=True)
 class InternalNode:
+    tree_id: bytes32
+    generation: int
     hash: bytes32
-    # generation: int
+    # TODO: or terminal, internal, and root types?
+    parent_hash: Optional[bytes32]
     left_hash: bytes32
     right_hash: bytes32
 
@@ -287,12 +326,33 @@ class InternalNode:
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> InternalNode:
+        parent_hash = row["parent"]
+        if parent_hash is not None:
+            parent_hash = bytes32(parent_hash)
+
         return cls(
+            tree_id=bytes32(row["tree_id"]),
+            generation=row["generation"],
             hash=bytes32(row["hash"]),
-            # generation=row["generation"],
+            parent_hash=parent_hash,
             left_hash=bytes32(row["left"]),
             right_hash=bytes32(row["right"]),
         )
+
+    # TODO: wasn't here before
+    def to_row(self) -> Dict[str, Union[int, bytes32, None]]:
+        return {
+            "tree_id": self.tree_id,
+            "generation": self.generation,
+            "hash": self.hash,
+            "parent": self.parent_hash,
+            "left": self.left_hash,
+            "right": self.right_hash,
+            # TODO: hmm
+            "node_type": NodeType.INTERNAL,
+            "key": None,
+            "value": None,
+        }
 
     def other_child_hash(self, hash: bytes32) -> bytes32:
         if self.left_hash == hash:

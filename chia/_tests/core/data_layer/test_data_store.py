@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, cast, final
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, cast
 
 import aiohttp
 import aiosqlite
@@ -221,7 +221,11 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
         cursor = await reader.execute("SELECT * FROM node")
         before = await cursor.fetchall()
 
-    await data_store._insert_internal_node(left_hash=parent.left_hash, right_hash=parent.right_hash)
+    # TODO: didn't think much about generation here
+    next_generation = await data_store.get_tree_generation(tree_id=tree_id)
+    await data_store._insert_internal_node(
+        tree_id=tree_id, generation=next_generation, left_hash=parent.left_hash, right_hash=parent.right_hash
+    )
 
     async with data_store.db_wrapper.reader() as reader:
         cursor = await reader.execute("SELECT * FROM node")
@@ -240,7 +244,11 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
         cursor = await reader.execute("SELECT * FROM node")
         before = await cursor.fetchall()
 
-    await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value)
+    # TODO: didn't think much about generation here
+    next_generation = await data_store.get_tree_generation(tree_id=tree_id)
+    await data_store._insert_terminal_node(
+        tree_id=tree_id, generation=next_generation, key=kv_node.key, value=kv_node.value
+    )
 
     async with data_store.db_wrapper.reader() as reader:
         cursor = await reader.execute("SELECT * FROM node")
@@ -649,10 +657,15 @@ async def test_inserting_duplicate_key_fails(
 @pytest.mark.anyio()
 async def test_inserting_invalid_length_hash_raises_original_exception(
     data_store: DataStore,
+    tree_id: bytes32,
 ) -> None:
+    # TODO: didn't think much about generation here
+    next_generation = await data_store.get_tree_generation(tree_id=tree_id)
     with pytest.raises(aiosqlite.IntegrityError):
         # casting since we are testing an invalid case
         await data_store._insert_node(
+            tree_id=tree_id,
+            generation=next_generation,
             node_hash=cast(bytes32, b"\x05"),
             node_type=NodeType.TERMINAL,
             left_hash=None,
@@ -2023,77 +2036,6 @@ async def test_benchmark_v2(
         ):
             pass
 
-    @final
-    @dataclass
-    class NewInternalNode:
-        tree_id: bytes32
-        generation: int
-        hash: bytes32
-        # TODO: or terminal, internal, and root types?
-        parent_hash: Optional[bytes32]
-        left_hash: bytes32
-        right_hash: bytes32
-
-        @classmethod
-        def from_row(cls, row: aiosqlite.Row) -> NewInternalNode:
-            return cls(
-                tree_id=bytes32(row["tree_id"]),
-                generation=row["generation"],
-                hash=bytes32(row["hash"]),
-                parent_hash=bytes32(row["parent"]),
-                left_hash=bytes32(row["left"]),
-                right_hash=bytes32(row["right"]),
-            )
-
-        def to_row(self) -> Dict[str, Union[int, bytes32, None]]:
-            return {
-                "tree_id": self.tree_id,
-                "generation": self.generation,
-                "hash": self.hash,
-                "parent": self.parent_hash,
-                "left": self.left_hash,
-                "right": self.right_hash,
-                # TODO: hmm
-                "node_type": NodeType.INTERNAL,
-                "key": None,
-                "value": None,
-            }
-
-    @dataclass
-    class NewTerminalNode:
-        tree_id: bytes32
-        generation: int
-        hash: bytes32
-        # TODO: or terminal, internal, and root types?
-        parent_hash: Optional[bytes32]
-        key_hash: bytes32
-        value_hash: bytes32
-
-        # @classmethod
-        # def from_row(cls, row: aiosqlite.Row) -> I:
-        #     return cls(
-        #         tree_id=bytes32(row["tree_id"]),
-        #         generation=row["generation"],
-        #         hash=bytes32(row["hash"]),
-        #         parent_hash=bytes32(row["parent"]),
-        #         left_hash=bytes32(row["left"]),
-        #         right_hash=bytes32(row["right"]),
-        #     )
-
-        def to_row(self) -> Dict[str, Union[int, bytes32, None]]:
-            return {
-                "tree_id": self.tree_id,
-                "generation": self.generation,
-                "hash": self.hash,
-                "parent": self.parent_hash,
-                "left": None,
-                "right": None,
-                # TODO: hmm
-                "node_type": NodeType.TERMINAL,
-                "key": bytes32([0] * 32),
-                "value": bytes32([0] * 32),
-            }
-
     root = await data_store.get_tree_as_program(tree_id=tree_id)
 
     @dataclass
@@ -2102,14 +2044,14 @@ async def test_benchmark_v2(
         node: Union[InternalNode, TerminalNode]
 
     to_visit: List[Entry] = [Entry(parent_hash=None, node=root)]
-    hash_cache: Dict[bytes32, Union[NewInternalNode, NewTerminalNode]] = {}
+    hash_cache: Dict[bytes32, Union[InternalNode, TerminalNode]] = {}
 
     while len(to_visit) > 0:
         entry = to_visit.pop(0)
 
-        new_node: Union[NewInternalNode, NewTerminalNode]
+        new_node: Union[InternalNode, TerminalNode]
         if isinstance(entry.node, InternalNode):
-            new_node = NewInternalNode(
+            new_node = InternalNode(
                 tree_id=tree_id,
                 generation=0,
                 hash=entry.node.hash,
@@ -2122,13 +2064,16 @@ async def test_benchmark_v2(
             to_visit.append(Entry(parent_hash=new_node.hash, node=entry.node.pair[0]))
             to_visit.append(Entry(parent_hash=new_node.hash, node=entry.node.pair[1]))
         elif isinstance(entry.node, TerminalNode):
-            new_node = NewTerminalNode(
+            new_node = TerminalNode(
                 tree_id=tree_id,
                 generation=0,
                 hash=entry.node.hash,
                 parent_hash=entry.parent_hash,
+                # TODO: real values
                 key_hash=bytes32([0] * 32),
                 value_hash=bytes32([0] * 32),
+                key=entry.node.key,
+                value=entry.node.value,
             )
             hash_cache[new_node.hash] = new_node
         else:

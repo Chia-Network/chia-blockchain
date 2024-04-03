@@ -76,9 +76,20 @@ class DataStore:
 
             async with db_wrapper.writer() as writer:
                 await writer.execute(
+                    """
+                        CREATE TABLE blob(
+                            hash BLOB PRIMARY KEY NULL CHECK(length(hash) == 32),
+                            blob BLOB
+                        )
+                        """
+                )
+                await writer.execute(
                     f"""
                     CREATE TABLE IF NOT EXISTS node(
-                        hash BLOB PRIMARY KEY NOT NULL CHECK(length(hash) == 32),
+                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                        generation INTEGER NOT NULL CHECK(generation >= 0),
+                        hash BLOB NULL CHECK(length(hash) == 32),
+                        parent BLOB REFERENCES node,
                         node_type INTEGER NOT NULL CHECK(
                             (
                                 node_type == {int(NodeType.INTERNAL)}
@@ -99,7 +110,8 @@ class DataStore:
                         left BLOB REFERENCES node,
                         right BLOB REFERENCES node,
                         key BLOB,
-                        value BLOB
+                        value BLOB,
+                        PRIMARY KEY(tree_id, generation, hash)
                     )
                     """
                 )
@@ -122,7 +134,7 @@ class DataStore:
                             {" OR ".join(f"status == {status}" for status in Status)}
                         ),
                         PRIMARY KEY(tree_id, generation),
-                        FOREIGN KEY(node_hash) REFERENCES node(hash)
+                        FOREIGN KEY(tree_id, generation, node_hash) REFERENCES node(tree_id, generation, hash)
                     )
                     """
                 )
@@ -139,7 +151,7 @@ class DataStore:
                         tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
                         generation INTEGER NOT NULL,
                         PRIMARY KEY(hash, tree_id, generation),
-                        FOREIGN KEY(ancestor) REFERENCES node(hash)
+                        FOREIGN KEY(tree_id, generation, ancestor) REFERENCES node(tree_id, generation, hash)
                     )
                     """
                 )
@@ -169,8 +181,11 @@ class DataStore:
             yield self
 
     @asynccontextmanager
-    async def transaction(self) -> AsyncIterator[None]:
-        async with self.db_wrapper.writer():
+    async def transaction(
+        self,
+        foreign_key_enforcement_enabled: Optional[bool] = None,
+    ) -> AsyncIterator[None]:
+        async with self.db_wrapper.writer(foreign_key_enforcement_enabled=foreign_key_enforcement_enabled):
             yield
 
     async def _insert_root(
@@ -230,6 +245,8 @@ class DataStore:
 
     async def _insert_node(
         self,
+        tree_id: bytes32,
+        generation: int,
         node_hash: bytes32,
         node_type: NodeType,
         left_hash: Optional[bytes32],
@@ -239,6 +256,8 @@ class DataStore:
     ) -> None:
         # TODO: can we get sqlite to do this check?
         values = {
+            "tree_id": tree_id,
+            "generation": generation,
             "hash": node_hash,
             "node_type": node_type,
             "left": left_hash,
@@ -251,8 +270,8 @@ class DataStore:
             try:
                 await writer.execute(
                     """
-                    INSERT INTO node(hash, node_type, left, right, key, value)
-                    VALUES(:hash, :node_type, :left, :right, :key, :value)
+                    INSERT INTO node(tree_id, generation, hash, node_type, left, right, key, value)
+                    VALUES(:tree_id, :generation, :hash, :node_type, :left, :right, :key, :value)
                     """,
                     values,
                 )
@@ -280,20 +299,28 @@ class DataStore:
                         f"Requested insertion of node with matching hash but other values differ: {node_hash}"
                     ) from None
 
-    async def insert_node(self, node_type: NodeType, value1: bytes, value2: bytes) -> None:
+    async def insert_node(
+        self, tree_id: bytes32, generation: int, node_type: NodeType, value1: bytes, value2: bytes
+    ) -> None:
         if node_type == NodeType.INTERNAL:
             left_hash = bytes32(value1)
             right_hash = bytes32(value2)
             node_hash = internal_hash(left_hash, right_hash)
-            await self._insert_node(node_hash, node_type, bytes32(value1), bytes32(value2), None, None)
+            await self._insert_node(
+                tree_id, generation, node_hash, node_type, bytes32(value1), bytes32(value2), None, None
+            )
         else:
             node_hash = leaf_hash(key=value1, value=value2)
-            await self._insert_node(node_hash, node_type, None, None, value1, value2)
+            await self._insert_node(tree_id, generation, node_hash, node_type, None, None, value1, value2)
 
-    async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
+    async def _insert_internal_node(
+        self, tree_id: bytes32, generation: int, left_hash: bytes32, right_hash: bytes32
+    ) -> bytes32:
         node_hash: bytes32 = internal_hash(left_hash=left_hash, right_hash=right_hash)
 
         await self._insert_node(
+            tree_id=tree_id,
+            generation=generation,
             node_hash=node_hash,
             node_type=NodeType.INTERNAL,
             left_hash=left_hash,
@@ -359,13 +386,15 @@ class DataStore:
                             f"{hash} {generation} {tree_id}"
                         ) from None
 
-    async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
+    async def _insert_terminal_node(self, tree_id: bytes32, generation: int, key: bytes, value: bytes) -> bytes32:
         # forcing type hint here for:
         # https://github.com/Chia-Network/clvm/pull/102
         # https://github.com/Chia-Network/clvm/pull/106
         node_hash: bytes32 = Program.to((key, value)).get_tree_hash()
 
         await self._insert_node(
+            tree_id=tree_id,
+            generation=generation,
             node_hash=node_hash,
             node_type=NodeType.TERMINAL,
             left_hash=None,
@@ -480,7 +509,17 @@ class DataStore:
 
             bad_node_hashes: List[bytes32] = []
             async for row in cursor:
-                node = row_to_node(row=row)
+                async with reader.execute("SELECT * FROM blob WHERE hash = :hash", {"hash": row["key_hash"]}) as cursor:
+                    other_row = await cursor.fetchone()
+                    assert other_row is not None
+                    key_blob = other_row["blob"]
+                async with reader.execute(
+                    "SELECT * FROM blob WHERE hash = :hash", {"hash": row["value_hash"]}
+                ) as cursor:
+                    other_row = await cursor.fetchone()
+                    assert other_row is not None
+                    value_blob = other_row["blob"]
+                node = row_to_node(row=row, key=key_blob, value=value_blob)
                 if isinstance(node, InternalNode):
                     expected_hash = internal_hash(left_hash=node.left_hash, right_hash=node.right_hash)
                 elif isinstance(node, TerminalNode):
@@ -687,7 +726,8 @@ class DataStore:
 
             internal_nodes: List[InternalNode] = []
             async for row in cursor:
-                node = row_to_node(row=row)
+                # TODO: total hack passing unneeded but garbage key and value
+                node = row_to_node(row=row, key=b"", value=b"")
                 if not isinstance(node, InternalNode):
                     raise Exception(f"Unexpected internal node found: {node.hash.hex()}")
                 internal_nodes.append(node)
@@ -742,7 +782,17 @@ class DataStore:
                     # list.  While 63 allows for a lot of nodes in a balanced tree, in
                     # the worst case it allows only 62 terminal nodes.
                     raise Exception("Tree depth exceeded 62, unable to guarantee left-to-right node order.")
-                node = row_to_node(row=row)
+                async with reader.execute("SELECT * FROM blob WHERE hash = :hash", {"hash": row["key_hash"]}) as cursor:
+                    other_row = await cursor.fetchone()
+                    assert other_row is not None
+                    key_blob = other_row["blob"]
+                async with reader.execute(
+                    "SELECT * FROM blob WHERE hash = :hash", {"hash": row["value_hash"]}
+                ) as cursor:
+                    other_row = await cursor.fetchone()
+                    assert other_row is not None
+                    value_blob = other_row["blob"]
+                node = row_to_node(row=row, key=key_blob, value=value_blob)
                 if not isinstance(node, TerminalNode):
                     raise Exception(f"Unexpected internal node found: {node.hash.hex()}")
                 terminal_nodes.append(node)
@@ -764,7 +814,17 @@ class DataStore:
             async for row in cursor:
                 if row["depth"] > 62:
                     raise Exception("Tree depth exceeded 62, unable to guarantee left-to-right node order.")
-                node = row_to_node(row=row)
+                async with reader.execute("SELECT * FROM blob WHERE hash = :hash", {"hash": row["key_hash"]}) as cursor:
+                    other_row = await cursor.fetchone()
+                    assert other_row is not None
+                    key_blob = other_row["blob"]
+                async with reader.execute(
+                    "SELECT * FROM blob WHERE hash = :hash", {"hash": row["value_hash"]}
+                ) as cursor:
+                    other_row = await cursor.fetchone()
+                    assert other_row is not None
+                    value_blob = other_row["blob"]
+                node = row_to_node(row=row, key=key_blob, value=value_blob)
                 if not isinstance(node, TerminalNode):
                     raise Exception(f"Unexpected internal node found: {node.hash.hex()}")
                 keys_values_hashed[key_hash(node.key)] = leaf_hash(node.key, node.value)
@@ -1026,7 +1086,9 @@ class DataStore:
         insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
         new_generation = root.generation + 1
         # create first new internal node
-        new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+        new_hash = await self._insert_internal_node(
+            tree_id=tree_id, generation=new_generation, left_hash=left, right_hash=right
+        )
         insert_ancestors_cache.append((left, right, tree_id))
 
         # create updated replacements for the rest of the internal nodes
@@ -1043,7 +1105,9 @@ class DataStore:
 
             traversal_node_hash = ancestor.hash
 
-            new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
+            new_hash = await self._insert_internal_node(
+                tree_id=tree_id, generation=new_generation, left_hash=left, right_hash=right
+            )
             insert_ancestors_cache.append((left, right, tree_id))
 
         new_root = await self._insert_root(
@@ -1090,7 +1154,10 @@ class DataStore:
                     raise Exception("can not insert a new key/value on an internal node")
 
             # create new terminal node
-            new_terminal_node_hash = await self._insert_terminal_node(key=key, value=value)
+            # TODO: didn't think much about the generation here
+            new_terminal_node_hash = await self._insert_terminal_node(
+                tree_id=tree_id, generation=root.generation + 1, key=key, value=value
+            )
 
             if was_empty:
                 if side is not None:
@@ -1198,7 +1265,9 @@ class DataStore:
                 else:
                     raise Exception("Internal error.")
 
-                new_child_hash = await self._insert_internal_node(left_hash=left_hash, right_hash=right_hash)
+                new_child_hash = await self._insert_internal_node(
+                    tree_id=tree_id, generation=new_generation, left_hash=left_hash, right_hash=right_hash
+                )
                 insert_ancestors_cache.append((left_hash, right_hash, tree_id))
                 old_child_hash = ancestor.hash
 
@@ -1244,7 +1313,10 @@ class DataStore:
                 return InsertResult(leaf_hash(key, new_value), root)
 
             # create new terminal node
-            new_terminal_node_hash = await self._insert_terminal_node(key=key, value=new_value)
+            # TODO: didn't think much about generation here
+            new_terminal_node_hash = await self._insert_terminal_node(
+                tree_id=tree_id, generation=root.generation + 1, key=key, value=new_value
+            )
 
             ancestors = await self.get_ancestors_common(
                 node_hash=old_node.hash,
@@ -1522,10 +1594,18 @@ class DataStore:
             cursor = await reader.execute("SELECT * FROM node WHERE hash == :hash LIMIT 1", {"hash": node_hash})
             row = await cursor.fetchone()
 
-        if row is None:
-            raise Exception(f"Node not found for requested hash: {node_hash.hex()}")
+            if row is None:
+                raise Exception(f"Node not found for requested hash: {node_hash.hex()}")
 
-        node = row_to_node(row=row)
+            async with reader.execute("SELECT * FROM blob WHERE hash = :hash", {"hash": row["key_hash"]}) as cursor:
+                other_row = await cursor.fetchone()
+                assert other_row is not None
+                key_blob = other_row["blob"]
+            async with reader.execute("SELECT * FROM blob WHERE hash = :hash", {"hash": row["value_hash"]}) as cursor:
+                other_row = await cursor.fetchone()
+                assert other_row is not None
+                value_blob = other_row["blob"]
+            node = row_to_node(row=row, key=key_blob, value=value_blob)
         return node
 
     async def get_tree_as_program(self, tree_id: bytes32) -> Union[InternalNode, TerminalNode]:
@@ -1548,7 +1628,20 @@ class DataStore:
                 """,
                 {"root_hash": root_node.hash},
             )
-            nodes = [row_to_node(row=row) async for row in cursor]
+            nodes: List[Union[InternalNode, TerminalNode]] = []
+            async for row in cursor:
+                async with reader.execute("SELECT * FROM blob WHERE hash = :hash", {"hash": row["key_hash"]}) as cursor:
+                    other_row = await cursor.fetchone()
+                    assert other_row is not None
+                    key_blob = other_row["blob"]
+                async with reader.execute(
+                    "SELECT * FROM blob WHERE hash = :hash", {"hash": row["value_hash"]}
+                ) as cursor:
+                    other_row = await cursor.fetchone()
+                    assert other_row is not None
+                    value_blob = other_row["blob"]
+                node = row_to_node(row=row, key=key_blob, value=value_blob)
+                nodes.append(node)
             hash_to_node: Dict[bytes32, Node] = {}
             for node in reversed(nodes):
                 if isinstance(node, InternalNode):

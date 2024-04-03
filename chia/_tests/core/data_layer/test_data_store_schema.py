@@ -322,7 +322,11 @@ async def test_ancestors_ancestor_must_be_32(
     length: int,
 ) -> None:
     async with data_store.db_wrapper.writer() as writer:
-        node_hash = await data_store._insert_terminal_node(key=b"\x00", value=b"\x01")
+        # TODO: didn't think much about generation here
+        next_generation = await data_store.get_tree_generation(tree_id=tree_id)
+        node_hash = await data_store._insert_terminal_node(
+            tree_id=tree_id, generation=next_generation, key=b"\x00", value=b"\x01"
+        )
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await writer.execute(
                 """
@@ -341,7 +345,11 @@ async def test_ancestors_tree_id_must_be_32(
     length: int,
 ) -> None:
     async with data_store.db_wrapper.writer() as writer:
-        node_hash = await data_store._insert_terminal_node(key=b"\x00", value=b"\x01")
+        # TODO: didn't think much about generation here
+        next_generation = await data_store.get_tree_generation(tree_id=tree_id)
+        node_hash = await data_store._insert_terminal_node(
+            tree_id=tree_id, generation=next_generation, key=b"\x00", value=b"\x01"
+        )
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await writer.execute(
                 """
