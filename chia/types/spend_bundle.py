@@ -9,6 +9,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import Err, ValidationError
+from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable, streamable_from_dict
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
@@ -55,7 +56,7 @@ class SpendBundle(Streamable):
     def name(self) -> bytes32:
         return self.get_hash()
 
-    def debug(self, agg_sig_additional_data: bytes = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
+    def debug(self, agg_sig_additional_data: bytes32 = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
         debug_spend_bundle(self, agg_sig_additional_data)
 
     @classmethod
@@ -77,7 +78,7 @@ def estimate_fees(spend_bundle: SpendBundle) -> int:
     for cs in spend_bundle.coin_spends:
         removed_amount += cs.coin.amount
         coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
-        max_cost -= cost
+        max_cost = uint64(max_cost - cost)
         if max_cost < 0:
             raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "estimate_fees() for SpendBundle")
         for c in coins:

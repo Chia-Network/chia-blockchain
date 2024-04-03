@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import json
 import logging
 from dataclasses import dataclass
@@ -589,7 +588,7 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     )
 
     p2_singleton_puzzle_hash = case.pool_contract_puzzle_hash
-    farmer_api.farmer.constants = dataclasses.replace(DEFAULT_CONSTANTS, POOL_SUB_SLOT_ITERS=case.sub_slot_iters)
+    farmer_api.farmer.constants = DEFAULT_CONSTANTS.replace(POOL_SUB_SLOT_ITERS=case.sub_slot_iters)
     farmer_api.farmer._private_keys = case.farmer_private_keys
     farmer_api.farmer.authentication_keys = case.authentication_keys
     farmer_api.farmer.sps[case.sp_hash] = [sp]
@@ -728,7 +727,7 @@ def create_valid_pos(farmer: Farmer) -> Tuple[farmer_protocol.NewSignagePoint, P
         fee_info=None,
     )
     p2_singleton_puzzle_hash = case.pool_contract_puzzle_hash
-    farmer.constants = dataclasses.replace(DEFAULT_CONSTANTS, POOL_SUB_SLOT_ITERS=case.sub_slot_iters)
+    farmer.constants = DEFAULT_CONSTANTS.replace(POOL_SUB_SLOT_ITERS=case.sub_slot_iters)
     farmer._private_keys = case.farmer_private_keys
     farmer.authentication_keys = case.authentication_keys
     farmer.sps[case.sp_hash] = [sp]

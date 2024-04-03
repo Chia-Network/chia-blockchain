@@ -11,7 +11,7 @@ from chiapos import Verifier
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint32
+from chia.util.ints import uint8, uint32
 
 ProofOfSpace = chia_rs.ProofOfSpace
 
@@ -85,8 +85,8 @@ def passes_plot_filter(
     return cast(bool, plot_filter[:prefix_bits].uint == 0)
 
 
-def calculate_prefix_bits(constants: ConsensusConstants, height: uint32) -> int:
-    prefix_bits = constants.NUMBER_ZERO_BITS_PLOT_FILTER
+def calculate_prefix_bits(constants: ConsensusConstants, height: uint32) -> uint8:
+    prefix_bits: int = constants.NUMBER_ZERO_BITS_PLOT_FILTER
     if height >= constants.PLOT_FILTER_32_HEIGHT:
         prefix_bits -= 4
     elif height >= constants.PLOT_FILTER_64_HEIGHT:
@@ -96,7 +96,7 @@ def calculate_prefix_bits(constants: ConsensusConstants, height: uint32) -> int:
     elif height >= constants.HARD_FORK_HEIGHT:
         prefix_bits -= 1
 
-    return max(0, prefix_bits)
+    return uint8(max(0, prefix_bits))
 
 
 def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:

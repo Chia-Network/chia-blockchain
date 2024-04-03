@@ -152,7 +152,7 @@ class Offer:
             assert cs.coin not in adds
             try:
                 hinted_coins, cost = compute_spend_hints_and_additions(cs)
-                max_cost -= cost
+                max_cost = uint64(max_cost - cost)
                 adds[cs.coin] = [hc.coin for hc in hinted_coins.values()]
                 hints = {**hints, **{id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None}}
             except Exception:
@@ -170,7 +170,7 @@ class Offer:
             for cs in self._bundle.coin_spends:
                 try:
                     cost, conds = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
-                    max_cost -= cost
+                    max_cost = uint64(max_cost - cost)
                     conditions[cs.coin] = parse_conditions_non_consensus(conds.as_iter())
                 except Exception:  # pragma: no cover
                     continue

@@ -43,6 +43,7 @@ from pathlib import Path
 import click
 
 from chia._tests.util.run_block import run_json_block
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -70,7 +71,7 @@ def get_config_and_constants():
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     network = config["selected_network"]
     overrides = config["network_overrides"]["constants"][network]
-    updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+    updated_constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
     return config, updated_constants
 
 

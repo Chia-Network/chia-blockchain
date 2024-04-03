@@ -14,6 +14,7 @@ import zstd
 
 from chia._tests.util.constants import test_constants as TEST_CONSTANTS
 from chia.cmds.init_funcs import chia_init
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import Message, NodeType
@@ -139,7 +140,7 @@ async def run_sync_test(
             constants = TEST_CONSTANTS
         else:
             overrides = config["network_overrides"]["constants"][config["selected_network"]]
-            constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+            constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
         if single_thread:
             config["full_node"]["single_threaded"] = True
         config["full_node"]["db_sync"] = db_sync
