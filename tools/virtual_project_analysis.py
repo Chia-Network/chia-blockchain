@@ -51,8 +51,8 @@ def build_dependency_graph(dir_params: DirectoryParameters) -> Dict[Path, List[P
             tree = ast.parse(filestring, filename=chia_file.path)
             for node in ast.iter_child_nodes(tree):
                 if isinstance(node, ast.ImportFrom):
-                    if node.module is not None and node.module.startswith("chia."):
-                        imported_path = os.path.join("./", node.module.replace(".", "/") + ".py")
+                    if node.module is not None and node.module.startswith(dir_params.dir_path.stem):
+                        imported_path = os.path.join(dir_params.dir_path.parent, node.module.replace(".", "/") + ".py")
                         paths_to_search = [
                             imported_path,
                             *(os.path.join(imported_path[:-3], alias.name + ".py") for alias in node.names),
@@ -62,8 +62,10 @@ def build_dependency_graph(dir_params: DirectoryParameters) -> Dict[Path, List[P
                                 dependency_graph[chia_file.path].append(Path(path_to_search))
                 elif isinstance(node, ast.Import):
                     for alias in node.names:
-                        if alias.name.startswith("chia."):
-                            imported_path = os.path.join("./", alias.name.replace(".", "/") + ".py")
+                        if alias.name.startswith(dir_params.dir_path.stem):
+                            imported_path = os.path.join(
+                                dir_params.dir_path.parent, alias.name.replace(".", "/") + ".py"
+                            )
                             if os.path.exists(imported_path):
                                 dependency_graph[chia_file.path].append(Path(imported_path))
     return dependency_graph
@@ -243,7 +245,7 @@ def config(func: Callable[..., None]) -> Callable[..., None]:
 
         # Instantiate DirectoryParameters with the provided options
         dir_params = DirectoryParameters(
-            dir_path=kwargs.pop("include_dir"),
+            dir_path=Path(kwargs.pop("include_dir")),
             excluded_paths=[*(Path(p) for p in kwargs.pop("excluded_paths")), *exclude_paths],
         )
 
