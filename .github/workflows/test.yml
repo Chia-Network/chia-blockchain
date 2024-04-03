@@ -119,9 +119,9 @@ jobs:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
-      - macos
-      - ubuntu
-      - windows
+      - ${{ inputs.run-macos && "macos" || "configure"}
+      - ${{ inputs.run-linux && "ubuntu" || "configure"}
+      - ${{ inputs.run-windows && "windows" || "configure"}
     strategy:
       fail-fast: false
       matrix:
