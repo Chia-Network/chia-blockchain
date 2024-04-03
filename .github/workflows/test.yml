@@ -42,6 +42,11 @@ on:
         default: true
         required: false
         type: boolean
+      full-python-matrix:
+        description: "run full Python version matrix"
+        default: false
+        required: false
+        type: boolean
   schedule:
     - cron: "0 13 * * *"
 
@@ -69,7 +74,7 @@ jobs:
           python chia/_tests/build-job-matrix.py --per directory --verbose ${{ inputs.duplicates > 1 && format('--duplicates {0}', inputs.duplicates) || '' }} ${{ inputs.build-job-matrix-arguments }} > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> "$GITHUB_OUTPUT"
-          echo matrix_mode=${{ ( github.event_name == 'schedule' ) && 'all' || ( github.event_name == 'workflow_dispatch' ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') ) && 'all' || 'main' }} >> "$GITHUB_OUTPUT"
+          echo matrix_mode=${{ ( github.event_name == 'schedule' || inputs.full-python-matrix ) && 'all' || github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') && 'all' || 'main' }} >> "$GITHUB_OUTPUT"
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
