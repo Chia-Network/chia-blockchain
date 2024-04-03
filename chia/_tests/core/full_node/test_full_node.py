@@ -966,8 +966,6 @@ class TestFullNodeProtocol:
             30, full_node_2.full_node.mempool_manager.mempool.at_full_capacity, True, 10000000 * group_size
         )
 
-        # assert full_node_2.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
-
         await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
         # Idempotence in resubmission
