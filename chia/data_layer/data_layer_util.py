@@ -376,30 +376,24 @@ class InternalNode:
 @dataclass(frozen=True)
 class Root:
     tree_id: bytes32
-    node_hash: Optional[bytes32]
     generation: int
+    empty: bool
     status: Status
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> Root:
-        raw_node_hash = row["node_hash"]
-        if raw_node_hash is None:
-            node_hash = None
-        else:
-            node_hash = bytes32(raw_node_hash)
-
         return cls(
             tree_id=bytes32(row["tree_id"]),
-            node_hash=node_hash,
             generation=row["generation"],
+            empty=bool(row["empty"]),
             status=Status(row["status"]),
         )
 
     def to_row(self) -> Dict[str, Any]:
         return {
             "tree_id": self.tree_id,
-            "node_hash": self.node_hash,
             "generation": self.generation,
+            "empty": int(self.empty),
             "status": self.status.value,
         }
 
@@ -407,16 +401,16 @@ class Root:
     def unmarshal(cls, marshalled: Dict[str, Any]) -> Root:
         return cls(
             tree_id=bytes32.from_hexstr(marshalled["tree_id"]),
-            node_hash=None if marshalled["node_hash"] is None else bytes32.from_hexstr(marshalled["node_hash"]),
             generation=marshalled["generation"],
+            empty=marshalled["empty"],
             status=Status(marshalled["status"]),
         )
 
     def marshal(self) -> Dict[str, Any]:
         return {
             "tree_id": self.tree_id.hex(),
-            "node_hash": None if self.node_hash is None else self.node_hash.hex(),
             "generation": self.generation,
+            "empty": self.empty,
             "status": self.status.value,
         }
 

@@ -83,7 +83,8 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                 else:
                     t1 = time.time()
                     assert reference_node_hash is not None
-                    node = await data_store.get_node(reference_node_hash)
+                    root = await data_store.get_tree_root(tree_id=tree_id)
+                    node = await data_store.get_node(tree_id=tree_id, generation=root.generation, node_hash=reference_node_hash)
                     assert isinstance(node, TerminalNode)
                     if not slow_mode:
                         await data_store.delete(key=node.key, tree_id=tree_id)
