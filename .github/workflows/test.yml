@@ -114,9 +114,9 @@ jobs:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
-      - ${{ github.event.inputs.run-macos && "macos" || "" }}
-      - ${{ github.event.inputs.run-ubuntu && "ubuntu" || "" }}
-      - ${{ github.event.inputs.run-windows && "windows" || "" }}
+      - ${{ inputs.run-macos && "macos" || "" }}
+      - ${{ inputs.run-ubuntu && "ubuntu" || "" }}
+      - ${{ inputs.run-windows && "windows" || "" }}
     strategy:
       fail-fast: false
       matrix:
