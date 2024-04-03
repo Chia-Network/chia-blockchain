@@ -32,6 +32,9 @@ on:
       runs-on:
         required: true
         type: string
+      arch:
+        required: true
+        type: string
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
