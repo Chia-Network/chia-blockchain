@@ -19,7 +19,24 @@ on:
     inputs:
       build-job-matrix-arguments:
         description: "extra arguments for build-job-matrix.py"
+        default: ""
         required: false
+        type: string
+      run-linux:
+        description: "run Linux tests"
+        default: true
+        required: false
+        type: boolean
+      run-macos:
+        description: "run macOS tests"
+        default: true
+        required: false
+        type: boolean
+      run-windows:
+        description: "run Windows tests"
+        default: true
+        required: false
+        type: boolean
   schedule:
     - cron: "0 13 * * *"
 
@@ -54,6 +71,7 @@ jobs:
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
   macos:
+    if: github.event.inputs.run-macos
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -66,6 +84,7 @@ jobs:
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-latest
   ubuntu:
+    if: github.event.inputs.run-linux
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -78,6 +97,7 @@ jobs:
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
   windows:
+    if: github.event.inputs.run-windows
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -94,9 +114,9 @@ jobs:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
-      - macos
-      - ubuntu
-      - windows
+      - ${{ github.event.inputs.run-macos && "macos" || "" }}
+      - ${{ github.event.inputs.run-ubuntu && "ubuntu" || "" }}
+      - ${{ github.event.inputs.run-windows && "windows" || "" }}
     strategy:
       fail-fast: false
       matrix:
