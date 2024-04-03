@@ -83,7 +83,7 @@ def not_ephemeral_additions(sp: SpendBundle) -> List[Coin]:
     max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
     for cs in sp.coin_spends:
         coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
-        max_cost -= cost
+        max_cost = uint64(max_cost - cost)
         if max_cost < 0:
             raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "non_ephemeral_additions() for SpendBundle")
         for c in coins:

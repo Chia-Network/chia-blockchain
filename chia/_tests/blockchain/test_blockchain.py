@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 import random
 import time
@@ -559,8 +558,7 @@ class TestBlockHeaderValidation:
 
     async def do_test_invalid_icc_sub_slot_vdf(self, keychain, db_version, constants: ConsensusConstants):
         bt_high_iters = await create_block_tools_async(
-            constants=dataclasses.replace(
-                constants,
+            constants=constants.replace(
                 SUB_SLOT_ITERS_STARTING=uint64(2**12),
                 DIFFICULTY_STARTING=uint64(2**14),
             ),
@@ -1500,7 +1498,7 @@ class TestBlockHeaderValidation:
         # 26
         # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
         # default for this test
-        constants = dataclasses.replace(bt.constants, MAX_FUTURE_TIME2=2 * 60)
+        constants = bt.constants.replace(MAX_FUTURE_TIME2=2 * 60)
         time_delta = 2 * 60 + 1
 
         blocks = bt.get_consecutive_blocks(1)
@@ -2671,15 +2669,13 @@ class TestBodyValidation:
         pass
         #
         # with TempKeyring() as keychain:
-        #     new_test_constants = dataclasses.replace(
-        #         bt.constants,
+        #     new_test_constants = bt.constants.replace(
         #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
         #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
         #     )
         #     b, db_wrapper = await create_blockchain(new_test_constants, db_version)
         #     bt_2 = await create_block_tools_async(constants=new_test_constants, keychain=keychain)
-        #     bt_2.constants = dataclasses.replace(
-        #         bt_2.constants,
+        #     bt_2.constants = bt_2.constants.replace(
         #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
         #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
         #     )
