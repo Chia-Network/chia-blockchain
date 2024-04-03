@@ -76,7 +76,7 @@ jobs:
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
   macos:
-    if: github.event.inputs.run-macos
+    if: inputs.run-macos
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -89,7 +89,7 @@ jobs:
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-latest
   ubuntu:
-    if: github.event.inputs.run-linux
+    if: inputs.run-linux
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -102,7 +102,7 @@ jobs:
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
   windows:
-    if: github.event.inputs.run-windows
+    if: inputs.run-windows
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
