@@ -61,6 +61,7 @@ jobs:
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-12
+      arch: intel
   macos-arm:
     uses: ./.github/workflows/test-single.yml
     needs: configure
@@ -68,11 +69,12 @@ jobs:
       emoji: 🍎
       matrix: macos
       name: macOS ARM
-      file_name: macosa-arm
+      file_name: macos-arm
       concurrency_name: macos-arm
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-14
+      arch: arm
   ubuntu:
     uses: ./.github/workflows/test-single.yml
     needs: configure
@@ -85,6 +87,7 @@ jobs:
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
+      arch: intel
   windows:
     uses: ./.github/workflows/test-single.yml
     needs: configure
@@ -97,6 +100,7 @@ jobs:
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: windows-latest
+      arch: intel
 
   coverage:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
