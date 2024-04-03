@@ -76,9 +76,20 @@ class DataStore:
 
             async with db_wrapper.writer() as writer:
                 await writer.execute(
+                    """
+                        CREATE TABLE blob(
+                            hash BLOB PRIMARY KEY NULL CHECK(length(hash) == 32),
+                            blob BLOB
+                        )
+                        """
+                )
+                await writer.execute(
                     f"""
                     CREATE TABLE IF NOT EXISTS node(
-                        hash BLOB PRIMARY KEY NOT NULL CHECK(length(hash) == 32),
+                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                        generation INTEGER NOT NULL CHECK(generation >= 0),
+                        hash BLOB NULL CHECK(length(hash) == 32),
+                        parent BLOB,
                         node_type INTEGER NOT NULL CHECK(
                             (
                                 node_type == {int(NodeType.INTERNAL)}
@@ -96,12 +107,17 @@ class DataStore:
                                 AND value IS NOT NULL
                             )
                         ),
-                        left BLOB REFERENCES node,
-                        right BLOB REFERENCES node,
+                        left BLOB,
+                        right BLOB,
                         key BLOB,
-                        value BLOB
+                        value BLOB,
+                        PRIMARY KEY(tree_id, generation, hash)
                     )
                     """
+                    # TODO: can we recover these foreign key constraints?
+                    # FOREIGN KEY(tree_id, generation, parent) REFERENCES node(tree_id, generation, hash)
+                    # FOREIGN KEY(tree_id, generation, left) REFERENCES node(tree_id, generation, hash)
+                    # FOREIGN KEY(tree_id, generation, right) REFERENCES node(tree_id, generation, hash)
                 )
                 await writer.execute(
                     """
@@ -117,29 +133,10 @@ class DataStore:
                     CREATE TABLE IF NOT EXISTS root(
                         tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
                         generation INTEGER NOT NULL CHECK(generation >= 0),
-                        node_hash BLOB,
                         status INTEGER NOT NULL CHECK(
                             {" OR ".join(f"status == {status}" for status in Status)}
                         ),
                         PRIMARY KEY(tree_id, generation),
-                        FOREIGN KEY(node_hash) REFERENCES node(hash)
-                    )
-                    """
-                )
-                # TODO: Add ancestor -> hash relationship, this might involve temporarily
-                # deferring the foreign key enforcement due to the insertion order
-                # and the node table also enforcing a similar relationship in the
-                # other direction.
-                # FOREIGN KEY(ancestor) REFERENCES ancestors(ancestor)
-                await writer.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS ancestors(
-                        hash BLOB NOT NULL REFERENCES node,
-                        ancestor BLOB CHECK(length(ancestor) == 32),
-                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
-                        generation INTEGER NOT NULL,
-                        PRIMARY KEY(hash, tree_id, generation),
-                        FOREIGN KEY(ancestor) REFERENCES node(hash)
                     )
                     """
                 )
@@ -153,11 +150,6 @@ class DataStore:
                         from_wallet tinyint CHECK(from_wallet == 0 OR from_wallet == 1),
                         PRIMARY KEY(tree_id, url)
                     )
-                    """
-                )
-                await writer.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS node_hash ON root(node_hash)
                     """
                 )
                 await writer.execute(
