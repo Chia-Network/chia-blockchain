@@ -196,8 +196,8 @@ class DataStore:
 
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                INSERT INTO root(tree_id, generation, status)
+                VALUES(:tree_id, :generation, :status)
                 """,
                 new_root.to_row(),
             )
@@ -243,8 +243,8 @@ class DataStore:
             try:
                 await writer.execute(
                     """
-                    INSERT INTO node(hash, node_type, left, right, key, value)
-                    VALUES(:hash, :node_type, :left, :right, :key, :value)
+                    INSERT INTO node(tree_id, generation, hash, node_type, left, right, key, value)
+                    VALUES(:tree_id, :generation, :hash, :node_type, :left, :right, :key, :value)
                     """,
                     values,
                 )

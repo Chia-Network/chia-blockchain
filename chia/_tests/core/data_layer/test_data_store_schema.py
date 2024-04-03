@@ -43,8 +43,8 @@ async def test_node_hash_must_be_32(
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await writer.execute(
                 """
-                INSERT INTO node(hash, node_type, left, right, key, value)
-                VALUES(:hash, :node_type, :left, :right, :key, :value)
+                INSERT INTO node(tree_id, generation, hash, node_type, left, right, key, value)
+                VALUES(:tree_id, :generation, :hash, :node_type, :left, :right, :key, :value)
                 """,
                 valid_node_values,
             )
@@ -62,8 +62,8 @@ async def test_node_hash_must_not_be_null(
         with pytest.raises(sqlite3.IntegrityError, match=r"^NOT NULL constraint failed: node.hash$"):
             await writer.execute(
                 """
-                INSERT INTO node(hash, node_type, left, right, key, value)
-                VALUES(:hash, :node_type, :left, :right, :key, :value)
+                INSERT INTO node(tree_id, generation, hash, node_type, left, right, key, value)
+                VALUES(:tree_id, :generation, :hash, :node_type, :left, :right, :key, :value)
                 """,
                 valid_node_values,
             )
@@ -82,8 +82,8 @@ async def test_node_type_must_be_valid(
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await writer.execute(
                 """
-                INSERT INTO node(hash, node_type, left, right, key, value)
-                VALUES(:hash, :node_type, :left, :right, :key, :value)
+                INSERT INTO node(tree_id, generation, hash, node_type, left, right, key, value)
+                VALUES(:tree_id, :generation, :hash, :node_type, :left, :right, :key, :value)
                 """,
                 valid_node_values,
             )
@@ -107,8 +107,8 @@ async def test_node_internal_child_not_null(data_store: DataStore, tree_id: byte
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await writer.execute(
                 """
-                INSERT INTO node(hash, node_type, left, right, key, value)
-                VALUES(:hash, :node_type, :left, :right, :key, :value)
+                INSERT INTO node(tree_id, generation, hash, node_type, left, right, key, value)
+                VALUES(:tree_id, :generation, :hash, :node_type, :left, :right, :key, :value)
                 """,
                 values,
             )
@@ -140,8 +140,8 @@ async def test_node_internal_must_be_valid_reference(
         with pytest.raises(sqlite3.IntegrityError, match=r"^FOREIGN KEY constraint failed$"):
             await writer.execute(
                 """
-                INSERT INTO node(hash, node_type, left, right, key, value)
-                VALUES(:hash, :node_type, :left, :right, :key, :value)
+                INSERT INTO node(tree_id, generation, hash, node_type, left, right, key, value)
+                VALUES(:tree_id, :generation, :hash, :node_type, :left, :right, :key, :value)
                 """,
                 values,
             )
@@ -159,8 +159,8 @@ async def test_node_terminal_key_value_not_null(data_store: DataStore, tree_id: 
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await writer.execute(
                 """
-                INSERT INTO node(hash, node_type, left, right, key, value)
-                VALUES(:hash, :node_type, :left, :right, :key, :value)
+                INSERT INTO node(tree_id, generation, hash, node_type, left, right, key, value)
+                VALUES(:tree_id, :generation, :hash, :node_type, :left, :right, :key, :value)
                 """,
                 values,
             )
@@ -177,8 +177,8 @@ async def test_root_tree_id_must_be_32(data_store: DataStore, tree_id: bytes32, 
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                INSERT INTO root(tree_id, generation, status)
+                VALUES(:tree_id, :generation, :status)
                 """,
                 values,
             )
@@ -193,8 +193,8 @@ async def test_root_tree_id_must_not_be_null(data_store: DataStore, tree_id: byt
         with pytest.raises(sqlite3.IntegrityError, match=r"^NOT NULL constraint failed: root.tree_id$"):
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                INSERT INTO root(tree_id, generation, status)
+                VALUES(:tree_id, :generation, :status)
                 """,
                 values,
             )
@@ -217,8 +217,8 @@ async def test_root_generation_must_not_be_less_than_zero(
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                INSERT INTO root(tree_id, generation, status)
+                VALUES(:tree_id, :generation, :status)
                 """,
                 values,
             )
@@ -238,8 +238,8 @@ async def test_root_generation_must_not_be_null(data_store: DataStore, tree_id: 
         with pytest.raises(sqlite3.IntegrityError, match=r"^NOT NULL constraint failed: root.generation$"):
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                INSERT INTO root(tree_id, generation, status)
+                VALUES(:tree_id, :generation, :status)
                 """,
                 values,
             )
@@ -253,8 +253,8 @@ async def test_root_node_hash_must_reference(data_store: DataStore) -> None:
         with pytest.raises(sqlite3.IntegrityError, match=r"^FOREIGN KEY constraint failed$"):
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                INSERT INTO root(tree_id, generation, status)
+                VALUES(:tree_id, :generation, :status)
                 """,
                 values,
             )
@@ -275,8 +275,8 @@ async def test_root_status_must_be_valid(data_store: DataStore, tree_id: bytes32
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                INSERT INTO root(tree_id, generation, status)
+                VALUES(:tree_id, :generation, :status)
                 """,
                 values,
             )
@@ -291,8 +291,8 @@ async def test_root_status_must_not_be_null(data_store: DataStore, tree_id: byte
         with pytest.raises(sqlite3.IntegrityError, match=r"^NOT NULL constraint failed: root.status$"):
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                INSERT INTO root(tree_id, generation, status)
+                VALUES(:tree_id, :generation, :status)
                 """,
                 values,
             )
@@ -307,8 +307,8 @@ async def test_root_tree_id_generation_must_be_unique(data_store: DataStore, tre
         with pytest.raises(sqlite3.IntegrityError, match=r"^UNIQUE constraint failed: root.tree_id, root.generation$"):
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                INSERT INTO root(tree_id, generation, status)
+                VALUES(:tree_id, :generation, :status)
                 """,
                 values,
             )

@@ -56,8 +56,8 @@ pytestmark = pytest.mark.data_layer
 
 
 table_columns: Dict[str, List[str]] = {
-    "node": ["hash", "node_type", "left", "right", "key", "value"],
-    "root": ["tree_id", "generation", "node_hash", "status"],
+    "node": ["tree_id", "generation", "hash", "parent", "node_type", "left", "right", "key", "value"],
+    "root": ["tree_id", "generation", "status"],
 }
 
 
@@ -70,8 +70,8 @@ async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_
     async with data_store.db_wrapper.writer() as writer:
         await writer.execute(
             """
-            INSERT INTO node(hash, node_type, left, right, key, value)
-            VALUES(:hash, :node_type, :left, :right, :key, :value)
+            INSERT INTO node(tree_id, generation, hash, parent, node_type, left, right, key, value)
+            VALUES(:tree_id, :generation, :hash, :node_type, :left, :right, :key, :value)
             """,
             valid_node_values,
         )
@@ -983,13 +983,12 @@ async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataSto
         for generation in range(1, 5):
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                INSERT INTO root(tree_id, generation, status)
+                VALUES(:tree_id, :generation, :status)
                 """,
                 {
                     "tree_id": tree_id,
                     "generation": generation,
-                    "node_hash": None,
                     "status": Status.COMMITTED.value,
                 },
             )
@@ -1009,13 +1008,12 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
         for generation in [*range(5), *range(6, 10)]:
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
+                INSERT INTO root(tree_id, generation, status)
+                VALUES(:tree_id, :generation, :status)
                 """,
                 {
                     "tree_id": tree_id,
                     "generation": generation,
-                    "node_hash": None,
                     "status": Status.COMMITTED.value,
                 },
             )
@@ -1031,8 +1029,13 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
 async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.writer() as writer:
         await writer.execute(
-            "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
+            """
+            INSERT INTO node(tree_id, generation, hash, node_type, left, right)
+            VALUES(:tree_id, :generation, :hash, :node_type, :left, :right)
+            """,
             {
+                "tree_id": bytes32.random(),
+                "generation": 0,
                 "hash": a_bytes_32,
                 "node_type": NodeType.INTERNAL,
                 "left": a_bytes_32,
@@ -1051,8 +1054,13 @@ async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
 async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.writer() as writer:
         await writer.execute(
-            "INSERT INTO node(hash, node_type, key, value) VALUES(:hash, :node_type, :key, :value)",
+            """
+            INSERT INTO node(tree_id, generation, hash, node_type, key, value)
+            VALUES(:tree_id, :generation, :hash, :node_type, :key, :value)
+            """,
             {
+                "tree_id": bytes32.random(),
+                "generation": 0,
                 "hash": a_bytes_32,
                 "node_type": NodeType.TERMINAL,
                 "key": Program.to((1, 2)).as_bin(),
