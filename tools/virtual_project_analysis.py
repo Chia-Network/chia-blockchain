@@ -109,7 +109,13 @@ def is_excluded(file_path: Path, excluded_paths: List[Path]) -> bool:
 # graph: A dictionary mapping each file to its list of dependencies.
 # excluded_paths: A list of paths that should be excluded from the cycle detection.
 # ignore_cycles_in: A list of package names where cycles, if found, should be ignored.
-def find_cycles(graph: Dict[Path, List[Path]], excluded_paths: List[Path], ignore_cycles_in: List[str]) -> List[str]:
+# ignore_specific_edges: A dictionary of {parent: child} pairs where the search for a cycle should be abandonned
+def find_cycles(
+    graph: Dict[Path, List[Path]],
+    excluded_paths: List[Path],
+    ignore_cycles_in: List[str],
+    ignore_specific_edges: Dict[Path, Path],
+) -> List[List[Tuple[str, Path]]]:
 
     # Define a nested function for recursive dependency searching.
     # top_level_package: The name of the package at the top of the dependency tree.
@@ -117,10 +123,22 @@ def find_cycles(graph: Dict[Path, List[Path]], excluded_paths: List[Path], ignor
     # dependency: The current dependency path being examined.
     # already_seen: A list of dependency paths that have already been visited to avoid infinite loops.
     def recursive_dependency_search(
-        top_level_package: str, left_top_level: bool, dependency: Path, already_seen: List[Path]
+        top_level_package: str,
+        left_top_level: bool,
+        dependency: Path,
+        already_seen: List[Path],
+        immediate_parent: Optional[Path],
     ) -> List[List[Tuple[str, Path]]]:
         # Check if the dependency is in the list of already seen dependencies or is excluded.
-        if dependency in already_seen or is_excluded(dependency, excluded_paths):
+        if (
+            dependency in already_seen
+            or is_excluded(dependency, excluded_paths)
+            or (
+                dependency in ignore_specific_edges
+                and len(already_seen) > 0
+                and ignore_specific_edges[dependency] == immediate_parent
+            )
+        ):
             return []
 
         # Mark this dependency as seen.
@@ -144,7 +162,9 @@ def find_cycles(graph: Dict[Path, List[Path]], excluded_paths: List[Path], ignor
                 for stack in [
                     _stack
                     for dep in graph[dependency]
-                    for _stack in recursive_dependency_search(top_level_package, left_top_level, dep, already_seen)
+                    for _stack in recursive_dependency_search(
+                        top_level_package, left_top_level, dep, already_seen, dependency
+                    )
                 ]
             ]
 
@@ -158,10 +178,10 @@ def find_cycles(graph: Dict[Path, List[Path]], excluded_paths: List[Path], ignor
         if chia_file.annotations is None or chia_file.annotations.package in ignore_cycles_in:
             continue
         # Extend the path_accumulator with results from the recursive search starting from this parent.
-        path_accumulator.extend(recursive_dependency_search(chia_file.annotations.package, False, parent, []))
+        path_accumulator.extend(recursive_dependency_search(chia_file.annotations.package, False, parent, [], None))
 
     # Format and return the accumulated paths as strings showing the cycles.
-    return [" -> ".join([str(d) + f" ({p})" for p, d in stack]) for stack in path_accumulator]
+    return path_accumulator
 
 
 def print_graph(graph: Union[Dict[str, List[str]], Dict[Path, List[Path]]]) -> None:
@@ -202,10 +222,18 @@ class DirectoryParameters:
         return python_files
 
 
-@dataclass
+@dataclass(frozen=True)
 class Config:
     directory_parameters: DirectoryParameters
     ignore_cycles_in: List[str]
+    ignore_specific_edges: Dict[Path, Path]  # {parent: child}
+
+
+def parse_edge(user_string: str) -> Tuple[Path, Path]:
+    split_string = user_string.split("->")
+    child = Path(split_string[0].strip().split("(")[0].strip())
+    parent = Path(split_string[1].strip().split("(")[0].strip())
+    return parent, child
 
 
 def config(func: Callable[..., None]) -> Callable[..., None]:
@@ -234,6 +262,7 @@ def config(func: Callable[..., None]) -> Callable[..., None]:
     def inner(config_path: Optional[str], *args: Any, **kwargs: Any) -> None:
         exclude_paths = []
         ignore_cycles_in = []
+        ignore_specific_edges = []
         if config_path is not None:
             # Reading from the YAML configuration file
             with open(config_path) as file:
@@ -242,6 +271,7 @@ def config(func: Callable[..., None]) -> Callable[..., None]:
             # Extracting required configuration values
             exclude_paths = [Path(p) for p in config_data.get("exclude_paths", [])]
             ignore_cycles_in = config_data.get("ignore_cycles_in", [])
+            ignore_specific_edges = config_data.get("ignore_specific_edges", [])
 
         # Instantiate DirectoryParameters with the provided options
         dir_params = DirectoryParameters(
@@ -249,9 +279,17 @@ def config(func: Callable[..., None]) -> Callable[..., None]:
             excluded_paths=[*(Path(p) for p in kwargs.pop("excluded_paths")), *exclude_paths],
         )
 
+        # Make the ignored edge dictionary
+        ignore_specific_edges_graph = {}
+        for ignore in (*kwargs.pop("ignore_specific_edges", []), *ignore_specific_edges):
+            parent, child = parse_edge(ignore)
+            ignore_specific_edges_graph[parent] = child
+
         # Instantiating the Config object
         config = Config(
-            directory_parameters=dir_params, ignore_cycles_in=[*kwargs.pop("ignore_cycles_in", []), *ignore_cycles_in]
+            directory_parameters=dir_params,
+            ignore_cycles_in=[*kwargs.pop("ignore_cycles_in", []), *ignore_cycles_in],
+            ignore_specific_edges=ignore_specific_edges_graph,
         )
 
         # Calling the wrapped function with the Config object and other arguments
@@ -295,6 +333,13 @@ def print_virtual_dependency_graph(config: Config) -> None:
     type=str,
     help="Ignore dependency cycles in a package",
 )
+@click.option(
+    "--ignore-specific-edge",
+    "ignore_specific_edges",
+    multiple=True,
+    type=str,
+    help="Ignore specific problematic dependencies (format: path/to/file1 -> path/to/file2)",
+)
 @config
 def print_cycles(config: Config) -> None:
     flag = False
@@ -302,8 +347,9 @@ def print_cycles(config: Config) -> None:
         build_dependency_graph(config.directory_parameters),
         config.directory_parameters.excluded_paths,
         config.ignore_cycles_in,
+        config.ignore_specific_edges,
     ):
-        print(cycle)
+        print(" -> ".join([str(d) + f" ({p})" for p, d in cycle]))
         flag = True
 
     if flag:

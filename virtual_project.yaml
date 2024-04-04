@@ -10,24 +10,13 @@ ignore_cycles_in:
   - supported_wallets
   - data_layer
   - farmer
-  - key_management
   - full_node
   - service
   - pooling
-  - plotting
-  - rpc
   - simulator
   - consensus
   - mempool
-  - harvester
-  - introducer
-  - plot_sync
   - protocol
-  - seeder
-  - timelord
-  - network
-  - clvm
-  - todo
-  - testing
-  - chialisp
-  - cryptography
+ignore_specific_edges:
+  - chia/wallet/derive_keys.py (cryptography) -> chia/consensus/coinbase.py (consensus)
+  - chia/server/server.py (service) -> chia/server/introducer_peers.py (network)
