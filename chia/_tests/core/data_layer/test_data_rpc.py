@@ -3446,10 +3446,10 @@ async def test_unsubmitted_batch_db_migration(
     monkeypatch: Any,
 ) -> None:
     with monkeypatch.context() as m:
-        OldStatus = IntEnum("Status", [(name, member.value) for name, member in Status.__members__.items()])
+        OldStatus = IntEnum("Status", [(name, member.value) for name, member in Status.__members__.items()])  # type: ignore
         ModifiedStatus = IntEnum(
             "Status", [(name, member.value) for name, member in Status.__members__.items() if name != "PENDING_BATCH"]
-        )
+        )  # type: ignore
         m.setattr("chia.data_layer.data_layer_util.Status", ModifiedStatus)
         m.setattr("chia.data_layer.data_store.Status", ModifiedStatus)
         m.setattr("chia.data_layer.data_layer.Status", ModifiedStatus)
