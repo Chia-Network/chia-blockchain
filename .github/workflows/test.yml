@@ -23,6 +23,9 @@ concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}--${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
+env:
+    collect-junit: false
+
 jobs:
   configure:
     name: Configure matrix
@@ -61,6 +64,7 @@ jobs:
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-latest
+      collect-junit: ${{ env.collect-junit == 'true' }}
   ubuntu:
     uses: ./.github/workflows/test-single.yml
     needs: configure
@@ -73,6 +77,7 @@ jobs:
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
+      collect-junit: ${{ env.collect-junit == 'true' }}
   windows:
     uses: ./.github/workflows/test-single.yml
     needs: configure
@@ -85,6 +90,7 @@ jobs:
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: windows-latest
+      collect-junit: ${{ env.collect-junit == 'true' }}
 
   coverage:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
@@ -119,6 +125,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Results
+        if: ${{ env.collect-junit == 'true' }}
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
@@ -126,6 +133,7 @@ jobs:
           path: junit-data
 
       - name: Format JUnit data and prepare results
+        if: ${{ env.collect-junit == 'true' }}
         run: |
           sudo snap install yq
           ls junit-data/*.xml | xargs --max-procs=10 --replace={} yq eval '.testsuites.testsuite.testcase |= sort_by(.+@classname, .+@name)' --inplace {}
@@ -136,6 +144,7 @@ jobs:
           ls junit-results/*.xml | xargs --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
 
       - name: Publish formatted JUnit data
+        if: ${{ env.collect-junit == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: junit-data
@@ -168,7 +177,7 @@ jobs:
           python -m chia._tests.process_junit            --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> junit-results/time_out_assert.md
 
       - name: Publish JUnit results
-        if: always()
+        if: always() && ${{ env.collect-junit == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: junit-results
