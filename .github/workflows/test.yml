@@ -61,7 +61,7 @@ jobs:
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-latest
-      collect-junit: ${{ env.collect-junit == 'true' }}
+      collect-junit: false
   ubuntu:
     uses: ./.github/workflows/test-single.yml
     needs: configure
@@ -74,7 +74,7 @@ jobs:
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
-      collect-junit: ${{ env.collect-junit == 'true' }}
+      collect-junit: false
   windows:
     uses: ./.github/workflows/test-single.yml
     needs: configure
@@ -87,7 +87,7 @@ jobs:
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: windows-latest
-      collect-junit: ${{ env.collect-junit == 'true' }}
+      collect-junit: false
 
   coverage:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
@@ -174,7 +174,7 @@ jobs:
           python -m chia._tests.process_junit            --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> junit-results/time_out_assert.md
 
       - name: Publish JUnit results
-        if: always() && ${{ env.collect-junit == 'true' }}
+        if: always() && false
         uses: actions/upload-artifact@v4
         with:
           name: junit-results
