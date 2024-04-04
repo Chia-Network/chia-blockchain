@@ -3446,10 +3446,15 @@ async def test_unsubmitted_batch_db_migration(
     monkeypatch: Any,
 ) -> None:
     with monkeypatch.context() as m:
-        OldStatus = IntEnum("Status", [(name, member.value) for name, member in Status.__members__.items()])  # type: ignore
-        ModifiedStatus = IntEnum(
-            "Status", [(name, member.value) for name, member in Status.__members__.items() if name != "PENDING_BATCH"]
-        )  # type: ignore
+        class OldStatus(IntEnum):
+            PENDING = 1
+            COMMITTED = 2
+            PENDING_BATCH = 3
+
+        class ModifiedStatus(IntEnum):
+            PENDING = 1
+            COMMITTED = 2
+
         m.setattr("chia.data_layer.data_layer_util.Status", ModifiedStatus)
         m.setattr("chia.data_layer.data_store.Status", ModifiedStatus)
         m.setattr("chia.data_layer.data_layer.Status", ModifiedStatus)
@@ -3497,9 +3502,7 @@ async def test_unsubmitted_batch_db_migration(
         data_rpc_api = DataLayerRpcApi(data_layer)
         # Test we don't migrate twice.
         with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: status == 1 OR status == 2"):
-            await data_rpc_api.batch_update(
-                {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
-            )
+            await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False})
 
     # Artificially remove the first migration.
     async with DataStore.managed(database=tmp_path.joinpath("db.sqlite")) as data_store:
