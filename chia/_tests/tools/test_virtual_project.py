@@ -5,7 +5,7 @@ from typing import Callable, Dict, List
 
 import pytest
 
-from tools.virtual_project_analysis import (
+from chia.util.virtual_project_analysis import (
     Annotation,
     ChiaFile,
     DirectoryParameters,
@@ -195,8 +195,8 @@ def mock_chia_file_parse(path: Path) -> ChiaFile:
 
 @pytest.fixture
 def prepare_mocks(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("tools.virtual_project_analysis.build_dependency_graph", mock_build_dependency_graph)
-    monkeypatch.setattr("tools.virtual_project_analysis.ChiaFile.parse", mock_chia_file_parse)
+    monkeypatch.setattr("chia.util.virtual_project_analysis.build_dependency_graph", mock_build_dependency_graph)
+    monkeypatch.setattr("chia.util.virtual_project_analysis.ChiaFile.parse", mock_chia_file_parse)
 
 
 def test_build_virtual_dependency_graph(prepare_mocks: None) -> None:
@@ -221,7 +221,7 @@ def mock_chia_file_parse2(path: Path) -> ChiaFile:
 
 @pytest.fixture
 def prepare_mocks2(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("tools.virtual_project_analysis.ChiaFile.parse", mock_chia_file_parse2)
+    monkeypatch.setattr("chia.util.virtual_project_analysis.ChiaFile.parse", mock_chia_file_parse2)
 
 
 def test_cycle_detection(prepare_mocks2: None) -> None:
