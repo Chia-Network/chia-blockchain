@@ -13,7 +13,6 @@ from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.mempool_manager import (
@@ -48,6 +47,7 @@ from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
+from chia.util.bundle_tools import simple_solution_generator
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement

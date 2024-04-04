@@ -38,12 +38,6 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.full_node.bundle_tools import (
-    best_solution_generator_from_template,
-    detect_potential_template_generator,
-    simple_solution_generator,
-    simple_solution_generator_backrefs,
-)
 from chia.full_node.signage_point import SignagePoint
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
@@ -97,6 +91,12 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
+from chia.util.bundle_tools import (
+    best_solution_generator_from_template,
+    detect_potential_template_generator,
+    simple_solution_generator,
+    simple_solution_generator_backrefs,
+)
 from chia.util.config import (
     config_path_for_filename,
     create_default_chia_config,

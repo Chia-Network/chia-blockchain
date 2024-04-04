@@ -31,7 +31,6 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.simulator.block_tools import create_block_tools_async
 from chia.simulator.keyring import TempKeyring
@@ -50,6 +49,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.bundle_tools import detect_potential_template_generator
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
