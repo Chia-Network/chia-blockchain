@@ -3446,6 +3446,7 @@ async def test_unsubmitted_batch_db_migration(
     monkeypatch: Any,
 ) -> None:
     with monkeypatch.context() as m:
+
         class OldStatus(IntEnum):
             PENDING = 1
             COMMITTED = 2
