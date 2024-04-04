@@ -7,10 +7,12 @@ import enum
 import json
 import os
 import random
+import sqlite3
 import sys
 import time
 from copy import deepcopy
 from dataclasses import dataclass
+from enum import IntEnum
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
 
@@ -43,6 +45,7 @@ from chia.data_layer.data_layer_util import (
     leaf_hash,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
+from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
@@ -3431,3 +3434,77 @@ async def test_unsubmitted_batch_update(
 
         with pytest.raises(Exception, match="Latest root is already confirmed"):
             res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_unsubmitted_batch_db_migration(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    bt: BlockTools,
+    monkeypatch: Any,
+) -> None:
+    with monkeypatch.context() as m:
+        OldStatus = IntEnum("Status", [(name, member.value) for name, member in Status.__members__.items()])
+        ModifiedStatus = IntEnum(
+            "Status", [(name, member.value) for name, member in Status.__members__.items() if name != "PENDING_BATCH"]
+        )
+        m.setattr("chia.data_layer.data_layer_util.Status", ModifiedStatus)
+        m.setattr("chia.data_layer.data_store.Status", ModifiedStatus)
+        m.setattr("chia.data_layer.data_layer.Status", ModifiedStatus)
+
+        wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+            self_hostname, one_wallet_and_one_simulator_services
+        )
+
+        async with init_data_layer_service(
+            wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path
+        ) as data_layer_service:
+            assert data_layer_service.rpc_server is not None
+            rpc_port = data_layer_service.rpc_server.listen_port
+            data_layer = data_layer_service._api.data_layer
+            data_rpc_api = DataLayerRpcApi(data_layer)
+            res = await data_rpc_api.create_data_store({})
+            assert res is not None
+
+            store_id = bytes32(hexstr_to_bytes(res["id"]))
+            await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+
+            m.setattr("chia.data_layer.data_layer_util.Status", OldStatus)
+            m.setattr("chia.data_layer.data_store.Status", OldStatus)
+            m.setattr("chia.data_layer.data_layer.Status", OldStatus)
+
+            key = b"0000"
+            value = b"0000"
+            changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+            with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: status == 1 OR status == 2"):
+                await data_rpc_api.batch_update(
+                    {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+                )
+
+    async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
+        assert data_layer_service.rpc_server is not None
+        rpc_port = data_layer_service.rpc_server.listen_port
+        data_layer = data_layer_service._api.data_layer
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        # Test we don't migrate twice.
+        with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: status == 1 OR status == 2"):
+            await data_rpc_api.batch_update(
+                {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+            )
+
+    # Artificially remove the first migration.
+    async with DataStore.managed(database=tmp_path.joinpath("db.sqlite")) as data_store:
+        async with data_store.db_wrapper.writer() as writer:
+            await writer.execute("DELETE FROM schema")
+
+    async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
+        assert data_layer_service.rpc_server is not None
+        rpc_port = data_layer_service.rpc_server.listen_port
+        data_layer = data_layer_service._api.data_layer
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        res = await data_rpc_api.batch_update(
+            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+        )
+        assert res == {}
