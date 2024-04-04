@@ -18,7 +18,6 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
@@ -34,6 +33,7 @@ from chia.types.eligible_coin_spends import EligibilityAndAdditions, UnspentLine
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
+from chia.types.npc_result import NPCResult
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util import cached_bls

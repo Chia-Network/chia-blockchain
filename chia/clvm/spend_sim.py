@@ -13,7 +13,6 @@ import anyio
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
@@ -29,6 +28,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
+from chia.types.npc_result import NPCResult
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError

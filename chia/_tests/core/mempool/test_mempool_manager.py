@@ -11,7 +11,6 @@ from chiabip158 import PyBIP158
 from chia._tests.util.misc import invariant_check_mempool
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
@@ -45,6 +44,7 @@ from chia.types.eligible_coin_spends import (
 )
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
+from chia.types.npc_result import NPCResult
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions

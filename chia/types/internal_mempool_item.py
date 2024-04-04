@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict
 
-from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_item import BundleCoinSpend
+from chia.types.npc_result import NPCResult
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32
 

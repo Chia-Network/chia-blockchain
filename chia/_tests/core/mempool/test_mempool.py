@@ -24,7 +24,6 @@ from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.misc import BenchmarkRunner, invariant_check_mempool
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
@@ -52,6 +51,7 @@ from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
+from chia.types.npc_result import NPCResult
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.api_decorators import api_request

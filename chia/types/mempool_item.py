@@ -3,10 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.types.npc_result import NPCResult
 from chia.types.spend_bundle import SpendBundle
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64

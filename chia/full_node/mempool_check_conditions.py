@@ -17,7 +17,6 @@ from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_
 from chia_rs import run_block_generator, run_block_generator2, run_chia_program
 
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -26,6 +25,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions, SpendInfo, make_spend
 from chia.types.generator_types import BlockGenerator
+from chia.types.npc_result import NPCResult
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.condition_tools import conditions_for_solution
 from chia.util.errors import Err

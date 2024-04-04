@@ -10,10 +10,10 @@ from chia._tests.environments.wallet import WalletEnvironment, WalletState, Wall
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.full_node import FullNode
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.npc_result import NPCResult
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig

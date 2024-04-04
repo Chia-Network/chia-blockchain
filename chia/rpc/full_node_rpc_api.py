@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
@@ -24,6 +23,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
+from chia.types.npc_result import NPCResult
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes

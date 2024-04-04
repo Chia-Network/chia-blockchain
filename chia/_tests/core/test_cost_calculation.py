@@ -10,7 +10,6 @@ from clvm_tools import binutils
 
 from chia._tests.util.misc import BenchmarkRunner
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
@@ -20,6 +19,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
+from chia.types.npc_result import NPCResult
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 
