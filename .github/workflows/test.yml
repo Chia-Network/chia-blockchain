@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-    collect-junit: false
+  collect-junit: false
 
 jobs:
   configure:
