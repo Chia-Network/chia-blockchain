@@ -3462,7 +3462,6 @@ async def test_unsubmitted_batch_db_migration(
             wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path
         ) as data_layer_service:
             assert data_layer_service.rpc_server is not None
-            rpc_port = data_layer_service.rpc_server.listen_port
             data_layer = data_layer_service._api.data_layer
             data_rpc_api = DataLayerRpcApi(data_layer)
             res = await data_rpc_api.create_data_store({})
@@ -3478,6 +3477,15 @@ async def test_unsubmitted_batch_db_migration(
             key = b"0000"
             value = b"0000"
             changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+            res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+            update_tx_rec0 = res["tx_id"]
+            await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
+            keys = await data_rpc_api.get_keys({"id": store_id.hex()})
+            assert keys == {"keys": ["0x30303030"]}
+
+            key = b"0001"
+            value = b"0001"
+            changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
             with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: status == 1 OR status == 2"):
                 await data_rpc_api.batch_update(
                     {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
@@ -3485,7 +3493,6 @@ async def test_unsubmitted_batch_db_migration(
 
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
         assert data_layer_service.rpc_server is not None
-        rpc_port = data_layer_service.rpc_server.listen_port
         data_layer = data_layer_service._api.data_layer
         data_rpc_api = DataLayerRpcApi(data_layer)
         # Test we don't migrate twice.
@@ -3501,10 +3508,15 @@ async def test_unsubmitted_batch_db_migration(
 
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
         assert data_layer_service.rpc_server is not None
-        rpc_port = data_layer_service.rpc_server.listen_port
         data_layer = data_layer_service._api.data_layer
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.batch_update(
             {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
         )
         assert res == {}
+
+        res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
+        update_tx_rec1 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
+        keys = await data_rpc_api.get_keys({"id": store_id.hex()})
+        assert keys == {"keys": ["0x30303031", "0x30303030"]}
