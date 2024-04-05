@@ -208,7 +208,7 @@ jobs:
       - name: Verify source and installed tests collect and match
         run: |
           echo '==== collecting source tests ===='
-          if ! pytest --collect-only -qq --import-mode=prepend chia/_tests/ 1> source_tests_raw
+          if ! pytest --collect-only -qq --import-mode=prepend chia/_tests/ > source_tests_raw
           then
             echo '    ==== source test collection failure'
             cat source_tests_raw
@@ -216,7 +216,7 @@ jobs:
           fi
 
           echo '==== collecting installed tests ===='
-          if ! pytest --collect-only -qq --import-mode=append --pyargs chia._tests 1> installed_tests_raw
+          if ! pytest --collect-only -qq --import-mode=append --pyargs chia._tests > installed_tests_raw
           then
             echo '    ==== installed test collection failure'
             cat source_tests_raw
