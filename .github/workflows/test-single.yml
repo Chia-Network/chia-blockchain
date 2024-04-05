@@ -207,6 +207,7 @@ jobs:
 
       - name: Verify source and installed tests collect and match
         run: |
+          pytest --collect-only -qq --import-mode=prepend chia/_tests/
           echo '==== collecting source tests ===='
           if ! pytest --collect-only -qq --import-mode=prepend chia/_tests/ > source_tests_raw
           then
