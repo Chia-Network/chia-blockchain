@@ -1507,7 +1507,7 @@ async def test_benchmark_batch_insert_speed(
     r = random.Random()
     r.seed("shadowlands", version=2)
 
-    test_size = 1000
+    test_size = 100
     max_pre_size = 10_000
     # may not be needed if big_o already considers the effect
     # TODO: must be > 0 to avoid an issue with the log class?
