@@ -25,6 +25,7 @@ from _pytest.fixtures import SubRequest
 from pytest import MonkeyPatch
 
 import chia._tests
+import tools
 from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.core.node_height import node_height_at_least
