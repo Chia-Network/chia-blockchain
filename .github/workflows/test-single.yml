@@ -205,12 +205,32 @@ jobs:
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
 
-      - name: Verify source and installed tests match
+      - name: Verify source and installed tests collect and match
         run: |
           echo '==== collecting source tests ===='
-          pytest --collect-only -qq --import-mode=prepend chia/_tests/ | sed -n 's;^\(chia/_tests/.*\);\1;p' | sort | tee source_tests
+          if ! pytest --collect-only -qq --import-mode=prepend chia/_tests/ 1> source_tests_raw
+          then
+            echo '    ==== source test collection failure'
+            cat source_tests_raw
+            exit 1
+          fi
+
           echo '==== collecting installed tests ===='
-          pytest --collect-only -qq --import-mode=append --pyargs chia._tests | sed -n 's;^venv/.*/\(chia/_tests/.*\);\1;p' | sort | tee installed_tests
+          if ! pytest --collect-only -qq --import-mode=append --pyargs chia._tests 1> installed_tests_raw
+          then
+            echo '    ==== installed test collection failure'
+            cat source_tests_raw
+            exit 1
+          fi
+
+          echo '==== processing collected tests ===='
+          for mode in source installed
+          do
+            echo "::group::collected ${mode} tests"
+            cat ${mode}_tests_raw | sed -n 's;^venv/.*/\(chia/_tests/.*\);\1;p' | sort | tee ${mode}_tests
+            echo '::endgroup::'
+          done
+
           echo '==== diffing collected tests ===='
           diff --unified source_tests installed_tests
 
