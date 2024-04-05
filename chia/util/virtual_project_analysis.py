@@ -279,9 +279,9 @@ def config(func: Callable[..., None]) -> Callable[..., None]:
 
             # Extracting required configuration values
             exclude_paths = [Path(p) for p in config_data.get("exclude_paths", [])]
-            ignore_cycles_in = config_data.get("ignore_cycles_in", [])
-            ignore_specific_files = config_data.get("ignore_specific_files", [])
-            ignore_specific_edges = config_data.get("ignore_specific_edges", [])
+            ignore_cycles_in = config_data["ignore"].get("packages", [])
+            ignore_specific_files = config_data["ignore"].get("files", [])
+            ignore_specific_edges = config_data["ignore"].get("edges", [])
 
         # Instantiate DirectoryParameters with the provided options
         dir_params = DirectoryParameters(

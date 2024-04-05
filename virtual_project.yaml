@@ -1,24 +1,25 @@
 exclude_paths:
   - chia/_tests
   - chia/util/dump_keyring.py
-ignore_cycles_in:
-  - chia-blockchain
-  - obsolete
-  - development
-  - cmds
-  - wallet
-  - supported_wallets
-  - data_layer
-  - farmer
-  - full_node
-  - service
-  - simulator
-  - consensus
-  - mempool
-  - protocol
-ignore_specific_files:
-  - chia/cmds/cmds_util.py
-ignore_specific_edges:
-  - chia/cmds/plotnft_funcs.py (pooling) -> chia/cmds/wallet_funcs.py (wallet)
-  - chia/wallet/derive_keys.py (cryptography) -> chia/consensus/coinbase.py (consensus)
-  - chia/server/server.py (service) -> chia/server/introducer_peers.py (network)
+ignore:
+  packages:
+    - chia-blockchain
+    - obsolete
+    - development
+    - cmds
+    - wallet
+    - supported_wallets
+    - data_layer
+    - farmer
+    - full_node
+    - service
+    - simulator
+    - consensus
+    - mempool
+    - protocol
+  files:
+    - chia/cmds/cmds_util.py
+  edges:
+    - chia/cmds/plotnft_funcs.py (pooling) -> chia/cmds/wallet_funcs.py (wallet)
+    - chia/wallet/derive_keys.py (cryptography) -> chia/consensus/coinbase.py (consensus)
+    - chia/server/server.py (service) -> chia/server/introducer_peers.py (network)
