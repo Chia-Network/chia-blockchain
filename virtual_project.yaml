@@ -12,11 +12,13 @@ ignore_cycles_in:
   - farmer
   - full_node
   - service
-  - pooling
   - simulator
   - consensus
   - mempool
   - protocol
+ignore_specific_files:
+  - chia/cmds/cmds_util.py
 ignore_specific_edges:
+  - chia/cmds/plotnft_funcs.py (pooling) -> chia/cmds/wallet_funcs.py (wallet)
   - chia/wallet/derive_keys.py (cryptography) -> chia/consensus/coinbase.py (consensus)
   - chia/server/server.py (service) -> chia/server/introducer_peers.py (network)
