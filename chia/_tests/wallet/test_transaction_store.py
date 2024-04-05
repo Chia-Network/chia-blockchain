@@ -10,6 +10,7 @@ from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
@@ -888,7 +889,7 @@ async def test_large_tx_record_query() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
         tx_records_to_insert = []
-        for _ in range(db_wrapper.host_parameter_limit + 1):
+        for _ in range(SQLITE_MAX_VARIABLE_NUMBER + 1):
             name = bytes32.random()
             record = TransactionRecordOld(
                 confirmed_at_height=uint32(0),
@@ -934,7 +935,7 @@ async def test_large_tx_record_query() -> None:
             )
 
         all_transactions = await store.get_all_transactions_for_wallet(1)
-        assert len(all_transactions) == db_wrapper.host_parameter_limit + 1
+        assert len(all_transactions) == SQLITE_MAX_VARIABLE_NUMBER + 1
         # Check that all transaction record items have correct valid times
         empty_valid_times = ConditionValidTimes()
         assert all(tx.valid_times == empty_valid_times for tx in all_transactions[:-1])

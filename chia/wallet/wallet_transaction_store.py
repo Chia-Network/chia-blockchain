@@ -9,7 +9,7 @@ import aiosqlite
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.conditions import ConditionValidTimes
@@ -433,8 +433,8 @@ class WalletTransactionStore:
         empty_valid_times = ConditionValidTimes()
         async with self.db_wrapper.reader_no_transaction() as conn:
             chunked_records: List[List[TransactionRecordOld]] = [
-                old_records[i : min(len(old_records), i + self.db_wrapper.host_parameter_limit)]
-                for i in range(0, len(old_records), self.db_wrapper.host_parameter_limit)
+                old_records[i : min(len(old_records), i + SQLITE_MAX_VARIABLE_NUMBER)]
+                for i in range(0, len(old_records), SQLITE_MAX_VARIABLE_NUMBER)
             ]
             for records_chunk in chunked_records:
                 cursor = await conn.execute(

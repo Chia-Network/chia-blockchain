@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 import zstd
 
 from chia.util.config import load_config, lock_and_load_config, save_config
-from chia.util.db_wrapper import get_host_parameter_limit
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.path import path_from_root
 
 
@@ -180,7 +180,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             """
         )
         conn.commit()
-        parameter_limit = get_host_parameter_limit()
+        parameter_limit = SQLITE_MAX_VARIABLE_NUMBER
         start_time = monotonic()
         block_start_time = start_time
         rowids: List[int] = []

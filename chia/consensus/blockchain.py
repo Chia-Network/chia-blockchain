@@ -45,6 +45,7 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
@@ -967,7 +968,7 @@ class Blockchain(BlockchainInterface):
         """
         records: List[BlockRecord] = []
         hashes: List[bytes32] = []
-        assert batch_size < self.block_store.db_wrapper.host_parameter_limit
+        assert batch_size < SQLITE_MAX_VARIABLE_NUMBER
         for height in heights:
             header_hash: Optional[bytes32] = self.height_to_hash(height)
             if header_hash is None:

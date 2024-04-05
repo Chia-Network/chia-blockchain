@@ -5,7 +5,6 @@ import contextlib
 import functools
 import random
 import sqlite3
-import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -105,34 +104,12 @@ def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> No
     file.write(line)
 
 
-def get_host_parameter_limit() -> int:
-    # NOTE: This does not account for dynamically adjusted limits since it makes a
-    #       separate db and connection.  If aiosqlite adds support we should use it.
-    if sys.version_info >= (3, 11):
-        connection = sqlite3.connect(":memory:")
-
-        # sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER exists in 3.11, pylint
-        limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER  # pylint: disable=E1101
-        host_parameter_limit = connection.getlimit(limit_number)
-    else:
-        # guessing based on defaults, seems you can't query
-
-        # https://www.sqlite.org/changes.html#version_3_32_0
-        # Increase the default upper bound on the number of parameters from 999 to 32766.
-        if sqlite3.sqlite_version_info >= (3, 32, 0):
-            host_parameter_limit = 32766
-        else:
-            host_parameter_limit = 999
-    return host_parameter_limit
-
-
 @final
 @dataclass
 class DBWrapper2:
     _write_connection: aiosqlite.Connection
     db_version: int = 1
     _log_file: Optional[TextIO] = None
-    host_parameter_limit: int = get_host_parameter_limit()
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     _read_connections: asyncio.Queue[aiosqlite.Connection] = field(default_factory=asyncio.Queue)
     _num_read_connections: int = 0

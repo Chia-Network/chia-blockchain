@@ -10,6 +10,7 @@ from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.trade_record import TradeRecord, TradeRecordOld
@@ -176,7 +177,7 @@ async def test_large_trade_record_query() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await TradeStore.create(db_wrapper)
         trade_records_to_insert = []
-        for _ in range(db_wrapper.host_parameter_limit + 1):
+        for _ in range(SQLITE_MAX_VARIABLE_NUMBER + 1):
             offer_name = bytes32.random()
             trade_record_old = TradeRecordOld(
                 confirmed_at_index=uint32(0),
@@ -211,7 +212,7 @@ async def test_large_trade_record_query() -> None:
                 (offer_name, bytes(ConditionValidTimes(min_height=uint32(42)))),
             )
         all_trades = await store.get_all_trades()
-        assert len(all_trades) == db_wrapper.host_parameter_limit + 1
+        assert len(all_trades) == SQLITE_MAX_VARIABLE_NUMBER + 1
         # Check that all trade_record items have correct valid_times
         empty = ConditionValidTimes()
         assert all(trade.valid_times == empty for trade in all_trades[:-1])

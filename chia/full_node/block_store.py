@@ -13,7 +13,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
-from chia.util.db_wrapper import DBWrapper2, execute_fetchone
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2, execute_fetchone
 from chia.util.errors import Err
 from chia.util.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.ints import uint32
@@ -370,7 +370,7 @@ class BlockStore:
         if len(header_hashes) == 0:
             return []
 
-        assert len(header_hashes) < self.db_wrapper.host_parameter_limit
+        assert len(header_hashes) < SQLITE_MAX_VARIABLE_NUMBER
         formatted_str = (
             f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
         )

@@ -27,7 +27,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
-from chia.util.db_wrapper import get_host_parameter_limit
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import GeneratorBlockInfo
 from chia.util.ints import uint8, uint32, uint64
 
@@ -369,7 +369,7 @@ async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int
             await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)])
 
         with pytest.raises(AssertionError):
-            await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)] * (get_host_parameter_limit() + 1))
+            await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)] * (SQLITE_MAX_VARIABLE_NUMBER + 1))
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
