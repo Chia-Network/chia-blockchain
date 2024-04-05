@@ -168,7 +168,7 @@ jobs:
       - uses: chia-network/actions/activate-venv@main
 
       - name: Add time out assert results to workflow summary
-        if: always()
+        if: always() && false
         run: |
           python -m chia._tests.process_junit --limit 50 --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
           python -m chia._tests.process_junit            --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> junit-results/time_out_assert.md
