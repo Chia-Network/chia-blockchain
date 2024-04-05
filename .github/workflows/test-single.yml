@@ -232,7 +232,9 @@ jobs:
           done
 
           echo '==== diffing collected tests ===='
+          echo "::group::collected tests diff"
           diff --unified source_tests installed_tests
+          echo '::endgroup::'
 
       - name: Move chia/ so we test the installed code
         run: |
