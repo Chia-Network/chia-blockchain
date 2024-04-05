@@ -1594,7 +1594,7 @@ class FullNodeAPI:
         max_items -= len(states)
 
         hint_coin_ids = await self.full_node.hint_store.get_coin_ids_multi(
-            cast(set[bytes], puzzle_hashes), max_items=max_items
+            cast(Set[bytes], puzzle_hashes), max_items=max_items
         )
 
         hint_states: List[CoinState] = []

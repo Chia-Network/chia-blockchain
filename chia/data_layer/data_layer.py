@@ -817,7 +817,7 @@ class DataLayer:
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
                         )
 
-            work_queue = asyncio.Queue[Job[Subscription]]()
+            work_queue: asyncio.Queue[Job[Subscription]] = asyncio.Queue()
             async with QueuedAsyncPool.managed(
                 name="DataLayer subscription update pool",
                 worker_async_callable=self.update_subscription,

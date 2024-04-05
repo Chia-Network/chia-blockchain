@@ -961,7 +961,9 @@ class TestFullNodeProtocol:
         new_transaction = fnp.NewTransaction(bytes32.random(seeded_random), uint64(10000000), uint64(1))
         await full_node_1.new_transaction(new_transaction, fake_peer)
         assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
-        assert full_node_2.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
+        await time_out_assert(
+            30, full_node_2.full_node.mempool_manager.mempool.at_full_capacity, True, 10000000 * group_size
+        )
 
         await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
