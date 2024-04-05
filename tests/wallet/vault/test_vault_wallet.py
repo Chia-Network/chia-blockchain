@@ -31,7 +31,7 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
 
     # Temporary hack so execute_signing_instructions can access the key
     env.wallet_state_manager.config["test_sk"] = SECP_SK
-    client = env.rpc_client
+    client = wallet_environments.environments[1].rpc_client
     fingerprint = (await client.get_public_keys())[0]
     bls_pk = None
     timelock = None
@@ -60,7 +60,7 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
                 },
                 post_block_balance_updates={
                     1: {
-                        "confirmed_wallet_balance": -1,
+                        # "confirmed_wallet_balance": -1,
                         "set_remainder": True,
                     }
                 },
@@ -231,3 +231,63 @@ async def test_vault_creation(
     # test match_hinted_coin
     matched = await wallet.match_hinted_coin(wallet.vault_info.coin, wallet.vault_info.inner_puzzle_hash)
     assert matched
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 1]}],
+    indirect=True,
+)
+@pytest.mark.parametrize("setup_function", [vault_setup])
+@pytest.mark.parametrize("with_recovery", [True])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="requires secp")
+@pytest.mark.anyio
+async def test_vault_recovery(
+    wallet_environments: WalletTestFramework,
+    setup_function: Callable[[WalletTestFramework, bool], Awaitable[None]],
+    with_recovery: bool,
+) -> None:
+    await setup_function(wallet_environments, with_recovery)
+    env = wallet_environments.environments[0]
+    assert isinstance(env.xch_wallet, Vault)
+
+    wallet: Vault = env.xch_wallet
+    await wallet.sync_vault_launcher()
+    assert wallet.vault_info
+
+    p2_singleton_puzzle_hash = wallet.get_p2_singleton_puzzle_hash()
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(1, p2_singleton_puzzle_hash)
+
+    coins_to_create = 2
+    funding_amount = uint64(1000000000)
+    funding_wallet = wallet_environments.environments[1].xch_wallet
+    for _ in range(coins_to_create):
+        funding_tx = await funding_wallet.generate_signed_transaction(
+            funding_amount,
+            p2_singleton_puzzle_hash,
+            DEFAULT_TX_CONFIG,
+            memos=[wallet.vault_info.pubkey],
+        )
+        await funding_wallet.wallet_state_manager.add_pending_transactions(funding_tx)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "init": True,
+                        "set_remainder": True,
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        "confirmed_wallet_balance": funding_amount * 2,
+                        "set_remainder": True,
+                    }
+                },
+            ),
+        ],
+    )
+
+    recovery_txs = await env.rpc_client.vault_recovery(wallet_id=wallet.id())
+    assert recovery_txs

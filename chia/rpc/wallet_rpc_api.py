@@ -119,6 +119,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, C
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vault.vault_drivers import get_vault_hidden_puzzle_with_index
+from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
@@ -303,6 +304,7 @@ class WalletRpcApi:
             "/submit_transactions": self.submit_transactions,
             # VAULT
             "/vault_create": self.vault_create,
+            "/vault_recovery": self.vault_recovery,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -4617,3 +4619,12 @@ class WalletRpcApi:
         return {
             "transactions": [vault_record.to_json_dict_convenience(self.service.config)],
         }
+
+    async def vault_recovery(self, request: Dict[str, Any]) -> EndpointResult:
+        """
+        Initiate Vault Recovery
+        """
+        wallet_id = uint32(request["wallet_id"])
+        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=Vault)
+        recovery_txs = await wallet.create_recovery_spends()
+        return {"transactions": [tx.to_json_dict_convenience(self.service.config) for tx in recovery_txs]}

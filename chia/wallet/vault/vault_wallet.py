@@ -140,7 +140,6 @@ class Vault(Wallet):
             coins=coins,
             primaries_input=primaries,
             memos=memos,
-            negative_change_allowed=kwargs.get("negative_change_allowed", False),
             puzzle_decorator_override=puzzle_decorator_override,
             extra_conditions=extra_conditions,
         )
@@ -542,7 +541,7 @@ class Vault(Wallet):
             sent_to=[],
             memos=[],
             trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
+            type=uint32(TransactionType.INCOMING_TX.value),
             name=recovery_spend.name(),
             valid_times=parse_timelock_info(tuple()),
         )
@@ -562,7 +561,7 @@ class Vault(Wallet):
             sent_to=[],
             memos=[],
             trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
+            type=uint32(TransactionType.INCOMING_TX.value),
             name=finish_spend.name(),
             valid_times=parse_timelock_info(tuple()),
         )

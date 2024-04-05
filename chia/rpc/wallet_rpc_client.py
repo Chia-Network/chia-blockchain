@@ -1673,3 +1673,10 @@ class WalletRpcClient(RpcClient):
             },
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+
+    async def vault_recovery(self, wallet_id: uint32) -> List[TransactionRecord]:
+        response = await self.fetch(
+            "vault_recovery",
+            {"wallet_id": wallet_id},
+        )
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
