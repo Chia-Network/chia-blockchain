@@ -2370,6 +2370,28 @@ class TestGeneratorConditions:
 
         assert npc_result.error == expect_error
 
+    @pytest.mark.parametrize("mempool", [True, False])
+    @pytest.mark.parametrize(
+        "condition, expect_error",
+        [
+            ('(66 0 "foo") (67 0 "bar")', Err.MESSAGE_NOT_SENT_OR_RECEIVED.value),
+            ('(66 0 "foo") (67 0 "foo")', None),
+        ],
+    )
+    def test_message_condition(
+        self, mempool: bool, condition: str, expect_error: Optional[int], softfork_height: uint32
+    ):
+        npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
+        print(npc_result)
+
+        # the message conditions are only activated with soft fork 4, so
+        # before then there are no errors.
+        # In mempool mode, the message conditions activated immediately.
+        if softfork_height < test_constants.SOFT_FORK4_HEIGHT and not mempool:
+            expect_error = None
+
+        assert npc_result.error == expect_error
+
 
 # the tests below are malicious generator programs
 

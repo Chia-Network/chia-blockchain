@@ -432,3 +432,34 @@ class TestConditions:
             )
         )
         await check_conditions(bt, conditions)
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "conds, expected",
+        [
+            ('(66 0x3f "foobar" {coin}) (67 0x3f "foobar" {coin})', None),
+            ('(66 0x3f "foobar" {coin}) (67 0x3f "foo" {coin})', Err.MESSAGE_NOT_SENT_OR_RECEIVED),
+            ('(66 0x39 "foo" {coin})', Err.COIN_AMOUNT_EXCEEDS_MAXIMUM),
+            ('(67 0x0f "foo" {coin})', Err.COIN_AMOUNT_EXCEEDS_MAXIMUM),
+            ('(66 0x3f "foo" {coin}) (67 0x27 "foo" {coin})', Err.MESSAGE_NOT_SENT_OR_RECEIVED),
+            ('(66 0x27 "foo" {coin}) (67 0x3f "foo" {coin})', Err.MESSAGE_NOT_SENT_OR_RECEIVED),
+            ('(66 0 "foo") (67 0 "foo")', None),
+            ('(66 0 "foobar") (67 0 "foo")', Err.MESSAGE_NOT_SENT_OR_RECEIVED),
+            ('(66 0x09 "foo" 1750000000000) (67 0x09 "foo" 1750000000000)', None),
+            ('(66 -1 "foo")', Err.INVALID_MESSAGE_MODE),
+            ('(67 -1 "foo")', Err.INVALID_MESSAGE_MODE),
+            ('(66 0x40 "foo")', Err.INVALID_MESSAGE_MODE),
+            ('(67 0x40 "foo")', Err.INVALID_MESSAGE_MODE),
+        ],
+    )
+    async def test_message_conditions(
+        self, bt: BlockTools, consensus_mode: ConsensusMode, conds: str, expected: Optional[Err]
+    ) -> None:
+        blocks = await initial_blocks(bt)
+        coin = blocks[-2].get_included_reward_coins()[0]
+        conditions = Program.to(assemble("(" + conds.format(coin="0x" + coin.name().hex()) + ")"))
+        # before the softfork has activated, it's all allowed
+        if consensus_mode.value < ConsensusMode.SOFT_FORK_4.value:
+            expected = None
+
+        await check_conditions(bt, conditions, expected_err=expected)
