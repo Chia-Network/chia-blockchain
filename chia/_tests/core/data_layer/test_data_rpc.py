@@ -170,11 +170,11 @@ async def is_transaction_confirmed(api: WalletRpcApi, tx_id: bytes32) -> bool:
 
 
 async def farm_block_with_spend(
-    full_node_api: FullNodeSimulator, ph: bytes32, tx_rec: bytes32, wallet_rpc_api: WalletRpcApi
+    full_node_api: FullNodeSimulator, ph: bytes32, tx_rec: bytes32, wallet_rpc_api: WalletRpcApi, timeout: int = 10
 ) -> None:
-    await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
+    await time_out_assert(timeout, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(10, is_transaction_confirmed, True, wallet_rpc_api, tx_rec)
+    await time_out_assert(timeout, is_transaction_confirmed, True, wallet_rpc_api, tx_rec)
 
 
 def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: int) -> bool:
@@ -3431,3 +3431,42 @@ async def test_unsubmitted_batch_update(
 
         with pytest.raises(Exception, match="Latest root is already confirmed"):
             res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_multistore_update(
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+
+        store_ids: List[bytes32] = []
+        store_ids_count = 5
+
+        for _ in range(store_ids_count):
+            res = await data_rpc_api.create_data_store({})
+            assert res is not None
+            store_id = bytes32.from_hexstr(res["id"])
+            await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+            store_ids.append(store_id)
+
+        for index, store_id in enumerate(store_ids):
+            key = index.to_bytes(2, "big")
+            value = index.to_bytes(2, "big")
+            changelist: List[Dict[str, str]] = [
+                {"action": "insert", "key": key.hex(), "value": value.hex(), "tree_id": store_id.hex()}
+            ]
+
+        res = await data_rpc_api.multistore_batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"][0]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api, timeout=60)
+
+        for index, store_id in enumerate(store_ids):
+            key = index.to_bytes(2, "big")
+            value = index.to_bytes(2, "big")
+            res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
+            assert hexstr_to_bytes(res["value"]) == value

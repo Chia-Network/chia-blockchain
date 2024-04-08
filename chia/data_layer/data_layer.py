@@ -300,7 +300,7 @@ class DataLayer:
             update_dictionary: Dict[bytes32, bytes32] = {}
             for tree_id in changelist_by_store.keys():
                 root_hash = await self._get_publishable_root_hash(tree_id=tree_id)
-                update_dictionary[tree_id] = root_hash
+                update_dictionary[bytes32(tree_id)] = root_hash
             transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary)
             return transaction_records
         else:

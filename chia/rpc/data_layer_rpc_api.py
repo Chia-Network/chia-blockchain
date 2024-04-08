@@ -66,6 +66,13 @@ def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def process_change_multistore(change: Dict[str, Any]) -> Dict[str, Any]:
+    res = process_change(change)
+    tree_id = change.get("tree_id")
+    res["tree_id"] = hexstr_to_bytes(tree_id)
+    return res
+
+
 def get_fee(config: Dict[str, Any], request: Dict[str, Any]) -> uint64:
     fee = request.get("fee")
     if fee is None:
@@ -257,7 +264,7 @@ class DataLayerRpcApi:
 
     async def multistore_batch_update(self, request: Dict[str, Any]) -> EndpointResult:
         fee = get_fee(self.service.config, request)
-        changelist = [process_change(change) for change in request["changelist"]]
+        changelist = [process_change_multistore(change) for change in request["changelist"]]
         submit_on_chain = request.get("submit_on_chain", True)
         # todo input checks
         if self.service is None:
