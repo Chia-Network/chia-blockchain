@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Callable, Dict, List
 
 import pytest
+from click.testing import CliRunner
 
 from chia.util.virtual_project_analysis import (
     Annotation,
@@ -11,6 +12,7 @@ from chia.util.virtual_project_analysis import (
     DirectoryParameters,
     build_dependency_graph,
     build_virtual_dependency_graph,
+    cli,
     find_cycles,
 )
 
@@ -143,6 +145,27 @@ def test_gather_with_nested_directories_and_exclusions(tmp_path: Path) -> None:
     # Assertions
     assert len(python_files) == 1  # Only the non-empty Python file in the nested directory should be found
     assert python_files[0].path == nested_file  # The path of the gathered file should match the nested non-empty file
+
+
+def test_find_missing_annotations(tmp_path: Path) -> None:
+    # Set up directory structure
+    dir_path = tmp_path / "test_dir"
+    dir_path.mkdir()
+
+    # Create test files
+    create_python_file(dir_path, "non_empty.py", "print('Hello World')")
+
+    # Run the command
+    runner = CliRunner()
+    result = runner.invoke(cli, ["find_missing_annotations", "--directory", str(dir_path)])
+    assert result.output == f"{dir_path / 'non_empty.py'}\n"
+
+    # Rewrite file to have annotation
+    create_python_file(dir_path, "non_empty.py", "# Package: misc\n")
+
+    # Run the command again with no results
+    result = runner.invoke(cli, ["find_missing_annotations", "--directory", str(dir_path)])
+    assert result.output == ""
 
 
 @pytest.fixture
