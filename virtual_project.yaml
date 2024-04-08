@@ -17,9 +17,16 @@ ignore:
     - consensus
     - mempool
     - protocol
+    - seeder
+    - introducer
+    - timelord
+    - streamable
+    - harvester
   files:
     - chia/cmds/cmds_util.py
   edges:
     - chia/cmds/plotnft_funcs.py (pooling) -> chia/cmds/wallet_funcs.py (wallet)
+    - chia/cmds/plotnft_funcs.py (pooling) -> chia/rpc/farmer_rpc_client.py (farmer)
+    - chia/cmds/plotnft_funcs.py (pooling) -> chia/rpc/wallet_rpc_client.py (wallet)
     - chia/wallet/derive_keys.py (cryptography) -> chia/consensus/coinbase.py (consensus)
     - chia/server/server.py (service) -> chia/server/introducer_peers.py (network)

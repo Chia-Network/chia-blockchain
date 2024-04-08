@@ -232,7 +232,7 @@ def test_cycle_detection(prepare_mocks2: None) -> None:
         Path("/path/to/package3/module3.py"): [],
     }
     cycles = find_cycles(
-        graph, excluded_paths=[], ignore_cycles_in=[], ignore_specific_files=[], ignore_specific_edges={}
+        graph, excluded_paths=[], ignore_cycles_in=[], ignore_specific_files=[], ignore_specific_edges=[]
     )
     assert len(cycles) == 1  # Expect one cycle to be detected
 
@@ -248,7 +248,7 @@ def test_excluded_paths_handling(prepare_mocks2: None) -> None:
         excluded_paths=[Path("/path/to/package2/module2.py")],
         ignore_cycles_in=[],
         ignore_specific_files=[],
-        ignore_specific_edges={},
+        ignore_specific_edges=[],
     )
     assert len(cycles) == 0  # No cycles due to exclusion
 
@@ -260,7 +260,7 @@ def test_ignore_cycles_in_specific_packages(prepare_mocks2: None) -> None:
     }
     # Assuming module1.py and module2.py belong to Package1, which is ignored
     cycles = find_cycles(
-        graph, excluded_paths=[], ignore_cycles_in=["Package1"], ignore_specific_files=[], ignore_specific_edges={}
+        graph, excluded_paths=[], ignore_cycles_in=["Package1"], ignore_specific_files=[], ignore_specific_edges=[]
     )
     assert len(cycles) == 0  # Cycles in Package1 are ignored
 
@@ -276,7 +276,7 @@ def test_ignore_cycles_with_specific_edges(prepare_mocks2: None) -> None:
         excluded_paths=[],
         ignore_cycles_in=[],
         ignore_specific_files=[],
-        ignore_specific_edges={Path("/path/to/package3/module3.py"): Path("/path/to/package2/module2.py")},
+        ignore_specific_edges=[(Path("/path/to/package3/module3.py"), Path("/path/to/package2/module2.py"))],
     )
     assert len(cycles) == 0
 
@@ -292,6 +292,6 @@ def test_ignore_cycles_with_specific_files(prepare_mocks2: None) -> None:
         excluded_paths=[],
         ignore_cycles_in=[],
         ignore_specific_files=[Path("/path/to/package2/module2.py")],
-        ignore_specific_edges={},
+        ignore_specific_edges=[],
     )
     assert len(cycles) == 0

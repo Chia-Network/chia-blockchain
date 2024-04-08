@@ -117,7 +117,7 @@ def find_cycles(
     excluded_paths: List[Path],
     ignore_cycles_in: List[str],
     ignore_specific_files: List[Path],
-    ignore_specific_edges: Dict[Path, Path],
+    ignore_specific_edges: List[Tuple[Path, Path]],
 ) -> List[List[Tuple[str, Path]]]:
 
     # Define a nested function for recursive dependency searching.
@@ -129,24 +129,13 @@ def find_cycles(
         top_level_package: str,
         left_top_level: bool,
         dependency: Path,
-        already_seen: List[Path],
-        immediate_parent: Optional[Path],
+        already_seen: Dict[Path, List[List[Tuple[str, Path]]]],
+        previous_child: Optional[Path],
     ) -> List[List[Tuple[str, Path]]]:
-        # Check if the dependency is in the list of already seen dependencies or is excluded or is part of a known
-        # problematic edge.
-        if (
-            dependency in already_seen
-            or is_excluded(dependency, excluded_paths)
-            or (
-                dependency in ignore_specific_edges
-                and len(already_seen) > 0
-                and ignore_specific_edges[dependency] == immediate_parent
-            )
-        ):
+        # Check if the dependency is excluded or is part of a known problematic edge.
+        if is_excluded(dependency, excluded_paths) or (dependency, previous_child) in ignore_specific_edges:
             return []
 
-        # Mark this dependency as seen.
-        already_seen.append(dependency)
         # Parse the dependency file to obtain its annotations.
         chia_file = ChiaFile.parse(dependency)
 
@@ -161,10 +150,15 @@ def find_cycles(
             # Now that we have decided we will be recursing, we check if this file is a problematic one
             return []
         else:
+            # As an optimization, check if we've already cached the results of a call to this dependency
+            if dependency in already_seen:
+                return already_seen[dependency]
+
             # Update the left_top_level flag if we have moved to a different package.
             left_top_level = left_top_level or chia_file.annotations.package != top_level_package
+
             # Recursively search through all dependencies of the current dependency and accumulate the results.
-            return [
+            stacks = [
                 [(chia_file.annotations.package, dependency), *stack]
                 for stack in [
                     _stack
@@ -174,6 +168,9 @@ def find_cycles(
                     )
                 ]
             ]
+            already_seen[dependency] = stacks
+
+            return stacks
 
     # Initialize an accumulator for paths that are part of cycles.
     path_accumulator = []
@@ -185,7 +182,7 @@ def find_cycles(
         if chia_file.annotations is None or chia_file.annotations.package in ignore_cycles_in:
             continue
         # Extend the path_accumulator with results from the recursive search starting from this parent.
-        path_accumulator.extend(recursive_dependency_search(chia_file.annotations.package, False, parent, [], None))
+        path_accumulator.extend(recursive_dependency_search(chia_file.annotations.package, False, parent, {}, None))
 
     # Format and return the accumulated paths as strings showing the cycles.
     return path_accumulator
@@ -234,7 +231,7 @@ class Config:
     directory_parameters: DirectoryParameters
     ignore_cycles_in: List[str]
     ignore_specific_files: List[Path]
-    ignore_specific_edges: Dict[Path, Path]  # {parent: child}
+    ignore_specific_edges: List[Tuple[Path, Path]]  # (parent, child)
 
 
 def parse_edge(user_string: str) -> Tuple[Path, Path]:
@@ -290,10 +287,10 @@ def config(func: Callable[..., None]) -> Callable[..., None]:
         )
 
         # Make the ignored edge dictionary
-        ignore_specific_edges_graph = {}
+        ignore_specific_edges_graph = []
         for ignore in (*kwargs.pop("ignore_specific_edges", []), *ignore_specific_edges):
             parent, child = parse_edge(ignore)
-            ignore_specific_edges_graph[parent] = child
+            ignore_specific_edges_graph.append((parent, child))
 
         # Instantiating the Config object
         config = Config(
@@ -375,10 +372,67 @@ def print_cycles(config: Config) -> None:
         sys.exit(1)
 
 
+@click.command("check_config", short_help="Check the config is as specific as it can be")
+@click.option(
+    "--ignore-cycles-in",
+    "ignore_cycles_in",
+    multiple=True,
+    type=str,
+    help="Ignore dependency cycles in a package",
+)
+@click.option(
+    "--ignore-specific-file",
+    "ignore_specific_files",
+    multiple=True,
+    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+    help="Ignore cycles involving specific files",
+)
+@click.option(
+    "--ignore-specific-edge",
+    "ignore_specific_edges",
+    multiple=True,
+    type=str,
+    help="Ignore specific problematic dependencies (format: path/to/file1 -> path/to/file2)",
+)
+@config
+def check_config(config: Config) -> None:
+    cycles = find_cycles(
+        build_dependency_graph(config.directory_parameters),
+        config.directory_parameters.excluded_paths,
+        [],
+        [],
+        [],
+    )
+    modules_found = set()
+    files_found = set()
+    edges_found = set()
+    for cycle in cycles:
+        modules_found.add(cycle[0][0])
+        for dep in cycle[1:]:
+            files_found.add(dep[1])
+        for index, dep in enumerate(cycle):
+            if index == 0:
+                continue
+            edges_found.add((dep[1], cycle[index - 1][1]))
+
+    for module in config.ignore_cycles_in:
+        if module not in modules_found:
+            print(f"    module {module} ignored but no cycles were found")
+    print()
+    for file in config.ignore_specific_files:
+        if file not in files_found:
+            print(f"    file {file} ignored but no cycles were found")
+    print()
+    for edge in config.ignore_specific_edges:
+        if edge not in edges_found:
+            print(f"    edge {edge[1]} -> {edge[0]} ignored but no cycles were found")
+
+
 cli.add_command(find_missing_annotations)
 cli.add_command(print_dependency_graph)
 cli.add_command(print_virtual_dependency_graph)
 cli.add_command(print_cycles)
+cli.add_command(check_config)
 
 if __name__ == "__main__":
     cli()
