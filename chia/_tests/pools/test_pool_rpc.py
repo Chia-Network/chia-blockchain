@@ -459,9 +459,11 @@ class TestPoolWalletRpc:
 
             assert len(await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
-            tr: TransactionRecord = await client.send_transaction(
-                1, uint64(100), encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch"), DEFAULT_TX_CONFIG
-            )
+            tr: TransactionRecord = (
+                await client.send_transaction(
+                    1, uint64(100), encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch"), DEFAULT_TX_CONFIG
+                )
+            ).transaction
 
             await full_node_api.wait_transaction_records_entered_mempool(records=[tr])
             await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
