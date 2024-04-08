@@ -254,11 +254,12 @@ def test_excluded_paths_handling(prepare_mocks2: None) -> None:
 
 
 def test_ignore_cycles_in_specific_packages(prepare_mocks2: None) -> None:
-    graph = {
+    graph: Dict[Path, List[Path]] = {
         Path("/path/to/package1/module1.py"): [Path("/path/to/package2/module2.py")],
-        Path("/path/to/package2/module2.py"): [Path("/path/to/package1/module1.py")],
+        Path("/path/to/package2/module2.py"): [Path("/path/to/package3/module3.py")],
+        Path("/path/to/package3/module3.py"): [],
     }
-    # Assuming module1.py and module2.py belong to Package1, which is ignored
+    # Assuming module1.py and module3.py belong to Package1, which is ignored
     cycles = find_cycles(
         graph, excluded_paths=[], ignore_cycles_in=["Package1"], ignore_specific_files=[], ignore_specific_edges=[]
     )
