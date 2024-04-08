@@ -37,7 +37,7 @@ dependencies = [
     "packaging==23.2",
     "psutil==5.9.4",
     "hsms==0.3.1",
-    "ecdsa==0.18.0",  # For SECP
+    "ecdsa==0.19.0",  # For SECP
 ]
 
 upnp_dependencies = [
