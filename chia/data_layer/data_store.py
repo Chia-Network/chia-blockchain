@@ -213,7 +213,7 @@ class DataStore:
             await writer.execute("DROP TABLE root")
             await writer.execute("ALTER TABLE new_root RENAME TO root")
             await writer.execute("INSERT INTO schema (version_id) VALUES (?)", (version,))
-            log.info(f"Finished migrating DB to version {version}")
+        log.info(f"Finished migrating DB to version {version}")
 
     async def _insert_root(
         self,
