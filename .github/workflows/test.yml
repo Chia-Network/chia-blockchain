@@ -75,6 +75,7 @@ jobs:
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-14
       arch: arm
+      collect-junit: false
   ubuntu:
     uses: ./.github/workflows/test-single.yml
     needs: configure
@@ -88,6 +89,7 @@ jobs:
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
       arch: intel
+      collect-junit: false
   windows:
     uses: ./.github/workflows/test-single.yml
     needs: configure
@@ -101,6 +103,7 @@ jobs:
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: windows-latest
       arch: intel
+      collect-junit: false
 
   coverage:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
@@ -136,6 +139,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Results
+        if: false
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
@@ -143,6 +147,7 @@ jobs:
           path: junit-data
 
       - name: Format JUnit data and prepare results
+        if: false
         run: |
           sudo snap install yq
           ls junit-data/*.xml | xargs --max-procs=10 --replace={} yq eval '.testsuites.testsuite.testcase |= sort_by(.+@classname, .+@name)' --inplace {}
@@ -153,6 +158,7 @@ jobs:
           ls junit-results/*.xml | xargs --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
 
       - name: Publish formatted JUnit data
+        if: false
         uses: actions/upload-artifact@v4
         with:
           name: junit-data
@@ -179,13 +185,13 @@ jobs:
       - uses: chia-network/actions/activate-venv@main
 
       - name: Add time out assert results to workflow summary
-        if: always()
+        if: always() && false
         run: |
           python -m chia._tests.process_junit --limit 50 --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
           python -m chia._tests.process_junit            --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> junit-results/time_out_assert.md
 
       - name: Publish JUnit results
-        if: always()
+        if: always() && false
         uses: actions/upload-artifact@v4
         with:
           name: junit-results
