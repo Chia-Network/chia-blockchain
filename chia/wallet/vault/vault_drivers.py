@@ -29,8 +29,9 @@ P2_RECOVERY_MOD: Program = load_clvm("vault_p2_recovery.clsp")
 P2_RECOVERY_MOD_HASH = P2_RECOVERY_MOD.get_tree_hash()
 RECOVERY_FINISH_MOD: Program = load_clvm("vault_recovery_finish.clsp")
 RECOVERY_FINISH_MOD_HASH = RECOVERY_FINISH_MOD.get_tree_hash()
-P2_SINGLETON_MOD: Program = load_clvm("p2_singleton.clsp")
+P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 P2_SINGLETON_MOD_HASH = P2_SINGLETON_MOD.get_tree_hash()
+P2_SINGLETON_AGGREGATOR_MOD: Program = load_clvm("p2_singleton_aggregator.clsp")
 
 
 # PUZZLES
@@ -111,7 +112,8 @@ def get_recovery_finish_puzzle(bls_pk: G1Element, timelock: uint64, amount: uint
 
 
 def get_p2_singleton_puzzle(launcher_id: bytes32) -> Program:
-    puzzle = P2_SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_id, SINGLETON_LAUNCHER_HASH)
+    singleton_struct = Program.to((SINGLETON_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_HASH)))
+    puzzle = P2_SINGLETON_MOD.curry(singleton_struct, P2_SINGLETON_AGGREGATOR_MOD)
     return puzzle
 
 

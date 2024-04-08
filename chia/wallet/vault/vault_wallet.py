@@ -20,7 +20,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import Condition, CreateCoin, CreatePuzzleAnnouncement, parse_timelock_info
+from chia.wallet.conditions import Condition, CreateCoin, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
@@ -169,6 +169,8 @@ class Vault(Wallet):
     async def generate_p2_singleton_spends(
         self,
         amount: uint64,
+        delegated_puzzle: Program,
+        delegated_solution: Program,
         tx_config: TXConfig,
         coins: Optional[Set[Coin]] = None,
     ) -> List[CoinSpend]:
@@ -187,6 +189,8 @@ class Vault(Wallet):
         p2_singleton_puzzle: Program = get_p2_singleton_puzzle(self.launcher_id)
 
         spends: List[CoinSpend] = []
+        # create the first spend which generates the conditions
+
         for coin in list(coins):
             p2_singleton_solution: Program = Program.to([self.vault_info.inner_puzzle_hash, coin.name()])
             spends.append(make_spend(coin, p2_singleton_puzzle, p2_singleton_solution))
@@ -216,31 +220,42 @@ class Vault(Wallet):
             + fee
             + sum(c.amount for c in extra_conditions if isinstance(c, CreateCoin))
         )
-
-        p2_singleton_spends = await self.generate_p2_singleton_spends(uint64(total_amount), tx_config, coins=coins)
-
-        coins = {spend.coin for spend in p2_singleton_spends}
-        spend_value = sum([coin.amount for coin in coins])
-        change = spend_value - total_amount
-        assert change >= 0
-        if change > 0:
-            change_puzzle_hash: bytes32 = get_p2_singleton_puzzle_hash(self.launcher_id)
-            primaries.append(Payment(change_puzzle_hash, uint64(change)))
+        # Select p2_singleton coins to spend
+        if coins is None:
+            total_balance = await self.get_spendable_balance()
+            if total_amount > total_balance:
+                raise ValueError(
+                    f"Can't spend more than wallet balance: {total_balance} mojos, tried to spend: {amount} mojos"
+                )
+            coins = await self.select_coins(
+                uint64(total_amount),
+                tx_config.coin_selection_config,
+            )
+        assert len(coins) > 0
+        selected_amount = sum([coin.amount for coin in coins])
+        assert selected_amount >= amount
 
         conditions = [primary.as_condition() for primary in primaries]
-        next_puzzle_hash = (
-            self.vault_info.coin.puzzle_hash if tx_config.reuse_puzhash else (await self.get_new_puzzlehash())
-        )
-        recreate_vault_condition = CreateCoin(
-            next_puzzle_hash, uint64(self.vault_info.coin.amount), memos=[next_puzzle_hash]
-        ).to_program()
-        conditions.append(recreate_vault_condition)
-        announcements = [CreatePuzzleAnnouncement(spend.coin.name()).to_program() for spend in p2_singleton_spends]
-        conditions.extend(announcements)
-
+        conditions.append(Payment(newpuzzlehash, amount, memos if memos else []).as_condition())
+        p2_singleton_puzzle = get_p2_singleton_puzzle(self.launcher_id)
+        p2_singleton_puzhash = p2_singleton_puzzle.get_tree_hash()
+        # add the change condition
+        if selected_amount > amount:
+            conditions.append(Payment(p2_singleton_puzhash, uint64(selected_amount - total_amount)).as_condition())
+        # create the p2_singleton spends
         delegated_puzzle = puzzle_for_conditions(conditions)
         delegated_solution = solution_for_conditions(conditions)
+        p2_singleton_spends: List[CoinSpend] = []
+        for coin in coins:
+            if not p2_singleton_spends:
+                p2_solution = Program.to(
+                    [0, self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin.name()]
+                )
+            else:
+                p2_solution = Program.to([0, self.vault_info.inner_puzzle_hash, 0, 0, coin.name()])
+            p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
 
+        # create the vault spend
         secp_puzzle = construct_p2_delegated_secp(
             self.vault_info.pubkey,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
@@ -260,6 +275,8 @@ class Vault(Wallet):
                 delegated_solution,
                 None,  # Slot for signed message
                 self.vault_info.coin.name(),
+                vault_inner_puzzle.get_tree_hash(),
+                [p2_coin.name() for p2_coin in coins],
             ]
         )
         if self.vault_info.is_recoverable:
