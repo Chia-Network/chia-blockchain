@@ -181,6 +181,12 @@ class PeerSubscriptions:
 
         return removed
 
+    def clear_puzzle_subscriptions(self, peer_id: bytes32) -> None:
+        self._puzzle_subscriptions.remove_peer(peer_id)
+
+    def clear_coin_subscriptions(self, peer_id: bytes32) -> None:
+        self._coin_subscriptions.remove_peer(peer_id)
+
     def remove_peer(self, peer_id: bytes32) -> None:
         self._puzzle_subscriptions.remove_peer(peer_id)
         self._coin_subscriptions.remove_peer(peer_id)

@@ -11,7 +11,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 _T_Condition = TypeVar("_T_Condition", bound="Condition")
@@ -401,6 +401,48 @@ class CreatePuzzleAnnouncement(Condition):
         return cls(
             program.at("rf").as_atom(),
             puzzle_hash,
+        )
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class SendMessage(Condition):
+    mode: uint8
+    msg: bytes
+    args: Program
+
+    def to_program(self) -> Program:
+        condition: Program = Program.to([ConditionOpcode.SEND_MESSAGE, self.mode, self.msg, self.args])
+        return condition
+
+    @classmethod
+    def from_program(cls, program: Program) -> SendMessage:
+        return cls(
+            uint8(program.at("rf").as_int()),
+            program.at("rrf").as_atom(),
+            program.at("rrrf"),
+        )
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class ReceiveMessage(Condition):
+    mode: uint8
+    msg: bytes
+    args: Program
+
+    def to_program(self) -> Program:
+        condition: Program = Program.to([ConditionOpcode.RECEIVE_MESSAGE, self.mode, self.msg, self.args])
+        return condition
+
+    @classmethod
+    def from_program(cls, program: Program) -> ReceiveMessage:
+        return cls(
+            uint8(program.at("rf").as_int()),
+            program.at("rrf").as_atom(),
+            program.at("rrrf"),
         )
 
 
@@ -1063,6 +1105,8 @@ CONDITION_DRIVERS: Dict[bytes, Type[Condition]] = {
     ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.value: AssertCoinAnnouncement,
     ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT.value: CreatePuzzleAnnouncement,
     ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT.value: AssertPuzzleAnnouncement,
+    ConditionOpcode.SEND_MESSAGE.value: SendMessage,
+    ConditionOpcode.RECEIVE_MESSAGE.value: ReceiveMessage,
     ConditionOpcode.ASSERT_CONCURRENT_SPEND.value: AssertConcurrentSpend,
     ConditionOpcode.ASSERT_CONCURRENT_PUZZLE.value: AssertConcurrentPuzzle,
     ConditionOpcode.ASSERT_MY_COIN_ID.value: AssertMyCoinID,
@@ -1101,6 +1145,8 @@ CONDITION_DRIVERS_W_ABSTRACTIONS: Dict[bytes, Type[Condition]] = {
     ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.value: AssertAnnouncement,
     ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT.value: CreateAnnouncement,
     ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT.value: AssertAnnouncement,
+    ConditionOpcode.SEND_MESSAGE.value: SendMessage,
+    ConditionOpcode.RECEIVE_MESSAGE.value: ReceiveMessage,
     ConditionOpcode.ASSERT_CONCURRENT_SPEND.value: AssertConcurrentSpend,
     ConditionOpcode.ASSERT_CONCURRENT_PUZZLE.value: AssertConcurrentPuzzle,
     ConditionOpcode.ASSERT_MY_COIN_ID.value: AssertMyCoinID,

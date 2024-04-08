@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import asyncio
 import logging
-import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -155,26 +155,42 @@ async def insert_from_delta_file(
         existing_generation += 1
         filename = get_delta_filename(tree_id, root_hash, existing_generation)
         request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
-        if downloader is None:
-            # use http downloader
-            if not await http_download(client_foldername, filename, proxy_url, server_info, timeout, log):
-                await data_store.server_misses_file(tree_id, server_info, timestamp)
-                return False
+        target_path = client_foldername.joinpath(filename)
+        filename_exists = False
+        if target_path.exists():
+            filename_exists = True
+            log.info(f"Filename {filename} exists, don't download it.")
         else:
-            log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    downloader.url + "/download",
-                    json=request_json,
-                    headers=downloader.headers,
-                ) as response:
-                    res_json = await response.json()
-                    if not res_json["downloaded"]:
-                        log.error(f"Failed to download delta file {filename} from {downloader}: {res_json}")
-                        break
+            if downloader is None:
+                # use http downloader - this raises on any error
+                try:
+                    await http_download(client_foldername, filename, proxy_url, server_info, timeout, log)
+                except (asyncio.TimeoutError, aiohttp.ClientError):
+                    new_server_info = await data_store.server_misses_file(tree_id, server_info, timestamp)
+                    log.info(
+                        f"Failed to download {filename} from {new_server_info.url}."
+                        f"Miss {new_server_info.num_consecutive_failures}."
+                    )
+                    log.info(f"Next attempt from {new_server_info.url} in {new_server_info.ignore_till - timestamp}s.")
+                    return False
+            else:
+                log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        downloader.url + "/download",
+                        json=request_json,
+                        headers=downloader.headers,
+                    ) as response:
+                        res_json = await response.json()
+                        if not res_json["downloaded"]:
+                            log.error(f"Failed to download delta file {filename} from {downloader}: {res_json}")
+                            break
 
         log.info(f"Successfully downloaded delta file {filename}.")
         try:
+            filename_full_tree = client_foldername.joinpath(
+                get_full_tree_filename(tree_id, root_hash, existing_generation)
+            )
             await insert_into_data_store_from_file(
                 data_store,
                 tree_id,
@@ -186,9 +202,6 @@ async def insert_from_delta_file(
                 f"Generation: {existing_generation}. Tree id: {tree_id}."
             )
 
-            filename_full_tree = client_foldername.joinpath(
-                get_full_tree_filename(tree_id, root_hash, existing_generation)
-            )
             root = await data_store.get_tree_root(tree_id=tree_id)
             with open(filename_full_tree, "wb") as writer:
                 await data_store.write_tree_to_file(root, root_hash, tree_id, False, writer)
@@ -196,14 +209,25 @@ async def insert_from_delta_file(
             await data_store.received_correct_file(tree_id, server_info)
         except Exception:
             target_filename = client_foldername.joinpath(filename)
-            os.remove(target_filename)
+            try:
+                target_filename.unlink()
+            except FileNotFoundError:
+                pass
+
+            try:
+                filename_full_tree.unlink()
+            except FileNotFoundError:
+                pass
+
             # await data_store.received_incorrect_file(tree_id, server_info, timestamp)
             # incorrect file bans for 7 days which in practical usage
             # is too long given this file might be incorrect for various reasons
             # therefore, use the misses file logic instead
-            await data_store.server_misses_file(tree_id, server_info, timestamp)
+            if not filename_exists:
+                # Don't penalize this server if we didn't download the file from it.
+                await data_store.server_misses_file(tree_id, server_info, timestamp)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
-            raise
+            return False
 
     return True
 
@@ -230,7 +254,11 @@ async def http_download(
     server_info: ServerInfo,
     timeout: int,
     log: logging.Logger,
-) -> bool:
+) -> None:
+    """
+    Download a file from a server using aiohttp.
+    Raises exceptions on errors
+    """
     async with aiohttp.ClientSession() as session:
         headers = {"accept-encoding": "gzip"}
         async with session.get(
@@ -250,5 +278,3 @@ async def http_download(
                     if new_percentage != progress_percentage:
                         progress_percentage = new_percentage
                         log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
-
-    return True

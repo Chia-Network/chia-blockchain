@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import pytest
 
@@ -62,13 +62,10 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
         ) as db_wrapper1:
             block_store1 = await BlockStore.create(db_wrapper1)
             coin_store1 = await CoinStore.create(db_wrapper1)
+            hint_store1 = await HintStore.create(db_wrapper1)
             if with_hints:
-                hint_store1: Optional[HintStore] = await HintStore.create(db_wrapper1)
                 for h in hints:
-                    assert hint_store1 is not None
                     await hint_store1.add_hints([(h[0], h[1])])
-            else:
-                hint_store1 = None
 
             bc = await Blockchain.create(coin_store1, block_store1, test_constants, Path("."), reserved_cores=0)
 
@@ -85,9 +82,7 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
             async with DBWrapper2.managed(database=out_file, reader_count=1, db_version=2) as db_wrapper2:
                 block_store1 = await BlockStore.create(db_wrapper1)
                 coin_store1 = await CoinStore.create(db_wrapper1)
-                hint_store1 = None
-                if with_hints:
-                    hint_store1 = await HintStore.create(db_wrapper1)
+                hint_store1 = await HintStore.create(db_wrapper1)
 
                 block_store2 = await BlockStore.create(db_wrapper2)
                 coin_store2 = await CoinStore.create(db_wrapper2)
@@ -96,7 +91,6 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                 if with_hints:
                     # check hints
                     for h in hints:
-                        assert hint_store1 is not None
                         assert h[0] in await hint_store1.get_coin_ids(h[1])
                         assert h[0] in await hint_store2.get_coin_ids(h[1])
 
@@ -121,7 +115,9 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                 # check coins
                 for block in blocks:
                     coins = await coin_store1.get_coins_added_at_height(block.height)
-                    assert await coin_store2.get_coins_added_at_height(block.height) == coins
+                    coins2 = await coin_store2.get_coins_added_at_height(block.height)
+                    assert len(coins) == len(coins2)
+                    assert set(coins) == set(coins2)
                     assert await coin_store1.get_coins_removed_at_height(
                         block.height
                     ) == await coin_store2.get_coins_removed_at_height(block.height)
