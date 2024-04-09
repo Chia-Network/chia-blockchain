@@ -112,6 +112,8 @@ jobs:
               matrix: "3.8"
           - arch:
               matrix: arm
+            configuration:
+              install_timelord: true
           - os:
               matrix: windows
             configuration:
