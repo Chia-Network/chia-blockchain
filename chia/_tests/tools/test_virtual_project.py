@@ -440,14 +440,15 @@ def test_config_with_yaml(create_yaml_config: Callable[[Dict[str, Any]], Path]) 
 
     # Verify the config object created by the decorator
     config = result.output
+    path_type = config_path.__class__.__name__
     assert config == (
         "Config("
         "directory_parameters=DirectoryParameters("
-        "dir_path=WindowsPath('.'), "
-        "excluded_paths=[WindowsPath('path/to/exclude')]"
+        f"dir_path={path_type}('.'), "
+        f"excluded_paths=[{path_type}('path/to/exclude')]"
         "), "
         "ignore_cycles_in=['ignored.package'], "
-        "ignore_specific_files=[WindowsPath('ignored_file.py')], "
-        "ignore_specific_edges=[(WindowsPath('ignored_child'), WindowsPath('ignored_parent'))]"
+        f"ignore_specific_files=[{path_type}('ignored_file.py')], "
+        f"ignore_specific_edges=[({path_type}('ignored_child'), {path_type}('ignored_parent'))]"
         ")\n"
     )
