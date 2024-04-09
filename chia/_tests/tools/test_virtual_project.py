@@ -194,6 +194,15 @@ def test_build_dependency_graph(chia_package_structure: Path) -> None:
     assert chia_dir / "module2.py" in graph[chia_dir / "module3.py"]
 
 
+def test_print_dependency_graph(chia_package_structure: Path) -> None:
+    # Run the command
+    runner = CliRunner()
+    result = runner.invoke(cli, ["print_dependency_graph", "--directory", str(chia_package_structure)])
+    assert "module1.py" in result.output
+    assert "module2.py" in result.output
+    assert "module3.py" in result.output
+
+
 # Mock the build_dependency_graph function to control its output
 def mock_build_dependency_graph(dir_params: DirectoryParameters) -> Dict[Path, List[Path]]:
     return {
@@ -232,6 +241,23 @@ def test_build_virtual_dependency_graph(prepare_mocks: None) -> None:
     assert "Package2" in virtual_graph["Package3"]
 
 
+def test_print_virtual_dependency_graph(tmp_path: Path) -> None:
+    chia_dir = tmp_path / "chia"
+    chia_dir.mkdir()
+
+    # Create some files within the chia package
+    create_python_file(chia_dir, "module1.py", "# Package: one\ndef func1(): pass")
+    create_python_file(chia_dir, "module2.py", "# Package: two\ndef func2(): pass\nfrom chia.module1 import func1")
+    create_python_file(chia_dir, "module3.py", "# Package: three\ndef func3(): pass\nimport chia.module2")
+
+    # Run the command
+    runner = CliRunner()
+    result = runner.invoke(cli, ["print_virtual_dependency_graph", "--directory", str(chia_dir)])
+    assert "one" in result.output
+    assert "two" in result.output
+    assert "three" in result.output
+
+
 # Helper function to simulate ChiaFile.parse for testing
 def mock_chia_file_parse2(path: Path) -> ChiaFile:
     annotations_map = {
@@ -258,6 +284,54 @@ def test_cycle_detection(prepare_mocks2: None) -> None:
         graph, excluded_paths=[], ignore_cycles_in=[], ignore_specific_files=[], ignore_specific_edges=[]
     )
     assert len(cycles) == 1  # Expect one cycle to be detected
+
+
+def test_print_cycles(tmp_path: Path) -> None:
+    chia_dir = tmp_path / "chia"
+    chia_dir.mkdir()
+
+    # Create some files within the chia package
+    create_python_file(chia_dir, "module1.py", "# Package: one\ndef func1(): pass\nfrom chia.module2 import func2")
+    create_python_file(chia_dir, "module2.py", "# Package: two\ndef func2(): pass\nfrom chia.module3 import func3")
+    create_python_file(chia_dir, "module3.py", "# Package: one\ndef func3(): pass\n")
+
+    # Run the command
+    runner = CliRunner()
+    result = runner.invoke(cli, ["print_cycles", "--directory", str(chia_dir)])
+    assert "module1.py (one) -> " in result.output
+
+
+def test_check_config(tmp_path: Path) -> None:
+    chia_dir = tmp_path / "chia"
+    chia_dir.mkdir()
+
+    # Create some files within the chia package
+    create_python_file(chia_dir, "module1.py", "# Package: one\ndef func1(): pass\nfrom chia.module2 import func2")
+    create_python_file(chia_dir, "module2.py", "# Package: two\ndef func2(): pass\nfrom chia.module3 import func3")
+    create_python_file(chia_dir, "module3.py", "# Package: three\ndef func3(): pass\n")
+
+    # Run the command
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        [
+            "check_config",
+            "--directory",
+            str(chia_dir),
+            "--ignore-cycles-in",
+            "one",
+            "--ignore-specific-file",
+            str(chia_dir / "module1.py"),
+            "--ignore-specific-edge",
+            str(chia_dir / "module2.py") + " -> " + str(chia_dir / "module3"),
+        ],
+    )
+    assert "    module one ignored but no cycles were found" in result.output
+    assert f"    file {str(chia_dir / 'module1.py')} ignored but no cycles were found" in result.output
+    assert (
+        f"    edge {str(chia_dir / 'module2.py') + ' -> ' + str(chia_dir / 'module3')} ignored but no cycles were found"
+        in result.output
+    )
 
 
 def test_excluded_paths_handling(prepare_mocks2: None) -> None:
