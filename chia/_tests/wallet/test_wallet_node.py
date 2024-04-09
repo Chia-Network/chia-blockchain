@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional
 import pytest
 from chia_rs import G1Element, PrivateKey
 
-from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import CoinGenerator
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
@@ -444,7 +443,6 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
     assert len(set(puzzle_hashes)) == len(puzzle_hashes)
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_get_balance(

@@ -7,16 +7,16 @@ from typing import Callable, Tuple, cast
 import pytest
 from packaging.version import Version
 
+from chia import __version__
 from chia._tests.connection_utils import connect_and_get_peer
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.cmds.init_funcs import chia_full_version_str
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RejectBlock, RequestBlock, RequestTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Error, protocol_version
 from chia.protocols.wallet_protocol import RejectHeaderRequest
-from chia.server.outbound_message import make_msg
+from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.start_full_node import create_full_node_service
 from chia.server.start_wallet import create_wallet_service
@@ -80,9 +80,9 @@ async def test_connection_versions(
     outgoing_connection = wallet_node.server.all_connections[full_node.server.node_id]
     incoming_connection = full_node.server.all_connections[wallet_node.server.node_id]
     for connection in [outgoing_connection, incoming_connection]:
-        assert connection.protocol_version == Version(protocol_version)
-        assert connection.version == chia_full_version_str()
-        assert connection.get_version() == chia_full_version_str()
+        assert connection.protocol_version == Version(protocol_version[NodeType.WALLET])
+        assert connection.version == __version__
+        assert connection.get_version() == connection.version
 
 
 @pytest.mark.anyio

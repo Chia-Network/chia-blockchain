@@ -37,6 +37,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
+from chia.util.chia_version import chia_short_version
 from chia.util.ints import uint32, uint64
 from chia.util.network import resolve
 from chia.util.path import path_from_root
@@ -140,7 +141,7 @@ class Crawler:
 
         async def peer_action(peer: WSChiaConnection) -> None:
             peer_info = peer.get_peer_info()
-            version = peer.get_version()
+            version = chia_short_version(peer.get_version())
             if peer_info is not None and version is not None:
                 self.version_cache.append((peer_info.host, version))
             # Ask peer for peers

@@ -246,17 +246,23 @@ class BlockHeightMap:
         # fork height may be -1, in which case all blocks are different and we
         # should clear all sub epoch summaries
         heights_to_delete = []
-        log.log(
-            logging.WARNING if fork_height < 100 else logging.INFO,
-            f"rolling back height-to-hash and sub-epoch-summaries cache to {fork_height}",
-        )
+
         for ses_included_height in self.__sub_epoch_summaries.keys():
             if ses_included_height > fork_height:
                 heights_to_delete.append(ses_included_height)
+
         for height in heights_to_delete:
             del self.__sub_epoch_summaries[height]
+
         del self.__height_to_hash[(fork_height + 1) * 32 :]
         self.__first_dirty = min(self.__first_dirty, fork_height + 1)
+
+        if len(heights_to_delete) > 0:
+            log.log(
+                logging.WARNING if fork_height < 100 else logging.INFO,
+                f"rolling back {len(heights_to_delete)} blocks in "
+                f"height-to-hash and sub-epoch-summaries cache, to height {fork_height}",
+            )
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])

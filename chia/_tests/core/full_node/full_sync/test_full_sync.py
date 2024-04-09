@@ -416,60 +416,6 @@ class TestFullSync:
         duration = time.time() - start
         assert duration > 5
 
-    @pytest.mark.limit_consensus_modes(reason="save time")
-    @pytest.mark.skip("This feature depends on (now removed) CHIP-13")
-    @pytest.mark.anyio
-    async def test_bad_peak_in_cache(
-        self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
-    ):
-        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
-        bt.constants = dataclasses.replace(blockchain_constants, SOFT_FORK4_HEIGHT=1000000)
-        blocks = bt.get_consecutive_blocks(700, default_400_blocks)
-        full_node_2.full_node.blockchain.constants = dataclasses.replace(
-            blockchain_constants,
-            SOFT_FORK4_HEIGHT=1000000,
-        )
-        full_node_1.full_node.blockchain.constants = dataclasses.replace(blockchain_constants, SOFT_FORK4_HEIGHT=400)
-        for block in blocks:
-            await full_node_2.full_node.add_block(block)
-        server_1 = full_node_1.full_node.server
-        server_2 = full_node_2.full_node.server
-        await server_2.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
-        )
-        await time_out_assert(60, full_node_1.full_node.sync_store.get_long_sync, True)
-        await time_out_assert(250, full_node_1.full_node.sync_store.get_long_sync, False)
-        peak = full_node_2.full_node.blockchain.get_peak()
-        wp = await full_node_2.full_node.weight_proof_handler.get_proof_of_weight(peak.header_hash)
-        assert full_node_1.full_node.in_bad_peak_cache(wp) is True
-
-    @pytest.mark.limit_consensus_modes(reason="save time")
-    @pytest.mark.skip("This feature depends on (now removed) CHIP-13")
-    @pytest.mark.anyio
-    async def test_skip_bad_peak_validation(
-        self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
-    ):
-        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
-        blocks = bt.get_consecutive_blocks(700, default_400_blocks)
-        full_node_2.full_node.blockchain.constants = dataclasses.replace(
-            blockchain_constants,
-            SOFT_FORK4_HEIGHT=1000000,
-        )
-        full_node_1.full_node.blockchain.constants = dataclasses.replace(blockchain_constants, SOFT_FORK4_HEIGHT=400)
-        for block in blocks:
-            await full_node_2.full_node.add_block(block)
-
-        peak = full_node_2.full_node.blockchain.get_peak()
-        full_node_1.full_node.add_to_bad_peak_cache(peak.header_hash, peak.height)
-        await server_2.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
-        )
-
-        await time_out_assert(60, has_peers_with_peak, True, full_node_1.full_node, peak.header_hash)
-
-        with pytest.raises(ValueError, match="Weight proof failed bad peak cache validation"):
-            await full_node_1.full_node.request_validate_wp(peak.header_hash, peak.height, peak.weight)
-
     @pytest.mark.anyio
     async def test_bad_peak_cache_invalidation(
         self, two_nodes, default_1000_blocks, blockchain_constants, consensus_mode

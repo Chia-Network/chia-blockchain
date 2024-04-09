@@ -32,6 +32,11 @@ class ConditionOpcode(bytes, enum.Enum):
     ASSERT_CONCURRENT_SPEND = bytes([64])
     ASSERT_CONCURRENT_PUZZLE = bytes([65])
 
+    # new message conditions in softfork introduced in Chia 2.3
+
+    SEND_MESSAGE = bytes([66])
+    RECEIVE_MESSAGE = bytes([67])
+
     # the conditions below let coins inquire about themselves
 
     ASSERT_MY_COIN_ID = bytes([70])
