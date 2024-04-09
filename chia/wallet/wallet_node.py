@@ -1634,6 +1634,8 @@ class WalletNode:
         if not self.is_trusted(peer):
             valid_list = []
             for coin in coin_state.coin_states:
+                if coin.coin.name() not in coin_names:
+                    continue
                 valid = await self.validate_received_state_from_peer(
                     coin, peer, self.get_cache_for_peer(peer), fork_height
                 )
