@@ -4195,7 +4195,6 @@ class WalletRpcApi:
                 tx_records.extend(records)
 
             return {
-                "tx_records": [rec.to_json_dict_convenience(self.service.config) for rec in tx_records],
                 "transactions": [rec.to_json_dict_convenience(self.service.config) for rec in tx_records],
             }
 
