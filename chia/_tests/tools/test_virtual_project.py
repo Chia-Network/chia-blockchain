@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List
 
+import click
 import pytest
+import yaml
 from click.testing import CliRunner
 
 from chia.util.virtual_project_analysis import (
     Annotation,
     ChiaFile,
+    Config,
     DirectoryParameters,
     build_dependency_graph,
     build_virtual_dependency_graph,
     cli,
+    config,
     find_cycles,
 )
 
@@ -393,3 +397,57 @@ def test_ignore_cycles_with_specific_files(prepare_mocks2: None) -> None:
         ignore_specific_edges=[],
     )
     assert len(cycles) == 0
+
+
+# Sample function to use with the decorator for testing
+@click.command("blah")
+@config
+def sample_function(config: Config) -> None:
+    print(config)
+
+
+# Helper function to create a temporary YAML configuration file
+@pytest.fixture
+def create_yaml_config(tmp_path: Path) -> Callable[[Dict[str, Any]], Path]:
+    def _create_yaml_config(content: Dict[str, Any]) -> Path:
+        path = tmp_path / "config.yaml"
+        with open(path, "w") as f:
+            yaml.dump(content, f)
+        return path
+
+    return _create_yaml_config
+
+
+def test_config_with_yaml(create_yaml_config: Callable[[Dict[str, Any]], Path]) -> None:
+    # Create a temporary YAML configuration file
+    yaml_config = {
+        "exclude_paths": ["path/to/exclude"],
+        "ignore": {
+            "packages": ["ignored.package"],
+            "files": ["ignored_file.py"],
+            "edges": ["ignored_parent -> ignored_child"],
+        },
+    }
+    config_path = create_yaml_config(yaml_config)
+
+    runner = CliRunner()
+
+    # Invoke the CLI with the --config option
+    result = runner.invoke(sample_function, ["--directory", ".", "--config", str(config_path)])
+
+    # Check if the command ran successfully
+    assert result.exit_code == 0
+
+    # Verify the config object created by the decorator
+    config = result.output
+    assert config == (
+        "Config("
+        "directory_parameters=DirectoryParameters("
+        "dir_path=WindowsPath('.'), "
+        "excluded_paths=[WindowsPath('path/to/exclude')]"
+        "), "
+        "ignore_cycles_in=['ignored.package'], "
+        "ignore_specific_files=[WindowsPath('ignored_file.py')], "
+        "ignore_specific_edges=[(WindowsPath('ignored_child'), WindowsPath('ignored_parent'))]"
+        ")\n"
+    )
