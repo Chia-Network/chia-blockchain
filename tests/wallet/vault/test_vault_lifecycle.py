@@ -82,7 +82,6 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
                 secp_delegated_solution,
                 secp_signature,
                 vault_coin.name(),
-                vault_puzzlehash,
             ]
         )
 

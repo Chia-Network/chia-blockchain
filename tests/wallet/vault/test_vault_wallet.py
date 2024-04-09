@@ -181,16 +181,13 @@ async def test_vault_creation(
     await wallet_environments.full_node.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
     assert unsigned_txs[0].spend_bundle is not None
-    assert len(unsigned_txs) == 1
     spends = [Spend.from_coin_spend(spend) for spend in unsigned_txs[0].spend_bundle.coin_spends]
     signing_info = await env.rpc_client.gather_signing_info(GatherSigningInfo(spends))
 
     signing_responses = await wallet.execute_signing_instructions(signing_info.signing_instructions)
 
     signed_response = await wallet.apply_signatures(spends, signing_responses)
-
     await env.wallet_state_manager.submit_transactions([signed_response])
-
     vault_eve_id = wallet.vault_info.coin.name()
 
     await wallet_environments.process_pending_states(

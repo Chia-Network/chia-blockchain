@@ -20,7 +20,13 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import Condition, CreateCoin, parse_timelock_info
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    Condition,
+    CreateCoin,
+    CreatePuzzleAnnouncement,
+    parse_timelock_info,
+)
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
@@ -169,8 +175,6 @@ class Vault(Wallet):
     async def generate_p2_singleton_spends(
         self,
         amount: uint64,
-        delegated_puzzle: Program,
-        delegated_solution: Program,
         tx_config: TXConfig,
         coins: Optional[Set[Coin]] = None,
     ) -> List[CoinSpend]:
@@ -189,8 +193,6 @@ class Vault(Wallet):
         p2_singleton_puzzle: Program = get_p2_singleton_puzzle(self.launcher_id)
 
         spends: List[CoinSpend] = []
-        # create the first spend which generates the conditions
-
         for coin in list(coins):
             p2_singleton_solution: Program = Program.to([self.vault_info.inner_puzzle_hash, coin.name()])
             spends.append(make_spend(coin, p2_singleton_puzzle, p2_singleton_solution))
@@ -220,6 +222,7 @@ class Vault(Wallet):
             + fee
             + sum(c.amount for c in extra_conditions if isinstance(c, CreateCoin))
         )
+
         # Select p2_singleton coins to spend
         if coins is None:
             total_balance = await self.get_spendable_balance()
@@ -245,6 +248,7 @@ class Vault(Wallet):
         # create the p2_singleton spends
         delegated_puzzle = puzzle_for_conditions(conditions)
         delegated_solution = solution_for_conditions(conditions)
+
         p2_singleton_spends: List[CoinSpend] = []
         for coin in coins:
             if not p2_singleton_spends:
@@ -255,7 +259,29 @@ class Vault(Wallet):
                 p2_solution = Program.to([0, self.vault_info.inner_puzzle_hash, 0, 0, coin.name()])
             p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
 
-        # create the vault spend
+        next_puzzle_hash = (
+            self.vault_info.coin.puzzle_hash if tx_config.reuse_puzhash else (await self.get_new_puzzlehash())
+        )
+        vault_conditions: List[Condition] = []
+        recreate_vault_condition = CreateCoin(
+            next_puzzle_hash, uint64(self.vault_info.coin.amount), memos=[next_puzzle_hash]
+        ).to_program()
+        vault_conditions.append(recreate_vault_condition)
+        for i, spend in enumerate(p2_singleton_spends):
+            puzzle_to_assert = delegated_puzzle if i == 0 else Program.to(0)
+            vault_conditions.extend(
+                [
+                    CreatePuzzleAnnouncement(
+                        Program.to([spend.coin.name(), puzzle_to_assert.get_tree_hash()]).get_tree_hash(),
+                        # self.vault_info.coin.puzzle_hash
+                    ).to_program(),
+                    AssertCoinAnnouncement(asserted_id=spend.coin.name(), asserted_msg=b"$").to_program(),
+                ]
+            )
+
+        vault_delegated_puzzle = puzzle_for_conditions(vault_conditions)
+        vault_delegated_solution = solution_for_conditions(vault_conditions)
+
         secp_puzzle = construct_p2_delegated_secp(
             self.vault_info.pubkey,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
@@ -271,12 +297,10 @@ class Vault(Wallet):
 
         secp_solution = Program.to(
             [
-                delegated_puzzle,
-                delegated_solution,
+                vault_delegated_puzzle,
+                vault_delegated_solution,
                 None,  # Slot for signed message
                 self.vault_info.coin.name(),
-                vault_inner_puzzle.get_tree_hash(),
-                [p2_coin.name() for p2_coin in coins],
             ]
         )
         if self.vault_info.is_recoverable:

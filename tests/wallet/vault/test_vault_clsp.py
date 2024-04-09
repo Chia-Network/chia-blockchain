@@ -95,13 +95,12 @@ def test_recovery_puzzles() -> None:
     signed_delegated_puzzle = secp_sk.sign_deterministic(
         delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + DEFAULT_HIDDEN_PUZZLE_HASH
     )
-    next_vault_inner_puzhash = bytes32(bytes([1] * 32))
     secp_solution = Program.to(
-        [delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id, next_vault_inner_puzhash]
+        [delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id, DEFAULT_CONSTANTS.GENESIS_CHALLENGE]
     )
     escape_solution = Program.to([escape_proof, escape_puzzle, secp_solution])
     escape_conds = conditions_dict_for_solution(recovery_puzzle, escape_solution, INFINITE_COST)
-    assert escape_conds[ConditionOpcode.CREATE_COIN][0].vars[0] == next_vault_inner_puzhash
+    assert escape_conds[ConditionOpcode.CREATE_COIN][0].vars[0] == ACS_PH
 
 
 def test_p2_delegated_secp() -> None:
@@ -113,13 +112,11 @@ def test_p2_delegated_secp() -> None:
     signed_delegated_puzzle = secp_sk.sign_deterministic(
         delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + DEFAULT_HIDDEN_PUZZLE_HASH
     )
-    next_vault_inner_puzhash = bytes32(bytes([1] * 32))
-    secp_solution = Program.to(
-        [delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id, next_vault_inner_puzhash]
-    )
+
+    secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id])
     conds = secp_puzzle.run(secp_solution)
 
-    assert conds.at("rfrf").as_atom() == next_vault_inner_puzhash
+    assert conds.at("rfrf").as_atom() == ACS_PH
 
     # test that a bad secp sig fails
     sig_bytes = bytearray(signed_delegated_puzzle)
@@ -161,15 +158,12 @@ def test_vault_root_puzzle() -> None:
     signed_delegated_puzzle = secp_sk.sign_deterministic(
         delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + DEFAULT_HIDDEN_PUZZLE_HASH
     )
-    next_vault_inner_puzhash = bytes32(bytes([1] * 32))
-    secp_solution = Program.to(
-        [delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id, next_vault_inner_puzhash]
-    )
+    secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id])
     proof = vault_merkle_tree.generate_proof(secp_puzzlehash)
     secp_proof = Program.to((proof[0], proof[1][0]))
     vault_solution = Program.to([secp_proof, secp_puzzle, secp_solution])
     secp_conds = conditions_dict_for_solution(vault_puzzle, vault_solution, INFINITE_COST)
-    assert secp_conds[ConditionOpcode.CREATE_COIN][0].vars[0] == next_vault_inner_puzhash
+    assert secp_conds[ConditionOpcode.CREATE_COIN][0].vars[0] == ACS_PH
 
     # recovery spend path
     recovery_conditions = Program.to([[51, ACS_PH, amount]])
