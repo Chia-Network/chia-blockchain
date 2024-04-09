@@ -69,6 +69,7 @@ def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
 def process_change_multistore(change: Dict[str, Any]) -> Dict[str, Any]:
     res = process_change(change)
     tree_id = change.get("tree_id")
+    assert tree_id is not None
     res["tree_id"] = hexstr_to_bytes(tree_id)
     return res
 
