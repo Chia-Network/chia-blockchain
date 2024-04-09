@@ -320,7 +320,7 @@ class TestWriteFile:
     # use tmp_path pytest fixture to create a temporary directory
     async def test_write_file_existing_intermediate_dirs(self, tmp_path: Path):
         """
-        Write a file to a location and where intermediate directories aleady exist.
+        Write a file to a location and where intermediate directories already exist.
         """
 
         dest_path: Path = tmp_path / "test_write_file/a/b/c/test_write_file.txt"

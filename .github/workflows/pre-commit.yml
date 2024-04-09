@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   pre-commit:
-    name: ${{ matrix.os.name }} ${{ matrix.arch.name }}
+    name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
     strategy:
@@ -42,7 +42,11 @@ jobs:
           - name: Intel
             matrix: intel
         python:
+          - major_dot_minor: "3.8"
+          - major_dot_minor: "3.9"
           - major_dot_minor: "3.10"
+          - major_dot_minor: "3.11"
+          - major_dot_minor: "3.12"
         exclude:
           - os:
               matrix: windows

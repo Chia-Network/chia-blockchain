@@ -523,7 +523,7 @@ def random_coin_records() -> RandomCoinRecords:
         coin = Coin(
             std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
             puzzle_hash,
-            uint64(1000),
+            uint64(i),
         )
 
         if is_hinted:
@@ -552,12 +552,16 @@ def random_coin_records() -> RandomCoinRecords:
 @pytest.mark.parametrize("include_spent", [True, False])
 @pytest.mark.parametrize("include_unspent", [True, False])
 @pytest.mark.parametrize("include_hinted", [True, False])
+@pytest.mark.parametrize(
+    "min_amount", [uint64(0), uint64(30000), uint64(0xFFFF), uint64(0x7FFF), uint64(0x8000), uint64(0x8000000000000000)]
+)
 async def test_coin_state_batches(
     db_version: int,
     random_coin_records: RandomCoinRecords,
     include_spent: bool,
     include_unspent: bool,
     include_hinted: bool,
+    min_amount: uint64,
 ) -> None:
     async with DBConnection(db_version) as db_wrapper:
         # Initialize coin and hint stores.
@@ -577,6 +581,8 @@ async def test_coin_state_batches(
                 continue
             if cr.coin.puzzle_hash not in ph_set and not include_hinted:
                 continue
+            if cr.coin.amount < min_amount:
+                continue
             expected_crs.append(cr)
 
         height: Optional[uint32] = uint32(0)
@@ -586,25 +592,30 @@ async def test_coin_state_batches(
         def height_of(coin_state: CoinState) -> int:
             return max(coin_state.created_height or 0, coin_state.spent_height or 0)
 
-        while height is not None:
-            (coin_states, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
-                remaining_phs[:15000],
-                min_height=height,
-                include_spent=include_spent,
-                include_unspent=include_unspent,
-                include_hinted=include_hinted,
-            )
+        while len(remaining_phs) > 0:
+            while height is not None:
+                (coin_states, height) = await coin_store.batch_coin_states_by_puzzle_hashes(
+                    remaining_phs[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE],
+                    min_height=height,
+                    include_spent=include_spent,
+                    include_unspent=include_unspent,
+                    include_hinted=include_hinted,
+                    min_amount=min_amount,
+                    max_items=7000,
+                )
 
-            # Ensure that all of the returned coin states are in order.
-            assert all(height_of(coin_states[i]) <= height_of(coin_states[i + 1]) for i in range(len(coin_states) - 1))
+                # Ensure that all of the returned coin states are in order.
+                assert all(
+                    height_of(coin_states[i]) <= height_of(coin_states[i + 1]) for i in range(len(coin_states) - 1)
+                )
 
-            all_coin_states += coin_states
+                all_coin_states += coin_states
 
-            if height is None:
-                remaining_phs = remaining_phs[15000:]
+                if height is None:
+                    remaining_phs = remaining_phs[CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE :]
 
-                if len(remaining_phs) > 0:
-                    height = uint32(0)
+                    if len(remaining_phs) > 0:
+                        height = uint32(0)
 
         assert len(all_coin_states) == len(expected_crs)
 
@@ -683,6 +694,18 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
         # Make sure that the extra coin records are not included in the results.
         assert next_height == (12 if cut_off_middle else 50)
         assert len(all_coin_states) == (25001 if cut_off_middle else 50000)
+
+
+@pytest.mark.anyio
+async def test_batch_no_puzzle_hashes(db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        # Initialize coin and hint stores.
+        coin_store = await CoinStore.create(db_wrapper)
+        await HintStore.create(db_wrapper)
+
+        coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([])
+        assert coin_states == []
+        assert height is None
 
 
 @pytest.mark.anyio
