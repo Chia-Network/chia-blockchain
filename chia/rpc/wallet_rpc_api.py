@@ -16,14 +16,12 @@ from chia.data_layer.data_layer_util import dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.rpc.util import marshal, tx_endpoint
 from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
-from chia.server.outbound_message import NodeType, make_msg
+from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -153,7 +151,6 @@ class WalletRpcApi:
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
-            "/farm_block": self.farm_block,  # Only when node simulator is running
             "/get_timestamp_for_height": self.get_timestamp_for_height,
             "/set_auto_claim": self.set_auto_claim,
             "/get_auto_claim": self.get_auto_claim,
@@ -616,13 +613,6 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             await self.service.wallet_state_manager.add_pending_transactions(txs)
 
-        return {}
-
-    async def farm_block(self, request: Dict[str, Any]) -> EndpointResult:
-        raw_puzzle_hash = decode_puzzle_hash(request["address"])
-        msg = make_msg(ProtocolMessageTypes.farm_new_block, FarmNewBlockProtocol(raw_puzzle_hash))
-
-        await self.service.server.send_to_all([msg], NodeType.FULL_NODE)
         return {}
 
     async def get_timestamp_for_height(self, request: Dict[str, Any]) -> EndpointResult:
