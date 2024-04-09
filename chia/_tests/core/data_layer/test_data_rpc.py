@@ -3454,12 +3454,11 @@ async def test_multistore_update(
             await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
             store_ids.append(store_id)
 
+        changelist: List[Dict[str, str]] = []
         for index, store_id in enumerate(store_ids):
             key = index.to_bytes(2, "big")
             value = index.to_bytes(2, "big")
-            changelist: List[Dict[str, str]] = [
-                {"action": "insert", "key": key.hex(), "value": value.hex(), "tree_id": store_id.hex()}
-            ]
+            changelist.append({"action": "insert", "key": key.hex(), "value": value.hex(), "tree_id": store_id.hex()})
 
         res = await data_rpc_api.multistore_batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"][0]
