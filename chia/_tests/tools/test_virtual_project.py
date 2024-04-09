@@ -315,7 +315,7 @@ def test_check_config(tmp_path: Path) -> None:
     # Create some files within the chia package
     create_python_file(chia_dir, "module1.py", "# Package: one\ndef func1(): pass\nfrom chia.module2 import func2")
     create_python_file(chia_dir, "module2.py", "# Package: two\ndef func2(): pass\nfrom chia.module3 import func3")
-    create_python_file(chia_dir, "module3.py", "# Package: three\ndef func3(): pass\n")
+    create_python_file(chia_dir, "module3.py", "# Package: one\ndef func3(): pass\n")
 
     # Run the command
     runner = CliRunner()
@@ -326,14 +326,14 @@ def test_check_config(tmp_path: Path) -> None:
             "--directory",
             str(chia_dir),
             "--ignore-cycles-in",
-            "one",
+            "two",
             "--ignore-specific-file",
             str(chia_dir / "module1.py"),
             "--ignore-specific-edge",
             str(chia_dir / "module2.py") + " -> " + str(chia_dir / "module3"),
         ],
     )
-    assert "    module one ignored but no cycles were found" in result.output
+    assert "    module two ignored but no cycles were found" in result.output
     assert f"    file {str(chia_dir / 'module1.py')} ignored but no cycles were found" in result.output
     assert (
         f"    edge {str(chia_dir / 'module2.py') + ' -> ' + str(chia_dir / 'module3')} ignored but no cycles were found"
