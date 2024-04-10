@@ -198,6 +198,8 @@ def create_valid_node_values(
 
 
 def create_valid_node_values(
+    tree_id: bytes32,
+    generation: int,
     node_type: NodeType,
     left_hash: Optional[bytes32] = None,
     right_hash: Optional[bytes32] = None,
@@ -206,6 +208,8 @@ def create_valid_node_values(
         assert left_hash is not None
         assert right_hash is not None
         return {
+            "tree_id": tree_id,
+            "generation": generation,
             "hash": Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash),
             "node_type": node_type,
             "left": left_hash,
@@ -218,6 +222,8 @@ def create_valid_node_values(
         key = b""
         value = b""
         return {
+            "tree_id": tree_id,
+            "generation": generation,
             "hash": Program.to((key, value)).get_tree_hash(),
             "node_type": node_type,
             "left": None,

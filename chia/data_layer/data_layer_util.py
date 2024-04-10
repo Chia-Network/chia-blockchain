@@ -79,6 +79,7 @@ def get_hashes_for_page(page: int, lengths: Dict[bytes32, int], max_page_size: i
 
 
 async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
+    return
     async with db.reader() as reader:
         cursor = await reader.execute("SELECT name FROM sqlite_master WHERE type='table';")
         print("-" * 50, description, flush=True)
@@ -183,6 +184,7 @@ class TerminalNode:
     # generation: int
     key: bytes
     value: bytes
+    parent_hash: bytes32
 
     atom: None = field(init=False, default=None)
 
@@ -193,12 +195,16 @@ class TerminalNode:
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
         assert row["node_type"] == NodeType.TERMINAL
+        parent_hash = row["parent"]
+        if parent_hash is not None:
+            parent_hash = bytes32(parent_hash)
 
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
             key=row["key"],
             value=row["value"],
+            parent_hash=parent_hash,
         )
 
 
@@ -282,6 +288,7 @@ class ProofOfInclusion:
 class InternalNode:
     hash: bytes32
     # generation: int
+    parent_hash: Optional[bytes32]
     left_hash: bytes32
     right_hash: bytes32
 
@@ -291,10 +298,14 @@ class InternalNode:
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> InternalNode:
         assert row["node_type"] == NodeType.INTERNAL
+        parent_hash = row["parent"]
+        if parent_hash is not None:
+            parent_hash = bytes32(parent_hash)
 
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
+            parent_hash=parent_hash,
             left_hash=bytes32(row["left"]),
             right_hash=bytes32(row["right"]),
         )

@@ -221,8 +221,13 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
         before = await cursor.fetchall()
 
     root = await data_store.get_tree_root(tree_id=tree_id)
-    new_generation = root.generation + 1
-    await data_store._insert_internal_node(tree_id=tree_id, generation=new_generation, parent_hash=parent.hash, left_hash=parent.left_hash, right_hash=parent.right_hash)
+    await data_store._insert_internal_node(
+        tree_id=tree_id,
+        generation=root.generation,
+        parent_hash=parent.hash,
+        left_hash=parent.left_hash,
+        right_hash=parent.right_hash,
+    )
 
     async with data_store.db_wrapper.reader() as reader:
         cursor = await reader.execute("SELECT * FROM node")
@@ -243,7 +248,9 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
 
     root = await data_store.get_tree_root(tree_id=tree_id)
     new_generation = root.generation + 1
-    await data_store._insert_terminal_node(tree_id=tree_id, generation=new_generation, parent_hash=kv_node.hash, key=kv_node.key, value=kv_node.value)
+    await data_store._insert_terminal_node(
+        tree_id=tree_id, generation=new_generation, parent_hash=kv_node.hash, key=kv_node.key, value=kv_node.value
+    )
 
     async with data_store.db_wrapper.reader() as reader:
         cursor = await reader.execute("SELECT * FROM node")
@@ -260,7 +267,7 @@ async def test_build_a_tree(
 ) -> None:
     example = await create_example(data_store, tree_id)
 
-    await _debug_dump(db=data_store.db_wrapper, description="final")
+    # await _debug_dump(db=data_store.db_wrapper, description="final")
     actual = await data_store.get_tree_as_program(tree_id=tree_id)
     # print("actual  ", actual.as_python())
     # print("expected", example.expected.as_python())
@@ -314,12 +321,9 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
         "c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2",
     ]
 
-    ancestors_2 = await data_store.get_ancestors_optimized(node_hash=reference_node_hash, tree_id=tree_id)
-    assert ancestors == ancestors_2
-
 
 @pytest.mark.anyio
-async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_get_ancestors_again(data_store: DataStore, tree_id: bytes32, task_instrumentation) -> None:
     ancestors: List[Tuple[int, bytes32, List[InternalNode]]] = []
     random = Random()
     random.seed(100, version=2)
@@ -340,9 +344,10 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                 while node_count > 0:
                     node_count -= 1
                     seed = bytes32(b"0" * 32)
-                    node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
+                    generation = await data_store.get_tree_generation(tree_id=tree_id)
+                    node_hash = await data_store.get_terminal_node_for_seed(tree_id, generation, seed)
                     assert node_hash is not None
-                    node = await data_store.get_node(node_hash)
+                    node = await data_store.get_node(tree_id=tree_id, generation=generation, node_hash=node_hash)
                     assert isinstance(node, TerminalNode)
                     await data_store.delete(key=node.key, tree_id=tree_id, status=Status.COMMITTED)
                 deleted_all = True
@@ -356,18 +361,21 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
         key = (i % 200).to_bytes(4, byteorder="big")
         value = (i % 200).to_bytes(4, byteorder="big")
         seed = Program.to((key, value)).get_tree_hash()
-        node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
+        generation = await data_store.get_tree_generation(tree_id=tree_id)
+        node_hash = await data_store.get_terminal_node_for_seed(tree_id, generation, seed)
         if is_insert:
             node_count += 1
             side = None if node_hash is None else data_store.get_side_for_seed(seed)
 
+            # TODO: added for debug
+            generation = await data_store.get_tree_generation(tree_id=tree_id)
+            # await _debug_dump(db=data_store.db_wrapper, description=f"insert {node_hash=}")
             insert_result = await data_store.insert(
                 key=key,
                 value=value,
                 tree_id=tree_id,
                 reference_node_hash=node_hash,
                 side=side,
-                use_optimized=False,
                 status=Status.COMMITTED,
             )
             node_hash = insert_result.node_hash
@@ -377,26 +385,22 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                 ancestors.append((generation, node_hash, current_ancestors))
         else:
             node_count -= 1
+            await _debug_dump(db=data_store.db_wrapper, description=f"delete {node_hash=}")
             assert node_hash is not None
-            node = await data_store.get_node(node_hash)
+            generation = await data_store.get_tree_generation(tree_id=tree_id)
+            node = await data_store.get_node(tree_id=tree_id, generation=generation, node_hash=node_hash)
             assert isinstance(node, TerminalNode)
-            await data_store.delete(key=node.key, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED)
+            await data_store.delete(key=node.key, tree_id=tree_id, status=Status.COMMITTED)
 
     for generation, node_hash, expected_ancestors in ancestors:
-        current_ancestors = await data_store.get_ancestors_optimized(
-            node_hash=node_hash, tree_id=tree_id, generation=generation
-        )
-        assert current_ancestors == expected_ancestors
+        current_ancestors = await data_store.get_ancestors(node_hash=node_hash, tree_id=tree_id, generation=generation)
+        assert current_ancestors == expected_ancestors, (generation, node_hash)
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize(
-    "use_optimized",
-    [True, False],
-)
-async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimized: bool, tmp_path: Path) -> None:
+async def test_batch_update(data_store: DataStore, tree_id: bytes32, tmp_path: Path, task_instrumentation) -> None:
     num_batches = 10
-    num_ops_per_batch = 100 if use_optimized else 10
+    num_ops_per_batch = 100
     saved_roots: List[Root] = []
     saved_batches: List[List[Dict[str, Any]]] = []
 
@@ -425,7 +429,6 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                         key=key,
                         value=value,
                         tree_id=tree_id,
-                        use_optimized=use_optimized,
                         status=Status.COMMITTED,
                     )
                 else:
@@ -433,7 +436,6 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                         key=key,
                         new_value=value,
                         tree_id=tree_id,
-                        use_optimized=use_optimized,
                         status=Status.COMMITTED,
                     )
                 action = "insert" if op_type == "insert" else "upsert"
@@ -445,7 +447,6 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 await single_op_data_store.delete(
                     key=key,
                     tree_id=tree_id,
-                    use_optimized=use_optimized,
                     status=Status.COMMITTED,
                 )
                 batch.append({"action": "delete", "key": key})
@@ -459,7 +460,6 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                     key=key,
                     new_value=new_value,
                     tree_id=tree_id,
-                    use_optimized=use_optimized,
                     status=Status.COMMITTED,
                 )
                 keys_values[key] = new_value
@@ -486,9 +486,9 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
             while ancestor in ancestors:
                 ancestor = ancestors[ancestor]
                 expected_ancestors.append(ancestor)
-            result_ancestors = await data_store.get_ancestors_optimized(node_hash, tree_id)
+            result_ancestors = await data_store.get_ancestors(node_hash, tree_id)
             assert [node.hash for node in result_ancestors] == expected_ancestors
-            node = await data_store.get_node(node_hash)
+            node = await data_store.get_node(tree_id=tree_id, generation=batch_number + 1, node_hash=node_hash)
             if isinstance(node, InternalNode):
                 queue.append(node.left_hash)
                 queue.append(node.right_hash)
@@ -500,14 +500,9 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize(
-    "use_optimized",
-    [True, False],
-)
 async def test_upsert_ignores_existing_arguments(
     data_store: DataStore,
     tree_id: bytes32,
-    use_optimized: bool,
 ) -> None:
     key = b"key"
     value = b"value1"
@@ -516,7 +511,6 @@ async def test_upsert_ignores_existing_arguments(
         key=key,
         value=value,
         tree_id=tree_id,
-        use_optimized=use_optimized,
         status=Status.COMMITTED,
     )
     node = await data_store.get_node_by_key(key, tree_id)
@@ -527,7 +521,6 @@ async def test_upsert_ignores_existing_arguments(
         key=key,
         new_value=new_value,
         tree_id=tree_id,
-        use_optimized=use_optimized,
         status=Status.COMMITTED,
     )
     node = await data_store.get_node_by_key(key, tree_id)
@@ -537,7 +530,6 @@ async def test_upsert_ignores_existing_arguments(
         key=key,
         new_value=new_value,
         tree_id=tree_id,
-        use_optimized=use_optimized,
         status=Status.COMMITTED,
     )
     node = await data_store.get_node_by_key(key, tree_id)
@@ -548,7 +540,6 @@ async def test_upsert_ignores_existing_arguments(
         key=key2,
         new_value=value,
         tree_id=tree_id,
-        use_optimized=use_optimized,
         status=Status.COMMITTED,
     )
     node = await data_store.get_node_by_key(key2, tree_id)
@@ -689,7 +680,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
         insert_result = await data_store.autoinsert(key, value, tree_id, status=Status.COMMITTED)
         hashes.append(insert_result.node_hash)
 
-    heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
+    heights = {node_hash: len(await data_store.get_ancestors(node_hash, tree_id)) for node_hash in hashes}
     too_tall = {hash: height for hash, height in heights.items() if height > 14}
     assert too_tall == {}
     assert 11 <= statistics.mean(heights.values()) <= 12
@@ -716,11 +707,11 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
                 side=Side.LEFT,
                 status=Status.COMMITTED,
             )
-            ancestors = await data_store.get_ancestors_optimized(insert_result.node_hash, tree_id)
+            ancestors = await data_store.get_ancestors(insert_result.node_hash, tree_id)
             assert len(ancestors) == i
         hashes.append(insert_result.node_hash)
 
-    heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
+    heights = {node_hash: len(await data_store.get_ancestors(node_hash, tree_id)) for node_hash in hashes}
     too_tall = {hash: height for hash, height in heights.items() if height > 14}
     assert too_tall == {}
     assert 11 <= statistics.mean(heights.values()) <= 12
@@ -863,7 +854,7 @@ async def test_proof_of_inclusion_by_hash(data_store: DataStore, tree_id: bytes3
     proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
 
     print(node)
-    await _debug_dump(db=data_store.db_wrapper)
+    # await _debug_dump(db=data_store.db_wrapper)
 
     expected_layers = [
         ProofOfInclusionLayer(
@@ -1927,8 +1918,6 @@ async def test_insert_key_already_present(data_store: DataStore, tree_id: bytes3
         await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
 
 
-
-
 @pytest.mark.anyio
 async def test_hum(
     data_store: DataStore,
@@ -1941,10 +1930,10 @@ async def test_hum(
     r.seed("shadowlands", version=2)
 
     test_size = 100
-    max_pre_size = 1000
+    max_pre_size = 10_000
     # may not be needed if big_o already considers the effect
     # TODO: must be > 0 to avoid an issue with the log class?
-    lowest_considered_n = 200
+    lowest_considered_n = 2000
     simplicity_bias_percentage = 10 / 100
 
     batch_count, remainder = divmod(max_pre_size, test_size)
