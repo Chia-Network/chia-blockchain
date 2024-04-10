@@ -28,10 +28,8 @@ async def load_plugin_configurations(root_path: Path, config_type: str) -> List[
         try:
             with open(conf_file) as file:
                 data = json.load(file)
-            # Validate that data is a list of dicts with 'url' as a key
-            if isinstance(data, list) and all(isinstance(item, dict) and "url" in item for item in data):
-                valid_configs.extend([PluginRemote.unmarshal(marshalled=item) for item in data])
-                print(f"Valid configurations in {conf_file.name}: {data}")
+
+            valid_configs.extend([PluginRemote.unmarshal(marshalled=item) for item in data])
         except (OSError, json.JSONDecodeError, Exception) as e:
             print(f"Error loading or parsing {conf_file}: {e}, skipping this file.")
     return valid_configs
