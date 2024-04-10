@@ -125,6 +125,7 @@ async def async_main() -> int:
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
         await service.run()
+
     return 0
 
 
