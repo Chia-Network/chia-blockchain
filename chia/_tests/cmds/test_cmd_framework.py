@@ -392,3 +392,8 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
 
     async with expected_command.rpc_info.wallet_rpc(consume_errors=False) as client_info:
         assert await client_info.client.get_logged_in_fingerprint() == fingerprint
+
+    # We don't care about setting the correct arg type here
+    test_present_client_info = TempCMD(rpc_info=NeedsWalletRPC(client_info="hello world"))  # type: ignore[arg-type]
+    async with test_present_client_info.rpc_info.wallet_rpc(consume_errors=False) as client_info:
+        assert client_info == "hello world"  # type: ignore[comparison-overlap]
