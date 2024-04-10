@@ -98,7 +98,7 @@ def test_proposal() -> None:
     )
     self_destruct_time = 1000  # number of blocks
     oracle_spend_delay = 10
-    active_votes_list = [0xFADEDDAB]  # are the the ids of previously voted on proposals?
+    active_votes_list = [0xFADEDDAB]  # are the ids of previously voted on proposals?
     acs: Program = Program.to(1)
     acs_ph: bytes32 = acs.get_tree_hash()
 
