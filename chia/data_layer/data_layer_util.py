@@ -86,7 +86,8 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
             cursor = await reader.execute(f"SELECT * FROM {name}")
             print(f"\n -- {name} ------", flush=True)
             async for row in cursor:
-                print(f"        {dict(row)}")
+                tweaked = {k: (v if not isinstance(v, bytes) else v.hex()) for k, v in dict(row).items()}
+                print(f"        {tweaked}")
 
 
 async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
@@ -191,6 +192,8 @@ class TerminalNode:
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
+        assert row["node_type"] == NodeType.TERMINAL
+
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
@@ -287,6 +290,8 @@ class InternalNode:
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> InternalNode:
+        assert row["node_type"] == NodeType.INTERNAL
+
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
@@ -321,18 +326,19 @@ class Root:
     status: Status
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> Root:
-        raw_node_hash = row["node_hash"]
-        if raw_node_hash is None:
-            node_hash = None
-        else:
-            node_hash = bytes32(raw_node_hash)
+    async def from_row(cls, row: aiosqlite.Row, data_store: DataStore) -> Root:
+        tree_id = bytes32(row["tree_id"])
+        generation = row["generation"]
+        status = Status(row["status"])
+
+        # TODO: should not be handled this way
+        node_hash = await data_store._get_root_hash(tree_id=tree_id, generation=generation)
 
         return cls(
-            tree_id=bytes32(row["tree_id"]),
+            tree_id=tree_id,
             node_hash=node_hash,
-            generation=row["generation"],
-            status=Status(row["status"]),
+            generation=generation,
+            status=status,
         )
 
     def to_row(self) -> Dict[str, Any]:

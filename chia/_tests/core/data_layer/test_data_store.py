@@ -71,7 +71,7 @@ async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_
         await writer.execute(
             """
             INSERT INTO node(tree_id, generation, hash, parent, node_type, left, right, key, value)
-            VALUES(:tree_id, :generation, :hash, :node_type, :left, :right, :key, :value)
+            VALUES(:tree_id, :generation, :hash, :parent, :node_type, :left, :right, :key, :value)
             """,
             valid_node_values,
         )
@@ -220,7 +220,9 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
         cursor = await reader.execute("SELECT * FROM node")
         before = await cursor.fetchall()
 
-    await data_store._insert_internal_node(left_hash=parent.left_hash, right_hash=parent.right_hash)
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    new_generation = root.generation + 1
+    await data_store._insert_internal_node(tree_id=tree_id, generation=new_generation, parent_hash=parent.hash, left_hash=parent.left_hash, right_hash=parent.right_hash)
 
     async with data_store.db_wrapper.reader() as reader:
         cursor = await reader.execute("SELECT * FROM node")
@@ -239,7 +241,9 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
         cursor = await reader.execute("SELECT * FROM node")
         before = await cursor.fetchall()
 
-    await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value)
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    new_generation = root.generation + 1
+    await data_store._insert_terminal_node(tree_id=tree_id, generation=new_generation, parent_hash=kv_node.hash, key=kv_node.key, value=kv_node.value)
 
     async with data_store.db_wrapper.reader() as reader:
         cursor = await reader.execute("SELECT * FROM node")
@@ -273,6 +277,26 @@ async def test_get_node_by_key(data_store: DataStore, tree_id: bytes32) -> None:
 
     actual = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
     assert actual.hash == key_node_hash
+
+
+# @pytest.mark.anyio
+# async def test_get_one_ancestor(data_store: DataStore, tree_id: bytes32) -> None:
+#     async with data_store.transaction(foreign_key_checks_enabled=False):
+#         await data_store._insert_terminal_node(
+#             tree_id=tree_id,
+#             generation=0,
+#             left_hash=
+#         )
+#         async with writer.execute(
+#             """
+#             INSERT INTO node(
+#             """
+#         )
+#
+#     reference_node_hash = example.terminal_nodes[2]
+#
+#     ancestor = await data_store._get_one_ancestor(node_hash=reference_node_hash, tree_id=tree_id)
+#     print()
 
 
 @pytest.mark.anyio
@@ -390,6 +414,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 [0.4, 0.2, 0.2, 0.2],
                 k=1,
             )
+            op_type = "insert"
             if op_type == "insert" or op_type == "upsert-insert" or len(keys_values) == 0:
                 if len(keys_values) == 0:
                     op_type = "insert"
@@ -571,18 +596,6 @@ async def test_insert_batch_reference_and_side(
 
 
 @pytest.mark.anyio
-async def test_ancestor_table_unique_inserts(data_store: DataStore, tree_id: bytes32) -> None:
-    await add_0123_example(data_store=data_store, tree_id=tree_id)
-    hash_1 = bytes32.from_hexstr("0763561814685fbf92f6ca71fbb1cb11821951450d996375c239979bd63e9535")
-    hash_2 = bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40")
-    await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
-    await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
-    with pytest.raises(Exception, match="^Requested insertion of ancestor"):
-        await data_store._insert_ancestor_table(hash_1, hash_1, tree_id, 2)
-    await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
-
-
-@pytest.mark.anyio
 async def test_get_pairs(
     data_store: DataStore,
     tree_id: bytes32,
@@ -652,27 +665,15 @@ async def test_inserting_invalid_length_hash_raises_original_exception(
     with pytest.raises(aiosqlite.IntegrityError):
         # casting since we are testing an invalid case
         await data_store._insert_node(
+            tree_id=bytes32.random(),
+            generation=0,
             node_hash=cast(bytes32, b"\x05"),
+            parent_hash=bytes32([0] * 32),
             node_type=NodeType.TERMINAL,
             left_hash=None,
             right_hash=None,
             key=b"\x06",
             value=b"\x07",
-        )
-
-
-@pytest.mark.anyio()
-async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
-    data_store: DataStore,
-    tree_id: bytes32,
-) -> None:
-    with pytest.raises(aiosqlite.IntegrityError):
-        # casting since we are testing an invalid case
-        await data_store._insert_ancestor_table(
-            left_hash=bytes32(b"\x01" * 32),
-            right_hash=bytes32(b"\x02" * 32),
-            tree_id=tree_id,
-            generation=0,
         )
 
 
@@ -1924,3 +1925,95 @@ async def test_insert_key_already_present(data_store: DataStore, tree_id: bytes3
     )
     with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
         await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+
+
+
+
+@pytest.mark.anyio
+async def test_hum(
+    data_store: DataStore,
+    tree_id: bytes32,
+    benchmark_runner: BenchmarkRunner,
+) -> None:
+    import big_o
+
+    r = random.Random()
+    r.seed("shadowlands", version=2)
+
+    test_size = 100
+    max_pre_size = 1000
+    # may not be needed if big_o already considers the effect
+    # TODO: must be > 0 to avoid an issue with the log class?
+    lowest_considered_n = 200
+    simplicity_bias_percentage = 10 / 100
+
+    batch_count, remainder = divmod(max_pre_size, test_size)
+    assert remainder == 0, "the last batch would be a different size"
+
+    changelist = [
+        {
+            "action": "insert",
+            "key": x.to_bytes(32, byteorder="big", signed=False),
+            "value": bytes(r.getrandbits(8) for _ in range(1200)),
+        }
+        for x in range(max_pre_size)
+    ]
+
+    pre = changelist[:max_pre_size]
+
+    records: Dict[int, float] = {}
+
+    total_inserted = 0
+    pre_iter = iter(pre)
+    with benchmark_runner.assert_runtime(
+        label="overall",
+        # TODO: this is silly
+        seconds=1,
+        enable_assertion=False,
+        clock=time.monotonic,
+    ) as f:
+        while True:
+            pre_batch = list(itertools.islice(pre_iter, test_size))
+            if len(pre_batch) == 0:
+                break
+
+            with benchmark_runner.assert_runtime(
+                label="count",
+                # TODO: this is silly
+                seconds=1,
+                enable_assertion=False,
+                clock=time.monotonic,
+            ) as f:
+                await data_store.insert_batch(
+                    tree_id=tree_id,
+                    changelist=pre_batch,
+                    # TODO: does this mess up test accuracy?
+                    status=Status.COMMITTED,
+                )
+
+            records[total_inserted] = f.result().duration
+            total_inserted += len(pre_batch)
+
+    considered_durations = {n: duration for n, duration in records.items() if n >= lowest_considered_n}
+    ns = list(considered_durations.keys())
+    durations = list(considered_durations.values())
+    best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations)
+    simplicity_bias = simplicity_bias_percentage * fitted[best_class]
+    best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations, simplicity_bias=simplicity_bias)
+
+    print(f"allowed simplicity bias: {simplicity_bias}")
+    print(big_o.reports.big_o_report(best=best_class, others=fitted))
+
+    assert isinstance(
+        best_class, (big_o.complexities.Constant, big_o.complexities.Linear)
+    ), f"must be constant or linear: {best_class}"
+
+    coefficient_maximums = [2.5, *(10**-n for n in range(1, 100))]
+
+    coefficients = best_class.coefficients()
+    paired = list(zip(coefficients, coefficient_maximums))
+    assert len(paired) == len(coefficients)
+    for index, [actual, maximum] in enumerate(paired):
+        assert actual <= maximum, f"(coefficient {index}) {actual} > {maximum}: {paired}"
+
+    # TODO: how do we get this into present reporting since that's just for time
