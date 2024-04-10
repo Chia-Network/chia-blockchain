@@ -398,7 +398,7 @@ class DAOCATWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
@@ -496,7 +496,7 @@ class DAOCATWallet:
             new_locked_coins,
         )
         await self.save_info(dao_cat_info)
-        return record
+        return [record]
 
     async def remove_active_proposal(
         self, proposal_id_list: List[bytes32], tx_config: TXConfig, fee: uint64 = uint64(0)
