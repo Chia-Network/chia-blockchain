@@ -602,7 +602,8 @@ async def test_wallet_node_bad_coin_state_ignore(
         )
 
     async def validate_received_state_from_peer(*args: Any) -> bool:
-        return True
+        # It's an interesting case here where we don't hit this unless something is broken
+        return True  # pragma: no cover
 
     assert full_node_api.full_node._server is not None
     monkeypatch.setattr(
