@@ -1923,7 +1923,7 @@ async def test_hum(
     data_store: DataStore,
     tree_id: bytes32,
     benchmark_runner: BenchmarkRunner,
-    task_instrumentation,
+    # task_instrumentation,
 ) -> None:
     import big_o
 

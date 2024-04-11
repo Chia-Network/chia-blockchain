@@ -90,7 +90,7 @@ class DataStore:
                     CREATE TABLE IF NOT EXISTS node(
                         tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
                         generation INTEGER NOT NULL CHECK(generation >= 0),
-                        hash BLOB NULL CHECK(length(hash) == 32),
+                        hash BLOB NOT NULL CHECK(length(hash) == 32),
                         parent BLOB,
                         node_type INTEGER NOT NULL CHECK(
                             (
@@ -162,6 +162,41 @@ class DataStore:
                     CREATE INDEX IF NOT EXISTS node_key_index ON node(key)
                     """
                 )
+                # await writer.execute(
+                #     """
+                #     CREATE INDEX IF NOT EXISTS node_hash_index ON node(hash)
+                #     """
+                # )
+                # await writer.execute(
+                #     """
+                #     CREATE INDEX IF NOT EXISTS node_left_index ON node(left)
+                #     """
+                # )
+                # await writer.execute(
+                #     """
+                #     CREATE INDEX IF NOT EXISTS node_right_index ON node(right)
+                #     """
+                # )
+                # await writer.execute(
+                #     """
+                #     CREATE INDEX IF NOT EXISTS node_tree_id_generation_left_index ON node(tree_id, generation, left)
+                #     """
+                # )
+                # await writer.execute(
+                #     """
+                #     CREATE INDEX IF NOT EXISTS node_tree_id_generation_right_index ON node(tree_id, generation, right)
+                #     """
+                # )
+                # await writer.execute(
+                #     """
+                #     CREATE INDEX IF NOT EXISTS node_tree_id_generation_hash_index ON node(tree_id, generation, hash)
+                #     """
+                # )
+                # await writer.execute(
+                #     """
+                #     CREATE INDEX IF NOT EXISTS node_tree_id_generation_hash_index ON node(tree_id, generation, parent)
+                #     """
+                # )
 
             yield self
 
@@ -898,68 +933,80 @@ class DataStore:
 
     async def get_terminal_node_for_seed(
         self,
-        tree_id: bytes32,
-        generation: int,
+        root: Root,
         seed: bytes32,
-        root_hash: Optional[bytes32] = None,
     ) -> Optional[bytes32]:
         path = "".join(reversed("".join(f"{b:08b}" for b in seed)))
         async with self.db_wrapper.reader() as reader:
-            if root_hash is None:
-                root = await self.get_tree_root(tree_id)
-                root_hash = root.node_hash
-            if root_hash is None:
-                return None
+            reference_node_hash = root.node_hash
+            for raw_side in path:
+                async with reader.execute(
+                    """
+                    SELECT *
+                    FROM node
+                    WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
+                    LIMIT 1
+                    """,
+                    {"tree_id": root.tree_id, "generation": root.generation, "hash": reference_node_hash},
+                ) as cursor:
+                    row = await cursor.fetchone()
+                node = row_to_node(row=row)
+                if isinstance(node, TerminalNode):
+                    break
 
-            async with reader.execute(
-                """
-                WITH RECURSIVE
-                    random_leaf(hash, node_type, left, right, depth, side) AS (
-                        SELECT
-                            node.hash AS hash,
-                            node.node_type AS node_type,
-                            node.left AS left,
-                            node.right AS right,
-                            1 AS depth,
-                            SUBSTR(:path, 1, 1) as side
-                        FROM node
-                        WHERE tree_id = :tree_id AND generation = :generation AND node.hash == :root_hash
-                        UNION ALL
-                        SELECT
-                            node.hash AS hash,
-                            node.node_type AS node_type,
-                            node.left AS left,
-                            node.right AS right,
-                            random_leaf.depth + 1 AS depth,
-                            SUBSTR(:path, random_leaf.depth + 1, 1) as side
-                        FROM node, random_leaf
-                        WHERE (
-                            tree_id = :tree_id
-                            AND generation = :generation
-                            AND (
-                                (random_leaf.side == "0" AND node.hash == random_leaf.left)
-                                OR (random_leaf.side != "0" AND node.hash == random_leaf.right)
-                            )
-                        )
-                    )
-                SELECT hash AS hash FROM random_leaf
-                WHERE node_type == :node_type
-                LIMIT 1
-                """,
-                {
-                    "tree_id": tree_id,
-                    "generation": generation,
-                    "root_hash": root_hash,
-                    "node_type": NodeType.TERMINAL,
-                    "path": path,
-                },
-            ) as cursor:
-                row = await cursor.fetchone()
-                if row is None:
-                    # No cover since this is an error state that should be unreachable given the code
-                    # above has already verified that there is a non-empty tree.
-                    raise Exception("No terminal node found for seed")  # pragma: no cover
-                return bytes32(row["hash"])
+                if raw_side == "0":
+                    reference_node_hash = node.left_hash
+                else:
+                    reference_node_hash = node.right_hash
+            return reference_node_hash
+            # async with reader.execute(
+            #     """
+            #     WITH RECURSIVE
+            #         random_leaf(hash, node_type, left, right, depth, side) AS (
+            #             SELECT
+            #                 node.hash AS hash,
+            #                 node.node_type AS node_type,
+            #                 node.left AS left,
+            #                 node.right AS right,
+            #                 1 AS depth,
+            #                 SUBSTR(:path, 1, 1) as side
+            #             FROM node
+            #             WHERE tree_id = :tree_id AND generation = :generation AND node.parent IS NULL
+            #             UNION ALL
+            #             SELECT
+            #                 node.hash AS hash,
+            #                 node.node_type AS node_type,
+            #                 node.left AS left,
+            #                 node.right AS right,
+            #                 random_leaf.depth + 1 AS depth,
+            #                 SUBSTR(:path, random_leaf.depth + 1, 1) as side
+            #             FROM node, random_leaf
+            #             WHERE (
+            #                 CASE
+            #                     WHEN random_leaf.side == "0"
+            #                     THEN node.tree_id = :tree_id AND node.generation = :generation AND node.hash == random_leaf.left
+            #                     ELSE node.tree_id = :tree_id AND node.generation = :generation AND node.hash == random_leaf.right
+            #                 END
+            #             )
+            #         )
+            #     SELECT hash AS hash FROM random_leaf
+            #     WHERE node_type == :node_type
+            #     LIMIT 1
+            #     """,
+            #     {
+            #         "tree_id": tree_id,
+            #         "generation": generation,
+            #         "root_hash": root_hash,
+            #         "node_type": NodeType.TERMINAL,
+            #         "path": path,
+            #     },
+            # ) as cursor:
+            #     row = await cursor.fetchone()
+            #     if row is None:
+            #         # No cover since this is an error state that should be unreachable given the code
+            #         # above has already verified that there is a non-empty tree.
+            #         raise Exception("No terminal node found for seed")  # pragma: no cover
+            #     return bytes32(row["hash"])
 
     def get_side_for_seed(self, seed: bytes32) -> Side:
         side_seed = bytes(seed)[0]
@@ -985,9 +1032,7 @@ class DataStore:
                 side = None
             else:
                 seed = leaf_hash(key=key, value=value)
-                reference_node_hash = await self.get_terminal_node_for_seed(
-                    tree_id, root.generation, seed, root_hash=root.node_hash
-                )
+                reference_node_hash = await self.get_terminal_node_for_seed(root=root, seed=seed)
                 side = self.get_side_for_seed(seed)
 
             return await self.insert(
@@ -1304,7 +1349,7 @@ class DataStore:
                 root = await self.get_tree_root(tree_id=tree_id)
 
             try:
-                await self.get_node_by_key(key=key, tree_id=tree_id)
+                await self.get_node_by_key(root=root, key=key)
                 raise Exception(f"Key already present: {key.hex()}")
             except KeyNotFoundError:
                 pass
@@ -1423,7 +1468,7 @@ class DataStore:
                 root = await self.get_tree_root(tree_id=tree_id, generation=generation)
 
             try:
-                node = await self.get_node_by_key(key=key, tree_id=tree_id)
+                node = await self.get_node_by_key(root=root, key=key)
                 node_hash = node.hash
                 assert isinstance(node, TerminalNode)
             except KeyNotFoundError:
@@ -1487,7 +1532,7 @@ class DataStore:
                 root = await self.get_tree_root(tree_id=tree_id)
 
             try:
-                old_node = await self.get_node_by_key(key=key, tree_id=tree_id)
+                old_node = await self.get_node_by_key(root=root, key=key)
             except KeyNotFoundError:
                 log.debug(f"Key not found: {key.hex()}. Doing an autoinsert instead")
                 return await self.autoinsert(
@@ -1781,16 +1826,37 @@ class DataStore:
             if status == Status.COMMITTED:
                 await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
 
-    async def get_node_by_key_latest_generation(self, key: bytes, tree_id: bytes32) -> TerminalNode:
-        async with self.db_wrapper.reader() as reader:
-            root = await self.get_tree_root(tree_id=tree_id)
-            if root.node_hash is None:
-                raise KeyNotFoundError(key=key)
+    # async def get_node_by_key_latest_generation(self, key: bytes, tree_id: bytes32) -> TerminalNode:
+    #     async with self.db_wrapper.reader() as reader:
+    #         root = await self.get_tree_root(tree_id=tree_id)
+    #         if root.node_hash is None:
+    #             raise KeyNotFoundError(key=key)
+    #
+    #         # await _debug_dump(
+    #         #     db=self.db_wrapper,
+    #         #     description=f"get_node_by_key_latest_generation() {tree_id.hex()=} {root.generation=} {key=}",
+    #         # )
+    #         async with reader.execute(
+    #             """
+    #             SELECT *
+    #             FROM node
+    #             WHERE tree_id = :tree_id AND generation = :generation AND key = :key
+    #             LIMIT 1
+    #             """,
+    #             {"tree_id": tree_id, "generation": root.generation, "key": key},
+    #         ) as cursor:
+    #             row = await cursor.fetchone()
+    #             if row is None:
+    #                 raise KeyNotFoundError(key=key)
+    #
+    #         return TerminalNode.from_row(row=row)
 
-            # await _debug_dump(
-            #     db=self.db_wrapper,
-            #     description=f"get_node_by_key_latest_generation() {tree_id.hex()=} {root.generation=} {key=}",
-            # )
+    async def get_node_by_key(
+        self,
+        root: Root,
+        key: bytes,
+    ) -> TerminalNode:
+        async with self.db_wrapper.reader() as reader:
             async with reader.execute(
                 """
                 SELECT *
@@ -1798,30 +1864,13 @@ class DataStore:
                 WHERE tree_id = :tree_id AND generation = :generation AND key = :key
                 LIMIT 1
                 """,
-                {"tree_id": tree_id, "generation": root.generation, "key": key},
+                {"tree_id": root.tree_id, "generation": root.generation, "key": key},
             ) as cursor:
                 row = await cursor.fetchone()
                 if row is None:
                     raise KeyNotFoundError(key=key)
 
-            return TerminalNode.from_row(row=row)
-
-    async def get_node_by_key(
-        self,
-        key: bytes,
-        tree_id: bytes32,
-        root_hash: Optional[bytes32] = None,
-    ) -> TerminalNode:
-        if root_hash is None:
-            return await self.get_node_by_key_latest_generation(key, tree_id)
-
-        nodes = await self.get_keys_values(tree_id=tree_id, root_hash=root_hash)
-
-        for node in nodes:
-            if node.key == key:
-                return node
-
-        raise KeyNotFoundError(key=key)
+        return TerminalNode.from_row(row=row)
 
     async def get_node(self, tree_id: bytes32, generation: int, node_hash: bytes32) -> Node:
         async with self.db_wrapper.reader() as reader:
