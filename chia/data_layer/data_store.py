@@ -1105,7 +1105,6 @@ class DataStore:
                 parent_hash=new_hash,
             )
         await _debug_dump(db=self.db_wrapper, description="after ._set_parent()")
-        child_hash = new_hash
 
         # create updated replacements for the rest of the internal nodes
         for ancestor in ancestors:
@@ -1434,7 +1433,6 @@ class DataStore:
 
             try:
                 node = await self.get_node_by_key(root=root, key=key)
-                node_hash = node.hash
                 assert isinstance(node, TerminalNode)
             except KeyNotFoundError:
                 log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
@@ -1598,7 +1596,6 @@ class DataStore:
                     if pending_root.generation != old_root.generation + 1:
                         raise Exception("Internal error")
                     await self.change_root_status(pending_root, Status.COMMITTED)
-                    await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
                     latest_local_root = pending_root
                 else:
                     raise Exception("Internal error")
@@ -1755,63 +1752,6 @@ class DataStore:
                 return None
 
             return InternalNode.from_row(row=row)
-
-    async def build_ancestor_table_for_latest_root(self, tree_id: bytes32) -> None:
-        async with self.db_wrapper.writer():
-            root = await self.get_tree_root(tree_id=tree_id)
-            if root.node_hash is None:
-                return
-            previous_root = await self.get_tree_root(
-                tree_id=tree_id,
-                generation=max(root.generation - 1, 0),
-            )
-
-            if previous_root.node_hash is not None:
-                previous_internal_nodes: List[InternalNode] = await self.get_internal_nodes(
-                    tree_id=tree_id,
-                    root_hash=previous_root.node_hash,
-                )
-                known_hashes: Set[bytes32] = {node.hash for node in previous_internal_nodes}
-            else:
-                known_hashes = set()
-            internal_nodes: List[InternalNode] = await self.get_internal_nodes(
-                tree_id=tree_id,
-                root_hash=root.node_hash,
-            )
-
-    async def insert_root_with_ancestor_table(
-        self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING
-    ) -> None:
-        async with self.db_wrapper.writer():
-            await self._insert_root(tree_id=tree_id, node_hash=node_hash, status=status)
-            # Don't update the ancestor table for non-committed status.
-            if status == Status.COMMITTED:
-                await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
-
-    # async def get_node_by_key_latest_generation(self, key: bytes, tree_id: bytes32) -> TerminalNode:
-    #     async with self.db_wrapper.reader() as reader:
-    #         root = await self.get_tree_root(tree_id=tree_id)
-    #         if root.node_hash is None:
-    #             raise KeyNotFoundError(key=key)
-    #
-    #         # await _debug_dump(
-    #         #     db=self.db_wrapper,
-    #         #     description=f"get_node_by_key_latest_generation() {tree_id.hex()=} {root.generation=} {key=}",
-    #         # )
-    #         async with reader.execute(
-    #             """
-    #             SELECT *
-    #             FROM node
-    #             WHERE tree_id = :tree_id AND generation = :generation AND key = :key
-    #             LIMIT 1
-    #             """,
-    #             {"tree_id": tree_id, "generation": root.generation, "key": key},
-    #         ) as cursor:
-    #             row = await cursor.fetchone()
-    #             if row is None:
-    #                 raise KeyNotFoundError(key=key)
-    #
-    #         return TerminalNode.from_row(row=row)
 
     async def get_node_by_key(
         self,
