@@ -13,7 +13,7 @@ from chia.simulator.block_tools import BlockTools
 @pytest.mark.parametrize("skip_keyring", [False, True])
 async def test_daemon(skip_keyring: bool, mocker: MockerFixture, bt: BlockTools, capsys: Any) -> None:
     mocker.patch("sys.argv", ["chia", "start", "daemon"])
-    daemon = await create_start_daemon_connection(bt.root_path, bt.config, skip_keyring)
+    daemon = await create_start_daemon_connection(bt.root_path, bt.config, skip_keyring=skip_keyring)
     assert daemon is not None
     captured = capsys.readouterr()
     assert captured.err == ""
