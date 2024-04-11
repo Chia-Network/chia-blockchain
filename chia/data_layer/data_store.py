@@ -209,7 +209,7 @@ class DataStore:
         # TODO: should not be handled this way
         async with self.db_wrapper.reader() as reader:
             # await _debug_dump(db=self.db_wrapper, description=f"Reading {bytes(tree_id)} {generation}")
-            async with reader.execute(
+            cursor = await reader.execute(
                 """
                 SELECT hash
                 FROM node
@@ -217,8 +217,8 @@ class DataStore:
                 LIMIT 1
                 """,
                 {"tree_id": tree_id, "generation": generation},
-            ) as cursor:
-                hash_row = await cursor.fetchone()
+            )
+            hash_row = await cursor.fetchone()
 
         if hash_row is None:
             node_hash = None
@@ -311,11 +311,11 @@ class DataStore:
                     raise
 
                 # TODO: this probably needs updated for newer primary key and schema structure
-                async with writer.execute(
+                cursor = await writer.execute(
                     "SELECT * FROM node WHERE hash == :hash LIMIT 1",
                     {"hash": node_hash},
-                ) as cursor:
-                    result = await cursor.fetchone()
+                )
+                result = await cursor.fetchone()
 
                 if result is None:
                     # some ideas for causes:
@@ -937,28 +937,32 @@ class DataStore:
         seed: bytes32,
     ) -> Optional[bytes32]:
         path = "".join(reversed("".join(f"{b:08b}" for b in seed)))
-        async with self.db_wrapper.reader() as reader:
-            reference_node_hash = root.node_hash
-            for raw_side in path:
-                async with reader.execute(
-                    """
-                    SELECT *
-                    FROM node
-                    WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
-                    LIMIT 1
-                    """,
-                    {"tree_id": root.tree_id, "generation": root.generation, "hash": reference_node_hash},
-                ) as cursor:
-                    row = await cursor.fetchone()
-                node = row_to_node(row=row)
-                if isinstance(node, TerminalNode):
-                    break
+        reference_node_hash = root.node_hash
+        for raw_side in path:
+            node = await self.get_node(
+                tree_id=root.tree_id,
+                generation=root.generation,
+                node_hash=reference_node_hash,
+            )
+            # cursor = await reader.execute(
+            #     """
+            #     SELECT *
+            #     FROM node
+            #     WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
+            #     LIMIT 1
+            #     """,
+            #     {"tree_id": root.tree_id, "generation": root.generation, "hash": reference_node_hash},
+            # )
+            # row = await cursor.fetchone()
+            # node = row_to_node(row=row)
+            if isinstance(node, TerminalNode):
+                break
 
-                if raw_side == "0":
-                    reference_node_hash = node.left_hash
-                else:
-                    reference_node_hash = node.right_hash
-            return reference_node_hash
+            if raw_side == "0":
+                reference_node_hash = node.left_hash
+            else:
+                reference_node_hash = node.right_hash
+        return reference_node_hash
             # async with reader.execute(
             #     """
             #     WITH RECURSIVE
@@ -1081,32 +1085,28 @@ class DataStore:
             old_generation = await self.get_tree_generation(tree_id=tree_id)
             new_generation = old_generation + 1
 
-            # TODO: for debug
-            async with writer.execute(
+            # # TODO: for debug
+            # async with writer.execute(
+            #     """
+            #     SELECT tree_id, :new_generation, hash, parent, node_type, left, right, key, value
+            #     FROM node
+            #     WHERE tree_id = :tree_id AND generation = :old_generation
+            #     """,
+            #     {"tree_id": tree_id, "old_generation": old_generation, "new_generation": new_generation},
+            # ) as cursor:
+            #     rows = await cursor.fetchall()
+            #     d = [dict(row) for row in rows]
+            #     # await _debug_dump(db=self.db_wrapper, description="hum")
+
+            await writer.execute(
                 """
+                INSERT INTO node(tree_id, generation, hash, parent, node_type, left, right, key, value)
                 SELECT tree_id, :new_generation, hash, parent, node_type, left, right, key, value
                 FROM node
                 WHERE tree_id = :tree_id AND generation = :old_generation
                 """,
                 {"tree_id": tree_id, "old_generation": old_generation, "new_generation": new_generation},
-            ) as cursor:
-                rows = await cursor.fetchall()
-                d = [dict(row) for row in rows]
-                # await _debug_dump(db=self.db_wrapper, description="hum")
-
-            try:
-                async with writer.execute(
-                    """
-                    INSERT INTO node(tree_id, generation, hash, parent, node_type, left, right, key, value)
-                    SELECT tree_id, :new_generation, hash, parent, node_type, left, right, key, value
-                    FROM node
-                    WHERE tree_id = :tree_id AND generation = :old_generation
-                    """,
-                    {"tree_id": tree_id, "old_generation": old_generation, "new_generation": new_generation},
-                ):
-                    pass
-            except Exception as e:
-                raise
+            )
 
             # TODO: can we do the root here as well?
 
@@ -1157,14 +1157,13 @@ class DataStore:
             traversal_node_hash = ancestor.hash
 
             async with self.db_wrapper.writer() as writer:
-                async with writer.execute(
+                await writer.execute(
                     """
                     DELETE FROM node
                     WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
                     """,
                     {"tree_id": tree_id, "generation": new_generation, "hash": ancestor.hash},
-                ):
-                    pass
+                )
 
             await _debug_dump(db=self.db_wrapper, description="after delete")
 
@@ -1205,15 +1204,14 @@ class DataStore:
     ) -> None:
         # TODO: maybe set an sql check to only allow NULL -> blob?
         async with self.db_wrapper.writer() as writer:
-            async with writer.execute(
+            await writer.execute(
                 """
                 UPDATE node
                 SET parent = :parent
                 WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
                 """,
                 {"tree_id": tree_id, "generation": generation, "hash": node_hash, "parent": parent_hash},
-            ):
-                pass
+            )
 
     async def _propagate_update_through_lineage(
         self,
@@ -1303,25 +1301,23 @@ class DataStore:
                 #     [row] = await cursor.fetchone()
                 # updated_node = InternalNode.from_row(row=row)
 
-            async with writer.executemany(
+            await writer.executemany(
                 """
                 UPDATE node
                 SET hash = :new_hash, left = :left, right = :right
                 WHERE tree_id = :tree_id AND generation = :generation AND hash = :original_hash
                 """,
                 update_parameters,
-            ):
-                pass
+            )
 
-            async with writer.executemany(
+            await writer.executemany(
                 """
                 UPDATE node
                 SET parent = :parent
                 WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
                 """,
                 parent_parameters,
-            ):
-                pass
+            )
 
         return updated_node.hash
 
@@ -1475,29 +1471,27 @@ class DataStore:
                 log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
                 return root
 
-            async with writer.execute(
+            await writer.execute(
                 """
                     DELETE
                     FROM node
                     WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
                     """,
                 {"tree_id": tree_id, "generation": generation, "hash": node.hash},
-            ):
-                pass
+            )
 
             if node.parent_hash is None:
                 return await self._insert_root(tree_id=tree_id, generation=generation, node_hash=None, status=status)
 
             parent = await self.get_node(tree_id=tree_id, generation=generation, node_hash=node.parent_hash)
-            async with writer.execute(
+            await writer.execute(
                 """
                     DELETE
                     FROM node
                     WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
                     """,
                 {"tree_id": tree_id, "generation": generation, "hash": parent.hash},
-            ):
-                pass
+            )
 
             other_child_hash = parent.other_child_hash(hash=node.hash)
             if parent.parent_hash is None:
@@ -1552,15 +1546,14 @@ class DataStore:
             else:
                 generation = new_generation
 
-            async with writer.execute(
+            await writer.execute(
                 """
                 DELETE
                 FROM node
                 WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
                 """,
                 {"tree_id": tree_id, "generation": generation, "hash": old_node.hash},
-            ):
-                pass
+            )
             # create new terminal node
             new_terminal_node_hash = await self._insert_terminal_node(
                 tree_id=tree_id,
@@ -1702,7 +1695,7 @@ class DataStore:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
             await _debug_dump(db=self.db_wrapper)
-            async with writer.execute(
+            cursor = await writer.execute(
                 """
                 SELECT hash
                 FROM node
@@ -1710,8 +1703,8 @@ class DataStore:
                 LIMIT 1
                 """,
                 {"tree_id": tree_id, "generation": new_generation},
-            ) as cursor:
-                maybe_row = await cursor.fetchone()
+            )
+            maybe_row = await cursor.fetchone()
 
             if maybe_row is None:
                 new_root_hash = None
@@ -1771,7 +1764,7 @@ class DataStore:
             if generation is None:
                 generation = await self.get_tree_generation(tree_id=tree_id)
 
-            async with reader.execute(
+            cursor = await reader.execute(
                 """
                 SELECT *
                 FROM node
@@ -1786,8 +1779,8 @@ class DataStore:
                 LIMIT 1
                 """,
                 {"tree_id": tree_id, "generation": generation, "node_hash": node_hash},
-            ) as cursor:
-                row = await cursor.fetchone()
+            )
+            row = await cursor.fetchone()
 
             if row is None:
                 return None
@@ -1857,7 +1850,7 @@ class DataStore:
         key: bytes,
     ) -> TerminalNode:
         async with self.db_wrapper.reader() as reader:
-            async with reader.execute(
+            cursor = await reader.execute(
                 """
                 SELECT *
                 FROM node
@@ -1865,16 +1858,16 @@ class DataStore:
                 LIMIT 1
                 """,
                 {"tree_id": root.tree_id, "generation": root.generation, "key": key},
-            ) as cursor:
-                row = await cursor.fetchone()
-                if row is None:
-                    raise KeyNotFoundError(key=key)
+            )
+            row = await cursor.fetchone()
+            if row is None:
+                raise KeyNotFoundError(key=key)
 
         return TerminalNode.from_row(row=row)
 
     async def get_node(self, tree_id: bytes32, generation: int, node_hash: bytes32) -> Node:
         async with self.db_wrapper.reader() as reader:
-            async with reader.execute(
+            cursor = await reader.execute(
                 """
                 SELECT *
                 FROM node
@@ -1882,8 +1875,8 @@ class DataStore:
                 LIMIT 1
                 """,
                 {"tree_id": tree_id, "generation": generation, "hash": node_hash},
-            ) as cursor:
-                row = await cursor.fetchone()
+            )
+            row = await cursor.fetchone()
 
         if row is None:
             raise Exception(f"Node not found for requested hash: {node_hash.hex()}")
