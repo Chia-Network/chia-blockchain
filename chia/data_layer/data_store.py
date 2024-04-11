@@ -84,7 +84,8 @@ class DataStore:
                 #         )
                 #         """
                 # )
-                # TODO: parent should be a reference, as should left and right.  except for the null-ness or the 00000....ness or...
+                # TODO: parent should be a reference, as should left and right.
+                #       except for the null-ness or the 00000....ness or...
                 await writer.execute(
                     f"""
                     CREATE TABLE IF NOT EXISTS node(
@@ -754,7 +755,19 @@ class DataStore:
         return await reader.execute(
             """
             WITH RECURSIVE
-                tree_from_root_hash(tree_id, generation, hash, parent, node_type, left, right, key, value, depth, rights) AS (
+                tree_from_root_hash(
+                    tree_id,
+                    generation,
+                    hash,
+                    parent,
+                    node_type,
+                    left,
+                    right,
+                    key,
+                    value,
+                    depth,
+                    rights
+                ) AS (
                     SELECT node.*, 0 AS depth, 0 AS rights
                     FROM node
                     WHERE tree_id = :tree_id AND generation = :generation AND node.hash == :root_hash
@@ -963,54 +976,6 @@ class DataStore:
             else:
                 reference_node_hash = node.right_hash
         return reference_node_hash
-            # async with reader.execute(
-            #     """
-            #     WITH RECURSIVE
-            #         random_leaf(hash, node_type, left, right, depth, side) AS (
-            #             SELECT
-            #                 node.hash AS hash,
-            #                 node.node_type AS node_type,
-            #                 node.left AS left,
-            #                 node.right AS right,
-            #                 1 AS depth,
-            #                 SUBSTR(:path, 1, 1) as side
-            #             FROM node
-            #             WHERE tree_id = :tree_id AND generation = :generation AND node.parent IS NULL
-            #             UNION ALL
-            #             SELECT
-            #                 node.hash AS hash,
-            #                 node.node_type AS node_type,
-            #                 node.left AS left,
-            #                 node.right AS right,
-            #                 random_leaf.depth + 1 AS depth,
-            #                 SUBSTR(:path, random_leaf.depth + 1, 1) as side
-            #             FROM node, random_leaf
-            #             WHERE (
-            #                 CASE
-            #                     WHEN random_leaf.side == "0"
-            #                     THEN node.tree_id = :tree_id AND node.generation = :generation AND node.hash == random_leaf.left
-            #                     ELSE node.tree_id = :tree_id AND node.generation = :generation AND node.hash == random_leaf.right
-            #                 END
-            #             )
-            #         )
-            #     SELECT hash AS hash FROM random_leaf
-            #     WHERE node_type == :node_type
-            #     LIMIT 1
-            #     """,
-            #     {
-            #         "tree_id": tree_id,
-            #         "generation": generation,
-            #         "root_hash": root_hash,
-            #         "node_type": NodeType.TERMINAL,
-            #         "path": path,
-            #     },
-            # ) as cursor:
-            #     row = await cursor.fetchone()
-            #     if row is None:
-            #         # No cover since this is an error state that should be unreachable given the code
-            #         # above has already verified that there is a non-empty tree.
-            #         raise Exception("No terminal node found for seed")  # pragma: no cover
-            #     return bytes32(row["hash"])
 
     def get_side_for_seed(self, seed: bytes32) -> Side:
         side_seed = bytes(seed)[0]
@@ -1407,7 +1372,11 @@ class DataStore:
                         node_hash=side_hash,
                         parent_hash=new_internal_node_hash,
                     )
-                # new_internal_node = await self.get_node(tree_id=tree_id, generation=generation, node_hash=new_internal_node_hash)
+                # new_internal_node = await self.get_node(
+                #     tree_id=tree_id,
+                #     generation=generation,
+                #     node_hash=new_internal_node_hash,
+                # )
 
                 if reference_node.parent_hash is None:
                     new_root_hash = new_internal_node_hash
