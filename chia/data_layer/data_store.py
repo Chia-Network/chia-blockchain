@@ -656,11 +656,13 @@ class DataStore:
                 {"reference_hash": node_hash, "tree_id": tree_id, "generation": generation},
             )
 
-            # The resulting rows must represent internal nodes.  InternalNode.from_row()
-            # does some amount of validation in the sense that it will fail if left
-            # or right can't turn into a bytes32 as expected.  There is room for more
-            # validation here if desired.
-            lineage: List[InternalNode] = [row_to_node(row=row) async for row in cursor]
+            rows = await cursor.fetchall()
+
+        # The resulting rows must represent internal nodes.  InternalNode.from_row()
+        # does some amount of validation in the sense that it will fail if left
+        # or right can't turn into a bytes32 as expected.  There is room for more
+        # validation here if desired.
+        lineage: List[InternalNode] = [row_to_node(row=row) for row in rows]
 
         # TODO: real checks
         assert all(isinstance(node, InternalNode) for node in lineage[1:])
@@ -932,7 +934,8 @@ class DataStore:
                             SUBSTR(:path, random_leaf.depth + 1, 1) as side
                         FROM node, random_leaf
                         WHERE (
-                            (tree_id = :tree_id AND generation = :generation)
+                            tree_id = :tree_id
+                            AND generation = :generation
                             AND (
                                 (random_leaf.side == "0" AND node.hash == random_leaf.left)
                                 OR (random_leaf.side != "0" AND node.hash == random_leaf.right)
@@ -1189,6 +1192,9 @@ class DataStore:
                 # TODO: debug for now
                 assert False
 
+            update_parameters = []
+            parent_parameters = []
+
             for node in lineage:
                 if original_child_hash == node.left_hash:
                     updated_node = replace(
@@ -1206,12 +1212,7 @@ class DataStore:
                     # TODO: provide a real error
                     assert False
 
-                async with writer.execute(
-                    """
-                    UPDATE node
-                    SET hash = :new_hash, left = :left, right = :right
-                    WHERE tree_id = :tree_id AND generation = :generation AND hash = :original_hash
-                    """,
+                update_parameters.append(
                     {
                         "original_hash": node.hash,
                         "tree_id": tree_id,
@@ -1220,16 +1221,23 @@ class DataStore:
                         "left": updated_node.left_hash,
                         "right": updated_node.right_hash,
                     },
-                ):
-                    pass
+                )
 
                 for side_hash in [updated_node.left_hash, updated_node.right_hash]:
-                    await self._set_parent(
-                        tree_id=tree_id,
-                        generation=generation,
-                        node_hash=side_hash,
-                        parent_hash=updated_node.hash,
+                    parent_parameters.append(
+                        {
+                            "tree_id": tree_id,
+                            "generation": generation,
+                            "hash": side_hash,
+                            "parent": updated_node.hash,
+                        },
                     )
+                    # await self._set_parent(
+                    #     tree_id=tree_id,
+                    #     generation=generation,
+                    #     node_hash=side_hash,
+                    #     parent_hash=updated_node.hash,
+                    # )
 
                 original_child_hash = node.hash
                 new_child_hash = updated_node.hash
@@ -1249,6 +1257,26 @@ class DataStore:
                 # ) as cursor:
                 #     [row] = await cursor.fetchone()
                 # updated_node = InternalNode.from_row(row=row)
+
+            async with writer.executemany(
+                """
+                UPDATE node
+                SET hash = :new_hash, left = :left, right = :right
+                WHERE tree_id = :tree_id AND generation = :generation AND hash = :original_hash
+                """,
+                update_parameters,
+            ):
+                pass
+
+            async with writer.executemany(
+                """
+                UPDATE node
+                SET parent = :parent
+                WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
+                """,
+                parent_parameters,
+            ):
+                pass
 
         return updated_node.hash
 
