@@ -215,7 +215,7 @@ async def create_plots(
                 plot_str = args.plotid.hex()  # Convert bytes to hex string
             else:
                 plot_str = args.plotid
-            plot_id = bytes.fromhex(plot_str)
+            plot_id = bytes32.fromhex(plot_str)
 
         if args.memo is not None:
             print(f"Type of args.memo: {type(args.memo)}")  # Should print: <class 'str'>
