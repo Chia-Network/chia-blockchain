@@ -4189,6 +4189,7 @@ class WalletRpcApi:
                     bytes32.from_hexstr(launcher),
                     bytes32.from_hexstr(root),
                     tx_config,
+                    fee=uint64(request.get("fee", 0)),
                     extra_conditions=extra_conditions,
                 )
                 tx_records.extend(records)

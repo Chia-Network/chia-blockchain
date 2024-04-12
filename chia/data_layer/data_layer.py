@@ -301,7 +301,7 @@ class DataLayer:
             for tree_id in changelist_by_store.keys():
                 root_hash = await self._get_publishable_root_hash(tree_id=tree_id)
                 update_dictionary[bytes32(tree_id)] = root_hash
-            transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary)
+            transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary, fee=fee)
             return transaction_records
         else:
             return []
@@ -331,7 +331,7 @@ class DataLayer:
             root_hash = pending_root.node_hash if pending_root.node_hash is not None else self.none_bytes
             update_dictionary[pending_root.tree_id] = root_hash
             await self.data_store.change_root_status(pending_root, Status.PENDING)
-        transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary)
+        transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary, fee=fee)
         return transaction_records
 
     async def batch_insert(
