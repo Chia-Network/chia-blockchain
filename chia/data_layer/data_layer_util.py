@@ -91,9 +91,9 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
                 print(f"        {tweaked}")
 
 
-async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
-    terminal_nodes = await data_store.get_keys_values(tree_id=store_id, root_hash=root_hash)
-    internal_nodes = await data_store.get_internal_nodes(tree_id=store_id, root_hash=root_hash)
+async def _dot_dump(data_store: DataStore, root: Root) -> str:
+    terminal_nodes = await data_store.get_keys_values(root=root)
+    internal_nodes = await data_store.get_internal_nodes(root=root)
 
     n = 8
 
