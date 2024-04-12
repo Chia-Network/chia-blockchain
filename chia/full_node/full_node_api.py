@@ -1257,11 +1257,13 @@ class FullNodeAPI:
             response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, None)
         else:
             # Create addition Merkle set
-            addition_merkle_set = MerkleSet()
             # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+            leafs: List[bytes32] = []
             for puzzle, coins in puzzlehash_coins_map.items():
-                addition_merkle_set.add_already_hashed(puzzle)
-                addition_merkle_set.add_already_hashed(hash_coin_ids([c.name() for c in coins]))
+                leafs.append(puzzle)
+                leafs.append(hash_coin_ids([c.name() for c in coins]))
+
+            addition_merkle_set = MerkleSet(leafs)
 
             for puzzle_hash in request.puzzle_hashes:
                 # This is a proof of inclusion if it's in (result==True), or exclusion of it's not in
@@ -1327,9 +1329,10 @@ class FullNodeAPI:
             response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, None)
         else:
             assert block.transactions_generator
-            removal_merkle_set = MerkleSet()
+            leafs: List[bytes32] = []
             for removed_name, removed_coin in all_removals_dict.items():
-                removal_merkle_set.add_already_hashed(removed_name)
+                leafs.append(removed_name)
+            removal_merkle_set = MerkleSet(leafs)
             assert removal_merkle_set.get_root() == block.foliage_transaction_block.removals_root
             for coin_name in request.coin_names:
                 result, proof = removal_merkle_set.is_included_already_hashed(coin_name)
