@@ -3570,7 +3570,7 @@ async def test_multistore_update(
                 )
                 update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
             elif layer == InterfaceLayer.cli:
-                args: List[str] = [
+                args = [
                     sys.executable,
                     "-m",
                     "chia",

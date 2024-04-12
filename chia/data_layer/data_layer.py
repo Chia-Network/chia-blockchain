@@ -304,7 +304,7 @@ class DataLayer:
             transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary)
             return transaction_records
         else:
-            return None
+            return []
 
     async def submit_pending_root(
         self,

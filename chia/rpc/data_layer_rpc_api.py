@@ -274,11 +274,11 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         transaction_records = await self.service.multistore_batch_update(changelist, uint64(fee), submit_on_chain)
         if submit_on_chain:
-            if transaction_records is None:
+            if transaction_records == []:
                 raise Exception("Batch update failed")
             return {"tx_id": [transaction_record.name for transaction_record in transaction_records]}
         else:
-            if transaction_records is not None:
+            if transaction_records != []:
                 raise Exception("Transaction submitted on chain, but submit_on_chain set to False")
             return {}
 
