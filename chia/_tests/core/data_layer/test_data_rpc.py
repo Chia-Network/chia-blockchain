@@ -172,11 +172,11 @@ async def is_transaction_confirmed(api: WalletRpcApi, tx_id: bytes32) -> bool:
 
 
 async def farm_block_with_spend(
-    full_node_api: FullNodeSimulator, ph: bytes32, tx_rec: bytes32, wallet_rpc_api: WalletRpcApi, timeout: int = 10
+    full_node_api: FullNodeSimulator, ph: bytes32, tx_rec: bytes32, wallet_rpc_api: WalletRpcApi
 ) -> None:
-    await time_out_assert(timeout, check_mempool_spend_count, True, full_node_api, 1)
+    await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(timeout, is_transaction_confirmed, True, wallet_rpc_api, tx_rec)
+    await time_out_assert(10, is_transaction_confirmed, True, wallet_rpc_api, tx_rec)
 
 
 def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: int) -> bool:
@@ -3614,7 +3614,7 @@ async def test_multistore_update(
             else:  # pragma: no cover
                 assert False, "unhandled parametrization"
 
-        await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api, timeout=60)
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
 
         for index, store_id in enumerate(store_ids):
             for offset in (0, 1000):
