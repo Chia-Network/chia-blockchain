@@ -238,6 +238,26 @@ def submit_pending_root(
     )
 
 
+@data_cmd.command("submit_all_pending_roots", help="Submit on chain all locally stored batches")
+@create_rpc_port_option()
+@create_fee_option()
+@options.create_fingerprint()
+def submit_all_pending_roots(
+    data_rpc_port: int,
+    fee: str,
+    fingerprint: Optional[int],
+) -> None:
+    from chia.cmds.data_funcs import submit_all_pending_roots_cmd
+
+    run(
+        submit_all_pending_roots_cmd(
+            rpc_port=data_rpc_port,
+            fee=fee,
+            fingerprint=fingerprint,
+        )
+    )
+
+
 @data_cmd.command("get_keys", help="Get all keys for a given store")
 @create_data_store_id_option()
 @click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)

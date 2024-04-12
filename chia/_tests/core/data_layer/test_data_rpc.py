@@ -25,6 +25,7 @@ from chia.cmds.data_funcs import (
     get_keys_values_cmd,
     get_kv_diff_cmd,
     get_proof_cmd,
+    submit_all_pending_roots_cmd,
     submit_pending_root_cmd,
     update_data_store_cmd,
     update_multiple_stores_cmd,
@@ -3436,12 +3437,14 @@ async def test_unsubmitted_batch_update(
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
+@pytest.mark.parametrize("submit_on_chain", [True, False])
 @pytest.mark.anyio
 async def test_multistore_update(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
     layer: InterfaceLayer,
+    submit_on_chain: bool,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
@@ -3451,6 +3454,7 @@ async def test_multistore_update(
         rpc_port = data_layer_service.rpc_server.listen_port
 
         data_layer = data_layer_service._api.data_layer
+        data_store = data_layer.data_store
         data_rpc_api = DataLayerRpcApi(data_layer)
 
         store_ids: List[bytes32] = []
@@ -3474,19 +3478,28 @@ async def test_multistore_update(
             changelist.append({"action": "insert", "key": key.hex(), "value": value.hex(), "tree_id": store_id.hex()})
 
         if layer == InterfaceLayer.direct:
-            res = await data_rpc_api.multistore_batch_update({"changelist": changelist})
-            update_tx_rec0 = res["tx_id"][0]
+            res = await data_rpc_api.multistore_batch_update(
+                {"changelist": changelist, "submit_on_chain": submit_on_chain}
+            )
+            if submit_on_chain:
+                update_tx_rec0 = res["tx_id"][0]
+            else:
+                assert res == {}
         elif layer == InterfaceLayer.funcs:
             res = await update_multiple_stores_cmd(
                 rpc_port=rpc_port,
                 changelist=changelist,
-                submit_on_chain=True,
+                submit_on_chain=submit_on_chain,
                 fee=None,
                 fingerprint=None,
                 root_path=bt.root_path,
             )
-            update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
+            if submit_on_chain:
+                update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
+            else:
+                assert res == {"success": True}
         elif layer == InterfaceLayer.cli:
+            submit_str = "--submit" if submit_on_chain else "--no-submit"
             args: List[str] = [
                 sys.executable,
                 "-m",
@@ -3497,6 +3510,7 @@ async def test_multistore_update(
                 json.dumps(changelist),
                 "--data-rpc-port",
                 str(rpc_port),
+                f"{submit_str}",
             ]
             process = await asyncio.create_subprocess_exec(
                 *args,
@@ -3516,7 +3530,10 @@ async def test_multistore_update(
             else:  # pragma: no cover
                 # https://github.com/python/cpython/issues/92841
                 assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
-            update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
+            if submit_on_chain:
+                update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
+            else:
+                assert res == {"success": True}
         elif layer == InterfaceLayer.client:
             client = await DataLayerRpcClient.create(
                 self_hostname=self_hostname,
@@ -3527,14 +3544,75 @@ async def test_multistore_update(
             try:
                 res = await client.update_multiple_stores(
                     changelist=changelist,
+                    submit_on_chain=submit_on_chain,
                     fee=None,
                 )
             finally:
                 client.close()
                 await client.await_closed()
-            update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
+            if submit_on_chain:
+                update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
+            else:
+                assert res == {"success": True}
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
+
+        if not submit_on_chain:
+            if layer == InterfaceLayer.direct:
+                res = await data_rpc_api.submit_all_pending_roots({})
+                update_tx_rec0 = res["tx_id"][0]
+            elif layer == InterfaceLayer.funcs:
+                res = await submit_all_pending_roots_cmd(
+                    rpc_port=rpc_port,
+                    fee=None,
+                    fingerprint=None,
+                    root_path=bt.root_path,
+                )
+                update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
+            elif layer == InterfaceLayer.cli:
+                args: List[str] = [
+                    sys.executable,
+                    "-m",
+                    "chia",
+                    "data",
+                    "submit_all_pending_roots",
+                    "--data-rpc-port",
+                    str(rpc_port),
+                ]
+                process = await asyncio.create_subprocess_exec(
+                    *args,
+                    env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                await process.wait()
+                assert process.stdout is not None
+                assert process.stderr is not None
+                stdout = await process.stdout.read()
+                res = json.loads(stdout)
+                stderr = await process.stderr.read()
+                assert process.returncode == 0
+                if sys.version_info >= (3, 10, 6):
+                    assert stderr == b""
+                else:  # pragma: no cover
+                    # https://github.com/python/cpython/issues/92841
+                    assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+                update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
+            elif layer == InterfaceLayer.client:
+                client = await DataLayerRpcClient.create(
+                    self_hostname=self_hostname,
+                    port=rpc_port,
+                    root_path=bt.root_path,
+                    net_config=bt.config,
+                )
+                try:
+                    res = await client.submit_all_pending_roots(fee=None)
+                finally:
+                    client.close()
+                    await client.await_closed()
+                update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
+            else:  # pragma: no cover
+                assert False, "unhandled parametrization"
 
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api, timeout=60)
 
@@ -3544,3 +3622,15 @@ async def test_multistore_update(
                 value = (index + offset).to_bytes(2, "big")
                 res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
                 assert hexstr_to_bytes(res["value"]) == value
+
+        with pytest.raises(Exception, match="No pending roots found to submit"):
+            await data_rpc_api.submit_all_pending_roots({})
+        for store_id in store_ids:
+            pending_root = await data_store.get_pending_root(tree_id=store_id)
+            assert pending_root is None
+
+        key = b"0000"
+        value = b"0000"
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        with pytest.raises(Exception, match="Each operation must have a tree_id field"):
+            await data_rpc_api.multistore_batch_update({"changelist": changelist})

@@ -304,7 +304,7 @@ class DataLayer:
             transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary)
             return transaction_records
         else:
-            return []
+            return None
 
     async def submit_pending_root(
         self,
@@ -321,6 +321,18 @@ class DataLayer:
 
         await self.data_store.change_root_status(pending_root, Status.PENDING)
         return await self.publish_update(tree_id, fee)
+
+    async def submit_all_pending_roots(self, fee: uint64) -> List[TransactionRecord]:
+        pending_roots = await self.data_store.get_all_pending_batches_roots()
+        update_dictionary: Dict[bytes32, bytes32] = {}
+        if len(pending_roots) == 0:
+            raise Exception("No pending roots found to submit")
+        for pending_root in pending_roots:
+            root_hash = pending_root.node_hash if pending_root.node_hash is not None else self.none_bytes
+            update_dictionary[pending_root.tree_id] = root_hash
+            await self.data_store.change_root_status(pending_root, Status.PENDING)
+        transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary)
+        return transaction_records
 
     async def batch_insert(
         self,

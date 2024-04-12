@@ -69,7 +69,8 @@ def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
 def process_change_multistore(change: Dict[str, Any]) -> Dict[str, Any]:
     res = process_change(change)
     tree_id = change.get("tree_id")
-    assert tree_id is not None
+    if tree_id is None:
+        raise Exception("Each operation must have a tree_id field")
     res["tree_id"] = hexstr_to_bytes(tree_id)
     return res
 
@@ -95,6 +96,7 @@ class DataLayerRpcApi:
             "/batch_update": self.batch_update,
             "/multistore_batch_update": self.multistore_batch_update,
             "/submit_pending_root": self.submit_pending_root,
+            "/submit_all_pending_roots": self.submit_all_pending_roots,
             "/get_value": self.get_value,
             "/get_keys": self.get_keys,
             "/get_keys_values": self.get_keys_values,
@@ -285,6 +287,11 @@ class DataLayerRpcApi:
         fee = get_fee(self.service.config, request)
         transaction_record = await self.service.submit_pending_root(store_id, uint64(fee))
         return {"tx_id": transaction_record.name}
+
+    async def submit_all_pending_roots(self, request: Dict[str, Any]) -> EndpointResult:
+        fee = get_fee(self.service.config, request)
+        transaction_records = await self.service.submit_all_pending_roots(uint64(fee))
+        return {"tx_id": [transaction_record.name for transaction_record in transaction_records]}
 
     async def insert(self, request: Dict[str, Any]) -> EndpointResult:
         """

@@ -57,6 +57,10 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("submit_pending_root", {"id": store_id.hex(), "fee": fee})
         return response
 
+    async def submit_all_pending_roots(self, fee: Optional[uint64]) -> Dict[str, Any]:
+        response = await self.fetch("submit_all_pending_roots", {"fee": fee})
+        return response
+
     async def get_keys_values(
         self, store_id: bytes32, root_hash: Optional[bytes32], page: Optional[int], max_page_size: Optional[int]
     ) -> Dict[str, Any]:
