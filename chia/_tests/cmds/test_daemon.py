@@ -8,12 +8,11 @@ from _pytest.capture import CaptureFixture
 from pytest_mock import MockerFixture
 
 from chia.cmds.start_funcs import create_start_daemon_connection
-from chia.simulator.block_tools import BlockTools
 
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("skip_keyring", [False, True])
-async def test_daemon(skip_keyring: bool, mocker: MockerFixture, bt: BlockTools, capsys: CaptureFixture[str]) -> None:
+async def test_daemon(skip_keyring: bool, mocker: MockerFixture, capsys: CaptureFixture[str]) -> None:
     class DummyConnection:
         @staticmethod
         async def is_keyring_locked() -> bool:
@@ -28,7 +27,7 @@ async def test_daemon(skip_keyring: bool, mocker: MockerFixture, bt: BlockTools,
 
     mocker.patch("chia.cmds.start_funcs.connect_to_daemon_and_validate", side_effect=connect_to_daemon_and_validate)
 
-    daemon = await create_start_daemon_connection(bt.root_path, bt.config, skip_keyring=skip_keyring)
+    daemon = await create_start_daemon_connection(Path("/path-not-exist"), {}, skip_keyring=skip_keyring)
     assert daemon is not None
     captured = capsys.readouterr()
     assert captured.err == ""
