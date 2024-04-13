@@ -18,10 +18,6 @@ async def test_daemon(skip_keyring: bool, mocker: MockerFixture, capsys: Capture
         async def is_keyring_locked() -> bool:
             return False
 
-        @staticmethod
-        async def unlock_keyring() -> None:
-            return None
-
     async def connect_to_daemon_and_validate(_root_path: Path, _config: Dict[str, Any]) -> DummyConnection:
         return DummyConnection()
 
