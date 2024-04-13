@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from pathlib import Path
+from typing import Any, Dict
 
 import pytest
 from _pytest.capture import CaptureFixture
@@ -13,25 +14,19 @@ from chia.simulator.block_tools import BlockTools
 @pytest.mark.anyio
 @pytest.mark.parametrize("skip_keyring", [False, True])
 async def test_daemon(skip_keyring: bool, mocker: MockerFixture, bt: BlockTools, capsys: CaptureFixture[str]) -> None:
-    mocker.patch("sys.argv", ["chia", "start", "daemon"])
-
-    def get_current_passphrase() -> Optional[str]:
-        return "some-passphrase"
-
     class DummyConnection:
         @staticmethod
-        def is_keyring_locked() -> bool:
+        async def is_keyring_locked() -> bool:
             return False
 
         @staticmethod
         async def unlock_keyring() -> None:
             return None
 
-    def connect_to_daemon_and_validate() -> Any:
+    async def connect_to_daemon_and_validate(_root_path: Path, _config: Dict[str, Any]) -> DummyConnection:
         return DummyConnection()
 
-    mocker.patch("chia.cmds.passphrase_funcs.get_current_passphrase", side_effect=get_current_passphrase)
-    mocker.patch("chia.daemon.client.connect_to_daemon_and_validate", side_effect=connect_to_daemon_and_validate)
+    mocker.patch("chia.cmds.start_funcs.connect_to_daemon_and_validate", side_effect=connect_to_daemon_and_validate)
 
     daemon = await create_start_daemon_connection(bt.root_path, bt.config, skip_keyring=skip_keyring)
     assert daemon is not None
