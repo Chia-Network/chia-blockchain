@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 import pytest
 from _pytest.capture import CaptureFixture
@@ -18,7 +18,21 @@ async def test_daemon(skip_keyring: bool, mocker: MockerFixture, bt: BlockTools,
     def get_current_passphrase() -> Optional[str]:
         return "some-passphrase"
 
+    class DummyConnection:
+        @staticmethod
+        def is_keyring_locked() -> bool:
+            return False
+
+        @staticmethod
+        async def unlock_keyring() -> None:
+            return None
+
+    def connect_to_daemon_and_validate() -> Any:
+        return DummyConnection()
+
     mocker.patch("chia.cmds.passphrase_funcs.get_current_passphrase", side_effect=get_current_passphrase)
+    mocker.patch("chia.daemon.client.connect_to_daemon_and_validate", side_effect=connect_to_daemon_and_validate)
+
     daemon = await create_start_daemon_connection(bt.root_path, bt.config, skip_keyring=skip_keyring)
     assert daemon is not None
     captured = capsys.readouterr()
