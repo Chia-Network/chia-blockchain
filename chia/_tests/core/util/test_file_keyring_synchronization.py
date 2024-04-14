@@ -11,6 +11,7 @@ from time import sleep
 from chia._tests.core.util.test_lockfile import wait_for_enough_files_in_directory
 from chia.simulator.keyring import TempKeyring
 from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.lock import LockfileError
 from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)
@@ -42,7 +43,11 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
             sleep(0.1)
         assert started
 
-        KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase=passphrase)
+        try:
+            KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase=passphrase)
+        except LockfileError as e:
+            log.error(f"Failed to set passphrase: {e}")
+            assert False
 
         found_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service, user)
         if found_passphrase != passphrase:
