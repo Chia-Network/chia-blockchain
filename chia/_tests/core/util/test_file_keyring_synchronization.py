@@ -15,6 +15,8 @@ from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)
 
+logging.basicConfig(level=logging.DEBUG)
+
 
 DUMMY_SLEEP_VALUE = 2
 
