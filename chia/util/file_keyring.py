@@ -217,12 +217,16 @@ class FileKeyring(FileSystemEventHandler):
         return hash(self.keyring_path)
 
     @contextlib.contextmanager
-    def lock_and_reload_if_required(self) -> Iterator[None]:
+    def lock_and_reload_if_required(self, memo: str = "") -> Iterator[None]:
+        print(f"Before: Lockfile.create {memo}")
         with Lockfile.create(self.keyring_path, timeout=30, poll_interval=0.2):
+            print(f"In: Lockfile.create {memo}")
             self.check_if_keyring_file_modified()
             with self.load_keyring_lock:
                 if self.needs_load_keyring:
+                    print(f"Before: load_keyring {memo}")
                     self.load_keyring()
+                    print(f"After: load_keyring {memo}")
             yield
 
     def setup_keyring_file_watcher(self) -> None:
@@ -287,7 +291,7 @@ class FileKeyring(FileSystemEventHandler):
         Store the passphrase to the keyring data using the name specified by the
         'user' parameter. Will force a write to keyring.yaml on success.
         """
-        with self.lock_and_reload_if_required():
+        with self.lock_and_reload_if_required(user):
             keys = self.cached_keys()
             # Ensure a dictionary exists for the 'service'
             if keys.get(service) is None:

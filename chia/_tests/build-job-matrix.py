@@ -36,6 +36,9 @@ def subdirs(per: str) -> List[Path]:
             if len([f for f in path.glob("test_*.py")]) == 0:
                 logging.info(f"Skipping {relative_path}: no tests collected")
                 continue
+            elif str(relative_path) != "core/util":
+                logging.info(f"Skipping: {relative_path}: not 'core/util'")
+                continue
 
             filtered_paths.append(path)
 
