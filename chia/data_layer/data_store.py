@@ -1284,9 +1284,8 @@ class DataStore:
 
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
-    async def clean_node_table(self, writer: aiosqlite.Connection) -> None:
-        await writer.execute(
-            """
+    async def clean_node_table(self, writer: Optional[aiosqlite.Connection] = None) -> None:
+        query = """
             WITH RECURSIVE pending_nodes AS (
                 SELECT node_hash AS hash FROM root
                 WHERE status IN (:pending_status, :pending_batch_status)
@@ -1300,14 +1299,19 @@ class DataStore:
                 WHERE n.right IS NOT NULL
             )
             DELETE FROM node
-            WHERE hash NOT IN (SELECT hash FROM ancestors)
-            AND hash NOT IN (SELECT hash FROM pending_nodes)
-            """,
-            {
-                "pending_status": Status.PENDING.value,
-                "pending_batch_status": Status.PENDING_BATCH.value,
-            },
-        )
+            WHERE hash IN (
+                SELECT n.hash FROM node n
+                LEFT JOIN ancestors a ON n.hash = a.hash
+                LEFT JOIN pending_nodes pn ON n.hash = pn.hash
+                WHERE a.hash IS NULL AND pn.hash IS NULL
+            )
+        """
+        params = {"pending_status": Status.PENDING.value, "pending_batch_status": Status.PENDING_BATCH.value}
+        if writer is None:
+            async with self.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+                await writer.execute(query, params)
+        else:
+            await writer.execute(query, params)
 
     async def insert_batch(
         self,
@@ -1315,7 +1319,7 @@ class DataStore:
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
     ) -> Optional[bytes32]:
-        async with self.db_wrapper.writer() as writer:
+        async with self.transaction():
             old_root = await self.get_tree_root(tree_id)
             pending_root = await self.get_pending_root(tree_id=tree_id)
             if pending_root is None:
@@ -1395,8 +1399,6 @@ class DataStore:
                     "Didn't get the expected generation after batch update: "
                     f"Expected: {old_root.generation + 1}. Got: {new_root.generation}"
                 )
-
-            await self.clean_node_table(writer)
             return root.node_hash
 
     async def _get_one_ancestor(
@@ -1741,7 +1743,7 @@ class DataStore:
                 )
 
     async def delete_store_data(self, tree_id: bytes32) -> None:
-        async with self.db_wrapper.writer() as writer:
+        async with self.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
             await self.clean_node_table(writer)
             cursor = await writer.execute(
                 """

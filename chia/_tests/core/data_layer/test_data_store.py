@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import itertools
 import logging
+import os
 import random
 import re
 import statistics
@@ -1322,9 +1323,13 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
         current_timestamp += 1
 
 
+@pytest.mark.parametrize(
+    "error",
+    [True, False],
+)
 @pytest.mark.anyio
 async def test_server_http_ban(
-    data_store: DataStore, tree_id: bytes32, monkeypatch: Any, tmp_path: Path, seeded_random: random.Random
+    data_store: DataStore, tree_id: bytes32, error: bool, monkeypatch: Any, tmp_path: Path, seeded_random: random.Random
 ) -> None:
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
     await data_store.subscribe(Subscription(tree_id, [sinfo]))
@@ -1337,7 +1342,8 @@ async def test_server_http_ban(
         timeout: int,
         log: logging.Logger,
     ) -> None:
-        raise aiohttp.ClientConnectionError()
+        if error:
+            raise aiohttp.ClientConnectionError()
 
     start_timestamp = int(time.time())
     with monkeypatch.context() as m:
@@ -1781,6 +1787,124 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
                     await raw_data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
                     with pytest.raises(KeyNotFoundError, match=f"Key not found: {key.hex()}"):
                         await raw_data_store.get_node_by_key(tree_id=tree_id, key=key)
+
+
+@pytest.mark.anyio
+async def test_insert_from_delta_file_correct_file_exists(
+    data_store: DataStore, tree_id: bytes32, tmp_path: Path
+) -> None:
+    await data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+    num_files = 5
+    for generation in range(num_files):
+        key = generation.to_bytes(4, byteorder="big")
+        value = generation.to_bytes(4, byteorder="big")
+        await data_store.autoinsert(
+            key=key,
+            value=value,
+            tree_id=tree_id,
+            status=Status.COMMITTED,
+        )
+
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    assert root.generation == num_files + 1
+    root_hashes = []
+    for generation in range(1, num_files + 2):
+        root = await data_store.get_tree_root(tree_id=tree_id, generation=generation)
+        await write_files_for_root(data_store, tree_id, root, tmp_path, 0)
+        root_hashes.append(bytes32([0] * 32) if root.node_hash is None else root.node_hash)
+    with os.scandir(tmp_path) as entries:
+        filenames = {entry.name for entry in entries}
+        assert len(filenames) == 2 * (num_files + 1)
+    for filename in filenames:
+        if "full" in filename:
+            tmp_path.joinpath(filename).unlink()
+    with os.scandir(tmp_path) as entries:
+        filenames = {entry.name for entry in entries}
+        assert len(filenames) == num_files + 1
+    kv_before = await data_store.get_keys_values(tree_id=tree_id)
+    await data_store.rollback_to_generation(tree_id, 0)
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    assert root.generation == 0
+
+    sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
+    success = await insert_from_delta_file(
+        data_store=data_store,
+        tree_id=tree_id,
+        existing_generation=0,
+        root_hashes=root_hashes,
+        server_info=sinfo,
+        client_foldername=tmp_path,
+        timeout=15,
+        log=log,
+        proxy_url="",
+        downloader=None,
+    )
+    assert success
+
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    assert root.generation == num_files + 1
+    with os.scandir(tmp_path) as entries:
+        filenames = {entry.name for entry in entries}
+        assert len(filenames) == 2 * (num_files + 1)
+    kv = await data_store.get_keys_values(tree_id=tree_id)
+    assert kv == kv_before
+
+
+@pytest.mark.anyio
+async def test_insert_from_delta_file_incorrect_file_exists(
+    data_store: DataStore, tree_id: bytes32, tmp_path: Path
+) -> None:
+    await data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    assert root.generation == 1
+
+    key = b"a"
+    value = b"a"
+    await data_store.autoinsert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    assert root.generation == 2
+    await write_files_for_root(data_store, tree_id, root, tmp_path, 0)
+
+    incorrect_root_hash = bytes32([0] * 31 + [1])
+    with os.scandir(tmp_path) as entries:
+        filenames = [entry.name for entry in entries]
+        assert len(filenames) == 2
+        os.rename(
+            tmp_path.joinpath(filenames[0]),
+            tmp_path.joinpath(get_delta_filename(tree_id, incorrect_root_hash, 2)),
+        )
+        os.rename(
+            tmp_path.joinpath(filenames[1]),
+            tmp_path.joinpath(get_full_tree_filename(tree_id, incorrect_root_hash, 2)),
+        )
+
+    await data_store.rollback_to_generation(tree_id, 1)
+    sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
+    success = await insert_from_delta_file(
+        data_store=data_store,
+        tree_id=tree_id,
+        existing_generation=1,
+        root_hashes=[incorrect_root_hash],
+        server_info=sinfo,
+        client_foldername=tmp_path,
+        timeout=15,
+        log=log,
+        proxy_url="",
+        downloader=None,
+    )
+    assert not success
+
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    assert root.generation == 1
+    with os.scandir(tmp_path) as entries:
+        filenames = [entry.name for entry in entries]
+        assert len(filenames) == 0
 
 
 @pytest.mark.anyio

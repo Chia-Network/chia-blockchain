@@ -48,8 +48,10 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
+    ReceiveMessage,
     Remark,
     ReserveFee,
+    SendMessage,
     Softfork,
     Timelock,
     UnknownCondition,
@@ -151,6 +153,18 @@ def test_completeness() -> None:
             [AMT, ["81f6", "a0" + HASH_HEX]],
         ),
         ConditionSerializations(ConditionOpcode.REMARK, Program.to([]), ["rest"], ["80"]),
+        ConditionSerializations(
+            ConditionOpcode.SEND_MESSAGE,
+            Program.to([0x3F, b"foobar", Program.to(HASH)]),
+            ["mode", "msg", "args"],
+            ["63", "0x" + b"foobar".hex(), "a0" + HASH_HEX],
+        ),
+        ConditionSerializations(
+            ConditionOpcode.RECEIVE_MESSAGE,
+            Program.to([0x3F, b"foobar", Program.to(HASH)]),
+            ["mode", "msg", "args"],
+            ["63", "0x" + b"foobar".hex(), "a0" + HASH_HEX],
+        ),
     ],
 )
 def test_condition_serialization(serializations: ConditionSerializations, abstractions: bool) -> None:
@@ -307,6 +321,8 @@ def test_timelock_parsing(timelock_info: TimelockInfo) -> None:
         CreateAnnouncement,
         AssertAnnouncement,
         Timelock,
+        SendMessage,
+        ReceiveMessage,
     ],
 )
 @pytest.mark.parametrize(
@@ -359,6 +375,8 @@ def test_invalid_condition(
             CreateAnnouncement,
             AssertAnnouncement,
             Timelock,
+            SendMessage,
+            ReceiveMessage,
         ]
     ],
     prg: bytes,

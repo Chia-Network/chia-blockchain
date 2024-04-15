@@ -16,7 +16,6 @@ from chia.data_layer.data_layer_util import dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.rpc.util import marshal, tx_endpoint
@@ -30,9 +29,8 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactions,
     SubmitTransactionsResponse,
 )
-from chia.server.outbound_message import NodeType, make_msg
+from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -163,7 +161,6 @@ class WalletRpcApi:
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
-            "/farm_block": self.farm_block,  # Only when node simulator is running
             "/get_timestamp_for_height": self.get_timestamp_for_height,
             "/set_auto_claim": self.set_auto_claim,
             "/get_auto_claim": self.get_auto_claim,
@@ -630,13 +627,6 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             await self.service.wallet_state_manager.add_pending_transactions(txs, sign=request.get("sign", False))
 
-        return {}
-
-    async def farm_block(self, request: Dict[str, Any]) -> EndpointResult:
-        raw_puzzle_hash = decode_puzzle_hash(request["address"])
-        msg = make_msg(ProtocolMessageTypes.farm_new_block, FarmNewBlockProtocol(raw_puzzle_hash))
-
-        await self.service.server.send_to_all([msg], NodeType.FULL_NODE)
         return {}
 
     async def get_timestamp_for_height(self, request: Dict[str, Any]) -> EndpointResult:
@@ -2355,6 +2345,7 @@ class WalletRpcApi:
 
             full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launcher_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                # It's unclear whether this path is ever reached, and there is no coverage in the DID wallet tests
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
                 elif (
@@ -2845,7 +2836,7 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         if not coins:  # pragma: no cover
             raise ValueError("There are not coins available to exit lockup")
-        exit_tx = await dao_cat_wallet.exit_vote_state(
+        [exit_tx] = await dao_cat_wallet.exit_vote_state(
             coins,
             tx_config,
             fee=fee,
@@ -2929,7 +2920,7 @@ class WalletRpcApi:
 
         vote_amount = request.get("vote_amount")
         fee = uint64(request.get("fee", 0))
-        proposal_tx = await dao_wallet.generate_new_proposal(
+        [proposal_tx] = await dao_wallet.generate_new_proposal(
             proposed_puzzle,
             tx_config,
             vote_amount=vote_amount,
@@ -2966,7 +2957,7 @@ class WalletRpcApi:
         if "vote_amount" in request:
             vote_amount = uint64(request["vote_amount"])
         fee = uint64(request.get("fee", 0))
-        vote_tx = await dao_wallet.generate_proposal_vote_spend(
+        [vote_tx] = await dao_wallet.generate_proposal_vote_spend(
             bytes32.from_hexstr(request["proposal_id"]),
             vote_amount,
             request["is_yes_vote"],  # bool
@@ -4212,17 +4203,9 @@ class WalletRpcApi:
                     extra_conditions=extra_conditions,
                 )
                 tx_records.extend(records)
-            # Now that we have all the txs, we need to aggregate them all into just one spend
-            modified_txs: List[TransactionRecord] = []
-            aggregate_spend = SpendBundle([], G2Element())
-            for tx in tx_records:
-                if tx.spend_bundle is not None:
-                    aggregate_spend = SpendBundle.aggregate([aggregate_spend, tx.spend_bundle])
-                    modified_txs.append(dataclasses.replace(tx, spend_bundle=None))
-            modified_txs[0] = dataclasses.replace(modified_txs[0], spend_bundle=aggregate_spend)
+
             return {
-                "tx_records": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs],
-                "transactions": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs],
+                "transactions": [rec.to_json_dict_convenience(self.service.config) for rec in tx_records],
             }
 
     async def dl_history(self, request: Dict[str, Any]) -> EndpointResult:
