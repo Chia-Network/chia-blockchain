@@ -35,6 +35,10 @@ on:
       arch:
         required: true
         type: string
+      collect-junit:
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -259,6 +263,7 @@ jobs:
           mv notchia/ chia/
 
       - name: Publish JUnit results
+        if: inputs.collect-junit
         uses: actions/upload-artifact@v4
         with:
           name: junit-data-${{ env.JOB_FILE_NAME }}
