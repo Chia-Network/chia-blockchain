@@ -846,7 +846,7 @@ class DAOWallet:
         vote_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         coins = await self.standard_wallet.select_coins(
             uint64(fee + dao_rules.proposal_minimum_amount),
@@ -953,7 +953,7 @@ class DAOWallet:
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
-        return record
+        return [record]
 
     async def generate_proposal_eve_spend(
         self,
@@ -1028,7 +1028,7 @@ class DAOWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
         proposal_info = None
         for pi in self.dao_info.proposals_list:
@@ -1136,7 +1136,7 @@ class DAOWallet:
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
-        return record
+        return [record]
 
     async def create_proposal_close_spend(
         self,

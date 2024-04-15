@@ -2820,7 +2820,7 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         if not coins:  # pragma: no cover
             raise ValueError("There are not coins available to exit lockup")
-        exit_tx = await dao_cat_wallet.exit_vote_state(
+        [exit_tx] = await dao_cat_wallet.exit_vote_state(
             coins,
             tx_config,
             fee=fee,
@@ -2904,7 +2904,7 @@ class WalletRpcApi:
 
         vote_amount = request.get("vote_amount")
         fee = uint64(request.get("fee", 0))
-        proposal_tx = await dao_wallet.generate_new_proposal(
+        [proposal_tx] = await dao_wallet.generate_new_proposal(
             proposed_puzzle,
             tx_config,
             vote_amount=vote_amount,
@@ -2941,7 +2941,7 @@ class WalletRpcApi:
         if "vote_amount" in request:
             vote_amount = uint64(request["vote_amount"])
         fee = uint64(request.get("fee", 0))
-        vote_tx = await dao_wallet.generate_proposal_vote_spend(
+        [vote_tx] = await dao_wallet.generate_proposal_vote_spend(
             bytes32.from_hexstr(request["proposal_id"]),
             vote_amount,
             request["is_yes_vote"],  # bool
