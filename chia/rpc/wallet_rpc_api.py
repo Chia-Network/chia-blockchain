@@ -4183,17 +4183,9 @@ class WalletRpcApi:
                     extra_conditions=extra_conditions,
                 )
                 tx_records.extend(records)
-            # Now that we have all the txs, we need to aggregate them all into just one spend
-            modified_txs: List[TransactionRecord] = []
-            aggregate_spend = SpendBundle([], G2Element())
-            for tx in tx_records:
-                if tx.spend_bundle is not None:
-                    aggregate_spend = SpendBundle.aggregate([aggregate_spend, tx.spend_bundle])
-                    modified_txs.append(dataclasses.replace(tx, spend_bundle=None))
-            modified_txs[0] = dataclasses.replace(modified_txs[0], spend_bundle=aggregate_spend)
+
             return {
-                "tx_records": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs],
-                "transactions": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs],
+                "transactions": [rec.to_json_dict_convenience(self.service.config) for rec in tx_records],
             }
 
     async def dl_history(self, request: Dict[str, Any]) -> EndpointResult:
