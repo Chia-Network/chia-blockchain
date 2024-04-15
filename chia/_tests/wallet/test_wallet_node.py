@@ -29,6 +29,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.util.misc import to_batches
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_node import Balance, WalletNode
 
 
@@ -617,4 +618,5 @@ async def test_wallet_node_bad_coin_state_ignore(
         types.MethodType(validate_received_state_from_peer, wallet_node),
     )
 
-    assert await wallet_node.get_coin_state([], wallet_node.get_full_node_peer()) == []
+    with pytest.raises(PeerRequestException):
+        await wallet_node.get_coin_state([], wallet_node.get_full_node_peer())
