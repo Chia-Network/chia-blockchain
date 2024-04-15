@@ -21,16 +21,16 @@ from chia.util.virtual_project_analysis import (
 )
 
 
-def test_is_annotated_true() -> None:
-    """Test that is_annotated returns True for a correctly annotated string."""
-    file_string = "# Package: example\n# Some other comment"
-    assert Annotation.is_annotated(file_string)
-
-
-def test_is_annotated_false() -> None:
-    """Test that is_annotated returns False for a non-annotated string."""
-    file_string = "# Some comment\n# Some other comment"
-    assert not Annotation.is_annotated(file_string)
+@pytest.mark.parametrize(
+    "file_string, expected",
+    [("# Package: example\n# Some other comment", True), ("# Some comment\n# Some other comment", False)],
+)
+def test_is_annotated(file_string: str, expected: bool) -> None:
+    """
+    Test that is_annotated returns True for a correctly annotated string and
+    False for non-annotated ones.
+    """
+    assert Annotation.is_annotated(file_string) == expected
 
 
 def test_parse_valid_annotation() -> None:
