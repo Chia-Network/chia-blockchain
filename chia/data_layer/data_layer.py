@@ -200,6 +200,7 @@ class DataLayer:
         async with DataStore.managed(database=self.db_path, sql_log_path=sql_log_path) as self._data_store:
             self._wallet_rpc = await self.wallet_rpc_init
 
+            await self._data_store.migrate_db()
             self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
             try:
                 yield
