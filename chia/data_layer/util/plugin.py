@@ -30,6 +30,7 @@ async def load_plugin_configurations(root_path: Path, config_type: str) -> List[
                 data = json.load(file)
 
             valid_configs.extend([PluginRemote.unmarshal(marshalled=item) for item in data])
+            log.info(f"loaded plugin configuration: {conf_file}")
         except (OSError, json.JSONDecodeError, Exception) as e:
             print(f"Error loading or parsing {conf_file}: {e}, skipping this file.")
     return valid_configs
