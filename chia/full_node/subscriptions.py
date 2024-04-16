@@ -92,7 +92,7 @@ class PeerSubscriptions:
         added: Set[bytes32] = set()
 
         def limit_reached() -> Set[bytes32]:
-            log.info(
+            log.warning(
                 "Peer %s attempted to exceed the subscription limit while adding puzzle subscriptions.",
                 peer_id,
             )
