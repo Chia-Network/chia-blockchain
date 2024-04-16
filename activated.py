@@ -7,7 +7,7 @@ import pathlib
 import subprocess
 import sys
 
-here = pathlib.Path(__file__).parent
+here = pathlib.Path(__file__).parent.absolute()
 
 
 def main(*args: str) -> int:

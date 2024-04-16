@@ -186,7 +186,12 @@ class Err(Enum):
     # raised if a spend issues too many assert spend, assert puzzle,
     # assert announcement or create announcement
     TOO_MANY_ANNOUNCEMENTS = 144
-    CHIP_0013_VALIDATION = 145
+    # the message mode in SEND_MESSAGE or RECEIVE_MESSAGE condition is not valid
+    INVALID_MESSAGE_MODE = 145
+    # the specified coin ID is not valid
+    INVALID_COIN_ID = 146
+    # message not sent/received
+    MESSAGE_NOT_SENT_OR_RECEIVED = 147
 
 
 class ValidationError(Exception):

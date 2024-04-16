@@ -22,19 +22,19 @@ LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
 
-def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
+def singleton_puzzle(launcher_id: bytes32, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
     return SINGLETON_MOD.curry((SINGLETON_MOD_HASH, (launcher_id, launcher_puzzle_hash)), inner_puzzle)
 
 
-def p2_singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32) -> Program:
+def p2_singleton_puzzle(launcher_id: bytes32, launcher_puzzle_hash: bytes32) -> Program:
     return P2_SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_id, launcher_puzzle_hash)
 
 
-def singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> bytes32:
+def singleton_puzzle_hash(launcher_id: bytes32, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> bytes32:
     return singleton_puzzle(launcher_id, launcher_puzzle_hash, inner_puzzle).get_tree_hash()
 
 
-def p2_singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32) -> bytes32:
+def p2_singleton_puzzle_hash(launcher_id: bytes32, launcher_puzzle_hash: bytes32) -> bytes32:
     return p2_singleton_puzzle(launcher_id, launcher_puzzle_hash).get_tree_hash()
 
 

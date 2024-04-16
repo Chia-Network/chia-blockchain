@@ -69,8 +69,7 @@ def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
 def get_fee(config: Dict[str, Any], request: Dict[str, Any]) -> uint64:
     fee = request.get("fee")
     if fee is None:
-        config_fee = config.get("fee", 0)
-        return uint64(config_fee)
+        fee = 0  # DL no longer reads the fee from the config
     return uint64(fee)
 
 
@@ -552,12 +551,14 @@ class DataLayerRpcApi:
 
         all_proofs: List[HashOnlyProof] = []
         for key in request.keys:
-            key_value = await self.service.get_value(store_id=request.store_id, key=key)
-            pi = await self.service.data_store.get_proof_of_inclusion_by_key(tree_id=request.store_id, key=key)
+            node = await self.service.data_store.get_node_by_key(tree_id=request.store_id, key=key)
+            pi = await self.service.data_store.get_proof_of_inclusion_by_hash(
+                tree_id=request.store_id, node_hash=node.hash, use_optimized=True
+            )
 
             proof = HashOnlyProof.from_key_value(
                 key=key,
-                value=key_value,
+                value=node.value,
                 node_hash=pi.node_hash,
                 layers=[
                     ProofLayer(

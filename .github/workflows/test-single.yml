@@ -32,6 +32,9 @@ on:
       runs-on:
         required: true
         type: string
+      arch:
+        required: true
+        type: string
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -57,6 +60,8 @@ jobs:
             name: ${{ inputs.name }}
             file_name: ${{ inputs.file_name }}
             runs-on: ${{ inputs.runs-on }}
+        arch:
+          - matrix: ${{ inputs.arch }}
         python:
           - name: "3.8"
             file_name: "3.8"
@@ -105,6 +110,8 @@ jobs:
               matrix: macos
             python:
               matrix: "3.8"
+          - arch:
+              matrix: arm
           - os:
               matrix: windows
             configuration:
@@ -184,11 +191,6 @@ jobs:
           gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=tar.gz -O - | tar xzf -
           mkdir "${GITHUB_WORKSPACE}/.chia"
           mv "${GITHUB_WORKSPACE}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/"* "${GITHUB_WORKSPACE}/.chia"
-
-      - name: Install boost (macOS)
-        if: matrix.os.matrix == 'macos'
-        run: |
-          brew install boost
 
       - uses: ./.github/actions/install
         with:
