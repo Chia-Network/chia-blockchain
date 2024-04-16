@@ -52,7 +52,7 @@ dev_dependencies = [
     "pylint==3.0.3",
     "pytest==8.1.1",
     "pytest-cov==4.1.0",
-    "pytest-mock==3.12.0",
+    "pytest-mock==3.14.0",
     "pytest-xdist==3.5.0",
     "pyupgrade==3.15.0",
     "twine==5.0.0",
