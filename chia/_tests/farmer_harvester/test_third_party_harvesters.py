@@ -29,7 +29,8 @@ from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
-from chia.types.aliases import FarmerService, FullNodeService, HarvesterService, SimulatorFullNodeService
+from chia.simulator.start_simulator import SimulatorFullNodeService
+from chia.types.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
