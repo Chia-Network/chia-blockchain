@@ -522,7 +522,7 @@ class FullNode:
             self.full_node_peers = FullNodePeers(
                 self.server,
                 self.config["target_outbound_peer_count"],
-                self.root_path / Path(self.config["peers_file_path"]),
+                self.root_path / Path(self.config.get("peers_file_path", "db/peers.dat")),
                 self.config["introducer_peer"],
                 dns_servers,
                 self.config["peer_connect_interval"],
@@ -1136,10 +1136,6 @@ class FullNode:
                 )
                 if success is False:
                     await peer.close(600)
-                    # check CHIP-0013 exception
-                    if err == Err.CHIP_0013_VALIDATION:
-                        self.add_to_bad_peak_cache(peak_hash, target_peak_sb_height)
-                        raise ValidationError(err, f"Failed to validate block batch {start_height} to {end_height}")
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
                 peak = self.blockchain.get_peak()
@@ -2367,8 +2363,10 @@ class FullNode:
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
                 else:
                     await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
+
                 if self.simulator_transaction_callback is not None:  # callback
                     await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
+
             else:
                 self.mempool_manager.remove_seen(spend_name)
                 self.log.debug(f"Wasn't able to add transaction with id {spend_name}, status {status} error: {error}")

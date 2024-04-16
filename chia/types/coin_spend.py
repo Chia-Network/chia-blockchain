@@ -77,7 +77,7 @@ def compute_additions_with_cost(
         cost += ConditionCost.CREATE_COIN.value
         puzzle_hash = next(atoms).as_atom()
         amount = uint64(next(atoms).as_int())
-        ret.append(Coin(parent_id, puzzle_hash, amount))
+        ret.append(Coin(parent_id, puzzle_hash, uint64(amount)))
 
     return ret, cost
 

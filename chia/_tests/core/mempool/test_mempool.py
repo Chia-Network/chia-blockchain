@@ -81,7 +81,7 @@ def wallet_a(bt):
 
 
 def generate_test_spend_bundle(
-    wallet_a: WalletTool,
+    wallet: WalletTool,
     coin: Coin,
     condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
     fee: uint64 = uint64(0),
@@ -90,7 +90,7 @@ def generate_test_spend_bundle(
 ) -> SpendBundle:
     if condition_dic is None:
         condition_dic = {}
-    transaction = wallet_a.generate_signed_transaction(amount, new_puzzle_hash, coin, condition_dic, fee)
+    transaction = wallet.generate_signed_transaction(amount, new_puzzle_hash, coin, condition_dic, fee)
     assert transaction is not None
     return transaction
 
@@ -2366,6 +2366,28 @@ class TestGeneratorConditions:
         # the SOFTFORK condition is only activated with the hard fork, so
         # before then there are no errors
         elif softfork_height < test_constants.HARD_FORK_HEIGHT:
+            expect_error = None
+
+        assert npc_result.error == expect_error
+
+    @pytest.mark.parametrize("mempool", [True, False])
+    @pytest.mark.parametrize(
+        "condition, expect_error",
+        [
+            ('(66 0 "foo") (67 0 "bar")', Err.MESSAGE_NOT_SENT_OR_RECEIVED.value),
+            ('(66 0 "foo") (67 0 "foo")', None),
+        ],
+    )
+    def test_message_condition(
+        self, mempool: bool, condition: str, expect_error: Optional[int], softfork_height: uint32
+    ):
+        npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
+        print(npc_result)
+
+        # the message conditions are only activated with soft fork 4, so
+        # before then there are no errors.
+        # In mempool mode, the message conditions activated immediately.
+        if softfork_height < test_constants.SOFT_FORK4_HEIGHT and not mempool:
             expect_error = None
 
         assert npc_result.error == expect_error

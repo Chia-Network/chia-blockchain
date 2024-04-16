@@ -1168,7 +1168,7 @@ class WalletRpcClient(RpcClient):
             **timelock_info.to_json_dict(),
         }
         response = await self.fetch("dl_update_multiple", request)
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["tx_records"]]
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
     async def dl_history(
         self,
