@@ -70,8 +70,8 @@ class HexString(click.ParamType):
             return value
         try:
             return hexstr_to_bytes(value)
-        except ValueError:
-            self.fail(f"{value} is not a valid hex string", param, ctx)
+        except ValueError as e:
+            self.fail(f"not a valid hex string: {value!r} ({e})", param, ctx)
 
 
 class HexString32(click.ParamType):
@@ -82,8 +82,8 @@ class HexString32(click.ParamType):
             return value
         try:
             return bytes32.from_hexstr(value)
-        except ValueError:
-            self.fail(f"{value} is not a valid 32-byte hex string", param, ctx)
+        except ValueError as e:
+            self.fail(f"not a valid 32-byte hex string: {value!r} ({e})", param, ctx)
 
 
 @dataclass(frozen=True)
