@@ -45,7 +45,7 @@ def get_flags_for_height_and_constants(height: int, constants: ConsensusConstant
     if height >= constants.SOFT_FORK2_HEIGHT:
         flags = flags | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
 
-    if height >= constants.SOFT_FORK3_HEIGHT:
+    if height >= constants.SOFT_FORK4_HEIGHT:
         flags = flags | ENABLE_MESSAGE_CONDITIONS
 
     if height >= constants.HARD_FORK_HEIGHT:

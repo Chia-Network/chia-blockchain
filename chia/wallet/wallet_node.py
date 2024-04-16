@@ -668,7 +668,7 @@ class WalletNode:
             self.wallet_peers = WalletPeers(
                 self.server,
                 self.config["target_peer_count"],
-                self.root_path / Path(self.config["wallet_peers_file_path"]),
+                self.root_path / Path(self.config.get("wallet_peers_file_path", "wallet/db/wallet_peers.dat")),
                 self.config["introducer_peer"],
                 self.config.get("dns_servers", ["dns-introducer.chia.net"]),
                 self.config["peer_connect_interval"],

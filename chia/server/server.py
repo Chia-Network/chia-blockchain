@@ -27,7 +27,6 @@ from typing_extensions import final
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS
-from chia.protocols.shared_protocol import protocol_version
 from chia.server.api_protocol import ApiProtocol
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
@@ -334,7 +333,7 @@ class ChiaServer:
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
             )
-            await connection.perform_handshake(self._network_id, protocol_version, self.get_port(), self._local_type)
+            await connection.perform_handshake(self._network_id, self.get_port(), self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
 
             # Limit inbound connections to config's specifications.
@@ -485,7 +484,7 @@ class ChiaServer:
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
                 session=session,
             )
-            await connection.perform_handshake(self._network_id, protocol_version, server_port, self._local_type)
+            await connection.perform_handshake(self._network_id, server_port, self._local_type)
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function

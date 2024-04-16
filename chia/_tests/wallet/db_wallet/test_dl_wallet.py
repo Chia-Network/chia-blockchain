@@ -88,6 +88,9 @@ class TestDLWallet:
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, 0)
         await time_out_assert(10, wallet_0.get_confirmed_balance, 0)
 
+        new_puz = await dl_wallet.get_new_puzzle()
+        assert new_puz
+
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
