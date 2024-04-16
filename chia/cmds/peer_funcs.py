@@ -102,6 +102,8 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
                 f"{last_connect}  "
                 f"{mb_up:7.1f}|{mb_down:<7.1f}"
             )
+            if trusted:
+                con_str += f"    -Trusted: {trusted}"
         print(con_str)
 
 
