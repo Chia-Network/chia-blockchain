@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import textwrap
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -63,9 +64,17 @@ def test_cmd_bases() -> None:
         ["--help"],
         catch_exceptions=False,
     )
-    assert result.output == (
-        "Usage: cmd [OPTIONS] COMMAND [ARGS]...\n\nOptions:\n  --help  Show this "
-        "message and exit.\n\nCommands:\n  temp_cmd        blah\n  temp_cmd_async  blah\n"
+    assert result.output == textwrap.dedent(
+        """\
+        Usage: cmd [OPTIONS] COMMAND [ARGS]...
+
+        Options:
+          --help  Show this message and exit.
+
+        Commands:
+          temp_cmd        blah
+          temp_cmd_async  blah
+        """
     )
     result = runner.invoke(
         cmd,
