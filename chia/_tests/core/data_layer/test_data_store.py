@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, cast
 
 import aiohttp
 import aiosqlite
@@ -48,6 +48,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
+from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
 
@@ -56,8 +57,8 @@ pytestmark = pytest.mark.data_layer
 
 
 table_columns: Dict[str, List[str]] = {
-    "node": ["hash", "node_type", "left", "right", "key", "value"],
-    "root": ["tree_id", "generation", "node_hash", "status"],
+    "node": ["tree_id", "generation", "hash", "parent", "node_type", "left", "right", "key", "value"],
+    "root": ["tree_id", "generation", "status"],
 }
 
 
@@ -70,8 +71,8 @@ async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_
     async with data_store.db_wrapper.writer() as writer:
         await writer.execute(
             """
-            INSERT INTO node(hash, node_type, left, right, key, value)
-            VALUES(:hash, :node_type, :left, :right, :key, :value)
+            INSERT INTO node(tree_id, generation, hash, node_type, left, right, key, value)
+            VALUES(:tree_id, :generation, :hash, :node_type, :left, :right, :key, :value)
             """,
             valid_node_values,
         )
@@ -182,19 +183,20 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
     expected = []
 
     node_hash = None
-    for key, expected_generation in zip(keys, itertools.count(start=1)):
-        insert_result = await data_store.insert(
-            key=key,
-            value=value,
-            tree_id=tree_id,
-            reference_node_hash=node_hash,
-            side=None if node_hash is None else Side.LEFT,
-            status=Status.COMMITTED,
-        )
-        node_hash = insert_result.node_hash
-        generation = await data_store.get_tree_generation(tree_id=tree_id)
-        generations.append(generation)
-        expected.append(expected_generation)
+    async with data_store.transaction(foreign_key_enforcement_enabled=False):
+        for key, expected_generation in zip(keys, itertools.count(start=1)):
+            insert_result = await data_store.insert(
+                key=key,
+                value=value,
+                tree_id=tree_id,
+                reference_node_hash=node_hash,
+                side=None if node_hash is None else Side.LEFT,
+                status=Status.COMMITTED,
+            )
+            node_hash = insert_result.node_hash
+            generation = await data_store.get_tree_generation(tree_id=tree_id)
+            generations.append(generation)
+            expected.append(expected_generation)
 
     assert generations == expected
 
@@ -220,7 +222,11 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
         cursor = await reader.execute("SELECT * FROM node")
         before = await cursor.fetchall()
 
-    await data_store._insert_internal_node(left_hash=parent.left_hash, right_hash=parent.right_hash)
+    # TODO: didn't think much about generation here
+    next_generation = await data_store.get_tree_generation(tree_id=tree_id)
+    await data_store._insert_internal_node(
+        tree_id=tree_id, generation=next_generation, left_hash=parent.left_hash, right_hash=parent.right_hash
+    )
 
     async with data_store.db_wrapper.reader() as reader:
         cursor = await reader.execute("SELECT * FROM node")
@@ -239,7 +245,11 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
         cursor = await reader.execute("SELECT * FROM node")
         before = await cursor.fetchall()
 
-    await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value)
+    # TODO: didn't think much about generation here
+    next_generation = await data_store.get_tree_generation(tree_id=tree_id)
+    await data_store._insert_terminal_node(
+        tree_id=tree_id, generation=next_generation, key=kv_node.key, value=kv_node.value
+    )
 
     async with data_store.db_wrapper.reader() as reader:
         cursor = await reader.execute("SELECT * FROM node")
@@ -318,7 +328,8 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                     seed = bytes32(b"0" * 32)
                     node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
                     assert node_hash is not None
-                    node = await data_store.get_node(node_hash)
+                    a_generation = await data_store.get_tree_generation(tree_id=tree_id)
+                    node = await data_store.get_node(tree_id=tree_id, generation=a_generation, node_hash=node_hash)
                     assert isinstance(node, TerminalNode)
                     await data_store.delete(key=node.key, tree_id=tree_id, status=Status.COMMITTED)
                 deleted_all = True
@@ -354,7 +365,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
         else:
             node_count -= 1
             assert node_hash is not None
-            node = await data_store.get_node(node_hash)
+            node = await data_store.get_node(tree_id=tree_id, generation=generation, node_hash=node_hash)
             assert isinstance(node, TerminalNode)
             await data_store.delete(key=node.key, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED)
 
@@ -463,7 +474,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 expected_ancestors.append(ancestor)
             result_ancestors = await data_store.get_ancestors_optimized(node_hash, tree_id)
             assert [node.hash for node in result_ancestors] == expected_ancestors
-            node = await data_store.get_node(node_hash)
+            node = await data_store.get_node(tree_id=tree_id, generation=root.generation, node_hash=node_hash)
             if isinstance(node, InternalNode):
                 queue.append(node.left_hash)
                 queue.append(node.right_hash)
@@ -558,28 +569,18 @@ async def test_insert_batch_reference_and_side(
     )
     assert new_root_hash is not None, "batch insert failed or failed to update root"
 
-    parent = await data_store.get_node(new_root_hash)
+    root = await data_store.get_tree_root(tree_id=tree_id)
+
+    parent = await data_store.get_node(tree_id=tree_id, generation=root.generation, node_hash=new_root_hash)
     assert isinstance(parent, InternalNode)
     if side == Side.LEFT:
-        child = await data_store.get_node(parent.left_hash)
+        child = await data_store.get_node(tree_id=tree_id, generation=root.generation, node_hash=parent.left_hash)
         assert parent.left_hash == child.hash
     elif side == Side.RIGHT:
-        child = await data_store.get_node(parent.right_hash)
+        child = await data_store.get_node(tree_id=tree_id, generation=root.generation, node_hash=parent.right_hash)
         assert parent.right_hash == child.hash
     else:  # pragma: no cover
         raise Exception("invalid side for test")
-
-
-@pytest.mark.anyio
-async def test_ancestor_table_unique_inserts(data_store: DataStore, tree_id: bytes32) -> None:
-    await add_0123_example(data_store=data_store, tree_id=tree_id)
-    hash_1 = bytes32.from_hexstr("0763561814685fbf92f6ca71fbb1cb11821951450d996375c239979bd63e9535")
-    hash_2 = bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40")
-    await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
-    await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
-    with pytest.raises(Exception, match="^Requested insertion of ancestor"):
-        await data_store._insert_ancestor_table(hash_1, hash_1, tree_id, 2)
-    await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
 
 
 @pytest.mark.anyio
@@ -648,31 +649,21 @@ async def test_inserting_duplicate_key_fails(
 @pytest.mark.anyio()
 async def test_inserting_invalid_length_hash_raises_original_exception(
     data_store: DataStore,
+    tree_id: bytes32,
 ) -> None:
+    # TODO: didn't think much about generation here
+    next_generation = await data_store.get_tree_generation(tree_id=tree_id)
     with pytest.raises(aiosqlite.IntegrityError):
         # casting since we are testing an invalid case
         await data_store._insert_node(
+            tree_id=tree_id,
+            generation=next_generation,
             node_hash=cast(bytes32, b"\x05"),
             node_type=NodeType.TERMINAL,
             left_hash=None,
             right_hash=None,
             key=b"\x06",
             value=b"\x07",
-        )
-
-
-@pytest.mark.anyio()
-async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
-    data_store: DataStore,
-    tree_id: bytes32,
-) -> None:
-    with pytest.raises(aiosqlite.IntegrityError):
-        # casting since we are testing an invalid case
-        await data_store._insert_ancestor_table(
-            left_hash=bytes32(b"\x01" * 32),
-            right_hash=bytes32(b"\x02" * 32),
-            tree_id=tree_id,
-            generation=0,
         )
 
 
@@ -1138,7 +1129,8 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
                 expected_diff.add(DiffData(OperationType.INSERT, key, value))
         else:
             assert node_hash is not None
-            node = await data_store.get_node(node_hash)
+            root = await data_store.get_tree_root(tree_id=tree_id)
+            node = await data_store.get_node(tree_id=tree_id, generation=root.generation, node_hash=node_hash)
             assert isinstance(node, TerminalNode)
             await data_store.delete(key=node.key, tree_id=tree_id, status=Status.COMMITTED)
             if i > 200:
@@ -1916,3 +1908,200 @@ async def test_insert_key_already_present(data_store: DataStore, tree_id: bytes3
     )
     with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
         await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+
+
+@pytest.mark.anyio
+async def test_benchmark_v2(
+    data_store: DataStore,
+    tree_id: bytes32,
+    benchmark_runner: BenchmarkRunner,
+) -> None:
+    r = random.Random()
+    r.seed("shadowlands", version=2)
+
+    test_size = 1000
+    max_pre_size = 10000
+
+    batch_count, remainder = divmod(max_pre_size, test_size)
+    assert remainder == 0, "the last batch would be a different size"
+
+    changelist = [
+        {
+            "action": "insert",
+            "key": x.to_bytes(32, byteorder="big", signed=False),
+            "value": bytes(r.getrandbits(8) for _ in range(1200)),
+        }
+        for x in range(max_pre_size)
+    ]
+
+    pre = changelist[:max_pre_size]
+
+    records: Dict[int, float] = {}
+
+    total_inserted = 0
+    pre_iter = iter(pre)
+    with benchmark_runner.assert_runtime(
+        label="overall",
+        # TODO: this is silly
+        seconds=1,
+        enable_assertion=False,
+        clock=time.monotonic,
+    ) as f:
+        while True:
+            pre_batch = list(itertools.islice(pre_iter, test_size))
+            if len(pre_batch) == 0:
+                break
+
+            with benchmark_runner.assert_runtime(
+                label="count",
+                # TODO: this is silly
+                seconds=1,
+                enable_assertion=False,
+                clock=time.monotonic,
+            ) as f:
+                await data_store.insert_batch(
+                    tree_id=tree_id,
+                    changelist=pre_batch,
+                    # TODO: does this mess up test accuracy?
+                    status=Status.COMMITTED,
+                )
+
+            records[total_inserted] = f.result().duration
+            total_inserted += len(pre_batch)
+
+    async with data_store.db_wrapper.writer() as writer:
+        async with writer.execute(
+            f"""
+            CREATE TABLE new_node(
+                tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                generation INTEGER NOT NULL CHECK(generation >= 0),
+                hash BLOB NULL CHECK(length(hash) == 32),
+                parent BLOB REFERENCES node,
+                node_type INTEGER NOT NULL CHECK(
+                    (
+                        node_type == {int(NodeType.INTERNAL)}
+                        AND left IS NOT NULL
+                        AND right IS NOT NULL
+                        AND key IS NULL
+                        AND value IS NULL
+                    )
+                    OR
+                    (
+                        node_type == {int(NodeType.TERMINAL)}
+                        AND left IS NULL
+                        AND right IS NULL
+                        AND key IS NOT NULL
+                        AND value IS NOT NULL
+                    )
+                ),
+                left BLOB REFERENCES node,
+                right BLOB REFERENCES node,
+                key BLOB,
+                value BLOB,
+                PRIMARY KEY(tree_id, generation, hash)
+            )
+            """
+        ):
+            pass
+
+        async with writer.execute(
+            """
+            CREATE TABLE blob(
+                hash BLOB PRIMARY KEY NULL CHECK(length(hash) == 32),
+                blob BLOB
+            )
+            """
+        ):
+            pass
+
+    root = await data_store.get_tree_as_program(tree_id=tree_id)
+
+    @dataclass
+    class Entry:
+        parent_hash: Optional[bytes32]
+        node: Union[InternalNode, TerminalNode]
+
+    to_visit: List[Entry] = [Entry(parent_hash=None, node=root)]
+    hash_cache: Dict[bytes32, Union[InternalNode, TerminalNode]] = {}
+
+    while len(to_visit) > 0:
+        entry = to_visit.pop(0)
+
+        new_node: Union[InternalNode, TerminalNode]
+        if isinstance(entry.node, InternalNode):
+            new_node = InternalNode(
+                tree_id=tree_id,
+                generation=0,
+                hash=entry.node.hash,
+                parent_hash=entry.parent_hash,
+                left_hash=entry.node.left_hash,
+                right_hash=entry.node.right_hash,
+            )
+            hash_cache[new_node.hash] = new_node
+            assert entry.node.pair is not None
+            to_visit.append(Entry(parent_hash=new_node.hash, node=entry.node.pair[0]))
+            to_visit.append(Entry(parent_hash=new_node.hash, node=entry.node.pair[1]))
+        elif isinstance(entry.node, TerminalNode):
+            new_node = TerminalNode(
+                tree_id=tree_id,
+                generation=0,
+                hash=entry.node.hash,
+                parent_hash=entry.parent_hash,
+                # TODO: real values
+                key_hash=bytes32([0] * 32),
+                value_hash=bytes32([0] * 32),
+                key=entry.node.key,
+                value=entry.node.value,
+            )
+            hash_cache[new_node.hash] = new_node
+        else:
+            assert False, f"some other nifty node type found: ({type(entry.node)}) {entry.node!r}"
+
+    async with data_store.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+        async with writer.executemany(
+            """
+            INSERT INTO new_node(tree_id, generation, hash, parent, node_type, left, right, key, value)
+            VALUES(:tree_id, :generation, :hash, :parent, :node_type, :left, :right, :key, :value)
+            """,
+            (node.to_row() for node in hash_cache.values()),
+        ):
+            pass
+
+        async with writer.executemany(
+            """
+            INSERT INTO blob(hash, blob)
+            VALUES(:hash, :blob)
+            """,
+            (
+                # TODO: what hash should we really use
+                {"hash": std_hash(blob), "blob": blob}
+                for entry in to_visit
+                if isinstance(entry.node, TerminalNode)
+                for blob in [entry.node.key, entry.node.value]
+            ),
+        ):
+            pass
+
+    with benchmark_runner.assert_runtime(
+        label="pure duplicate generation",
+        seconds=1,
+    ):
+        async with data_store.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+            async with writer.execute(
+                """
+                INSERT INTO new_node(tree_id, generation, hash, parent, node_type, left, right, key, value)
+                SELECT
+                    tree_id,
+                    :generation,
+                    hash,
+                    parent,
+                    node_type,
+                    left,
+                    right,
+                    key,
+                    value
+                FROM new_node
+                """,
+                {"generation": 1},
+            ):
+                pass

@@ -96,7 +96,10 @@ async def test_node_internal_child_not_null(data_store: DataStore, tree_id: byte
     node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
     node_b = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
 
-    values = create_valid_node_values(node_type=NodeType.INTERNAL, left_hash=node_a.hash, right_hash=node_b.hash)
+    # TODO: didn't think much about generation here
+    generation = await data_store.get_tree_generation(tree_id=tree_id) + 1
+
+    values = create_valid_node_values(tree_id=tree_id, generation=generation, node_type=NodeType.INTERNAL, left_hash=node_a.hash, right_hash=node_b.hash)
 
     if side == Side.LEFT:
         values["left"] = None
@@ -127,7 +130,10 @@ async def test_node_internal_must_be_valid_reference(
     node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
     node_b = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
 
-    values = create_valid_node_values(node_type=NodeType.INTERNAL, left_hash=node_a.hash, right_hash=node_b.hash)
+    # TODO: didn't think much about generation here
+    generation = await data_store.get_tree_generation(tree_id=tree_id) + 1
+
+    values = create_valid_node_values(tree_id=tree_id, generation=generation, node_type=NodeType.INTERNAL, left_hash=node_a.hash, right_hash=node_b.hash)
 
     if side == Side.LEFT:
         values["left"] = bad_child_hash
@@ -152,7 +158,10 @@ async def test_node_internal_must_be_valid_reference(
 async def test_node_terminal_key_value_not_null(data_store: DataStore, tree_id: bytes32, key_or_value: str) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
-    values = create_valid_node_values(node_type=NodeType.TERMINAL)
+    # TODO: didn't think much about generation here
+    generation = await data_store.get_tree_generation(tree_id=tree_id) + 1
+
+    values = create_valid_node_values(tree_id=tree_id, generation=generation, node_type=NodeType.TERMINAL)
     values[key_or_value] = None
 
     async with data_store.db_wrapper.writer() as writer:
@@ -311,44 +320,6 @@ async def test_root_tree_id_generation_must_be_unique(data_store: DataStore, tre
                 VALUES(:tree_id, :generation, :node_hash, :status)
                 """,
                 values,
-            )
-
-
-@pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
-@pytest.mark.anyio
-async def test_ancestors_ancestor_must_be_32(
-    data_store: DataStore,
-    tree_id: bytes32,
-    length: int,
-) -> None:
-    async with data_store.db_wrapper.writer() as writer:
-        node_hash = await data_store._insert_terminal_node(key=b"\x00", value=b"\x01")
-        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await writer.execute(
-                """
-                INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                VALUES(:hash, :ancestor, :tree_id, :generation)
-                """,
-                {"hash": node_hash, "ancestor": bytes([0] * length), "tree_id": bytes32([0] * 32), "generation": 0},
-            )
-
-
-@pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
-@pytest.mark.anyio
-async def test_ancestors_tree_id_must_be_32(
-    data_store: DataStore,
-    tree_id: bytes32,
-    length: int,
-) -> None:
-    async with data_store.db_wrapper.writer() as writer:
-        node_hash = await data_store._insert_terminal_node(key=b"\x00", value=b"\x01")
-        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await writer.execute(
-                """
-                INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                VALUES(:hash, :ancestor, :tree_id, :generation)
-                """,
-                {"hash": node_hash, "ancestor": bytes32([0] * 32), "tree_id": bytes([0] * length), "generation": 0},
             )
 
 

@@ -87,12 +87,15 @@ async def valid_node_values_fixture(
 ) -> Dict[str, Any]:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
+    # TODO: didn't think much about generation here
+    generation = await data_store.get_tree_generation(tree_id=tree_id) + 1
+
     if node_type == NodeType.INTERNAL:
         node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
         node_b = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
-        return create_valid_node_values(node_type=node_type, left_hash=node_a.hash, right_hash=node_b.hash)
+        return create_valid_node_values(tree_id=tree_id, generation=generation, node_type=node_type, left_hash=node_a.hash, right_hash=node_b.hash)
     elif node_type == NodeType.TERMINAL:
-        return create_valid_node_values(node_type=node_type)
+        return create_valid_node_values(tree_id=tree_id, generation=generation, node_type=node_type)
     else:
         raise Exception(f"invalid node type: {node_type!r}")
 

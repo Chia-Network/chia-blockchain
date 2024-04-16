@@ -67,10 +67,11 @@ async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
 
     insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
 
-    c_hash = await insert(key=b"\x02", value=b"\x12\x02", reference_node_hash=None, side=None)
-    b_hash = await insert(key=b"\x01", value=b"\x11\x01", reference_node_hash=c_hash, side=Side.LEFT)
-    d_hash = await insert(key=b"\x03", value=b"\x13\x03", reference_node_hash=c_hash, side=Side.RIGHT)
-    a_hash = await insert(key=b"\x00", value=b"\x10\x00", reference_node_hash=b_hash, side=Side.LEFT)
+    async with data_store.transaction(foreign_key_enforcement_enabled=False):
+        c_hash = await insert(key=b"\x02", value=b"\x12\x02", reference_node_hash=None, side=None)
+        b_hash = await insert(key=b"\x01", value=b"\x11\x01", reference_node_hash=c_hash, side=Side.LEFT)
+        d_hash = await insert(key=b"\x03", value=b"\x13\x03", reference_node_hash=c_hash, side=Side.RIGHT)
+        a_hash = await insert(key=b"\x00", value=b"\x10\x00", reference_node_hash=b_hash, side=Side.LEFT)
 
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash])
 
@@ -103,16 +104,17 @@ async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Examp
 
     insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
 
-    g_hash = await insert(key=b"\x06", value=b"\x16\x06", reference_node_hash=None, side=None)
+    async with data_store.transaction(foreign_key_enforcement_enabled=False):
+        g_hash = await insert(key=b"\x06", value=b"\x16\x06", reference_node_hash=None, side=None)
 
-    c_hash = await insert(key=b"\x02", value=b"\x12\x02", reference_node_hash=g_hash, side=Side.LEFT)
-    b_hash = await insert(key=b"\x01", value=b"\x11\x01", reference_node_hash=c_hash, side=Side.LEFT)
-    d_hash = await insert(key=b"\x03", value=b"\x13\x03", reference_node_hash=c_hash, side=Side.RIGHT)
-    a_hash = await insert(key=b"\x00", value=b"\x10\x00", reference_node_hash=b_hash, side=Side.LEFT)
+        c_hash = await insert(key=b"\x02", value=b"\x12\x02", reference_node_hash=g_hash, side=Side.LEFT)
+        b_hash = await insert(key=b"\x01", value=b"\x11\x01", reference_node_hash=c_hash, side=Side.LEFT)
+        d_hash = await insert(key=b"\x03", value=b"\x13\x03", reference_node_hash=c_hash, side=Side.RIGHT)
+        a_hash = await insert(key=b"\x00", value=b"\x10\x00", reference_node_hash=b_hash, side=Side.LEFT)
 
-    f_hash = await insert(key=b"\x05", value=b"\x15\x05", reference_node_hash=g_hash, side=Side.LEFT)
-    h_hash = await insert(key=b"\x07", value=b"\x17\x07", reference_node_hash=g_hash, side=Side.RIGHT)
-    e_hash = await insert(key=b"\x04", value=b"\x14\x04", reference_node_hash=f_hash, side=Side.LEFT)
+        f_hash = await insert(key=b"\x05", value=b"\x15\x05", reference_node_hash=g_hash, side=Side.LEFT)
+        h_hash = await insert(key=b"\x07", value=b"\x17\x07", reference_node_hash=g_hash, side=Side.RIGHT)
+        e_hash = await insert(key=b"\x04", value=b"\x14\x04", reference_node_hash=f_hash, side=Side.LEFT)
 
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash, e_hash, f_hash, g_hash, h_hash])
 
@@ -185,6 +187,8 @@ class ChiaRoot:
 
 @overload
 def create_valid_node_values(
+    tree_id: bytes32,
+    generation: int,
     node_type: Literal[NodeType.INTERNAL],
     left_hash: bytes32,
     right_hash: bytes32,
@@ -193,11 +197,15 @@ def create_valid_node_values(
 
 @overload
 def create_valid_node_values(
+    tree_id: bytes32,
+    generation: int,
     node_type: Literal[NodeType.TERMINAL],
 ) -> Dict[str, Any]: ...
 
 
 def create_valid_node_values(
+    tree_id: bytes32,
+    generation: int,
     node_type: NodeType,
     left_hash: Optional[bytes32] = None,
     right_hash: Optional[bytes32] = None,
@@ -206,6 +214,8 @@ def create_valid_node_values(
         assert left_hash is not None
         assert right_hash is not None
         return {
+            "tree_id": tree_id,
+            "generation": generation,
             "hash": Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash),
             "node_type": node_type,
             "left": left_hash,
@@ -218,6 +228,8 @@ def create_valid_node_values(
         key = b""
         value = b""
         return {
+            "tree_id": tree_id,
+            "generation": generation,
             "hash": Program.to((key, value)).get_tree_hash(),
             "node_type": node_type,
             "left": None,
