@@ -98,7 +98,7 @@ class _CommandParsingStage:
         if self._needs_context:
             return True
         else:
-            return any([subclass.needs_context() for subclass in self.my_subclasses.values()])
+            return any(subclass.needs_context() for subclass in self.my_subclasses.values())
 
     def get_all_option_decorators(self) -> List[Callable[[SyncCmd], SyncCmd]]:
         all_option_decorators: List[Callable[[SyncCmd], SyncCmd]] = self.my_option_decorators
