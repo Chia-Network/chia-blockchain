@@ -4,9 +4,13 @@ $script_directory = Split-Path $MyInvocation.MyCommand.Path -Parent
 
 $command = $args[0]
 $parameters = [System.Collections.ArrayList]$args
-$parameters.RemoveAt(0)
+if ($parameters.Count -gt 0) {
+    $parameters.RemoveAt(0)
+}
 
 & $script_directory/venv/Scripts/Activate.ps1
-& $command @parameters
+if ($command) {
+    & $command @parameters
+}
 
 exit $LASTEXITCODE
