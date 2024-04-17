@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 import click
 import pytest
@@ -33,19 +33,22 @@ def test_is_annotated_false() -> None:
     assert not Annotation.is_annotated(file_string)
 
 
-def test_parse_valid_annotation() -> None:
-    """Test that parse returns an Annotation instance for a valid annotation."""
-    file_string = "# Package: example\n# Some other comment"
-    annotation = Annotation.parse(file_string)
-    assert isinstance(annotation, Annotation)
-    assert annotation.package == "example"
-
-
-def test_parse_invalid_annotation() -> None:
-    """Test that parse raises ValueError for a string without valid annotation."""
-    file_string = "# Some comment\n# Some other comment"
-    with pytest.raises(ValueError):
-        Annotation.parse(file_string)
+@pytest.mark.parametrize(
+    "file_string, expected",
+    [("# Package: example\n# Some other comment", "example"), ("# Some comment\n# Some other comment", None)],
+)
+def test_parse_annotation(file_string: str, expected: Optional[str]) -> None:
+    """
+    Test that parse returns an Annotation instance for a valid annotation or
+    raises ValueError for an invalid one.
+    """
+    if expected is None:
+        with pytest.raises(ValueError, match="Annotation not found"):
+            Annotation.parse(file_string)
+    else:
+        annotation = Annotation.parse(file_string)
+        assert isinstance(annotation, Annotation)
+        assert annotation.package == expected
 
 
 # Temporary directory fixture to create test files
