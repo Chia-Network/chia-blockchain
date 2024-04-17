@@ -148,7 +148,7 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
 
     for _field in _fields:
         field_name = _field.name
-        if hasattr(hints[field_name], COMMAND_HELPER_ATTRIBUTE_NAME) and hints[field_name].__command_helper__:
+        if getattr(hints[field_name], COMMAND_HELPER_ATTRIBUTE_NAME, False):
             subclasses[field_name] = _generate_command_parser(hints[field_name])
         else:
             if field_name == "context":
