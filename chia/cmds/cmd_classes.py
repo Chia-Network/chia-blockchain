@@ -150,17 +150,13 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
         field_name = _field.name
         if getattr(hints[field_name], COMMAND_HELPER_ATTRIBUTE_NAME, False):
             subclasses[field_name] = _generate_command_parser(hints[field_name])
-        else:
-            if field_name == "context":
-                if hints[field_name] != Context:
-                    raise ValueError("only Context can be the hint for variables named 'context'")
-                else:
-                    needs_context = True
-                    kwarg_names.append(field_name)
-                    continue
-
-            if "option_args" not in _field.metadata:
-                continue
+        elif field_name == "context":
+            if hints[field_name] != Context:
+                raise ValueError("only Context can be the hint for variables named 'context'")
+            else:
+                needs_context = True
+                kwarg_names.append(field_name)
+        elif "option_args" in _field.metadata:
             option_args = _field.metadata["option_args"]
 
             if "type" not in option_args:
