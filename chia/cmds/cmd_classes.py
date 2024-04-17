@@ -88,7 +88,7 @@ class HexString32(click.ParamType):
             self.fail(f"not a valid 32-byte hex string: {value!r} ({e})", param, ctx)
 
 
-@dataclass(frozen=True)
+@dataclass
 class _CommandParsingStage:
     my_dataclass: Type[ChiaCommand]
     my_option_decorators: List[Callable[[SyncCmd], SyncCmd]]
@@ -135,6 +135,15 @@ class _CommandParsingStage:
             cmd_to_return = decorator(cmd_to_return)
 
         return cmd_to_return
+
+    def __call__(self, *args: Any, **kwargs: Any) -> None:
+        instance = self.initialize_instance(*args, **kwargs)
+        if inspect.iscoroutinefunction(self.my_dataclass.run):
+            coro = instance.run()
+            assert coro is not None
+            asyncio.run(coro)
+        else:
+            instance.run()
 
 
 def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
@@ -220,22 +229,7 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
 def _convert_class_to_function(cls: Type[ChiaCommand]) -> SyncCmd:
     command_parser = _generate_command_parser(cls)
 
-    if inspect.iscoroutinefunction(cls.run):
-
-        async def async_base_cmd(*args: Any, **kwargs: Any) -> None:
-            await command_parser.initialize_instance(*args, **kwargs).run()  # type: ignore[misc]
-
-        def base_cmd(*args: Any, **kwargs: Any) -> None:
-            coro = async_base_cmd(*args, **kwargs)
-            assert coro is not None
-            asyncio.run(coro)
-
-    else:
-
-        def base_cmd(*args: Any, **kwargs: Any) -> None:
-            command_parser.initialize_instance(*args, **kwargs).run()
-
-    return command_parser.apply_decorators(base_cmd)
+    return command_parser.apply_decorators(command_parser)
 
 
 @dataclass_transform()
