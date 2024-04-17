@@ -32,7 +32,7 @@ from chia.util.streamable import is_type_SpecificOptional
 
 SyncCmd = Callable[..., None]
 
-COMMAND_HELPER_ATTRIBUTE_NAME = "__command_helper__"
+COMMAND_HELPER_ATTRIBUTE_NAME = "_is_command_helper"
 
 
 class SyncChiaCommand(Protocol):
