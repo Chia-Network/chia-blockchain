@@ -17,6 +17,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
 import anyio
 import pytest
 
+from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.data_funcs import (
@@ -3437,7 +3438,7 @@ async def test_unsubmitted_batch_update(
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
-@pytest.mark.parametrize("submit_on_chain", [True, False])
+@boolean_datacases(name="submit_on_chain", false="save as incomplete batch", true="submit directly on chain")
 @pytest.mark.anyio
 async def test_multistore_update(
     self_hostname: str,
@@ -3499,57 +3500,36 @@ async def test_multistore_update(
             else:
                 assert res == {"success": True}
         elif layer == InterfaceLayer.cli:
-            submit_str = "--submit" if submit_on_chain else "--no-submit"
-            args: List[str] = [
-                sys.executable,
-                "-m",
-                "chia",
+            process = await run_cli_cmd(
                 "data",
                 "update_multiple_stores",
                 "--changelist",
                 json.dumps(changelist),
                 "--data-rpc-port",
                 str(rpc_port),
-                f"{submit_str}",
-            ]
-            process = await asyncio.create_subprocess_exec(
-                *args,
-                env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                "--submit" if submit_on_chain else "--no-submit",
+                root_path=bt.root_path,
             )
-            await process.wait()
-            assert process.stdout is not None
-            assert process.stderr is not None
-            stdout = await process.stdout.read()
-            res = json.loads(stdout)
-            stderr = await process.stderr.read()
-            assert process.returncode == 0
-            if sys.version_info >= (3, 10, 6):
-                assert stderr == b""
-            else:  # pragma: no cover
-                # https://github.com/python/cpython/issues/92841
-                assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+            raw_output = await process.stdout.read()
+            res = json.loads(raw_output)
+
             if submit_on_chain:
                 update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
             else:
                 assert res == {"success": True}
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 res = await client.update_multiple_stores(
                     changelist=changelist,
                     submit_on_chain=submit_on_chain,
                     fee=None,
                 )
-            finally:
-                client.close()
-                await client.await_closed()
+
             if submit_on_chain:
                 update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
             else:
@@ -3570,46 +3550,25 @@ async def test_multistore_update(
                 )
                 update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
             elif layer == InterfaceLayer.cli:
-                args = [
-                    sys.executable,
-                    "-m",
-                    "chia",
+                process = await run_cli_cmd(
                     "data",
                     "submit_all_pending_roots",
                     "--data-rpc-port",
                     str(rpc_port),
-                ]
-                process = await asyncio.create_subprocess_exec(
-                    *args,
-                    env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
+                    root_path=bt.root_path,
                 )
-                await process.wait()
-                assert process.stdout is not None
-                assert process.stderr is not None
-                stdout = await process.stdout.read()
-                res = json.loads(stdout)
-                stderr = await process.stderr.read()
-                assert process.returncode == 0
-                if sys.version_info >= (3, 10, 6):
-                    assert stderr == b""
-                else:  # pragma: no cover
-                    # https://github.com/python/cpython/issues/92841
-                    assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+                raw_output = await process.stdout.read()
+                res = json.loads(raw_output)
                 update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
             elif layer == InterfaceLayer.client:
-                client = await DataLayerRpcClient.create(
+                async with DataLayerRpcClient.create_as_context(
                     self_hostname=self_hostname,
                     port=rpc_port,
                     root_path=bt.root_path,
                     net_config=bt.config,
-                )
-                try:
+                ) as client:
                     res = await client.submit_all_pending_roots(fee=None)
-                finally:
-                    client.close()
-                    await client.await_closed()
+
                 update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
             else:  # pragma: no cover
                 assert False, "unhandled parametrization"
