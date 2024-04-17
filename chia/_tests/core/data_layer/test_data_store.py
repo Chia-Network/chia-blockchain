@@ -108,27 +108,27 @@ async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
 
 @pytest.mark.parametrize(argnames=["length"], argvalues=[[length] for length in [*range(0, 32), *range(33, 48)]])
 @pytest.mark.anyio
-async def test_create_tree_fails_for_not_bytes32(raw_data_store: DataStore, length: int) -> None:
-    bad_tree_id = b"\0" * length
+async def test_create_store_fails_for_not_bytes32(raw_data_store: DataStore, length: int) -> None:
+    bad_store_id = b"\0" * length
 
     # TODO: require a more specific exception
     with pytest.raises(Exception):
         # type ignore since we are trying to intentionally pass a bad argument
-        await raw_data_store.create_tree(store_id=bad_tree_id)  # type: ignore[arg-type]
+        await raw_data_store.create_tree(store_id=bad_store_id)  # type: ignore[arg-type]
 
 
 @pytest.mark.anyio
 async def test_get_trees(raw_data_store: DataStore) -> None:
-    expected_tree_ids = set()
+    expected_store_ids = set()
 
     for n in range(10):
         store_id = bytes32(b"\0" * 31 + bytes([n]))
         await raw_data_store.create_tree(store_id=store_id)
-        expected_tree_ids.add(store_id)
+        expected_store_ids.add(store_id)
 
-    tree_ids = await raw_data_store.get_tree_ids()
+    store_ids = await raw_data_store.get_store_ids()
 
-    assert tree_ids == expected_tree_ids
+    assert store_ids == expected_store_ids
 
 
 @pytest.mark.anyio
@@ -1241,7 +1241,7 @@ async def test_subscribe_unsubscribe(data_store: DataStore, store_id: bytes32) -
 
     await data_store.unsubscribe(store_id)
     assert await data_store.get_subscriptions() == []
-    tree_id2 = bytes32([0] * 32)
+    store_id2 = bytes32([0] * 32)
 
     await data_store.subscribe(
         Subscription(
@@ -1250,7 +1250,7 @@ async def test_subscribe_unsubscribe(data_store: DataStore, store_id: bytes32) -
     )
     await data_store.subscribe(
         Subscription(
-            tree_id2, [ServerInfo("http://127:0:0:1/8000", 300, 300), ServerInfo("http://127:0:0:1/8001", 400, 400)]
+            store_id2, [ServerInfo("http://127:0:0:1/8000", 300, 300), ServerInfo("http://127:0:0:1/8001", 400, 400)]
         )
     )
     subscriptions = await data_store.get_subscriptions()
@@ -1259,7 +1259,7 @@ async def test_subscribe_unsubscribe(data_store: DataStore, store_id: bytes32) -
             store_id, [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)]
         ),
         Subscription(
-            tree_id2, [ServerInfo("http://127:0:0:1/8000", 300, 300), ServerInfo("http://127:0:0:1/8001", 400, 400)]
+            store_id2, [ServerInfo("http://127:0:0:1/8000", 300, 300), ServerInfo("http://127:0:0:1/8001", 400, 400)]
         ),
     ]
 
@@ -1577,9 +1577,9 @@ async def test_benchmark_batch_insert_speed(
 @pytest.mark.anyio
 async def test_delete_store_data(raw_data_store: DataStore) -> None:
     store_id = bytes32(b"\0" * 32)
-    tree_id_2 = bytes32(b"\0" * 31 + b"\1")
+    store_id_2 = bytes32(b"\0" * 31 + b"\1")
     await raw_data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
-    await raw_data_store.create_tree(store_id=tree_id_2, status=Status.COMMITTED)
+    await raw_data_store.create_tree(store_id=store_id_2, status=Status.COMMITTED)
     total_keys = 4
     keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
     batch1 = [
@@ -1591,8 +1591,8 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
     batch2.append({"action": "insert", "key": keys[3], "value": keys[3]})
     assert batch1 != batch2
     await raw_data_store.insert_batch(store_id, batch1, status=Status.COMMITTED)
-    await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
-    keys_values_before = await raw_data_store.get_keys_values(tree_id_2)
+    await raw_data_store.insert_batch(store_id_2, batch2, status=Status.COMMITTED)
+    keys_values_before = await raw_data_store.get_keys_values(store_id_2)
     async with raw_data_store.db_wrapper.reader() as reader:
         result = await reader.execute("SELECT * FROM node")
         nodes = await result.fetchall()
@@ -1603,7 +1603,7 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
     assert [kv_nodes_before[key] for key in keys] == keys
     await raw_data_store.delete_store_data(store_id)
     # Deleting from `node` table doesn't alter other stores.
-    keys_values_after = await raw_data_store.get_keys_values(tree_id_2)
+    keys_values_after = await raw_data_store.get_keys_values(store_id_2)
     assert keys_values_before == keys_values_after
     async with raw_data_store.db_wrapper.reader() as reader:
         result = await reader.execute("SELECT * FROM node")
@@ -1618,14 +1618,14 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
         else:
             # `keys[2]` was only present in the first store.
             assert keys[i] not in kv_nodes_after
-    assert not await raw_data_store.tree_id_exists(store_id)
-    await raw_data_store.delete_store_data(tree_id_2)
+    assert not await raw_data_store.store_id_exists(store_id)
+    await raw_data_store.delete_store_data(store_id_2)
     async with raw_data_store.db_wrapper.reader() as reader:
         async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
             row_count = await cursor.fetchone()
             assert row_count is not None
             assert row_count[0] == 0
-    assert not await raw_data_store.tree_id_exists(tree_id_2)
+    assert not await raw_data_store.store_id_exists(store_id_2)
 
 
 @pytest.mark.anyio
@@ -1635,8 +1635,8 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
         num_stores = 50
         total_keys = 150
         keys_deleted_per_store = 3
-        tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
-        for store_id in tree_ids:
+        store_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
+        for store_id in store_ids:
             await raw_data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
         original_keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
         batches = []
@@ -1646,7 +1646,7 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
             ]
             batches.append(batch)
 
-        for store_id, batch in zip(tree_ids, batches):
+        for store_id, batch in zip(store_ids, batches):
             await raw_data_store.insert_batch(store_id, batch, status=Status.COMMITTED)
 
         for tree_index in range(num_stores):
@@ -1660,7 +1660,7 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
             keys_before_index = set(original_keys[: tree_index * keys_deleted_per_store])
             assert keys_after_index.issubset(keys)
             assert keys.isdisjoint(keys_before_index)
-            await raw_data_store.delete_store_data(tree_ids[tree_index])
+            await raw_data_store.delete_store_data(store_ids[tree_index])
 
         async with raw_data_store.db_wrapper.reader() as reader:
             async with reader.execute("SELECT COUNT(*) FROM node") as cursor:
@@ -1672,11 +1672,11 @@ async def test_delete_store_data_multiple_stores(raw_data_store: DataStore) -> N
 @pytest.mark.parametrize("common_keys_count", [1, 250, 499])
 @pytest.mark.anyio
 async def test_delete_store_data_with_common_values(raw_data_store: DataStore, common_keys_count: int) -> None:
-    tree_id_1 = bytes32(b"\x00" * 31 + b"\x01")
-    tree_id_2 = bytes32(b"\x00" * 31 + b"\x02")
+    store_id_1 = bytes32(b"\x00" * 31 + b"\x01")
+    store_id_2 = bytes32(b"\x00" * 31 + b"\x02")
 
-    await raw_data_store.create_tree(store_id=tree_id_1, status=Status.COMMITTED)
-    await raw_data_store.create_tree(store_id=tree_id_2, status=Status.COMMITTED)
+    await raw_data_store.create_tree(store_id=store_id_1, status=Status.COMMITTED)
+    await raw_data_store.create_tree(store_id=store_id_2, status=Status.COMMITTED)
 
     key_offset = 1000
     total_keys_per_store = 500
@@ -1692,10 +1692,10 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
     batch1 = [{"action": "insert", "key": key, "value": key} for key in common_keys.union(unique_keys_1)]
     batch2 = [{"action": "insert", "key": key, "value": key} for key in common_keys.union(unique_keys_2)]
 
-    await raw_data_store.insert_batch(tree_id_1, batch1, status=Status.COMMITTED)
-    await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
+    await raw_data_store.insert_batch(store_id_1, batch1, status=Status.COMMITTED)
+    await raw_data_store.insert_batch(store_id_2, batch2, status=Status.COMMITTED)
 
-    await raw_data_store.delete_store_data(tree_id_1)
+    await raw_data_store.delete_store_data(store_id_1)
     async with raw_data_store.db_wrapper.reader() as reader:
         result = await reader.execute("SELECT * FROM node")
         nodes = await result.fetchall()
@@ -1712,8 +1712,8 @@ async def test_delete_store_data_with_common_values(raw_data_store: DataStore, c
 async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStore, pending_status: Status) -> None:
     num_stores = 5
     total_keys = 15
-    tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
-    for store_id in tree_ids:
+    store_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
+    for store_id in store_ids:
         await raw_data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     original_keys = [key.to_bytes(4, byteorder="big") for key in range(total_keys)]
     batches = []
@@ -1724,10 +1724,10 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
         end_index = (i + 1) * keys_per_pending_root
         batch = [{"action": "insert", "key": key, "value": key} for key in original_keys[start_index:end_index]]
         batches.append(batch)
-    for store_id, batch in zip(tree_ids, batches):
+    for store_id, batch in zip(store_ids, batches):
         await raw_data_store.insert_batch(store_id, batch, status=pending_status)
 
-    store_id = tree_ids[-1]
+    store_id = store_ids[-1]
     batch = [{"action": "insert", "key": key, "value": key} for key in original_keys]
     await raw_data_store.insert_batch(store_id, batch, status=Status.COMMITTED)
 
@@ -1747,7 +1747,7 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
     assert keys == set(original_keys[: (num_stores - 1) * keys_per_pending_root])
 
     for index in range(num_stores - 1):
-        store_id = tree_ids[index]
+        store_id = store_ids[index]
         root = await raw_data_store.get_pending_root(store_id)
         assert root is not None
         await raw_data_store.change_root_status(root, Status.COMMITTED)
@@ -1766,12 +1766,12 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
     random = Random()
     random.seed(100, version=2)
 
-    tree_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
-    for store_id in tree_ids:
+    store_ids = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_stores)]
+    for store_id in store_ids:
         await raw_data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     keys = [key.to_bytes(4, byteorder="big") for key in range(num_keys)]
     for repetition in range(repetitions):
-        for index, store_id in enumerate(tree_ids):
+        for index, store_id in enumerate(store_ids):
             values = [
                 (value + values_offset * repetition).to_bytes(4, byteorder="big")
                 for value in range(index * num_keys, (index + 1) * num_keys)
@@ -1781,7 +1781,7 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
                 batch.append({"action": "upsert", "key": key, "value": value})
             await raw_data_store.insert_batch(store_id, batch, status=Status.COMMITTED)
 
-        for index, store_id in enumerate(tree_ids):
+        for index, store_id in enumerate(store_ids):
             values = [
                 (value + values_offset * repetition).to_bytes(4, byteorder="big")
                 for value in range(index * num_keys, (index + 1) * num_keys)

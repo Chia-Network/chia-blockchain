@@ -514,7 +514,7 @@ class DataStore:
                     bad_trees.append(store_id)
 
             if len(bad_trees) > 0:
-                raise TreeGenerationIncrementingError(tree_ids=bad_trees)
+                raise TreeGenerationIncrementingError(store_ids=bad_trees)
 
     async def _check_hashes(self) -> None:
         async with self.db_wrapper.reader() as reader:
@@ -549,13 +549,13 @@ class DataStore:
 
         return tree_root.node_hash is None
 
-    async def get_tree_ids(self) -> Set[bytes32]:
+    async def get_store_ids(self) -> Set[bytes32]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute("SELECT DISTINCT tree_id FROM root")
 
-            tree_ids = {bytes32(row["tree_id"]) async for row in cursor}
+            store_ids = {bytes32(row["tree_id"]) async for row in cursor}
 
-        return tree_ids
+        return store_ids
 
     async def get_tree_generation(self, store_id: bytes32) -> int:
         async with self.db_wrapper.reader() as reader:
@@ -593,7 +593,7 @@ class DataStore:
 
         return Root.from_row(row=row)
 
-    async def tree_id_exists(self, store_id: bytes32) -> bool:
+    async def store_id_exists(self, store_id: bytes32) -> bool:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 "SELECT 1 FROM root WHERE tree_id == :tree_id AND status == :status LIMIT 1",

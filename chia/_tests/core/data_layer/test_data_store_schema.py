@@ -168,10 +168,15 @@ async def test_node_terminal_key_value_not_null(data_store: DataStore, store_id:
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
 @pytest.mark.anyio
-async def test_root_tree_id_must_be_32(data_store: DataStore, store_id: bytes32, length: int) -> None:
+async def test_root_store_id_must_be_32(data_store: DataStore, store_id: bytes32, length: int) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
-    bad_tree_id = bytes([0] * length)
-    values = {"tree_id": bad_tree_id, "generation": 0, "node_hash": example.terminal_nodes[0], "status": Status.PENDING}
+    bad_store_id = bytes([0] * length)
+    values = {
+        "tree_id": bad_store_id,
+        "generation": 0,
+        "node_hash": example.terminal_nodes[0],
+        "status": Status.PENDING,
+    }
 
     async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
@@ -185,7 +190,7 @@ async def test_root_tree_id_must_be_32(data_store: DataStore, store_id: bytes32,
 
 
 @pytest.mark.anyio
-async def test_root_tree_id_must_not_be_null(data_store: DataStore, store_id: bytes32) -> None:
+async def test_root_store_id_must_not_be_null(data_store: DataStore, store_id: bytes32) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
     values = {"tree_id": None, "generation": 0, "node_hash": example.terminal_nodes[0], "status": Status.PENDING}
 
@@ -299,7 +304,7 @@ async def test_root_status_must_not_be_null(data_store: DataStore, store_id: byt
 
 
 @pytest.mark.anyio
-async def test_root_tree_id_generation_must_be_unique(data_store: DataStore, store_id: bytes32) -> None:
+async def test_root_store_id_generation_must_be_unique(data_store: DataStore, store_id: bytes32) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
     values = {"tree_id": store_id, "generation": 0, "node_hash": example.terminal_nodes[0], "status": Status.COMMITTED}
 
@@ -335,7 +340,7 @@ async def test_ancestors_ancestor_must_be_32(
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
 @pytest.mark.anyio
-async def test_ancestors_tree_id_must_be_32(
+async def test_ancestors_store_id_must_be_32(
     data_store: DataStore,
     store_id: bytes32,
     length: int,
@@ -354,7 +359,7 @@ async def test_ancestors_tree_id_must_be_32(
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
 @pytest.mark.anyio
-async def test_subscriptions_tree_id_must_be_32(
+async def test_subscriptions_store_id_must_be_32(
     data_store: DataStore,
     store_id: bytes32,
     length: int,

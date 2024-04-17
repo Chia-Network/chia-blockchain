@@ -53,7 +53,7 @@ def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32]
 
 
 @pytest.fixture(name="store_id", scope="function")
-def tree_id_fixture() -> bytes32:
+def store_id_fixture() -> bytes32:
     base = b"a store id"
     pad = b"." * (32 - len(base))
     return bytes32(pad + base)

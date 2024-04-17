@@ -497,7 +497,7 @@ class DataLayer:
 
         await self._update_confirmation_status(store_id=store_id)
 
-        if not await self.data_store.tree_id_exists(store_id=store_id):
+        if not await self.data_store.store_id_exists(store_id=store_id):
             await self.data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
 
         timestamp = int(time.time())
@@ -720,7 +720,7 @@ class DataLayer:
         if store_id not in (subscription.store_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given store_id.")
         filenames: List[str] = []
-        if await self.data_store.tree_id_exists(store_id) and not retain_data:
+        if await self.data_store.store_id_exists(store_id) and not retain_data:
             generation = await self.data_store.get_tree_generation(store_id)
             all_roots = await self.data_store.get_roots_between(store_id, 1, generation + 1)
             for root in all_roots:
@@ -805,11 +805,11 @@ class DataLayer:
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
 
-            # Subscribe to all local tree_ids that we can find on chain.
-            local_tree_ids = await self.data_store.get_tree_ids()
-            subscription_tree_ids = {subscription.store_id for subscription in subscriptions}
-            for local_id in local_tree_ids:
-                if local_id not in subscription_tree_ids:
+            # Subscribe to all local store_ids that we can find on chain.
+            local_store_ids = await self.data_store.get_store_ids()
+            subscription_store_ids = {subscription.store_id for subscription in subscriptions}
+            for local_id in local_store_ids:
+                if local_id not in subscription_store_ids:
                     try:
                         subscription = await self.subscribe(local_id, [])
                         subscriptions.insert(0, subscription)
@@ -1106,7 +1106,7 @@ class DataLayer:
     async def get_sync_status(self, store_id: bytes32) -> SyncStatus:
         await self._update_confirmation_status(store_id=store_id)
 
-        if not await self.data_store.tree_id_exists(store_id=store_id):
+        if not await self.data_store.store_id_exists(store_id=store_id):
             raise Exception(f"No store id stored in the local database for {store_id}")
         root = await self.data_store.get_tree_root(store_id=store_id)
         singleton_record = await self.wallet_rpc.dl_latest_singleton(store_id, True)

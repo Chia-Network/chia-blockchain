@@ -27,8 +27,8 @@ def is_filename_valid(filename: str) -> bool:
     split = filename.split("-")
 
     try:
-        raw_tree_id, raw_node_hash, file_type, raw_generation, raw_version, *rest = split
-        store_id = bytes32(bytes.fromhex(raw_tree_id))
+        raw_store_id, raw_node_hash, file_type, raw_generation, raw_version, *rest = split
+        store_id = bytes32(bytes.fromhex(raw_store_id))
         node_hash = bytes32(bytes.fromhex(raw_node_hash))
         generation = int(raw_generation)
     except ValueError:
