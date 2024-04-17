@@ -257,7 +257,7 @@ class DataStore:
             if node_hash is not None and status == Status.COMMITTED:
                 values = {
                     "hash": node_hash,
-                    "store_id": store_id,
+                    "tree_id": store_id,
                     "generation": generation,
                 }
                 await writer.execute(
