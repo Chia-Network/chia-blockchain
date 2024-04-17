@@ -1314,7 +1314,7 @@ class DataStore:
             await writer.execute(query, params)
 
     async def get_leaf_at_minimum_height(self, root_hash: bytes32) -> TerminalNode:
-        root_node = await self.get_node(intermediate_root.node_hash)
+        root_node = await self.get_node(root_hash)
         queue: List[Node] = [root_node]
         while True:
             assert len(queue) > 0
