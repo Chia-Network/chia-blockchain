@@ -74,3 +74,4 @@ Once installed, an [Intro to Chia][link-intro] guide is available in the [Chia D
 [link-youtube]:       https://www.youtube.com/chianetwork
 
 [logo-chia]:          https://www.chia.net/wp-content/uploads/2022/09/chia-logo.svg "Chia logo"
+
