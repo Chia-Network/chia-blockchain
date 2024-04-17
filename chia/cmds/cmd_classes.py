@@ -92,7 +92,7 @@ class HexString32(click.ParamType):
 class _CommandParsingStage:
     my_dataclass: Type[ChiaCommand]
     my_option_decorators: List[Callable[[SyncCmd], SyncCmd]]
-    my_subclasses: Dict[str, _CommandParsingStage]
+    my_members: Dict[str, _CommandParsingStage]
     my_kwarg_names: List[str]
     _needs_context: bool
 
@@ -100,12 +100,12 @@ class _CommandParsingStage:
         if self._needs_context:
             return True
         else:
-            return any(subclass.needs_context() for subclass in self.my_subclasses.values())
+            return any(member.needs_context() for member in self.my_members.values())
 
     def get_all_option_decorators(self) -> List[Callable[[SyncCmd], SyncCmd]]:
         all_option_decorators: List[Callable[[SyncCmd], SyncCmd]] = self.my_option_decorators
-        for subclass in self.my_subclasses.values():
-            all_option_decorators.extend(subclass.get_all_option_decorators())
+        for member in self.my_members.values():
+            all_option_decorators.extend(member.get_all_option_decorators())
         return all_option_decorators
 
     def initialize_instance(self, **kwargs: Any) -> ChiaCommand:
@@ -113,8 +113,8 @@ class _CommandParsingStage:
         for kwarg_name in self.my_kwarg_names:
             kwargs_to_pass[kwarg_name] = kwargs[kwarg_name]
 
-        for subclass_arg_name, subclass in self.my_subclasses.items():
-            kwargs_to_pass[subclass_arg_name] = subclass.initialize_instance(**kwargs)
+        for member_arg_name, member in self.my_members.items():
+            kwargs_to_pass[member_arg_name] = member.initialize_instance(**kwargs)
 
         return self.my_dataclass(**kwargs_to_pass)
 
@@ -149,7 +149,7 @@ class _CommandParsingStage:
 def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
     option_decorators: List[Callable[[SyncCmd], SyncCmd]] = []
     kwarg_names: List[str] = []
-    subclasses: Dict[str, _CommandParsingStage] = {}
+    members: Dict[str, _CommandParsingStage] = {}
     needs_context: bool = False
 
     hints = get_type_hints(cls)
@@ -158,7 +158,7 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
     for _field in _fields:
         field_name = _field.name
         if getattr(hints[field_name], COMMAND_HELPER_ATTRIBUTE_NAME, False):
-            subclasses[field_name] = _generate_command_parser(hints[field_name])
+            members[field_name] = _generate_command_parser(hints[field_name])
         elif field_name == "context":
             if hints[field_name] != Context:
                 raise ValueError("only Context can be the hint for variables named 'context'")
@@ -220,7 +220,7 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
     return _CommandParsingStage(
         my_dataclass=cls,
         my_option_decorators=option_decorators,
-        my_subclasses=subclasses,
+        my_members=members,
         my_kwarg_names=kwarg_names,
         _needs_context=needs_context,
     )
