@@ -256,7 +256,20 @@ jobs:
         env:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
         run: |
-          pytest --cov=chia --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml='junit-data/junit.${{ env.JOB_FILE_NAME }}.xml' --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+          for retry in {1..5}
+          do
+            PYTEST_OUTPUT="pytest_output.${retry}"
+            RETRY_PREFIX="attempt: ${retry}: "
+            if pytest --cov=chia --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml='junit-data/junit.${{ env.JOB_FILE_NAME }}.xml' --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }} | tee "${PYTEST_OUTPUT}" | sed "s/^/${RETRY_PREFIX}/"
+            then
+              exit 0
+            fi
+
+            if ! grep -E '(aiohttp\.client_exceptions\.ClientOSError: \[Errno 54\] Connection reset by peer)' "{$PYTEST_OUTPUT}"
+            then
+              exit 1
+            fi
+          done
 
       - name: Move back to chia/ for coverage
         run: |
