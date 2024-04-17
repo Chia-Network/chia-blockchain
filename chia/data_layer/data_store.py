@@ -157,6 +157,14 @@ class DataStore:
                 )
                 await writer.execute(
                     """
+                    CREATE TABLE IF NOT EXISTS schema(
+                        version_id TEXT PRIMARY KEY,
+                        applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+                await writer.execute(
+                    """
                     CREATE INDEX IF NOT EXISTS node_hash ON root(node_hash)
                     """
                 )
@@ -172,6 +180,40 @@ class DataStore:
     async def transaction(self) -> AsyncIterator[None]:
         async with self.db_wrapper.writer():
             yield
+
+    async def migrate_db(self) -> None:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute("SELECT * FROM schema")
+            row = await cursor.fetchone()
+            if row is not None:
+                version = row["version_id"]
+                if version != "v1.0":
+                    raise Exception("Unknown version")
+                log.info(f"Found DB schema version {version}. No migration needed.")
+                return
+
+        version = "v1.0"
+        log.info(f"Initiating migration to version {version}")
+        async with self.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+            await writer.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS new_root(
+                    tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                    generation INTEGER NOT NULL CHECK(generation >= 0),
+                    node_hash BLOB,
+                    status INTEGER NOT NULL CHECK(
+                        {" OR ".join(f"status == {status}" for status in Status)}
+                    ),
+                    PRIMARY KEY(tree_id, generation),
+                    FOREIGN KEY(node_hash) REFERENCES node(hash)
+                )
+                """
+            )
+            await writer.execute("INSERT INTO new_root SELECT * FROM root")
+            await writer.execute("DROP TABLE root")
+            await writer.execute("ALTER TABLE new_root RENAME TO root")
+            await writer.execute("INSERT INTO schema (version_id) VALUES (?)", (version,))
+        log.info(f"Finished migrating DB to version {version}")
 
     async def _insert_root(
         self,
