@@ -3510,6 +3510,7 @@ async def test_multistore_update(
                 "--submit" if submit_on_chain else "--no-submit",
                 root_path=bt.root_path,
             )
+            assert process.stdout is not None
             raw_output = await process.stdout.read()
             res = json.loads(raw_output)
 
@@ -3557,6 +3558,7 @@ async def test_multistore_update(
                     str(rpc_port),
                     root_path=bt.root_path,
                 )
+                assert process.stdout is not None
                 raw_output = await process.stdout.read()
                 res = json.loads(raw_output)
                 update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
