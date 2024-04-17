@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -120,11 +120,10 @@ class Node(metaclass=ABCMeta):
 class MerkleSet:
     root: Node
 
-    def __init__(self, root: Optional[Node] = None):
-        if root is None:
-            self.root = _empty
-        else:
-            self.root = root
+    def __init__(self, leafs: Iterable[bytes32]):
+        self.root = _empty
+        for leaf in leafs:
+            self.root = self.root.add(leaf, 0)
 
     def get_root(self) -> bytes32:
         return compress_root(self.root.get_hash())
@@ -141,6 +140,12 @@ class MerkleSet:
         newhashes: List[bytes] = []
         self.root._audit(newhashes, [])
         assert newhashes == sorted(newhashes)
+
+    @staticmethod
+    def _with_root(root: Node) -> MerkleSet:
+        s = MerkleSet([])
+        s.root = root
+        return s
 
 
 class EmptyNode(Node):
@@ -346,7 +351,7 @@ def deserialize_proof(proof: bytes) -> MerkleSet:
         r, pos = _deserialize(proof, 0, [])
         if pos != len(proof):
             raise SetError()
-        return MerkleSet(r)
+        return MerkleSet._with_root(r)
     except IndexError:
         raise SetError()
 

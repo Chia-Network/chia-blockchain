@@ -1916,3 +1916,16 @@ async def test_insert_key_already_present(data_store: DataStore, tree_id: bytes3
     )
     with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
         await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+
+
+@pytest.mark.anyio
+async def test_migration_unknown_version(data_store: DataStore) -> None:
+    async with data_store.db_wrapper.writer() as writer:
+        await writer.execute(
+            "INSERT INTO schema(version_id) VALUES(:version_id)",
+            {
+                "version_id": "unknown version",
+            },
+        )
+    with pytest.raises(Exception, match="Unknown version"):
+        await data_store.migrate_db()
