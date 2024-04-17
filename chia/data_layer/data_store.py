@@ -560,7 +560,7 @@ class DataStore:
     async def get_tree_generation(self, store_id: bytes32) -> int:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT MAX(generation) FROM root WHERE store_id == :store_id AND status == :status",
+                "SELECT MAX(generation) FROM root WHERE tree_id == :tree_id AND status == :status",
                 {"tree_id": store_id, "status": Status.COMMITTED.value},
             )
             row = await cursor.fetchone()
