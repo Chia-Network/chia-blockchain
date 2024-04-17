@@ -12,6 +12,8 @@ jobs:
   main:
     runs-on: ubuntu-latest
     steps:
+      - name: Run
+        run: echo "hello"
       - name: check if prs are behind main
         uses: Chia-Network/actions/label-conflict@main
         with:
