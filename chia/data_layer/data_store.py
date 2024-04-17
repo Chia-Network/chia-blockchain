@@ -1763,7 +1763,7 @@ class DataStore:
             new_servers = [server_info for server_info in subscription.servers_info if server_info.url not in old_urls]
             for server_info in new_servers:
                 await writer.execute(
-                    "INSERT INTO subscriptions(store_id, url, ignore_till, num_consecutive_failures, from_wallet) "
+                    "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
                     "VALUES (:tree_id, :url, :ignore_till, :num_consecutive_failures, 0)",
                     {
                         "tree_id": subscription.store_id,
