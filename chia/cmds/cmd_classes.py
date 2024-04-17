@@ -32,6 +32,8 @@ from chia.util.streamable import is_type_SpecificOptional
 
 SyncCmd = Callable[..., None]
 
+COMMAND_HELPER_ATTRIBUTE_NAME = "__command_helper__"
+
 
 class SyncChiaCommand(Protocol):
     def run(self) -> None: ...
@@ -146,7 +148,7 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
 
     for _field in _fields:
         field_name = _field.name
-        if hasattr(hints[field_name], "__command_helper__") and hints[field_name].__command_helper__:
+        if hasattr(hints[field_name], COMMAND_HELPER_ATTRIBUTE_NAME) and hints[field_name].__command_helper__:
             subclasses[field_name] = _generate_command_parser(hints[field_name])
         else:
             if field_name == "context":
@@ -267,7 +269,7 @@ def command_helper(cls: Type[Any]) -> Type[Any]:
         new_cls = dataclass(frozen=True)(cls)  # pragma: no cover
     else:
         new_cls = dataclass(frozen=True, kw_only=True)(cls)
-    setattr(new_cls, "__command_helper__", True)
+    setattr(new_cls, COMMAND_HELPER_ATTRIBUTE_NAME, True)
     return new_cls
 
 
