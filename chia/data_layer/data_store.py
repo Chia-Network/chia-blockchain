@@ -1313,6 +1313,20 @@ class DataStore:
         else:
             await writer.execute(query, params)
 
+    async def get_leaf_at_minimum_height(self, root_hash: bytes32) -> TerminalNode:
+        root_node = await self.get_node(intermediate_root.node_hash)
+        queue: List[Node] = [root_node]
+        while True:
+            assert len(queue) > 0
+            node = queue.pop(0)
+            if isinstance(node, InternalNode):
+                left_node = await self.get_node(node.left_hash)
+                right_node = await self.get_node(node.right_hash)
+                queue.append(left_node)
+                queue.append(right_node)
+            elif isinstance(node, TerminalNode):
+                return node
+
     async def insert_batch(
         self,
         tree_id: bytes32,
@@ -1337,6 +1351,13 @@ class DataStore:
 
             assert latest_local_root is not None
 
+            key_hash_frequency: Dict[bytes32, int] = {}
+            for change in changelist:
+                key = change["key"]
+                hash = key_hash(key)
+                key_hash_frequency[hash] = key_hash_frequency.get(hash, 0) + 1
+
+            pending_autoinsert_hashes: List[bytes32] = []
             for change in changelist:
                 if change["action"] == "insert":
                     key = change["key"]
@@ -1344,6 +1365,14 @@ class DataStore:
                     reference_node_hash = change.get("reference_node_hash", None)
                     side = change.get("side", None)
                     if reference_node_hash is None and side is None:
+                        hash = key_hash(key)
+                        # The key is not referenced in any other operation but this autoinsert, hence the order
+                        # of performing these should not matter. We perform all these autoinserts as a batch
+                        # at the end, to speed up the tree processing operations.
+                        if key_hash_frequency[hash] == 1:
+                            terminal_node_hash = await self._insert_terminal_node(key, value)
+                            pending_autoinsert_hashes.append(terminal_node_hash)
+                            continue
                         insert_result = await self.autoinsert(
                             key, value, tree_id, True, Status.COMMITTED, root=latest_local_root
                         )
@@ -1374,6 +1403,43 @@ class DataStore:
                     latest_local_root = insert_result.root
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
+
+            # Start with the leaf nodes and pair them to form new nodes at the next level up, repeating this process
+            # in a bottom-up fashion until a single root node remains. This constructs a balanced tree from the leaves.
+            while len(pending_autoinsert_hashes) > 1:
+                new_hashes: List[bytes32] = []
+                for i in range(0, len(pending_autoinsert_hashes) - 1, 2):
+                    internal_node_hash = await self._insert_internal_node(
+                        pending_autoinsert_hashes[i], pending_autoinsert_hashes[i + 1]
+                    )
+                    new_hashes.append(internal_node_hash)
+                if len(pending_autoinsert_hashes) % 2 != 0:
+                    new_hashes.append(pending_autoinsert_hashes[-1])
+
+                pending_autoinsert_hashes = new_hashes
+
+            if len(pending_autoinsert_hashes):
+                subtree_hash = pending_autoinsert_hashes[0]
+                if latest_local_root is None or latest_local_root.node_hash is None:
+                    await self._insert_root(tree_id=tree_id, node_hash=subtree_hash, status=Status.COMMITTED)
+                else:
+                    min_height_leaf = await self.get_leaf_at_minimum_height(latest_local_root.node_hash)
+                    ancestors = await self.get_ancestors_common(
+                        node_hash=min_height_leaf.hash,
+                        tree_id=tree_id,
+                        root_hash=latest_local_root.node_hash,
+                        generation=latest_local_root.generation,
+                        use_optimized=True,
+                    )
+                    await self.update_ancestor_hashes_on_insert(
+                        tree_id=tree_id,
+                        left=min_height_leaf.hash,
+                        right=subtree_hash,
+                        traversal_node_hash=min_height_leaf.hash,
+                        ancestors=ancestors,
+                        status=Status.COMMITTED,
+                        root=latest_local_root,
+                    )
 
             root = await self.get_tree_root(tree_id=tree_id)
             if root.node_hash == old_root.node_hash:
