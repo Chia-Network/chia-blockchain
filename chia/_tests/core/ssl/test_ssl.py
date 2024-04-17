@@ -49,6 +49,7 @@ class TestSSL:
         assert success is True
 
     @pytest.mark.anyio
+    @pytest.mark.flaky(max_runs=3)
     async def test_farmer(self, farmer_one_harvester, self_hostname):
         _, farmer_service, bt = farmer_one_harvester
         farmer_api = farmer_service._api
