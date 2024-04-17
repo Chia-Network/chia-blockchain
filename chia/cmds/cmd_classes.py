@@ -157,12 +157,13 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                 needs_context = True
                 kwarg_names.append(field_name)
         elif "option_args" in _field.metadata:
-            option_args = _field.metadata["option_args"]
+            option_args: Dict[str, Any] = {"multiple": False}
+            option_args.update(_field.metadata["option_args"])
 
             if "type" not in option_args:
                 origin = get_origin(hints[field_name])
                 if origin == collections.abc.Sequence:
-                    if "multiple" not in option_args or not option_args["multiple"]:
+                    if not option_args["multiple"]:
                         raise TypeError("Can only use Sequence with multiple=True")
                     else:
                         type_arg = get_args(hints[field_name])[0]
@@ -174,7 +175,7 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                                 f"Default {option_args['default']} is not a tuple "
                                 f"or all of its elements are not of type {type_arg}"
                             )
-                elif "multiple" in option_args:
+                elif option_args["multiple"]:
                     raise TypeError("Options with multiple=True must be Sequence[T]")
                 elif is_type_SpecificOptional(hints[field_name]):
                     if "required" not in option_args or option_args["required"]:
