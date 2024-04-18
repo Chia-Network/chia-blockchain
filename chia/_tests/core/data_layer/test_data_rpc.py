@@ -3608,6 +3608,13 @@ async def test_multistore_update(
         with pytest.raises(Exception, match=f"Store id {store_id.hex()} must appear in a single update"):
             await data_rpc_api.multistore_batch_update({"store_updates": store_updates})
 
+        store_updates = [{"changelist": changelist}]
+        with pytest.raises(Exception, match=f"Each update must specify a store_id"):
+            await data_rpc_api.multistore_batch_update({"store_updates": store_updates})
+        store_updates = [{"store_id": store_id.hex()}]
+        with pytest.raises(Exception, match=f"Each update must specify a changelist"):
+            await data_rpc_api.multistore_batch_update({"store_updates": store_updates})
+
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
