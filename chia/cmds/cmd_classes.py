@@ -166,7 +166,7 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                 needs_context = True
                 kwarg_names.append(field_name)
         elif "option_args" in _field.metadata:
-            option_args: Dict[str, Any] = {"multiple": False}
+            option_args: Dict[str, Any] = {"multiple": False, "required": False}
             option_args.update(_field.metadata["option_args"])
 
             if "type" not in option_args:
@@ -187,7 +187,7 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                 elif option_args["multiple"]:
                     raise TypeError("Options with multiple=True must be Sequence[T]")
                 elif is_type_SpecificOptional(hints[field_name]):
-                    if "required" not in option_args or option_args["required"]:
+                    if option_args["required"]:
                         raise TypeError("Optional only allowed for options with required=False")
                     type_arg = get_args(hints[field_name])[0]
                     if "default" in option_args and (

@@ -219,14 +219,6 @@ def test_typing() -> None:
     with pytest.raises(TypeError):
 
         @chia_command(cmd, "temp_cmd_optional_bad", "blah")
-        class TempCMDOptionalBad:
-            optional: Optional[int] = option("--optional")
-
-            def run(self) -> None: ...
-
-    with pytest.raises(TypeError):
-
-        @chia_command(cmd, "temp_cmd_optional_bad", "blah")
         class TempCMDOptionalBad2:
             optional: Optional[int] = option("--optional", required=True)
 
