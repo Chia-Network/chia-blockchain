@@ -16,7 +16,8 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.simulator import simulator_protocol
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.types.aliases import SimulatorFullNodeService, WalletService
+from chia.simulator.start_simulator import SimulatorFullNodeService
+from chia.types.aliases import WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.hash import std_hash
