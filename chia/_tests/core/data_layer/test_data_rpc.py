@@ -181,6 +181,7 @@ async def farm_block_with_spend(
     await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await time_out_assert(10, is_transaction_confirmed, True, wallet_rpc_api, tx_rec)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_rpc_api.service, timeout=20)
 
 
 def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: int) -> bool:
@@ -3471,19 +3472,21 @@ async def test_multistore_update(
             await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
             store_ids.append(store_id)
 
-        changelist: List[Dict[str, str]] = []
+        store_updates: List[Dict[str, Any]] = []
         key_offset = 1000
         for index, store_id in enumerate(store_ids):
+            changelist: List[Dict[str, str]] = []
             key = index.to_bytes(2, "big")
             value = index.to_bytes(2, "big")
-            changelist.append({"action": "insert", "key": key.hex(), "value": value.hex(), "tree_id": store_id.hex()})
+            changelist.append({"action": "insert", "key": key.hex(), "value": value.hex()})
             key = (index + key_offset).to_bytes(2, "big")
             value = (index + key_offset).to_bytes(2, "big")
-            changelist.append({"action": "insert", "key": key.hex(), "value": value.hex(), "tree_id": store_id.hex()})
+            changelist.append({"action": "insert", "key": key.hex(), "value": value.hex()})
+            store_updates.append({"store_id": store_id.hex(), "changelist": changelist})
 
         if layer == InterfaceLayer.direct:
             res = await data_rpc_api.multistore_batch_update(
-                {"changelist": changelist, "submit_on_chain": submit_on_chain}
+                {"store_updates": store_updates, "submit_on_chain": submit_on_chain}
             )
             if submit_on_chain:
                 update_tx_rec0 = res["tx_id"][0]
@@ -3492,7 +3495,7 @@ async def test_multistore_update(
         elif layer == InterfaceLayer.funcs:
             res = await update_multiple_stores_cmd(
                 rpc_port=rpc_port,
-                changelist=changelist,
+                store_updates=store_updates,
                 submit_on_chain=submit_on_chain,
                 fee=None,
                 fingerprint=None,
@@ -3506,8 +3509,8 @@ async def test_multistore_update(
             process = await run_cli_cmd(
                 "data",
                 "update_multiple_stores",
-                "--changelist",
-                json.dumps(changelist),
+                "--store_updates",
+                json.dumps(store_updates),
                 "--data-rpc-port",
                 str(rpc_port),
                 "--submit" if submit_on_chain else "--no-submit",
@@ -3529,7 +3532,7 @@ async def test_multistore_update(
                 net_config=bt.config,
             ) as client:
                 res = await client.update_multiple_stores(
-                    changelist=changelist,
+                    store_updates=store_updates,
                     submit_on_chain=submit_on_chain,
                     fee=None,
                 )
@@ -3593,11 +3596,17 @@ async def test_multistore_update(
             pending_root = await data_store.get_pending_root(tree_id=store_id)
             assert pending_root is None
 
+        store_updates = []
         key = b"0000"
         value = b"0000"
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
-        with pytest.raises(Exception, match="Each operation must have a tree_id field"):
-            await data_rpc_api.multistore_batch_update({"changelist": changelist})
+        store_updates.append({"store_id": store_id.hex(), "changelist": changelist})
+        key = b"0001"
+        value = b"0001"
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        store_updates.append({"store_id": store_id.hex(), "changelist": changelist})
+        with pytest.raises(Exception, match=f"Store id {store_id.hex()} must appear in a single update"):
+            await data_rpc_api.multistore_batch_update({"store_updates": store_updates})
 
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")

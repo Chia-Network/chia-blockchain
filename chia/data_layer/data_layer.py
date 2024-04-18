@@ -276,32 +276,30 @@ class DataLayer:
 
     async def multistore_batch_update(
         self,
-        changelist: List[Dict[str, Any]],
+        store_updates: List[Dict[str, Any]],
         fee: uint64,
         submit_on_chain: bool = True,
     ) -> List[TransactionRecord]:
-        changelist_by_store: Dict[bytes32, List[Dict[str, Any]]] = {}
-        for action in changelist:
-            if "tree_id" not in action:
-                raise Exception("Each operation must have a tree_id field.")
-            tree_id = action["tree_id"]
-            del action["tree_id"]
-            if tree_id in changelist_by_store:
-                changelist_by_store[tree_id].append(action)
-            else:
-                changelist_by_store[tree_id] = [action]
+        store_ids: Set[bytes32] = set()
+        for update in store_updates:
+            store_id = update["store_id"]
+            changelist = update["changelist"]
 
-        status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
-        for tree_id, changelist in changelist_by_store.items():
-            await self.batch_insert(tree_id=tree_id, changelist=changelist, status=status)
+            if store_id in store_ids:
+                raise Exception(f"Store id {store_id.hex()} must appear in a single update")
+            store_ids.add(store_id)
+
+            status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
+            await self.batch_insert(tree_id=store_id, changelist=changelist, status=status)
+
         await self.data_store.clean_node_table()
 
         if submit_on_chain:
-            await self._update_confirmation_status(tree_id=tree_id)
             update_dictionary: Dict[bytes32, bytes32] = {}
-            for tree_id in changelist_by_store.keys():
-                root_hash = await self._get_publishable_root_hash(tree_id=tree_id)
-                update_dictionary[bytes32(tree_id)] = root_hash
+            for store_id in store_ids:
+                await self._update_confirmation_status(tree_id=store_id)
+                root_hash = await self._get_publishable_root_hash(tree_id=store_id)
+                update_dictionary[bytes32(store_id)] = root_hash
             transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary, fee=fee)
             return transaction_records
         else:

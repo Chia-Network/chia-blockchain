@@ -66,12 +66,16 @@ def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def process_change_multistore(change: Dict[str, Any]) -> Dict[str, Any]:
-    res = process_change(change)
-    tree_id = change.get("tree_id")
-    if tree_id is None:
-        raise Exception("Each operation must have a tree_id field")
-    res["tree_id"] = hexstr_to_bytes(tree_id)
+def process_change_multistore(update: Dict[str, Any]) -> Dict[str, Any]:
+    store_id = update.get("store_id")
+    if store_id is None:
+        raise Exception("Each update must specify a store_id")
+    changelist = update.get("changelist")
+    if changelist is None:
+        raise Exception("Each update must specify a changelist")
+    res: Dict[str, Any] = {}
+    res["store_id"] = hexstr_to_bytes(store_id)
+    res["changelist"] = [process_change(change) for change in changelist]
     return res
 
 
@@ -267,12 +271,12 @@ class DataLayerRpcApi:
 
     async def multistore_batch_update(self, request: Dict[str, Any]) -> EndpointResult:
         fee = get_fee(self.service.config, request)
-        changelist = [process_change_multistore(change) for change in request["changelist"]]
+        store_updates = [process_change_multistore(update) for update in request["store_updates"]]
         submit_on_chain = request.get("submit_on_chain", True)
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        transaction_records = await self.service.multistore_batch_update(changelist, uint64(fee), submit_on_chain)
+        transaction_records = await self.service.multistore_batch_update(store_updates, uint64(fee), submit_on_chain)
         if submit_on_chain:
             if transaction_records == []:
                 raise Exception("Batch update failed")

@@ -91,7 +91,7 @@ async def update_data_store_cmd(
 
 async def update_multiple_stores_cmd(
     rpc_port: Optional[int],
-    changelist: List[Dict[str, str]],
+    store_updates: List[Dict[str, str]],
     fee: Optional[str],
     fingerprint: Optional[int],
     submit_on_chain: bool,
@@ -102,7 +102,7 @@ async def update_multiple_stores_cmd(
 
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
         res = await client.update_multiple_stores(
-            changelist=changelist,
+            store_updates=store_updates,
             fee=final_fee,
             submit_on_chain=submit_on_chain,
         )

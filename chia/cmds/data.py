@@ -51,6 +51,17 @@ def create_changelist_option() -> Callable[[FC], FC]:
     )
 
 
+def create_store_updates_option() -> Callable[[FC], FC]:
+    return click.option(
+        "-d",
+        "--store_updates",
+        "store_updates_string",
+        help="str representing the store updates",
+        type=str,
+        required=True,
+    )
+
+
 def create_key_option(multiple: bool = False) -> Callable[[FC], FC]:
     return click.option(
         "-k",
@@ -190,13 +201,13 @@ def update_data_store(
 
 
 @data_cmd.command("update_multiple_stores", help="Update multiple stores by providing the changelist operations")
-@create_changelist_option()
+@create_store_updates_option()
 @create_rpc_port_option()
 @create_fee_option()
 @options.create_fingerprint()
 @click.option("--submit/--no-submit", default=True, help="Submit the result on chain")
 def update_multiple_stores(
-    changelist_string: str,
+    store_updates_string: str,
     data_rpc_port: int,
     fee: str,
     fingerprint: Optional[int],
@@ -207,7 +218,7 @@ def update_multiple_stores(
     run(
         update_multiple_stores_cmd(
             rpc_port=data_rpc_port,
-            changelist=json.loads(changelist_string),
+            store_updates=json.loads(store_updates_string),
             fee=fee,
             fingerprint=fingerprint,
             submit_on_chain=submit,
