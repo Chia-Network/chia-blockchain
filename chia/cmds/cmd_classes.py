@@ -88,6 +88,12 @@ class HexString32(click.ParamType):
             self.fail(f"not a valid 32-byte hex string: {value!r} ({e})", param, ctx)
 
 
+_CLASS_TYPES_TO_CLICK_TYPES = {
+    bytes: HexString(),
+    bytes32: HexString32(),
+}
+
+
 @dataclass
 class _CommandParsingStage:
     my_dataclass: Type[ChiaCommand]
@@ -197,10 +203,8 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                 elif origin is not None:
                     raise TypeError(f"Type {origin} invalid as a click type")
                 else:
-                    if hints[field_name] == bytes:
-                        type_arg = HexString()
-                    elif hints[field_name] == bytes32:
-                        type_arg = HexString32()
+                    if hints[field_name] in _CLASS_TYPES_TO_CLICK_TYPES:
+                        type_arg = _CLASS_TYPES_TO_CLICK_TYPES[hints[field_name]]
                     else:
                         type_arg = hints[field_name]
                     if "default" in option_args and not isinstance(option_args["default"], hints[field_name]):
