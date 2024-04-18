@@ -373,7 +373,7 @@ class DataStore:
                     )
                 except aiosqlite.IntegrityError as e:
                     if not e.args[0].startswith("UNIQUE constraint"):
-                        # UNIQUE constraint failed: ancestors.hash, ancestors.store_id, ancestors.generation
+                        # UNIQUE constraint failed: ancestors.hash, ancestors.tree_id, ancestors.generation
                         raise
 
                     async with writer.execute(
