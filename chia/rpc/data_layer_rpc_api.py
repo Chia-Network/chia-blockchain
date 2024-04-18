@@ -74,7 +74,7 @@ def process_change_multistore(update: Dict[str, Any]) -> Dict[str, Any]:
     if changelist is None:
         raise Exception("Each update must specify a changelist")
     res: Dict[str, Any] = {}
-    res["store_id"] = hexstr_to_bytes(store_id)
+    res["store_id"] = bytes32.from_hexstr(store_id)
     res["changelist"] = [process_change(change) for change in changelist]
     return res
 

@@ -299,7 +299,7 @@ class DataLayer:
             for store_id in store_ids:
                 await self._update_confirmation_status(tree_id=store_id)
                 root_hash = await self._get_publishable_root_hash(tree_id=store_id)
-                update_dictionary[bytes32(store_id)] = root_hash
+                update_dictionary[store_id] = root_hash
             transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary, fee=fee)
             return transaction_records
         else:
