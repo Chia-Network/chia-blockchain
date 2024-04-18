@@ -14,7 +14,6 @@ from typing import (
     List,
     Optional,
     Protocol,
-    Tuple,
     Type,
     Union,
     get_args,
@@ -47,15 +46,6 @@ class AsyncChiaCommand(Protocol):
 ChiaCommand = Union[SyncChiaCommand, AsyncChiaCommand]
 
 
-@dataclass(frozen=True)
-class OptionArgs:
-    param_decls: Tuple[str, ...]
-    multiple: bool
-    required: bool
-    type: Optional[Any]
-    kwargs: Dict[str, Any]
-
-
 def option(*param_decls: str, **kwargs: Any) -> Any:
     if sys.version_info < (3, 10):  # versions < 3.10 don't know about kw_only and they complain about lacks of defaults
         # Can't get coverage on this because we only test on one version
@@ -65,12 +55,9 @@ def option(*param_decls: str, **kwargs: Any) -> Any:
 
     return field(  # pylint: disable=invalid-field-call
         metadata=dict(
-            option_args=OptionArgs(
+            option_args=dict(
                 param_decls=tuple(param_decls),
-                multiple=kwargs.get("multiple", False),
-                required=kwargs.get("required", False),
-                type=kwargs.get("type", None),
-                kwargs=kwargs,
+                **kwargs,
             ),
         ),
         default=kwargs.get("default", default_default),
@@ -185,34 +172,34 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                 needs_context = True
                 kwarg_names.append(field_name)
         elif "option_args" in _field.metadata:
-            option_args: OptionArgs = _field.metadata["option_args"]
+            option_args: Dict[str, Any] = {"multiple": False, "required": False}
+            option_args.update(_field.metadata["option_args"])
 
-            if option_args.type is None:
+            if "type" not in option_args:
                 origin = get_origin(hints[field_name])
                 if origin == collections.abc.Sequence:
-                    if not option_args.multiple:
+                    if not option_args["multiple"]:
                         raise TypeError("Can only use Sequence with multiple=True")
                     else:
                         type_arg = get_args(hints[field_name])[0]
-                        if "default" in option_args.kwargs and (
-                            not isinstance(option_args.kwargs["default"], tuple)
-                            or any(not isinstance(item, type_arg) for item in option_args.kwargs["default"])
+                        if "default" in option_args and (
+                            not isinstance(option_args["default"], tuple)
+                            or any(not isinstance(item, type_arg) for item in option_args["default"])
                         ):
                             raise TypeError(
-                                f"Default {option_args.kwargs['default']} is not a tuple "
+                                f"Default {option_args['default']} is not a tuple "
                                 f"or all of its elements are not of type {type_arg}"
                             )
-                elif option_args.multiple:
+                elif option_args["multiple"]:
                     raise TypeError("Options with multiple=True must be Sequence[T]")
                 elif is_type_SpecificOptional(hints[field_name]):
-                    if option_args.required:
+                    if option_args["required"]:
                         raise TypeError("Optional only allowed for options with required=False")
                     type_arg = get_args(hints[field_name])[0]
-                    if "default" in option_args.kwargs and (
-                        not isinstance(option_args.kwargs["default"], type_arg)
-                        and option_args.kwargs["default"] is not None
+                    if "default" in option_args and (
+                        not isinstance(option_args["default"], type_arg) and option_args["default"] is not None
                     ):
-                        raise TypeError(f"Default {option_args.kwargs['default']} is not type {type_arg} or None")
+                        raise TypeError(f"Default {option_args['default']} is not type {type_arg} or None")
                 elif origin is not None:
                     raise TypeError(f"Type {origin} invalid as a click type")
                 else:
@@ -220,19 +207,17 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                         type_arg = _CLASS_TYPES_TO_CLICK_TYPES[hints[field_name]]
                     else:
                         type_arg = hints[field_name]
-                    if "default" in option_args.kwargs and not isinstance(
-                        option_args.kwargs["default"], hints[field_name]
-                    ):
-                        raise TypeError(f"Default {option_args.kwargs['default']} is not type {type_arg}")
+                    if "default" in option_args and not isinstance(option_args["default"], hints[field_name]):
+                        raise TypeError(f"Default {option_args['default']} is not type {type_arg}")
             else:
-                type_arg = option_args.type
+                type_arg = option_args["type"]
 
             kwarg_names.append(field_name)
             option_decorators.append(
                 click.option(
-                    *option_args.param_decls,
+                    *option_args["param_decls"],
                     type=type_arg,
-                    **{k: v for k, v in option_args.kwargs.items() if k not in ("param_decls", "type")},
+                    **{k: v for k, v in option_args.items() if k not in ("param_decls", "type")},
                 )
             )
 
