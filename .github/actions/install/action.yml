@@ -10,7 +10,7 @@ inputs:
   development:
     description: "Install development dependencies."
     required: false
-    default: ""
+    default: "false"
   editable:
     description: "Install as editable source."
     required: false
@@ -31,6 +31,10 @@ inputs:
     description: "Skip python package installation and just do pip install."
     required: false
     default: "false"
+  constraints-file-artifact-name:
+    description: "Name of the artifact to upload the constraints file to."
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -41,7 +45,7 @@ runs:
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }} ${{ (fromJSON(inputs.do-system-installs) != true) && '-s' || '' }}
+        ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }} ${{ (fromJSON(inputs.do-system-installs) != true) && '-s' || '' }}
 
     - name: Run install script (Windows)
       if: runner.os == 'windows'
@@ -49,4 +53,17 @@ runs:
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        ${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }}
+        ${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }}
+
+    - name: Create constraints file
+      if: inputs.constraints-file-artifact-name != ''
+      shell: bash
+      run: |
+        ${{ runner.os == 'windows' && 'venv/scripts/pip' || 'venv/bin/pip' }} freeze --exclude-editable > venv/constraints.txt
+
+    - name: Upload constraints file
+      if: inputs.constraints-file-artifact-name != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.constraints-file-artifact-name }}
+        path: venv/constraints.txt

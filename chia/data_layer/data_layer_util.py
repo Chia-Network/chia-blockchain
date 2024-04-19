@@ -9,15 +9,20 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 import aiosqlite as aiosqlite
 from typing_extensions import final
 
+from chia.data_layer.data_layer_errors import ProofIntegrityError
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint64
+from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 
 if TYPE_CHECKING:
     from chia.data_layer.data_store import DataStore
+    from chia.wallet.wallet_node import WalletNode
 
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
@@ -37,10 +42,40 @@ def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: by
 
 
 def leaf_hash(key: bytes, value: bytes) -> bytes32:
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to((key, value)).get_tree_hash()  # type: ignore[no-any-return]
+    return SerializedProgram.to((key, value)).get_tree_hash()
+
+
+def key_hash(key: bytes) -> bytes32:
+    return SerializedProgram.to(key).get_tree_hash()
+
+
+@dataclasses.dataclass(frozen=True)
+class PaginationData:
+    total_pages: int
+    total_bytes: int
+    hashes: List[bytes32]
+
+
+def get_hashes_for_page(page: int, lengths: Dict[bytes32, int], max_page_size: int) -> PaginationData:
+    current_page = 0
+    current_page_size = 0
+    total_bytes = 0
+    hashes: List[bytes32] = []
+    for hash, length in sorted(lengths.items(), key=lambda x: (-x[1], x[0])):
+        if length > max_page_size:
+            raise RuntimeError(
+                f"Cannot paginate data, item size is larger than max page size: {length} {max_page_size}"
+            )
+        total_bytes += length
+        if current_page_size + length <= max_page_size:
+            current_page_size += length
+        else:
+            current_page += 1
+            current_page_size = length
+        if current_page == page:
+            hashes.append(hash)
+
+    return PaginationData(current_page + 1, total_bytes, hashes)
 
 
 async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
@@ -100,6 +135,7 @@ def row_to_node(row: aiosqlite.Row) -> Node:
 class Status(IntEnum):
     PENDING = 1
     COMMITTED = 2
+    PENDING_BATCH = 3
 
 
 class NodeType(IntEnum):
@@ -112,7 +148,7 @@ class Side(IntEnum):
     LEFT = 0
     RIGHT = 1
 
-    def other(self) -> "Side":
+    def other(self) -> Side:
         if self == Side.LEFT:
             return Side.RIGHT
 
@@ -154,7 +190,7 @@ class TerminalNode:
         return Program.to(self.key), Program.to(self.value)
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
+    def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
@@ -173,9 +209,9 @@ class ProofOfInclusionLayer:
     @classmethod
     def from_internal_node(
         cls,
-        internal_node: "InternalNode",
+        internal_node: InternalNode,
         traversal_child_hash: bytes32,
-    ) -> "ProofOfInclusionLayer":
+    ) -> ProofOfInclusionLayer:
         return ProofOfInclusionLayer(
             other_hash_side=internal_node.other_child_side(hash=traversal_child_hash),
             other_hash=internal_node.other_child_hash(hash=traversal_child_hash),
@@ -183,7 +219,7 @@ class ProofOfInclusionLayer:
         )
 
     @classmethod
-    def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> "ProofOfInclusionLayer":
+    def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> ProofOfInclusionLayer:
         combined_hash = calculate_internal_hash(
             hash=primary_hash,
             other_hash_side=other_hash_side,
@@ -250,7 +286,7 @@ class InternalNode:
     atom: None = None
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "InternalNode":
+    def from_row(cls, row: aiosqlite.Row) -> InternalNode:
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
@@ -285,7 +321,7 @@ class Root:
     status: Status
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "Root":
+    def from_row(cls, row: aiosqlite.Row) -> Root:
         raw_node_hash = row["node_hash"]
         if raw_node_hash is None:
             node_hash = None
@@ -308,7 +344,7 @@ class Root:
         }
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> "Root":
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Root:
         return cls(
             tree_id=bytes32.from_hexstr(marshalled["tree_id"]),
             node_hash=None if marshalled["node_hash"] is None else bytes32.from_hexstr(marshalled["node_hash"]),
@@ -725,3 +761,194 @@ class PluginStatus:
 class InsertResult:
     node_hash: bytes32
     root: Root
+
+
+@dataclasses.dataclass(frozen=True)
+class UnsubscribeData:
+    tree_id: bytes32
+    retain_data: bool
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysValuesCompressed:
+    keys_values_hashed: Dict[bytes32, bytes32]
+    key_hash_to_length: Dict[bytes32, int]
+    leaf_hash_to_length: Dict[bytes32, int]
+    root_hash: Optional[bytes32]
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysPaginationData:
+    total_pages: int
+    total_bytes: int
+    keys: List[bytes]
+    root_hash: Optional[bytes32]
+
+
+@dataclasses.dataclass(frozen=True)
+class KeysValuesPaginationData:
+    total_pages: int
+    total_bytes: int
+    keys_values: List[TerminalNode]
+    root_hash: Optional[bytes32]
+
+
+@dataclasses.dataclass(frozen=True)
+class KVDiffPaginationData:
+    total_pages: int
+    total_bytes: int
+    kv_diff: List[DiffData]
+
+
+#
+# GetProof and VerifyProof support classes
+#
+@streamable
+@dataclasses.dataclass(frozen=True)
+class ProofLayer(Streamable):
+    # This class is basically Layer but streamable
+    other_hash_side: uint8
+    other_hash: bytes32
+    combined_hash: bytes32
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class HashOnlyProof(Streamable):
+    key_clvm_hash: bytes32
+    value_clvm_hash: bytes32
+    node_hash: bytes32
+    layers: List[ProofLayer]
+
+    def root(self) -> bytes32:
+        if len(self.layers) == 0:
+            return self.node_hash
+        return self.layers[-1].combined_hash
+
+    @classmethod
+    def from_key_value(cls, key: bytes, value: bytes, node_hash: bytes32, layers: List[ProofLayer]) -> HashOnlyProof:
+        return cls(
+            key_clvm_hash=Program.to(key).get_tree_hash(),
+            value_clvm_hash=Program.to(value).get_tree_hash(),
+            node_hash=node_hash,
+            layers=layers,
+        )
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class KeyValueHashes(Streamable):
+    key_clvm_hash: bytes32
+    value_clvm_hash: bytes32
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class ProofResultInclusions(Streamable):
+    store_id: bytes32
+    inclusions: List[KeyValueHashes]
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class GetProofRequest(Streamable):
+    store_id: bytes32
+    keys: List[bytes]
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class StoreProofsHashes(Streamable):
+    store_id: bytes32
+    proofs: List[HashOnlyProof]
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class DLProof(Streamable):
+    store_proofs: StoreProofsHashes
+    coin_id: bytes32
+    inner_puzzle_hash: bytes32
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class GetProofResponse(Streamable):
+    proof: DLProof
+    success: bool
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class VerifyProofResponse(Streamable):
+    verified_clvm_hashes: ProofResultInclusions
+    current_root: bool
+    success: bool
+
+
+def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> List[KeyValueHashes]:
+    """Verify a proof of inclusion for a DL singleton"""
+
+    verified_keys: List[KeyValueHashes] = []
+
+    for reference_proof in dl_proof.store_proofs.proofs:
+        inner_puz_hash = dl_proof.inner_puzzle_hash
+        host_fullpuz_program = create_host_fullpuz(
+            inner_puz_hash, reference_proof.root(), dl_proof.store_proofs.store_id
+        )
+        expected_puzzle_hash = host_fullpuz_program.get_tree_hash_precalc(inner_puz_hash)
+
+        if puzzle_hash != expected_puzzle_hash:
+            raise ProofIntegrityError(
+                "Invalid Proof: incorrect puzzle hash: expected:"
+                f"{expected_puzzle_hash.hex()} received: {puzzle_hash.hex()}"
+            )
+
+        proof = ProofOfInclusion(
+            node_hash=reference_proof.node_hash,
+            layers=[
+                ProofOfInclusionLayer(
+                    other_hash_side=Side(layer.other_hash_side),
+                    other_hash=layer.other_hash,
+                    combined_hash=layer.combined_hash,
+                )
+                for layer in reference_proof.layers
+            ],
+        )
+
+        leaf_hash = internal_hash(left_hash=reference_proof.key_clvm_hash, right_hash=reference_proof.value_clvm_hash)
+        if leaf_hash != proof.node_hash:
+            raise ProofIntegrityError("Invalid Proof: node hash does not match key and value")
+
+        if not proof.valid():
+            raise ProofIntegrityError("Invalid Proof: invalid proof of inclusion found")
+
+        verified_keys.append(
+            KeyValueHashes(key_clvm_hash=reference_proof.key_clvm_hash, value_clvm_hash=reference_proof.value_clvm_hash)
+        )
+
+    return verified_keys
+
+
+async def dl_verify_proof(
+    request: Dict[str, Any],
+    wallet_node: WalletNode,
+    peer: WSChiaConnection,
+) -> Dict[str, Any]:
+    """Verify a proof of inclusion for a DL singleton"""
+
+    dlproof = DLProof.from_json_dict(request)
+
+    coin_id = dlproof.coin_id
+    coin_states = await wallet_node.get_coin_state([coin_id], peer=peer)
+    if len(coin_states) == 0:
+        raise ProofIntegrityError(f"Invalid Proof: No DL singleton found at coin id: {coin_id.hex()}")
+
+    verified_keys = dl_verify_proof_internal(dlproof, coin_states[0].coin.puzzle_hash)
+
+    response = VerifyProofResponse(
+        verified_clvm_hashes=ProofResultInclusions(dlproof.store_proofs.store_id, verified_keys),
+        success=True,
+        current_root=coin_states[0].spent_height is None,
+    )
+    return response.to_json_dict()

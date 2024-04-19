@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 from time import perf_counter
 from typing import Dict, List, Optional, Set, Tuple
@@ -86,7 +85,7 @@ class TradeStore:
     @classmethod
     async def create(
         cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
-    ) -> "TradeStore":
+    ) -> TradeStore:
         self = cls()
 
         if name:
@@ -99,20 +98,18 @@ class TradeStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS trade_records("
-                    " trade_record blob,"
-                    " trade_id text PRIMARY KEY,"
-                    " status int,"
-                    " confirmed_at_index int,"
-                    " created_at_time bigint,"
-                    " sent int,"
-                    " is_my_offer tinyint)"
-                )
+                "CREATE TABLE IF NOT EXISTS trade_records("
+                " trade_record blob,"
+                " trade_id text PRIMARY KEY,"
+                " status int,"
+                " confirmed_at_index int,"
+                " created_at_time bigint,"
+                " sent int,"
+                " is_my_offer tinyint)"
             )
 
             await conn.execute(
-                ("CREATE TABLE IF NOT EXISTS coin_of_interest_to_trade_record(trade_id blob, coin_id blob)")
+                "CREATE TABLE IF NOT EXISTS coin_of_interest_to_trade_record(trade_id blob, coin_id blob)"
             )
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS coin_to_trade_record_index on coin_of_interest_to_trade_record(trade_id)"
@@ -155,7 +152,8 @@ class TradeStore:
 
             await conn.execute("CREATE INDEX IF NOT EXISTS trade_confirmed_index on trade_records(confirmed_at_index)")
             await conn.execute("CREATE INDEX IF NOT EXISTS trade_status on trade_records(status)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS trade_id on trade_records(trade_id)")
+            # Remove an old redundant index on the primary key
+            await conn.execute("DROP INDEX IF EXISTS trade_id")
 
             if needs_is_my_offer_migration:
                 await migrate_is_my_offer(self.log, conn)
@@ -164,25 +162,37 @@ class TradeStore:
 
         return self
 
-    async def add_trade_record(self, record: TradeRecord, offer_name: bytes32) -> None:
+    async def add_trade_record(self, record: TradeRecord, offer_name: bytes32, replace: bool = False) -> None:
         """
         Store TradeRecord into DB
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            existing_trades_with_same_offer = await conn.execute_fetchall(
-                "SELECT trade_id FROM trade_records WHERE offer_name=? AND trade_id<>? LIMIT 1",
-                (offer_name, record.trade_id.hex()),
+            if not replace:
+                existing_trades_with_same_offer = await conn.execute_fetchall(
+                    "SELECT trade_id FROM trade_records WHERE offer_name=? AND trade_id<>? LIMIT 1",
+                    (offer_name, record.trade_id.hex()),
+                )
+                if existing_trades_with_same_offer:
+                    raise ValueError("Trade for this offer already exists.")
+            trade_record_old = TradeRecordOld(
+                confirmed_at_index=record.confirmed_at_index,
+                accepted_at_time=record.accepted_at_time,
+                created_at_time=record.created_at_time,
+                is_my_offer=record.is_my_offer,
+                sent=record.sent,
+                offer=record.offer,
+                taken_offer=record.taken_offer,
+                coins_of_interest=record.coins_of_interest,
+                trade_id=record.trade_id,
+                status=record.status,
+                sent_to=record.sent_to,
             )
-            if existing_trades_with_same_offer:
-                raise ValueError("Trade for this offer already exists.")
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO trade_records "
                 "(trade_record, trade_id, status, confirmed_at_index, created_at_time, sent, offer_name, is_my_offer) "
                 "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    bytes(
-                        TradeRecordOld(**{k: v for k, v in dataclasses.asdict(record).items() if k != "valid_times"})
-                    ),
+                    bytes(trade_record_old),
                     record.trade_id.hex(),
                     record.status,
                     record.confirmed_at_index,
@@ -242,7 +252,7 @@ class TradeStore:
             sent_to=current.sent_to,
             valid_times=current.valid_times,
         )
-        await self.add_trade_record(tx, offer_name)
+        await self.add_trade_record(tx, offer_name, replace=True)
 
     async def increment_sent(
         self, id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Optional[Err]
@@ -472,20 +482,40 @@ class TradeStore:
             await cursor.close()
 
     async def _get_new_trade_records_from_old(self, old_records: List[TradeRecordOld]) -> List[TradeRecord]:
+        trade_id_to_valid_times: Dict[bytes, ConditionValidTimes] = {}
+        empty_valid_times = ConditionValidTimes()
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute(
-                "SELECT trade_id, valid_times from trade_record_times WHERE "
-                f"trade_id IN ({','.join('?' *  len(old_records))})",
-                tuple(trade.trade_id for trade in old_records),
-            )
-            valid_times: Dict[bytes32, ConditionValidTimes] = {
-                bytes32(res[0]): ConditionValidTimes.from_bytes(res[1]) for res in await cursor.fetchall()
-            }
-            await cursor.close()
+            chunked_records: List[List[TradeRecordOld]] = [
+                old_records[i : min(len(old_records), i + self.db_wrapper.host_parameter_limit)]
+                for i in range(0, len(old_records), self.db_wrapper.host_parameter_limit)
+            ]
+            for records_chunk in chunked_records:
+                cursor = await conn.execute(
+                    "SELECT trade_id, valid_times from trade_record_times WHERE "
+                    f"trade_id IN ({','.join('?' * len(records_chunk))})",
+                    tuple(trade.trade_id for trade in records_chunk),
+                )
+                for row in await cursor.fetchall():
+                    trade_id_to_valid_times[row[0]] = ConditionValidTimes.from_bytes(row[1])
+                await cursor.close()
         return [
             TradeRecord(
-                valid_times=valid_times[record.trade_id] if record.trade_id in valid_times else ConditionValidTimes(),
-                **dataclasses.asdict(record),
+                confirmed_at_index=record.confirmed_at_index,
+                accepted_at_time=record.accepted_at_time,
+                created_at_time=record.created_at_time,
+                is_my_offer=record.is_my_offer,
+                sent=record.sent,
+                offer=record.offer,
+                taken_offer=record.taken_offer,
+                coins_of_interest=record.coins_of_interest,
+                trade_id=record.trade_id,
+                status=record.status,
+                sent_to=record.sent_to,
+                valid_times=(
+                    trade_id_to_valid_times[record.trade_id]
+                    if record.trade_id in trade_id_to_valid_times
+                    else empty_valid_times
+                ),
             )
             for record in old_records
         ]

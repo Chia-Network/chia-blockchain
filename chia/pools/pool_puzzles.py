@@ -3,8 +3,7 @@ from __future__ import annotations
 import logging
 from typing import List, Optional, Tuple
 
-from blspy import G1Element
-from clvm.casts import int_from_bytes, int_to_bytes
+from chia_rs import G1Element
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.consensus.block_rewards import calculate_pool_reward
@@ -93,7 +92,7 @@ def create_p2_singleton_puzzle(
 
 def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32, seconds_delay: uint64, delayed_puzzle_hash: bytes32) -> bytes32:
     return create_p2_singleton_puzzle(
-        SINGLETON_MOD_HASH, launcher_id, int_to_bytes(seconds_delay), delayed_puzzle_hash
+        SINGLETON_MOD_HASH, launcher_id, seconds_delay, delayed_puzzle_hash
     ).get_tree_hash()
 
 
@@ -103,11 +102,15 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSpend) -> Tuple[uint64
     # Delayed puz info is (seconds delayed_puzzle_hash)
     seconds: Optional[uint64] = None
     delayed_puzzle_hash: Optional[bytes32] = None
-    for key, value in extra_data.as_python():
-        if key == b"t":
-            seconds = int_from_bytes(value)
-        if key == b"h":
-            delayed_puzzle_hash = bytes32(value)
+    for key_value_pairs in extra_data.as_iter():
+        key_value_pair = key_value_pairs.as_pair()
+        if key_value_pair is None:
+            continue
+        key, value = key_value_pair
+        if key.atom == b"t":
+            seconds = uint64(value.as_int())
+        if key.atom == b"h":
+            delayed_puzzle_hash = bytes32(value.as_atom())
     assert seconds is not None
     assert delayed_puzzle_hash is not None
     return seconds, delayed_puzzle_hash
@@ -128,10 +131,11 @@ def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program) ->
     r = puzzle.uncurry()
     if r is None:
         return False
-    inner_f, args = r
-    singleton_mod_hash, launcher_id, launcher_puzzle_hash, seconds_delay, delayed_puzzle_hash = list(args.as_iter())
-    seconds_delay = uint64(seconds_delay.as_int())
-    return seconds_delay, delayed_puzzle_hash.as_atom()
+    _, args = r
+    _, _, _, seconds_delay_prog, delayed_puzzle_hash_prog = args.as_iter()
+    seconds_delay = uint64(seconds_delay_prog.as_int())
+    delayed_puzzle_hash = bytes32(delayed_puzzle_hash_prog.as_atom())
+    return seconds_delay, delayed_puzzle_hash
 
 
 # Verify that a puzzle is a Pool Wallet Singleton

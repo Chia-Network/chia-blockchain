@@ -21,6 +21,8 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 from chia.util.misc import SignalHandlers
 
+SimulatorFullNodeService = Service[FullNode, FullNodeSimulator, SimulatorFullNodeRpcApi]
+
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
 
@@ -36,7 +38,7 @@ async def create_full_node_simulator_service(
     bt: BlockTools,
     connect_to_daemon: bool = True,
     override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
-) -> Service[FullNode, FullNodeSimulator]:
+) -> SimulatorFullNodeService:
     service_config = config[SERVICE_NAME]
     constants = bt.constants
 
@@ -66,7 +68,7 @@ async def create_full_node_simulator_service(
 
 @dataclass
 class StartedSimulator:
-    service: Service[FullNode, FullNodeSimulator]
+    service: SimulatorFullNodeService
     exit_code: int
 
 

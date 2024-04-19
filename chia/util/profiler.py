@@ -5,7 +5,9 @@ import cProfile
 import logging
 import pathlib
 import tracemalloc
+from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import AsyncIterator, Optional
 
 from chia.util.path import path_from_root
 
@@ -52,7 +54,7 @@ if __name__ == "__main__":
     profile_dir = pathlib.Path(sys.argv[1])
     init(strip=False)
 
-    def analyze_cpu_usage(profile_dir: pathlib.Path):
+    def analyze_cpu_usage(profile_dir: pathlib.Path) -> None:
         counter = 0
         try:
             while True:
@@ -116,7 +118,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(e)
 
-    def analyze_slot_range(profile_dir: pathlib.Path, first: int, last: int):
+    def analyze_slot_range(profile_dir: pathlib.Path, first: int, last: int) -> None:
         if last < first:
             print("ERROR: first must be <= last when specifying slot range")
             return
@@ -176,3 +178,17 @@ async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.L
             counter += 1
     finally:
         tracemalloc.stop()
+
+
+@asynccontextmanager
+async def enable_profiler(profile: bool) -> AsyncIterator[Optional[cProfile.Profile]]:
+    if not profile:
+        yield None
+        return
+
+    # this is not covered by any unit tests as it's essentially test code
+    # itself. It's exercised manually when investigating performance issues
+    with cProfile.Profile() as pr:  # pragma: no cover
+        pr.enable()
+        yield pr
+        pr.disable()

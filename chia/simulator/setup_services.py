@@ -14,45 +14,40 @@ from typing import Any, AsyncGenerator, AsyncIterator, Dict, Iterator, List, Opt
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
-from chia.farmer.farmer import Farmer
-from chia.farmer.farmer_api import FarmerAPI
-from chia.full_node.full_node import FullNode
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
-from chia.introducer.introducer import Introducer
-from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability, capabilities
-from chia.seeder.crawler import Crawler
-from chia.seeder.crawler_api import CrawlerAPI
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
+from chia.server.outbound_message import NodeType
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
 from chia.server.start_harvester import create_harvester_service
 from chia.server.start_introducer import create_introducer_service
-from chia.server.start_service import Service
 from chia.server.start_timelord import create_timelord_service
 from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools, test_constants
-from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
-from chia.simulator.start_simulator import create_full_node_simulator_service
+from chia.simulator.start_simulator import SimulatorFullNodeService, create_full_node_simulator_service
 from chia.ssl.create_ssl import create_all_ssl
-from chia.timelord.timelord import Timelord
-from chia.timelord.timelord_api import TimelordAPI
 from chia.timelord.timelord_launcher import VDFClientProcessMgr, find_vdf_client, spawn_process
+from chia.types.aliases import (
+    CrawlerService,
+    FarmerService,
+    FullNodeService,
+    HarvesterService,
+    IntroducerService,
+    TimelordService,
+    WalletService,
+)
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
+from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config, set_peer_info
+from chia.util.db_wrapper import generate_in_memory_db_uri
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
 from chia.util.misc import SignalHandlers
-from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_node_api import WalletNodeAPI
 
 log = logging.getLogger(__name__)
 
@@ -118,18 +113,19 @@ async def setup_full_node(
     disable_capabilities: Optional[List[Capability]] = None,
     *,
     reuse_db: bool = False,
-) -> AsyncGenerator[Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]], None]:
-    db_path = local_bt.root_path / f"{db_name}"
-    if not reuse_db and db_path.exists():
-        # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
-        gc.collect()
-        db_path.unlink()
+) -> AsyncGenerator[Union[FullNodeService, SimulatorFullNodeService], None]:
+    if reuse_db:
+        db_path: Union[str, Path] = local_bt.root_path / f"{db_name}"
+        uri = False
+    else:
+        db_path = generate_in_memory_db_uri()
+        uri = True
 
-        if db_version > 1:
-            with sqlite3.connect(db_path) as connection:
-                connection.execute("CREATE TABLE database_version(version int)")
-                connection.execute("INSERT INTO database_version VALUES (?)", (db_version,))
-                connection.commit()
+    if not reuse_db and db_version > 1:
+        with sqlite3.connect(db_path, uri=uri) as connection:
+            connection.execute("CREATE TABLE database_version(version int)")
+            connection.execute("INSERT INTO database_version VALUES (?)", (db_version,))
+            connection.commit()
 
     if connect_to_daemon:
         assert local_bt.config["daemon_port"] is not None
@@ -155,7 +151,7 @@ async def setup_full_node(
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     local_bt.change_config(config)
     override_capabilities = None if disable_capabilities is None else get_capabilities(disable_capabilities)
-    service: Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]]
+    service: Union[FullNodeService, SimulatorFullNodeService]
     if simulator:
         service = await create_full_node_simulator_service(
             local_bt.root_path,
@@ -172,39 +168,15 @@ async def setup_full_node(
             connect_to_daemon=connect_to_daemon,
             override_capabilities=override_capabilities,
         )
-    await service.start()
 
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
-        if not reuse_db and db_path.exists():
-            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
-
-            # 3.11 switched to using functools.lru_cache for the statement cache.
-            # See #87028. This introduces a reference cycle involving the connection
-            # object, so the connection object no longer gets immediately
-            # deallocated, not until, for example, gc.collect() is called to break
-            # the cycle.
-            gc.collect()
-            for _ in range(10):
-                try:
-                    db_path.unlink()
-                    break
-                except PermissionError as e:
-                    print(f"db_path.unlink(): {e}")
-                    time.sleep(0.1)
-                    # filesystem operations are async on windows
-                    # [WinError 32] The process cannot access the file because it is
-                    # being used by another process
-                    pass
 
 
 @asynccontextmanager
 async def setup_crawler(
     root_path_populated_with_config: Path, database_uri: str
-) -> AsyncGenerator[Service[Crawler, CrawlerAPI], None]:
+) -> AsyncGenerator[CrawlerService, None]:
     create_all_ssl(
         root_path=root_path_populated_with_config,
         private_ca_crt_and_key=get_next_private_ca_cert_and_key().collateral.cert_and_key,
@@ -228,16 +200,11 @@ async def setup_crawler(
         updated_constants,
         connect_to_daemon=False,
     )
-    await service.start()
+    async with service.manage():
+        if not service_config["crawler"]["start_rpc_server"]:  # otherwise the loops don't work.
+            service._node.state_changed_callback = lambda x, y: None
 
-    if not service_config["crawler"]["start_rpc_server"]:  # otherwise the loops don't work.
-        service._node.state_changed_callback = lambda x, y: None
-
-    try:
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -272,7 +239,7 @@ async def setup_wallet_node(
     introducer_port: Optional[uint16] = None,
     key_seed: Optional[bytes] = None,
     initial_num_public_keys: int = 5,
-) -> AsyncGenerator[Service[WalletNode, WalletNodeAPI], None]:
+) -> AsyncGenerator[WalletService, None]:
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config
         service_config = config["wallet"]
@@ -309,11 +276,16 @@ async def setup_wallet_node(
             service_config["introducer_peer"] = None
 
         if full_node_port is not None:
-            service_config["full_node_peer"] = {}
-            service_config["full_node_peer"]["host"] = self_hostname
-            service_config["full_node_peer"]["port"] = full_node_port
+            service_config.pop("full_node_peer", None)
+            service_config["full_node_peers"] = [
+                {
+                    "host": self_hostname,
+                    "port": full_node_port,
+                },
+            ]
         else:
-            del service_config["full_node_peer"]
+            service_config.pop("full_node_peer", None)
+            service_config.pop("full_node_peers", None)
 
         service = create_wallet_service(
             local_bt.root_path,
@@ -323,13 +295,10 @@ async def setup_wallet_node(
             connect_to_daemon=False,
         )
 
-        await service.start()
-
         try:
-            yield service
+            async with service.manage():
+                yield service
         finally:
-            service.stop()
-            await service.wait_closed()
             if db_path.exists():
                 # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
 
@@ -360,7 +329,7 @@ async def setup_harvester(
     farmer_peer: Optional[UnresolvedPeerInfo],
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
-) -> AsyncGenerator[Service[Harvester, HarvesterAPI], None]:
+) -> AsyncGenerator[HarvesterService, None]:
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as config:
         config["logging"]["log_stdout"] = True
         config["selected_network"] = "testnet0"
@@ -375,18 +344,12 @@ async def setup_harvester(
         root_path,
         config,
         consensus_constants,
-        farmer_peer=farmer_peer,
+        farmer_peers={farmer_peer} if farmer_peer is not None else set(),
         connect_to_daemon=False,
     )
 
-    if start_service:
-        await service.start()
-
-    try:
+    async with service.manage(start=start_service):
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -398,7 +361,7 @@ async def setup_farmer(
     full_node_port: Optional[uint16] = None,
     start_service: bool = True,
     port: uint16 = uint16(0),
-) -> AsyncGenerator[Service[Farmer, FarmerAPI], None]:
+) -> AsyncGenerator[FarmerService, None]:
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as root_config:
         root_config["logging"]["log_stdout"] = True
         root_config["selected_network"] = "testnet0"
@@ -414,10 +377,16 @@ async def setup_farmer(
     config_pool["xch_target_address"] = encode_puzzle_hash(b_tools.pool_ph, "xch")
 
     if full_node_port:
-        service_config["full_node_peer"]["host"] = self_hostname
-        service_config["full_node_peer"]["port"] = full_node_port
+        service_config.pop("full_node_peer", None)
+        service_config["full_node_peers"] = [
+            {
+                "host": self_hostname,
+                "port": full_node_port,
+            },
+        ]
     else:
-        del service_config["full_node_peer"]
+        service_config.pop("full_node_peer", None)
+        service_config.pop("full_node_peers", None)
 
     service = create_farmer_service(
         root_path,
@@ -428,18 +397,12 @@ async def setup_farmer(
         connect_to_daemon=False,
     )
 
-    if start_service:
-        await service.start()
-
-    try:
+    async with service.manage(start=start_service):
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
-async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[Introducer, IntroducerAPI], None]:
+async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[IntroducerService, None]:
     service = create_introducer_service(
         bt.root_path,
         bt.config,
@@ -447,13 +410,8 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[
         connect_to_daemon=False,
     )
 
-    await service.start()
-
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -532,9 +490,9 @@ async def setup_timelord(
     config: Dict[str, Any],
     root_path: Path,
     vdf_port: uint16 = uint16(0),
-) -> AsyncGenerator[Service[Timelord, TimelordAPI], None]:
+) -> AsyncGenerator[TimelordService, None]:
     service_config = config["timelord"]
-    service_config["full_node_peer"]["port"] = full_node_port
+    set_peer_info(service_config, peer_type=NodeType.FULL_NODE, peer_port=full_node_port)
     service_config["bluebox_mode"] = sanitizer
     service_config["fast_algorithm"] = False
     service_config["vdf_server"]["port"] = vdf_port
@@ -548,10 +506,5 @@ async def setup_timelord(
         connect_to_daemon=False,
     )
 
-    await service.start()
-
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()

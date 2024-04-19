@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
-from blspy import PrivateKey
+from chia_rs import PrivateKey
 
 from chia.cmds.init_funcs import check_keys
 from chia.util.errors import KeychainException, KeychainFingerprintNotFound

@@ -8,6 +8,7 @@ NO_REPLY_EXPECTED = [
     pmt.new_peak,
     pmt.new_transaction,
     pmt.new_unfinished_block,
+    pmt.new_unfinished_block2,
     pmt.new_signage_point_or_end_of_sub_slot,
     pmt.request_mempool_transactions,
     pmt.new_compact_vdf,
@@ -30,6 +31,7 @@ VALID_REPLY_MESSAGE_MAP = {
     pmt.request_block: [pmt.respond_block, pmt.reject_block],
     pmt.request_blocks: [pmt.respond_blocks, pmt.reject_blocks],
     pmt.request_unfinished_block: [pmt.respond_unfinished_block],
+    pmt.request_unfinished_block2: [pmt.respond_unfinished_block],
     pmt.request_block_header: [pmt.respond_block_header, pmt.reject_header_request],
     pmt.request_removals: [pmt.respond_removals, pmt.reject_removals_request],
     pmt.request_additions: [pmt.respond_additions, pmt.reject_additions_request],
@@ -45,6 +47,10 @@ VALID_REPLY_MESSAGE_MAP = {
     pmt.request_peers_introducer: [pmt.respond_peers_introducer],
     pmt.request_puzzle_solution: [pmt.respond_puzzle_solution, pmt.reject_puzzle_solution],
     pmt.send_transaction: [pmt.transaction_ack],
+    pmt.request_remove_puzzle_subscriptions: [pmt.respond_remove_puzzle_subscriptions],
+    pmt.request_remove_coin_subscriptions: [pmt.respond_remove_coin_subscriptions],
+    pmt.request_puzzle_state: [pmt.respond_puzzle_state, pmt.reject_puzzle_state],
+    pmt.request_coin_state: [pmt.respond_coin_state, pmt.reject_coin_state],
 }
 
 

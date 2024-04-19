@@ -6,6 +6,7 @@ import random
 import time
 import traceback
 from logging import Logger
+from pathlib import Path
 from random import Random
 from secrets import randbits
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -16,10 +17,8 @@ from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
-from chia.server.address_manager_sqlite_store import create_address_manager_from_db
 from chia.server.address_manager_store import AddressManagerStore
 from chia.server.outbound_message import Message, NodeType, make_msg
-from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo, UnresolvedPeerInfo
@@ -46,7 +45,7 @@ class FullNodeDiscovery:
         self,
         server: ChiaServer,
         target_outbound_count: int,
-        peer_store_resolver: PeerStoreResolver,
+        peers_file_path: Path,
         introducer_info: Optional[Dict[str, Any]],
         dns_servers: List[str],
         peer_connect_interval: int,
@@ -57,9 +56,8 @@ class FullNodeDiscovery:
         self.server: ChiaServer = server
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
-        self.legacy_peer_db_path = peer_store_resolver.legacy_peer_db_path
         self.legacy_peer_db_migrated = False
-        self.peers_file_path = peer_store_resolver.peers_file_path
+        self.peers_file_path = peers_file_path
         self.dns_servers = dns_servers
         random.shuffle(dns_servers)  # Don't always start with the same DNS server
         self.introducer_info: Optional[UnresolvedPeerInfo] = None
@@ -89,30 +87,6 @@ class FullNodeDiscovery:
         self.default_port: Optional[int] = default_port
         if default_port is None and selected_network in NETWORK_ID_DEFAULT_PORTS:
             self.default_port = NETWORK_ID_DEFAULT_PORTS[selected_network]
-
-    async def migrate_address_manager_if_necessary(self) -> None:
-        if (
-            self.legacy_peer_db_migrated
-            or self.peers_file_path.exists()
-            or self.legacy_peer_db_path is None
-            or not self.legacy_peer_db_path.exists()
-        ):
-            # No need for migration if:
-            #   - we've already migrated
-            #   - we have a peers file
-            #   - we don't have a legacy peer db
-            return
-        try:
-            self.log.info(f"Migrating legacy peer database from {self.legacy_peer_db_path}")
-            # Attempt to create an AddressManager from the legacy peer database
-            address_manager: Optional[AddressManager] = await create_address_manager_from_db(self.legacy_peer_db_path)
-            if address_manager is not None:
-                self.log.info(f"Writing migrated peer data to {self.peers_file_path}")
-                # Write the AddressManager data to the new peers file
-                await AddressManagerStore.serialize(address_manager, self.peers_file_path)
-                self.legacy_peer_db_migrated = True
-        except Exception:
-            self.log.exception("Error migrating legacy peer database")
 
     async def initialize_address_manager(self) -> None:
         self.address_manager = await AddressManagerStore.create_address_manager(self.peers_file_path)
@@ -434,7 +408,7 @@ class FullNodeDiscovery:
                 await asyncio.sleep(connect_peer_interval)
 
                 # prune completed connect tasks
-                self.pending_task = set(filter(lambda t: not t.done(), self.pending_tasks))
+                self.pending_tasks = set(filter(lambda t: not t.done(), self.pending_tasks))
 
             except Exception as e:
                 self.log.error(f"Exception in create outbound connections: {e}")
@@ -528,7 +502,7 @@ class FullNodePeers(FullNodeDiscovery):
         self,
         server: ChiaServer,
         target_outbound_count: int,
-        peer_store_resolver: PeerStoreResolver,
+        peers_file_path: Path,
         introducer_info: Dict[str, Any],
         dns_servers: List[str],
         peer_connect_interval: int,
@@ -539,7 +513,7 @@ class FullNodePeers(FullNodeDiscovery):
         super().__init__(
             server,
             target_outbound_count,
-            peer_store_resolver,
+            peers_file_path,
             introducer_info,
             dns_servers,
             peer_connect_interval,
@@ -552,7 +526,6 @@ class FullNodePeers(FullNodeDiscovery):
         self.key = randbits(256)
 
     async def start(self) -> None:
-        await self.migrate_address_manager_if_necessary()
         await self.initialize_address_manager()
         self.self_advertise_task = asyncio.create_task(self._periodically_self_advertise_and_clean_data())
         self.address_relay_task = asyncio.create_task(self._address_relay())
@@ -709,7 +682,7 @@ class WalletPeers(FullNodeDiscovery):
         self,
         server: ChiaServer,
         target_outbound_count: int,
-        peer_store_resolver: PeerStoreResolver,
+        peers_file_path: Path,
         introducer_info: Dict[str, Any],
         dns_servers: List[str],
         peer_connect_interval: int,
@@ -720,7 +693,7 @@ class WalletPeers(FullNodeDiscovery):
         super().__init__(
             server,
             target_outbound_count,
-            peer_store_resolver,
+            peers_file_path,
             introducer_info,
             dns_servers,
             peer_connect_interval,
@@ -731,7 +704,6 @@ class WalletPeers(FullNodeDiscovery):
 
     async def start(self) -> None:
         self.initial_wait = 1
-        await self.migrate_address_manager_if_necessary()
         await self.initialize_address_manager()
         await self.start_tasks()
 

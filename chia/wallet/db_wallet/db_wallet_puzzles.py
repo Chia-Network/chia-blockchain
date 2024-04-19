@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Iterator, List, Tuple, Union
 
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
@@ -39,7 +40,7 @@ def create_host_layer_puzzle(innerpuz: Union[Program, bytes32], current_root: by
     )
 
 
-def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
+def match_dl_singleton(puzzle: Union[Program, SerializedProgram]) -> Tuple[bool, Iterator[Program]]:
     """
     Given a puzzle test if it's a CAT and, if it is, return the curried arguments
     """

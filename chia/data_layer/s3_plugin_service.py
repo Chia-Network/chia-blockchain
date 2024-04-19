@@ -302,7 +302,7 @@ class S3Plugin:
         self.stores = read_store_ids_from_config(config)
 
     def update_config(self) -> None:
-        with open("s3_plugin_config.yml", "r") as file:
+        with open("s3_plugin_config.yml") as file:
             full_config = yaml.safe_load(file)
 
         full_config[self.instance_name]["stores"] = [store.marshal() for store in self.stores]
@@ -387,7 +387,7 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
 
 
 def load_config(instance: str) -> Any:
-    with open("s3_plugin_config.yml", "r") as f:
+    with open("s3_plugin_config.yml") as f:
         full_config = yaml.safe_load(f)
     return full_config[instance]
 

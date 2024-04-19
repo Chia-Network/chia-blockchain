@@ -46,43 +46,39 @@ class WalletTransactionStore:
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS transaction_record("
-                    " transaction_record blob,"
-                    " bundle_id text PRIMARY KEY,"  # NOTE: bundle_id is being stored as bytes, not hex
-                    " confirmed_at_height bigint,"
-                    " created_at_time bigint,"
-                    " to_puzzle_hash text,"
-                    " amount blob,"
-                    " fee_amount blob,"
-                    " confirmed int,"
-                    " sent int,"
-                    " wallet_id bigint,"
-                    " trade_id text,"
-                    " type int)"
-                )
+                "CREATE TABLE IF NOT EXISTS transaction_record("
+                " transaction_record blob,"
+                " bundle_id text PRIMARY KEY,"  # NOTE: bundle_id is being stored as bytes, not hex
+                " confirmed_at_height bigint,"
+                " created_at_time bigint,"
+                " to_puzzle_hash text,"
+                " amount blob,"
+                " fee_amount blob,"
+                " confirmed int,"
+                " sent int,"
+                " wallet_id bigint,"
+                " trade_id text,"
+                " type int)"
             )
 
             # Useful for reorg lookups
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS tx_confirmed_index on transaction_record(confirmed_at_height)"
             )
-
             await conn.execute("CREATE INDEX IF NOT EXISTS tx_created_index on transaction_record(created_at_time)")
-
-            await conn.execute("CREATE INDEX IF NOT EXISTS tx_confirmed on transaction_record(confirmed)")
-
-            await conn.execute("CREATE INDEX IF NOT EXISTS tx_sent on transaction_record(sent)")
-
-            await conn.execute("CREATE INDEX IF NOT EXISTS tx_created_time on transaction_record(created_at_time)")
-
-            await conn.execute("CREATE INDEX IF NOT EXISTS tx_type on transaction_record(type)")
-
+            # Remove a redundant index on `created_at_time`
+            # See https://github.com/Chia-Network/chia-blockchain/issues/10276
+            await conn.execute("DROP INDEX IF EXISTS tx_created_time")
             await conn.execute("CREATE INDEX IF NOT EXISTS tx_to_puzzle_hash on transaction_record(to_puzzle_hash)")
-
+            await conn.execute("CREATE INDEX IF NOT EXISTS tx_confirmed on transaction_record(confirmed)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS tx_sent on transaction_record(sent)")
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS transaction_record_wallet_id on transaction_record(wallet_id)"
             )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS transaction_record_trade_id_idx ON transaction_record(trade_id)"
+            )
+            await conn.execute("CREATE INDEX IF NOT EXISTS tx_type on transaction_record(type)")
 
             try:
                 await conn.execute("CREATE TABLE tx_times(txid blob PRIMARY KEY, valid_times blob)")
@@ -104,25 +100,34 @@ class WalletTransactionStore:
         Store TransactionRecord in DB and Cache.
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
+            transaction_record_old = TransactionRecordOld(
+                confirmed_at_height=record.confirmed_at_height,
+                created_at_time=record.created_at_time,
+                to_puzzle_hash=record.to_puzzle_hash,
+                amount=record.amount,
+                fee_amount=record.fee_amount,
+                confirmed=record.confirmed,
+                sent=record.sent,
+                spend_bundle=record.spend_bundle,
+                additions=record.additions,
+                removals=record.removals,
+                wallet_id=record.wallet_id,
+                sent_to=record.sent_to,
+                trade_id=record.trade_id,
+                type=record.type,
+                name=record.name,
+                memos=record.memos,
+            )
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    bytes(
-                        TransactionRecordOld(
-                            spend_bundle=record.spend_bundle,
-                            **{
-                                k: v
-                                for k, v in dataclasses.asdict(record).items()
-                                if k not in ("valid_times", "spend_bundle")
-                            },
-                        )
-                    ),
+                    bytes(transaction_record_old),
                     record.name,
                     record.confirmed_at_height,
                     record.created_at_time,
                     record.to_puzzle_hash.hex(),
-                    bytes(record.amount),
-                    bytes(record.fee_amount),
+                    record.amount.stream_to_bytes(),
+                    record.fee_amount.stream_to_bytes(),
                     int(record.confirmed),
                     record.sent,
                     record.wallet_id,
@@ -131,11 +136,7 @@ class WalletTransactionStore:
                 ),
             )
             await conn.execute_insert(
-                "INSERT OR REPLACE INTO tx_times " "(txid, valid_times) " "VALUES(?, ?)",
-                (
-                    record.name,
-                    bytes(record.valid_times),
-                ),
+                "INSERT OR REPLACE INTO tx_times VALUES (?, ?)", (record.name, bytes(record.valid_times))
             )
 
     async def delete_transaction_record(self, tx_id: bytes32) -> None:
@@ -428,20 +429,42 @@ class WalletTransactionStore:
             ).close()
 
     async def _get_new_tx_records_from_old(self, old_records: List[TransactionRecordOld]) -> List[TransactionRecord]:
+        tx_id_to_valid_times: Dict[bytes, ConditionValidTimes] = {}
+        empty_valid_times = ConditionValidTimes()
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute(
-                f"SELECT txid, valid_times from tx_times WHERE txid IN ({','.join('?' *  len(old_records))})",
-                tuple(tx.name for tx in old_records),
-            )
-            valid_times: Dict[bytes32, ConditionValidTimes] = {
-                bytes32(res[0]): ConditionValidTimes.from_bytes(res[1]) for res in await cursor.fetchall()
-            }
-            await cursor.close()
+            chunked_records: List[List[TransactionRecordOld]] = [
+                old_records[i : min(len(old_records), i + self.db_wrapper.host_parameter_limit)]
+                for i in range(0, len(old_records), self.db_wrapper.host_parameter_limit)
+            ]
+            for records_chunk in chunked_records:
+                cursor = await conn.execute(
+                    f"SELECT txid, valid_times from tx_times WHERE txid IN ({','.join('?' * len(records_chunk))})",
+                    tuple(tx.name for tx in records_chunk),
+                )
+                for row in await cursor.fetchall():
+                    tx_id_to_valid_times[row[0]] = ConditionValidTimes.from_bytes(row[1])
+                await cursor.close()
         return [
             TransactionRecord(
-                valid_times=valid_times[record.name] if record.name in valid_times else ConditionValidTimes(),
+                confirmed_at_height=record.confirmed_at_height,
+                created_at_time=record.created_at_time,
+                to_puzzle_hash=record.to_puzzle_hash,
+                amount=record.amount,
+                fee_amount=record.fee_amount,
+                confirmed=record.confirmed,
+                sent=record.sent,
                 spend_bundle=record.spend_bundle,
-                **{k: v for k, v in dataclasses.asdict(record).items() if k != "spend_bundle"},
+                additions=record.additions,
+                removals=record.removals,
+                wallet_id=record.wallet_id,
+                sent_to=record.sent_to,
+                trade_id=record.trade_id,
+                type=record.type,
+                name=record.name,
+                memos=record.memos,
+                valid_times=(
+                    tx_id_to_valid_times[record.name] if record.name in tx_id_to_valid_times else empty_valid_times
+                ),
             )
             for record in old_records
         ]

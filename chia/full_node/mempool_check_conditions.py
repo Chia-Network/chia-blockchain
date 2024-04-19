@@ -6,20 +6,15 @@ from typing import Dict, List, Optional
 from chia_rs import (
     AGG_SIG_ARGS,
     ALLOW_BACKREFS,
-    ENABLE_ASSERT_BEFORE,
-    ENABLE_BLS_OPS,
     ENABLE_BLS_OPS_OUTSIDE_GUARD,
     ENABLE_FIXED_DIV,
-    ENABLE_SECP_OPS,
+    ENABLE_MESSAGE_CONDITIONS,
     ENABLE_SOFTFORK_CONDITION,
-    LIMIT_ANNOUNCES,
-    LIMIT_OBJECTS,
     MEMPOOL_MODE,
     NO_RELATIVE_CONDITIONS_ON_EPHEMERAL,
 )
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_block_generator2, run_chia_program
-from clvm.casts import int_from_bytes
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
@@ -29,7 +24,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions, SpendInfo
+from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions, SpendInfo, make_spend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.condition_tools import conditions_for_solution
@@ -45,19 +40,13 @@ log = logging.getLogger(__name__)
 
 
 def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
-    flags = ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+    flags = 0
 
     if height >= constants.SOFT_FORK2_HEIGHT:
-        flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+        flags = flags | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
 
-    if height >= constants.SOFT_FORK3_HEIGHT:
-        # the soft-fork initiated with 2.0. To activate end of October 2023
-        # * the number of announces created and asserted are limited per spend
-        # * the total number of CLVM objects (atoms or pairs) are limited
-        # * BLS operators enabled, behind the softfork op. This set of operators
-        #   also includes coinid, % and modpow
-        # * secp operators enabled
-        flags = flags | LIMIT_ANNOUNCES | LIMIT_OBJECTS | ENABLE_BLS_OPS | ENABLE_SECP_OPS
+    if height >= constants.SOFT_FORK4_HEIGHT:
+        flags = flags | ENABLE_MESSAGE_CONDITIONS
 
     if height >= constants.HARD_FORK_HEIGHT:
         # the hard-fork initiated with 2.0. To activate June 2024
@@ -108,16 +97,18 @@ def get_name_puzzle_conditions(
         err, result = run_block(bytes(generator.program), block_args, max_cost, flags)
         assert (err is None) != (result is None)
         if err is not None:
-            return NPCResult(uint16(err), None, uint64(0))
+            return NPCResult(uint16(err), None)
         else:
             assert result is not None
-            return NPCResult(None, result, uint64(result.cost))
+            return NPCResult(None, result)
     except BaseException:
         log.exception("get_name_puzzle_condition failed")
-        return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None, uint64(0))
+        return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None)
 
 
-def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin: Coin, flags: int) -> SpendInfo:
+def get_puzzle_and_solution_for_coin(
+    generator: BlockGenerator, coin: Coin, height: int, constants: ConsensusConstants
+) -> SpendInfo:
     try:
         args = bytearray(b"\xff")
         args += bytes(DESERIALIZE_MOD)
@@ -132,7 +123,7 @@ def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin: Coin, flag
             coin.parent_coin_info,
             coin.amount,
             coin.puzzle_hash,
-            flags,
+            get_flags_for_height_and_constants(height, constants),
         )
         return SpendInfo(SerializedProgram.from_bytes(puzzle), SerializedProgram.from_bytes(solution))
     except Exception as e:
@@ -158,8 +149,8 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
     for spend in Program.to(ret).first().as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
         puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
-        spends.append(CoinSpend(coin, puzzle, solution))
+        coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
+        spends.append(make_spend(coin, puzzle, solution))
 
     return spends
 
@@ -187,8 +178,8 @@ def get_spends_for_block_with_conditions(
     for spend in Program.to(ret).first().as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
         puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
-        coin_spend = CoinSpend(coin, puzzle, solution)
+        coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
+        coin_spend = make_spend(coin, puzzle, solution)
         conditions = conditions_for_solution(puzzle, solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
         spends.append(CoinSpendWithConditions(coin_spend, conditions))
 

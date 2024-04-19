@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import random
 import secrets
-from typing import BinaryIO, Iterable, Optional, SupportsBytes, Type, TypeVar, Union
-
-from typing_extensions import SupportsIndex
+from typing import BinaryIO, Iterable, Optional, SupportsBytes, SupportsIndex, Type, TypeVar, Union
 
 _T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")
 
@@ -27,7 +25,7 @@ class SizedBytes(bytes):
 
     _size = 0
 
-    # This is just a partial exposure of the underlying int constructor.  Liskov...
+    # This is just a partial exposure of the underlying bytes constructor.  Liskov...
     # https://github.com/python/typeshed/blob/f8547a3f3131de90aa47005358eb3394e79cfa13/stdlib/builtins.pyi#L483-L493
     def __init__(self, v: Union[Iterable[SupportsIndex], SupportsBytes]) -> None:
         # v is unused here and that is ok since .__new__() seems to have already
@@ -36,7 +34,7 @@ class SizedBytes(bytes):
         # created instance satisfies the length limitation of the particular subclass.
         super().__init__()
         if len(self) != self._size:
-            raise ValueError("bad %s initializer %s" % (type(self).__name__, v))
+            raise ValueError(f"bad {type(self).__name__} initializer {v}")
 
     @classmethod
     def parse(cls: Type[_T_SizedBytes], f: BinaryIO) -> _T_SizedBytes:
@@ -73,4 +71,4 @@ class SizedBytes(bytes):
         return self.hex()
 
     def __repr__(self) -> str:
-        return "<%s: %s>" % (self.__class__.__name__, str(self))
+        return f"<{self.__class__.__name__}: {str(self)}>"

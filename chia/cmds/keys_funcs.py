@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.cmds.passphrase_funcs import obtain_current_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk
@@ -174,6 +174,7 @@ def show_keys(
 
         if show_mnemonic:
             key["master_sk"] = bytes(sk).hex()
+            key["farmer_sk"] = bytes(master_sk_to_farmer_sk(sk)).hex()
             key["wallet_sk"] = bytes(master_sk_to_wallet_sk(sk, uint32(0))).hex()
             key["mnemonic"] = bytes_to_mnemonic(key_data.entropy)
         return key
@@ -194,6 +195,7 @@ def show_keys(
             print(f"First wallet address{' (non-observer)' if key['non_observer'] else ''}: {key['wallet_address']}")
             if show_mnemonic:
                 print("Master private key (m):", key["master_sk"])
+                print("Farmer private key (m/12381/8444/0/0):", key["farmer_sk"])
                 print("First wallet secret key (m/12381/8444/2/0):", key["wallet_sk"])
                 print("  Mnemonic seed (24 secret words):")
                 print(key["mnemonic"])

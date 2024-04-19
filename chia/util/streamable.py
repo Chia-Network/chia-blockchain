@@ -7,6 +7,7 @@ import pprint
 import traceback
 from enum import Enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     BinaryIO,
     Callable,
@@ -22,8 +23,7 @@ from typing import (
     get_type_hints,
 )
 
-from blspy import G1Element, G2Element, PrivateKey
-from typing_extensions import TYPE_CHECKING, Literal, get_args, get_origin
+from typing_extensions import Literal, get_args, get_origin
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -80,20 +80,6 @@ class ConversionError(StreamableError):
             + "".join(traceback.format_exception_only(type(exception), value=exception)).strip()
         )
 
-
-# TODO: Remove hack, this allows streaming these objects from binary
-size_hints = {
-    "PrivateKey": PrivateKey.PRIVATE_KEY_SIZE,
-    "G1Element": G1Element.SIZE,
-    "G2Element": G2Element.SIZE,
-}
-unhashable_types = [
-    "PrivateKey",
-    "G1Element",
-    "G2Element",
-    "Program",
-    "SerializedProgram",
-]
 
 _T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
@@ -192,20 +178,6 @@ def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
         raise ConversionError(item, f_type, e) from e
 
 
-def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:
-    if isinstance(item, f_type):
-        return item
-    if not isinstance(item, bytes):
-        item = convert_hex_string(item)
-    try:
-        if hasattr(f_type, "from_bytes_unchecked"):
-            return f_type.from_bytes_unchecked(item)
-        else:
-            return f_type.from_bytes(item)
-    except Exception as e:
-        raise ConversionError(item, f_type, e) from e
-
-
 def convert_primitive(f_type: Type[Any], item: Any) -> Any:
     if isinstance(item, f_type):
         return item
@@ -251,9 +223,6 @@ def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
         convert_inner_func = function_to_convert_one_item(inner_type)
         # Ignoring for now as the proper solution isn't obvious
         return lambda items: convert_list(convert_inner_func, items)  # type: ignore[arg-type]
-    elif f_type.__name__ in unhashable_types:
-        # Type is unhashable (bls type), so cast from hex string
-        return lambda item: convert_unhashable_type(f_type, item)
     elif hasattr(f_type, "from_json_dict"):
         return lambda item: f_type.from_json_dict(item)
     elif issubclass(f_type, bytes):
@@ -301,8 +270,7 @@ def function_to_post_init_process_one_item(f_type: Type[object]) -> ConvertFunct
 
 def recurse_jsonify(d: Any) -> Any:
     """
-    Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
-    strings.
+    Makes bytes objects into strings with 0x, and makes large ints into strings.
     """
     if dataclasses.is_dataclass(d):
         new_dict = {}
@@ -322,7 +290,7 @@ def recurse_jsonify(d: Any) -> Any:
             new_dict[name] = recurse_jsonify(val)
         return new_dict
 
-    elif type(d).__name__ in unhashable_types or issubclass(type(d), bytes):
+    elif issubclass(type(d), bytes):
         return f"0x{bytes(d).hex()}"
     elif isinstance(d, Enum):
         return d.name
@@ -401,15 +369,6 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[ParseFunctionType]) -
     return tuple(full_list)
 
 
-def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int, unchecked: bool) -> Any:
-    bytes_read = f.read(bytes_to_read)
-    assert bytes_read is not None and len(bytes_read) == bytes_to_read
-    if unchecked:
-        return f_type.from_bytes_unchecked(bytes_read)
-    else:
-        return f_type.from_bytes(bytes_read)
-
-
 def parse_str(f: BinaryIO) -> str:
     str_size = parse_uint32(f)
     str_read_bytes = f.read(str_size)
@@ -444,12 +403,6 @@ def function_to_parse_one_item(f_type: Type[Any]) -> ParseFunctionType:
         inner_types = get_args(f_type)
         list_parse_inner_type_f = [function_to_parse_one_item(_) for _ in inner_types]
         return lambda f: parse_tuple(f, list_parse_inner_type_f)
-    if hasattr(f_type, "from_bytes_unchecked") and f_type.__name__ in size_hints:
-        bytes_to_read = size_hints[f_type.__name__]
-        return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=True)
-    if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
-        bytes_to_read = size_hints[f_type.__name__]
-        return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=False)
     if f_type is str:
         return parse_str
     raise UnsupportedType(f"Type {f_type} does not have parse")
@@ -646,6 +599,11 @@ class Streamable:
         parsed = cls.parse(f)
         assert f.read() == b""
         return parsed
+
+    def stream_to_bytes(self) -> bytes:
+        f = io.BytesIO()
+        self.stream(f)
+        return bytes(f.getvalue())
 
     def __bytes__(self: Any) -> bytes:
         f = io.BytesIO()

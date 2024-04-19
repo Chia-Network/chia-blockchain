@@ -43,7 +43,7 @@ class DaemonProxy:
                 autoclose=True,
                 autoping=True,
                 heartbeat=self.heartbeat,
-                ssl_context=self.ssl_context,
+                ssl=self.ssl_context,
                 max_msg_size=self.max_message_size,
             )
         except Exception:
@@ -94,6 +94,12 @@ class DaemonProxy:
     async def get_version(self) -> WsRpcMessage:
         data: Dict[str, Any] = {}
         request = self.format_request("get_version", data)
+        response = await self._get(request)
+        return response
+
+    async def get_network_info(self) -> WsRpcMessage:
+        data: Dict[str, Any] = {}
+        request = self.format_request("get_network_info", data)
         response = await self._get(request)
         return response
 

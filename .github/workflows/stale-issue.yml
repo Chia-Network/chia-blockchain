@@ -1,13 +1,13 @@
-name: 'Close stale issues'
+name: "Close stale issues"
 on:
   schedule:
-    - cron: '0 11 * * *'
+    - cron: "0 11 * * *"
 
 jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: chia-network/stale@main
+      - uses: actions/stale@v9
         with:
           operations-per-run: 10000
           ascending: true

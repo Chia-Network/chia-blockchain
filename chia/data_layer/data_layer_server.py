@@ -92,7 +92,7 @@ class DataLayerServer:
             content = reader.read()
         response = web.Response(
             content_type="application/octet-stream",
-            headers={"Content-Disposition": "attachment;filename={}".format(filename)},
+            headers={"Content-Disposition": f"attachment;filename={filename}"},
             body=content,
         )
         return response

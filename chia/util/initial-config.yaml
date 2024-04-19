@@ -4,9 +4,11 @@ min_mainnet_k_size: 32
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
 prefer_ipv6: False
+rpc_timeout: 300
 daemon_port: 55400
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
 daemon_heartbeat: 300 # sets the heartbeat for ping/ping interval and timeouts
+daemon_allow_tls_1_2: False # if True, allow TLS 1.2 for daemon connections
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
 
@@ -72,7 +74,7 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
       SOFT_FORK2_HEIGHT: 3000000
-      SOFT_FORK3_HEIGHT: 2997292
+      SOFT_FORK4_HEIGHT: 4465000
       # planned 2.0 release is July 26, height 2965036 on testnet
       # 1 week later
       HARD_FORK_HEIGHT: 2997292
@@ -84,6 +86,25 @@ network_overrides: &network_overrides
       PLOT_FILTER_64_HEIGHT: 8010796
       # 3 years later
       PLOT_FILTER_32_HEIGHT: 13056556
+    testnet11:
+      AGG_SIG_ME_ADDITIONAL_DATA: 37a90eb5185a9c4439a91ddc98bbadce7b4feba060d50116a067de66bf236615
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
+      DIFFICULTY_STARTING: 30
+      EPOCH_BLOCKS: 768
+      GENESIS_CHALLENGE: 37a90eb5185a9c4439a91ddc98bbadce7b4feba060d50116a067de66bf236615
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: 3ef7c233fc0785f3c0cae5992c1d35e7c955ca37a423571c1607ba392a9d12f7
+      MEMPOOL_BLOCK_BUFFER: 10
+      MIN_PLOT_SIZE: 18
+      NETWORK_TYPE: 1
+      SUB_SLOT_ITERS_STARTING: 67108864
+      # Forks activated from the beginning on this network
+      HARD_FORK_HEIGHT: 0
+      HARD_FORK_FIX_HEIGHT: 0
+      SOFT_FORK4_HEIGHT: 641500
+      PLOT_FILTER_128_HEIGHT: 6029568
+      PLOT_FILTER_64_HEIGHT: 11075328
+      PLOT_FILTER_32_HEIGHT: 16121088
   config:
     mainnet:
       address_prefix: "xch"
@@ -103,6 +124,9 @@ network_overrides: &network_overrides
       address_prefix: "txch"
       default_full_node_port: 58444
     testnet10:
+      address_prefix: "txch"
+      default_full_node_port: 58444
+    testnet11:
       address_prefix: "txch"
       default_full_node_port: 58444
 
@@ -176,9 +200,9 @@ seeder:
       private_key: "config/ssl/crawler/private_crawler.key"
 
 harvester:
-  farmer_peer:
-    host: *self_hostname
-    port: 8447
+  farmer_peers:
+    - host: *self_hostname
+      port: 8447
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -237,10 +261,10 @@ pool:
 farmer:
   # The farmer server (if run) will run on this port
   port: 8447
-  # The farmer will attempt to connect to this full node and harvester
-  full_node_peer:
-    host: *self_hostname
-    port: 8444
+  # The farmer will attempt to connect to these full nodes
+  full_node_peers:
+    - host: *self_hostname
+      port: 8444
 
   pool_public_keys: []
 
@@ -282,9 +306,9 @@ timelord:
       - 127.0.0.1
     ips_estimate:
       - 150000
-  full_node_peer:
-    host: *self_hostname
-    port: 8444
+  full_node_peers:
+    - host: *self_hostname
+      port: 8444
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
@@ -331,6 +355,8 @@ timelord:
 full_node:
   # The full node server (if run) will run on this port
   port: 8444
+  # The full node will attempt to connect to these full nodes
+  full_node_peers: []
 
   # controls the sync-to-disk behavior of the database connection. Can be one of:
   # "on"    enables syncing to disk, minimizes risk of corrupting the DB in
@@ -356,6 +382,14 @@ full_node:
   peers_file_path: db/peers.dat
 
   multiprocessing_start_method: default
+
+  # The maximum number of UnfinishedBlocks we accept (and forward) with the
+  # same reward hash (but different foliage hashes). Traditionally this was
+  # effectively 1, meaning whichever UnfinishedBlock we saw first was the only
+  # one we forwarded. In 2.2.0 we relaxed the protocol to allow some
+  # duplicates be forwarded, in order to allow the timelords to,
+  # deterministically, pick which one to infuse
+  max_duplicate_unfinished_blocks: 3
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -386,7 +420,7 @@ full_node:
   # How long to wait for a peer connection
   peer_connect_timeout: 30
   # Accept peers until this number of connections
-  target_peer_count: 80
+  target_peer_count: 40
   # Initiate outbound connections until this number is hit.
   target_outbound_peer_count: 8
   # IPv4/IPv6 network addresses and CIDR blocks allowed to connect even when target_peer_count has been hit.
@@ -410,9 +444,18 @@ full_node:
   # timeout for weight proof request
   weight_proof_timeout: &weight_proof_timeout 360
 
+  # when the full node enters sync-mode, we wait until we have collected peaks
+  # from at least 3 peers, or until we've waitied this many seconds
+  max_sync_wait: 30
+
   # when enabled, the full node will print a pstats profile to the root_dir/profile every second
   # analyze with chia/utils/profiler.py
   enable_profiler: False
+
+  # when enabled, each time a block is validated, the python profiler is
+  # engaged. If the validation takes more than 2 seconds, the profile is saved
+  # to disk, in the chia root/block-validation-profile
+  profile_block_validation: False
 
   enable_memory_profiler: False
 
@@ -519,9 +562,9 @@ wallet:
 
   dns_servers: *dns_servers
 
-  full_node_peer:
-    host: *self_hostname
-    port: 8444
+  full_node_peers:
+    - host: *self_hostname
+      port: 8444
   # The path of NFT off-chain metadata cache
   nft_metadata_cache_path: "nft_cache"
   # The length of NFT ID prefix will be used as hash index
@@ -592,6 +635,9 @@ wallet:
   # The amount someone has to pay you in mojos for you to see their notification
   required_notification_amount: 10000000
 
+  # Enabling the delta sync can under certain circumstances lead to missing coin states during re-orgs
+  use_delta_sync: False
+
   #################################
   #  Inner puzzle decorators      #
   #################################
@@ -636,15 +682,12 @@ data_layer:
   # TODO: what considerations are there in choosing this?
   rpc_port: 8562
   rpc_server_max_request_body_size: 26214400
-  fee: 1000000000
 
   # this is a debug and profiling facility that logs all SQLite commands to a
   # separate log file (under logging/data_sql.log).
   log_sqlite_cmds: False
 
   logging: *logging
-
-  # TODO: which of these are really appropriate?
 
   ssl:
     private_crt: "config/ssl/data_layer/private_data_layer.crt"

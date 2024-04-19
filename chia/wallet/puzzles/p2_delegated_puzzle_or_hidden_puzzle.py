@@ -55,12 +55,13 @@ following mechanism:
   key whose derivation is within. Any wallets which intend to use standard coins in
   this way must try to resolve a public key to a secret key via this derivation.
 """
+
 from __future__ import annotations
 
 import hashlib
 from typing import Union
 
-from blspy import G1Element, PrivateKey
+from chia_rs import G1Element, PrivateKey
 from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.program import Program

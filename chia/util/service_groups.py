@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Generator, KeysView
+from typing import Dict, Generator, Iterable, KeysView
 
-SERVICES_FOR_GROUP = {
+SERVICES_FOR_GROUP: Dict[str, list[str]] = {
     "all": [
         "chia_harvester",
         "chia_timelord_launcher",
@@ -13,6 +13,7 @@ SERVICES_FOR_GROUP = {
         "chia_data_layer",
         "chia_data_layer_http",
     ],
+    "daemon": [],
     # TODO: should this be `data_layer`?
     "data": ["chia_wallet", "chia_data_layer"],
     "data_layer_http": ["chia_data_layer_http"],
@@ -37,10 +38,9 @@ def all_groups() -> KeysView[str]:
     return SERVICES_FOR_GROUP.keys()
 
 
-def services_for_groups(groups) -> Generator[str, None, None]:
+def services_for_groups(groups: Iterable[str]) -> Generator[str, None, None]:
     for group in groups:
-        for service in SERVICES_FOR_GROUP[group]:
-            yield service
+        yield from SERVICES_FOR_GROUP[group]
 
 
 def validate_service(service: str) -> bool:

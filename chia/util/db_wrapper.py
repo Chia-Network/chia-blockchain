@@ -3,13 +3,16 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+import secrets
 import sqlite3
 import sys
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, Optional, TextIO, Type, Union
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, TextIO, Tuple, Type, Union
 
 import aiosqlite
+import anyio
 from typing_extensions import final
 
 if aiosqlite.sqlite_version_info < (3, 32, 0):
@@ -21,8 +24,40 @@ else:
 SQLITE_INT_MAX = 2**63 - 1
 
 
+class DBWrapperError(Exception):
+    pass
+
+
+class ForeignKeyError(DBWrapperError):
+    def __init__(self, violations: Iterable[Union[aiosqlite.Row, Tuple[str, object, str, object]]]) -> None:
+        self.violations: List[Dict[str, object]] = []
+
+        for violation in violations:
+            if isinstance(violation, tuple):
+                violation_dict = dict(zip(["table", "rowid", "parent", "fkid"], violation))
+            else:
+                violation_dict = dict(violation)
+            self.violations.append(violation_dict)
+
+        super().__init__(f"Found {len(self.violations)} FK violations: {self.violations}")
+
+
+class NestedForeignKeyDelayedRequestError(DBWrapperError):
+    def __init__(self) -> None:
+        super().__init__("Unable to enable delayed foreign key enforcement in a nested request.")
+
+
+class InternalError(DBWrapperError):
+    pass
+
+
+def generate_in_memory_db_uri() -> str:
+    # We need to use shared cache as our DB wrapper uses different types of connections
+    return f"file:db_{secrets.token_hex(16)}?mode=memory&cache=shared"
+
+
 async def execute_fetchone(
-    c: aiosqlite.Connection, sql: str, parameters: Iterable[Any] = None
+    c: aiosqlite.Connection, sql: str, parameters: Optional[Iterable[Any]] = None
 ) -> Optional[sqlite3.Row]:
     rows = await c.execute_fetchall(sql, parameters)
     for row in rows:
@@ -48,20 +83,16 @@ async def _create_connection(
 async def manage_connection(
     database: Union[str, Path],
     uri: bool = False,
-    log_path: Optional[Path] = None,
+    log_file: Optional[TextIO] = None,
     name: Optional[str] = None,
 ) -> AsyncIterator[aiosqlite.Connection]:
-    async with contextlib.AsyncExitStack() as exit_stack:
-        connection: aiosqlite.Connection
-        if log_path is not None:
-            file = exit_stack.enter_context(log_path.open("a", encoding="utf-8"))
-            connection = await _create_connection(database=database, uri=uri, log_file=file, name=name)
-        else:
-            connection = await _create_connection(database=database, uri=uri, name=name)
+    connection: aiosqlite.Connection
+    connection = await _create_connection(database=database, uri=uri, log_file=log_file, name=name)
 
-        try:
-            yield connection
-        finally:
+    try:
+        yield connection
+    finally:
+        with anyio.CancelScope(shield=True):
             await connection.close()
 
 
@@ -96,17 +127,18 @@ def get_host_parameter_limit() -> int:
 
 
 @final
+@dataclass
 class DBWrapper2:
-    db_version: int
-    host_parameter_limit: int
-    _lock: asyncio.Lock
-    _read_connections: asyncio.Queue[aiosqlite.Connection]
     _write_connection: aiosqlite.Connection
-    _num_read_connections: int
-    _in_use: Dict[asyncio.Task, aiosqlite.Connection]
-    _current_writer: Optional[asyncio.Task]
-    _savepoint_name: int
-    _log_file: Optional[TextIO]
+    db_version: int = 1
+    _log_file: Optional[TextIO] = None
+    host_parameter_limit: int = get_host_parameter_limit()
+    _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    _read_connections: asyncio.Queue[aiosqlite.Connection] = field(default_factory=asyncio.Queue)
+    _num_read_connections: int = 0
+    _in_use: Dict[asyncio.Task[object], aiosqlite.Connection] = field(default_factory=dict)
+    _current_writer: Optional[asyncio.Task[object]] = None
+    _savepoint_name: int = 0
 
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
@@ -115,22 +147,63 @@ class DBWrapper2:
         self._read_connections.put_nowait(c)
         self._num_read_connections += 1
 
-    def __init__(
-        self,
-        connection: aiosqlite.Connection,
+    @classmethod
+    @contextlib.asynccontextmanager
+    async def managed(
+        cls,
+        database: Union[str, Path],
+        *,
         db_version: int = 1,
-        log_file: Optional[TextIO] = None,
-    ) -> None:
-        self._read_connections = asyncio.Queue()
-        self._write_connection = connection
-        self._lock = asyncio.Lock()
-        self.db_version = db_version
-        self._num_read_connections = 0
-        self._in_use = {}
-        self._current_writer = None
-        self._savepoint_name = 0
-        self._log_file = log_file
-        self.host_parameter_limit = get_host_parameter_limit()
+        uri: bool = False,
+        reader_count: int = 4,
+        log_path: Optional[Path] = None,
+        journal_mode: str = "WAL",
+        synchronous: Optional[str] = None,
+        foreign_keys: Optional[bool] = None,
+        row_factory: Optional[Type[aiosqlite.Row]] = None,
+    ) -> AsyncIterator[DBWrapper2]:
+        if foreign_keys is None:
+            foreign_keys = False
+
+        async with contextlib.AsyncExitStack() as async_exit_stack:
+            if log_path is None:
+                log_file = None
+            else:
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_file = async_exit_stack.enter_context(log_path.open("a", encoding="utf-8"))
+
+            write_connection = await async_exit_stack.enter_async_context(
+                manage_connection(database=database, uri=uri, log_file=log_file, name="writer"),
+            )
+            await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
+            if synchronous is not None:
+                await (await write_connection.execute(f"pragma synchronous={synchronous}")).close()
+
+            await (await write_connection.execute(f"pragma foreign_keys={'ON' if foreign_keys else 'OFF'}")).close()
+
+            write_connection.row_factory = row_factory
+
+            self = cls(_write_connection=write_connection, db_version=db_version, _log_file=log_file)
+
+            for index in range(reader_count):
+                read_connection = await async_exit_stack.enter_async_context(
+                    manage_connection(
+                        database=database,
+                        uri=uri,
+                        log_file=log_file,
+                        name=f"reader-{index}",
+                    ),
+                )
+                read_connection.row_factory = row_factory
+                await self.add_connection(c=read_connection)
+
+            try:
+                yield self
+            finally:
+                with anyio.CancelScope(shield=True):
+                    while self._num_read_connections > 0:
+                        await self._read_connections.get()
+                        self._num_read_connections -= 1
 
     @classmethod
     async def create(
@@ -146,6 +219,7 @@ class DBWrapper2:
         foreign_keys: bool = False,
         row_factory: Optional[Type[aiosqlite.Row]] = None,
     ) -> DBWrapper2:
+        # WARNING: please use .managed() instead
         if log_path is None:
             log_file = None
         else:
@@ -160,7 +234,7 @@ class DBWrapper2:
 
         write_connection.row_factory = row_factory
 
-        self = cls(connection=write_connection, db_version=db_version, log_file=log_file)
+        self = cls(_write_connection=write_connection, db_version=db_version, _log_file=log_file)
 
         for index in range(reader_count):
             read_connection = await _create_connection(
@@ -175,6 +249,7 @@ class DBWrapper2:
         return self
 
     async def close(self) -> None:
+        # WARNING: please use .managed() instead
         try:
             while self._num_read_connections > 0:
                 await (await self._read_connections.get()).close()
@@ -204,7 +279,10 @@ class DBWrapper2:
             await self._write_connection.execute(f"RELEASE {name}")
 
     @contextlib.asynccontextmanager
-    async def writer(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def writer(
+        self,
+        foreign_key_enforcement_enabled: Optional[bool] = None,
+    ) -> AsyncIterator[aiosqlite.Connection]:
         """
         Initiates a new, possibly nested, transaction. If this task is already
         in a transaction, none of the changes made as part of this transaction
@@ -219,17 +297,63 @@ class DBWrapper2:
         assert task is not None
         if self._current_writer == task:
             # we allow nesting writers within the same task
+            if foreign_key_enforcement_enabled is not None:
+                # NOTE: Technically this is complaining even if the requested state is
+                #       already in place.  This could be adjusted to allow nesting
+                #       when the existing and requested states agree.  In this case,
+                #       probably skip the nested foreign key check when exiting since
+                #       we don't have many foreign key errors and so it is likely ok
+                #       to save the extra time checking twice.
+                raise NestedForeignKeyDelayedRequestError()
             async with self._savepoint_ctx():
                 yield self._write_connection
             return
 
         async with self._lock:
-            async with self._savepoint_ctx():
-                self._current_writer = task
-                try:
-                    yield self._write_connection
-                finally:
-                    self._current_writer = None
+            async with contextlib.AsyncExitStack() as exit_stack:
+                if foreign_key_enforcement_enabled is not None:
+                    await exit_stack.enter_async_context(
+                        self._set_foreign_key_enforcement(enabled=foreign_key_enforcement_enabled),
+                    )
+
+                async with self._savepoint_ctx():
+                    self._current_writer = task
+                    try:
+                        yield self._write_connection
+
+                        if foreign_key_enforcement_enabled is not None and not foreign_key_enforcement_enabled:
+                            await self._check_foreign_keys()
+                    finally:
+                        self._current_writer = None
+
+    @contextlib.asynccontextmanager
+    async def _set_foreign_key_enforcement(self, enabled: bool) -> AsyncIterator[None]:
+        if self._current_writer is not None:
+            raise InternalError("Unable to set foreign key enforcement state while a writer is held")
+
+        async with self._write_connection.execute("PRAGMA foreign_keys") as cursor:
+            result = await cursor.fetchone()
+            if result is None:  # pragma: no cover
+                raise InternalError("No results when querying for present foreign key enforcement state")
+            [original_value] = result
+
+        if original_value == enabled:
+            yield
+            return
+
+        try:
+            await self._write_connection.execute(f"PRAGMA foreign_keys={enabled}")
+            yield
+        finally:
+            with anyio.CancelScope(shield=True):
+                await self._write_connection.execute(f"PRAGMA foreign_keys={original_value}")
+
+    async def _check_foreign_keys(self) -> None:
+        async with self._write_connection.execute("PRAGMA foreign_key_check") as cursor:
+            violations = list(await cursor.fetchall())
+
+        if len(violations) > 0:
+            raise ForeignKeyError(violations=violations)
 
     @contextlib.asynccontextmanager
     async def writer_maybe_transaction(self) -> AsyncIterator[aiosqlite.Connection]:

@@ -75,7 +75,10 @@ def get_bladebit_src_path(plotters_root_path: Path) -> Path:
 
 
 def get_bladebit_package_path() -> Path:
-    return Path(os.path.dirname(sys.executable)) / "bladebit"
+    p = Path(os.path.dirname(sys.executable)).joinpath("_internal/bladebit")
+    if p.exists():
+        return p
+    return Path(os.path.dirname(sys.executable)).joinpath("bladebit")
 
 
 def get_bladebit_exec_path(with_cuda: bool = False) -> str:

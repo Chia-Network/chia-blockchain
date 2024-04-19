@@ -6,7 +6,7 @@ from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from blspy import G1Element, PrivateKey
+from chia_rs import G1Element, PrivateKey
 from chiapos import DiskProver
 from typing_extensions import final
 

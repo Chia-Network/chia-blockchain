@@ -58,7 +58,7 @@ class WalletNodeAPI:
             else:
                 timestamp = None
             if timestamp is not None and self.wallet_node.is_timestamp_in_sync(timestamp):
-                self.log.info("Connected to a a synced trusted peer, disconnecting from all untrusted nodes.")
+                self.log.info("Connected to a synced trusted peer, disconnecting from all untrusted nodes.")
                 # Stop peer discovery/connect tasks first
                 if self.wallet_node.wallet_peers is not None:
                     await self.wallet_node.wallet_peers.ensure_is_closed()
@@ -97,6 +97,12 @@ class WalletNodeAPI:
         async with self.wallet_node.wallet_state_manager.lock:
             assert peer.peer_node_id is not None
             name = peer.peer_node_id.hex()
+            if peer.peer_node_id in self.wallet_node._tx_messages_in_progress:
+                self.wallet_node._tx_messages_in_progress[peer.peer_node_id] = [
+                    txid for txid in self.wallet_node._tx_messages_in_progress[peer.peer_node_id] if txid != ack.txid
+                ]
+                if self.wallet_node._tx_messages_in_progress[peer.peer_node_id] == []:
+                    del self.wallet_node._tx_messages_in_progress[peer.peer_node_id]
             status = MempoolInclusionStatus(ack.status)
             try:
                 wallet_state_manager = self.wallet_node.wallet_state_manager

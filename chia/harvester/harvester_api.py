@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.harvester.harvester import Harvester
@@ -221,6 +221,9 @@ class HarvesterAPI:
                         quality_str.hex() + str(filename.resolve()),
                         proof_of_space,
                         new_challenge.signage_point_index,
+                        include_source_signature_data=False,
+                        farmer_reward_address_override=None,
+                        fee_info=None,
                     )
                 )
             return filename, all_responses
@@ -338,6 +341,8 @@ class HarvesterAPI:
             local_sk.get_g1(),
             farmer_public_key,
             message_signatures,
+            False,
+            None,
         )
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
