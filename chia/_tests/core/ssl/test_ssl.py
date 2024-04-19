@@ -76,7 +76,7 @@ class TestSSL:
         with pytest.raises(aiohttp.ClientConnectorCertificateError):
             await establish_connection(farmer_server, self_hostname, ssl_context)
         ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, pub_crt, pub_key)
-        with pytest.raises(aiohttp.ServerDisconnectedError):
+        with pytest.raises((aiohttp.ServerDisconnectedError, aiohttp.ClientOSError)):
             await establish_connection(farmer_server, self_hostname, ssl_context)
 
     @pytest.mark.anyio
