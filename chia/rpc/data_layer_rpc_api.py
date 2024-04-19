@@ -273,7 +273,6 @@ class DataLayerRpcApi:
         fee = get_fee(self.service.config, request)
         store_updates = [process_change_multistore(update) for update in request["store_updates"]]
         submit_on_chain = request.get("submit_on_chain", True)
-        # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
         transaction_records = await self.service.multistore_batch_update(store_updates, uint64(fee), submit_on_chain)
