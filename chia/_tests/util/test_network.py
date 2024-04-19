@@ -18,7 +18,7 @@ class TestNetwork:
         assert await resolve("127.0.0.1", prefer_ipv6=prefer_ipv6) == IPAddress.create("127.0.0.1")
         assert await resolve("10.11.12.13", prefer_ipv6=prefer_ipv6) == IPAddress.create("10.11.12.13")
         assert await resolve("localhost", prefer_ipv6=prefer_ipv6) == IPAddress.create("127.0.0.1")
-        assert await resolve("example.net", prefer_ipv6=prefer_ipv6) == IPAddress.create("93.184.216.34")
+        assert await resolve("example.net", prefer_ipv6=prefer_ipv6) == IPAddress.create("93.184.215.14")
 
     @pytest.mark.anyio
     @pytest.mark.skipif(
