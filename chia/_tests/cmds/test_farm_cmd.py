@@ -16,6 +16,7 @@ from chia.types.aliases import FarmerService, HarvesterService, WalletService
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="Farm summary test is unrelated to consensus mode")
 async def test_farm_summary_command(
     capsys: CaptureFixture[str],
     farmer_one_harvester_simulator_wallet: Tuple[
