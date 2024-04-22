@@ -2736,7 +2736,7 @@ class TestBodyValidation:
         )
         block: FullBlock = blocks[-1]
 
-        merkle_set = MerkleSet()
+        merkle_set = MerkleSet([])
         # additions
         block_2 = recursive_replace(block, "foliage_transaction_block.additions_root", merkle_set.get_root())
         block_2 = recursive_replace(
@@ -2749,7 +2749,7 @@ class TestBodyValidation:
         await _validate_and_add_block(empty_blockchain, block_2, expected_error=Err.BAD_ADDITION_ROOT)
 
         # removals
-        merkle_set.add_already_hashed(std_hash(b"1"))
+        merkle_set = MerkleSet([std_hash(b"1")])
         block_2 = recursive_replace(block, "foliage_transaction_block.removals_root", merkle_set.get_root())
         block_2 = recursive_replace(
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()

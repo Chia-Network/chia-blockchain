@@ -24,7 +24,8 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import ReorgProtocol
-from chia.types.aliases import SimulatorFullNodeService, WalletService
+from chia.simulator.start_simulator import SimulatorFullNodeService
+from chia.types.aliases import WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash

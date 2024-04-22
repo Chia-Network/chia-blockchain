@@ -27,7 +27,7 @@ from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
-from chia.simulator.start_simulator import create_full_node_simulator_service
+from chia.simulator.start_simulator import SimulatorFullNodeService, create_full_node_simulator_service
 from chia.ssl.create_ssl import create_all_ssl
 from chia.timelord.timelord_launcher import VDFClientProcessMgr, find_vdf_client, spawn_process
 from chia.types.aliases import (
@@ -36,7 +36,6 @@ from chia.types.aliases import (
     FullNodeService,
     HarvesterService,
     IntroducerService,
-    SimulatorFullNodeService,
     TimelordService,
     WalletService,
 )

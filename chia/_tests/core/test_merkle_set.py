@@ -24,18 +24,13 @@ async def test_basics(bt: BlockTools) -> None:
     num_blocks = 20
     blocks = bt.get_consecutive_blocks(num_blocks)
 
-    merkle_set = MerkleSet()
-    merkle_set_reverse = MerkleSet()
     coins = list(itertools.chain.from_iterable(map(lambda block: block.get_included_reward_coins(), blocks)))
 
     # excluded coin (not present in 'coins' and Merkle sets)
     excl_coin = coins.pop()
 
-    for coin in reversed(coins):
-        merkle_set_reverse.add_already_hashed(coin.name())
-
-    for coin in coins:
-        merkle_set.add_already_hashed(coin.name())
+    merkle_set_reverse = MerkleSet([coin.name() for coin in reversed(coins)])
+    merkle_set = MerkleSet([coin.name() for coin in coins])
 
     for coin in coins:
         result, proof = merkle_set.is_included_already_hashed(coin.name())
@@ -57,25 +52,23 @@ def hashdown(buf: bytes) -> bytes32:
 
 @pytest.mark.anyio
 async def test_merkle_set_invalid_hash_size() -> None:
-    merkle_set = MerkleSet()
-
     # this is too large
     with pytest.raises(AssertionError):
-        merkle_set.add_already_hashed(bytes([0x80] + [0] * 32))
+        MerkleSet([bytes([0x80] + [0] * 32)])  # type: ignore[list-item]
 
     with pytest.raises(ValueError, match="could not convert slice to array"):
         compute_merkle_set_root([bytes([0x80] + [0] * 32)])
 
     # this is too small
     with pytest.raises(AssertionError):
-        merkle_set.add_already_hashed(bytes([0x80] + [0] * 30))
+        MerkleSet([bytes([0x80] + [0] * 30)])  # type: ignore[list-item]
 
     with pytest.raises(ValueError, match="could not convert slice to array"):
         compute_merkle_set_root([bytes([0x80] + [0] * 30)])
 
     # empty
     with pytest.raises(AssertionError):
-        merkle_set.add_already_hashed(b"")
+        MerkleSet([b""])  # type: ignore[list-item]
 
     with pytest.raises(ValueError, match="could not convert slice to array"):
         compute_merkle_set_root([b""])
@@ -84,8 +77,7 @@ async def test_merkle_set_invalid_hash_size() -> None:
 @pytest.mark.anyio
 async def test_merkle_set_1() -> None:
     a = bytes32([0x80] + [0] * 31)
-    merkle_set = MerkleSet()
-    merkle_set.add_already_hashed(a)
+    merkle_set = MerkleSet([a])
     assert merkle_set.get_root() == bytes32(compute_merkle_set_root([a]))
     assert merkle_set.get_root() == sha256(b"\1" + a).digest()
 
@@ -93,16 +85,14 @@ async def test_merkle_set_1() -> None:
 @pytest.mark.anyio
 async def test_merkle_set_duplicate() -> None:
     a = bytes32([0x80] + [0] * 31)
-    merkle_set = MerkleSet()
-    merkle_set.add_already_hashed(a)
-    merkle_set.add_already_hashed(a)
+    merkle_set = MerkleSet([a, a])
     assert merkle_set.get_root() == bytes32(compute_merkle_set_root([a, a]))
     assert merkle_set.get_root() == sha256(b"\1" + a).digest()
 
 
 @pytest.mark.anyio
 async def test_merkle_set_0() -> None:
-    merkle_set = MerkleSet()
+    merkle_set = MerkleSet([])
     assert merkle_set.get_root() == bytes32(compute_merkle_set_root([]))
     assert merkle_set.get_root() == bytes32([0] * 32)
 
@@ -111,9 +101,7 @@ async def test_merkle_set_0() -> None:
 async def test_merkle_set_2() -> None:
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0x70] + [0] * 31)
-    merkle_set = MerkleSet()
-    merkle_set.add_already_hashed(a)
-    merkle_set.add_already_hashed(b)
+    merkle_set = MerkleSet([a, b])
     assert merkle_set.get_root() == bytes32(compute_merkle_set_root([a, b]))
     assert merkle_set.get_root() == hashdown(b"\1\1" + b + a)
 
@@ -122,9 +110,7 @@ async def test_merkle_set_2() -> None:
 async def test_merkle_set_2_reverse() -> None:
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0x70] + [0] * 31)
-    merkle_set = MerkleSet()
-    merkle_set.add_already_hashed(b)
-    merkle_set.add_already_hashed(a)
+    merkle_set = MerkleSet([b, a])
     assert merkle_set.get_root() == bytes32(compute_merkle_set_root([b, a]))
     assert merkle_set.get_root() == hashdown(b"\1\1" + b + a)
 
@@ -136,9 +122,7 @@ async def test_merkle_set_3() -> None:
     c = bytes32([0x71] + [0] * 31)
     values = [a, b, c]
     for vals in permutations(values):
-        merkle_set = MerkleSet()
-        for v in vals:
-            merkle_set.add_already_hashed(v)
+        merkle_set = MerkleSet(list(vals))
         assert merkle_set.get_root() == bytes32(compute_merkle_set_root(list(vals)))
         assert merkle_set.get_root() == hashdown(b"\2\1" + hashdown(b"\1\1" + b + c) + a)
     # this tree looks like this:
@@ -158,9 +142,7 @@ async def test_merkle_set_4() -> None:
     d = bytes32([0x81] + [0] * 31)
     values = [a, b, c, d]
     for vals in permutations(values):
-        merkle_set = MerkleSet()
-        for v in vals:
-            merkle_set.add_already_hashed(v)
+        merkle_set = MerkleSet(list(vals))
         assert merkle_set.get_root() == bytes32(compute_merkle_set_root(list(vals)))
         assert merkle_set.get_root() == hashdown(b"\2\2" + hashdown(b"\1\1" + b + c) + hashdown(b"\1\1" + a + d))
     # this tree looks like this:
@@ -194,9 +176,7 @@ async def test_merkle_set_5() -> None:
 
     values = [a, b, c, d, e]
     for vals in permutations(values):
-        merkle_set = MerkleSet()
-        for v in vals:
-            merkle_set.add_already_hashed(v)
+        merkle_set = MerkleSet(list(vals))
 
         assert merkle_set.get_root() == bytes32(compute_merkle_set_root(list(vals)))
         assert merkle_set.get_root() == expected
@@ -239,9 +219,7 @@ async def test_merkle_left_edge() -> None:
     expected = hashdown(b"\2\1" + expected + a)
 
     for vals in permutations(values):
-        merkle_set = MerkleSet()
-        for v in vals:
-            merkle_set.add_already_hashed(v)
+        merkle_set = MerkleSet(list(vals))
         assert merkle_set.get_root() == bytes32(compute_merkle_set_root(list(vals)))
         assert merkle_set.get_root() == expected
     # this tree looks like this:
@@ -280,9 +258,7 @@ async def test_merkle_right_edge() -> None:
     expected = hashdown(b"\1\2" + a + expected)
 
     for vals in permutations(values):
-        merkle_set = MerkleSet()
-        for v in vals:
-            merkle_set.add_already_hashed(v)
+        merkle_set = MerkleSet(list(vals))
         assert merkle_set.get_root() == bytes32(compute_merkle_set_root(list(vals)))
         assert merkle_set.get_root() == expected
     # this tree looks like this:
@@ -322,9 +298,7 @@ async def test_merkle_set_random_regression() -> None:
 
         for _ in range(10):
             rng.shuffle(values)
-            merkle_set = MerkleSet()
-            for v in values:
-                merkle_set.add_already_hashed(v)
+            merkle_set = MerkleSet(values)
 
             python_root = merkle_set.get_root()
             rust_root = bytes32(compute_merkle_set_root(values))
@@ -341,10 +315,9 @@ def test_validate_removals_full_list(num_coins: int, seeded_random: Random) -> N
     # the root can be computed by all the removals
     coins = make_test_coins(num_coins, seeded_random)
 
-    removals_merkle_set = MerkleSet()
     coin_map: List[Tuple[bytes32, Optional[Coin]]] = []
+    removals_merkle_set = MerkleSet([coin.name() for coin in coins])
     for coin in coins:
-        removals_merkle_set.add_already_hashed(coin.name())
         coin_map.append((coin.name(), coin))
     removals_root = removals_merkle_set.get_root()
 
@@ -358,15 +331,14 @@ def test_validate_additions_full_list(num_coins: int, batch_size: int, seeded_ra
     # the root can be computed by all the removals
     coins = make_test_coins(num_coins, seeded_random)
 
-    additions_merkle_set = MerkleSet()
     additions: List[Tuple[bytes32, List[Coin]]] = []
+    leafs: List[bytes32] = []
     for coin_batch in to_batches(coins, batch_size):
         puzzle_hash = bytes32.random(seeded_random)
         additions.append((puzzle_hash, coin_batch.entries))
-        additions_merkle_set.add_already_hashed(puzzle_hash)
-        additions_merkle_set.add_already_hashed(
-            std_hash(b"".join(sorted([coin.name() for coin in coin_batch.entries], reverse=True)))
-        )
+        leafs.append(puzzle_hash)
+        leafs.append(std_hash(b"".join(sorted([coin.name() for coin in coin_batch.entries], reverse=True))))
+    additions_merkle_set = MerkleSet(leafs)
     additions_root = additions_merkle_set.get_root()
 
     assert validate_additions(additions, None, additions_root) is True

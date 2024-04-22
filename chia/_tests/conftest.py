@@ -61,6 +61,7 @@ from chia.simulator.setup_services import (
     setup_seeder,
     setup_timelord,
 )
+from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
@@ -72,7 +73,6 @@ from chia.types.aliases import (
     FarmerService,
     FullNodeService,
     HarvesterService,
-    SimulatorFullNodeService,
     TimelordService,
     WalletService,
 )
