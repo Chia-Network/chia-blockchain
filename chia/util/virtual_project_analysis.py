@@ -40,7 +40,7 @@ class ChiaFile:
     @classmethod
     def parse(cls, file_path: Path) -> ChiaFile:
         with open(file_path, encoding="utf-8", errors="ignore") as f:
-            file_string = f.read()
+            file_string = next(f, "")
             return cls(file_path, Annotation.parse(file_string) if Annotation.is_annotated(file_string) else None)
 
 
