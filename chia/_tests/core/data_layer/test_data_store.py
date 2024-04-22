@@ -373,9 +373,8 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
 async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimized: bool, tmp_path: Path) -> None:
     num_batches = 10
     num_ops_per_batch = 100 if use_optimized else 10
-    saved_roots: List[Root] = []
     saved_batches: List[List[Dict[str, Any]]] = []
-
+    saved_kv: List[List[TerminalNode]] = []
     db_uri = generate_in_memory_db_uri()
     async with DataStore.managed(database=db_uri, uri=True) as single_op_data_store:
         await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
@@ -442,16 +441,20 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
             if (operation + 1) % num_ops_per_batch == 0:
                 saved_batches.append(batch)
                 batch = []
-                root = await single_op_data_store.get_tree_root(tree_id=tree_id)
-                saved_roots.append(root)
+                current_kv = await single_op_data_store.get_keys_values(tree_id=tree_id)
+                saved_kv.append(current_kv)
 
     for batch_number, batch in enumerate(saved_batches):
         assert len(batch) == num_ops_per_batch
         await data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
         root = await data_store.get_tree_root(tree_id)
         assert root.generation == batch_number + 1
-        assert root.node_hash == saved_roots[batch_number].node_hash
         assert root.node_hash is not None
+        current_kv = await data_store.get_keys_values(tree_id=tree_id)
+        # Get the same keys/values, but possibly stored in other order.
+        assert {node.key: node.value for node in current_kv} == {
+            node.key: node.value for node in saved_kv[batch_number]
+        }
         queue: List[bytes32] = [root.node_hash]
         ancestors: Dict[bytes32, bytes32] = {}
         while len(queue) > 0:
