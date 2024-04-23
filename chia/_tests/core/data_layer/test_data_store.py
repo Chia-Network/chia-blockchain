@@ -1556,6 +1556,32 @@ async def test_benchmark_batch_insert_speed(
 
 
 @pytest.mark.anyio
+async def test_benchmark_batch_insert_speed_multiple_batches(
+    data_store: DataStore,
+    tree_id: bytes32,
+    benchmark_runner: BenchmarkRunner,
+) -> None:
+    r = random.Random()
+    r.seed("shadowlands", version=2)
+
+    with benchmark_runner.assert_runtime(seconds=120):
+        for batch in range(200):
+            changelist = [
+                {
+                    "action": "insert",
+                    "key": x.to_bytes(32, byteorder="big", signed=False),
+                    "value": bytes(r.getrandbits(8) for _ in range(10000)),
+                }
+                for x in range(batch * 50, (batch + 1) * 50)
+            ]
+            await data_store.insert_batch(
+                tree_id=tree_id,
+                changelist=changelist,
+                status=Status.COMMITTED,
+            )
+
+
+@pytest.mark.anyio
 async def test_delete_store_data(raw_data_store: DataStore) -> None:
     tree_id = bytes32(b"\0" * 32)
     tree_id_2 = bytes32(b"\0" * 31 + b"\1")
