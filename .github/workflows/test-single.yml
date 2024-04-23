@@ -35,6 +35,10 @@ on:
       arch:
         required: true
         type: string
+      collect-junit:
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -209,14 +213,40 @@ jobs:
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
 
-      - name: Verify source and installed tests match
+      - name: Verify source and installed tests collect and match
         run: |
           echo '==== collecting source tests ===='
-          pytest --collect-only -qq --import-mode=prepend chia/_tests/ | sed -n 's;^\(chia/_tests/.*\);\1;p' | sort | tee source_tests
+          if pytest --collect-only -qq --import-mode=prepend chia/_tests/ > source_tests_raw
+          then
+            cat source_tests_raw | sed -n 's;^\(chia/_tests/.*\);\1;p' | sort > source_tests
+          else
+            echo '    ==== source test collection failure'
+            cat source_tests_raw
+            exit 1
+          fi
+
           echo '==== collecting installed tests ===='
-          pytest --collect-only -qq --import-mode=append --pyargs chia._tests | sed -n 's;^venv/.*/\(chia/_tests/.*\);\1;p' | sort | tee installed_tests
+          if pytest --collect-only -qq --import-mode=append --pyargs chia._tests > installed_tests_raw
+          then
+            cat installed_tests_raw | sed -n 's;^venv/.*/\(chia/_tests/.*\);\1;p' | sort > installed_tests
+          else
+            echo '    ==== installed test collection failure'
+            cat installed_tests_raw
+            exit 1
+          fi
+
+          echo '==== collected tests ===='
+          for mode in source installed
+          do
+            echo "::group::collected ${mode} tests"
+            cat ${mode}_tests
+            echo '::endgroup::'
+          done
+
           echo '==== diffing collected tests ===='
-          diff --unified source_tests installed_tests
+          echo "::group::collected tests diff"
+          diff --unified source_tests installed_tests; DIFF_EXIT_CODE=$?
+          echo '::endgroup::'
 
       - name: Move chia/ so we test the installed code
         run: |
@@ -233,6 +263,7 @@ jobs:
           mv notchia/ chia/
 
       - name: Publish JUnit results
+        if: inputs.collect-junit
         uses: actions/upload-artifact@v4
         with:
           name: junit-data-${{ env.JOB_FILE_NAME }}
