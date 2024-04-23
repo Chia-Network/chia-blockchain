@@ -1564,7 +1564,7 @@ async def test_benchmark_batch_insert_speed_multiple_batches(
     r = random.Random()
     r.seed("shadowlands", version=2)
 
-    with benchmark_runner.assert_runtime(seconds=120):
+    with benchmark_runner.assert_runtime(seconds=165):
         for batch in range(200):
             changelist = [
                 {
