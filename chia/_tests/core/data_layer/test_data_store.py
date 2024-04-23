@@ -1553,7 +1553,6 @@ async def test_benchmark_batch_insert_speed(
             tree_id=tree_id,
             changelist=batch,
         )
-    raise Exception("Debug average time")
 
 
 @pytest.mark.anyio
