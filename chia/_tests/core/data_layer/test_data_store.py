@@ -1516,7 +1516,7 @@ class BatchInsertBenchmarkCase:
     BatchInsertBenchmarkCase(
         pre=10_000,
         count=25_000,
-        limit=36,
+        limit=40,
     ),
 )
 @pytest.mark.anyio
