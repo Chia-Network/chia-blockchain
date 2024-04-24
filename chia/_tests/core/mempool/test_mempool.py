@@ -209,7 +209,7 @@ class TestPendingTxCache:
 
         txs = c.drain(161)
         assert len(txs) == 2
-        for name, tx in txs.items():
+        for tx in txs.values():
             assert tx.assert_height == 50
 
     def test_item_limit(self):
