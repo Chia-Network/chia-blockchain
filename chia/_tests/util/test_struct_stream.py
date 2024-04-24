@@ -14,10 +14,10 @@ from _pytest.fixtures import SubRequest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.mark.structures import ParameterSet
+from chia_rs.struct_stream import StructStream, parse_metadata_from_name
 from typing_extensions import final
 
 from chia.util.ints import int8, int16, int32, int64, int512, uint8, uint16, uint32, uint64, uint128
-from chia.util.struct_stream import StructStream, parse_metadata_from_name
 
 
 def dataclass_parameter(instance: object) -> ParameterSet:
