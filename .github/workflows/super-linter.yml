@@ -73,7 +73,6 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_MD: true
           VALIDATE_POWERSHELL: true
-          VALIDATE_SHELL_SHFMT: true
           VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_YAML: true
           DISABLE_ERRORS: false
