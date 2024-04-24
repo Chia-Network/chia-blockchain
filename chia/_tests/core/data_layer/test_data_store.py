@@ -1512,7 +1512,39 @@ class BatchInsertBenchmarkCase:
         return f"pre={self.pre},count={self.count}"
 
 
+@dataclass
+class BatchesInsertBenchmarkCase:
+    count: int
+    batch_count: int
+    limit: float
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return f"count={self.count},batch_count={self.batch_count}"
+
+
 @datacases(
+    BatchInsertBenchmarkCase(
+        pre=0,
+        count=100,
+        limit=2.2,
+    ),
+    BatchInsertBenchmarkCase(
+        pre=1_000,
+        count=100,
+        limit=4,
+    ),
+    BatchInsertBenchmarkCase(
+        pre=0,
+        count=1_000,
+        limit=30,
+    ),
+    BatchInsertBenchmarkCase(
+        pre=1_000,
+        count=1_000,
+        limit=36,
+    ),
     BatchInsertBenchmarkCase(
         pre=10_000,
         count=25_000,
@@ -1555,24 +1587,32 @@ async def test_benchmark_batch_insert_speed(
         )
 
 
+@datacases(
+    BatchesInsertBenchmarkCase(
+        count=50,
+        batch_count=200,
+        limit=36,
+    ),
+)
 @pytest.mark.anyio
 async def test_benchmark_batch_insert_speed_multiple_batches(
     data_store: DataStore,
     tree_id: bytes32,
     benchmark_runner: BenchmarkRunner,
+    case: BatchesInsertBenchmarkCase,
 ) -> None:
     r = random.Random()
     r.seed("shadowlands", version=2)
 
-    with benchmark_runner.assert_runtime(seconds=195):
-        for batch in range(200):
+    with benchmark_runner.assert_runtime(seconds=case.limit):
+        for batch in range(case.batch_count):
             changelist = [
                 {
                     "action": "insert",
                     "key": x.to_bytes(32, byteorder="big", signed=False),
                     "value": bytes(r.getrandbits(8) for _ in range(10000)),
                 }
-                for x in range(batch * 50, (batch + 1) * 50)
+                for x in range(batch * case.count, (batch + 1) * case.count)
             ]
             await data_store.insert_batch(
                 tree_id=tree_id,
