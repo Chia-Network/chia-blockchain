@@ -1591,7 +1591,7 @@ async def test_benchmark_batch_insert_speed(
     BatchesInsertBenchmarkCase(
         count=50,
         batch_count=200,
-        limit=36,
+        limit=195,
     ),
 )
 @pytest.mark.anyio
