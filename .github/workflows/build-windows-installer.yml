@@ -360,7 +360,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe -o "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent --webseed https://download.chia.net/install/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
+          py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce --piece-length 16384 "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe -o "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent --webseed https://download.chia.net/install/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
           ls
           gh release upload --repo ${{ github.repository }} $RELEASE_TAG "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent
 
