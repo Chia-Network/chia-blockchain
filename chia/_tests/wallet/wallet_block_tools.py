@@ -37,7 +37,7 @@ DEFAULT_PROOF_OF_SPACE = ProofOfSpace(
     uint8(20),
     bytes(32 * 5),
 )
-DEFAULT_VDF_INFO = VDFInfo(bytes32([0] * 32), uint64(1), ClassgroupElement(bytes100(bytes(100))))
+DEFAULT_VDF_INFO = VDFInfo(bytes32([0] * 32), uint64(1), ClassgroupElement(bytes100([0] * 100)))
 DEFAULT_VDF_PROOF = VDFProof(uint8(0), bytes(100), False)
 
 
