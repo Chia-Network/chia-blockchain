@@ -146,13 +146,13 @@ class Offer:
         # populate the _additions cache
         adds: Dict[Coin, List[Coin]] = {}
         hints: Dict[bytes32, bytes32] = {}
-        max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+        max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
         for cs in self._bundle.coin_spends:
             # you can't spend the same coin twice in the same SpendBundle
             assert cs.coin not in adds
             try:
                 hinted_coins, cost = compute_spend_hints_and_additions(cs)
-                max_cost = uint64(max_cost - cost)
+                max_cost -= cost
                 adds[cs.coin] = [hc.coin for hc in hinted_coins.values()]
                 hints = {**hints, **{id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None}}
             except Exception:
@@ -166,11 +166,11 @@ class Offer:
     def conditions(self) -> Dict[Coin, List[Condition]]:
         if self._conditions is None:
             conditions: Dict[Coin, List[Condition]] = {}
-            max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
             for cs in self._bundle.coin_spends:
                 try:
                     cost, conds = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
-                    max_cost = uint64(max_cost - cost)
+                    max_cost -= cost
                     conditions[cs.coin] = parse_conditions_non_consensus(conds.as_iter())
                 except Exception:  # pragma: no cover
                     continue
