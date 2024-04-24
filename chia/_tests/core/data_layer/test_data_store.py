@@ -370,9 +370,19 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
     "use_optimized",
     [True, False],
 )
-async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimized: bool, tmp_path: Path) -> None:
-    num_batches = 10
-    num_ops_per_batch = 100 if use_optimized else 10
+@pytest.mark.parametrize(
+    "num_batches",
+    [1, 5, 10, 25],
+)
+async def test_batch_update(
+    data_store: DataStore,
+    tree_id: bytes32,
+    use_optimized: bool,
+    tmp_path: Path,
+    num_batches: int,
+) -> None:
+    total_operations = 1000 if use_optimized else 100
+    num_ops_per_batch = total_operations // num_batches
     saved_batches: List[List[Dict[str, Any]]] = []
     saved_kv: List[List[TerminalNode]] = []
     db_uri = generate_in_memory_db_uri()
@@ -442,6 +452,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 saved_batches.append(batch)
                 batch = []
                 current_kv = await single_op_data_store.get_keys_values(tree_id=tree_id)
+                assert {kv.key: kv.value for kv in current_kv} == keys_values
                 saved_kv.append(current_kv)
 
     for batch_number, batch in enumerate(saved_batches):
