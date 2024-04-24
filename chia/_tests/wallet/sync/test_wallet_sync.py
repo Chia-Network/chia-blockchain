@@ -49,7 +49,6 @@ from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
-from chia.util.merkle_set import deserialize_proof
 from chia_rs import confirm_not_included_already_hashed
 
 
