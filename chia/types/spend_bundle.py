@@ -73,7 +73,7 @@ def estimate_fees(spend_bundle: SpendBundle) -> int:
     """Unsafe to use for fees validation!!!"""
     removed_amount = 0
     added_amount = 0
-    max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+    max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
     for cs in spend_bundle.coin_spends:
         removed_amount += cs.coin.amount
         coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
