@@ -18,7 +18,13 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoinAnnouncement, parse_timelock_info
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    Condition,
+    CreateCoin,
+    CreateCoinAnnouncement,
+    parse_timelock_info,
+)
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
@@ -279,7 +285,12 @@ class Wallet:
         if primaries_input is not None:
             primaries.extend(primaries_input)
 
-        total_amount = amount + sum(primary.amount for primary in primaries) + fee
+        total_amount = (
+            amount
+            + sum(primary.amount for primary in primaries)
+            + fee
+            + sum(c.amount for c in extra_conditions if isinstance(c, CreateCoin))
+        )
         total_balance = await self.get_spendable_balance()
         if coins is None:
             if total_amount > total_balance:
@@ -410,9 +421,11 @@ class Wallet:
         The first output is (amount, puzzle_hash, memos), and the rest of the outputs are in primaries.
         """
         if primaries is None:
-            non_change_amount = amount
+            non_change_amount: int = amount
         else:
-            non_change_amount = uint64(amount + sum(p.amount for p in primaries))
+            non_change_amount = amount + sum(p.amount for p in primaries)
+
+        non_change_amount += sum(c.amount for c in extra_conditions if isinstance(c, CreateCoin))
 
         self.log.debug("Generating transaction for: %s %s %s", puzzle_hash, amount, repr(coins))
         transaction = await self._generate_unsigned_transaction(
@@ -694,3 +707,9 @@ class Wallet:
                 )
             ],
         )
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()
