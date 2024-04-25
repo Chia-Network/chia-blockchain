@@ -722,31 +722,33 @@ class Farmer:
     async def generate_login_link(self, launcher_id: bytes32) -> Optional[str]:
         for pool_state in self.pool_state.values():
             pool_config: PoolWalletConfig = pool_state["pool_config"]
-            if pool_config.launcher_id == launcher_id:
-                authentication_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
-                if authentication_sk is None:
-                    self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
-                    continue
-                authentication_token_timeout = pool_state["authentication_token_timeout"]
-                if authentication_token_timeout is None:
-                    self.log.error(
-                        f"No pool specific authentication_token_timeout has been set for"
-                        f"{pool_config.p2_singleton_puzzle_hash}, check communication with the pool."
-                    )
-                    return None
+            if pool_config.launcher_id != launcher_id:
+                continue
 
-                authentication_token = get_current_authentication_token(authentication_token_timeout)
-                message: bytes32 = std_hash(
-                    AuthenticationPayload(
-                        "get_login", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
-                    )
+            authentication_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
+            if authentication_sk is None:
+                self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
+                continue
+            authentication_token_timeout = pool_state["authentication_token_timeout"]
+            if authentication_token_timeout is None:
+                self.log.error(
+                    f"No pool specific authentication_token_timeout has been set for"
+                    f"{pool_config.p2_singleton_puzzle_hash}, check communication with the pool."
                 )
-                signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
-                return (
-                    pool_config.pool_url
-                    + f"/login?launcher_id={launcher_id.hex()}&authentication_token={authentication_token}"
-                    f"&signature={bytes(signature).hex()}"
+                return None
+
+            authentication_token = get_current_authentication_token(authentication_token_timeout)
+            message: bytes32 = std_hash(
+                AuthenticationPayload(
+                    "get_login", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
                 )
+            )
+            signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
+            return (
+                pool_config.pool_url
+                + f"/login?launcher_id={launcher_id.hex()}&authentication_token={authentication_token}"
+                f"&signature={bytes(signature).hex()}"
+            )
 
         return None
 
