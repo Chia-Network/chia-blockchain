@@ -1,4 +1,4 @@
-# Package: cmds
+# Package: wallet
 
 from __future__ import annotations
 
