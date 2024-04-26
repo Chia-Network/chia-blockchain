@@ -827,7 +827,6 @@ FarmerOneHarvester = Tuple[List[HarvesterService], FarmerService, BlockTools]
 
 @pytest.fixture(scope="function")
 async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[FarmerOneHarvester]:
-    asyncio.get_event_loop().set_debug(True)
     async with setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True) as _:
         yield _
 

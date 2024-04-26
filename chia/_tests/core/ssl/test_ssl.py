@@ -45,13 +45,12 @@ ssl_cert_error = False
 
 
 @contextlib.contextmanager
-def suppress_ssl_exception_report():
-    loop = asyncio.get_event_loop()
-    # loop.set_debug(True)
-    old_handler = loop.get_exception_handler()
+def set_ssl_cert_error():
+    current_loop = asyncio.get_event_loop()
+    old_handler = current_loop.get_exception_handler()
     old_handler_fn = old_handler  # or lambda _loop, ctx: loop.default_exception_handler(ctx)
 
-    def ignore_exc(_loop, ctx):
+    def find_and_set(loop, ctx):
         exc = ctx.get("exception")
         if isinstance(exc, ssl.SSLCertVerificationError):
             global ssl_cert_error
@@ -60,12 +59,11 @@ def suppress_ssl_exception_report():
 
         old_handler_fn(loop, ctx)
 
-    loop.set_exception_handler(ignore_exc)
+    current_loop.set_exception_handler(find_and_set)
     try:
         yield
     finally:
-        loop.set_exception_handler(old_handler)
-        loop.set_debug(False)
+        current_loop.set_exception_handler(old_handler)
 
 
 class TestSSL:
@@ -80,8 +78,9 @@ class TestSSL:
         assert success is True
 
     @pytest.mark.anyio
-    async def test_farmer(self, farmer_one_harvester, self_hostname):
-        _, farmer_service, bt = farmer_one_harvester
+    async def test_farmer(self, farmer_one_harvester_not_started, self_hostname):
+
+        _, farmer_service, bt = farmer_one_harvester_not_started
         farmer_api = farmer_service._api
 
         farmer_server = farmer_api.farmer.server
@@ -96,25 +95,30 @@ class TestSSL:
             priv_crt,
             priv_key,
         )
-        # ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, priv_crt, priv_key)
-        # await establish_connection(farmer_server, self_hostname, ssl_context)
 
-        # Create not authenticated cert
-        pub_crt = farmer_server.root_path / "non_valid.crt"
-        pub_key = farmer_server.root_path / "non_valid.key"
-        generate_ca_signed_cert(chia_ca_crt_path.read_bytes(), chia_ca_key_path.read_bytes(), pub_crt, pub_key)
-        # ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
-        # with pytest.raises(aiohttp.ClientConnectorCertificateError):
-        #    await establish_connection(farmer_server, self_hostname, ssl_context)
-        ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, pub_crt, pub_key)
-        try:
-            with suppress_ssl_exception_report():
-                await establish_connection(farmer_server, self_hostname, ssl_context)
-        except Exception as e:
-            print(e)
-            assert ssl_cert_error is True
-        finally:
-            assert ssl_cert_error is True
+        asyncio.get_event_loop().set_debug(True)
+        async with farmer_service.manage():
+            # ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, priv_crt, priv_key)
+            # await establish_connection(farmer_server, self_hostname, ssl_context)
+
+            # Create not authenticated cert
+            pub_crt = farmer_server.root_path / "non_valid.crt"
+            pub_key = farmer_server.root_path / "non_valid.key"
+            generate_ca_signed_cert(chia_ca_crt_path.read_bytes(), chia_ca_key_path.read_bytes(), pub_crt, pub_key)
+            # ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
+            # with pytest.raises(aiohttp.ClientConnectorCertificateError):
+            #    await establish_connection(farmer_server, self_hostname, ssl_context)
+            ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, pub_crt, pub_key)
+            try:
+                with set_ssl_cert_error():
+                    await establish_connection(farmer_server, self_hostname, ssl_context)
+            except Exception as e:
+                print(e)
+                assert ssl_cert_error is True
+            finally:
+                assert ssl_cert_error is True
+
+        asyncio.get_event_loop().set_debug(False)
 
     @pytest.mark.anyio
     async def test_full_node(self, simulator_and_wallet, self_hostname):
