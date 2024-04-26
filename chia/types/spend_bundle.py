@@ -10,7 +10,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import Err, ValidationError
 from chia.util.streamable import Streamable, streamable, streamable_from_dict
-from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 from .coin_spend import CoinSpend, compute_additions_with_cost
 
@@ -54,9 +53,6 @@ class SpendBundle(Streamable):
 
     def name(self) -> bytes32:
         return self.get_hash()
-
-    def debug(self, agg_sig_additional_data: bytes = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
-        debug_spend_bundle(self, agg_sig_additional_data)
 
     @classmethod
     def from_json_dict(cls, json_dict: Dict[str, Any]) -> SpendBundle:
