@@ -265,8 +265,8 @@ class DataLayer:
         else:
             return None
 
-    async def _get_publishable_root_hash(self, tree_id: bytes32) -> bytes32:
-        pending_root: Optional[Root] = await self.data_store.get_pending_root(store_id=tree_id)
+    async def _get_publishable_root_hash(self, store_id: bytes32) -> bytes32:
+        pending_root: Optional[Root] = await self.data_store.get_pending_root(store_id=store_id)
         if pending_root is None:
             raise Exception("Latest root is already confirmed.")
         if pending_root.status == Status.PENDING_BATCH:
@@ -298,7 +298,7 @@ class DataLayer:
             update_dictionary: Dict[bytes32, bytes32] = {}
             for store_id in store_ids:
                 await self._update_confirmation_status(store_id=store_id)
-                root_hash = await self._get_publishable_root_hash(tree_id=store_id)
+                root_hash = await self._get_publishable_root_hash(store_id=store_id)
                 update_dictionary[store_id] = root_hash
             transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary, fee=fee)
             return transaction_records
@@ -369,7 +369,7 @@ class DataLayer:
         fee: uint64,
     ) -> TransactionRecord:
         await self._update_confirmation_status(store_id=store_id)
-        root_hash = await self._get_publishable_root_hash(tree_id=store_id)
+        root_hash = await self._get_publishable_root_hash(store_id=store_id)
         transaction_record = await self.wallet_rpc.dl_update_root(
             launcher_id=store_id,
             new_root=root_hash,

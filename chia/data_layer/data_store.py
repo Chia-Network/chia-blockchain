@@ -602,8 +602,8 @@ class DataStore:
                 {"status": Status.PENDING_BATCH.value},
             )
             roots = [Root.from_row(row=row) async for row in cursor]
-            tree_ids = [root.store_id for root in roots]
-            if len(set(tree_ids)) != len(tree_ids):
+            store_ids = [root.store_id for root in roots]
+            if len(set(store_ids)) != len(store_ids):
                 raise Exception("Internal error: multiple pending batches for a store")
             return roots
 
