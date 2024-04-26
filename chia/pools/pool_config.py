@@ -42,20 +42,22 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
     config = load_config(root_path, "config.yaml")
     ret_list: List[PoolWalletConfig] = []
     pool_list = config["pool"].get("pool_list", [])
-    if pool_list is not None:
-        for pool_config_dict in pool_list:
-            try:
-                pool_config = PoolWalletConfig(
-                    bytes32.from_hexstr(pool_config_dict["launcher_id"]),
-                    pool_config_dict["pool_url"],
-                    pool_config_dict["payout_instructions"],
-                    bytes32.from_hexstr(pool_config_dict["target_puzzle_hash"]),
-                    bytes32.from_hexstr(pool_config_dict["p2_singleton_puzzle_hash"]),
-                    G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
-                )
-                ret_list.append(pool_config)
-            except Exception as e:
-                log.error(f"Exception loading config: {pool_config_dict} {e}")
+    if pool_list is None:
+        return ret_list
+
+    for pool_config_dict in pool_list:
+        try:
+            pool_config = PoolWalletConfig(
+                bytes32.from_hexstr(pool_config_dict["launcher_id"]),
+                pool_config_dict["pool_url"],
+                pool_config_dict["payout_instructions"],
+                bytes32.from_hexstr(pool_config_dict["target_puzzle_hash"]),
+                bytes32.from_hexstr(pool_config_dict["p2_singleton_puzzle_hash"]),
+                G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
+            )
+            ret_list.append(pool_config)
+        except Exception as e:
+            log.error(f"Exception loading config: {pool_config_dict} {e}")
 
     return ret_list
 

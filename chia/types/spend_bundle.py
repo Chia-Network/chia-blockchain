@@ -55,7 +55,7 @@ class SpendBundle(Streamable):
     def name(self) -> bytes32:
         return self.get_hash()
 
-    def debug(self, agg_sig_additional_data: bytes = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
+    def debug(self, agg_sig_additional_data: bytes32 = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
         debug_spend_bundle(self, agg_sig_additional_data)
 
     @classmethod
@@ -73,7 +73,7 @@ def estimate_fees(spend_bundle: SpendBundle) -> int:
     """Unsafe to use for fees validation!!!"""
     removed_amount = 0
     added_amount = 0
-    max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+    max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
     for cs in spend_bundle.coin_spends:
         removed_amount += cs.coin.amount
         coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)

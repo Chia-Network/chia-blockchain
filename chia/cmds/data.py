@@ -51,6 +51,17 @@ def create_changelist_option() -> Callable[[FC], FC]:
     )
 
 
+def create_store_updates_option() -> Callable[[FC], FC]:
+    return click.option(
+        "-d",
+        "--store_updates",
+        "store_updates_string",
+        help="str representing the store updates",
+        type=str,
+        required=True,
+    )
+
+
 def create_key_option(multiple: bool = False) -> Callable[[FC], FC]:
     return click.option(
         "-k",
@@ -189,6 +200,32 @@ def update_data_store(
     )
 
 
+@data_cmd.command("update_multiple_stores", help="Update multiple stores by providing the changelist operations")
+@create_store_updates_option()
+@create_rpc_port_option()
+@create_fee_option()
+@options.create_fingerprint()
+@click.option("--submit/--no-submit", default=True, help="Submit the result on chain")
+def update_multiple_stores(
+    store_updates_string: str,
+    data_rpc_port: int,
+    fee: str,
+    fingerprint: Optional[int],
+    submit: bool,
+) -> None:
+    from chia.cmds.data_funcs import update_multiple_stores_cmd
+
+    run(
+        update_multiple_stores_cmd(
+            rpc_port=data_rpc_port,
+            store_updates=json.loads(store_updates_string),
+            fee=fee,
+            fingerprint=fingerprint,
+            submit_on_chain=submit,
+        )
+    )
+
+
 @data_cmd.command("submit_pending_root", help="Submit on chain a locally stored batch")
 @create_data_store_id_option()
 @create_rpc_port_option()
@@ -206,6 +243,26 @@ def submit_pending_root(
         submit_pending_root_cmd(
             rpc_port=data_rpc_port,
             store_id=id,
+            fee=fee,
+            fingerprint=fingerprint,
+        )
+    )
+
+
+@data_cmd.command("submit_all_pending_roots", help="Submit on chain all locally stored batches")
+@create_rpc_port_option()
+@create_fee_option()
+@options.create_fingerprint()
+def submit_all_pending_roots(
+    data_rpc_port: int,
+    fee: str,
+    fingerprint: Optional[int],
+) -> None:
+    from chia.cmds.data_funcs import submit_all_pending_roots_cmd
+
+    run(
+        submit_all_pending_roots_cmd(
+            rpc_port=data_rpc_port,
             fee=fee,
             fingerprint=fingerprint,
         )

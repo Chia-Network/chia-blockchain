@@ -1277,7 +1277,7 @@ class WalletRpcApi:
 
         # Some backwards compat fill-ins
         if cs_config_loader.excluded_coin_ids is None:
-            excluded_coins: Optional[List[Coin]] = request.get("excluded_coins", request.get("exclude_coins"))
+            excluded_coins: Optional[List[Dict[str, Any]]] = request.get("excluded_coins", request.get("exclude_coins"))
             if excluded_coins is not None:
                 cs_config_loader = cs_config_loader.override(
                     excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
@@ -4175,11 +4175,13 @@ class WalletRpcApi:
             # TODO: This method should optionally link the singletons with announcements.
             #       Otherwise spends are vulnerable to signature subtraction.
             tx_records: List[TransactionRecord] = []
+            fee_per_launcher = uint64(request.get("fee", 0) // len(request["updates"]))
             for launcher, root in request["updates"].items():
                 records = await wallet.create_update_state_spend(
                     bytes32.from_hexstr(launcher),
                     bytes32.from_hexstr(root),
                     tx_config,
+                    fee=fee_per_launcher,
                     extra_conditions=extra_conditions,
                 )
                 tx_records.extend(records)

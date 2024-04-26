@@ -146,7 +146,7 @@ class Offer:
         # populate the _additions cache
         adds: Dict[Coin, List[Coin]] = {}
         hints: Dict[bytes32, bytes32] = {}
-        max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+        max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
         for cs in self._bundle.coin_spends:
             # you can't spend the same coin twice in the same SpendBundle
             assert cs.coin not in adds
@@ -166,7 +166,7 @@ class Offer:
     def conditions(self) -> Dict[Coin, List[Condition]]:
         if self._conditions is None:
             conditions: Dict[Coin, List[Condition]] = {}
-            max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
             for cs in self._bundle.coin_spends:
                 try:
                     cost, conds = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)

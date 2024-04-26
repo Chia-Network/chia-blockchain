@@ -80,7 +80,7 @@ def not_ephemeral_additions(sp: SpendBundle) -> List[Coin]:
         removals.add(cs.coin)
 
     additions: List[Coin] = []
-    max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+    max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
     for cs in sp.coin_spends:
         coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
         max_cost -= cost
