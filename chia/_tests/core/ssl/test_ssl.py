@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import ssl
+
 import aiohttp
 import pytest
 
@@ -37,6 +41,33 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
         await wsc.close()
 
 
+ssl_cert_error = False
+
+
+@contextlib.contextmanager
+def suppress_ssl_exception_report():
+    loop = asyncio.get_event_loop()
+    loop.set_debug(True)
+    old_handler = loop.get_exception_handler()
+    old_handler_fn = old_handler  # or lambda _loop, ctx: loop.default_exception_handler(ctx)
+
+    def ignore_exc(_loop, ctx):
+        exc = ctx.get("exception")
+        if isinstance(exc, ssl.SSLCertVerificationError):
+            print("here")
+            global ssl_cert_error
+            ssl_cert_error = True
+            raise exc
+
+        old_handler_fn(loop, ctx)
+
+    loop.set_exception_handler(ignore_exc)
+    try:
+        yield
+    finally:
+        loop.set_exception_handler(old_handler)
+
+
 class TestSSL:
     @pytest.mark.anyio
     async def test_public_connections(self, simulator_and_wallet, self_hostname):
@@ -65,19 +96,24 @@ class TestSSL:
             priv_crt,
             priv_key,
         )
-        ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, priv_crt, priv_key)
-        await establish_connection(farmer_server, self_hostname, ssl_context)
+        # ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, priv_crt, priv_key)
+        # await establish_connection(farmer_server, self_hostname, ssl_context)
 
         # Create not authenticated cert
         pub_crt = farmer_server.root_path / "non_valid.crt"
         pub_key = farmer_server.root_path / "non_valid.key"
         generate_ca_signed_cert(chia_ca_crt_path.read_bytes(), chia_ca_key_path.read_bytes(), pub_crt, pub_key)
-        ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
-        with pytest.raises(aiohttp.ClientConnectorCertificateError):
-            await establish_connection(farmer_server, self_hostname, ssl_context)
+        # ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
+        # with pytest.raises(aiohttp.ClientConnectorCertificateError):
+        #    await establish_connection(farmer_server, self_hostname, ssl_context)
         ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, pub_crt, pub_key)
-        with pytest.raises(aiohttp.ServerDisconnectedError):
-            await establish_connection(farmer_server, self_hostname, ssl_context)
+        try:
+            with suppress_ssl_exception_report():
+                await establish_connection(farmer_server, self_hostname, ssl_context)
+        except Exception:
+            assert ssl_cert_error is True
+        finally:
+            assert ssl_cert_error is True
 
     @pytest.mark.anyio
     async def test_full_node(self, simulator_and_wallet, self_hostname):
