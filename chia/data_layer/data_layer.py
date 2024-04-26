@@ -299,7 +299,8 @@ class DataLayer:
                 raise ValueError(f"Singleton with launcher ID {tree_id} is not owned by DL Wallet")
 
             t1 = time.monotonic()
-            batch_hash = await self.data_store.insert_batch(tree_id, changelist, status)
+            enable_batch_autoinsert = self.config.get("enable_batch_autoinsert", True)
+            batch_hash = await self.data_store.insert_batch(tree_id, changelist, status, enable_batch_autoinsert)
             t2 = time.monotonic()
             self.log.info(f"Data store batch update process time: {t2 - t1}.")
             # todo return empty node hash from get_tree_root

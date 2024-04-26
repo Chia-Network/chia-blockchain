@@ -1332,6 +1332,7 @@ class DataStore:
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
+        enable_batch_autoinsert: bool = True,
     ) -> Optional[bytes32]:
         async with self.transaction():
             old_root = await self.get_tree_root(tree_id)
@@ -1369,7 +1370,7 @@ class DataStore:
                         # The key is not referenced in any other operation but this autoinsert, hence the order
                         # of performing these should not matter. We perform all these autoinserts as a batch
                         # at the end, to speed up the tree processing operations.
-                        if key_hash_frequency[hash] == 1:
+                        if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
                             terminal_node_hash = await self._insert_terminal_node(key, value)
                             pending_autoinsert_hashes.append(terminal_node_hash)
                             continue
