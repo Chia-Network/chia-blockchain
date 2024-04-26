@@ -47,7 +47,7 @@ ssl_cert_error = False
 @contextlib.contextmanager
 def suppress_ssl_exception_report():
     loop = asyncio.get_event_loop()
-    loop.set_debug(True)
+    # loop.set_debug(True)
     old_handler = loop.get_exception_handler()
     old_handler_fn = old_handler  # or lambda _loop, ctx: loop.default_exception_handler(ctx)
 
@@ -110,7 +110,8 @@ class TestSSL:
         try:
             with suppress_ssl_exception_report():
                 await establish_connection(farmer_server, self_hostname, ssl_context)
-        except Exception:
+        except Exception as e:
+            print(e)
             assert ssl_cert_error is True
         finally:
             assert ssl_cert_error is True
