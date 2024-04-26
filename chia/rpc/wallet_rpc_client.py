@@ -1158,12 +1158,14 @@ class WalletRpcClient(RpcClient):
     async def dl_update_multiple(
         self,
         update_dictionary: Dict[bytes32, bytes32],
+        fee: uint64,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> List[TransactionRecord]:
         updates_as_strings = {str(lid): str(root) for lid, root in update_dictionary.items()}
         request = {
             "updates": updates_as_strings,
+            "fee": fee,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
             **timelock_info.to_json_dict(),
         }

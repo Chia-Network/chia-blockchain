@@ -4175,11 +4175,13 @@ class WalletRpcApi:
             # TODO: This method should optionally link the singletons with announcements.
             #       Otherwise spends are vulnerable to signature subtraction.
             tx_records: List[TransactionRecord] = []
+            fee_per_launcher = uint64(request.get("fee", 0) // len(request["updates"]))
             for launcher, root in request["updates"].items():
                 records = await wallet.create_update_state_spend(
                     bytes32.from_hexstr(launcher),
                     bytes32.from_hexstr(root),
                     tx_config,
+                    fee=fee_per_launcher,
                     extra_conditions=extra_conditions,
                 )
                 tx_records.extend(records)
