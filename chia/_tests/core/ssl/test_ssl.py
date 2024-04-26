@@ -54,10 +54,9 @@ def suppress_ssl_exception_report():
     def ignore_exc(_loop, ctx):
         exc = ctx.get("exception")
         if isinstance(exc, ssl.SSLCertVerificationError):
-            print("here")
             global ssl_cert_error
             ssl_cert_error = True
-            raise exc
+            return
 
         old_handler_fn(loop, ctx)
 
@@ -66,6 +65,7 @@ def suppress_ssl_exception_report():
         yield
     finally:
         loop.set_exception_handler(old_handler)
+        loop.set_debug(False)
 
 
 class TestSSL:
