@@ -87,6 +87,7 @@ async def init_data_layer_service(
     wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
+    enable_batch_autoinsert: bool = True,
 ) -> AsyncIterator[DataLayerService]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
@@ -95,6 +96,7 @@ async def init_data_layer_service(
     config["data_layer"]["port"] = 0
     config["data_layer"]["rpc_port"] = 0
     config["data_layer"]["manage_data_interval"] = 5
+    config["data_layer"]["enable_batch_autoinsert"] = enable_batch_autoinsert
     if maximum_full_file_count is not None:
         config["data_layer"]["maximum_full_file_count"] = maximum_full_file_count
     if db_path is not None:
@@ -130,12 +132,6 @@ async def bare_data_layer_api_fixture(tmp_path: Path, bt: BlockTools) -> AsyncIt
     async with init_data_layer(wallet_rpc_port=port, bt=bt, db_path=tmp_path.joinpath(str(port))) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         yield data_rpc_api
-
-
-def bytes32_list_code(data: List[bytes32]) -> str:
-    elements = [f"bytes32.from_hexstr({root.hex()!r})" for root in data]
-    joined = ", ".join(elements)
-    return f"[{joined},]"
 
 
 async def init_wallet_and_node(
@@ -826,7 +822,11 @@ async def offer_setup_fixture(
             port = wallet_service.rpc_server.listen_port
             data_layer_service = await exit_stack.enter_async_context(
                 init_data_layer_service(
-                    wallet_rpc_port=port, wallet_service=wallet_service, bt=bt, db_path=tmp_path.joinpath(str(port))
+                    wallet_rpc_port=port,
+                    wallet_service=wallet_service,
+                    bt=bt,
+                    db_path=tmp_path.joinpath(str(port)),
+                    enable_batch_autoinsert=False,
                 )
             )
             data_layer = data_layer_service._api.data_layer
@@ -1051,12 +1051,12 @@ make_one_take_one_reference = MakeAndTakeReference(
     taker_inclusions=[{"key": b"\x10".hex(), "value": b"\x02\x10".hex()}],
     trade_id="a86b08e21b7677783812969fd8f8a1442d4d265cbb0bd2727bf6c16858789f5b",
     maker_root_history=[
-        bytes32.from_hexstr("65c03098d1d14fe7a09a1a18225a210cce381f174cc853702ea1c08bd8476609"),
-        bytes32.from_hexstr("4e66e60e6652f03fe15eb4d65b4ca18aa5b475822e7c698cba40c4e10bc15e66"),
+        bytes32.from_hexstr("6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27"),
+        bytes32.from_hexstr("8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea"),
     ],
     taker_root_history=[
-        bytes32.from_hexstr("9ea7ab07052249cac3dc9be7fd669620eb409ced20c2d281f9edc60ac379895d"),
-        bytes32.from_hexstr("785c24f5d6e51dd042c14bc4537a0b6d62c7026fe24baea685d6ba183303db7b"),
+        bytes32.from_hexstr("42f08ebc0578f2cec7a9ad1c3038e74e0f30eba5c2f4cb1ee1c8fdb682c19dbb"),
+        bytes32.from_hexstr("eeb63ac765065d2ee161e1c059c8188ef809e1c3ed8739bad5bfee2c2ee1c742"),
     ],
 )
 
@@ -1111,12 +1111,12 @@ make_one_take_one_same_values_reference = MakeAndTakeReference(
     taker_inclusions=[{"key": b"\x10".hex(), "value": b"\x05\x10".hex()}],
     trade_id="09c4af6aa770f6797516dbae697a5efead5a1eaa29295fcc314b3f2f48fd9fe9",
     maker_root_history=[
-        bytes32.from_hexstr("65c03098d1d14fe7a09a1a18225a210cce381f174cc853702ea1c08bd8476609"),
-        bytes32.from_hexstr("fa3cfc7366a6c4e94036b91c0ccc6744f607e697435a8332f733994bca4b76d0"),
+        bytes32.from_hexstr("6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27"),
+        bytes32.from_hexstr("1d1eb374688e3033cbce2514e4fded10ceffe068e663718b8a20716a65019f91"),
     ],
     taker_root_history=[
-        bytes32.from_hexstr("9ea7ab07052249cac3dc9be7fd669620eb409ced20c2d281f9edc60ac379895d"),
-        bytes32.from_hexstr("d21665368ad7fc0fdbc65f4d20858c62da690bf5939568f32c427be6b26d116f"),
+        bytes32.from_hexstr("42f08ebc0578f2cec7a9ad1c3038e74e0f30eba5c2f4cb1ee1c8fdb682c19dbb"),
+        bytes32.from_hexstr("87ebc7585e5b291203c318a7be96ca9cdfd5ddfc9cc2a97f55a3eddb49f0c74e"),
     ],
 )
 
@@ -1201,12 +1201,12 @@ make_two_take_one_reference = MakeAndTakeReference(
     taker_inclusions=[{"key": b"\x10".hex(), "value": b"\x02\x10".hex()}],
     trade_id="9c407637b889be3b61b3f5599b7391ee6edbf69a0c8c954656231c0bfb710b08",
     maker_root_history=[
-        bytes32.from_hexstr("65c03098d1d14fe7a09a1a18225a210cce381f174cc853702ea1c08bd8476609"),
-        bytes32.from_hexstr("fe8d2157948e2549cc92db6bb8719723e3a5ce32e7924c3cbcf2db875dc8f25d"),
+        bytes32.from_hexstr("6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27"),
+        bytes32.from_hexstr("043fed6d67961e36db2900b6aab24aa68be529c4e632aace486fbea1b26dc70e"),
     ],
     taker_root_history=[
-        bytes32.from_hexstr("9ea7ab07052249cac3dc9be7fd669620eb409ced20c2d281f9edc60ac379895d"),
-        bytes32.from_hexstr("785c24f5d6e51dd042c14bc4537a0b6d62c7026fe24baea685d6ba183303db7b"),
+        bytes32.from_hexstr("42f08ebc0578f2cec7a9ad1c3038e74e0f30eba5c2f4cb1ee1c8fdb682c19dbb"),
+        bytes32.from_hexstr("eeb63ac765065d2ee161e1c059c8188ef809e1c3ed8739bad5bfee2c2ee1c742"),
     ],
 )
 
@@ -1264,12 +1264,12 @@ make_one_take_two_reference = MakeAndTakeReference(
     ],
     trade_id="d53d08a6951849cd33de3a703bc133a2ae973a34ce4527e19e233fb5cb57bbe3",
     maker_root_history=[
-        bytes32.from_hexstr("65c03098d1d14fe7a09a1a18225a210cce381f174cc853702ea1c08bd8476609"),
-        bytes32.from_hexstr("4e66e60e6652f03fe15eb4d65b4ca18aa5b475822e7c698cba40c4e10bc15e66"),
+        bytes32.from_hexstr("6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27"),
+        bytes32.from_hexstr("8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea"),
     ],
     taker_root_history=[
-        bytes32.from_hexstr("9ea7ab07052249cac3dc9be7fd669620eb409ced20c2d281f9edc60ac379895d"),
-        bytes32.from_hexstr("af4467e1727270a67bf23298aa29da959198ce9ef48cf4a34da2f309d72bf1c8"),
+        bytes32.from_hexstr("42f08ebc0578f2cec7a9ad1c3038e74e0f30eba5c2f4cb1ee1c8fdb682c19dbb"),
+        bytes32.from_hexstr("2215da3c9a309e0d8972fd6acb8ac62898a0f7e4a07351d558c2cc5094dfc5ec"),
     ],
 )
 
@@ -1329,11 +1329,11 @@ make_one_existing_take_one_reference = MakeAndTakeReference(
     taker_inclusions=[{"key": b"\x10".hex(), "value": b"\x02\x10".hex()}],
     trade_id="74ce97a6154467ca1a868e546a5d9e15e1e61c386aa27cb3686b198613972606",
     maker_root_history=[
-        bytes32.from_hexstr("65c03098d1d14fe7a09a1a18225a210cce381f174cc853702ea1c08bd8476609"),
+        bytes32.from_hexstr("6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27"),
     ],
     taker_root_history=[
-        bytes32.from_hexstr("9ea7ab07052249cac3dc9be7fd669620eb409ced20c2d281f9edc60ac379895d"),
-        bytes32.from_hexstr("785c24f5d6e51dd042c14bc4537a0b6d62c7026fe24baea685d6ba183303db7b"),
+        bytes32.from_hexstr("42f08ebc0578f2cec7a9ad1c3038e74e0f30eba5c2f4cb1ee1c8fdb682c19dbb"),
+        bytes32.from_hexstr("eeb63ac765065d2ee161e1c059c8188ef809e1c3ed8739bad5bfee2c2ee1c742"),
     ],
 )
 
@@ -1388,11 +1388,11 @@ make_one_take_one_existing_reference = MakeAndTakeReference(
     taker_inclusions=[{"key": b"\x09".hex(), "value": b"\x02\x09".hex()}],
     trade_id="be67400ac9856e7aa1ec96071457bda73f7304115902ac387ad2b1e085115956",
     maker_root_history=[
-        bytes32.from_hexstr("65c03098d1d14fe7a09a1a18225a210cce381f174cc853702ea1c08bd8476609"),
-        bytes32.from_hexstr("4e66e60e6652f03fe15eb4d65b4ca18aa5b475822e7c698cba40c4e10bc15e66"),
+        bytes32.from_hexstr("6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27"),
+        bytes32.from_hexstr("8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea"),
     ],
     taker_root_history=[
-        bytes32.from_hexstr("9ea7ab07052249cac3dc9be7fd669620eb409ced20c2d281f9edc60ac379895d"),
+        bytes32.from_hexstr("42f08ebc0578f2cec7a9ad1c3038e74e0f30eba5c2f4cb1ee1c8fdb682c19dbb"),
     ],
 )
 
@@ -1447,12 +1447,12 @@ make_one_upsert_take_one_reference = MakeAndTakeReference(
     taker_inclusions=[{"key": b"\x10".hex(), "value": b"\x02\x10".hex()}],
     trade_id="72232956344e9f12eec28635e9299d367e9fd9c4a8759db0f8f110c872919ff0",
     maker_root_history=[
-        bytes32.from_hexstr("65c03098d1d14fe7a09a1a18225a210cce381f174cc853702ea1c08bd8476609"),
-        bytes32.from_hexstr("558e340c925a04f78ac0cd1da8d6296619016407f76014790adc17bc1ccd3a9b"),
+        bytes32.from_hexstr("6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27"),
+        bytes32.from_hexstr("3761921b9b0520458995bb0ec353ea28d36efa2a7cfc3aba6772f005f7dd34c6"),
     ],
     taker_root_history=[
-        bytes32.from_hexstr("9ea7ab07052249cac3dc9be7fd669620eb409ced20c2d281f9edc60ac379895d"),
-        bytes32.from_hexstr("785c24f5d6e51dd042c14bc4537a0b6d62c7026fe24baea685d6ba183303db7b"),
+        bytes32.from_hexstr("42f08ebc0578f2cec7a9ad1c3038e74e0f30eba5c2f4cb1ee1c8fdb682c19dbb"),
+        bytes32.from_hexstr("eeb63ac765065d2ee161e1c059c8188ef809e1c3ed8739bad5bfee2c2ee1c742"),
     ],
 )
 
@@ -1507,12 +1507,12 @@ make_one_take_one_upsert_reference = MakeAndTakeReference(
     taker_inclusions=[{"key": b"\x09".hex(), "value": b"\x02\x10".hex()}],
     trade_id="399511c325cc7ac6df2e195271f9001f965d25327e46f89049aec1e286252746",
     maker_root_history=[
-        bytes32.from_hexstr("65c03098d1d14fe7a09a1a18225a210cce381f174cc853702ea1c08bd8476609"),
-        bytes32.from_hexstr("4e66e60e6652f03fe15eb4d65b4ca18aa5b475822e7c698cba40c4e10bc15e66"),
+        bytes32.from_hexstr("6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27"),
+        bytes32.from_hexstr("8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea"),
     ],
     taker_root_history=[
-        bytes32.from_hexstr("9ea7ab07052249cac3dc9be7fd669620eb409ced20c2d281f9edc60ac379895d"),
-        bytes32.from_hexstr("3ea564c7737e28ec275fd46144a5c6d0ff9457400bcc027220fd6c7af97c4685"),
+        bytes32.from_hexstr("42f08ebc0578f2cec7a9ad1c3038e74e0f30eba5c2f4cb1ee1c8fdb682c19dbb"),
+        bytes32.from_hexstr("d77afd64e9f307f3250a352c155480311512f9da2033228f1a2f0a3687cc90e0"),
     ],
 )
 
@@ -1623,18 +1623,16 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     taker_history = taker_history_result["root_history"]
 
     assert [generation["confirmed"] for generation in maker_history] == [True] * len(maker_history)
-    maker_root_hash_history = [generation["root_hash"] for generation in maker_history]
-    assert maker_root_hash_history == [
+    assert [generation["root_hash"] for generation in maker_history] == [
         bytes32([0] * 32),
         *reference.maker_root_history,
-    ], f"maker_root_history={bytes32_list_code(maker_root_hash_history[1:])},"
+    ]
 
     assert [generation["confirmed"] for generation in taker_history] == [True] * len(taker_history)
-    taker_root_hash_history = [generation["root_hash"] for generation in taker_history]
-    assert taker_root_hash_history == [
+    assert [generation["root_hash"] for generation in taker_history] == [
         bytes32([0] * 32),
         *reference.taker_root_history,
-    ], f"taker_root_history={bytes32_list_code(taker_root_hash_history[1:])},"
+    ]
 
     # TODO: test maker and taker fees
 
