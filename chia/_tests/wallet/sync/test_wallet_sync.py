@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
+from chia_rs import confirm_not_included_already_hashed
 from colorlog import getLogger
 
 from chia._tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
@@ -49,7 +50,6 @@ from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
-from chia_rs import confirm_not_included_already_hashed
 
 
 async def get_tx_count(wsm: WalletStateManager, wallet_id: int) -> int:
