@@ -8,7 +8,7 @@ from random import Random
 from typing import List, Optional, Tuple
 
 import pytest
-from chia_rs import Coin, compute_merkle_set_root, MerkleSet, confirm_included_already_hashed
+from chia_rs import Coin, MerkleSet, compute_merkle_set_root, confirm_included_already_hashed
 
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.sized_bytes import bytes32
