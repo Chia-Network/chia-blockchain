@@ -15,12 +15,61 @@ on:
       - "**.md"
     branches:
       - "**"
-  workflow_dispatch: null
+  workflow_dispatch:
+    inputs:
+      build-job-matrix-arguments:
+        description: "extra arguments for build-job-matrix.py"
+        default: ""
+        required: false
+        type: string
+      per:
+        description: "individual job scope"
+        default: "directory"
+        required: false
+        type: choice
+        options:
+          - directory
+          - file
+      only:
+        description: "only run this job"
+        default: ""
+        required: false
+        type: string
+      duplicates:
+        description: "times to run each job"
+        default: 1
+        required: false
+        type: number
+      run-linux:
+        description: "run Linux tests"
+        default: true
+        required: false
+        type: boolean
+      run-macos-intel:
+        description: "run macOS-intel tests"
+        default: true
+        required: false
+        type: boolean
+      run-macos-arm:
+        description: "run macOS-arm tests"
+        default: true
+        required: false
+        type: boolean
+      run-windows:
+        description: "run Windows tests"
+        default: true
+        required: false
+        type: boolean
+      full-python-matrix:
+        description: "run full Python version matrix"
+        default: false
+        required: false
+        type: boolean
   schedule:
     - cron: "0 13 * * *"
 
 concurrency:
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}--${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -40,16 +89,17 @@ jobs:
       - name: Generate matrix configuration
         id: configure
         run: |
-          python chia/_tests/build-job-matrix.py --per directory --verbose > matrix.json
+          python chia/_tests/build-job-matrix.py --per directory --verbose ${{ inputs.only && format('--only {0}', inputs.only) || '' }} ${{ inputs.duplicates > 1 && format('--duplicates {0}', inputs.duplicates) || '' }} ${{ inputs.build-job-matrix-arguments }} > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> "$GITHUB_OUTPUT"
-          echo matrix_mode=${{ ( github.event_name == 'schedule' ) && 'all' || ( github.event_name == 'workflow_dispatch' ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') ) && 'all' || 'main' }} >> "$GITHUB_OUTPUT"
+          echo matrix_mode=${{ ( github.event_name == 'schedule' || inputs.full-python-matrix ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') ) && 'all' || 'main' }} >> "$GITHUB_OUTPUT"
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
   macos-intel:
+    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-intel
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -63,6 +113,7 @@ jobs:
       runs-on: macos-12
       arch: intel
   macos-arm:
+    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-arm
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -77,6 +128,7 @@ jobs:
       arch: arm
       collect-junit: false
   ubuntu:
+    if: github.event_name != 'workflow_dispatch' || inputs.run-linux
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -91,6 +143,7 @@ jobs:
       arch: intel
       collect-junit: false
   windows:
+    if: github.event_name != 'workflow_dispatch' || inputs.run-windows
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:

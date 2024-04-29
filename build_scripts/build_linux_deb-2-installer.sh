@@ -4,11 +4,11 @@ set -o errexit
 
 if [ ! "$1" ]; then
   echo "This script requires either amd64 of arm64 as an argument"
-	exit 1
+  exit 1
 elif [ "$1" = "amd64" ]; then
-	PLATFORM="amd64"
+  PLATFORM="amd64"
 else
-	PLATFORM="arm64"
+  PLATFORM="arm64"
 fi
 export PLATFORM
 
@@ -19,8 +19,8 @@ git submodule
 # set, this will attempt to Notarize the signed DMG
 
 if [ ! "$CHIA_INSTALLER_VERSION" ]; then
-	echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
-	CHIA_INSTALLER_VERSION="0.0.0"
+  echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
+  CHIA_INSTALLER_VERSION="0.0.0"
 fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 export CHIA_INSTALLER_VERSION
@@ -39,15 +39,14 @@ SPEC_FILE=$(python -c 'import sys; from pathlib import Path; path = Path(sys.arg
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "pyinstaller failed!"
-	exit $LAST_EXIT_CODE
+  echo >&2 "pyinstaller failed!"
+  exit $LAST_EXIT_CODE
 fi
 
 # Creates a directory of licenses
 echo "Building pip and NPM license directory"
 pwd
 bash ./build_license_directory.sh
-
 
 # Builds CLI only .deb
 # need j2 for templating the control file
@@ -64,7 +63,8 @@ mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
 mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
 mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
 mkdir -p "dist/$CLI_DEB_BASE/etc/systemd/system"
-CHIA_DEB_CONTROL_VERSION=$(format_deb_version_string "$CHIA_INSTALLER_VERSION"); export CHIA_DEB_CONTROL_VERSION
+CHIA_DEB_CONTROL_VERSION=$(format_deb_version_string "$CHIA_INSTALLER_VERSION")
+export CHIA_DEB_CONTROL_VERSION
 j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" assets/deb/control.j2
 cp assets/systemd/*.service "dist/$CLI_DEB_BASE/etc/systemd/system/"
 cp -r dist/daemon/* "dist/$CLI_DEB_BASE/opt/chia/"
@@ -80,7 +80,7 @@ cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
-jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
+jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
 
 echo "Building Linux(deb) Electron app"
 PRODUCT_NAME="chia"
@@ -126,8 +126,8 @@ ls -l dist/linux*-unpacked/resources
 mv package.json.orig package.json
 
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-builder failed!"
-	exit $LAST_EXIT_CODE
+  echo >&2 "electron-builder failed!"
+  exit $LAST_EXIT_CODE
 fi
 
 GUI_DEB_NAME=chia-blockchain_${CHIA_INSTALLER_VERSION}_${PLATFORM}.deb

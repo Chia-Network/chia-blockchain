@@ -265,6 +265,46 @@ class DataLayer:
         else:
             return None
 
+    async def _get_publishable_root_hash(self, tree_id: bytes32) -> bytes32:
+        pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
+        if pending_root is None:
+            raise Exception("Latest root is already confirmed.")
+        if pending_root.status == Status.PENDING_BATCH:
+            raise Exception("Unable to publish on chain, batch update set still open.")
+
+        return self.none_bytes if pending_root.node_hash is None else pending_root.node_hash
+
+    async def multistore_batch_update(
+        self,
+        store_updates: List[Dict[str, Any]],
+        fee: uint64,
+        submit_on_chain: bool = True,
+    ) -> List[TransactionRecord]:
+        store_ids: Set[bytes32] = set()
+        for update in store_updates:
+            store_id = update["store_id"]
+            changelist = update["changelist"]
+
+            if store_id in store_ids:
+                raise Exception(f"Store id {store_id.hex()} must appear in a single update")
+            store_ids.add(store_id)
+
+            status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
+            await self.batch_insert(tree_id=store_id, changelist=changelist, status=status)
+
+        await self.data_store.clean_node_table()
+
+        if submit_on_chain:
+            update_dictionary: Dict[bytes32, bytes32] = {}
+            for store_id in store_ids:
+                await self._update_confirmation_status(tree_id=store_id)
+                root_hash = await self._get_publishable_root_hash(tree_id=store_id)
+                update_dictionary[store_id] = root_hash
+            transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary, fee=fee)
+            return transaction_records
+        else:
+            return []
+
     async def submit_pending_root(
         self,
         tree_id: bytes32,
@@ -280,6 +320,18 @@ class DataLayer:
 
         await self.data_store.change_root_status(pending_root, Status.PENDING)
         return await self.publish_update(tree_id, fee)
+
+    async def submit_all_pending_roots(self, fee: uint64) -> List[TransactionRecord]:
+        pending_roots = await self.data_store.get_all_pending_batches_roots()
+        update_dictionary: Dict[bytes32, bytes32] = {}
+        if len(pending_roots) == 0:
+            raise Exception("No pending roots found to submit")
+        for pending_root in pending_roots:
+            root_hash = pending_root.node_hash if pending_root.node_hash is not None else self.none_bytes
+            update_dictionary[pending_root.tree_id] = root_hash
+            await self.data_store.change_root_status(pending_root, Status.PENDING)
+        transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary, fee=fee)
+        return transaction_records
 
     async def batch_insert(
         self,
@@ -317,15 +369,7 @@ class DataLayer:
         fee: uint64,
     ) -> TransactionRecord:
         await self._update_confirmation_status(tree_id=tree_id)
-
-        pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
-        if pending_root is None:
-            raise Exception("Latest root is already confirmed.")
-        if pending_root.status == Status.PENDING_BATCH:
-            raise Exception("Unable to publish on chain, batch update set still open.")
-
-        root_hash = self.none_bytes if pending_root.node_hash is None else pending_root.node_hash
-
+        root_hash = await self._get_publishable_root_hash(tree_id=tree_id)
         transaction_record = await self.wallet_rpc.dl_update_root(
             launcher_id=tree_id,
             new_root=root_hash,

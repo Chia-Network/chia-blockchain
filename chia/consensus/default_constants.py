@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
 from .constants import ConsensusConstants
 
@@ -21,15 +21,15 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # These 3 constants must be changed at the same time
     SUB_EPOCH_BLOCKS=uint32(384),  # The number of blocks per sub-epoch, mainnet 384
     EPOCH_BLOCKS=uint32(4608),  # The number of blocks per epoch, mainnet 4608. Must be multiple of SUB_EPOCH_SB
-    SIGNIFICANT_BITS=8,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
-    DISCRIMINANT_SIZE_BITS=1024,  # Max is 1024 (based on ClassGroupElement int size)
-    NUMBER_ZERO_BITS_PLOT_FILTER=9,  # H(plot signature of the challenge) must start with these many zeroes
-    MIN_PLOT_SIZE=32,  # 32 for mainnet
-    MAX_PLOT_SIZE=50,
-    SUB_SLOT_TIME_TARGET=600,  # The target number of seconds per slot, mainnet 600
-    NUM_SP_INTERVALS_EXTRA=3,  # The number of sp intervals to add to the signage point
-    MAX_FUTURE_TIME2=2 * 60,  # The next block can have a timestamp of at most these many seconds in the future
-    NUMBER_OF_TIMESTAMPS=11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
+    SIGNIFICANT_BITS=uint8(8),  # The number of bits to look at in difficulty and min iters. The rest are zeroed
+    DISCRIMINANT_SIZE_BITS=uint16(1024),  # Max is 1024 (based on ClassGroupElement int size)
+    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(9),  # H(plot signature of the challenge) must start with these many zeroes
+    MIN_PLOT_SIZE=uint8(32),  # 32 for mainnet
+    MAX_PLOT_SIZE=uint8(50),
+    SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
+    NUM_SP_INTERVALS_EXTRA=uint8(3),  # The number of sp intervals to add to the signage point
+    MAX_FUTURE_TIME2=uint32(2 * 60),  # The next block can have a timestamp of at most these many seconds in the future
+    NUMBER_OF_TIMESTAMPS=uint8(11),  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     # Default used for tests is std_hash(b'')
@@ -42,15 +42,15 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bytes32.fromhex(
         "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
     ),
-    MAX_VDF_WITNESS_SIZE=64,
+    MAX_VDF_WITNESS_SIZE=uint8(64),
     # Size of mempool = 10x the size of block
-    MEMPOOL_BLOCK_BUFFER=10,
+    MEMPOOL_BLOCK_BUFFER=uint8(10),
     # Max coin amount, fits into 64 bits
     MAX_COIN_AMOUNT=uint64((1 << 64) - 1),
     # Max block cost in clvm cost units
-    MAX_BLOCK_COST_CLVM=11000000000,
+    MAX_BLOCK_COST_CLVM=uint64(11000000000),
     # The cost per byte of generator program
-    COST_PER_BYTE=(12000),
+    COST_PER_BYTE=uint64(12000),
     WEIGHT_PROOF_THRESHOLD=uint8(2),
     BLOCKS_CACHE_SIZE=uint32(4608 + (128 * 4)),
     WEIGHT_PROOF_RECENT_BLOCKS=uint32(1000),
