@@ -527,8 +527,10 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
         await full_node_api.request_additions(RequestAdditions(last_block.height, std_hash(b""), [ph]))
 
     # No results
+    fake_coin = std_hash(b"")
+    assert ph != fake_coin
     res1 = await full_node_api.request_additions(
-        RequestAdditions(last_block.height, last_block.header_hash, [std_hash(b"")])
+        RequestAdditions(last_block.height, last_block.header_hash, [fake_coin])
     )
     assert res1 is not None
     response = RespondAdditions.from_bytes(res1.data)
