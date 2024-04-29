@@ -105,7 +105,7 @@ async def async_main() -> int:
 
     old_uploaders = config["data_layer"].get("uploaders", [])
     new_uploaders = plugins_config.get("uploaders", [])
-    conf_file_uploaders = await load_plugin_configurations(service_dir, "uploaders")
+    conf_file_uploaders = await load_plugin_configurations(service_dir, "uploaders", log)
     uploaders: List[PluginRemote] = [
         *(PluginRemote(url=url) for url in old_uploaders),
         *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_uploaders),
@@ -114,7 +114,7 @@ async def async_main() -> int:
 
     old_downloaders = config["data_layer"].get("downloaders", [])
     new_downloaders = plugins_config.get("downloaders", [])
-    conf_file_uploaders = await load_plugin_configurations(service_dir, "downloaders")
+    conf_file_uploaders = await load_plugin_configurations(service_dir, "downloaders", log)
     downloaders: List[PluginRemote] = [
         *(PluginRemote(url=url) for url in old_downloaders),
         *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_downloaders),

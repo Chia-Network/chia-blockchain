@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
 
 from chia.data_layer.data_layer_util import PluginRemote
 from chia.data_layer.util.plugin import load_plugin_configurations
+
+log = logging.getLogger(__name__)
 
 
 @pytest.mark.anyio
@@ -29,7 +32,7 @@ async def test_load_plugin_configurations(tmp_path: Path) -> None:
         json.dump(invalid_config, file)
 
     # Test loading configurations
-    loaded_configs = await load_plugin_configurations(root_path, plugin_type)
+    loaded_configs = await load_plugin_configurations(root_path, plugin_type, log)
 
     expected_configs = [
         PluginRemote.unmarshal(marshalled=config) if isinstance(config, dict) else None for config in valid_config
@@ -46,7 +49,7 @@ async def test_load_plugin_configurations_no_configs(tmp_path: Path) -> None:
     root_path = tmp_path / "plugins_root"
 
     # Test loading configurations with no config files
-    loaded_configs = await load_plugin_configurations(root_path, plugin_type)
+    loaded_configs = await load_plugin_configurations(root_path, plugin_type, log)
 
     assert loaded_configs == [], "Should return an empty list when no configurations are present"
 
@@ -65,7 +68,7 @@ async def test_load_plugin_configurations_unreadable_file(tmp_path: Path) -> Non
     unreadable_config_file.chmod(0)  # Make the file unreadable
 
     # Test loading configurations
-    loaded_configs = await load_plugin_configurations(root_path, plugin_type)
+    loaded_configs = await load_plugin_configurations(root_path, plugin_type, log)
 
     assert loaded_configs == [], "Should gracefully handle unreadable files"
 
@@ -83,6 +86,6 @@ async def test_load_plugin_configurations_improper_json(tmp_path: Path) -> None:
         file.write("{not: 'a valid json'}")
 
     # Test loading configurations
-    loaded_configs = await load_plugin_configurations(root_path, plugin_type)
+    loaded_configs = await load_plugin_configurations(root_path, plugin_type, log)
 
     assert loaded_configs == [], "Should gracefully handle files with improper JSON"

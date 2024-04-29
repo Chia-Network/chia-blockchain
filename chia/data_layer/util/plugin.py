@@ -7,11 +7,10 @@ from typing import List
 import yaml
 
 from chia.data_layer.data_layer_util import PluginRemote
+from chia.util.log_exceptions import log_exceptions
 
-log = logging.getLogger(__name__)
 
-
-async def load_plugin_configurations(root_path: Path, config_type: str) -> List[PluginRemote]:
+async def load_plugin_configurations(root_path: Path, config_type: str, log: logging.Logger) -> List[PluginRemote]:
     """
     Loads plugin configurations from the specified directory and validates that the contents
     are in the expected JSON format (an array of PluginRemote objects). It gracefully handles errors
@@ -30,11 +29,16 @@ async def load_plugin_configurations(root_path: Path, config_type: str) -> List[
     valid_configs = []
     for conf_file in config_path.glob("*.conf"):
         try:
-            with open(conf_file) as file:
-                data = yaml.safe_load(file)
+            with log_exceptions(
+                log=log,
+                consume=True,
+                message=f"Skipping config file due to failure loading or parsing: {conf_file}",
+            ):
+                with open(conf_file) as file:
+                    data = yaml.safe_load(file)
 
-            valid_configs.extend([PluginRemote.unmarshal(marshalled=item) for item in data])
-            log.info(f"loaded plugin configuration: {conf_file}")
+                valid_configs.extend([PluginRemote.unmarshal(marshalled=item) for item in data])
+                log.info(f"loaded plugin configuration: {conf_file}")
         except (OSError, yaml.YAMLError, Exception) as e:
             log.warn(f"Error loading or parsing {conf_file}: {e}, skipping this file.")
     return valid_configs
