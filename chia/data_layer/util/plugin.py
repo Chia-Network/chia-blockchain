@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import yaml
+import logging
 from pathlib import Path
 from typing import List
 
 from chia.data_layer.data_layer_util import PluginRemote
 
+log = logging.getLogger(__name__)
 
 async def load_plugin_configurations(root_path: Path, config_type: str) -> List[PluginRemote]:
     """
@@ -30,6 +32,7 @@ async def load_plugin_configurations(root_path: Path, config_type: str) -> List[
                 data = yaml.safe_load(file)
 
             valid_configs.extend([PluginRemote.unmarshal(marshalled=item) for item in data])
+            log.info(f"loaded plugin configuration: {conf_file}")
         except (OSError, yaml.YAMLError, Exception) as e:
-            print(f"Error loading or parsing {conf_file}: {e}, skipping this file.")
+            log.warn(f"Error loading or parsing {conf_file}: {e}, skipping this file.")
     return valid_configs
