@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json
+import yaml
 from pathlib import Path
 from typing import List
 
@@ -27,9 +27,9 @@ async def load_plugin_configurations(root_path: Path, config_type: str) -> List[
     for conf_file in config_path.glob("*.conf"):
         try:
             with open(conf_file) as file:
-                data = json.load(file)
+                data = yaml.safe_load(file)
 
             valid_configs.extend([PluginRemote.unmarshal(marshalled=item) for item in data])
-        except (OSError, json.JSONDecodeError, Exception) as e:
+        except (OSError, yaml.YAMLError, Exception) as e:
             print(f"Error loading or parsing {conf_file}: {e}, skipping this file.")
     return valid_configs
