@@ -60,7 +60,7 @@ jobs:
       concurrency_name: macos
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: macos-latest
+      runs-on: macos-12
       collect-junit: false
   ubuntu:
     uses: ./.github/workflows/test-single.yml
