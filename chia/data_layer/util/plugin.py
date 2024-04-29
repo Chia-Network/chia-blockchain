@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-import yaml
 import logging
 from pathlib import Path
 from typing import List
 
+import yaml
+
 from chia.data_layer.data_layer_util import PluginRemote
 
 log = logging.getLogger(__name__)
+
 
 async def load_plugin_configurations(root_path: Path, config_type: str) -> List[PluginRemote]:
     """
