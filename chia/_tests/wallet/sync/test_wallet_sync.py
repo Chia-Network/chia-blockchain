@@ -537,13 +537,16 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
     assert response.proofs is not None
     assert len(response.proofs) == 1
     assert len(response.coins) == 1
-    root = (await full_node_api.full_node.block_store.get_full_block(last_block.header_hash)).foliage_transaction_block.additions_root
+    root = (
+        await full_node_api.full_node.block_store.get_full_block(last_block.header_hash)
+    ).foliage_transaction_block.additions_root
     assert confirm_not_included_already_hashed(root, response.proofs[0][0], response.proofs[0][1])
-    # proofs is a tuple of (puzzlehash, proof, proof_2) 
+    # proofs is a tuple of (puzzlehash, proof, proof_2)
     # proof is a proof of inclusion (or exclusion) of that puzzlehash
-    # proof_2 is a proof of all the coins with that puzzlehash (all coin names are concatenated and hashed into one entry in the merkle set for this)
+    # proof_2 is a proof of all the coins with that puzzlehash
+    # all coin names are concatenated and hashed into one entry in the merkle set for proof_2
     # the response contains the list of coins so you can check the proof_2
-    
+
     assert response.proofs[0][0] == std_hash(b"")
     assert response.proofs[0][1] is not None
     assert response.proofs[0][2] is None
