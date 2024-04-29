@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
+from chia_rs import confirm_not_included_already_hashed
 from colorlog import getLogger
 
 from chia._tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
@@ -526,8 +527,10 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
         await full_node_api.request_additions(RequestAdditions(last_block.height, std_hash(b""), [ph]))
 
     # No results
+    fake_coin = std_hash(b"")
+    assert ph != fake_coin
     res1 = await full_node_api.request_additions(
-        RequestAdditions(last_block.height, last_block.header_hash, [std_hash(b"")])
+        RequestAdditions(last_block.height, last_block.header_hash, [fake_coin])
     )
     assert res1 is not None
     response = RespondAdditions.from_bytes(res1.data)
@@ -536,6 +539,16 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
     assert response.proofs is not None
     assert len(response.proofs) == 1
     assert len(response.coins) == 1
+    full_block = await full_node_api.full_node.block_store.get_full_block(last_block.header_hash)
+    assert full_block is not None
+    assert full_block.foliage_transaction_block is not None
+    root = full_block.foliage_transaction_block.additions_root
+    assert confirm_not_included_already_hashed(root, response.proofs[0][0], response.proofs[0][1])
+    # proofs is a tuple of (puzzlehash, proof, proof_2)
+    # proof is a proof of inclusion (or exclusion) of that puzzlehash
+    # proof_2 is a proof of all the coins with that puzzlehash
+    # all coin names are concatenated and hashed into one entry in the merkle set for proof_2
+    # the response contains the list of coins so you can check the proof_2
 
     assert response.proofs[0][0] == std_hash(b"")
     assert response.proofs[0][1] is not None
