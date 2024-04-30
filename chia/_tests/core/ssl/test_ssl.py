@@ -45,6 +45,8 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
 #
 # This is needed on linux and mac when running in asyncio debug otherwise
 # The SSL Error causes the test to exit and fail prematurely in an uncatchable way
+# This doesn't seem to work on Windows as the exception handler is never called
+# at least for this SSL failure
 #
 @contextlib.contextmanager
 def ignore_ssl_cert_error():
@@ -107,18 +109,32 @@ class TestSSL:
 
         with set_asyncio_debug():
             async with farmer_service.manage():
-                # ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, priv_crt, priv_key)
-                # await establish_connection(farmer_server, self_hostname, ssl_context)
+                # Test one - normal working case
+                ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, priv_crt, priv_key)
+                await establish_connection(farmer_server, self_hostname, ssl_context)
 
+                # Test two -
+                # Use client certificate signed by public CA (instead of private one) and use public CA for SSL context
+                # This reliably raises ClientConnectorCertificateError
                 # Create not authenticated cert
+                #
                 pub_crt = farmer_server.root_path / "non_valid.crt"
                 pub_key = farmer_server.root_path / "non_valid.key"
                 generate_ca_signed_cert(chia_ca_crt_path.read_bytes(), chia_ca_key_path.read_bytes(), pub_crt, pub_key)
-                # ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
-                # with pytest.raises(aiohttp.ClientConnectorCertificateError):
-                #    await establish_connection(farmer_server, self_hostname, ssl_context)
+                ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
+                with pytest.raises(aiohttp.ClientConnectorCertificateError):
+                    await establish_connection(farmer_server, self_hostname, ssl_context)
+
+                # Test three -
+                # Use client certificate generated from public CA but use private CA for SSL context
+                # This doesn't reliable raise a specific exception on all platforms so resorting to searching
+                # the log for certificate failed messages. However, this is complicated in that the log
+                # for this is only generated with asyncio in debug mode which due to further complications
+                # needs to be set near the beginning when the farmer service starts
+                #
                 ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, pub_crt, pub_key)
                 try:
+                    caplog.clear()
                     with ignore_ssl_cert_error(), caplog.at_level(logging.DEBUG, logger="asyncio"):
                         await establish_connection(farmer_server, self_hostname, ssl_context)
                 except Exception:
