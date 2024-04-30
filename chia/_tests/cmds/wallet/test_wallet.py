@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
@@ -934,7 +935,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     ]
 
     with importlib_resources.as_file(test_offer_file_ref) as test_offer_file_name:
-        command_args = ["wallet", "take_offer", test_offer_file_name, FINGERPRINT_ARG, "-m1", "--reuse"]
+        command_args = ["wallet", "take_offer", os.fspath(test_offer_file_name), FINGERPRINT_ARG, "-m1", "--reuse"]
         run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
 
     expected_calls: logType = {
