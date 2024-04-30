@@ -38,8 +38,8 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_store import GetCoinRecords
 
-test_offer_file_ref = importlib_resources.files(__name__).joinpath("test_offer.toffer")
-test_offer_file_bech32 = test_offer_file_ref.read_text(encoding="utf-8")
+test_offer_file_path = importlib_resources.files(__name__).joinpath("test_offer.toffer")
+test_offer_file_bech32 = test_offer_file_path.read_text(encoding="utf-8")
 test_offer_id: str = "0xdfb7e8643376820ec995b0bcdb3fc1f764c16b814df5e074631263fcf1e00839"
 test_offer_id_bytes: bytes32 = bytes32.from_hexstr(test_offer_id)
 
@@ -934,7 +934,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         "Accepted offer with ID dfb7e8643376820ec995b0bcdb3fc1f764c16b814df5e074631263fcf1e00839",
     ]
 
-    with importlib_resources.as_file(test_offer_file_ref) as test_offer_file_name:
+    with importlib_resources.as_file(test_offer_file_path) as test_offer_file_name:
         command_args = ["wallet", "take_offer", os.fspath(test_offer_file_name), FINGERPRINT_ARG, "-m1", "--reuse"]
         run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
 

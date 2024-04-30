@@ -156,8 +156,8 @@ class TestKeychain:
         assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
 
     def test_bip39_test_vectors(self):
-        ref = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
-        all_vectors = json.loads(ref.read_text(encoding="utf-8"))
+        test_vectors_path = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
+        all_vectors = json.loads(test_vectors_path.read_text(encoding="utf-8"))
 
         for vector_list in all_vectors["english"]:
             entropy_bytes = bytes.fromhex(vector_list[0])
@@ -172,8 +172,8 @@ class TestKeychain:
         """
         Tests that the first 4 letters of each mnemonic phrase matches as if it were the full phrase
         """
-        ref = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
-        all_vectors = json.loads(ref.read_text(encoding="utf-8"))
+        test_vectors_path = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
+        all_vectors = json.loads(test_vectors_path.read_text(encoding="utf-8"))
 
         for idx, [entropy_hex, full_mnemonic, seed, short_mnemonic] in enumerate(all_vectors["english"]):
             entropy_bytes = bytes.fromhex(entropy_hex)

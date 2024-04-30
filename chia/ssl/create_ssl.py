@@ -29,9 +29,9 @@ _all_public_node_names: List[str] = ["full_node", "wallet", "farmer", "introduce
 
 
 def get_chia_ca_crt_key() -> Tuple[Any, Any]:
-    ref = importlib_resources.files(__name__)
-    crt = ref.joinpath("chia_ca.crt").read_bytes()
-    key = ref.joinpath("chia_ca.key").read_bytes()
+    here = importlib_resources.files(__name__)
+    crt = here.joinpath("chia_ca.crt").read_bytes()
+    key = here.joinpath("chia_ca.key").read_bytes()
     return crt, key
 
 

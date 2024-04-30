@@ -20,8 +20,8 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 # farmer puzzle hash
 ph = bytes32(b"a" * 32)
 
-clvm_generator_bin_ref = importlib_resources.files(__name__).joinpath("clvm_generator.bin")
-clvm_generator = clvm_generator_bin_ref.read_bytes()
+clvm_generator_bin_path = importlib_resources.files(__name__).joinpath("clvm_generator.bin")
+clvm_generator = clvm_generator_bin_path.read_bytes()
 
 
 def rewards(height: uint32) -> Tuple[Coin, Coin]:

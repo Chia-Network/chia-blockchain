@@ -53,8 +53,8 @@ def set_keys_root_path(keys_root_path: Path) -> None:
 
 
 def bip39_word_list() -> str:
-    path = importlib_resources.files(__name__).joinpath("english.txt")
-    contents: str = path.read_text(encoding="utf-8")
+    word_list_path = importlib_resources.files(__name__).joinpath("english.txt")
+    contents: str = word_list_path.read_text(encoding="utf-8")
     return contents
 
 

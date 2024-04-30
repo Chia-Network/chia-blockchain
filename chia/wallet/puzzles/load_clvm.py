@@ -92,8 +92,9 @@ def load_serialized_clvm(
 
     # Set the CHIA_DEV_COMPILE_CLVM_ON_IMPORT environment variable to anything except
     # "" or "0" to trigger automatic recompilation of the Chialisp on load.
+    resources = importlib_resources.files(package_or_requirement)
     if recompile and not getattr(sys, "frozen", False):
-        full_path = importlib_resources.files(package_or_requirement).joinpath(clvm_filename)
+        full_path = resources.joinpath(clvm_filename)
         if full_path.exists():
             # Establish whether the size is zero on entry
             output = full_path.parent / hex_filename
@@ -105,7 +106,7 @@ def load_serialized_clvm(
                     search_paths.append(chia_puzzles_path)
                 compile_clvm(full_path, output, search_paths=search_paths)
 
-    clvm_path = importlib_resources.files(package_or_requirement).joinpath(hex_filename)
+    clvm_path = resources.joinpath(hex_filename)
     clvm_hex = clvm_path.read_text(encoding="utf-8")
     assert len(clvm_hex.strip()) != 0
     clvm_blob = bytes.fromhex(clvm_hex)
@@ -132,7 +133,7 @@ def load_clvm(
 
 def load_clvm_maybe_recompile(
     clvm_filename,
-    package_or_requirement=__name__.rpartition(".")[0],
+    package_or_requirement=__name__,
     include_standard_libraries: bool = True,
     recompile: bool = recompile_requested,
 ) -> Program:
