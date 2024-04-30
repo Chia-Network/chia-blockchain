@@ -21,6 +21,8 @@ recompile_requested = (
     (os.environ.get("CHIA_DEV_COMPILE_CLVM_ON_IMPORT", "") != "") or ("pytest" in sys.modules)
 ) and os.environ.get("CHIA_DEV_COMPILE_CLVM_DISABLED", None) is None
 
+here_name = __name__.rpartition(".")[0]
+
 
 def translate_path(p_):
     p = str(p_)
@@ -78,7 +80,7 @@ def compile_clvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: Li
 
 
 def load_serialized_clvm(
-    clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = True, recompile: bool = True
+    clvm_filename, package_or_requirement=here_name, include_standard_libraries: bool = True, recompile: bool = True
 ) -> SerializedProgram:
     """
     This function takes a .clsp file in the given package and compiles it to a
@@ -115,7 +117,7 @@ def load_serialized_clvm(
 
 def load_clvm(
     clvm_filename,
-    package_or_requirement=__name__,
+    package_or_requirement=here_name,
     include_standard_libraries: bool = True,
     recompile: bool = True,
 ) -> Program:
@@ -133,7 +135,7 @@ def load_clvm(
 
 def load_clvm_maybe_recompile(
     clvm_filename,
-    package_or_requirement=__name__,
+    package_or_requirement=here_name,
     include_standard_libraries: bool = True,
     recompile: bool = recompile_requested,
 ) -> Program:
@@ -147,7 +149,7 @@ def load_clvm_maybe_recompile(
 
 def load_serialized_clvm_maybe_recompile(
     clvm_filename,
-    package_or_requirement=__name__,
+    package_or_requirement=here_name,
     include_standard_libraries: bool = True,
     recompile: bool = recompile_requested,
 ) -> SerializedProgram:
