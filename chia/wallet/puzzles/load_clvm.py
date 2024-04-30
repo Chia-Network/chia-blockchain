@@ -132,7 +132,7 @@ def load_clvm(
 
 def load_clvm_maybe_recompile(
     clvm_filename,
-    package_or_requirement=__name__,
+    package_or_requirement=__name__.rpartition(".")[0],
     include_standard_libraries: bool = True,
     recompile: bool = recompile_requested,
 ) -> Program:
