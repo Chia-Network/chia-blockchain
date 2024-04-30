@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
-import ssl
+import logging
 
 import aiohttp
 import pytest
-import logging
+
 from chia.protocols.shared_protocol import capabilities
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
@@ -39,9 +38,6 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
         )
         await wsc.perform_handshake(server._network_id, dummy_port, NodeType.FULL_NODE)
         await wsc.close()
-
-
-ssl_cert_error = False
 
 
 class TestSSL:
@@ -93,9 +89,11 @@ class TestSSL:
             except Exception:
                 pass  # ignore any exceptions and just check the expected log output below
             finally:
-                assert "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate signature failure" in caplog.text
+                assert (
+                    "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate signature failure"
+                    in caplog.text
+                )
                 asyncio.get_event_loop().set_debug(False)
-
 
     @pytest.mark.anyio
     async def test_full_node(self, simulator_and_wallet, self_hostname):
