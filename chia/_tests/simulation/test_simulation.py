@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import importlib.metadata
 import json
 from typing import AsyncIterator, List, Tuple
 
 import aiohttp
-import pkg_resources
 import pytest
 
 from chia._tests.core.node_height import node_height_at_least
@@ -30,7 +30,7 @@ from chia.util.ws_message import create_payload
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
-chiapos_version = pkg_resources.get_distribution("chiapos").version
+chiapos_version = importlib.metadata.version("chiapos")
 
 test_constants_modified = test_constants.replace(
     DIFFICULTY_STARTING=uint64(2**8),

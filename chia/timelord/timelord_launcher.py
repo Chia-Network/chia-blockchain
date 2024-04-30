@@ -12,8 +12,6 @@ from dataclasses import dataclass, field
 from types import FrameType
 from typing import Any, AsyncIterator, Dict, List, Optional
 
-import pkg_resources
-
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -66,11 +64,17 @@ class VDFClientProcessMgr:
 
 
 def find_vdf_client() -> pathlib.Path:
-    location = pkg_resources.get_distribution("chiavdf").location
-    if location is None:
+    try:
+        import chiavdf
+    except ImportError:
+        raise Exception("Cannot import chiavdf package")
+
+    file_string = getattr(chiavdf, "__file__", None)
+    if file_string is None:
         raise Exception("Cannot find chiavdf package location")
 
-    p = pathlib.Path(location, "vdf_client")
+    location = pathlib.Path(file_string).parent
+    p = location.joinpath("vdf_client")
     if p.is_file():
         return p
     raise FileNotFoundError("Cannot find vdf_client binary. Is Timelord installed? See install-timelord.sh")

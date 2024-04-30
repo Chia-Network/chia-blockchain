@@ -7,7 +7,7 @@ from hashlib import pbkdf2_hmac
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import pkg_resources
+import importlib_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from typing_extensions import final
@@ -53,7 +53,9 @@ def set_keys_root_path(keys_root_path: Path) -> None:
 
 
 def bip39_word_list() -> str:
-    return pkg_resources.resource_string(__name__, "english.txt").decode()
+    path = importlib_resources.files(__name__).joinpath("english.txt")
+    contents: str = path.read_text(encoding="utf-8")
+    return contents
 
 
 def generate_mnemonic() -> str:

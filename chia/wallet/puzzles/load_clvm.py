@@ -8,7 +8,7 @@ import sys
 import tempfile
 from typing import List
 
-import pkg_resources
+import importlib_resources
 from clvm_tools_rs import compile_clvm as compile_clvm_rust
 
 from chia.types.blockchain_format.program import Program
@@ -92,28 +92,21 @@ def load_serialized_clvm(
 
     # Set the CHIA_DEV_COMPILE_CLVM_ON_IMPORT environment variable to anything except
     # "" or "0" to trigger automatic recompilation of the Chialisp on load.
-    if recompile:
-        try:
-            if pkg_resources.resource_exists(package_or_requirement, clvm_filename):
-                # Establish whether the size is zero on entry
-                full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
-                output = full_path.parent / hex_filename
-                if not output.exists() or os.stat(full_path).st_mtime > os.stat(output).st_mtime:
-                    search_paths = [full_path.parent]
-                    if include_standard_libraries:
-                        # we can't get the dir, but we can get a file then get its parent.
-                        chia_puzzles_path = pathlib.Path(
-                            pkg_resources.resource_filename(__name__, "__init__.py")
-                        ).parent
-                        search_paths.append(chia_puzzles_path)
-                    compile_clvm(full_path, output, search_paths=search_paths)
+    if recompile and not getattr(sys, "frozen", False):
+        full_path = importlib_resources.files(package_or_requirement).joinpath(clvm_filename)
+        if full_path.exists():
+            # Establish whether the size is zero on entry
+            output = full_path.parent / hex_filename
+            if not output.exists() or os.stat(full_path).st_mtime > os.stat(output).st_mtime:
+                search_paths = [full_path.parent]
+                if include_standard_libraries:
+                    # we can't get the dir, but we can get a file then get its parent.
+                    chia_puzzles_path = pathlib.Path(__file__).parent
+                    search_paths.append(chia_puzzles_path)
+                compile_clvm(full_path, output, search_paths=search_paths)
 
-        except NotImplementedError:
-            # pyinstaller doesn't support `pkg_resources.resource_exists`
-            # so we just fall through to loading the hex clvm
-            pass
-
-    clvm_hex = pkg_resources.resource_string(package_or_requirement, hex_filename).decode("utf8")
+    clvm_path = importlib_resources.files(package_or_requirement).joinpath(hex_filename)
+    clvm_hex = clvm_path.read_text(encoding="utf-8")
     assert len(clvm_hex.strip()) != 0
     clvm_blob = bytes.fromhex(clvm_hex)
     return SerializedProgram.from_bytes(clvm_blob)
