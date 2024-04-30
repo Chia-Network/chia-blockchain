@@ -202,7 +202,7 @@ async def create_plots(
         # The plot id is based on the harvester, farmer, and pool keys
         if keys.pool_public_key is not None:
             plot_id: bytes32 = calculate_plot_id_pk(keys.pool_public_key, plot_public_key)
-            plot_memo: stream_plot_info_pk(keys.pool_public_key, keys.farmer_public_key, sk)
+            plot_memo: bytes32 = stream_plot_info_pk(keys.pool_public_key, keys.farmer_public_key, sk)
         else:
             assert keys.pool_contract_puzzle_hash is not None
             plot_id = calculate_plot_id_ph(keys.pool_contract_puzzle_hash, plot_public_key)
