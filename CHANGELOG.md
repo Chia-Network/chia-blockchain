@@ -51,8 +51,8 @@ for setuptools_scm/PEP 440 reasons.
 * Stop automatic transaction pushing by wallets
 * Unify transaction pushing
 * For testing purposes added support for non-ssl rpc clients
-* Bump `chia_rs` to `0.5.2`
-* Bump `clvm_tools` to `0.4.8`
+* Bump `chia_rs` to `0.6.1`
+* Bump `clvm_tools` to `0.4.9`
 * Bump `aiohttp` to `3.9.2`
 * Return TXs from CATWallet and Offer creation
 * Remove all install.sh code that installs python and leave it to the user to install separately
