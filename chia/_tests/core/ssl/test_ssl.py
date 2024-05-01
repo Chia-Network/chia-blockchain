@@ -59,7 +59,7 @@ def ignore_ssl_cert_error():
         if isinstance(exc, ssl.SSLCertVerificationError):
             return
 
-        old_handler_fn(loop, ctx)
+        old_handler_fn(loop, ctx)  # pragma: no cover
 
     current_loop.set_exception_handler(find_and_ignore)
     try:
