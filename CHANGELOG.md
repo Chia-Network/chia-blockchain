@@ -91,6 +91,9 @@ for setuptools_scm/PEP 440 reasons.
 * Bump `dnslib` to `0.9.24`
 * Bump `typing-extensions` to `4.10.0`
 
+### Known Issues
+* Please be aware that logging at `DEBUG` log level may log your local keyring passphrase to the log file. Note this is **not** your key mnemonic.
+
 ## 2.2.1 Chia blockchain 2024-03-4
 
 ### Fixed
