@@ -126,6 +126,10 @@ jobs:
             type: ubuntu
             # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
             url: "docker://ubuntu:jammy"
+          - name: ubuntu:noble (24.04)
+            type: ubuntu
+            # https://packages.ubuntu.com/noble/python3 (24.04, 3.12)
+            url: "docker://ubuntu:noble"
         arch:
           - name: ARM64
             matrix: arm
