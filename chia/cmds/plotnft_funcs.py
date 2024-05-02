@@ -61,7 +61,7 @@ async def create_pool_args(pool_url: str) -> Dict[str, Any]:
 
 
 async def create(
-    wallet_rpc_port: Optional[int], fingerprint: int, pool_url: Optional[str], state: str, fee: Decimal, prompt: bool
+    wallet_rpc_port: Optional[int], fingerprint: int, pool_url: Optional[str], state: str, fee: Decimal, *, prompt: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
         fee_mojos = uint64(int(fee * units["chia"]))
