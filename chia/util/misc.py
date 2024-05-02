@@ -422,6 +422,8 @@ def available_logical_cores() -> int:
     if sys.platform == "win32":
         cores = min(61, cores)  # https://github.com/python/cpython/issues/89240
 
+    return cores
+
 
 def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:
     caller = getframeinfo(stack()[distance + 1][0])
