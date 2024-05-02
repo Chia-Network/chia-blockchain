@@ -12,6 +12,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional
 import aiohttp
 
 from chia.cmds.cmds_util import (
+    cli_confirm,
     get_any_service_client,
     get_wallet_client,
     transaction_status_msg,
@@ -88,35 +89,28 @@ async def create(
         pool_msg = f" and join pool: {pool_url}" if pool_url else ""
         print(f"Will create a plot NFT{pool_msg}.")
         if prompt:
-            user_input: str = input("Confirm [n]/y: ")
-        else:
-            user_input = "yes"
+            cli_confirm("Confirm (y/n): ", "Aborting.")
 
-        if user_input.lower() == "y" or user_input.lower() == "yes":
-            try:
-                tx_record: TransactionRecord = await wallet_client.create_new_pool_wallet(
-                    target_puzzle_hash,
-                    pool_url,
-                    relative_lock_height,
-                    "localhost:5000",
-                    "new",
-                    state,
-                    fee_mojos,
-                )
-                start = time.time()
-                while time.time() - start < 10:
-                    await asyncio.sleep(0.1)
-                    tx = await wallet_client.get_transaction(tx_record.name)
-                    if len(tx.sent_to) > 0:
-                        print(transaction_submitted_msg(tx))
-                        print(transaction_status_msg(fingerprint, tx_record.name))
-                        return None
-            except Exception as e:
-                print(
-                    f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer"
-                )
-            return
-        print("Aborting.")
+        try:
+            tx_record: TransactionRecord = await wallet_client.create_new_pool_wallet(
+                target_puzzle_hash,
+                pool_url,
+                relative_lock_height,
+                "localhost:5000",
+                "new",
+                state,
+                fee_mojos,
+            )
+            start = time.time()
+            while time.time() - start < 10:
+                await asyncio.sleep(0.1)
+                tx = await wallet_client.get_transaction(tx_record.name)
+                if len(tx.sent_to) > 0:
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, tx_record.name))
+                    return None
+        except Exception as e:
+            print(f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer")
 
 
 async def pprint_pool_wallet_state(
@@ -261,26 +255,20 @@ async def submit_tx_with_confirmation(
 ) -> None:
     print(message)
     if prompt:
-        user_input: str = input("Confirm [n]/y: ")
-    else:
-        user_input = "yes"
-
-    if user_input.lower() == "y" or user_input.lower() == "yes":
-        try:
-            result = await func()
-            tx_record: TransactionRecord = result["transaction"]
-            start = time.time()
-            while time.time() - start < 10:
-                await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(tx_record.name)
-                if len(tx.sent_to) > 0:
-                    print(transaction_submitted_msg(tx))
-                    print(transaction_status_msg(fingerprint, tx_record.name))
-                    return None
-        except Exception as e:
-            print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")
-        return
-    print("Aborting.")
+        cli_confirm("Confirm (y/n): ", "Aborting.")
+    try:
+        result = await func()
+        tx_record: TransactionRecord = result["transaction"]
+        start = time.time()
+        while time.time() - start < 10:
+            await asyncio.sleep(0.1)
+            tx = await wallet_client.get_transaction(tx_record.name)
+            if len(tx.sent_to) > 0:
+                print(transaction_submitted_msg(tx))
+                print(transaction_status_msg(fingerprint, tx_record.name))
+                return None
+    except Exception as e:
+        print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")
 
 
 async def join_pool(
