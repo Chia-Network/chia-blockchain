@@ -16,7 +16,7 @@ dependencies = [
     "clvm_tools==0.4.9",  # Currying, Program.to, other conveniences
     "chia_rs==0.7.0",
     "clvm-tools-rs==0.1.40",  # Rust implementation of clvm_tools' compiler
-    "aiohttp==3.9.2",  # HTTP server for full node rpc
+    "aiohttp==3.9.4",  # HTTP server for full node rpc
     "aiosqlite==0.20.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.1.4",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
@@ -45,16 +45,16 @@ upnp_dependencies = [
 dev_dependencies = [
     "build==1.2.1",
     "coverage==7.4.3",
-    "diff-cover==8.0.3",
+    "diff-cover==9.0.0",
     "pre-commit==3.5.0; python_version < '3.9'",
-    "pre-commit==3.6.2; python_version >= '3.9'",
+    "pre-commit==3.7.0; python_version >= '3.9'",
     "py3createtorrent==1.2.0",
     "pylint==3.1.0",
     "pytest==8.1.1",
-    "pytest-cov==4.1.0",
+    "pytest-cov==5.0.0",
     "pytest-mock==3.14.0",
     "pytest-xdist==3.5.0",
-    "pyupgrade==3.15.0",
+    "pyupgrade==3.15.2",
     "twine==5.0.0",
     "isort==5.13.2",
     "flake8==7.0.0",
