@@ -289,7 +289,6 @@ jobs:
           aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb" "s3://download.chia.net/dev/chia-blockchain-cli_${CHIA_DEV_BUILD}-1_${{ matrix.os.arch }}.deb"
 
       - name: Create Checksums
-        if: env.FULL_RELEASE == 'true' || github.ref == 'refs/heads/main'
         run: |
           ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
           sha256sum "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb > "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.sha256
