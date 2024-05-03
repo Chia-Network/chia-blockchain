@@ -4,6 +4,7 @@ import logging
 from typing import List, Optional, Tuple
 
 from chia_rs import G1Element
+from clvm.casts import int_to_bytes
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.consensus.block_rewards import calculate_pool_reward
@@ -17,6 +18,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer import puzzle_for_singleton
+from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom
 
 log = logging.getLogger(__name__)
 # "Full" is the outer singleton, with the inner puzzle filled in
@@ -31,8 +33,10 @@ POOL_OUTER_MOD = SINGLETON_MOD
 POOL_MEMBER_HASH = POOL_MEMBER_MOD.get_tree_hash()
 POOL_WAITING_ROOM_HASH = POOL_WAITING_ROOM_MOD.get_tree_hash()
 P2_SINGLETON_HASH = P2_SINGLETON_MOD.get_tree_hash()
+P2_SINGLETON_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(P2_SINGLETON_HASH)
 POOL_OUTER_MOD_HASH = POOL_OUTER_MOD.get_tree_hash()
 SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
+SINGLETON_LAUNCHER_HASH_TREE_HASH = shatree_atom(SINGLETON_LAUNCHER_HASH)
 SINGLETON_MOD_HASH = POOL_OUTER_MOD_HASH
 
 SINGLETON_MOD_HASH_HASH = Program.to(SINGLETON_MOD_HASH).get_tree_hash()
@@ -90,10 +94,25 @@ def create_p2_singleton_puzzle(
     )
 
 
+def create_p2_singleton_puzzle_hash(
+    singleton_mod_hash: bytes,
+    launcher_id: bytes32,
+    seconds_delay: uint64,
+    delayed_puzzle_hash: bytes32,
+) -> bytes32:
+    # curry params are SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH SECONDS_DELAY DELAYED_PUZZLE_HASH
+    return curry_and_treehash(
+        P2_SINGLETON_HASH_QUOTED,
+        shatree_atom(singleton_mod_hash),
+        shatree_atom(launcher_id),
+        SINGLETON_LAUNCHER_HASH_TREE_HASH,
+        shatree_atom(int_to_bytes(seconds_delay)),
+        shatree_atom(delayed_puzzle_hash),
+    )
+
+
 def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32, seconds_delay: uint64, delayed_puzzle_hash: bytes32) -> bytes32:
-    return create_p2_singleton_puzzle(
-        SINGLETON_MOD_HASH, launcher_id, seconds_delay, delayed_puzzle_hash
-    ).get_tree_hash()
+    return create_p2_singleton_puzzle_hash(SINGLETON_MOD_HASH, launcher_id, seconds_delay, delayed_puzzle_hash)
 
 
 def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSpend) -> Tuple[uint64, bytes32]:
