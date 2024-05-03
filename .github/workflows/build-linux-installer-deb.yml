@@ -224,6 +224,10 @@ jobs:
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
 
+      - uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - uses: chia-network/actions/create-venv@main
         id: create-venv
 
