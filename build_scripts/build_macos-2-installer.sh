@@ -82,7 +82,7 @@ mkdir final_installer
 DMG_NAME="Chia-${CHIA_INSTALLER_VERSION}.dmg"
 if [ "$(arch)" = "arm64" ]; then
   mv dist/"${DMG_NAME}" dist/chia-"${CHIA_INSTALLER_VERSION}"-arm64.dmg
-  DMG_NAME=chia-${CHIA_INSTALLER_VERSION}-arm64.dmg
+  DMG_NAME=Chia-${CHIA_INSTALLER_VERSION}-arm64.dmg
 fi
 mv dist/"$DMG_NAME" final_installer/
 
