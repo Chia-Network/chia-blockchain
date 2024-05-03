@@ -9,7 +9,7 @@ from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import final
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.pools.pool_config import PoolWalletConfig
 from chia.pools.pool_puzzles import (
     create_absorb_spend,
     create_full_puzzle,
@@ -43,6 +43,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle, estimate_fees
+from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes, parse_timelock_info
 from chia.wallet.derive_keys import find_owner_sk
@@ -237,25 +238,44 @@ class PoolWallet:
 
     async def update_pool_config(self) -> None:
         current_state: PoolWalletInfo = await self.get_current_state()
-        pool_config_list: List[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.root_path)
-        pool_config_dict: Dict[bytes32, PoolWalletConfig] = {c.launcher_id: c for c in pool_config_list}
-        existing_config: Optional[PoolWalletConfig] = pool_config_dict.get(current_state.launcher_id, None)
-        payout_instructions: str = existing_config.payout_instructions if existing_config is not None else ""
+        with lock_and_load_config(self.wallet_state_manager.root_path, "config.yaml") as config:
+            pool_list = config["pool"].get("pool_list", [])
+            existing_config: int = -1
+            for idx, c in enumerate(pool_list):
+                try:
+                    launcher_id = bytes32.from_hexstr(c["launcher_id"])
+                    if launcher_id != current_state.launcher_id:
+                        continue
+                    existing_config = idx
+                    break
+                except Exception as e:
+                    self.log.error(f"Exception loading config: {c} {e}")
+                    continue
 
-        if len(payout_instructions) == 0:
-            payout_instructions = (await self.standard_wallet.get_new_puzzlehash()).hex()
-            self.log.info(f"New config entry. Generated payout_instructions puzzle hash: {payout_instructions}")
+            payout_instructions: str = (
+                pool_list[existing_config].get("payout_instructions", "") if existing_config >= 0 else ""
+            )
 
-        new_config: PoolWalletConfig = PoolWalletConfig(
-            current_state.launcher_id,
-            current_state.current.pool_url if current_state.current.pool_url else "",
-            payout_instructions,
-            current_state.current.target_puzzle_hash,
-            current_state.p2_singleton_puzzle_hash,
-            current_state.current.owner_pubkey,
-        )
-        pool_config_dict[new_config.launcher_id] = new_config
-        await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
+            if len(payout_instructions) == 0:
+                payout_instructions = (await self.standard_wallet.get_new_puzzlehash()).hex()
+                self.log.info(f"New config entry. Generated payout_instructions puzzle hash: {payout_instructions}")
+
+            new_config: PoolWalletConfig = PoolWalletConfig(
+                current_state.launcher_id,
+                current_state.current.pool_url if current_state.current.pool_url else "",
+                payout_instructions,
+                current_state.current.target_puzzle_hash,
+                current_state.p2_singleton_puzzle_hash,
+                current_state.current.owner_pubkey,
+            )
+
+            if existing_config >= 0:
+                pool_list[existing_config] = new_config.to_json_dict()
+            else:
+                pool_list.append(new_config.to_json_dict())
+
+            config["pool"]["pool_list"] = pool_list
+            save_config(self.wallet_state_manager.root_path, "config.yaml", config)
 
     async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """
