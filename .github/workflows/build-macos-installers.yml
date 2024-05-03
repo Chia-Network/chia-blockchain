@@ -316,15 +316,6 @@ jobs:
           AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
           GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
 
-      - name: Install AWS CLI
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET
-        run: |
-          command -v aws || brew install awscli
-
-      - name: Install GH CLI
-        run: |
-          command -v gh || brew install gh
-
       - name: Create Checksums
         run: |
           ls
