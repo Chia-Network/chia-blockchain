@@ -207,8 +207,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
-    container:
-      image: chianetwork/rocky8-builder:latest
     timeout-minutes: 5
     strategy:
       fail-fast: false

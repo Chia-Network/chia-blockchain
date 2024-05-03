@@ -260,6 +260,7 @@ jobs:
 
   publish:
     name: Publish EXE
+    # TODO: move to ubuntu-latest, needs pwsh section updates
     runs-on: [windows-2019]
     defaults:
       run:
