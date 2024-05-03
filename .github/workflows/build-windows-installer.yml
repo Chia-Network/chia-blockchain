@@ -341,12 +341,10 @@ jobs:
           aws s3 cp chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${CHIA_INSTALLER_VERSION}.exe s3://download.chia.net/dev/ChiaSetup-${CHIA_DEV_BUILD}.exe
 
       - name: Create Checksums
-        if: env.FULL_RELEASE == 'true' || github.ref == 'refs/heads/main'
         run: |
-          ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
-          sha256sum "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb > "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.sha256
-          sha256sum "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb > "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb.sha256
-          ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
+          ls "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/
+          sha256sum "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe > "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256
+          ls "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/
 
       - name: Create torrent
         if: env.FULL_RELEASE == 'true'
