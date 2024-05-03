@@ -248,7 +248,7 @@ jobs:
     runs-on: ${{ matrix.os.runs-on }}
     needs:
       - build
-    timeout-minutes: 5
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
