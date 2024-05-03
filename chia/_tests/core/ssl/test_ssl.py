@@ -52,14 +52,13 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
 def ignore_ssl_cert_error():
     current_loop = asyncio.get_event_loop()
     old_handler = current_loop.get_exception_handler()
-    old_handler_fn = old_handler  # or lambda _loop, ctx: loop.default_exception_handler(ctx)
 
     def find_and_ignore(loop, ctx):
         exc = ctx.get("exception")
         if isinstance(exc, ssl.SSLCertVerificationError):
             return
 
-        old_handler_fn(loop, ctx)  # pragma: no cover
+        old_handler(loop, ctx)  # pragma: no cover
 
     current_loop.set_exception_handler(find_and_ignore)
     try:
@@ -70,11 +69,13 @@ def ignore_ssl_cert_error():
 
 @contextlib.contextmanager
 def set_asyncio_debug():
-    asyncio.get_event_loop().set_debug(True)
+    loop = asyncio.get_event_loop()
+    original_state = loop.get_debug()
+    loop.set_debug(True)
     try:
         yield
     finally:
-        asyncio.get_event_loop().set_debug(False)
+        loop.set_debug(original_state)
 
 
 class TestSSL:
@@ -149,17 +150,16 @@ class TestSSL:
                 generate_ca_signed_cert(chia_ca_crt_path.read_bytes(), chia_ca_key_path.read_bytes(), pub_crt, pub_key)
 
                 ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, pub_crt, pub_key)
-                try:
-                    caplog.clear()
-                    with ignore_ssl_cert_error(), caplog.at_level(logging.DEBUG, logger="asyncio"):
-                        await establish_connection(farmer_server, self_hostname, ssl_context)
-                except Exception:
-                    pass  # ignore any exceptions and just check the expected log output below
-                finally:
-                    assert (
-                        "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate signature failure"
-                        in caplog.text
-                    )
+                caplog.clear()
+                with pytest.raises(Exception), ignore_ssl_cert_error(), caplog.at_level(
+                    logging.DEBUG, logger="asyncio"
+                ):
+                    await establish_connection(farmer_server, self_hostname, ssl_context)
+
+                assert (
+                    "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate signature failure"
+                    in caplog.text
+                )
 
     @pytest.mark.anyio
     async def test_full_node(self, simulator_and_wallet, self_hostname):
