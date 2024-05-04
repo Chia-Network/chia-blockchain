@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import final
 
+import chia
 from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.pools.pool_config import PoolWalletConfig
 from chia.pools.pool_puzzles import (
@@ -43,7 +44,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle, estimate_fees
-from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes, parse_timelock_info
 from chia.wallet.derive_keys import find_owner_sk
@@ -239,7 +239,7 @@ class PoolWallet:
     async def update_pool_config(self) -> None:
         start_time = time.monotonic()
         current_state: PoolWalletInfo = await self.get_current_state()
-        with lock_and_load_config(self.wallet_state_manager.root_path, "config.yaml") as config:
+        with chia.util.config.lock_and_load_config(self.wallet_state_manager.root_path, "config.yaml") as config:
             start_time2 = time.monotonic()
             pool_list = config["pool"].get("pool_list", [])
             existing_config: int = -1
@@ -277,7 +277,7 @@ class PoolWallet:
                 pool_list.append(new_config.to_json_dict())
 
             config["pool"]["pool_list"] = pool_list
-            save_config(self.wallet_state_manager.root_path, "config.yaml", config)
+            chia.util.config.save_config(self.wallet_state_manager.root_path, "config.yaml", config)
 
         end_time = time.monotonic()
         self.log.info(
