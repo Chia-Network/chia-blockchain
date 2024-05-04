@@ -19,7 +19,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
-from chia.pools.pool_config import PoolWalletConfig, add_auth_key, load_pool_config, update_pool_url
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_url
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
     AuthenticationPayload,
@@ -530,8 +530,6 @@ class Farmer:
                 if authentication_sk is None:
                     self.log.error(f"Could not find authentication sk for {p2_singleton_puzzle_hash}")
                     continue
-
-                add_auth_key(self._root_path, pool_config, authentication_sk.get_g1())
 
                 if p2_singleton_puzzle_hash not in self.pool_state:
                     self.pool_state[p2_singleton_puzzle_hash] = {
