@@ -237,8 +237,10 @@ class PoolWallet:
         return (await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id))[-1]
 
     async def update_pool_config(self) -> None:
+        start_time = time.monotonic()
         current_state: PoolWalletInfo = await self.get_current_state()
         with lock_and_load_config(self.wallet_state_manager.root_path, "config.yaml") as config:
+            start_time2 = time.monotonic()
             pool_list = config["pool"].get("pool_list", [])
             existing_config: int = -1
             for idx, c in enumerate(pool_list):
@@ -276,6 +278,12 @@ class PoolWallet:
 
             config["pool"]["pool_list"] = pool_list
             save_config(self.wallet_state_manager.root_path, "config.yaml", config)
+
+        end_time = time.monotonic()
+        self.log.info(
+            f"update_pool_config time: {end_time - start_time2:0.2f}s "
+            f"(waited for lock: {start_time2-start_time:0.2f})"
+        )
 
     async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """
