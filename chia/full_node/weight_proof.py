@@ -1221,6 +1221,7 @@ def validate_recent_blocks(
     prev_block_record: Optional[BlockRecord] = None
     deficit = uint8(0)
     adjusted = False
+    validated_block_count = 0
     for idx, block in enumerate(recent_chain.recent_chain_data):
         required_iters = uint64(0)
         overflow = False
@@ -1232,7 +1233,9 @@ def validate_recent_blocks(
             deficit = sub_slot.reward_chain.deficit
             if sub_slot.challenge_chain.subepoch_summary_hash is not None:
                 ses = True
-                assert summaries[ses_idx].get_hash() == sub_slot.challenge_chain.subepoch_summary_hash
+                if summaries[ses_idx].get_hash() != sub_slot.challenge_chain.subepoch_summary_hash:
+                    log.info(f"sub epoch summary mismatch")
+                    return False, []
                 ses_idx += 1
             if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                 ssi = sub_slot.challenge_chain.new_sub_slot_iters
@@ -1257,6 +1260,7 @@ def validate_recent_blocks(
                 if error is not None:
                     log.error(f"block {block.header_hash} failed validation {error}")
                     return False, []
+                validated_block_count=validated_block_count+1
                 assert caluclated_required_iters is not None
                 required_iters = caluclated_required_iters
             else:
@@ -1283,6 +1287,14 @@ def validate_recent_blocks(
         if shutdown_file_path is not None and not shutdown_file_path.is_file():
             log.info(f"cancelling block {block.header_hash} validation, shutdown requested")
             return False, []
+
+    if len(summaries) > 2 and prev_challenge is None:
+        log.info(f"did not find two challenges in recent chain")
+        return False, []
+
+    if len(summaries) > 2 and validated_block_count < last_blocks_to_validate:
+        log.info(f"did not validate enough blocks in recent chain part")
+        return False, []
 
     return True, [bytes(sub) for sub in sub_blocks._block_records.values()]
 
