@@ -23,6 +23,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig
+from chia.wallet.wallet_action_scope import WalletActionScope
 
 GENESIS_BY_ID_MOD = load_clvm_maybe_recompile(
     "genesis_by_coin_id.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
@@ -56,7 +57,7 @@ class LimitationsProgram:
 
     @classmethod
     async def generate_issuance_bundle(
-        cls, wallet, cat_tail_info: Dict, amount: uint64, tx_config: TXConfig
+        cls, wallet, cat_tail_info: Dict, amount: uint64, tx_config: TXConfig, action_scope: WalletActionScope
     ) -> Tuple[TransactionRecord, SpendBundle]:
         raise NotImplementedError("Need to implement 'generate_issuance_bundle' on limitations programs")
 
@@ -85,7 +86,13 @@ class GenesisById(LimitationsProgram):
 
     @classmethod
     async def generate_issuance_bundle(
-        cls, wallet, _: Dict, amount: uint64, tx_config: TXConfig, fee: uint64 = uint64(0)
+        cls,
+        wallet,
+        _: Dict,
+        amount: uint64,
+        tx_config: TXConfig,
+        action_scope: WalletActionScope,
+        fee: uint64 = uint64(0),
     ) -> Tuple[TransactionRecord, SpendBundle]:
         coins = await wallet.standard_wallet.select_coins(amount + fee, tx_config.coin_selection_config)
 
@@ -103,7 +110,7 @@ class GenesisById(LimitationsProgram):
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
         [tx_record] = await wallet.standard_wallet.generate_signed_transaction(
-            amount, minted_cat_puzzle_hash, tx_config, fee, coins, origin_id=origin_id
+            amount, minted_cat_puzzle_hash, tx_config, action_scope, fee, coins, origin_id=origin_id
         )
         assert tx_record.spend_bundle is not None
 
@@ -234,7 +241,13 @@ class GenesisByIdOrSingleton(LimitationsProgram):
 
     @classmethod
     async def generate_issuance_bundle(
-        cls, wallet, tail_info: Dict, amount: uint64, tx_config: TXConfig, fee: uint64 = uint64(0)
+        cls,
+        wallet,
+        tail_info: Dict,
+        amount: uint64,
+        tx_config: TXConfig,
+        action_scope: WalletActionScope,
+        fee: uint64 = uint64(0),
     ) -> Tuple[TransactionRecord, SpendBundle]:
         if "coins" in tail_info:
             coins: List[Coin] = tail_info["coins"]
@@ -263,7 +276,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
         tx_records: List[TransactionRecord] = await wallet.standard_wallet.generate_signed_transaction(
-            amount, minted_cat_puzzle_hash, tx_config, fee, coins=set(coins), origin_id=origin_id
+            amount, minted_cat_puzzle_hash, tx_config, action_scope, fee, coins=set(coins), origin_id=origin_id
         )
         tx_record: TransactionRecord = tx_records[0]
         assert tx_record.spend_bundle is not None

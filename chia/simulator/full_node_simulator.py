@@ -683,11 +683,12 @@ class FullNodeSimulator(FullNodeAPI):
                 outputs_group = [output for _, output in zip(range(per_transaction_record_group), outputs_iterator)]
 
                 if len(outputs_group) > 0:
-                    async with wallet.wallet_state_manager.lock:
+                    async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
                         [tx] = await wallet.generate_signed_transaction(
                             amount=outputs_group[0].amount,
                             puzzle_hash=outputs_group[0].puzzle_hash,
                             tx_config=DEFAULT_TX_CONFIG,
+                            action_scope=action_scope,
                             primaries=outputs_group[1:],
                         )
                     [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])

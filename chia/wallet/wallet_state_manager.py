@@ -928,7 +928,8 @@ class WalletStateManager:
                     if current_timestamp - coin_timestamp >= metadata.time_lock:
                         clawback_coins[coin.coin] = metadata
                         if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
-                            txs = await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
+                            async with self.new_action_scope(push=False) as action_scope:
+                                txs = await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config, action_scope)
                             all_txs.extend(txs)
                             tx_config = dataclasses.replace(
                                 tx_config,
@@ -941,7 +942,8 @@ class WalletStateManager:
             except Exception as e:
                 self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
         if len(clawback_coins) > 0:
-            all_txs.extend(await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config))
+            async with self.new_action_scope(push=False) as action_scope:
+                all_txs.extend(await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config, action_scope))
 
         await self.add_pending_transactions(all_txs)
 
@@ -950,6 +952,7 @@ class WalletStateManager:
         clawback_coins: Dict[Coin, ClawbackMetadata],
         fee: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         force: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
@@ -1011,6 +1014,7 @@ class WalletStateManager:
             chia_tx = await self.main_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
+                action_scope,
                 extra_conditions=(
                     AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
                 ),

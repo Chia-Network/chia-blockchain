@@ -62,7 +62,10 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     fee = uint64(1_999_999_999_999)
 
-    std_record, launcher_id_maker = await dl_wallet_maker.generate_new_reporter(maker_root, DEFAULT_TX_CONFIG, fee=fee)
+    async with dl_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        std_record, launcher_id_maker = await dl_wallet_maker.generate_new_reporter(
+            maker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
+        )
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker) is not None
     [std_record] = await wsm_maker.add_pending_transactions([std_record])
     await full_node_api.process_transaction_records(records=[std_record])
@@ -70,7 +73,10 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker, maker_root)
 
-    std_record, launcher_id_taker = await dl_wallet_taker.generate_new_reporter(taker_root, DEFAULT_TX_CONFIG, fee=fee)
+    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        std_record, launcher_id_taker = await dl_wallet_taker.generate_new_reporter(
+            taker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
+        )
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker) is not None
     [std_record] = await wsm_taker.add_pending_transactions([std_record])
     await full_node_api.process_transaction_records(records=[std_record])
@@ -98,24 +104,26 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     fee = uint64(2_000_000_000_000)
 
-    success, offer_maker, _, error = await trade_manager_maker.create_offer_for_ids(
-        {launcher_id_maker: -1, launcher_id_taker: 1},
-        DEFAULT_TX_CONFIG,
-        solver=Solver(
-            {
-                launcher_id_maker.hex(): {
-                    "new_root": "0x" + maker_root.hex(),
-                    "dependencies": [
-                        {
-                            "launcher_id": "0x" + launcher_id_taker.hex(),
-                            "values_to_prove": ["0x" + taker_branch.hex()],
-                        },
-                    ],
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        success, offer_maker, _, error = await trade_manager_maker.create_offer_for_ids(
+            {launcher_id_maker: -1, launcher_id_taker: 1},
+            DEFAULT_TX_CONFIG,
+            action_scope,
+            solver=Solver(
+                {
+                    launcher_id_maker.hex(): {
+                        "new_root": "0x" + maker_root.hex(),
+                        "dependencies": [
+                            {
+                                "launcher_id": "0x" + launcher_id_taker.hex(),
+                                "values_to_prove": ["0x" + taker_branch.hex()],
+                            },
+                        ],
+                    }
                 }
-            }
-        ),
-        fee=fee,
-    )
+            ),
+            fee=fee,
+        )
     assert error is None
     assert success is True
     assert offer_maker is not None
@@ -138,37 +146,39 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(offer_maker.offer)]
     )
-    offer_taker, tx_records = await trade_manager_taker.respond_to_offer(
-        maker_offer,
-        peer,
-        DEFAULT_TX_CONFIG,
-        solver=Solver(
-            {
-                launcher_id_taker.hex(): {
-                    "new_root": "0x" + taker_root.hex(),
-                    "dependencies": [
-                        {
-                            "launcher_id": "0x" + launcher_id_maker.hex(),
-                            "values_to_prove": ["0x" + maker_branch.hex()],
-                        },
+    async with trade_manager_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        offer_taker, tx_records = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(offer_maker.offer),
+            peer,
+            DEFAULT_TX_CONFIG,
+            action_scope,
+            solver=Solver(
+                {
+                    launcher_id_taker.hex(): {
+                        "new_root": "0x" + taker_root.hex(),
+                        "dependencies": [
+                            {
+                                "launcher_id": "0x" + launcher_id_maker.hex(),
+                                "values_to_prove": ["0x" + maker_branch.hex()],
+                            },
+                        ],
+                    },
+                    "proofs_of_inclusion": [
+                        [
+                            maker_root.hex(),
+                            str(maker_branch_proof[0]),
+                            ["0x" + sibling.hex() for sibling in maker_branch_proof[1]],
+                        ],
+                        [
+                            taker_root.hex(),
+                            str(taker_branch_proof[0]),
+                            ["0x" + sibling.hex() for sibling in taker_branch_proof[1]],
+                        ],
                     ],
-                },
-                "proofs_of_inclusion": [
-                    [
-                        maker_root.hex(),
-                        str(maker_branch_proof[0]),
-                        ["0x" + sibling.hex() for sibling in maker_branch_proof[1]],
-                    ],
-                    [
-                        taker_root.hex(),
-                        str(taker_branch_proof[0]),
-                        ["0x" + sibling.hex() for sibling in taker_branch_proof[1]],
-                    ],
-                ],
-            }
-        ),
-        fee=fee,
-    )
+                }
+            ),
+            fee=fee,
+        )
     tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
         tx_records, additional_signing_responses=signing_response
     )
@@ -229,7 +239,10 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 2)
 
-    txs = await dl_wallet_taker.create_update_state_spend(launcher_id_taker, bytes32([2] * 32), DEFAULT_TX_CONFIG)
+    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        txs = await dl_wallet_taker.create_update_state_spend(
+            launcher_id_taker, bytes32([2] * 32), DEFAULT_TX_CONFIG, action_scope
+        )
     txs = await wallet_node_taker.wallet_state_manager.add_pending_transactions(txs)
     await full_node_api.process_transaction_records(records=txs)
 
@@ -250,13 +263,15 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     ROWS = [bytes32([i] * 32) for i in range(0, 10)]
     root, _ = build_merkle_tree(ROWS)
 
-    std_record, launcher_id = await dl_wallet.generate_new_reporter(root, DEFAULT_TX_CONFIG)
+    async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        std_record, launcher_id = await dl_wallet.generate_new_reporter(root, DEFAULT_TX_CONFIG, action_scope)
     assert await dl_wallet.get_latest_singleton(launcher_id) is not None
     [std_record] = await wsm.add_pending_transactions([std_record])
     await full_node_api.process_transaction_records(records=[std_record])
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, root)
-    std_record_2, launcher_id_2 = await dl_wallet.generate_new_reporter(root, DEFAULT_TX_CONFIG)
-    [std_record_2] = await wsm.add_pending_transactions([std_record_2])
+    async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        std_record_2, launcher_id_2 = await dl_wallet.generate_new_reporter(root, DEFAULT_TX_CONFIG, action_scope)
+    std_record_2, launcher_id_2 = await wsm.add_pending_transactions([std_record_2])
     await full_node_api.process_transaction_records(records=[std_record_2])
 
     trade_manager = wsm.trade_manager
@@ -265,31 +280,34 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     ROWS.append(addition)
     root, proofs = build_merkle_tree(ROWS)
 
-    success, offer, _, error = await trade_manager.create_offer_for_ids(
-        {launcher_id: -1, launcher_id_2: 1},
-        DEFAULT_TX_CONFIG,
-        solver=Solver(
-            {
-                launcher_id.hex(): {
-                    "new_root": "0x" + root.hex(),
-                    "dependencies": [
-                        {
-                            "launcher_id": "0x" + launcher_id_2.hex(),
-                            "values_to_prove": ["0x" + addition.hex()],
-                        },
-                    ],
+    async with trade_manager.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        success, offer, _, error = await trade_manager.create_offer_for_ids(
+            {launcher_id: -1, launcher_id_2: 1},
+            DEFAULT_TX_CONFIG,
+            action_scope,
+            solver=Solver(
+                {
+                    launcher_id.hex(): {
+                        "new_root": "0x" + root.hex(),
+                        "dependencies": [
+                            {
+                                "launcher_id": "0x" + launcher_id_2.hex(),
+                                "values_to_prove": ["0x" + addition.hex()],
+                            },
+                        ],
+                    }
                 }
-            }
-        ),
-        fee=uint64(2_000_000_000_000),
-    )
+            ),
+            fee=uint64(2_000_000_000_000),
+        )
     assert error is None
     assert success is True
     assert offer is not None
 
-    cancellation_txs = await trade_manager.cancel_pending_offers(
-        [offer.trade_id], DEFAULT_TX_CONFIG, fee=uint64(2_000_000_000_000), secure=True
-    )
+    async with trade_manager.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        cancellation_txs = await trade_manager.cancel_pending_offers(
+            [offer.trade_id], DEFAULT_TX_CONFIG, action_scope, fee=uint64(2_000_000_000_000), secure=True
+        )
     cancellation_txs = await trade_manager.wallet_state_manager.add_pending_transactions(cancellation_txs)
     assert len(cancellation_txs) == 2
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager, offer)
@@ -322,18 +340,20 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     fee = uint64(1_999_999_999_999)
 
-    std_record, launcher_id_maker_1 = await dl_wallet_maker.generate_new_reporter(
-        maker_root, DEFAULT_TX_CONFIG, fee=fee
-    )
+    async with dl_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        std_record, launcher_id_maker_1 = await dl_wallet_maker.generate_new_reporter(
+            maker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
+        )
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_1) is not None
     [std_record] = await wsm_maker.add_pending_transactions([std_record])
     await full_node_api.process_transaction_records(records=[std_record])
     maker_funds -= fee
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker_1, maker_root)
-    std_record, launcher_id_maker_2 = await dl_wallet_maker.generate_new_reporter(
-        maker_root, DEFAULT_TX_CONFIG, fee=fee
-    )
+    async with dl_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        std_record, launcher_id_maker_2 = await dl_wallet_maker.generate_new_reporter(
+            maker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
+        )
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_2) is not None
     [std_record] = await wsm_maker.add_pending_transactions([std_record])
     await full_node_api.process_transaction_records(records=[std_record])
@@ -341,18 +361,20 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker_2, maker_root)
 
-    std_record, launcher_id_taker_1 = await dl_wallet_taker.generate_new_reporter(
-        taker_root, DEFAULT_TX_CONFIG, fee=fee
-    )
+    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        std_record, launcher_id_taker_1 = await dl_wallet_taker.generate_new_reporter(
+            taker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
+        )
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_1) is not None
     [std_record] = await wsm_taker.add_pending_transactions([std_record])
     await full_node_api.process_transaction_records(records=[std_record])
     taker_funds -= fee
     taker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker_1, taker_root)
-    std_record, launcher_id_taker_2 = await dl_wallet_taker.generate_new_reporter(
-        taker_root, DEFAULT_TX_CONFIG, fee=fee
-    )
+    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        std_record, launcher_id_taker_2 = await dl_wallet_taker.generate_new_reporter(
+            taker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
+        )
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_2) is not None
     [std_record] = await wsm_taker.add_pending_transactions([std_record])
     await full_node_api.process_transaction_records(records=[std_record])
@@ -384,37 +406,39 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     fee = uint64(2_000_000_000_000)
 
-    success, offer_maker, _, error = await trade_manager_maker.create_offer_for_ids(
-        {launcher_id_maker_1: -1, launcher_id_taker_1: 1, launcher_id_maker_2: -1, launcher_id_taker_2: 1},
-        DEFAULT_TX_CONFIG,
-        solver=Solver(
-            {
-                launcher_id_maker_1.hex(): {
-                    "new_root": "0x" + maker_root.hex(),
-                    "dependencies": [
-                        {
-                            "launcher_id": "0x" + launcher_id_taker_1.hex(),
-                            "values_to_prove": ["0x" + taker_branch.hex(), "0x" + taker_branch.hex()],
-                        }
-                    ],
-                },
-                launcher_id_maker_2.hex(): {
-                    "new_root": "0x" + maker_root.hex(),
-                    "dependencies": [
-                        {
-                            "launcher_id": "0x" + launcher_id_taker_1.hex(),
-                            "values_to_prove": ["0x" + taker_branch.hex()],
-                        },
-                        {
-                            "launcher_id": "0x" + launcher_id_taker_2.hex(),
-                            "values_to_prove": ["0x" + taker_branch.hex()],
-                        },
-                    ],
-                },
-            }
-        ),
-        fee=fee,
-    )
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        success, offer_maker, _, error = await trade_manager_maker.create_offer_for_ids(
+            {launcher_id_maker_1: -1, launcher_id_taker_1: 1, launcher_id_maker_2: -1, launcher_id_taker_2: 1},
+            DEFAULT_TX_CONFIG,
+            action_scope,
+            solver=Solver(
+                {
+                    launcher_id_maker_1.hex(): {
+                        "new_root": "0x" + maker_root.hex(),
+                        "dependencies": [
+                            {
+                                "launcher_id": "0x" + launcher_id_taker_1.hex(),
+                                "values_to_prove": ["0x" + taker_branch.hex(), "0x" + taker_branch.hex()],
+                            }
+                        ],
+                    },
+                    launcher_id_maker_2.hex(): {
+                        "new_root": "0x" + maker_root.hex(),
+                        "dependencies": [
+                            {
+                                "launcher_id": "0x" + launcher_id_taker_1.hex(),
+                                "values_to_prove": ["0x" + taker_branch.hex()],
+                            },
+                            {
+                                "launcher_id": "0x" + launcher_id_taker_2.hex(),
+                                "values_to_prove": ["0x" + taker_branch.hex()],
+                            },
+                        ],
+                    },
+                }
+            ),
+            fee=fee,
+        )
     assert error is None
     assert success is True
     assert offer_maker is not None
@@ -422,50 +446,52 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(offer_maker.offer)]
     )
-    offer_taker, tx_records = await trade_manager_taker.respond_to_offer(
-        maker_offer,
-        peer,
-        DEFAULT_TX_CONFIG,
-        solver=Solver(
-            {
-                launcher_id_taker_1.hex(): {
-                    "new_root": "0x" + taker_root.hex(),
-                    "dependencies": [
-                        {
-                            "launcher_id": "0x" + launcher_id_maker_1.hex(),
-                            "values_to_prove": ["0x" + maker_branch.hex(), "0x" + maker_branch.hex()],
-                        }
+    async with trade_manager_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        offer_taker, tx_records = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(offer_maker.offer),
+            peer,
+            DEFAULT_TX_CONFIG,
+            action_scope,
+            solver=Solver(
+                {
+                    launcher_id_taker_1.hex(): {
+                        "new_root": "0x" + taker_root.hex(),
+                        "dependencies": [
+                            {
+                                "launcher_id": "0x" + launcher_id_maker_1.hex(),
+                                "values_to_prove": ["0x" + maker_branch.hex(), "0x" + maker_branch.hex()],
+                            }
+                        ],
+                    },
+                    launcher_id_taker_2.hex(): {
+                        "new_root": "0x" + taker_root.hex(),
+                        "dependencies": [
+                            {
+                                "launcher_id": "0x" + launcher_id_maker_1.hex(),
+                                "values_to_prove": ["0x" + maker_branch.hex()],
+                            },
+                            {
+                                "launcher_id": "0x" + launcher_id_maker_2.hex(),
+                                "values_to_prove": ["0x" + maker_branch.hex()],
+                            },
+                        ],
+                    },
+                    "proofs_of_inclusion": [
+                        [
+                            maker_root.hex(),
+                            str(maker_branch_proof[0]),
+                            ["0x" + sibling.hex() for sibling in maker_branch_proof[1]],
+                        ],
+                        [
+                            taker_root.hex(),
+                            str(taker_branch_proof[0]),
+                            ["0x" + sibling.hex() for sibling in taker_branch_proof[1]],
+                        ],
                     ],
-                },
-                launcher_id_taker_2.hex(): {
-                    "new_root": "0x" + taker_root.hex(),
-                    "dependencies": [
-                        {
-                            "launcher_id": "0x" + launcher_id_maker_1.hex(),
-                            "values_to_prove": ["0x" + maker_branch.hex()],
-                        },
-                        {
-                            "launcher_id": "0x" + launcher_id_maker_2.hex(),
-                            "values_to_prove": ["0x" + maker_branch.hex()],
-                        },
-                    ],
-                },
-                "proofs_of_inclusion": [
-                    [
-                        maker_root.hex(),
-                        str(maker_branch_proof[0]),
-                        ["0x" + sibling.hex() for sibling in maker_branch_proof[1]],
-                    ],
-                    [
-                        taker_root.hex(),
-                        str(taker_branch_proof[0]),
-                        ["0x" + sibling.hex() for sibling in taker_branch_proof[1]],
-                    ],
-                ],
-            }
-        ),
-        fee=fee,
-    )
+                }
+            ),
+            fee=fee,
+        )
     tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
         tx_records, additional_signing_responses=signing_response
     )

@@ -46,8 +46,10 @@ async def test_mempool_update_performance(
     await time_out_assert(30, wallet_balance_at_least, True, wallet_node, send_amount + fee_amount)
 
     ph = await wallet.get_new_puzzlehash()
-    [big_transaction] = await wallet.generate_signed_transaction(send_amount, ph, DEFAULT_TX_CONFIG, fee_amount)
-    [big_transaction], _ = await wallet.wallet_state_manager.sign_transactions([big_transaction])
+    async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        [big_transaction] = await wallet.generate_signed_transaction(
+            send_amount, ph, DEFAULT_TX_CONFIG, action_scope, fee_amount
+        )
     assert big_transaction.spend_bundle is not None
     status, err = await full_node.add_transaction(
         big_transaction.spend_bundle, big_transaction.spend_bundle.name(), test=True

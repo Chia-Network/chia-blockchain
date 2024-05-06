@@ -576,7 +576,10 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
         payees.append(Payment(payee_ph, uint64(i + 100)))
         payees.append(Payment(payee_ph, uint64(i + 200)))
 
-    [tx] = await wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        [tx] = await wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, action_scope, primaries=payees
+        )
     [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -789,7 +792,10 @@ async def test_dusted_wallet(
     payees.append(Payment(payee_ph, uint64(dust_value)))
 
     # construct and send tx
-    [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    async with farm_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        [tx] = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, action_scope, primaries=payees
+        )
     [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -847,7 +853,10 @@ async def test_dusted_wallet(
         # This greatly speeds up the overall process
         if dust_remaining % 100 == 0 and dust_remaining != new_dust:
             # construct and send tx
-            [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+            async with farm_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+                [tx] = await farm_wallet.generate_signed_transaction(
+                    uint64(0), ph, DEFAULT_TX_CONFIG, action_scope, primaries=payees
+                )
             [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
             assert tx.spend_bundle is not None
             await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -865,7 +874,10 @@ async def test_dusted_wallet(
     # Only need to create tx if there was new dust to be added
     if new_dust >= 1:
         # construct and send tx
-        [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+        async with farm_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            [tx] = await farm_wallet.generate_signed_transaction(
+                uint64(0), ph, DEFAULT_TX_CONFIG, action_scope, primaries=payees
+            )
         [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
         assert tx.spend_bundle is not None
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -911,7 +923,10 @@ async def test_dusted_wallet(
         payees.append(Payment(payee_ph, uint64(xch_spam_amount)))
 
     # construct and send tx
-    [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    async with farm_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        [tx] = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, action_scope, primaries=payees
+        )
     [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -949,7 +964,10 @@ async def test_dusted_wallet(
     payees.append(Payment(payee_ph, uint64(dust_value)))
 
     # construct and send tx
-    [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    async with farm_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        [tx] = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, action_scope, primaries=payees
+        )
     [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1007,7 +1025,10 @@ async def test_dusted_wallet(
             large_dust_balance += dust_value
 
     # construct and send tx
-    [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    async with farm_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        [tx] = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, action_scope, primaries=payees
+        )
     [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1042,7 +1063,10 @@ async def test_dusted_wallet(
     payees = [Payment(payee_ph, uint64(balance))]
 
     # construct and send tx
-    [tx] = await dust_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    async with dust_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        [tx] = await dust_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, action_scope, primaries=payees
+        )
     [tx] = await dust_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1085,7 +1109,10 @@ async def test_dusted_wallet(
         # This greatly speeds up the overall process
         if coins_remaining % 100 == 0 and coins_remaining != spam_filter_after_n_txs:
             # construct and send tx
-            [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+            async with farm_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+                [tx] = await farm_wallet.generate_signed_transaction(
+                    uint64(0), ph, DEFAULT_TX_CONFIG, action_scope, primaries=payees
+                )
             [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
             assert tx.spend_bundle is not None
             await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1099,7 +1126,10 @@ async def test_dusted_wallet(
         coins_remaining -= 1
 
     # construct and send tx
-    [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    async with farm_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        [tx] = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, action_scope, primaries=payees
+        )
     [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1128,7 +1158,10 @@ async def test_dusted_wallet(
     payees = [Payment(payee_ph, uint64(1))]
 
     # construct and send tx
-    [tx] = await dust_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    async with dust_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        [tx] = await dust_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, action_scope, primaries=payees
+        )
     [tx] = await dust_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1173,7 +1206,8 @@ async def test_dusted_wallet(
     metadata = Program.to(
         [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
-    txs = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
+    async with farm_nft_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        txs = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG, action_scope)
     txs = await farm_nft_wallet.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
         if tx.spend_bundle is not None:
@@ -1198,9 +1232,10 @@ async def test_dusted_wallet(
 
     nft_coins = await farm_nft_wallet.get_current_nfts()
     # Send the NFT to the dust wallet
-    txs = await farm_nft_wallet.generate_signed_transaction(
-        [uint64(nft_coins[0].coin.amount)], [dust_ph], DEFAULT_TX_CONFIG, coins={nft_coins[0].coin}
-    )
+    async with farm_nft_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        txs = await farm_nft_wallet.generate_signed_transaction(
+            [uint64(nft_coins[0].coin.amount)], [dust_ph], DEFAULT_TX_CONFIG, action_scope, coins={nft_coins[0].coin}
+        )
     assert len(txs) == 1
     txs = await farm_wallet_node.wallet_state_manager.add_pending_transactions(txs)
     assert txs[0].spend_bundle is not None
@@ -1361,9 +1396,10 @@ async def test_retry_store(
 
             await assert_coin_state_retry()
 
-            [tx] = await wallet.generate_signed_transaction(
-                uint64(1_000_000_000_000), bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
-            )
+            async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+                [tx] = await wallet.generate_signed_transaction(
+                    uint64(1_000_000_000_000), bytes32([0] * 32), DEFAULT_TX_CONFIG, action_scope, memos=[ph]
+                )
             [tx] = await wallet_node.wallet_state_manager.add_pending_transactions([tx])
             await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
 

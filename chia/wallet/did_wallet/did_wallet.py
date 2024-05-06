@@ -52,6 +52,7 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -77,6 +78,7 @@ class DIDWallet:
         wallet: Wallet,
         amount: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         backups_ids: List[bytes32] = [],
         num_of_backup_ids_needed: uint64 = None,
         metadata: Dict[str, str] = {},
@@ -140,7 +142,7 @@ class DIDWallet:
             raise ValueError("Not enough balance")
 
         try:
-            txs = await self.generate_new_decentralised_id(amount, tx_config, fee, extra_conditions)
+            txs = await self.generate_new_decentralised_id(amount, tx_config, action_scope, fee, extra_conditions)
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
@@ -567,7 +569,11 @@ class DIDWallet:
         return self.wallet_info.name
 
     async def create_update_spend(
-        self, tx_config: TXConfig, fee: uint64 = uint64(0), extra_conditions: Tuple[Condition, ...] = tuple()
+        self,
+        tx_config: TXConfig,
+        action_scope: WalletActionScope,
+        fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
@@ -635,6 +641,7 @@ class DIDWallet:
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
+                action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
         else:
@@ -674,6 +681,7 @@ class DIDWallet:
         fee: uint64,
         with_recovery: bool,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         """
@@ -734,6 +742,7 @@ class DIDWallet:
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
+                action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
         else:
@@ -769,6 +778,7 @@ class DIDWallet:
     async def create_message_spend(
         self,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> TransactionRecord:
         assert self.did_info.current_inner is not None
@@ -838,7 +848,9 @@ class DIDWallet:
         )
 
     # This is used to cash out, or update the id_list
-    async def create_exit_spend(self, puzhash: bytes32, tx_config: TXConfig) -> List[TransactionRecord]:
+    async def create_exit_spend(
+        self, puzhash: bytes32, tx_config: TXConfig, action_scope: WalletActionScope
+    ) -> List[TransactionRecord]:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
@@ -898,6 +910,7 @@ class DIDWallet:
         newpuz: bytes32,
         pubkey: G1Element,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[TransactionRecord, SpendBundle, str]:
         """
@@ -1203,6 +1216,7 @@ class DIDWallet:
         self,
         amount: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
@@ -1227,6 +1241,7 @@ class DIDWallet:
             amount=amount,
             puzzle_hash=genesis_launcher_puz.get_tree_hash(),
             tx_config=tx_config,
+            action_scope=action_scope,
             fee=fee,
             coins=coins,
             primaries=None,

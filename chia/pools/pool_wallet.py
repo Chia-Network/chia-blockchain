@@ -51,6 +51,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
@@ -387,6 +388,7 @@ class PoolWallet:
         main_wallet: Wallet,
         initial_target_state: PoolState,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         p2_singleton_delay_time: Optional[uint64] = None,
         p2_singleton_delayed_ph: Optional[bytes32] = None,
@@ -428,6 +430,7 @@ class PoolWallet:
             p2_singleton_delay_time,
             p2_singleton_delayed_ph,
             tx_config,
+            action_scope,
             extra_conditions=extra_conditions,
         )
 
@@ -474,12 +477,14 @@ class PoolWallet:
         self,
         fee: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> TransactionRecord:
         [fee_tx] = await self.standard_wallet.generate_signed_transaction(
             uint64(0),
             (await self.standard_wallet.get_new_puzzlehash()),
             tx_config,
+            action_scope,
             fee=fee,
             origin_id=None,
             coins=None,
@@ -489,7 +494,7 @@ class PoolWallet:
         return fee_tx
 
     async def generate_travel_transactions(
-        self, fee: uint64, tx_config: TXConfig
+        self, fee: uint64, tx_config: TXConfig, action_scope: WalletActionScope
     ) -> Tuple[TransactionRecord, Optional[TransactionRecord]]:
         # target_state is contained within pool_wallet_state
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
@@ -560,7 +565,7 @@ class PoolWallet:
         assert unsigned_spend_bundle.removals()[0].name() == singleton.name()
         fee_tx: Optional[TransactionRecord] = None
         if fee > 0:
-            fee_tx = await self.generate_fee_transaction(fee, tx_config)
+            fee_tx = await self.generate_fee_transaction(fee, tx_config, action_scope)
             assert fee_tx.spend_bundle is not None
             unsigned_spend_bundle = SpendBundle.aggregate([unsigned_spend_bundle, fee_tx.spend_bundle])
             fee_tx = dataclasses.replace(fee_tx, spend_bundle=None)
@@ -597,6 +602,7 @@ class PoolWallet:
         delay_time: uint64,
         delay_ph: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[SpendBundle, bytes32, bytes32]:
         """
@@ -648,6 +654,7 @@ class PoolWallet:
             amount,
             genesis_launcher_puz.get_tree_hash(),
             tx_config,
+            action_scope,
             fee,
             coins,
             None,
@@ -673,7 +680,7 @@ class PoolWallet:
         return full_spend, puzzle_hash, launcher_coin.name()
 
     async def join_pool(
-        self, target_state: PoolState, fee: uint64, tx_config: TXConfig
+        self, target_state: PoolState, fee: uint64, tx_config: TXConfig, action_scope: WalletActionScope
     ) -> Tuple[uint64, TransactionRecord, Optional[TransactionRecord]]:
         if target_state.state != FARMING_TO_POOL.value:
             raise ValueError(f"join_pool must be called with target_state={FARMING_TO_POOL} (FARMING_TO_POOL)")
@@ -716,11 +723,11 @@ class PoolWallet:
         self.target_state = target_state
         self.next_transaction_fee = fee
         self.next_tx_config = tx_config
-        travel_tx, fee_tx = await self.generate_travel_transactions(fee, tx_config)
+        travel_tx, fee_tx = await self.generate_travel_transactions(fee, tx_config, action_scope)
         return total_fee, travel_tx, fee_tx
 
     async def self_pool(
-        self, fee: uint64, tx_config: TXConfig
+        self, fee: uint64, tx_config: TXConfig, action_scope: WalletActionScope
     ) -> Tuple[uint64, TransactionRecord, Optional[TransactionRecord]]:
         if await self.have_unconfirmed_transaction():
             raise ValueError(
@@ -756,11 +763,11 @@ class PoolWallet:
         )
         self.next_transaction_fee = fee
         self.next_tx_config = tx_config
-        travel_tx, fee_tx = await self.generate_travel_transactions(fee, tx_config)
+        travel_tx, fee_tx = await self.generate_travel_transactions(fee, tx_config, action_scope)
         return total_fee, travel_tx, fee_tx
 
     async def claim_pool_rewards(
-        self, fee: uint64, max_spends_in_tx: Optional[int], tx_config: TXConfig
+        self, fee: uint64, max_spends_in_tx: Optional[int], tx_config: TXConfig, action_scope: WalletActionScope
     ) -> Tuple[TransactionRecord, Optional[TransactionRecord]]:
         # Search for p2_puzzle_hash coins, and spend them with the singleton
         if await self.have_unconfirmed_transaction():
@@ -837,6 +844,7 @@ class PoolWallet:
             fee_tx = await self.generate_fee_transaction(
                 fee,
                 tx_config,
+                action_scope,
                 extra_conditions=(
                     AssertCoinAnnouncement(asserted_id=first_coin_record.coin.name(), asserted_msg=b"$"),
                 ),
@@ -912,9 +920,10 @@ class PoolWallet:
                     assert self.target_state.relative_lock_height >= self.MINIMUM_RELATIVE_LOCK_HEIGHT
                     assert self.target_state.pool_url is not None
 
-                travel_tx, fee_tx = await self.generate_travel_transactions(
-                    self.next_transaction_fee, self.next_tx_config
-                )
+                async with self.wallet_state_manager.new_action_scope(push=False) as action_scope:
+                    travel_tx, fee_tx = await self.generate_travel_transactions(
+                        self.next_transaction_fee, self.next_tx_config, action_scope
+                    )
                 txs = [travel_tx]
                 if fee_tx is not None:
                     txs.append(fee_tx)

@@ -180,11 +180,13 @@ class TestFullNodeBlockCompression:
         await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send a transaction to mempool
-        [tr] = await wallet.generate_signed_transaction(
-            tx_size,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            [tr] = await wallet.generate_signed_transaction(
+                tx_size,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
         [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
@@ -219,11 +221,13 @@ class TestFullNodeBlockCompression:
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         # Send another tx
-        [tr] = await wallet.generate_signed_transaction(
-            20000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            [tr] = await wallet.generate_signed_transaction(
+                20000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
         [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
@@ -262,11 +266,13 @@ class TestFullNodeBlockCompression:
         await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send another 2 tx
-        [tr] = await wallet.generate_signed_transaction(
-            30000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            [tr] = await wallet.generate_signed_transaction(
+                30000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
         [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
@@ -274,24 +280,13 @@ class TestFullNodeBlockCompression:
             tr.spend_bundle,
             tr.name,
         )
-        [tr] = await wallet.generate_signed_transaction(
-            40000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
-        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
-        await time_out_assert(
-            10,
-            full_node_2.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.name,
-        )
-
-        [tr] = await wallet.generate_signed_transaction(
-            50000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            [tr] = await wallet.generate_signed_transaction(
+                40000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
         [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
@@ -300,11 +295,28 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
-        [tr] = await wallet.generate_signed_transaction(
-            3000000000000,
-            ph,
-            DEFAULT_TX_CONFIG,
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            [tr] = await wallet.generate_signed_transaction(
+                50000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
         )
+
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            [tr] = await wallet.generate_signed_transaction(
+                3000000000000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
         [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
@@ -335,11 +347,13 @@ class TestFullNodeBlockCompression:
             assert num_blocks > 0
 
         # Creates a standard_transaction and an anyone-can-spend tx
-        [tr] = await wallet.generate_signed_transaction(
-            30000,
-            Program.to(1).get_tree_hash(),
-            DEFAULT_TX_CONFIG,
-        )
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            [tr] = await wallet.generate_signed_transaction(
+                30000,
+                Program.to(1).get_tree_hash(),
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
         extra_spend = SpendBundle(
             [
                 make_spend(
@@ -381,11 +395,13 @@ class TestFullNodeBlockCompression:
         assert len(all_blocks[-1].transactions_generator_ref_list) == 0
 
         # Make a standard transaction and an anyone-can-spend transaction
-        [tr] = await wallet.generate_signed_transaction(
-            30000,
-            Program.to(1).get_tree_hash(),
-            DEFAULT_TX_CONFIG,
-        )
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            [tr] = await wallet.generate_signed_transaction(
+                30000,
+                Program.to(1).get_tree_hash(),
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
         extra_spend = SpendBundle(
             [
                 make_spend(
