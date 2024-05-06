@@ -10,8 +10,9 @@ from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
-from chia.types.aliases import SimulatorFullNodeService, WalletService
+from chia.types.aliases import WalletService
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle

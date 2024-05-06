@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 import random
 from typing import AsyncIterator, Dict, List, Optional, Tuple
@@ -27,7 +26,7 @@ from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.recursive_replace import recursive_replace
 
 log = logging.getLogger(__name__)
@@ -36,9 +35,8 @@ log = logging.getLogger(__name__)
 @pytest.fixture(scope="function")
 async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncIterator[BlockTools]:
     with TempKeyring() as keychain:
-        patched_constants = dataclasses.replace(
-            blockchain_constants,
-            DISCRIMINANT_SIZE_BITS=32,
+        patched_constants = blockchain_constants.replace(
+            DISCRIMINANT_SIZE_BITS=uint16(32),
             SUB_SLOT_ITERS_STARTING=uint64(2**12),
         )
         yield await create_block_tools_async(constants=patched_constants, keychain=keychain)
@@ -46,9 +44,8 @@ async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncI
 
 @pytest.fixture(scope="function")
 async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
-    patched_constants = dataclasses.replace(
-        blockchain_constants,
-        DISCRIMINANT_SIZE_BITS=32,
+    patched_constants = blockchain_constants.replace(
+        DISCRIMINANT_SIZE_BITS=uint16(32),
         SUB_SLOT_ITERS_STARTING=uint64(2**12),
     )
     async with create_blockchain(patched_constants, db_version) as (bc1, db_wrapper):

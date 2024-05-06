@@ -175,7 +175,8 @@ class TestWalletRpc:
                     launcher_id: next_root,
                     launcher_id_2: next_root,
                     launcher_id_3: next_root,
-                }
+                },
+                uint64(0),
             )
 
             for i in range(0, 5):
