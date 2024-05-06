@@ -1234,7 +1234,7 @@ def validate_recent_blocks(
             if sub_slot.challenge_chain.subepoch_summary_hash is not None:
                 ses = True
                 if summaries[ses_idx].get_hash() != sub_slot.challenge_chain.subepoch_summary_hash:
-                    log.info(f"sub epoch summary mismatch")
+                    log.info("sub epoch summary mismatch")
                     return False, []
                 ses_idx += 1
             if sub_slot.challenge_chain.new_sub_slot_iters is not None:
@@ -1252,7 +1252,7 @@ def validate_recent_blocks(
                 sub_blocks.add_block_record(prev_block_record)
                 adjusted = True
             deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
-            log.debug(f"wp, validate block {block.height}")
+            log.debug("wp, validate block {block.height}")
             if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
                 caluclated_required_iters, error = validate_finished_header_block(
                     constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
@@ -1260,7 +1260,7 @@ def validate_recent_blocks(
                 if error is not None:
                     log.error(f"block {block.header_hash} failed validation {error}")
                     return False, []
-                validated_block_count=validated_block_count+1
+                validated_block_count = validated_block_count + 1
                 assert caluclated_required_iters is not None
                 required_iters = caluclated_required_iters
             else:
@@ -1289,11 +1289,11 @@ def validate_recent_blocks(
             return False, []
 
     if len(summaries) > 2 and prev_challenge is None:
-        log.info(f"did not find two challenges in recent chain")
+        log.info("did not find two challenges in recent chain")
         return False, []
 
     if len(summaries) > 2 and validated_block_count < last_blocks_to_validate:
-        log.info(f"did not validate enough blocks in recent chain part")
+        log.info("did not validate enough blocks in recent chain part")
         return False, []
 
     return True, [bytes(sub) for sub in sub_blocks._block_records.values()]
