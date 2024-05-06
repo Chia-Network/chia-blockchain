@@ -4,11 +4,14 @@ set -o errexit
 
 export NODE_OPTIONS="--max-old-space-size=3000"
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "$0")"; pwd)
+SCRIPT_DIR=$(
+  cd -- "$(dirname -- "$0")"
+  pwd
+)
 
 echo "### Checking GUI dependencies"
 
-if [ -d  "${SCRIPT_DIR}/.n" ]; then
+if [ -d "${SCRIPT_DIR}/.n" ]; then
   export N_PREFIX="${SCRIPT_DIR}/.n"
   export PATH="${N_PREFIX}/bin:${PATH}"
   echo "Loading nodejs/npm from"

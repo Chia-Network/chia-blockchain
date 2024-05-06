@@ -27,15 +27,6 @@ async def farm_blocks(full_node_api: FullNodeSimulator, ph: bytes32, num_blocks:
     return num_blocks
 
 
-def assert_sb_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
-    assert sb == node.full_node.mempool_manager.get_spendbundle(sb.name())
-
-
-def assert_sb_not_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
-    assert node.full_node.mempool_manager.get_spendbundle(sb.name()) is None
-    assert not node.full_node.mempool_manager.seen(sb.name())
-
-
 def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
     mempool_item = node.full_node.mempool_manager.mempool.get_item_by_id(sb.name())
     assert mempool_item is not None
@@ -76,7 +67,8 @@ async def test_wallet_tx_retry(
 
     # Evict SpendBundle from peer
     evict_from_pool(full_node_1, sb1)
-    assert_sb_not_in_pool(full_node_1, sb1)
+    assert full_node_1.full_node.mempool_manager.get_spendbundle(sb1.name()) is None
+    assert not full_node_1.full_node.mempool_manager.seen(sb1.name())
 
     # Wait some time so wallet will retry
     await asyncio.sleep(2)
