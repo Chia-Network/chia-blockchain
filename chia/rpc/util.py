@@ -158,17 +158,18 @@ def tx_endpoint(
                 new_txs, signing_responses = await self.service.wallet_state_manager.sign_transactions(
                     tx_records, response.get("signing_responses", []), "signing_responses" in response
                 )
-                response["transactions"] = [
-                    TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
-                ]
                 response["signing_responses"] = [byte_serialize_clvm_streamable(r).hex() for r in signing_responses]
             else:
                 new_txs = tx_records  # pragma: no cover
 
             if request.get("push", push):
-                await self.service.wallet_state_manager.add_pending_transactions(
+                new_txs = await self.service.wallet_state_manager.add_pending_transactions(
                     new_txs, merge_spends=merge_spends, sign=False
                 )
+
+            response["transactions"] = [
+                TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
+            ]
 
             # Some backwards compatibility code
             if "transaction" in response:
