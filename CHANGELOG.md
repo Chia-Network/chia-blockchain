@@ -6,6 +6,78 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.3.0 Chia blockchain 2024-05-01
+
+### Fixed
+* Fixed `Install.ps1` for PowerShell 7.4
+* Fixed readability of `Could not find parent coin` error log by printing hex and not bytes
+* Fixed some shutdown log spam by ensuring signal objects for signal handlers (fixes #17578)
+* Fixed negative plot sync durations not crashing the harvester (fixes #15027) (thanks @felixbrucker)
+* Fixed log spam by only logging warnings about protocol mismatches for farmer and harvester
+* Fixed log spam by logging rollbacks only if heights are actually deleted
+* Fixed DID update metadata issue (fixes #17412)
+* Fixed error codes and add more test coverage for message conditions
+* Fixed non-development source install
+* Fixed reorg from 0
+* Fixed (again) Datalayer download banning
+* Improved timelord skip peak logic.
+* Used click.Path for make_offer command filename (fixes #10920)
+* Handle when xch_target_address in config doesn't decode correctly (fixes #16995)
+* Delete unconfirmed Clawback TX
+* tighten up the check for duplicate UnfinishedBlocks before requesting that block
+* Optimized Datalayer `get_key_by_node`
+* Added test for observance of melted CAT balance (fixes #17727)
+* increase backwards compatibility by using default values for peer file path
+* Added `--skip-keyring` option to `chia start` and use in GUI (fixes #17848)
+
+### Added
+* Added Python 3.12 support
+* Added new subscription and wallet sync protocol support (will be used by the wallet in future releases)
+* Added Chip-25 Message Conditions support (https://github.com/Chia-Network/chips/pull/98)
+* Added support for HTTP redirect for the pool url (thanks @felixbrucker)
+* Added `use_delta_sync` option for faster wallet sync (thanks @felixbrucker)
+* Added Datalayer RPC pagination.
+* Added Datalayer multiple batch updates with `submit_on_chain` option.
+* Added `get_network_info` RPC to daemon
+* Added `new_unfinished_block2` support in Chia seeder
+* Added Hint support for SpendSim
+
+### Changed
+* Transition `FullBlock`, `BlockRecord`, `CoinSpend`, and `HeaderBlock` to rust
+* Move tests - all tests and infrastructure are now included in the chia-blockchain package under `chia/_tests`
+* Remove `Announcement` class in favor of `Condition` subclasses
+* Remove `ignore_max_send_amount`
+* Use `psutil.cpu_affinity()` instead of `os.cpu_count()`
+* Stop automatic transaction pushing by wallets
+* Unify transaction pushing
+* For testing purposes added support for non-ssl rpc clients
+* Bump `chia_rs` to `0.5.2`
+* Bump `clvm_tools` to `0.4.8`
+* Bump `aiohttp` to `3.9.2`
+* Return TXs from CATWallet and Offer creation
+* Remove all install.sh code that installs python and leave it to the user to install separately
+* Remove old `unhashable` special case in `Streamable`
+* Optimize `validate_removals()`
+* Remove support for migrating peers from legacy file format
+* Set unique peer filenames when swapping to/from testnets
+* Cleaner cli output for rpc client fetch errors
+* Optimized Datalayer subscription handling by using a `QueuedAsyncPool` for `DataLayer.periodically_manage_data()`
+* Update README.md links for wiki & faq sunset
+* Update README formatting and links (thanks @bknox83)
+* Turned concatenation of strings to f-strings (thanks @eukub)
+* Remove dead code in `multiprocess_validation`
+* Improve logging of the height-to-hash and sub-epoch-summaries cache
+* Pass full version in `Handshake` (thanks @felixbrucker)
+* Separate protocol versions for full_node, farmer, harvester, wallet
+* Optimized v1 to v2 DB upgrade
+* Datalayer: Avoid manage data loop delay for self subscriptions
+* Datalayer: Don't download DAT files that are already on disk
+* Datalayer: `get_proof` optimizations - use get_ancestors_optimized
+* Datalayer: Optimize insert/upsert/delete by using `get_node_by_key`
+* Datalayer: stop using fee config setting and remove from initial config
+* Datalayer: Optimize clean_node_table's query and speedup by leveraging relaxed foreign_keys
+* Enabled compression for cli rpm
+
 ## 2.2.1 Chia blockchain 2024-03-4
 
 ### Fixed
