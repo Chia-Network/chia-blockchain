@@ -45,6 +45,7 @@ from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecke
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord, VCStore
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -164,6 +165,7 @@ class VCWallet:
         self,
         provider_did: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         inner_puzzle_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -232,6 +234,7 @@ class VCWallet:
         self,
         vc_id: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         new_inner_puzhash: Optional[bytes32] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -268,6 +271,7 @@ class VCWallet:
             chia_tx = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
+                action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
             extra_conditions += (CreateCoinAnnouncement(coin_name),)
@@ -308,7 +312,9 @@ class VCWallet:
                     assert isinstance(wallet, DIDWallet)
                     if bytes32.fromhex(wallet.get_my_DID()) == vc_record.vc.proof_provider:
                         self.log.debug("Creating announcement from DID for vc: %s", vc_id.hex())
-                        did_tx = await wallet.create_message_spend(tx_config, extra_conditions=(did_announcement,))
+                        did_tx = await wallet.create_message_spend(
+                            tx_config, action_scope, extra_conditions=(did_announcement,)
+                        )
                         assert did_tx.spend_bundle is not None
                         spend_bundles.append(did_tx.spend_bundle)
                         tx_list.append(dataclasses.replace(did_tx, spend_bundle=None))
@@ -352,6 +358,7 @@ class VCWallet:
         parent_id: bytes32,
         peer: WSChiaConnection,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
@@ -376,6 +383,7 @@ class VCWallet:
             return await self.generate_signed_transaction(
                 vc.launcher_id,
                 tx_config,
+                action_scope,
                 fee,
                 self_revoke=True,
             )
@@ -399,6 +407,7 @@ class VCWallet:
         expected_did_announcement, vc_spend = vc.activate_backdoor(provider_inner_puzhash, announcement_nonce=nonce)
         did_tx: TransactionRecord = await did_wallet.create_message_spend(
             tx_config,
+            action_scope,
             extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),
         )
         assert did_tx.spend_bundle is not None
@@ -406,7 +415,7 @@ class VCWallet:
         did_tx = dataclasses.replace(did_tx, spend_bundle=final_bundle, name=final_bundle.name())
         if fee > 0:
             chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                fee, tx_config, extra_conditions=(vc_announcement,)
+                fee, tx_config, action_scope, extra_conditions=(vc_announcement,)
             )
             assert did_tx.spend_bundle is not None
             assert chia_tx.spend_bundle is not None
@@ -417,7 +426,9 @@ class VCWallet:
         else:
             return [did_tx]  # pragma: no cover
 
-    async def add_vc_authorization(self, offer: Offer, solver: Solver, tx_config: TXConfig) -> Tuple[Offer, Solver]:
+    async def add_vc_authorization(
+        self, offer: Offer, solver: Solver, tx_config: TXConfig, action_scope: WalletActionScope
+    ) -> Tuple[Offer, Solver]:
         """
         This method takes an existing offer and adds a VC authorization spend to it where it can/is willing.
         The only coins types that it looks for to approve are CR-CATs at the moment.
@@ -551,6 +562,7 @@ class VCWallet:
                             await self.generate_signed_transaction(
                                 launcher_id,
                                 tx_config,
+                                action_scope,
                                 extra_conditions=(
                                     *announcements_to_assert[launcher_id],
                                     *announcements_to_make[launcher_id],

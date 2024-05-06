@@ -54,7 +54,10 @@ async def test_wallet_tx_retry(
     await farm_blocks(full_node_1, reward_ph, 2)
     await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)
 
-    [transaction] = await wallet_1.generate_signed_transaction(uint64(100), reward_ph, DEFAULT_TX_CONFIG)
+    async with wallet_1.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        [transaction] = await wallet_1.generate_signed_transaction(
+            uint64(100), reward_ph, DEFAULT_TX_CONFIG, action_scope
+        )
     [transaction] = await wallet_1.wallet_state_manager.add_pending_transactions([transaction])
     sb1: Optional[SpendBundle] = transaction.spend_bundle
     assert sb1 is not None

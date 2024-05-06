@@ -55,6 +55,7 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -109,6 +110,7 @@ class CATWallet:
         cat_tail_info: Dict[str, Any],
         amount: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
     ) -> Tuple[CATWallet, List[TransactionRecord]]:
@@ -141,6 +143,7 @@ class CATWallet:
                 cat_tail_info,
                 amount,
                 tx_config,
+                action_scope,
                 fee,
             )
             assert self.cat_info.limitations_program_hash != empty_bytes
@@ -557,6 +560,7 @@ class CATWallet:
         fee: uint64,
         amount_to_claim: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[TransactionRecord, Optional[AssertCoinAnnouncement]]:
         """
@@ -575,6 +579,7 @@ class CATWallet:
                 uint64(0),
                 (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
                 tx_config,
+                action_scope,
                 fee=uint64(fee - amount_to_claim),
                 coins=chia_coins,
                 origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
@@ -593,6 +598,7 @@ class CATWallet:
                 uint64(selected_amount + amount_to_claim - fee),
                 (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
                 tx_config,
+                action_scope,
                 coins=chia_coins,
                 negative_change_allowed=True,
                 extra_conditions=extra_conditions,
@@ -616,6 +622,7 @@ class CATWallet:
         self,
         payments: List[Payment],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         coins: Optional[Set[Coin]] = None,
@@ -694,6 +701,7 @@ class CATWallet:
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
+                            action_scope,
                             extra_conditions=(announcement.corresponding_assertion(),),
                         )
                         innersol = self.standard_wallet.make_solution(
@@ -705,6 +713,7 @@ class CATWallet:
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
+                            action_scope,
                         )
                         assert xch_announcement is not None
                         innersol = self.standard_wallet.make_solution(
@@ -755,6 +764,7 @@ class CATWallet:
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         memos: Optional[List[List[bytes]]] = None,
@@ -779,6 +789,7 @@ class CATWallet:
         spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             tx_config,
+            action_scope,
             fee,
             cat_discrepancy=cat_discrepancy,  # (extra_delta, tail_reveal, tail_solution)
             coins=coins,

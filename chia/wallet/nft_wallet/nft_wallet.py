@@ -55,6 +55,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_nft_store import WalletNftStore
@@ -300,6 +301,7 @@ class NFTWallet:
         self,
         nft_ids: List[bytes32],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         did_id: Optional[bytes32] = None,
     ) -> Tuple[bytes32, SpendBundle]:
         """Get DID spend with announcement created we need to transfer NFT with did with current inner hash of DID
@@ -317,7 +319,7 @@ class NFTWallet:
                     self.log.debug("Creating announcement from DID for nft_ids: %s", nft_ids)
                     did_bundle = (
                         await wallet.create_message_spend(
-                            tx_config, extra_conditions=(CreatePuzzleAnnouncement(id) for id in nft_ids)
+                            tx_config, action_scope, extra_conditions=(CreatePuzzleAnnouncement(id) for id in nft_ids)
                         )
                     ).spend_bundle
                     self.log.debug("Sending DID announcement from puzzle: %s", did_bundle.removals())
@@ -331,6 +333,7 @@ class NFTWallet:
         self,
         metadata: Program,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         target_puzzle_hash: Optional[bytes32] = None,
         royalty_puzzle_hash: Optional[bytes32] = None,
         percentage: uint16 = uint16(0),
@@ -392,6 +395,7 @@ class NFTWallet:
             uint64(amount),
             nft_puzzles.LAUNCHER_PUZZLE_HASH,
             tx_config,
+            action_scope,
             fee,
             coins,
             None,
@@ -418,7 +422,9 @@ class NFTWallet:
         did_inner_hash = b""
         if did_id is not None:
             if did_id != b"":
-                did_inner_hash, did_bundle = await self.get_did_approval_info([launcher_coin.name()], tx_config)
+                did_inner_hash, did_bundle = await self.get_did_approval_info(
+                    [launcher_coin.name()], tx_config, action_scope
+                )
                 bundles_to_agg.append(did_bundle)
         nft_coin = NFTCoinInfo(
             nft_id=launcher_coin.name(),
@@ -433,6 +439,7 @@ class NFTWallet:
             [uint64(eve_coin.amount)],
             [target_puzzle_hash],
             tx_config,
+            action_scope,
             nft_coin=nft_coin,
             new_owner=did_id,
             new_did_inner_hash=did_inner_hash,
@@ -447,6 +454,7 @@ class NFTWallet:
         key: str,
         uri: str,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
@@ -463,6 +471,7 @@ class NFTWallet:
             [uint64(nft_coin_info.coin.amount)],
             [puzzle_hash],
             tx_config,
+            action_scope,
             fee,
             {nft_coin_info.coin},
             metadata_update=(key, uri),
@@ -574,6 +583,7 @@ class NFTWallet:
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         memos: Optional[List[List[bytes]]] = None,
@@ -602,6 +612,7 @@ class NFTWallet:
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             tx_config,
+            action_scope,
             fee,
             coins=coins,
             nft_coin=nft_coin,
@@ -652,6 +663,7 @@ class NFTWallet:
         self,
         payments: List[Payment],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         new_owner: Optional[bytes] = None,
@@ -675,6 +687,7 @@ class NFTWallet:
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
+                action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
         else:
@@ -758,6 +771,7 @@ class NFTWallet:
         offer_dict: Dict[Optional[bytes32], int],
         driver_dict: Dict[bytes32, PuzzleInfo],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64,
         extra_conditions: Tuple[Condition, ...],
     ) -> Tuple[Offer, List[TransactionRecord]]:
@@ -911,6 +925,7 @@ class NFTWallet:
                         abs(amount),
                         OFFER_MOD_HASH,
                         tx_config,
+                        action_scope,
                         primaries=[Payment(OFFER_MOD_HASH, uint64(payment_sum))] if payment_sum > 0 else [],
                         fee=fee,
                         coins=offered_coins_by_asset[asset],
@@ -923,6 +938,7 @@ class NFTWallet:
                         [abs(amount)],
                         [OFFER_MOD_HASH],
                         tx_config,
+                        action_scope,
                         fee=fee_left_to_pay,
                         coins=offered_coins_by_asset[asset],
                         trade_prices_list=[
@@ -938,6 +954,7 @@ class NFTWallet:
                         [abs(amount), sum(p.amount for _, p in payments)],
                         [OFFER_MOD_HASH, OFFER_MOD_HASH],
                         tx_config,
+                        action_scope,
                         fee=fee_left_to_pay,
                         coins=offered_coins_by_asset[asset],
                         extra_conditions=(*extra_conditions, *announcements_to_assert),
@@ -1060,6 +1077,7 @@ class NFTWallet:
         nft_list: List[NFTCoinInfo],
         did_id: bytes,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         announcement_ids: List[bytes32] = [],
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -1073,7 +1091,9 @@ class NFTWallet:
         for nft_coin_info in nft_list:
             nft_ids.append(nft_coin_info.nft_id)
         if did_id != b"":
-            did_inner_hash, did_bundle = await self.get_did_approval_info(announcement_ids, tx_config, bytes32(did_id))
+            did_inner_hash, did_bundle = await self.get_did_approval_info(
+                announcement_ids, tx_config, action_scope, bytes32(did_id)
+            )
             if len(announcement_ids) > 0:
                 spend_bundles.append(did_bundle)
 
@@ -1089,6 +1109,7 @@ class NFTWallet:
                     [uint64(nft_coin_info.coin.amount)],
                     puzzle_hashes_to_sign,
                     tx_config,
+                    action_scope,
                     fee,
                     {nft_coin_info.coin},
                     new_owner=did_id,
@@ -1115,6 +1136,7 @@ class NFTWallet:
         nft_list: List[NFTCoinInfo],
         puzzle_hash: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
@@ -1132,6 +1154,7 @@ class NFTWallet:
                     [uint64(nft_coin_info.coin.amount)],
                     [puzzle_hash],
                     tx_config,
+                    action_scope,
                     coins={nft_coin_info.coin},
                     fee=fee,
                     new_owner=b"",
@@ -1157,6 +1180,7 @@ class NFTWallet:
         nft_coin_info: NFTCoinInfo,
         did_id: bytes,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
@@ -1168,13 +1192,16 @@ class NFTWallet:
         did_inner_hash = b""
         additional_bundles = []
         if did_id != b"":
-            did_inner_hash, did_bundle = await self.get_did_approval_info([nft_id], tx_config, bytes32(did_id))
+            did_inner_hash, did_bundle = await self.get_did_approval_info(
+                [nft_id], tx_config, action_scope, bytes32(did_id)
+            )
             additional_bundles.append(did_bundle)
 
         nft_tx_record = await self.generate_signed_transaction(
             [uint64(nft_coin_info.coin.amount)],
             puzzle_hashes_to_sign,
             tx_config,
+            action_scope,
             fee,
             {nft_coin_info.coin},
             new_owner=did_id,
@@ -1191,6 +1218,7 @@ class NFTWallet:
         self,
         metadata_list: List[Dict[str, Any]],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         target_list: Optional[List[bytes32]] = [],
         mint_number_start: Optional[int] = 1,
         mint_total: Optional[int] = None,
@@ -1372,6 +1400,7 @@ class NFTWallet:
                 [uint64(eve_coin.amount)],
                 [target_ph],
                 tx_config,
+                action_scope,
                 nft_coin=nft_coin,
                 new_owner=b"",
                 new_did_inner_hash=b"",
@@ -1482,6 +1511,7 @@ class NFTWallet:
         self,
         metadata_list: List[Dict[str, Any]],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         target_list: Optional[List[bytes32]] = [],
         mint_number_start: Optional[int] = 1,
         mint_total: Optional[int] = None,
@@ -1615,6 +1645,7 @@ class NFTWallet:
                 [uint64(eve_coin.amount)],
                 [target_ph],
                 tx_config,
+                action_scope,
                 nft_coin=nft_coin,
                 new_owner=b"",
                 new_did_inner_hash=b"",

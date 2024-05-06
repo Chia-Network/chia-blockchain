@@ -147,13 +147,14 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     }
 
     # Generate DID as an "authorized provider"
-    did_id: bytes32 = bytes32.from_hexstr(
-        (
-            await DIDWallet.create_new_did_wallet(
-                wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG
-            )
-        ).get_my_DID()
-    )
+    async with wallet_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        did_id: bytes32 = bytes32.from_hexstr(
+            (
+                await DIDWallet.create_new_did_wallet(
+                    wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+                )
+            ).get_my_DID()
+        )
 
     # Mint a VC
     vc_record, _ = await client_0.vc_mint(
@@ -641,9 +642,10 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     }
 
     # Generate DID as an "authorized provider"
-    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG
-    )
+    async with wallet_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+        )
     did_id: bytes32 = bytes32.from_hexstr(did_wallet.get_my_DID())
 
     vc_record, _ = await client_0.vc_mint(
@@ -671,15 +673,20 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
 
     # Test a negative case real quick (mostly unrelated)
     with pytest.raises(ValueError, match="at the same time"):
-        await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
-            new_vc_record.vc.launcher_id,
-            wallet_environments.tx_config,
-            new_proof_hash=bytes32([0] * 32),
-            self_revoke=True,
-        )
+        async with wallet_node_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
+                new_vc_record.vc.launcher_id,
+                wallet_environments.tx_config,
+                action_scope,
+                new_proof_hash=bytes32([0] * 32),
+                self_revoke=True,
+            )
 
     # Send the DID to oblivion
-    txs = await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config)
+    async with did_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        txs = await did_wallet.transfer_did(
+            bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config, action_scope
+        )
     txs = await did_wallet.wallet_state_manager.add_pending_transactions(txs)
     await wallet_environments.process_pending_states(
         [

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass, field
-from typing import AsyncIterator, List, cast
+from typing import TYPE_CHECKING, AsyncIterator, List, cast
 
 from chia.util.action_scope import ActionScope
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.wallet_state_manager import WalletStateManager
+
+if TYPE_CHECKING:  # avoid circular import
+    from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 @dataclass

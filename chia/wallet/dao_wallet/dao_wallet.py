@@ -73,6 +73,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, T
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
@@ -120,6 +121,7 @@ class DAOWallet:
         amount_of_cats: uint64,
         dao_rules: DAORules,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         filter_amount: uint64 = uint64(1),
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
@@ -176,6 +178,7 @@ class DAOWallet:
             txs = await self.generate_new_dao(
                 amount_of_cats,
                 tx_config,
+                action_scope,
                 fee=fee,
                 fee_for_cat=fee_for_cat,
             )
@@ -605,6 +608,7 @@ class DAOWallet:
         self,
         amount_of_cats_to_create: Optional[uint64],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         cat_tail_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
@@ -691,6 +695,7 @@ class DAOWallet:
                 cat_tail_info,
                 amount_of_cats_to_create,
                 DEFAULT_TX_CONFIG,
+                action_scope,
                 fee=fee_for_cat,
             )
             assert new_cat_wallet is not None
@@ -730,6 +735,7 @@ class DAOWallet:
             uint64(1),
             genesis_launcher_puz.get_tree_hash(),
             tx_config,
+            action_scope,
             fee,
             origin_id=origin.name(),
             coins=set(coins),
@@ -843,6 +849,7 @@ class DAOWallet:
         self,
         proposed_puzzle: Program,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         vote_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -890,6 +897,7 @@ class DAOWallet:
             uint64(dao_rules.proposal_minimum_amount),
             genesis_launcher_puz.get_tree_hash(),
             tx_config,
+            action_scope,
             fee,
             origin_id=origin.name(),
             coins=coins,
@@ -1026,6 +1034,7 @@ class DAOWallet:
         vote_amount: Optional[uint64],
         is_yes_vote: bool,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
@@ -1111,6 +1120,7 @@ class DAOWallet:
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
+                action_scope,
             )
             assert chia_tx.spend_bundle is not None
             spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend, chia_tx.spend_bundle])
@@ -1142,6 +1152,7 @@ class DAOWallet:
         self,
         proposal_id: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         genesis_id: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
         self_destruct: bool = False,
@@ -1469,7 +1480,7 @@ class DAOWallet:
         else:
             spend_bundle = SpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
-            chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config)
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config, action_scope)
             assert chia_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
         else:
@@ -1530,6 +1541,7 @@ class DAOWallet:
         funding_wallet: WalletProtocol[Any],
         amount: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
@@ -1540,6 +1552,7 @@ class DAOWallet:
                 amount,
                 p2_singleton_puzhash,
                 tx_config,
+                action_scope,
                 fee=fee,
                 memos=[p2_singleton_puzhash],
             )
@@ -1552,6 +1565,7 @@ class DAOWallet:
                 [amount],
                 [p2_singleton_puzhash],
                 tx_config,
+                action_scope,
                 fee=fee,
                 extra_conditions=extra_conditions,
             )
@@ -1563,6 +1577,7 @@ class DAOWallet:
         self,
         amount: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         funding_wallet_id: uint32 = uint32(1),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -1570,7 +1585,7 @@ class DAOWallet:
         # set up the p2_singleton
         funding_wallet = self.wallet_state_manager.wallets[funding_wallet_id]
         tx_record = await self._create_treasury_fund_transaction(
-            funding_wallet, amount, tx_config, fee, extra_conditions=extra_conditions
+            funding_wallet, amount, tx_config, action_scope, fee, extra_conditions=extra_conditions
         )
         return tx_record[0]
 
@@ -1590,6 +1605,7 @@ class DAOWallet:
     async def free_coins_from_finished_proposals(
         self,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> TransactionRecord:
@@ -1613,7 +1629,7 @@ class DAOWallet:
                 prop_sb = SpendBundle([cs], AugSchemeMPL.aggregate([]))
                 spends.append(prop_sb)
 
-        sb = await dao_cat_wallet.remove_active_proposal(closed_list, tx_config=tx_config)
+        sb = await dao_cat_wallet.remove_active_proposal(closed_list, tx_config=tx_config, action_scope=action_scope)
         spends.append(sb)
 
         if not spends:  # pragma: no cover
@@ -1621,7 +1637,7 @@ class DAOWallet:
 
         full_spend = SpendBundle.aggregate(spends)
         if fee > 0:
-            chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config)
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config, action_scope)
             assert chia_tx.spend_bundle is not None
             full_spend = full_spend.aggregate([full_spend, chia_tx.spend_bundle])
 
@@ -1760,9 +1776,10 @@ class DAOWallet:
         self,
         amount: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
     ) -> List[TransactionRecord]:
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
-        return await dao_cat_wallet.enter_dao_cat_voting_mode(amount, tx_config)
+        return await dao_cat_wallet.enter_dao_cat_voting_mode(amount, tx_config, action_scope)
 
     @staticmethod
     def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:  # pragma: no cover

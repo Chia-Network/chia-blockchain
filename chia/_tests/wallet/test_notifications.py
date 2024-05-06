@@ -134,7 +134,10 @@ async def test_notifications(
             allow_height = peak.height + 1
         if case == "allow_larger":
             allow_larger_height = peak.height + 1
-        tx = await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, DEFAULT_TX_CONFIG, fee=FEE)
+        async with notification_manager_1.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            tx = await notification_manager_1.send_new_notification(
+                ph_2, msg, AMOUNT, DEFAULT_TX_CONFIG, action_scope, fee=FEE
+            )
         [tx] = await wsm_1.add_pending_transactions([tx])
         await time_out_assert_not_none(
             5,

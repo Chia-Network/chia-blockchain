@@ -56,6 +56,7 @@ from chia.wallet.vc_wallet.cr_cat_drivers import (
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -86,6 +87,7 @@ class CRCATWallet(CATWallet):
         cat_tail_info: Dict[str, Any],
         amount: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
     ) -> Tuple[CATWallet, List[TransactionRecord]]:  # pragma: no cover
@@ -399,6 +401,7 @@ class CRCATWallet(CATWallet):
         self,
         payments: List[Payment],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         coins: Optional[Set[Coin]] = None,
@@ -513,6 +516,7 @@ class CRCATWallet(CATWallet):
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
+                            action_scope,
                             extra_conditions=(announcement.corresponding_assertion(),),
                         )
                         innersol = self.standard_wallet.make_solution(
@@ -524,6 +528,7 @@ class CRCATWallet(CATWallet):
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
+                            action_scope,
                         )
                         assert xch_announcement is not None
                         innersol = self.standard_wallet.make_solution(
@@ -581,6 +586,7 @@ class CRCATWallet(CATWallet):
             vc_txs: List[TransactionRecord] = await vc_wallet.generate_signed_transaction(
                 vc.launcher_id,
                 tx_config,
+                action_scope,
                 extra_conditions=(
                     *expected_announcements,
                     announcement,
@@ -616,6 +622,7 @@ class CRCATWallet(CATWallet):
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         memos: Optional[List[List[bytes]]] = None,
@@ -652,6 +659,7 @@ class CRCATWallet(CATWallet):
         spend_bundle, other_txs = await self._generate_unsigned_spendbundle(
             payments,
             tx_config,
+            action_scope,
             fee,
             cat_discrepancy=cat_discrepancy,  # (extra_delta, tail_reveal, tail_solution)
             coins=coins,
@@ -690,6 +698,7 @@ class CRCATWallet(CATWallet):
         self,
         min_amount_to_claim: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         min_coin_amount: Optional[uint64] = None,
@@ -771,6 +780,7 @@ class CRCATWallet(CATWallet):
                 fee,
                 uint64(0),
                 tx_config,
+                action_scope,
                 extra_conditions=tuple(expected_announcements),
             )
             if chia_tx.spend_bundle is None:
@@ -783,6 +793,7 @@ class CRCATWallet(CATWallet):
         vc_txs: List[TransactionRecord] = await vc_wallet.generate_signed_transaction(
             vc.launcher_id,
             tx_config,
+            action_scope,
             extra_conditions=(
                 *extra_conditions,
                 *expected_announcements,
