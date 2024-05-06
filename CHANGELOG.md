@@ -51,9 +51,6 @@ for setuptools_scm/PEP 440 reasons.
 * Stop automatic transaction pushing by wallets
 * Unify transaction pushing
 * For testing purposes added support for non-ssl rpc clients
-* Bump `chia_rs` to `0.5.2`
-* Bump `clvm_tools` to `0.4.8`
-* Bump `aiohttp` to `3.9.2`
 * Return TXs from CATWallet and Offer creation
 * Remove all install.sh code that installs python and leave it to the user to install separately
 * Remove old `unhashable` special case in `Streamable`
@@ -77,6 +74,25 @@ for setuptools_scm/PEP 440 reasons.
 * Datalayer: stop using fee config setting and remove from initial config
 * Datalayer: Optimize clean_node_table's query and speedup by leveraging relaxed foreign_keys
 * Enabled compression for cli rpm
+* Bump `chia_rs` to `0.6.1`
+* Bump `clvm_tools` to `0.4.9`
+* Bump `chiavdf` to `1.1.4`
+* Bump `chiapos` to `2.0.4`
+* Bump `clvm` to `0.9.9`
+* Bump `aiohttp` to `3.9.2`
+* Bump `anyio` to `4.3.0`
+* Bump `boto3` to `1.34.46`
+* Bump `aiosqlite` to `0.20.0`
+* Bump `colorlog` to `6.8.2`
+* Bump `cryptography` to `42.0.5`
+* Bump `keyring` to `24.3.1`
+* Bump `dnspython` to `2.5.0`
+* Bump `watchdog` to `4.0.0`
+* Bump `dnslib` to `0.9.24`
+* Bump `typing-extensions` to `4.10.0`
+
+### Known Issues
+* Please be aware that logging at `DEBUG` log level may log your local keyring passphrase to the log file. Note this is **not** your key mnemonic.
 
 ## 2.2.1 Chia blockchain 2024-03-4
 
