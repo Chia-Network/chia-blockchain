@@ -44,7 +44,7 @@ jobs:
             matrix: macos
             emoji: 🍎
             runs-on:
-              intel: macos-latest
+              intel: macos-12
               arm: [macos, arm64]
           - name: Windows
             matrix: windows

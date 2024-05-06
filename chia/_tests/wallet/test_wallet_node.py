@@ -18,6 +18,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import Message, make_msg
 from chia.simulator.block_tools import test_constants
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -29,6 +30,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, KeyTypes, generate_mnemonic
 from chia.util.misc import to_batches
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_node import Balance, WalletNode
 
 
@@ -657,3 +659,43 @@ async def test_get_last_used_fingerprint_if_exists(
     await node._await_closed(shutting_down=False)
     await node._start_with_fingerprint()
     assert node.logged_in_fingerprint == fingerprint_2
+
+
+@pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")
+@pytest.mark.anyio
+async def test_wallet_node_bad_coin_state_ignore(
+    self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+
+    @api_request()
+    async def register_interest_in_coin(
+        self: Self, request: wallet_protocol.RegisterForCoinUpdates, *, test: bool = False
+    ) -> Optional[Message]:
+        return make_msg(
+            ProtocolMessageTypes.respond_to_coin_update,
+            wallet_protocol.RespondToCoinUpdates(
+                [], uint32(0), [CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0)), uint32(0), uint32(0))]
+            ),
+        )
+
+    async def validate_received_state_from_peer(*args: Any) -> bool:
+        # It's an interesting case here where we don't hit this unless something is broken
+        return True  # pragma: no cover
+
+    assert full_node_api.full_node._server is not None
+    monkeypatch.setattr(
+        full_node_api.full_node._server.get_connections()[0].api,
+        "register_interest_in_coin",
+        types.MethodType(register_interest_in_coin, full_node_api.full_node._server.get_connections()[0].api),
+    )
+    monkeypatch.setattr(
+        wallet_node,
+        "validate_received_state_from_peer",
+        types.MethodType(validate_received_state_from_peer, wallet_node),
+    )
+
+    with pytest.raises(PeerRequestException):
+        await wallet_node.get_coin_state([], wallet_node.get_full_node_peer())

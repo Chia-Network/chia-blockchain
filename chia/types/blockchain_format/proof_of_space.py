@@ -86,7 +86,7 @@ def passes_plot_filter(
 
 
 def calculate_prefix_bits(constants: ConsensusConstants, height: uint32) -> int:
-    prefix_bits = constants.NUMBER_ZERO_BITS_PLOT_FILTER
+    prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER)
     if height >= constants.PLOT_FILTER_32_HEIGHT:
         prefix_bits -= 4
     elif height >= constants.PLOT_FILTER_64_HEIGHT:

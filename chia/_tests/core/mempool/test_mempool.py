@@ -81,7 +81,7 @@ def wallet_a(bt):
 
 
 def generate_test_spend_bundle(
-    wallet_a: WalletTool,
+    wallet: WalletTool,
     coin: Coin,
     condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
     fee: uint64 = uint64(0),
@@ -90,7 +90,7 @@ def generate_test_spend_bundle(
 ) -> SpendBundle:
     if condition_dic is None:
         condition_dic = {}
-    transaction = wallet_a.generate_signed_transaction(amount, new_puzzle_hash, coin, condition_dic, fee)
+    transaction = wallet.generate_signed_transaction(amount, new_puzzle_hash, coin, condition_dic, fee)
     assert transaction is not None
     return transaction
 
@@ -209,7 +209,7 @@ class TestPendingTxCache:
 
         txs = c.drain(161)
         assert len(txs) == 2
-        for name, tx in txs.items():
+        for tx in txs.values():
             assert tx.assert_height == 50
 
     def test_item_limit(self):

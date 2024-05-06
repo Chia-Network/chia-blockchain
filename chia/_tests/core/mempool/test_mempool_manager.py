@@ -49,7 +49,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.payment import Payment
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -166,9 +166,9 @@ async def setup_mempool_with_coins(
 
     constants = DEFAULT_CONSTANTS
     if max_block_clvm_cost is not None:
-        constants = dataclasses.replace(constants, MAX_BLOCK_COST_CLVM=max_block_clvm_cost)
+        constants = constants.replace(MAX_BLOCK_COST_CLVM=uint64(max_block_clvm_cost))
     if mempool_block_buffer is not None:
-        constants = dataclasses.replace(constants, MEMPOOL_BLOCK_BUFFER=mempool_block_buffer)
+        constants = constants.replace(MEMPOOL_BLOCK_BUFFER=uint8(mempool_block_buffer))
     mempool_manager = await instantiate_mempool_manager(
         get_coin_records, constants=constants, max_tx_clvm_cost=max_tx_clvm_cost
     )
