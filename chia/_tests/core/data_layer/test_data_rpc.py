@@ -804,7 +804,7 @@ async def offer_setup_fixture(
     request: pytest.FixtureRequest,
 ) -> AsyncIterator[OfferSetup]:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
-    enable_batch_autoinsert_1, enable_batch_autoinsert_2 = getattr(request, "param", (True, True))
+    enable_batch_autoinsertion_settings = getattr(request, "param", (True, True))
     full_node_api = full_node_service._api
     wallets: List[Wallet] = []
     for wallet_service in wallet_services:
@@ -819,7 +819,7 @@ async def offer_setup_fixture(
 
     async with contextlib.AsyncExitStack() as exit_stack:
         store_setups: List[StoreSetup] = []
-        for index, wallet_service in enumerate(wallet_services):
+        for enable_batch_autoinsert, wallet_service in zip(enable_batch_autoinsertion_settings, wallet_services):
             assert wallet_service.rpc_server is not None
             port = wallet_service.rpc_server.listen_port
             data_layer_service = await exit_stack.enter_async_context(
@@ -828,7 +828,7 @@ async def offer_setup_fixture(
                     wallet_service=wallet_service,
                     bt=bt,
                     db_path=tmp_path.joinpath(str(port)),
-                    enable_batch_autoinsert=enable_batch_autoinsert_1 if index == 0 else enable_batch_autoinsert_2,
+                    enable_batch_autoinsert=enable_batch_autoinsert,
                 )
             )
             data_layer = data_layer_service._api.data_layer
