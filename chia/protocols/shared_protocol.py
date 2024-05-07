@@ -40,6 +40,10 @@ class Capability(IntEnum):
     # capability removed but functionality is still supported
     NONE_RESPONSE = 4
 
+    # Opts in to receiving mempool updates for subscribed transactions
+    # This is between a full node and receiving wallet
+    MEMPOOL_UPDATES = 5
+
 
 # These are the default capabilities used in all outgoing handshakes.
 # "1" means the capability is supported and enabled.

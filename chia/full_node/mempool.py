@@ -4,7 +4,7 @@ import logging
 import sqlite3
 from datetime import datetime
 from enum import Enum
-from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from chia_rs import AugSchemeMPL, Coin, G2Element
 
@@ -154,6 +154,58 @@ class Mempool:
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT name FROM tx")
             return [bytes32(row[0]) for row in cursor]
+
+    def transaction_ids_matching_coin_ids(self, coin_ids: Set[bytes32]) -> List[bytes32]:
+        transaction_ids: List[bytes32] = []
+
+        for transaction_id, item in self._items.items():
+            conds = item.npc_result.conds
+            if conds is None:
+                continue
+
+            for spend in conds.spends:
+                if spend.coin_id in coin_ids:
+                    transaction_ids.append(transaction_id)
+                    break
+
+                found_addition = False
+
+                for puzzle_hash, amount, _memo in spend.create_coin:
+                    if Coin(spend.coin_id, puzzle_hash, uint64(amount)).name() in coin_ids:
+                        transaction_ids.append(transaction_id)
+                        found_addition = True
+                        break
+
+                if found_addition:
+                    break
+
+        return transaction_ids
+
+    def transaction_ids_matching_puzzle_hashes(self, puzzle_hashes: Set[bytes32], include_hints: bool) -> List[bytes32]:
+        transaction_ids: List[bytes32] = []
+
+        for transaction_id, item in self._items.items():
+            conds = item.npc_result.conds
+            if conds is None:
+                continue
+
+            for spend in conds.spends:
+                if spend.puzzle_hash in puzzle_hashes:
+                    transaction_ids.append(transaction_id)
+                    break
+
+                found_addition = False
+
+                for puzzle_hash, _amount, memo in spend.create_coin:
+                    if puzzle_hash in puzzle_hash or (include_hints and memo is not None and memo in puzzle_hashes):
+                        transaction_ids.append(transaction_id)
+                        found_addition = True
+                        break
+
+                if found_addition:
+                    break
+
+        return transaction_ids
 
     # TODO: move "process_mempool_items()" into this class in order to do this a
     # bit more efficiently

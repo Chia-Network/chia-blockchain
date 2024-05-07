@@ -363,3 +363,21 @@ class RejectCoinState(Streamable):
 class RejectStateReason(IntEnum):
     REORG = 0
     EXCEEDED_SUBSCRIPTION_LIMIT = 1
+
+
+@streamable
+@dataclass(frozen=True)
+class SubscribedMempoolItems(Streamable):
+    transaction_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class MempoolItemAdded(Streamable):
+    transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class MempoolItemsRemoved(Streamable):
+    transaction_ids: List[bytes32]

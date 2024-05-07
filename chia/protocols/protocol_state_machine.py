@@ -13,6 +13,9 @@ NO_REPLY_EXPECTED = [
     pmt.request_mempool_transactions,
     pmt.new_compact_vdf,
     pmt.coin_state_update,
+    pmt.subscribed_mempool_items,
+    pmt.mempool_item_added,
+    pmt.mempool_items_removed,
 ]
 
 """
