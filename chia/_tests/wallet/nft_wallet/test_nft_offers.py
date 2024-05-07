@@ -144,14 +144,19 @@ async def test_nft_offer_with_fee(
 
     taker_fee = uint64(1)
 
+    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     peer = wallet_node_1.get_full_node_peer()
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
+        maker_offer,
         peer,
         tx_config,
         fee=taker_fee,
     )
-    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     assert trade_take is not None
     assert tx_records is not None
 
@@ -216,10 +221,13 @@ async def test_nft_offer_with_fee(
 
     taker_fee = uint64(1)
 
-    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), peer, tx_config, fee=taker_fee
+    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
     )
-    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(maker_offer, peer, tx_config, fee=taker_fee)
+    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     assert trade_take is not None
     assert tx_records is not None
 
@@ -478,11 +486,16 @@ async def test_nft_offer_with_metadata_update(
 
     taker_fee = uint64(1)
 
+    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     peer = wallet_node_1.get_full_node_peer()
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG, fee=taker_fee
+        maker_offer, peer, DEFAULT_TX_CONFIG, fee=taker_fee
     )
-    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     assert trade_take is not None
     assert tx_records is not None
 
@@ -652,14 +665,19 @@ async def test_nft_offer_nft_for_cat(
 
     taker_fee = uint64(1)
 
+    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     peer = wallet_node_1.get_full_node_peer()
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
+        maker_offer,
         peer,
         tx_config,
         fee=taker_fee,
     )
-    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     assert trade_take is not None
     assert tx_records is not None
 
@@ -736,10 +754,13 @@ async def test_nft_offer_nft_for_cat(
 
     taker_fee = uint64(1)
 
-    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), peer, tx_config, fee=taker_fee
+    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
     )
-    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(maker_offer, peer, tx_config, fee=taker_fee)
+    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     assert trade_take is not None
     assert tx_records is not None
 
@@ -843,7 +864,7 @@ async def test_nft_offer_nft_for_nft(
     )
 
     txs = await nft_wallet_taker.generate_new_nft(metadata_2, DEFAULT_TX_CONFIG)
-    txs = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
+    txs = await nft_wallet_taker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
@@ -886,11 +907,16 @@ async def test_nft_offer_nft_for_nft(
 
     taker_fee = uint64(1)
 
+    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     peer = wallet_node_1.get_full_node_peer()
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG, fee=taker_fee
+        maker_offer, peer, DEFAULT_TX_CONFIG, fee=taker_fee
     )
-    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     assert trade_take is not None
     assert tx_records is not None
 
@@ -1065,11 +1091,15 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     assert error is None
     assert trade_make is not None
 
+    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
+
     taker_fee = uint64(1)
 
     peer = wallet_node_1.get_full_node_peer()
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
+        maker_offer,
         peer,
         tx_config,
         fee=taker_fee,
@@ -1078,13 +1108,9 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     assert trade_take is not None
     assert tx_records is not None
 
-    tx_records = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(tx_records)
-    for tx in tx_records:
-        if tx.spend_bundle is not None:
-            await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
-            )
-
+    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     await full_node_api.process_transaction_records(records=tx_records)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
@@ -1156,22 +1182,20 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     assert error is None
     assert trade_make is not None
 
+    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
+
     taker_fee = uint64(1)
 
-    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), peer, tx_config, fee=taker_fee
-    )
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(maker_offer, peer, tx_config, fee=taker_fee)
 
     assert trade_take is not None
     assert tx_records is not None
 
-    tx_records = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(tx_records)
-    for tx in tx_records:
-        if tx.spend_bundle is not None:
-            await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
-            )
-
+    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     await full_node_api.process_transaction_records(records=tx_records)
     # check balances: taker wallet down an NFT, up cats
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)

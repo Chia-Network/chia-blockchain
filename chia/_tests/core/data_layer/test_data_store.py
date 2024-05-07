@@ -2013,3 +2013,16 @@ async def test_update_keys(data_store: DataStore, tree_id: bytes32) -> None:
             with pytest.raises(KeyNotFoundError, match=f"Key not found: {bytes_key.hex()}"):
                 await data_store.get_node_by_key(bytes_key, tree_id)
         num_keys += new_keys
+
+
+@pytest.mark.anyio
+async def test_migration_unknown_version(data_store: DataStore) -> None:
+    async with data_store.db_wrapper.writer() as writer:
+        await writer.execute(
+            "INSERT INTO schema(version_id) VALUES(:version_id)",
+            {
+                "version_id": "unknown version",
+            },
+        )
+    with pytest.raises(Exception, match="Unknown version"):
+        await data_store.migrate_db()

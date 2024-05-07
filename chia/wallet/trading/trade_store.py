@@ -481,6 +481,11 @@ class TradeStore:
             cursor = await conn.execute("DELETE FROM trade_records WHERE confirmed_at_index>?", (block_index,))
             await cursor.close()
 
+    async def delete_trade_record(self, trade_id: bytes32) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            await (await conn.execute("DELETE FROM trade_records WHERE trade_id=?", (trade_id.hex(),))).close()
+            await (await conn.execute("DELETE FROM trade_record_times WHERE trade_id=?", (trade_id,))).close()
+
     async def _get_new_trade_records_from_old(self, old_records: List[TradeRecordOld]) -> List[TradeRecord]:
         trade_id_to_valid_times: Dict[bytes, ConditionValidTimes] = {}
         empty_valid_times = ConditionValidTimes()

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
@@ -56,7 +55,7 @@ async def farmer_harvester_with_filter_size_9(
         return len(await farmer_rpc_cl.get_connections()) > 0
 
     local_b_tools = await create_block_tools_async(
-        constants=dataclasses.replace(test_constants, NUMBER_ZERO_BITS_PLOT_FILTER=9), keychain=get_temp_keyring
+        constants=test_constants.replace(NUMBER_ZERO_BITS_PLOT_FILTER=uint8(9)), keychain=get_temp_keyring
     )
     new_config = local_b_tools._config
     local_b_tools.change_config(new_config)

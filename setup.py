@@ -10,13 +10,13 @@ dependencies = [
     "anyio==4.3.0",
     "boto3==1.34.46",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.4",  # timelord and vdf verification
-    "chiabip158==1.4",  # bip158-style wallet filters
+    "chiabip158==1.5.1",  # bip158-style wallet filters
     "chiapos==2.0.4",  # proof of space
     "clvm==0.9.9",
     "clvm_tools==0.4.9",  # Currying, Program.to, other conveniences
-    "chia_rs==0.6.1",
+    "chia_rs==0.7.0",
     "clvm-tools-rs==0.1.40",  # Rust implementation of clvm_tools' compiler
-    "aiohttp==3.9.2",  # HTTP server for full node rpc
+    "aiohttp==3.9.4",  # HTTP server for full node rpc
     "aiosqlite==0.20.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.1.4",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
@@ -32,10 +32,11 @@ dependencies = [
     "dnspython==2.6.1",  # Query DNS seeds
     "watchdog==4.0.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.24",  # dns lib
-    "typing-extensions==4.10.0",  # typing backports like Protocol and TypedDict
+    "typing-extensions==4.11.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
     "packaging==23.2",
     "psutil==5.9.4",
+    "hsms==0.3.1",
 ]
 
 upnp_dependencies = [
@@ -45,16 +46,16 @@ upnp_dependencies = [
 dev_dependencies = [
     "build==1.2.1",
     "coverage==7.4.3",
-    "diff-cover==8.0.3",
+    "diff-cover==9.0.0",
     "pre-commit==3.5.0; python_version < '3.9'",
-    "pre-commit==3.6.2; python_version >= '3.9'",
+    "pre-commit==3.7.0; python_version >= '3.9'",
     "py3createtorrent==1.2.0",
-    "pylint==3.0.3",
+    "pylint==3.1.0",
     "pytest==8.1.1",
-    "pytest-cov==4.1.0",
+    "pytest-cov==5.0.0",
     "pytest-mock==3.14.0",
     "pytest-xdist==3.5.0",
-    "pyupgrade==3.15.0",
+    "pyupgrade==3.15.2",
     "twine==5.0.0",
     "isort==5.13.2",
     "flake8==7.0.0",

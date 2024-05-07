@@ -12,13 +12,11 @@ from inspect import getframeinfo, stack
 from pathlib import Path
 from types import FrameType
 from typing import (
-    Any,
     AsyncContextManager,
     AsyncIterator,
     ClassVar,
     Collection,
     ContextManager,
-    Dict,
     Generic,
     Iterable,
     Iterator,
@@ -39,7 +37,7 @@ from typing_extensions import Protocol
 
 from chia.util.errors import InvalidPathError
 from chia.util.ints import uint16, uint32, uint64
-from chia.util.streamable import Streamable, recurse_jsonify, streamable
+from chia.util.streamable import Streamable, streamable
 
 T = TypeVar("T")
 
@@ -123,11 +121,6 @@ def prompt_yes_no(prompt: str) -> bool:
 
 def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Sequence[object]]:
     return len(list_in) if length else list_in
-
-
-def dataclass_to_json_dict(instance: Any) -> Dict[str, Any]:
-    ret: Dict[str, Any] = recurse_jsonify(instance)
-    return ret
 
 
 def validate_directory_writable(path: Path) -> None:
