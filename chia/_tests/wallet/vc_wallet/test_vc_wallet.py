@@ -115,7 +115,7 @@ async def mint_cr_cat(
         {
             "num_environments": 2,
             "config_overrides": {"automatically_add_unknown_cats": True},
-            "blocks_needed": [1, 1],
+            "blocks_needed": [2, 1],
         }
     ],
     indirect=True,
@@ -153,7 +153,10 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # Mint a VC
     vc_record, _ = await client_0.vc_mint(
-        did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+        did_id,
+        wallet_environments.tx_config,
+        target_address=await wallet_0.get_new_puzzlehash(),
+        fee=uint64(1_750_000_000_000),
     )
 
     await wallet_environments.process_pending_states(
@@ -161,14 +164,15 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             WalletStateTransition(
                 pre_block_balance_updates={
                     "xch": {
-                        "unconfirmed_wallet_balance": -202,  # 200 for VC mint fee, 1 for VC singleton, 1 for DID mint
+                        # 1_750_000_000_000 for VC mint fee, 1 for VC singleton, 1 for DID mint
+                        "unconfirmed_wallet_balance": -1_750_000_000_002,
                         # I'm not sure incrementing pending_coin_removal_count here by 3 is the spirit of this number
                         # One existing coin has been removed and two ephemeral coins have been removed
                         # Does pending_coin_removal_count attempt to show the number of current pending removals
                         # Or does it intend to just mean all pending removals that we should eventually get states for?
-                        "pending_coin_removal_count": 4,  # 3 for VC mint, 1 for DID mint
-                        "<=#spendable_balance": -202,
-                        "<=#max_send_amount": -202,
+                        "pending_coin_removal_count": 5,  # 4 for VC mint, 1 for DID mint
+                        "<=#spendable_balance": -1_750_000_000_002,
+                        "<=#max_send_amount": -1_750_000_000_002,
                         "set_remainder": True,
                     },
                     "did": {"init": True, "set_remainder": True},
@@ -185,8 +189,9 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 },
                 post_block_balance_updates={
                     "xch": {
-                        "confirmed_wallet_balance": -202,  # 200 for VC mint fee, 1 for VC singleton, 1 for DID mint
-                        "pending_coin_removal_count": -4,  # 3 for VC mint, 1 for DID mint
+                        # 1_750_000_000_000 for VC mint fee, 1 for VC singleton, 1 for DID mint
+                        "confirmed_wallet_balance": -1_750_000_000_002,
+                        "pending_coin_removal_count": -5,  # 3 for VC mint, 1 for DID mint
                         "set_remainder": True,
                     },
                     "did": {
