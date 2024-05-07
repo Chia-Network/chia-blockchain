@@ -89,6 +89,28 @@ async def update_data_store_cmd(
     return res
 
 
+async def update_multiple_stores_cmd(
+    rpc_port: Optional[int],
+    store_updates: List[Dict[str, str]],
+    fee: Optional[str],
+    fingerprint: Optional[int],
+    submit_on_chain: bool,
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
+    res = dict()
+
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.update_multiple_stores(
+            store_updates=store_updates,
+            fee=final_fee,
+            submit_on_chain=submit_on_chain,
+        )
+        print(json.dumps(res, indent=2, sort_keys=True))
+
+    return res
+
+
 async def submit_pending_root_cmd(
     rpc_port: Optional[int],
     store_id: str,
@@ -104,6 +126,21 @@ async def submit_pending_root_cmd(
             store_id=store_id_bytes,
             fee=final_fee,
         )
+        print(json.dumps(res, indent=2, sort_keys=True))
+
+    return res
+
+
+async def submit_all_pending_roots_cmd(
+    rpc_port: Optional[int],
+    fee: Optional[str],
+    fingerprint: Optional[int],
+    root_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    final_fee = None if fee is None else uint64(Decimal(fee) * units["chia"])
+    res = dict()
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        res = await client.submit_all_pending_roots(fee=final_fee)
         print(json.dumps(res, indent=2, sort_keys=True))
 
     return res

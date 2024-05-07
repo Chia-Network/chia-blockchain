@@ -593,6 +593,20 @@ class DataStore:
 
         return Root.from_row(row=row)
 
+    async def get_all_pending_batches_roots(self) -> List[Root]:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
+                """
+                SELECT * FROM root WHERE status == :status
+                """,
+                {"status": Status.PENDING_BATCH.value},
+            )
+            roots = [Root.from_row(row=row) async for row in cursor]
+            tree_ids = [root.tree_id for root in roots]
+            if len(set(tree_ids)) != len(tree_ids):
+                raise Exception("Internal error: multiple pending batches for a store")
+            return roots
+
     async def tree_id_exists(self, tree_id: bytes32) -> bool:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(

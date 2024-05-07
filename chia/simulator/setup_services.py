@@ -12,7 +12,7 @@ from types import FrameType
 from typing import Any, AsyncGenerator, AsyncIterator, Dict, Iterator, List, Optional, Tuple, Union
 
 from chia.cmds.init_funcs import init
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.protocols.shared_protocol import Capability, capabilities
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
@@ -148,7 +148,7 @@ async def setup_full_node(
     config["simulator"]["auto_farm"] = False  # Disable Auto Farm for tests
     config["simulator"]["use_current_time"] = False  # Disable Real timestamps when running tests
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
-    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
     local_bt.change_config(config)
     override_capabilities = None if disable_capabilities is None else get_capabilities(disable_capabilities)
     service: Union[FullNodeService, SimulatorFullNodeService]
@@ -192,7 +192,7 @@ async def setup_crawler(
     service_config["crawler_db_path"] = database_uri
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
-    updated_constants = test_constants.replace_str_to_bytes(**overrides)
+    updated_constants = replace_str_to_bytes(test_constants, **overrides)
 
     service = create_full_node_crawler_service(
         root_path_populated_with_config,

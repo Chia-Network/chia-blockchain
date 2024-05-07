@@ -89,7 +89,9 @@ def tx_endpoint(
                     excluded_coin_amounts=request.get("exclude_coin_amounts"),
                 )
             if tx_config_loader.excluded_coin_ids is None:
-                excluded_coins: Optional[List[Coin]] = request.get("exclude_coins", request.get("excluded_coins"))
+                excluded_coins: Optional[List[Dict[str, Any]]] = request.get(
+                    "exclude_coins", request.get("excluded_coins")
+                )
                 if excluded_coins is not None:
                     tx_config_loader = tx_config_loader.override(
                         excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],

@@ -7,7 +7,7 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Dict, List, Optional, Tuple
 
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
@@ -77,7 +77,7 @@ async def async_main(service_config: Dict[str, Any]) -> int:
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
     update_testnet_overrides(network_id, overrides)
-    updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+    updated_constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = await create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)
     async with SignalHandlers.manage() as signal_handlers:

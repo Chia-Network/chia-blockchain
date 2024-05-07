@@ -219,20 +219,12 @@ class PoolWallet:
             curr_spend_i -= 1
 
         assert pool_state is not None
-        current_inner = pool_state_to_inner_puzzle(
-            pool_state,
-            launcher_coin.name(),
-            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
-            delayed_seconds,
-            delayed_puzhash,
-        )
         return PoolWalletInfo(
             pool_state,
             self.target_state,
             launcher_coin,
             launcher_id,
             p2_singleton_puzzle_hash,
-            current_inner,
             tip_singleton_coin.name(),
             last_singleton_spend_height,
         )
