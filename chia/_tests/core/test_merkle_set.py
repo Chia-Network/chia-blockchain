@@ -8,13 +8,12 @@ from random import Random
 from typing import List, Optional, Tuple
 
 import pytest
-from chia_rs import Coin, compute_merkle_set_root
+from chia_rs import Coin, MerkleSet, compute_merkle_set_root, confirm_included_already_hashed
 
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
-from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed
 from chia.util.misc import to_batches
 from chia.wallet.util.wallet_sync_utils import validate_additions, validate_removals
 
@@ -53,21 +52,21 @@ def hashdown(buf: bytes) -> bytes32:
 @pytest.mark.anyio
 async def test_merkle_set_invalid_hash_size() -> None:
     # this is too large
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         MerkleSet([bytes([0x80] + [0] * 32)])  # type: ignore[list-item]
 
     with pytest.raises(ValueError, match="could not convert slice to array"):
         compute_merkle_set_root([bytes([0x80] + [0] * 32)])
 
     # this is too small
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         MerkleSet([bytes([0x80] + [0] * 30)])  # type: ignore[list-item]
 
     with pytest.raises(ValueError, match="could not convert slice to array"):
         compute_merkle_set_root([bytes([0x80] + [0] * 30)])
 
     # empty
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         MerkleSet([b""])  # type: ignore[list-item]
 
     with pytest.raises(ValueError, match="could not convert slice to array"):

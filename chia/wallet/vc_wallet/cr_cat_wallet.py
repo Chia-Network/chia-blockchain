@@ -311,9 +311,6 @@ class CRCATWallet(CATWallet):
     async def get_new_cat_puzzle_hash(self) -> bytes32:  # pragma: no cover
         raise NotImplementedError("get_new_cat_puzzle_hash is a legacy method and is not available on CR-CAT wallets")
 
-    async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:  # pragma: no cover
-        raise NotImplementedError("get_new_cat_puzzle_hash is a legacy method and is not available on CR-CAT wallets")
-
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:  # pragma: no cover
         raise NotImplementedError(
             "inner_puzzle_for_cat_puzhash is a legacy method and is not available on CR-CAT wallets"
@@ -652,7 +649,7 @@ class CRCATWallet(CATWallet):
                 )
             )
 
-        unsigned_spend_bundle, other_txs = await self._generate_unsigned_spendbundle(
+        spend_bundle, other_txs = await self._generate_unsigned_spendbundle(
             payments,
             tx_config,
             fee,
@@ -660,10 +657,6 @@ class CRCATWallet(CATWallet):
             coins=coins,
             extra_conditions=extra_conditions,
             add_authorizations_to_cr_cats=add_authorizations_to_cr_cats,
-        )
-
-        signed_spend_bundle: SpendBundle = await self.wallet_state_manager.sign_transaction(
-            unsigned_spend_bundle.coin_spends
         )
 
         other_tx_removals: Set[Coin] = {removal for tx in other_txs for removal in tx.removals}
@@ -677,15 +670,15 @@ class CRCATWallet(CATWallet):
                 fee_amount=fee,
                 confirmed=False,
                 sent=uint32(0),
-                spend_bundle=signed_spend_bundle if i == 0 else None,
-                additions=list(set(signed_spend_bundle.additions()) - other_tx_additions) if i == 0 else [],
-                removals=list(set(signed_spend_bundle.removals()) - other_tx_removals) if i == 0 else [],
+                spend_bundle=spend_bundle if i == 0 else None,
+                additions=list(set(spend_bundle.additions()) - other_tx_additions) if i == 0 else [],
+                removals=list(set(spend_bundle.removals()) - other_tx_removals) if i == 0 else [],
                 wallet_id=self.id(),
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
-                name=signed_spend_bundle.name(),
-                memos=list(compute_memos(signed_spend_bundle).items()),
+                name=spend_bundle.name(),
+                memos=list(compute_memos(spend_bundle).items()),
                 valid_times=parse_timelock_info(extra_conditions),
             )
             for i, payment in enumerate(payments)

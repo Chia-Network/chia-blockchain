@@ -20,7 +20,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.conditions import (
@@ -442,42 +441,6 @@ class NFTWallet:
         txs.append(dataclasses.replace(tx_record, spend_bundle=SpendBundle.aggregate(bundles_to_agg)))
         return txs
 
-    async def sign(self, spend_bundle: SpendBundle, puzzle_hashes: Optional[List[bytes32]] = None) -> SpendBundle:
-        if puzzle_hashes is None:
-            puzzle_hashes = []
-        sigs: List[G2Element] = []
-        for spend in spend_bundle.coin_spends:
-            pks = {}
-            if not puzzle_hashes:
-                uncurried_nft = UncurriedNFT.uncurry(*spend.puzzle_reveal.to_program().uncurry())
-                if uncurried_nft is not None:
-                    self.log.debug("Found a NFT state layer to sign")
-                    puzzle_hashes.append(uncurried_nft.p2_puzzle.get_tree_hash())
-            for ph in puzzle_hashes:
-                private = await self.wallet_state_manager.get_private_key(ph)
-                pks[bytes(private.get_g1())] = private
-                synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-                synthetic_pk = synthetic_secret_key.get_g1()
-                pks[bytes(synthetic_pk)] = synthetic_secret_key
-            conditions = conditions_dict_for_solution(
-                spend.puzzle_reveal, spend.solution, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
-            )
-            for pk, msg in pkm_pairs_for_conditions_dict(
-                conditions, spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-            ):
-                try:
-                    sk = pks.get(pk)
-                    if sk:
-                        self.log.debug("Found key, signing for pk: %s", pk)
-                        sigs.append(AugSchemeMPL.sign(sk, msg))
-                    else:
-                        self.log.warning("Couldn't find key for: %s", pk)
-                except AssertionError:
-                    raise ValueError("This spend bundle cannot be signed by the NFT wallet")
-
-        agg_sig = AugSchemeMPL.aggregate(sigs)
-        return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
-
     async def update_metadata(
         self,
         nft_coin_info: NFTCoinInfo,
@@ -648,8 +611,7 @@ class NFTWallet:
             metadata_update=metadata_update,
             extra_conditions=extra_conditions,
         )
-        spend_bundle = await self.sign(unsigned_spend_bundle)
-        spend_bundle = SpendBundle.aggregate([spend_bundle] + additional_bundles)
+        spend_bundle = SpendBundle.aggregate([unsigned_spend_bundle] + additional_bundles)
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
@@ -1466,7 +1428,7 @@ class NFTWallet:
                     primaries=[], conditions=(AssertCoinAnnouncement(primary_announcement_hash),)
                 )
             xch_spends.append(make_spend(xch_coin, puzzle, solution))
-        xch_spend = await self.wallet_state_manager.sign_transaction(xch_spends)
+        xch_spend = SpendBundle(xch_spends, G2Element())
 
         # Create the DID spend using the announcements collected when making the intermediate launcher coins
         did_p2_solution = self.standard_wallet.make_solution(
@@ -1510,10 +1472,9 @@ class NFTWallet:
         # Collect up all the coin spends and sign them
         list_of_coinspends = [did_spend] + intermediate_coin_spends + launcher_spends
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        signed_spend_bundle = await did_wallet.sign(unsigned_spend_bundle)
 
         # Aggregate everything into a single spend bundle
-        total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends])
+        total_spend = SpendBundle.aggregate([unsigned_spend_bundle, xch_spend, *eve_spends])
 
         tx_record: TransactionRecord = dataclasses.replace(eve_txs[0], spend_bundle=total_spend)
         return [tx_record]
@@ -1704,15 +1665,14 @@ class NFTWallet:
             else:
                 solution = self.standard_wallet.make_solution(primaries=[], conditions=(primary_announcement,))
             xch_spends.append(make_spend(xch_coin, puzzle, solution))
-        xch_spend = await self.wallet_state_manager.sign_transaction(xch_spends)
+        xch_spend = SpendBundle(xch_spends, G2Element())
 
-        # Collect up all the coin spends and sign them
+        # Collect up all the coin spends
         list_of_coinspends = intermediate_coin_spends + launcher_spends
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        signed_spend_bundle = await self.sign(unsigned_spend_bundle)
 
         # Aggregate everything into a single spend bundle
-        total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends])
+        total_spend = SpendBundle.aggregate([unsigned_spend_bundle, xch_spend, *eve_spends])
         tx_record: TransactionRecord = dataclasses.replace(eve_txs[0], spend_bundle=total_spend)
         return [tx_record]
 

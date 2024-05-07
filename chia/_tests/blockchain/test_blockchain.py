@@ -8,7 +8,7 @@ from dataclasses import replace
 from typing import List, Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G2Element
+from chia_rs import AugSchemeMPL, G2Element, MerkleSet
 from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import (
@@ -53,7 +53,6 @@ from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
-from chia.util.merkle_set import MerkleSet
 from chia.util.misc import available_logical_cores
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof

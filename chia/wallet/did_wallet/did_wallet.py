@@ -17,7 +17,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
@@ -27,7 +26,6 @@ from chia.wallet.conditions import (
     parse_timelock_info,
 )
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
 from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, uncurry_innerpuz
@@ -626,8 +624,7 @@ class DIDWallet:
             make_spend(coin, full_puzzle, fullsol),
             make_spend(new_coin, new_full_puzzle, new_full_sol),
         ]
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        spend_bundle = await self.sign(unsigned_spend_bundle)
+        spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         if fee > 0:
             coin_name = coin.name()
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
@@ -726,8 +723,7 @@ class DIDWallet:
             ]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        spend_bundle = await self.sign(unsigned_spend_bundle)
+        spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         if fee > 0:
             coin_name = coin.name()
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
@@ -816,7 +812,6 @@ class DIDWallet:
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        signed_spend_bundle: SpendBundle = await self.sign(unsigned_spend_bundle)
         return TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -825,15 +820,15 @@ class DIDWallet:
             fee_amount=uint64(0),
             confirmed=False,
             sent=uint32(0),
-            spend_bundle=signed_spend_bundle,
-            additions=signed_spend_bundle.additions(),
+            spend_bundle=unsigned_spend_bundle,
+            additions=unsigned_spend_bundle.additions(),
             removals=[coin],
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=signed_spend_bundle.name(),
-            memos=list(compute_memos(signed_spend_bundle).items()),
+            name=unsigned_spend_bundle.name(),
+            memos=list(compute_memos(unsigned_spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
 
@@ -867,8 +862,7 @@ class DIDWallet:
             ]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        spend_bundle = await self.sign(unsigned_spend_bundle)
+        spend_bundle = SpendBundle(list_of_coinspends, G2Element())
 
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -952,8 +946,7 @@ class DIDWallet:
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        spend_bundle = await self.sign(unsigned_spend_bundle)
+        spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -1064,20 +1057,7 @@ class DIDWallet:
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
 
-        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        if index is None:
-            raise ValueError("Unknown pubkey.")
-        private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
-        message = bytes(puzhash)
-        sigs = [AugSchemeMPL.sign(private, message)]
-        for _ in spend_bundle.coin_spends:
-            sigs.append(AugSchemeMPL.sign(private, message))
-        aggsig = AugSchemeMPL.aggregate(sigs)
-        # assert AugSchemeMPL.verify(pubkey, message, aggsig)
-        if spend_bundle is None:
-            spend_bundle = SpendBundle(list_of_coinspends, aggsig)
-        else:
-            spend_bundle = spend_bundle.aggregate([spend_bundle, SpendBundle(list_of_coinspends, aggsig)])
+        spend_bundle = spend_bundle.aggregate([spend_bundle, SpendBundle(list_of_coinspends, G2Element())])
 
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -1214,31 +1194,6 @@ class DIDWallet:
         else:
             raise ValueError("Invalid inner DID puzzle.")
 
-    async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
-        sigs: List[G2Element] = []
-        for spend in spend_bundle.coin_spends:
-            puzzle_args = did_wallet_puzzles.match_did_puzzle(*spend.puzzle_reveal.to_program().uncurry())
-            if puzzle_args is not None:
-                p2_puzzle, _, _, _, _ = puzzle_args
-                puzzle_hash = p2_puzzle.get_tree_hash()
-                private = await self.wallet_state_manager.get_private_key(puzzle_hash)
-                synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-                conditions = conditions_dict_for_solution(
-                    spend.puzzle_reveal, spend.solution, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
-                )
-                synthetic_pk = synthetic_secret_key.get_g1()
-                for pk, msg in pkm_pairs_for_conditions_dict(
-                    conditions, spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                ):
-                    try:
-                        assert bytes(synthetic_pk) == pk
-                        sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
-                    except AssertionError:
-                        raise ValueError("This spend bundle cannot be signed by the DID wallet")
-
-        agg_sig = AugSchemeMPL.aggregate(sigs)
-        return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
-
     async def generate_new_decentralised_id(
         self, amount: uint64, tx_config: TXConfig, fee: uint64 = uint64(0)
     ) -> List[TransactionRecord]:
@@ -1359,7 +1314,7 @@ class DIDWallet:
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        return await self.sign(unsigned_spend_bundle)
+        return unsigned_spend_bundle
 
     async def get_spendable_balance(self, unspent_records=None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(

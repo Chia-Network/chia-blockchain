@@ -264,7 +264,7 @@ def db_version(request) -> int:
     return request.param
 
 
-SOFTFORK_HEIGHTS = [1000000, 5496000, 5496100, 5650000]
+SOFTFORK_HEIGHTS = [1000000, 5496000, 5496100, 5716000]
 
 
 @pytest.fixture(scope="function", params=SOFTFORK_HEIGHTS)
