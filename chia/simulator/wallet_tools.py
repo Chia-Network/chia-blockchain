@@ -6,6 +6,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.consensus.constants import ConsensusConstants
+from chia.simulator.derivation_cache import DerivationCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -35,7 +36,9 @@ class WalletTool:
     pubkey_num_lookup: Dict[bytes, uint32] = {}
     puzzle_pk_cache: Dict[bytes32, PrivateKey] = {}
 
-    def __init__(self, constants: ConsensusConstants, sk: Optional[PrivateKey] = None):
+    def __init__(
+        self, constants: ConsensusConstants, sk: Optional[PrivateKey] = None, cache: Optional[DerivationCache] = None
+    ):
         self.constants = constants
         self.current_balance = 0
         self.my_utxos: set = set()
@@ -45,6 +48,7 @@ class WalletTool:
             self.private_key = AugSchemeMPL.key_gen(DEFAULT_SEED)
         self.generator_lookups: Dict = {}
         self.puzzle_pk_cache: Dict = {}
+        self.derivation_cache = cache if cache else {}
         self.get_new_puzzle()
 
     def get_next_address_index(self) -> uint32:
@@ -56,9 +60,9 @@ class WalletTool:
         if sk:
             return sk
         for child in range(self.next_address):
-            pubkey = master_sk_to_wallet_sk(self.private_key, uint32(child)).get_g1()
+            pubkey = master_sk_to_wallet_sk(self.private_key, uint32(child), self.derivation_cache).get_g1()
             if puzzle_hash == puzzle_for_pk(pubkey).get_tree_hash():
-                return master_sk_to_wallet_sk(self.private_key, uint32(child))
+                return master_sk_to_wallet_sk(self.private_key, uint32(child), self.derivation_cache)
         raise ValueError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
@@ -66,7 +70,7 @@ class WalletTool:
 
     def get_new_puzzle(self) -> Program:
         next_address_index: uint32 = self.get_next_address_index()
-        sk: PrivateKey = master_sk_to_wallet_sk(self.private_key, next_address_index)
+        sk: PrivateKey = master_sk_to_wallet_sk(self.private_key, next_address_index, self.derivation_cache)
         pubkey: G1Element = sk.get_g1()
         self.pubkey_num_lookup[bytes(pubkey)] = next_address_index
 
@@ -80,7 +84,9 @@ class WalletTool:
         return puzzle.get_tree_hash()
 
     def sign(self, value: bytes, pubkey: bytes) -> G2Element:
-        privatekey: PrivateKey = master_sk_to_wallet_sk(self.private_key, self.pubkey_num_lookup[pubkey])
+        privatekey: PrivateKey = master_sk_to_wallet_sk(
+            self.private_key, self.pubkey_num_lookup[pubkey], self.derivation_cache
+        )
         return AugSchemeMPL.sign(privatekey, value)
 
     def make_solution(self, condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]]) -> Program:
