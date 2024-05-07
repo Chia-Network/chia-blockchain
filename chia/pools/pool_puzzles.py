@@ -110,7 +110,8 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSpend) -> Tuple[uint64
         if key.atom == b"t":
             seconds = uint64(value.as_int())
         if key.atom == b"h":
-            delayed_puzzle_hash = bytes32(value.as_atom())
+            assert value.atom is not None
+            delayed_puzzle_hash = bytes32(value.atom)
     assert seconds is not None
     assert delayed_puzzle_hash is not None
     return seconds, delayed_puzzle_hash
