@@ -1353,10 +1353,13 @@ class DataStore:
             assert latest_local_root is not None
 
             key_hash_frequency: Dict[bytes32, int] = {}
+            first_action: Dict[bytes32, str] = {}
             for change in changelist:
                 key = change["key"]
                 hash = key_hash(key)
                 key_hash_frequency[hash] = key_hash_frequency.get(hash, 0) + 1
+                if hash not in first_action:
+                    first_action[hash] = change["action"]
 
             pending_autoinsert_hashes: List[bytes32] = []
             for change in changelist:
@@ -1370,10 +1373,15 @@ class DataStore:
                         # The key is not referenced in any other operation but this autoinsert, hence the order
                         # of performing these should not matter. We perform all these autoinserts as a batch
                         # at the end, to speed up the tree processing operations.
-                        if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
-                            terminal_node_hash = await self._insert_terminal_node(key, value)
-                            pending_autoinsert_hashes.append(terminal_node_hash)
-                            continue
+                        # Additionally, if the first action is a delete, we can still perform the autoinsert at the
+                        # end, since the order will be preserved.
+                        if enable_batch_autoinsert:
+                            if key_hash_frequency[hash] == 1 or (
+                                key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
+                            ):
+                                terminal_node_hash = await self._insert_terminal_node(key, value)
+                                pending_autoinsert_hashes.append(terminal_node_hash)
+                                continue
                         insert_result = await self.autoinsert(
                             key, value, tree_id, True, Status.COMMITTED, root=latest_local_root
                         )

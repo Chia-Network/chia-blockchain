@@ -1981,3 +1981,35 @@ async def test_insert_key_already_present(data_store: DataStore, tree_id: bytes3
     )
     with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
         await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+
+
+@pytest.mark.anyio
+async def test_update_keys(data_store: DataStore, tree_id: bytes32) -> None:
+    num_keys = 10
+    missing_keys = 50
+    num_values = 10
+    new_keys = 10
+    for value in range(num_values):
+        changelist: List[Dict[str, Any]] = []
+        bytes_value = value.to_bytes(4, byteorder="big")
+        for key in range(num_keys + missing_keys):
+            bytes_key = key.to_bytes(4, byteorder="big")
+            changelist.append({"action": "delete", "key": bytes_key})
+        for key in range(num_keys):
+            bytes_key = key.to_bytes(4, byteorder="big")
+            changelist.append({"action": "insert", "key": bytes_key, "value": bytes_value})
+
+        await data_store.insert_batch(
+            tree_id=tree_id,
+            changelist=changelist,
+            status=Status.COMMITTED,
+        )
+        for key in range(num_keys):
+            bytes_key = key.to_bytes(4, byteorder="big")
+            node = await data_store.get_node_by_key(bytes_key, tree_id)
+            assert node.value == bytes_value
+        for key in range(num_keys, num_keys + missing_keys):
+            bytes_key = key.to_bytes(4, byteorder="big")
+            with pytest.raises(KeyNotFoundError, match=f"Key not found: {bytes_key.hex()}"):
+                await data_store.get_node_by_key(bytes_key, tree_id)
+        num_keys += new_keys
