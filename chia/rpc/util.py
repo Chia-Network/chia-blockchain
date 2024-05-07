@@ -101,7 +101,9 @@ def tx_endpoint(
                     excluded_coin_amounts=request.get("exclude_coin_amounts"),
                 )
             if tx_config_loader.excluded_coin_ids is None:
-                excluded_coins: Optional[List[Coin]] = request.get("exclude_coins", request.get("excluded_coins"))
+                excluded_coins: Optional[List[Dict[str, Any]]] = request.get(
+                    "exclude_coins", request.get("excluded_coins")
+                )
                 if excluded_coins is not None:
                     tx_config_loader = tx_config_loader.override(
                         excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
@@ -156,17 +158,18 @@ def tx_endpoint(
                 new_txs, signing_responses = await self.service.wallet_state_manager.sign_transactions(
                     tx_records, response.get("signing_responses", []), "signing_responses" in response
                 )
-                response["transactions"] = [
-                    TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
-                ]
                 response["signing_responses"] = [byte_serialize_clvm_streamable(r).hex() for r in signing_responses]
             else:
                 new_txs = tx_records  # pragma: no cover
 
             if request.get("push", push):
-                await self.service.wallet_state_manager.add_pending_transactions(
+                new_txs = await self.service.wallet_state_manager.add_pending_transactions(
                     new_txs, merge_spends=merge_spends, sign=False
                 )
+
+            response["transactions"] = [
+                TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
+            ]
 
             # Some backwards compatibility code
             if "transaction" in response:

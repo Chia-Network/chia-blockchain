@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-import dataclasses
-
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
-test_constants = dataclasses.replace(
-    DEFAULT_CONSTANTS,
-    MIN_PLOT_SIZE=18,
+test_constants = DEFAULT_CONSTANTS.replace(
+    MIN_PLOT_SIZE=uint8(18),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(12),
     DIFFICULTY_STARTING=uint64(2**9),
-    DISCRIMINANT_SIZE_BITS=16,
+    DISCRIMINANT_SIZE_BITS=uint16(16),
     SUB_EPOCH_BLOCKS=uint32(170),
     WEIGHT_PROOF_THRESHOLD=uint8(2),
     WEIGHT_PROOF_RECENT_BLOCKS=uint32(380),
@@ -19,5 +16,5 @@ test_constants = dataclasses.replace(
     MAX_SUB_SLOT_BLOCKS=uint32(50),
     EPOCH_BLOCKS=uint32(340),
     SUB_SLOT_ITERS_STARTING=uint64(2**10),  # Must be a multiple of 64
-    NUMBER_ZERO_BITS_PLOT_FILTER=1,  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
 )

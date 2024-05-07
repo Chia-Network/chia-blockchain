@@ -4,7 +4,6 @@ import logging
 from typing import List, Optional, Tuple
 
 from chia_rs import G1Element
-from clvm.casts import int_from_bytes
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.consensus.block_rewards import calculate_pool_reward
@@ -103,11 +102,15 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSpend) -> Tuple[uint64
     # Delayed puz info is (seconds delayed_puzzle_hash)
     seconds: Optional[uint64] = None
     delayed_puzzle_hash: Optional[bytes32] = None
-    for key, value in extra_data.as_python():
-        if key == b"t":
-            seconds = int_from_bytes(value)
-        if key == b"h":
-            delayed_puzzle_hash = bytes32(value)
+    for key_value_pairs in extra_data.as_iter():
+        key_value_pair = key_value_pairs.as_pair()
+        if key_value_pair is None:
+            continue
+        key, value = key_value_pair
+        if key.atom == b"t":
+            seconds = uint64(value.as_int())
+        if key.atom == b"h":
+            delayed_puzzle_hash = bytes32(value.as_atom())
     assert seconds is not None
     assert delayed_puzzle_hash is not None
     return seconds, delayed_puzzle_hash
