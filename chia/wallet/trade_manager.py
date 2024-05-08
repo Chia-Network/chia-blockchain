@@ -438,7 +438,7 @@ class TradeManager:
         if solver is None:
             solver = Solver({})
         try:
-            coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
+            coins_to_offer: Dict[Union[int, bytes32], Set[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
             offer_dict_no_ints: Dict[Optional[bytes32], int] = {}
             for id, amount in offer_dict.items():
@@ -555,7 +555,7 @@ class TradeManager:
                         Offer.ph(),
                         tx_config,
                         fee=fee_left_to_pay,
-                        coins=set(selected_coins),
+                        coins=selected_coins,
                         extra_conditions=(*extra_conditions, *announcements_to_assert),
                     )
                     all_transactions.append(tx)
@@ -569,7 +569,7 @@ class TradeManager:
                         [Offer.ph()],
                         tx_config,
                         fee=fee_left_to_pay,
-                        coins=set(selected_coins),
+                        coins=selected_coins,
                         extra_conditions=(*extra_conditions, *announcements_to_assert),
                     )
                     all_transactions.extend(txs)
@@ -580,7 +580,7 @@ class TradeManager:
                         [Offer.ph()],
                         tx_config,
                         fee=fee_left_to_pay,
-                        coins=set(selected_coins),
+                        coins=selected_coins,
                         extra_conditions=(*extra_conditions, *announcements_to_assert),
                         add_authorizations_to_cr_cats=False,
                     )

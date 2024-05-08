@@ -245,21 +245,19 @@ jobs:
 
   publish:
     name: Publish ${{ matrix.os.name }} DMG
-    runs-on: ${{ matrix.os.runs-on }}
+    runs-on: ubuntu-latest
     needs:
       - build
-    timeout-minutes: 10
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10"]
         os:
-          - runs-on: macos-11
-            name: intel
+          - name: intel
             file-suffix: ""
             glue-name: "build-macos"
-          - runs-on: [MacOS, ARM64]
-            name: m1
+          - name: m1
             file-suffix: "-arm64"
             glue-name: "build-mac-m1"
 
@@ -318,19 +316,10 @@ jobs:
           AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
           GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
 
-      - name: Install AWS CLI
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET
-        run: |
-          command -v aws || brew install awscli
-
-      - name: Install GH CLI
-        run: |
-          command -v gh || brew install gh
-
       - name: Create Checksums
         run: |
           ls
-          shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg > ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256
+          shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg > ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256
 
       - name: Configure AWS credentials
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
@@ -345,29 +334,29 @@ jobs:
           GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
           CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
           echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >> "$GITHUB_ENV"
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/dev/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/dev/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg
 
       - name: Create torrent
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: env.FULL_RELEASE == 'true'
         run: |
-          py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent --webseed https://download.chia.net/install/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
+          py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent --webseed https://download.chia.net/install/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
           ls ${{ github.workspace }}/build_scripts/final_installer/
-          gh release upload --repo ${{ github.repository }} $RELEASE_TAG ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
+          gh release upload --repo ${{ github.repository }} $RELEASE_TAG ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
 
       - name: Upload Dev Installer
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
         run: |
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg.sha256
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg.sha256
 
       - name: Upload Release Files
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
         run: |
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/install/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/install/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent s3://download.chia.net/torrents/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent s3://download.chia.net/torrents/
 
       - name: Upload release artifacts
         if: env.RELEASE == 'true'
@@ -414,6 +403,10 @@ jobs:
             matrix: 13
             runs-on:
               intel: macos-13
+          - name: 14
+            matrix: 14
+            runs-on:
+              arm: macos-14
         arch:
           - name: ARM64
             matrix: arm

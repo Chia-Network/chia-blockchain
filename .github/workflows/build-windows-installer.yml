@@ -260,10 +260,7 @@ jobs:
 
   publish:
     name: Publish EXE
-    runs-on: [windows-2019]
-    defaults:
-      run:
-        shell: bash
+    runs-on: ubuntu-latest
     needs:
       - build
     timeout-minutes: 5
@@ -326,12 +323,6 @@ jobs:
           AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
           GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
 
-      - name: Install AWS CLI
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET
-        shell: pwsh
-        run: |
-          msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
-
       - name: Configure AWS credentials
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
         uses: aws-actions/configure-aws-credentials@v4
@@ -350,10 +341,10 @@ jobs:
           aws s3 cp chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${CHIA_INSTALLER_VERSION}.exe s3://download.chia.net/dev/ChiaSetup-${CHIA_DEV_BUILD}.exe
 
       - name: Create Checksums
-        shell: pwsh
         run: |
-          certutil.exe -hashfile ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256
-          ls ${{ github.workspace }}/chia-blockchain-gui/release-builds/windows-installer/
+          ls "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/
+          sha256sum "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe > "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256
+          ls "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/
 
       - name: Create torrent
         if: env.FULL_RELEASE == 'true'
