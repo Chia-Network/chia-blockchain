@@ -202,31 +202,31 @@ jobs:
 
   publish:
     name: Publish ${{ matrix.os.arch }}
-    runs-on: ${{ matrix.os.runs-on }}
+    runs-on: ubuntu-latest
     needs:
       - build
-    container: chianetwork/ubuntu-20.04-builder:latest
     timeout-minutes: ${{ matrix.os.timeout }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10"]
         os:
-          - runs-on: ubuntu-latest
-            arch: amd64
+          - arch: amd64
             glue-name: "build-amd64-deb"
             timeout: 5
-          - runs-on: [Linux, ARM64]
-            arch: arm64
+          - arch: arm64
             glue-name: "build-arm64-deb"
-            # TOOD: some self hosted runners are exhibiting slow artifact downloads sometimes
-            timeout: 20
+            timeout: 5
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
+
+      - uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - uses: chia-network/actions/create-venv@main
         id: create-venv
@@ -289,7 +289,6 @@ jobs:
           aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_${{ matrix.os.arch }}.deb" "s3://download.chia.net/dev/chia-blockchain-cli_${CHIA_DEV_BUILD}-1_${{ matrix.os.arch }}.deb"
 
       - name: Create Checksums
-        if: env.FULL_RELEASE == 'true' || github.ref == 'refs/heads/main'
         run: |
           ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
           sha256sum "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb > "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.sha256
