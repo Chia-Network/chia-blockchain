@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from hashlib import sha256
-from typing import Callable, List
+from typing import Callable, List, Sequence
+
+from clvm.casts import int_to_bytes
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -36,6 +38,17 @@ A_KW_TREEHASH = shatree_atom(A_KW)
 C_KW_TREEHASH = shatree_atom(C_KW)
 ONE_TREEHASH = shatree_atom(ONE)
 NULL_TREEHASH = shatree_atom(NULL)
+
+
+def shatree_atom_list(li: Sequence[bytes]) -> bytes32:
+    ret = NULL_TREEHASH
+    for item in reversed(li):
+        ret = shatree_pair(shatree_atom(item), ret)
+    return ret
+
+
+def shatree_int(val: int) -> bytes32:
+    return shatree_atom(int_to_bytes(val))
 
 
 # The environment `E = (F . R)` recursively expands out to

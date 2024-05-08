@@ -66,7 +66,7 @@ from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
+from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom
 
 from .load_clvm import load_clvm_maybe_recompile
 from .p2_conditions import puzzle_for_conditions
@@ -113,7 +113,7 @@ def puzzle_for_synthetic_public_key(synthetic_public_key: G1Element) -> Program:
 
 
 def puzzle_hash_for_synthetic_public_key(synthetic_public_key: G1Element) -> bytes32:
-    public_key_hash = Program.to(bytes(synthetic_public_key)).get_tree_hash()
+    public_key_hash = shatree_atom(bytes(synthetic_public_key))
     return curry_and_treehash(QUOTED_MOD_HASH, public_key_hash)
 
 
