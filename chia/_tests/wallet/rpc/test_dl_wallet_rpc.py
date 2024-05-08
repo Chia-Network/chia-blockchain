@@ -208,7 +208,14 @@ class TestWalletRpc:
                 if tx.spend_bundle is not None:
                     additions.extend(tx.spend_bundle.additions())
             mirror_coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
-            mirror = Mirror(mirror_coin.name(), launcher_id, uint64(1000), [b"foo", b"bar"], True)
+            mirror = Mirror(
+                mirror_coin.name(),
+                launcher_id,
+                uint64(1000),
+                [b"foo", b"bar"],
+                True,
+                full_node_api.full_node.blockchain.get_peak_height(),
+            )
             await time_out_assert(15, client.dl_get_mirrors, [mirror], launcher_id)
             await client.dl_delete_mirror(mirror_coin.name(), fee=uint64(2000000000000))
             for i in range(0, 5):
