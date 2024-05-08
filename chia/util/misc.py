@@ -417,7 +417,12 @@ def available_logical_cores() -> int:
         assert count is not None
         return count
 
-    return len(psutil.Process().cpu_affinity())
+    cores = len(psutil.Process().cpu_affinity())
+
+    if sys.platform == "win32":
+        cores = min(61, cores)  # https://github.com/python/cpython/issues/89240
+
+    return cores
 
 
 def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:

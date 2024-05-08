@@ -309,7 +309,7 @@ class Blockchain(BlockchainInterface):
             The result of adding the block to the blockchain (NEW_PEAK, ADDED_AS_ORPHAN, INVALID_BLOCK,
                 DISCONNECTED_BLOCK, ALREDY_HAVE_BLOCK)
             An optional error if the result is not NEW_PEAK or ADDED_AS_ORPHAN
-            A StateChangeSumamry iff NEW_PEAK, with:
+            A StateChangeSummary iff NEW_PEAK, with:
                 - A fork point if the result is NEW_PEAK
                 - A list of coin changes as a result of rollback
                 - A list of NPCResult for any new transaction block added to the chain
