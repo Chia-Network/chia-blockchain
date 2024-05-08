@@ -59,6 +59,7 @@ following mechanism:
 from __future__ import annotations
 
 import hashlib
+from functools import lru_cache
 from typing import Union
 
 from chia_rs import G1Element, PrivateKey
@@ -91,6 +92,7 @@ def calculate_synthetic_offset(public_key: G1Element, hidden_puzzle_hash: bytes3
     return offset
 
 
+@lru_cache(maxsize=1000)
 def calculate_synthetic_public_key(public_key: G1Element, hidden_puzzle_hash: bytes32) -> G1Element:
     synthetic_offset: PrivateKey = PrivateKey.from_bytes(
         calculate_synthetic_offset(public_key, hidden_puzzle_hash).to_bytes(32, "big")
@@ -98,6 +100,7 @@ def calculate_synthetic_public_key(public_key: G1Element, hidden_puzzle_hash: by
     return public_key + synthetic_offset.get_g1()
 
 
+@lru_cache(maxsize=1000)
 def calculate_synthetic_secret_key(secret_key: PrivateKey, hidden_puzzle_hash: bytes32) -> PrivateKey:
     secret_exponent = int.from_bytes(bytes(secret_key), "big")
     public_key = secret_key.get_g1()
