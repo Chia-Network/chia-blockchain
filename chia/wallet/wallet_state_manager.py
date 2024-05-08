@@ -380,6 +380,14 @@ class WalletStateManager:
             return master_sk_to_wallet_sk(self.get_master_private_key(), record.index)
         return master_sk_to_wallet_sk_unhardened(self.get_master_private_key(), record.index)
 
+    async def get_public_key(self, puzzle_hash: bytes32) -> G1Element:
+        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        if record is None:
+            raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
+        if record.hardened:
+            raise ValueError(f"Key for puzzle hash: {puzzle_hash.hex()} is hardened")
+        return master_pk_to_wallet_pk_unhardened(self.root_pubkey, record.index)
+
     def get_master_private_key(self) -> PrivateKey:
         if self.private_key is None:  # pragma: no cover
             raise ValueError("Wallet is currently in observer mode and access to private key is denied")
