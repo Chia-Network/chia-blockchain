@@ -2693,11 +2693,6 @@ class TestMaliciousGenerators:
         assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
 
 
-@pytest.fixture(name="softfork", scope="function", params=[False, True])
-def softfork_fixture(request):
-    return request.param
-
-
 coins = make_test_coins()
 
 
