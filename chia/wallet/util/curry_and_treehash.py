@@ -37,11 +37,11 @@ Q_KW_TREEHASH = shatree_atom(Q_KW)
 A_KW_TREEHASH = shatree_atom(A_KW)
 C_KW_TREEHASH = shatree_atom(C_KW)
 ONE_TREEHASH = shatree_atom(ONE)
-NULL_TREEHASH = shatree_atom(NULL)
+NIL_TREEHASH = shatree_atom(NULL)
 
 
 def shatree_atom_list(li: Sequence[bytes]) -> bytes32:
-    ret = NULL_TREEHASH
+    ret = NIL_TREEHASH
     for item in reversed(li):
         ret = shatree_pair(shatree_atom(item), ret)
     return ret
@@ -64,7 +64,7 @@ def curried_values_tree_hash(arguments: List[bytes32]) -> bytes32:
         C_KW_TREEHASH,
         shatree_pair(
             shatree_pair(Q_KW_TREEHASH, arguments[0]),
-            shatree_pair(curried_values_tree_hash(arguments[1:]), NULL_TREEHASH),
+            shatree_pair(curried_values_tree_hash(arguments[1:]), NIL_TREEHASH),
         ),
     )
 
@@ -82,7 +82,7 @@ def curry_and_treehash(hash_of_quoted_mod_hash: bytes32, *hashed_arguments: byte
     curried_values = curried_values_tree_hash(list(hashed_arguments))
     return shatree_pair(
         A_KW_TREEHASH,
-        shatree_pair(hash_of_quoted_mod_hash, shatree_pair(curried_values, NULL_TREEHASH)),
+        shatree_pair(hash_of_quoted_mod_hash, shatree_pair(curried_values, NIL_TREEHASH)),
     )
 
 

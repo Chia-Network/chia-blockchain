@@ -46,7 +46,7 @@ from chia.wallet.singleton import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.curry_and_treehash import NULL_TREEHASH, shatree_int, shatree_pair
+from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
@@ -228,7 +228,7 @@ class DIDWallet:
         inner_solution: Program = full_solution.rest().rest().first()
         recovery_list: List[bytes32] = []
         backup_required: int = num_verification.as_int()
-        if recovery_list_hash != NULL_TREEHASH:
+        if recovery_list_hash != NIL_TREEHASH:
             try:
                 for did in inner_solution.rest().rest().rest().rest().rest().as_python():
                     recovery_list.append(bytes32(did[0]))
@@ -531,7 +531,7 @@ class DIDWallet:
         if self.did_info.origin_coin is None:
             # TODO: this seem dumb. Why bother with this case? Is it ever used?
             # inner puzzle: (8 . 0)
-            innerpuz_hash = shatree_pair(shatree_int(8), NULL_TREEHASH)
+            innerpuz_hash = shatree_pair(shatree_int(8), NIL_TREEHASH)
             return create_singleton_puzzle_hash(innerpuz_hash, bytes32([0] * 32))
         origin_coin_name = self.did_info.origin_coin.name()
         innerpuz_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
