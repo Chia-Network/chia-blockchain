@@ -1508,6 +1508,7 @@ class DataStore:
                             break
                         hash = node.hash
                 assert latest_local_root is not None
+                assert latest_local_root.node_hash is not None
                 new_root_hash = await self.batch_upsert(
                     tree_id,
                     latest_local_root.node_hash,
