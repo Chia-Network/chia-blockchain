@@ -383,7 +383,6 @@ class BenchmarkRunner:
     test_id: Optional[TestId] = None
     overhead: Optional[float] = None
 
-    @functools.wraps(_AssertRuntime)
     def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
         kwargs.setdefault("enable_assertion", self.enable_assertion)
         kwargs.setdefault("overhead", self.overhead)

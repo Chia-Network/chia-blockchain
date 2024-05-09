@@ -168,7 +168,7 @@ def to_batches(to_split: Collection[T], batch_size: int) -> Iterator[Batch[T]]:
         raise ValueError("to_batches: batch_size must be greater than 0.")
     total_size = len(to_split)
     if total_size == 0:
-        return iter(())
+        return
 
     if isinstance(to_split, list):
         for batch_start in range(0, total_size, batch_size):
