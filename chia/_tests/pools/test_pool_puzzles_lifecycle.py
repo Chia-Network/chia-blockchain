@@ -15,6 +15,7 @@ from chia.pools.pool_puzzles import (
     SINGLETON_MOD_HASH,
     create_absorb_spend,
     create_p2_singleton_puzzle,
+    create_p2_singleton_puzzle_hash,
     create_pooling_inner_puzzle,
     create_travel_spend,
     create_waiting_room_inner_puzzle,
@@ -189,6 +190,12 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,
         )
         p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
+        assert p2_singleton_ph == create_p2_singleton_puzzle_hash(
+            SINGLETON_MOD_HASH,
+            launcher_id,
+            DELAY_TIME,
+            DELAY_PH,
+        )
         assert uncurry_pool_waitingroom_inner_puzzle(pool_wr_innerpuz) == (
             starting_ph,
             relative_lock_height,

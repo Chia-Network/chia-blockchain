@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, cast
 
 import anyio
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element, MerkleSet
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
@@ -66,7 +66,6 @@ from chia.util.generator_tools import get_block_header, tx_removals_and_addition
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
-from chia.util.merkle_set import MerkleSet
 
 if TYPE_CHECKING:
     from chia.full_node.full_node import FullNode

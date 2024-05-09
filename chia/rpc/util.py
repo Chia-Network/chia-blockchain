@@ -1,17 +1,27 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 import traceback
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional, Tuple, get_type_hints
 
 import aiohttp
+from chia_rs import AugSchemeMPL
 
 from chia.types.blockchain_format.coin import Coin
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.json_util import obj_to_response
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_from_json_dicts, parse_timelock_info
+from chia.wallet.trade_record import TradeRecord
+from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.clvm_streamable import (
+    byte_serialize_clvm_streamable,
+    json_deserialize_with_clvm_streamable,
+    json_serialize_with_clvm_streamable,
+)
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
@@ -33,11 +43,21 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     async def rpc_endpoint(self, request: Dict[str, Any], *args: object, **kwargs: object) -> Dict[str, Any]:
         response_obj: Streamable = await func(
             self,
-            request_class.from_json_dict(request),
+            (
+                request_class.from_json_dict(request)
+                if not request.get("CHIP-0029", False)
+                else json_deserialize_with_clvm_streamable(request, request_hint)
+            ),
             *args,
             **kwargs,
         )
-        return response_obj.to_json_dict()
+        if not request.get("CHIP-0029", False):
+            return response_obj.to_json_dict()
+        else:
+            response_dict = json_serialize_with_clvm_streamable(response_obj)
+            if isinstance(response_dict, str):  # pragma: no cover
+                raise ValueError("Internal Error. Marshalled endpoint was made with clvm_streamable.")
+            return response_dict
 
     return rpc_endpoint
 
@@ -131,16 +151,33 @@ def tx_endpoint(
                 # unfortunately, this API isn't solely a tx endpoint
                 return response
 
-            new_txs: List[TransactionRecord] = [
+            tx_records: List[TransactionRecord] = [
                 TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]
             ]
+            unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(tx_records)
+
+            if not request.get("CHIP-0029", False):
+                response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
+            else:
+                response["unsigned_transactions"] = [byte_serialize_clvm_streamable(tx).hex() for tx in unsigned_txs]
+
+            new_txs: List[TransactionRecord] = []
+            if request.get("sign", self.service.config.get("auto_sign_txs", True)):
+                new_txs, signing_responses = await self.service.wallet_state_manager.sign_transactions(
+                    tx_records, response.get("signing_responses", []), "signing_responses" in response
+                )
+                response["signing_responses"] = [byte_serialize_clvm_streamable(r).hex() for r in signing_responses]
+            else:
+                new_txs = tx_records  # pragma: no cover
 
             if request.get("push", push):
                 new_txs = await self.service.wallet_state_manager.add_pending_transactions(
-                    new_txs, merge_spends=merge_spends
+                    new_txs, merge_spends=merge_spends, sign=False
                 )
 
-            response["transactions"] = [tx.to_json_dict_convenience(self.service.config) for tx in new_txs]
+            response["transactions"] = [
+                TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
+            ]
 
             # Some backwards compatibility code here because transaction information being returned was not uniform
             # until the "transactions" key was applied to all of them. Unfortunately, since .add_pending_transactions
@@ -182,8 +219,55 @@ def tx_endpoint(
                     response["tx"] = response["transactions"][0]
                 else:
                     response["tx"] = new_txs[0].to_json_dict()
+            if "txs" in response:
+                response["txs"] = [tx.to_json_dict() for tx in new_txs]
             if "tx_id" in response:
                 response["tx_id"] = new_txs[0].name
+            if "trade_record" in response:
+                old_offer: Offer = Offer.from_bech32(response["offer"])
+                signed_coin_spends: List[CoinSpend] = [
+                    coin_spend
+                    for tx in new_txs
+                    if tx.spend_bundle is not None
+                    for coin_spend in tx.spend_bundle.coin_spends
+                ]
+                involved_coins: List[Coin] = [spend.coin for spend in signed_coin_spends]
+                signed_coin_spends.extend(
+                    [spend for spend in old_offer._bundle.coin_spends if spend.coin not in involved_coins]
+                )
+                new_offer_bundle: SpendBundle = SpendBundle(
+                    signed_coin_spends,
+                    AugSchemeMPL.aggregate(
+                        [tx.spend_bundle.aggregated_signature for tx in new_txs if tx.spend_bundle is not None]
+                    ),
+                )
+                new_offer: Offer = Offer(old_offer.requested_payments, new_offer_bundle, old_offer.driver_dict)
+                response["offer"] = new_offer.to_bech32()
+                old_trade_record: TradeRecord = TradeRecord.from_json_dict_convenience(
+                    response["trade_record"], bytes(old_offer).hex()
+                )
+                new_trade: TradeRecord = dataclasses.replace(
+                    old_trade_record,
+                    offer=bytes(new_offer),
+                    trade_id=new_offer.name(),
+                )
+                response["trade_record"] = new_trade.to_json_dict_convenience()
+                if (
+                    await self.service.wallet_state_manager.trade_manager.trade_store.get_trade_record(
+                        old_trade_record.trade_id
+                    )
+                    is not None
+                ):
+                    await self.service.wallet_state_manager.trade_manager.trade_store.delete_trade_record(
+                        old_trade_record.trade_id
+                    )
+                    await self.service.wallet_state_manager.trade_manager.save_trade(new_trade, new_offer)
+                for tx in await self.service.wallet_state_manager.tx_store.get_transactions_by_trade_id(
+                    old_trade_record.trade_id
+                ):
+                    await self.service.wallet_state_manager.tx_store.add_transaction_record(
+                        dataclasses.replace(tx, trade_id=new_trade.trade_id)
+                    )
 
             return response
 
