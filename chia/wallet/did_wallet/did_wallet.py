@@ -46,6 +46,7 @@ from chia.wallet.singleton import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.curry_and_treehash import NULL_TREEHASH
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
@@ -227,7 +228,7 @@ class DIDWallet:
         inner_solution: Program = full_solution.rest().rest().first()
         recovery_list: List[bytes32] = []
         backup_required: int = num_verification.as_int()
-        if recovery_list_hash != Program.to([]).get_tree_hash():
+        if recovery_list_hash != NULL_TREEHASH:
             try:
                 for did in inner_solution.rest().rest().rest().rest().rest().as_python():
                     recovery_list.append(did[0])
