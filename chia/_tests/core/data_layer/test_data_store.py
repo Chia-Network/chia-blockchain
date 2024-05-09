@@ -370,12 +370,21 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
     "use_optimized",
     [True, False],
 )
-async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimized: bool, tmp_path: Path) -> None:
-    num_batches = 10
-    num_ops_per_batch = 100 if use_optimized else 10
-    saved_roots: List[Root] = []
+@pytest.mark.parametrize(
+    "num_batches",
+    [1, 5, 10, 25],
+)
+async def test_batch_update(
+    data_store: DataStore,
+    tree_id: bytes32,
+    use_optimized: bool,
+    tmp_path: Path,
+    num_batches: int,
+) -> None:
+    total_operations = 1000 if use_optimized else 100
+    num_ops_per_batch = total_operations // num_batches
     saved_batches: List[List[Dict[str, Any]]] = []
-
+    saved_kv: List[List[TerminalNode]] = []
     db_uri = generate_in_memory_db_uri()
     async with DataStore.managed(database=db_uri, uri=True) as single_op_data_store:
         await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
@@ -442,16 +451,21 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
             if (operation + 1) % num_ops_per_batch == 0:
                 saved_batches.append(batch)
                 batch = []
-                root = await single_op_data_store.get_tree_root(tree_id=tree_id)
-                saved_roots.append(root)
+                current_kv = await single_op_data_store.get_keys_values(tree_id=tree_id)
+                assert {kv.key: kv.value for kv in current_kv} == keys_values
+                saved_kv.append(current_kv)
 
     for batch_number, batch in enumerate(saved_batches):
         assert len(batch) == num_ops_per_batch
         await data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
         root = await data_store.get_tree_root(tree_id)
         assert root.generation == batch_number + 1
-        assert root.node_hash == saved_roots[batch_number].node_hash
         assert root.node_hash is not None
+        current_kv = await data_store.get_keys_values(tree_id=tree_id)
+        # Get the same keys/values, but possibly stored in other order.
+        assert {node.key: node.value for node in current_kv} == {
+            node.key: node.value for node in saved_kv[batch_number]
+        }
         queue: List[bytes32] = [root.node_hash]
         ancestors: Dict[bytes32, bytes32] = {}
         while len(queue) > 0:
@@ -1509,6 +1523,18 @@ class BatchInsertBenchmarkCase:
         return f"pre={self.pre},count={self.count}"
 
 
+@dataclass
+class BatchesInsertBenchmarkCase:
+    count: int
+    batch_count: int
+    limit: float
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return f"count={self.count},batch_count={self.batch_count}"
+
+
 @datacases(
     BatchInsertBenchmarkCase(
         pre=0,
@@ -1529,6 +1555,11 @@ class BatchInsertBenchmarkCase:
         pre=1_000,
         count=1_000,
         limit=36,
+    ),
+    BatchInsertBenchmarkCase(
+        pre=10_000,
+        count=25_000,
+        limit=52,
     ),
 )
 @pytest.mark.anyio
@@ -1565,6 +1596,40 @@ async def test_benchmark_batch_insert_speed(
             tree_id=tree_id,
             changelist=batch,
         )
+
+
+@datacases(
+    BatchesInsertBenchmarkCase(
+        count=50,
+        batch_count=200,
+        limit=195,
+    ),
+)
+@pytest.mark.anyio
+async def test_benchmark_batch_insert_speed_multiple_batches(
+    data_store: DataStore,
+    tree_id: bytes32,
+    benchmark_runner: BenchmarkRunner,
+    case: BatchesInsertBenchmarkCase,
+) -> None:
+    r = random.Random()
+    r.seed("shadowlands", version=2)
+
+    with benchmark_runner.assert_runtime(seconds=case.limit):
+        for batch in range(case.batch_count):
+            changelist = [
+                {
+                    "action": "insert",
+                    "key": x.to_bytes(32, byteorder="big", signed=False),
+                    "value": bytes(r.getrandbits(8) for _ in range(10000)),
+                }
+                for x in range(batch * case.count, (batch + 1) * case.count)
+            ]
+            await data_store.insert_batch(
+                tree_id=tree_id,
+                changelist=changelist,
+                status=Status.COMMITTED,
+            )
 
 
 @pytest.mark.anyio
@@ -1916,6 +1981,38 @@ async def test_insert_key_already_present(data_store: DataStore, tree_id: bytes3
     )
     with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
         await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+
+
+@pytest.mark.anyio
+async def test_update_keys(data_store: DataStore, tree_id: bytes32) -> None:
+    num_keys = 10
+    missing_keys = 50
+    num_values = 10
+    new_keys = 10
+    for value in range(num_values):
+        changelist: List[Dict[str, Any]] = []
+        bytes_value = value.to_bytes(4, byteorder="big")
+        for key in range(num_keys + missing_keys):
+            bytes_key = key.to_bytes(4, byteorder="big")
+            changelist.append({"action": "delete", "key": bytes_key})
+        for key in range(num_keys):
+            bytes_key = key.to_bytes(4, byteorder="big")
+            changelist.append({"action": "insert", "key": bytes_key, "value": bytes_value})
+
+        await data_store.insert_batch(
+            tree_id=tree_id,
+            changelist=changelist,
+            status=Status.COMMITTED,
+        )
+        for key in range(num_keys):
+            bytes_key = key.to_bytes(4, byteorder="big")
+            node = await data_store.get_node_by_key(bytes_key, tree_id)
+            assert node.value == bytes_value
+        for key in range(num_keys, num_keys + missing_keys):
+            bytes_key = key.to_bytes(4, byteorder="big")
+            with pytest.raises(KeyNotFoundError, match=f"Key not found: {bytes_key.hex()}"):
+                await data_store.get_node_by_key(bytes_key, tree_id)
+        num_keys += new_keys
 
 
 @pytest.mark.anyio

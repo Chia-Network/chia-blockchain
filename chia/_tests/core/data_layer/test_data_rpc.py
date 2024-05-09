@@ -93,6 +93,7 @@ async def init_data_layer_service(
     wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
+    enable_batch_autoinsert: bool = True,
 ) -> AsyncIterator[DataLayerService]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
@@ -101,6 +102,7 @@ async def init_data_layer_service(
     config["data_layer"]["port"] = 0
     config["data_layer"]["rpc_port"] = 0
     config["data_layer"]["manage_data_interval"] = 5
+    config["data_layer"]["enable_batch_autoinsert"] = enable_batch_autoinsert
     if maximum_full_file_count is not None:
         config["data_layer"]["maximum_full_file_count"] = maximum_full_file_count
     if db_path is not None:
@@ -806,8 +808,10 @@ async def offer_setup_fixture(
     self_hostname: str,
     two_wallet_nodes_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
+    request: pytest.FixtureRequest,
 ) -> AsyncIterator[OfferSetup]:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    enable_batch_autoinsertion_settings = getattr(request, "param", (True, True))
     full_node_api = full_node_service._api
     wallets: List[Wallet] = []
     for wallet_service in wallet_services:
@@ -822,12 +826,16 @@ async def offer_setup_fixture(
 
     async with contextlib.AsyncExitStack() as exit_stack:
         store_setups: List[StoreSetup] = []
-        for wallet_service in wallet_services:
+        for enable_batch_autoinsert, wallet_service in zip(enable_batch_autoinsertion_settings, wallet_services):
             assert wallet_service.rpc_server is not None
             port = wallet_service.rpc_server.listen_port
             data_layer_service = await exit_stack.enter_async_context(
                 init_data_layer_service(
-                    wallet_rpc_port=port, wallet_service=wallet_service, bt=bt, db_path=tmp_path.joinpath(str(port))
+                    wallet_rpc_port=port,
+                    wallet_service=wallet_service,
+                    bt=bt,
+                    db_path=tmp_path.joinpath(str(port)),
+                    enable_batch_autoinsert=enable_batch_autoinsert,
                 )
             )
             data_layer = data_layer_service._api.data_layer
@@ -914,19 +922,20 @@ async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
             (offer_setup.taker, b"\x02"),
         )
         for store_setup, value_prefix in setups:
-            await store_setup.api.batch_update(
-                {
-                    "id": store_setup.id.hex(),
-                    "changelist": [
-                        {
-                            "action": "insert",
-                            "key": value.to_bytes(length=1, byteorder="big").hex(),
-                            "value": (value_prefix + value.to_bytes(length=1, byteorder="big")).hex(),
-                        }
-                        for value in range(count)
-                    ],
-                }
+            await store_setup.data_layer.batch_insert(
+                tree_id=store_setup.id,
+                changelist=[
+                    {
+                        "action": "insert",
+                        "key": value.to_bytes(length=1, byteorder="big"),
+                        "value": (value_prefix + value.to_bytes(length=1, byteorder="big")),
+                    }
+                    for value in range(count)
+                ],
+                status=Status.PENDING,
+                enable_batch_autoinsert=False,
             )
+            await store_setup.data_layer.publish_update(store_setup.id, uint64(0))
 
         await process_for_data_layer_keys(
             expected_key=b"\x00",
@@ -1552,18 +1561,22 @@ make_one_take_one_unpopulated_reference = MakeAndTakeReference(
 
 
 @pytest.mark.parametrize(
-    argnames="reference",
-    argvalues=[
-        pytest.param(make_one_take_one_reference, id="one for one"),
-        pytest.param(make_one_take_one_same_values_reference, id="one for one same values"),
-        pytest.param(make_two_take_one_reference, id="two for one"),
-        pytest.param(make_one_take_two_reference, id="one for two"),
-        pytest.param(make_one_existing_take_one_reference, id="one existing for one"),
-        pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
-        pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
-        pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
-        pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
+    "reference, offer_setup",
+    [
+        pytest.param(make_one_take_one_reference, (True, True), id="one for one new/new batch_update"),
+        pytest.param(make_one_take_one_reference, (True, False), id="one for one new/old batch_update"),
+        pytest.param(make_one_take_one_reference, (False, True), id="one for one old/new batch_update"),
+        pytest.param(make_one_take_one_reference, (False, False), id="one for one old/old batch_update"),
+        pytest.param(make_one_take_one_same_values_reference, (True, True), id="one for one same values"),
+        pytest.param(make_two_take_one_reference, (True, True), id="two for one"),
+        pytest.param(make_one_take_two_reference, (True, True), id="one for two"),
+        pytest.param(make_one_existing_take_one_reference, (True, True), id="one existing for one"),
+        pytest.param(make_one_take_one_existing_reference, (True, True), id="one for one existing"),
+        pytest.param(make_one_upsert_take_one_reference, (True, True), id="one upsert for one"),
+        pytest.param(make_one_take_one_upsert_reference, (True, True), id="one for one upsert"),
+        pytest.param(make_one_take_one_unpopulated_reference, (True, True), id="one for one unpopulated"),
     ],
+    indirect=["offer_setup"],
 )
 @pytest.mark.anyio
 async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTakeReference) -> None:
@@ -3106,7 +3119,7 @@ async def test_pagination_cmds(
         if max_page_size is None or max_page_size == 100:
             assert keys == {
                 "keys": ["0x61616161", "0x6161"],
-                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
+                "root_hash": "0x889a4a61b17be799ae9d36831246672ef857a24091f54481431a83309d4e890e",
                 "success": True,
                 "total_bytes": 6,
                 "total_pages": 1,
@@ -3126,7 +3139,7 @@ async def test_pagination_cmds(
                         "value": "0x6161",
                     },
                 ],
-                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
+                "root_hash": "0x889a4a61b17be799ae9d36831246672ef857a24091f54481431a83309d4e890e",
                 "success": True,
                 "total_bytes": 9,
                 "total_pages": 1,
@@ -3143,7 +3156,7 @@ async def test_pagination_cmds(
         elif max_page_size == 5:
             assert keys == {
                 "keys": ["0x61616161"],
-                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
+                "root_hash": "0x889a4a61b17be799ae9d36831246672ef857a24091f54481431a83309d4e890e",
                 "success": True,
                 "total_bytes": 6,
                 "total_pages": 2,
@@ -3157,7 +3170,7 @@ async def test_pagination_cmds(
                         "value": "0x61",
                     }
                 ],
-                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
+                "root_hash": "0x889a4a61b17be799ae9d36831246672ef857a24091f54481431a83309d4e890e",
                 "success": True,
                 "total_bytes": 9,
                 "total_pages": 2,
