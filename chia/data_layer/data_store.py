@@ -1430,15 +1430,19 @@ class DataStore:
 
             key_hash_frequency: Dict[bytes32, int] = {}
             first_action: Dict[bytes32, str] = {}
+            last_action: Dict[bytes32, str] = {}
+
             for change in changelist:
                 key = change["key"]
                 hash = key_hash(key)
                 key_hash_frequency[hash] = key_hash_frequency.get(hash, 0) + 1
                 if hash not in first_action:
                     first_action[hash] = change["action"]
+                last_action[hash] = change["action"]
 
             pending_autoinsert_hashes: List[bytes32] = []
             pending_upsert_new_hashes: Dict[bytes32, bytes32] = {}
+
             for change in changelist:
                 if change["action"] == "insert":
                     key = change["key"]
@@ -1456,8 +1460,16 @@ class DataStore:
                             if key_hash_frequency[hash] == 1 or (
                                 key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
                             ):
+                                old_node = await self.maybe_get_node_by_key(key, tree_id)
                                 terminal_node_hash = await self._insert_terminal_node(key, value)
-                                pending_autoinsert_hashes.append(terminal_node_hash)
+
+                                if old_node is None:
+                                    pending_autoinsert_hashes.append(terminal_node_hash)
+                                else:
+                                    if key_hash_frequency[hash] == 1:
+                                        raise Exception(f"Key already present: {key.hex()}")
+                                    else:
+                                        pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
                                 continue
                         insert_result = await self.autoinsert(
                             key, value, tree_id, True, Status.COMMITTED, root=latest_local_root
@@ -1479,20 +1491,22 @@ class DataStore:
                         latest_local_root = insert_result.root
                 elif change["action"] == "delete":
                     key = change["key"]
+                    hash = key_hash(key)
+                    if key_hash_frequency[hash] == 2 and last_action[hash] == "insert" and enable_batch_autoinsert:
+                        continue
                     latest_local_root = await self.delete(key, tree_id, True, Status.COMMITTED, root=latest_local_root)
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
+                    hash = key_hash(key)
                     if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
-                        old_node: Optional[Node] = None
-                        try:
-                            old_node = await self.get_node_by_key(key=key, tree_id=tree_id)
-                        except KeyNotFoundError:
-                            pass
+                        terminal_node_hash = await self._insert_terminal_node(key, new_value)
+                        old_node = await self.maybe_get_node_by_key(key, tree_id)
                         if old_node is not None:
-                            terminal_node_hash = await self._insert_terminal_node(key, new_value)
                             pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
-                            continue
+                        else:
+                            pending_autoinsert_hashes.append(terminal_node_hash)
+                        continue
                     insert_result = await self.upsert(
                         key, new_value, tree_id, True, Status.COMMITTED, root=latest_local_root
                     )
@@ -1682,6 +1696,13 @@ class DataStore:
                 raise KeyNotFoundError(key=key)
             assert isinstance(node, TerminalNode)
             return node
+
+    async def maybe_get_node_by_key(self, key: bytes, tree_id: bytes32) -> Optional[TerminalNode]:
+        try:
+            node = await self.get_node_by_key_latest_generation(key, tree_id)
+            return node
+        except KeyNotFoundError:
+            return None
 
     async def get_node_by_key(
         self,
