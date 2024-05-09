@@ -1369,7 +1369,9 @@ class DataStore:
         else:
             await writer.execute(query, params)
 
-    async def get_leaf_at_minimum_height(self, root_hash: bytes32) -> TerminalNode:
+    async def get_leaf_at_minimum_height(
+        self, root_hash: bytes32, hash_to_parent: Dict[bytes32, InternalNode]
+    ) -> TerminalNode:
         root_node = await self.get_node(root_hash)
         queue: List[Node] = [root_node]
         while True:
@@ -1378,6 +1380,8 @@ class DataStore:
             if isinstance(node, InternalNode):
                 left_node = await self.get_node(node.left_hash)
                 right_node = await self.get_node(node.right_hash)
+                hash_to_parent[left_node.hash] = node
+                hash_to_parent[right_node.hash] = node
                 queue.append(left_node)
                 queue.append(right_node)
             elif isinstance(node, TerminalNode):
@@ -1536,14 +1540,14 @@ class DataStore:
                 if latest_local_root is None or latest_local_root.node_hash is None:
                     await self._insert_root(tree_id=tree_id, node_hash=subtree_hash, status=Status.COMMITTED)
                 else:
-                    min_height_leaf = await self.get_leaf_at_minimum_height(latest_local_root.node_hash)
-                    ancestors = await self.get_ancestors_common(
-                        node_hash=min_height_leaf.hash,
-                        tree_id=tree_id,
-                        root_hash=latest_local_root.node_hash,
-                        generation=latest_local_root.generation,
-                        use_optimized=True,
-                    )
+                    hash_to_parent: Dict[bytes32, InternalNode] = {}
+                    min_height_leaf = await self.get_leaf_at_minimum_height(latest_local_root.node_hash, hash_to_parent)
+                    ancestors: List[InternalNode] = []
+                    hash = min_height_leaf.hash
+                    while hash in hash_to_parent:
+                        node = hash_to_parent[hash]
+                        ancestors.append(node)
+                        hash = node.hash
                     await self.update_ancestor_hashes_on_insert(
                         tree_id=tree_id,
                         left=min_height_leaf.hash,
