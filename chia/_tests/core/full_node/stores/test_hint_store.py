@@ -109,6 +109,38 @@ async def test_duplicates(db_version: int) -> None:
 
 
 @pytest.mark.anyio
+async def test_coin_ids_multi(db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        hint_store = await HintStore.create(db_wrapper)
+        hints = [32 * i.to_bytes(1, byteorder="big", signed=False) for i in range(256)]
+        coin_ids = [bytes32(32 * i.to_bytes(1, byteorder="big", signed=False)) for i in range(256)]
+
+        expected: dict[bytes, list[bytes32]] = {}
+        expected[hints[0]] = coin_ids[0:10]
+        expected[hints[1]] = coin_ids[10:15]
+        expected[hints[2]] = [coin_ids[15]]
+        expected[hints[3]] = [coin_ids[16]]
+        expected[hints[4]] = coin_ids[17:20]
+
+        items = [(coin_id, hint) for hint, coin_ids in expected.items() for coin_id in coin_ids]
+
+        await hint_store.add_hints(items)
+
+        # Try all at once
+        actual = await hint_store.get_coin_ids_multi(set(expected.keys()))
+
+        assert set(actual) == {coin_id for coin_ids in expected.values() for coin_id in coin_ids}
+
+        # Try empty set
+        assert await hint_store.get_coin_ids_multi(set()) == []
+
+        # Try one at a time
+        for hint, coin_ids in expected.items():
+            actual = await hint_store.get_coin_ids_multi({hint})
+            assert set(actual) == set(coin_ids)
+
+
+@pytest.mark.anyio
 async def test_hints_in_blockchain(
     wallet_nodes: Tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools

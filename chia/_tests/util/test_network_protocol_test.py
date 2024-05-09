@@ -41,7 +41,7 @@ def test_missing_messages_state_machine() -> None:
     # to the visitor in build_network_protocol_files.py and rerun it. Then
     # update this test
     assert (
-        len(VALID_REPLY_MESSAGE_MAP) == 21
+        len(VALID_REPLY_MESSAGE_MAP) == 25
     ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
     assert (
         len(NO_REPLY_EXPECTED) == 8
@@ -75,6 +75,7 @@ def test_message_ids() -> None:
 def test_missing_messages() -> None:
     wallet_msgs = {
         "CoinState",
+        "CoinStateFilters",
         "CoinStateUpdate",
         "NewPeakWallet",
         "PuzzleSolutionResponse",
@@ -82,27 +83,38 @@ def test_missing_messages() -> None:
         "RegisterForPhUpdates",
         "RejectAdditionsRequest",
         "RejectBlockHeaders",
+        "RejectCoinState",
         "RejectHeaderBlocks",
         "RejectHeaderRequest",
         "RejectPuzzleSolution",
+        "RejectPuzzleState",
         "RejectRemovalsRequest",
+        "RejectStateReason",
         "RequestAdditions",
         "RequestBlockHeader",
         "RequestBlockHeaders",
         "RequestChildren",
+        "RequestCoinState",
         "RequestFeeEstimates",
         "RequestHeaderBlocks",
         "RequestPuzzleSolution",
+        "RequestPuzzleState",
         "RequestRemovals",
+        "RequestRemoveCoinSubscriptions",
+        "RequestRemovePuzzleSubscriptions",
         "RequestSESInfo",
         "RespondAdditions",
         "RespondBlockHeader",
         "RespondBlockHeaders",
         "RespondChildren",
+        "RespondCoinState",
         "RespondFeeEstimates",
         "RespondHeaderBlocks",
         "RespondPuzzleSolution",
+        "RespondPuzzleState",
         "RespondRemovals",
+        "RespondRemoveCoinSubscriptions",
+        "RespondRemovePuzzleSubscriptions",
         "RespondSESInfo",
         "RespondToCoinUpdates",
         "RespondToPhUpdates",

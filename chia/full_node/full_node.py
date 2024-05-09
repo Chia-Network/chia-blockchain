@@ -522,7 +522,7 @@ class FullNode:
             self.full_node_peers = FullNodePeers(
                 self.server,
                 self.config["target_outbound_peer_count"],
-                self.root_path / Path(self.config["peers_file_path"]),
+                self.root_path / Path(self.config.get("peers_file_path", "db/peers.dat")),
                 self.config["introducer_peer"],
                 dns_servers,
                 self.config["peer_connect_interval"],
@@ -2363,8 +2363,10 @@ class FullNode:
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
                 else:
                     await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
+
                 if self.simulator_transaction_callback is not None:  # callback
                     await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
+
             else:
                 self.mempool_manager.remove_seen(spend_name)
                 self.log.debug(f"Wasn't able to add transaction with id {spend_name}, status {status} error: {error}")

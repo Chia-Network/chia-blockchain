@@ -14,10 +14,9 @@ protocol_version = {
     NodeType.FARMER: "0.0.36",
     NodeType.TIMELORD: "0.0.36",
     NodeType.INTRODUCER: "0.0.36",
-    NodeType.WALLET: "0.0.36",
+    NodeType.WALLET: "0.0.37",
     NodeType.DATA_LAYER: "0.0.36",
 }
-
 
 """
 Handshake when establishing a connection between two servers.
@@ -32,7 +31,7 @@ class Capability(IntEnum):
     # introduces RequestBlockHeaders, which is a faster API for fetching header blocks
     # !! the old API is *RequestHeaderBlock* !!
     BLOCK_HEADERS = 2
-    # Specifies support for v1 and v2 versions of rate limits. Peers will ues the lowest shared capability:
+    # Specifies support for v1 and v2 versions of rate limits. Peers will use the lowest shared capability:
     # if peer A support v3 and peer B supports v2, they should send:
     # (BASE, RATE_LIMITS_V2, RATE_LIMITS_V3), and (BASE, RATE_LIMITS_V2) respectively. They will use the V2 limits.
     RATE_LIMITS_V2 = 3

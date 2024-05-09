@@ -22,22 +22,28 @@ EXTRAS=
 PLOTTER_INSTALL=
 EDITABLE='-e'
 
-while getopts adilpsh flag
-do
+while getopts adilpsh flag; do
   case "${flag}" in
-    # automated
-    a) :;;
-    # development
-    d) EXTRAS=${EXTRAS}dev,;;
-    # non-editable
-    i) EDITABLE='';;
-    # legacy keyring
-    l) EXTRAS=${EXTRAS}legacy-keyring,;;
-    p) PLOTTER_INSTALL=1;;
-    # simple install
-    s) :;;
-    h) usage; exit 0;;
-    *) echo; usage; exit 1;;
+  # automated
+  a) : ;;
+  # development
+  d) EXTRAS=${EXTRAS}dev, ;;
+  # non-editable
+  i) EDITABLE='' ;;
+  # legacy keyring
+  l) EXTRAS=${EXTRAS}legacy-keyring, ;;
+  p) PLOTTER_INSTALL=1 ;;
+  # simple install
+  s) : ;;
+  h)
+    usage
+    exit 0
+    ;;
+  *)
+    echo
+    usage
+    exit 1
+    ;;
   esac
 done
 
@@ -53,7 +59,6 @@ if [ "$(uname -m)" = "armv7l" ]; then
 fi
 # Get submodules
 git submodule update --init mozilla-ca
-
 
 # You can specify preferred python version by exporting `INSTALL_PYTHON_VERSION`
 # e.g. `export INSTALL_PYTHON_VERSION=3.8`

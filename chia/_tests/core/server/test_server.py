@@ -80,7 +80,7 @@ async def test_connection_versions(
     outgoing_connection = wallet_node.server.all_connections[full_node.server.node_id]
     incoming_connection = full_node.server.all_connections[wallet_node.server.node_id]
     for connection in [outgoing_connection, incoming_connection]:
-        assert connection.protocol_version == Version(protocol_version[NodeType.FULL_NODE])
+        assert connection.protocol_version == Version(protocol_version[NodeType.WALLET])
         assert connection.version == __version__
         assert connection.get_version() == connection.version
 
