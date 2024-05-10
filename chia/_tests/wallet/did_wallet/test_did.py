@@ -1313,7 +1313,7 @@ class TestDIDWallet:
                 wallet_node_1.wallet_state_manager,
                 wallet,
                 uint64(101),
-                [bytes(ph)],
+                [bytes32(ph)],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
                 fee=fee,

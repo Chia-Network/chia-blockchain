@@ -331,22 +331,22 @@ class InternalNode:
 
 @dataclass(frozen=True)
 class Root:
-    tree_id: bytes32
+    store_id: bytes32
     node_hash: Optional[bytes32]
     generation: int
     status: Status
 
     @classmethod
     async def from_row(cls, row: aiosqlite.Row, data_store: DataStore) -> Root:
-        tree_id = bytes32(row["tree_id"])
+        store_id = bytes32(row["tree_id"])
         generation = row["generation"]
         status = Status(row["status"])
 
         # TODO: should not be handled this way
-        node_hash = await data_store._get_root_hash(tree_id=tree_id, generation=generation)
+        node_hash = await data_store._get_root_hash(store_id=store_id, generation=generation)
 
         return cls(
-            tree_id=tree_id,
+            store_id=store_id,
             node_hash=node_hash,
             generation=generation,
             status=status,
@@ -354,7 +354,7 @@ class Root:
 
     def to_row(self) -> Dict[str, Any]:
         return {
-            "tree_id": self.tree_id,
+            "tree_id": self.store_id,
             "node_hash": self.node_hash,
             "generation": self.generation,
             "status": self.status.value,
@@ -363,7 +363,7 @@ class Root:
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> Root:
         return cls(
-            tree_id=bytes32.from_hexstr(marshalled["tree_id"]),
+            store_id=bytes32.from_hexstr(marshalled["tree_id"]),
             node_hash=None if marshalled["node_hash"] is None else bytes32.from_hexstr(marshalled["node_hash"]),
             generation=marshalled["generation"],
             status=Status(marshalled["status"]),
@@ -371,7 +371,7 @@ class Root:
 
     def marshal(self) -> Dict[str, Any]:
         return {
-            "tree_id": self.tree_id.hex(),
+            "tree_id": self.store_id.hex(),
             "node_hash": None if self.node_hash is None else self.node_hash.hex(),
             "generation": self.generation,
             "status": self.status.value,
@@ -393,7 +393,7 @@ class ServerInfo:
 
 @dataclass(frozen=True)
 class Subscription:
-    tree_id: bytes32
+    store_id: bytes32
     servers_info: List[ServerInfo]
 
 
@@ -718,7 +718,7 @@ class ClearPendingRootsResponse:
     success: bool
 
     root: Optional[Root]
-    # tree_id: bytes32
+    # store_id: bytes32
     # node_hash: Optional[bytes32]
     # generation: int
     # status: Status
@@ -782,7 +782,7 @@ class InsertResult:
 
 @dataclasses.dataclass(frozen=True)
 class UnsubscribeData:
-    tree_id: bytes32
+    store_id: bytes32
     retain_data: bool
 
 

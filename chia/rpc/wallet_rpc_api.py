@@ -110,6 +110,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
@@ -2332,7 +2333,7 @@ class WalletRpcApi:
             )
             full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
+                our_inner_puzzle, NIL_TREEHASH, uint64(0), singleton_struct, metadata
             )
             # Check if we have the DID wallet
             did_wallet: Optional[DIDWallet] = None
@@ -2422,7 +2423,7 @@ class WalletRpcApi:
                     inner_solution: Program = full_solution.rest().rest().first()
                     recovery_list: List[bytes32] = []
                     backup_required: int = num_verification.as_int()
-                    if recovery_list_hash != Program.to([]).get_tree_hash():
+                    if recovery_list_hash != NIL_TREEHASH:
                         try:
                             for did in inner_solution.rest().rest().rest().rest().rest().as_python():
                                 recovery_list.append(did[0])

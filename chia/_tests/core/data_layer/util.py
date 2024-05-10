@@ -28,7 +28,7 @@ else:
 
 async def general_insert(
     data_store: DataStore,
-    tree_id: bytes32,
+    store_id: bytes32,
     key: bytes,
     value: bytes,
     reference_node_hash: bytes32,
@@ -37,7 +37,7 @@ async def general_insert(
     insert_result = await data_store.insert(
         key=key,
         value=value,
-        tree_id=tree_id,
+        store_id=store_id,
         reference_node_hash=reference_node_hash,
         side=side,
         status=Status.COMMITTED,
@@ -51,7 +51,7 @@ class Example:
     terminal_nodes: List[bytes32]
 
 
-async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
+async def add_0123_example(data_store: DataStore, store_id: bytes32) -> Example:
     expected = Program.to(
         (
             (
@@ -65,7 +65,7 @@ async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
         ),
     )
 
-    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
+    insert = functools.partial(general_insert, data_store=data_store, store_id=store_id)
 
     c_hash = await insert(key=b"\x02", value=b"\x12\x02", reference_node_hash=None, side=None)
     b_hash = await insert(key=b"\x01", value=b"\x11\x01", reference_node_hash=c_hash, side=Side.LEFT)
@@ -75,7 +75,7 @@ async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash])
 
 
-async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Example:
+async def add_01234567_example(data_store: DataStore, store_id: bytes32) -> Example:
     expected = Program.to(
         (
             (
@@ -101,7 +101,7 @@ async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Examp
         ),
     )
 
-    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
+    insert = functools.partial(general_insert, data_store=data_store, store_id=store_id)
 
     g_hash = await insert(key=b"\x06", value=b"\x16\x06", reference_node_hash=None, side=None)
 
@@ -198,7 +198,7 @@ def create_valid_node_values(
 
 
 def create_valid_node_values(
-    tree_id: bytes32,
+    store_id: bytes32,
     generation: int,
     node_type: NodeType,
     left_hash: Optional[bytes32] = None,
@@ -208,7 +208,7 @@ def create_valid_node_values(
         assert left_hash is not None
         assert right_hash is not None
         return {
-            "tree_id": tree_id,
+            "tree_id": store_id,
             "generation": generation,
             "hash": Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash),
             "node_type": node_type,
@@ -222,7 +222,7 @@ def create_valid_node_values(
         key = b""
         value = b""
         return {
-            "tree_id": tree_id,
+            "tree_id": store_id,
             "generation": generation,
             "hash": Program.to((key, value)).get_tree_hash(),
             "node_type": node_type,

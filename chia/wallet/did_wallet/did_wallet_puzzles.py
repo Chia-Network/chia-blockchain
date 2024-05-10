@@ -13,16 +13,26 @@ from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
+    SINGLETON_LAUNCHER_PUZZLE_HASH_TREE_HASH,
     SINGLETON_TOP_LAYER_MOD,
     SINGLETON_TOP_LAYER_MOD_HASH,
+    SINGLETON_TOP_LAYER_MOD_HASH_TREE_HASH,
     is_singleton,
 )
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
+from chia.wallet.util.curry_and_treehash import (
+    calculate_hash_of_quoted_mod_hash,
+    curry_and_treehash,
+    shatree_atom,
+    shatree_atom_list,
+    shatree_int,
+    shatree_pair,
+)
 
 DID_INNERPUZ_MOD = load_clvm_maybe_recompile(
     "did_innerpuz.clsp", package_or_requirement="chia.wallet.did_wallet.puzzles"
 )
 DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
+DID_INNERPUZ_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(DID_INNERPUZ_MOD_HASH)
 INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile(
     "nft_intermediate_launcher.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
 )
@@ -74,17 +84,20 @@ def get_inner_puzhash_by_p2(
     :return: DID inner puzzle hash
     """
 
-    backup_ids_hash = Program(Program.to(recovery_list)).get_tree_hash()
-    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
+    backup_ids_hash = shatree_atom_list(recovery_list)
 
-    quoted_mod_hash = calculate_hash_of_quoted_mod_hash(DID_INNERPUZ_MOD_HASH)
+    # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
+    singleton_struct = shatree_pair(
+        SINGLETON_TOP_LAYER_MOD_HASH_TREE_HASH,
+        shatree_pair(shatree_atom(launcher_id), SINGLETON_LAUNCHER_PUZZLE_HASH_TREE_HASH),
+    )
 
     return curry_and_treehash(
-        quoted_mod_hash,
+        DID_INNERPUZ_MOD_HASH_QUOTED,
         p2_puzhash,
-        Program.to(backup_ids_hash).get_tree_hash(),
-        Program.to(num_of_backup_ids_needed).get_tree_hash(),
-        Program.to(singleton_struct).get_tree_hash(),
+        shatree_atom(backup_ids_hash),
+        shatree_int(num_of_backup_ids_needed),
+        singleton_struct,
         metadata.get_tree_hash(),
     )
 
