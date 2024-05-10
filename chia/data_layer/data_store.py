@@ -273,6 +273,7 @@ class DataStore:
     async def _insert_root(
         self,
         tree_id: bytes32,
+        # TODO: not _really_ using this
         node_hash: Optional[bytes32],
         status: Status,
         # TODO: review calls for it now being optional and defaulted
@@ -631,7 +632,6 @@ class DataStore:
                 SELECT *
                 FROM root
                 WHERE tree_id == :tree_id AND generation == :generation AND status == :status
-                LIMIT 1
                 """,
                 {"tree_id": tree_id, "generation": generation, "status": Status.COMMITTED.value},
             )
@@ -639,6 +639,9 @@ class DataStore:
 
             if row is None:
                 raise Exception(f"unable to find root for id, generation: {tree_id.hex()}, {generation}")
+
+            another_row = await cursor.fetchone()
+            assert another_row is None
 
         return await Root.from_row(row=row, data_store=self)
 
@@ -1606,15 +1609,15 @@ class DataStore:
         else:
             await writer.execute(query, params)
 
-    async def get_leaf_at_minimum_height(self, root_hash: bytes32) -> TerminalNode:
-        root_node = await self.get_node(root_hash)
+    async def get_leaf_at_minimum_height(self, root: Root) -> TerminalNode:
+        root_node = await self.get_node(root=root, node_hash=root.node_hash)
         queue: List[Node] = [root_node]
         while True:
             assert len(queue) > 0
             node = queue.pop(0)
             if isinstance(node, InternalNode):
-                left_node = await self.get_node(node.left_hash)
-                right_node = await self.get_node(node.right_hash)
+                left_node = await self.get_node(root=root, node_hash=node.left_hash)
+                right_node = await self.get_node(root=root, node_hash=node.right_hash)
                 queue.append(left_node)
                 queue.append(right_node)
             elif isinstance(node, TerminalNode):
@@ -1673,7 +1676,13 @@ class DataStore:
                             if key_hash_frequency[hash] == 1 or (
                                 key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
                             ):
-                                terminal_node_hash = await self._insert_terminal_node(key, value)
+                                terminal_node_hash = await self._insert_terminal_node(
+                                    tree_id=tree_id,
+                                    generation=new_generation,
+                                    parent_hash=None,
+                                    key=key,
+                                    value=value,
+                                )
                                 pending_autoinsert_hashes.append(terminal_node_hash)
                                 continue
                         insert_result = await self.autoinsert(
@@ -1729,9 +1738,22 @@ class DataStore:
             while len(pending_autoinsert_hashes) > 1:
                 new_hashes: List[bytes32] = []
                 for i in range(0, len(pending_autoinsert_hashes) - 1, 2):
+                    left = pending_autoinsert_hashes[i]
+                    right = pending_autoinsert_hashes[i + 1]
                     internal_node_hash = await self._insert_internal_node(
-                        pending_autoinsert_hashes[i], pending_autoinsert_hashes[i + 1]
+                        tree_id=tree_id,
+                        generation=new_generation,
+                        parent_hash=None,
+                        left_hash=left,
+                        right_hash=right,
                     )
+                    for child in [left, right]:
+                        await self._set_parent(
+                            tree_id=tree_id,
+                            generation=new_generation,
+                            node_hash=child,
+                            parent_hash=internal_node_hash,
+                        )
                     new_hashes.append(internal_node_hash)
                 if len(pending_autoinsert_hashes) % 2 != 0:
                     new_hashes.append(pending_autoinsert_hashes[-1])
@@ -1741,49 +1763,72 @@ class DataStore:
             if len(pending_autoinsert_hashes):
                 subtree_hash = pending_autoinsert_hashes[0]
                 if latest_local_root is None or latest_local_root.node_hash is None:
-                    await self._insert_root(tree_id=tree_id, node_hash=subtree_hash, status=Status.COMMITTED)
-                else:
-                    min_height_leaf = await self.get_leaf_at_minimum_height(latest_local_root.node_hash)
-                    ancestors = await self.get_ancestors_common(
-                        node_hash=min_height_leaf.hash,
+                    # TODO: is this too specific to the new insert style and needs a wider scope where it happens?
+                    root = await self._insert_root(
                         tree_id=tree_id,
-                        root_hash=latest_local_root.node_hash,
-                        generation=latest_local_root.generation,
-                        use_optimized=True,
-                    )
-                    await self.update_ancestor_hashes_on_insert(
-                        tree_id=tree_id,
-                        left=min_height_leaf.hash,
-                        right=subtree_hash,
-                        traversal_node_hash=min_height_leaf.hash,
-                        ancestors=ancestors,
+                        node_hash=subtree_hash,
                         status=Status.COMMITTED,
-                        root=latest_local_root,
+                        generation=new_generation,
                     )
+                else:
+                    root = await self._insert_root(
+                        tree_id=tree_id,
+                        node_hash=latest_local_root.node_hash,
+                        status=Status.COMMITTED,
+                        generation=new_generation,
+                    )
+
+                    min_height_leaf = await self.get_leaf_at_minimum_height(root=root)
+
+                    left = min_height_leaf.hash
+                    right = subtree_hash
+                    # TODO: should we pick a side less fixedly
+                    new_internal_node_hash = await self._insert_internal_node(
+                        tree_id=tree_id,
+                        generation=new_generation,
+                        parent_hash=None,
+                        left_hash=left,
+                        right_hash=right,
+                    )
+                    for child_hash in [left, right]:
+                        await self._set_parent(
+                            tree_id=tree_id,
+                            generation=new_generation,
+                            node_hash=child_hash,
+                            parent_hash=new_internal_node_hash,
+                        )
+
+                    new_root_hash = await self._propagate_update_through_lineage(
+                        root=root,
+                        parent_hash=min_height_leaf.parent_hash,
+                        original_child_hash=min_height_leaf.hash,
+                        new_child_hash=new_internal_node_hash,
+                    )
+                    root = replace(root, node_hash=new_root_hash)
+
+                    # new_root = await self._insert_root(
+                    #     tree_id=tree_id,
+                    #     node_hash=new_root_hash,
+                    #     status=status,
+                    #     generation=new_generation,
+                    # )
 
             await _debug_dump(db=self.db_wrapper)
-            cursor = await writer.execute(
-                """
-                SELECT hash
-                FROM node
-                WHERE tree_id = :tree_id AND generation = :generation AND parent IS NULL
-                LIMIT 1
-                """,
-                {"tree_id": tree_id, "generation": new_generation},
-            )
-            maybe_row = await cursor.fetchone()
-
-            if maybe_row is None:
-                new_root_hash = None
-            else:
-                new_root_hash = maybe_row["hash"]
-
-            root = await self._insert_root(
-                tree_id=tree_id,
-                node_hash=new_root_hash,
-                status=Status.COMMITTED,  # status,
-                generation=new_generation,
-            )
+            # cursor = await writer.execute(
+            #     """
+            #     SELECT hash
+            #     FROM node
+            #     WHERE tree_id = :tree_id AND generation = :generation AND parent IS NULL
+            #     LIMIT 1
+            #     """,
+            #     {"tree_id": tree_id, "generation": new_generation},
+            # )
+            # maybe_row = await cursor.fetchone()
+            #
+            # if maybe_row is None:
+            #     new_root_hash = None
+            # else:
+            #     new_root_hash = maybe_row["hash"]
 
             await _debug_dump(db=self.db_wrapper)
             if root.node_hash == old_root.node_hash:
