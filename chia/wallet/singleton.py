@@ -8,13 +8,20 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
+from chia.wallet.util.curry_and_treehash import (
+    calculate_hash_of_quoted_mod_hash,
+    curry_and_treehash,
+    shatree_atom,
+    shatree_pair,
+)
 
 SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
 SINGLETON_TOP_LAYER_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
+SINGLETON_TOP_LAYER_MOD_HASH_TREE_HASH = shatree_atom(SINGLETON_TOP_LAYER_MOD_HASH)
 SINGLETON_TOP_LAYER_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(SINGLETON_TOP_LAYER_MOD_HASH)
 SINGLETON_LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clsp")
 SINGLETON_LAUNCHER_PUZZLE_HASH = SINGLETON_LAUNCHER_PUZZLE.get_tree_hash()
+SINGLETON_LAUNCHER_PUZZLE_HASH_TREE_HASH = shatree_atom(SINGLETON_LAUNCHER_PUZZLE_HASH)
 
 
 def get_inner_puzzle_from_singleton(puzzle: Union[Program, SerializedProgram]) -> Optional[Program]:
@@ -66,9 +73,12 @@ def create_singleton_puzzle_hash(innerpuz_hash: bytes32, launcher_id: bytes32) -
     :return: Singleton full puzzle hash
     """
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
-    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
+    singleton_struct = shatree_pair(
+        SINGLETON_TOP_LAYER_MOD_HASH_TREE_HASH,
+        shatree_pair(shatree_atom(launcher_id), SINGLETON_LAUNCHER_PUZZLE_HASH_TREE_HASH),
+    )
 
-    return curry_and_treehash(SINGLETON_TOP_LAYER_MOD_HASH_QUOTED, singleton_struct.get_tree_hash(), innerpuz_hash)
+    return curry_and_treehash(SINGLETON_TOP_LAYER_MOD_HASH_QUOTED, singleton_struct, innerpuz_hash)
 
 
 def create_singleton_puzzle(innerpuz: Union[Program, SerializedProgram], launcher_id: bytes32) -> Program:
