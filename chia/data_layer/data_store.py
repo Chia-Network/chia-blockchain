@@ -955,6 +955,14 @@ class DataStore:
         kv_diff: List[DiffData] = []
 
         for hash in pagination_data.hashes:
+            if hash in old_pairs.keys_values_hashed:
+                root = root1
+            elif hash in new_pairs.keys_values_hashed:
+                root = root2
+            else:
+                # TODO: real error
+                assert False, "ack"
+
             node = await self.get_node(root=root, node_hash=hash)
             assert isinstance(node, TerminalNode)
             if hash in insertions:
