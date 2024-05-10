@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
-import random
+import secrets
 import sqlite3
 import sys
 from dataclasses import dataclass, field
@@ -53,7 +53,7 @@ class InternalError(DBWrapperError):
 
 def generate_in_memory_db_uri() -> str:
     # We need to use shared cache as our DB wrapper uses different types of connections
-    return f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+    return f"file:db_{secrets.token_hex(16)}?mode=memory&cache=shared"
 
 
 async def execute_fetchone(

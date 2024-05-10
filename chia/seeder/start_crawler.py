@@ -6,7 +6,7 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Dict, Optional
 
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.crawler_rpc_api import CrawlerRpcApi
 from chia.seeder.crawler import Crawler
@@ -70,7 +70,7 @@ async def async_main() -> int:
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
-    updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+    updated_constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_full_node_crawler_service(DEFAULT_ROOT_PATH, config, updated_constants)
     async with SignalHandlers.manage() as signal_handlers:

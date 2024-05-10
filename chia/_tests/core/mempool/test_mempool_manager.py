@@ -49,7 +49,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.payment import Payment
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -166,9 +166,9 @@ async def setup_mempool_with_coins(
 
     constants = DEFAULT_CONSTANTS
     if max_block_clvm_cost is not None:
-        constants = dataclasses.replace(constants, MAX_BLOCK_COST_CLVM=max_block_clvm_cost)
+        constants = constants.replace(MAX_BLOCK_COST_CLVM=uint64(max_block_clvm_cost))
     if mempool_block_buffer is not None:
-        constants = dataclasses.replace(constants, MEMPOOL_BLOCK_BUFFER=mempool_block_buffer)
+        constants = constants.replace(MEMPOOL_BLOCK_BUFFER=uint8(mempool_block_buffer))
     mempool_manager = await instantiate_mempool_manager(
         get_coin_records, constants=constants, max_tx_clvm_cost=max_tx_clvm_cost
     )
@@ -1030,7 +1030,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
     async def make_and_send_big_cost_sb(coin: Coin) -> None:
         conditions = []
         g1 = G1Element()
-        for _ in range(144):
+        for _ in range(169):
             conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 10_000_000])
         # Create a spend bundle with a big enough cost that gets it close to the limit
@@ -1040,7 +1040,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
     mempool_manager, coins = await setup_mempool_with_coins(
         coin_amounts=list(range(1_000_000_000, 1_000_000_030)),
         max_block_clvm_cost=550_000_000,
-        max_tx_clvm_cost=uint64(550_000_000 * 0.6),
+        max_tx_clvm_cost=uint64(550_000_000),
         mempool_block_buffer=20,
     )
     # Create the spend bundles with a big enough cost that they get close to the limit
@@ -1588,6 +1588,7 @@ async def test_identical_spend_aggregation_e2e(
         [tx] = await wallet.generate_signed_transaction(
             uint64(200), phs[0], DEFAULT_TX_CONFIG, primaries=other_recipients
         )
+        [tx], _ = await wallet.wallet_state_manager.sign_transactions([tx])
         assert tx.spend_bundle is not None
         await send_to_mempool(full_node_api, tx.spend_bundle)
         await farm_a_block(full_node_api, wallet_node, ph)
@@ -1605,6 +1606,7 @@ async def test_identical_spend_aggregation_e2e(
     [tx_a] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[0].coin})
     [tx_b] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[1].coin})
     [tx_c] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[2].coin})
+    [tx_a, tx_b, tx_c], _ = await wallet.wallet_state_manager.sign_transactions([tx_a, tx_b, tx_c])
     assert tx_a.spend_bundle is not None
     assert tx_b.spend_bundle is not None
     assert tx_c.spend_bundle is not None
@@ -1621,6 +1623,7 @@ async def test_identical_spend_aggregation_e2e(
     [tx] = await wallet.generate_signed_transaction(
         uint64(200), IDENTITY_PUZZLE_HASH, DEFAULT_TX_CONFIG, coins={coins[3].coin}
     )
+    [tx], _ = await wallet.wallet_state_manager.sign_transactions([tx])
     assert tx.spend_bundle is not None
     await send_to_mempool(full_node_api, tx.spend_bundle)
     await farm_a_block(full_node_api, wallet_node, ph)
@@ -1658,6 +1661,7 @@ async def test_identical_spend_aggregation_e2e(
         coins={coins[5].coin},
         extra_conditions=(e_announcement,),
     )
+    [tx_d, tx_f], _ = await wallet.wallet_state_manager.sign_transactions([tx_d, tx_f])
     assert tx_d.spend_bundle is not None
     assert tx_f.spend_bundle is not None
     # Create transaction E now that spends e_coin to create another eligible
@@ -1686,6 +1690,7 @@ async def test_identical_spend_aggregation_e2e(
     [tx_g] = await wallet.generate_signed_transaction(
         uint64(13), ph, DEFAULT_TX_CONFIG, coins={g_coin}, extra_conditions=(e_announcement,)
     )
+    [tx_g], _ = await wallet.wallet_state_manager.sign_transactions([tx_g])
     assert tx_g.spend_bundle is not None
     sb_e2g = SpendBundle.aggregate([sb_e2, tx_g.spend_bundle])
     sb_e2g_name = sb_e2g.name()

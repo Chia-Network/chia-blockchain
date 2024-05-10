@@ -160,6 +160,14 @@ class DataStore:
                 )
                 await writer.execute(
                     """
+                    CREATE TABLE IF NOT EXISTS schema(
+                        version_id TEXT PRIMARY KEY,
+                        applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+                await writer.execute(
+                    """
                     CREATE INDEX IF NOT EXISTS node_key_index ON node(key)
                     """
                 )
@@ -205,6 +213,40 @@ class DataStore:
     async def transaction(self) -> AsyncIterator[None]:
         async with self.db_wrapper.writer():
             yield
+
+    async def migrate_db(self) -> None:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute("SELECT * FROM schema")
+            row = await cursor.fetchone()
+            if row is not None:
+                version = row["version_id"]
+                if version != "v1.0":
+                    raise Exception("Unknown version")
+                log.info(f"Found DB schema version {version}. No migration needed.")
+                return
+
+        version = "v1.0"
+        log.info(f"Initiating migration to version {version}")
+        async with self.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+            await writer.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS new_root(
+                    tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                    generation INTEGER NOT NULL CHECK(generation >= 0),
+                    node_hash BLOB,
+                    status INTEGER NOT NULL CHECK(
+                        {" OR ".join(f"status == {status}" for status in Status)}
+                    ),
+                    PRIMARY KEY(tree_id, generation),
+                    FOREIGN KEY(node_hash) REFERENCES node(hash)
+                )
+                """
+            )
+            await writer.execute("INSERT INTO new_root SELECT * FROM root")
+            await writer.execute("DROP TABLE root")
+            await writer.execute("ALTER TABLE new_root RENAME TO root")
+            await writer.execute("INSERT INTO schema (version_id) VALUES (?)", (version,))
+        log.info(f"Finished migrating DB to version {version}")
 
     async def _get_root_hash(self, tree_id: bytes32, generation: int) -> Optional[bytes32]:
         # TODO: should not be handled this way
@@ -600,6 +642,20 @@ class DataStore:
 
         return await Root.from_row(row=row, data_store=self)
 
+    async def get_all_pending_batches_roots(self) -> List[Root]:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
+                """
+                SELECT * FROM root WHERE status == :status
+                """,
+                {"status": Status.PENDING_BATCH.value},
+            )
+            roots = [await Root.from_row(row=row, data_store=self) async for row in cursor]
+            tree_ids = [root.tree_id for root in roots]
+            if len(set(tree_ids)) != len(tree_ids):
+                raise Exception("Internal error: multiple pending batches for a store")
+            return roots
+
     async def tree_id_exists(self, tree_id: bytes32) -> bool:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
@@ -855,9 +911,7 @@ class DataStore:
             keys_values_compressed.root_hash,
         )
 
-    async def get_keys_values_paginated(
-        self, root: Root, page: int, max_page_size: int
-    ) -> KeysValuesPaginationData:
+    async def get_keys_values_paginated(self, root: Root, page: int, max_page_size: int) -> KeysValuesPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(root=root)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
 
@@ -1169,8 +1223,7 @@ class DataStore:
             # await _debug_dump(db=self.db_wrapper, description="before get lineage")
             # TODO: ick, just ancestors would make typing easier
             lineage: List[InternalNode] = await self.get_lineage(  # type: ignore[assignment]
-                node_hash=parent_hash,
-                root=root
+                node_hash=parent_hash, root=root
             )
 
             if len(lineage) == 0:
@@ -1299,10 +1352,7 @@ class DataStore:
                 if not was_empty:
                     raise Exception(f"Reference node hash must be specified for non-empty tree: {tree_id.hex()}")
             else:
-                reference_node = await self.get_node(
-                    root=root,
-                    node_hash=reference_node_hash
-                )
+                reference_node = await self.get_node(root=root, node_hash=reference_node_hash)
                 if isinstance(reference_node, InternalNode):
                     raise Exception("can not insert a new key/value adjacent to an internal node")
 
@@ -1556,11 +1606,26 @@ class DataStore:
         else:
             await writer.execute(query, params)
 
+    async def get_leaf_at_minimum_height(self, root_hash: bytes32) -> TerminalNode:
+        root_node = await self.get_node(root_hash)
+        queue: List[Node] = [root_node]
+        while True:
+            assert len(queue) > 0
+            node = queue.pop(0)
+            if isinstance(node, InternalNode):
+                left_node = await self.get_node(node.left_hash)
+                right_node = await self.get_node(node.right_hash)
+                queue.append(left_node)
+                queue.append(right_node)
+            elif isinstance(node, TerminalNode):
+                return node
+
     async def insert_batch(
         self,
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
+        enable_batch_autoinsert: bool = True,
     ) -> Optional[bytes32]:
         async with self.db_wrapper.writer() as writer:
             old_root = await self.get_tree_root(tree_id)
@@ -1581,6 +1646,16 @@ class DataStore:
 
             new_generation = await self._create_new_generation(tree_id=tree_id)
 
+            key_hash_frequency: Dict[bytes32, int] = {}
+            first_action: Dict[bytes32, str] = {}
+            for change in changelist:
+                key = change["key"]
+                hash = key_hash(key)
+                key_hash_frequency[hash] = key_hash_frequency.get(hash, 0) + 1
+                if hash not in first_action:
+                    first_action[hash] = change["action"]
+
+            pending_autoinsert_hashes: List[bytes32] = []
             for change in changelist:
                 if change["action"] == "insert":
                     key = change["key"]
@@ -1588,6 +1663,19 @@ class DataStore:
                     reference_node_hash = change.get("reference_node_hash", None)
                     side = change.get("side", None)
                     if reference_node_hash is None and side is None:
+                        hash = key_hash(key)
+                        # The key is not referenced in any other operation but this autoinsert, hence the order
+                        # of performing these should not matter. We perform all these autoinserts as a batch
+                        # at the end, to speed up the tree processing operations.
+                        # Additionally, if the first action is a delete, we can still perform the autoinsert at the
+                        # end, since the order will be preserved.
+                        if enable_batch_autoinsert:
+                            if key_hash_frequency[hash] == 1 or (
+                                key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
+                            ):
+                                terminal_node_hash = await self._insert_terminal_node(key, value)
+                                pending_autoinsert_hashes.append(terminal_node_hash)
+                                continue
                         insert_result = await self.autoinsert(
                             key=key,
                             value=value,
@@ -1635,6 +1723,43 @@ class DataStore:
                     latest_local_root = insert_result.root
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
+
+            # Start with the leaf nodes and pair them to form new nodes at the next level up, repeating this process
+            # in a bottom-up fashion until a single root node remains. This constructs a balanced tree from the leaves.
+            while len(pending_autoinsert_hashes) > 1:
+                new_hashes: List[bytes32] = []
+                for i in range(0, len(pending_autoinsert_hashes) - 1, 2):
+                    internal_node_hash = await self._insert_internal_node(
+                        pending_autoinsert_hashes[i], pending_autoinsert_hashes[i + 1]
+                    )
+                    new_hashes.append(internal_node_hash)
+                if len(pending_autoinsert_hashes) % 2 != 0:
+                    new_hashes.append(pending_autoinsert_hashes[-1])
+
+                pending_autoinsert_hashes = new_hashes
+
+            if len(pending_autoinsert_hashes):
+                subtree_hash = pending_autoinsert_hashes[0]
+                if latest_local_root is None or latest_local_root.node_hash is None:
+                    await self._insert_root(tree_id=tree_id, node_hash=subtree_hash, status=Status.COMMITTED)
+                else:
+                    min_height_leaf = await self.get_leaf_at_minimum_height(latest_local_root.node_hash)
+                    ancestors = await self.get_ancestors_common(
+                        node_hash=min_height_leaf.hash,
+                        tree_id=tree_id,
+                        root_hash=latest_local_root.node_hash,
+                        generation=latest_local_root.generation,
+                        use_optimized=True,
+                    )
+                    await self.update_ancestor_hashes_on_insert(
+                        tree_id=tree_id,
+                        left=min_height_leaf.hash,
+                        right=subtree_hash,
+                        traversal_node_hash=min_height_leaf.hash,
+                        ancestors=ancestors,
+                        status=Status.COMMITTED,
+                        root=latest_local_root,
+                    )
 
             await _debug_dump(db=self.db_wrapper)
             cursor = await writer.execute(
