@@ -475,6 +475,32 @@ class FullNodeSimulator(FullNodeAPI):
 
                 await asyncio.sleep(backoff)
 
+    async def wait_bundle_ids_in_mempool(
+        self,
+        bundle_ids: Collection[bytes32],
+        timeout: Union[None, float] = 5,
+    ) -> None:
+        """Wait until the ids of specific spend bundles have entered the mempool.
+
+        Arguments:
+            records: The bundle ids to wait for.
+        """
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            ids_to_check: Set[bytes32] = set(bundle_ids)
+
+            for backoff in backoff_times():
+                found = set()
+                for spend_bundle_name in ids_to_check:
+                    tx = self.full_node.mempool_manager.get_spendbundle(spend_bundle_name)
+                    if tx is not None:
+                        found.add(spend_bundle_name)
+                ids_to_check = ids_to_check.difference(found)
+
+                if len(ids_to_check) == 0:
+                    return
+
+                await asyncio.sleep(backoff)
+
     async def wait_transaction_records_marked_as_in_mempool(
         self,
         record_ids: Collection[bytes32],
@@ -664,7 +690,7 @@ class FullNodeSimulator(FullNodeAPI):
                             tx_config=DEFAULT_TX_CONFIG,
                             primaries=outputs_group[1:],
                         )
-                    await wallet.wallet_state_manager.add_pending_transactions([tx])
+                    [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
                     transaction_records.append(tx)
                 else:
                     break

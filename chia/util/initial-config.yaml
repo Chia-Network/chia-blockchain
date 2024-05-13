@@ -665,6 +665,8 @@ wallet:
     min_amount: 0
     batch_size: 50
 
+  auto_sign_txs: True
+
 data_layer:
   # TODO: consider name
   # TODO: organize consistently with other sections
@@ -695,6 +697,9 @@ data_layer:
   # this is a debug and profiling facility that logs all SQLite commands to a
   # separate log file (under logging/data_sql.log).
   log_sqlite_cmds: False
+
+  # Speeds up autoinserts. Disable to perform inserts one by one instead of in a batch.
+  enable_batch_autoinsert: True
 
   logging: *logging
 

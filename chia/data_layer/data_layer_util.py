@@ -87,8 +87,8 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
 
 
 async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
-    terminal_nodes = await data_store.get_keys_values(tree_id=store_id, root_hash=root_hash)
-    internal_nodes = await data_store.get_internal_nodes(tree_id=store_id, root_hash=root_hash)
+    terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
+    internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
 
     n = 8
 
@@ -327,7 +327,7 @@ class InternalNode:
 
 @dataclass(frozen=True)
 class Root:
-    tree_id: bytes32
+    store_id: bytes32
     node_hash: Optional[bytes32]
     generation: int
     status: Status
@@ -341,7 +341,7 @@ class Root:
             node_hash = bytes32(raw_node_hash)
 
         return cls(
-            tree_id=bytes32(row["tree_id"]),
+            store_id=bytes32(row["tree_id"]),
             node_hash=node_hash,
             generation=row["generation"],
             status=Status(row["status"]),
@@ -349,7 +349,7 @@ class Root:
 
     def to_row(self) -> Dict[str, Any]:
         return {
-            "tree_id": self.tree_id,
+            "tree_id": self.store_id,
             "node_hash": self.node_hash,
             "generation": self.generation,
             "status": self.status.value,
@@ -358,7 +358,7 @@ class Root:
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> Root:
         return cls(
-            tree_id=bytes32.from_hexstr(marshalled["tree_id"]),
+            store_id=bytes32.from_hexstr(marshalled["tree_id"]),
             node_hash=None if marshalled["node_hash"] is None else bytes32.from_hexstr(marshalled["node_hash"]),
             generation=marshalled["generation"],
             status=Status(marshalled["status"]),
@@ -366,7 +366,7 @@ class Root:
 
     def marshal(self) -> Dict[str, Any]:
         return {
-            "tree_id": self.tree_id.hex(),
+            "tree_id": self.store_id.hex(),
             "node_hash": None if self.node_hash is None else self.node_hash.hex(),
             "generation": self.generation,
             "status": self.status.value,
@@ -388,7 +388,7 @@ class ServerInfo:
 
 @dataclass(frozen=True)
 class Subscription:
-    tree_id: bytes32
+    store_id: bytes32
     servers_info: List[ServerInfo]
 
 
@@ -713,7 +713,7 @@ class ClearPendingRootsResponse:
     success: bool
 
     root: Optional[Root]
-    # tree_id: bytes32
+    # store_id: bytes32
     # node_hash: Optional[bytes32]
     # generation: int
     # status: Status
@@ -777,7 +777,7 @@ class InsertResult:
 
 @dataclasses.dataclass(frozen=True)
 class UnsubscribeData:
-    tree_id: bytes32
+    store_id: bytes32
     retain_data: bool
 
 

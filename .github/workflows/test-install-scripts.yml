@@ -31,8 +31,10 @@ jobs:
         python:
           - major-dot-minor: "3.10"
         os:
+          - runs-on: macos-latest
+            matrix: macos-arm
           - runs-on: macos-12
-            matrix: macos
+            matrix: macos-intel
           - runs-on: ubuntu-latest
             matrix: linux
           - runs-on: windows-latest

@@ -193,7 +193,7 @@ class MempoolManager:
         # spends.
         self.nonzero_fee_minimum_fpc = 5
 
-        BLOCK_SIZE_LIMIT_FACTOR = 0.6
+        BLOCK_SIZE_LIMIT_FACTOR = 0.7
         self.max_block_clvm_cost = uint64(self.constants.MAX_BLOCK_COST_CLVM * BLOCK_SIZE_LIMIT_FACTOR)
         self.max_tx_clvm_cost = (
             max_tx_clvm_cost if max_tx_clvm_cost is not None else uint64(self.constants.MAX_BLOCK_COST_CLVM // 2)
