@@ -1991,7 +1991,7 @@ async def test_insert_key_already_present(data_store: DataStore, store_id: bytes
 
 
 @pytest.mark.anyio
-@boolean_datacases(name="use_batch_autoinsert", false="don't use batch insert", true="batch insert")
+@boolean_datacases(name="use_batch_autoinsert", false="not optimized batch insert", true="optimized batch insert")
 async def test_batch_insert_key_already_present(
     data_store: DataStore,
     store_id: bytes32,
