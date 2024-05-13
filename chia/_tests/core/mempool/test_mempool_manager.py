@@ -388,7 +388,7 @@ async def add_spendbundle(
     npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb_name)
     ret = await mempool_manager.add_spend_bundle(sb, npc_result, sb_name, TEST_HEIGHT)
     invariant_check_mempool(mempool_manager.mempool)
-    return ret
+    return ret.cost, ret.status, ret.error
 
 
 async def generate_and_add_spendbundle(

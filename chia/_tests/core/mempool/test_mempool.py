@@ -2863,7 +2863,7 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
         invariant_check_mempool(mempool)
         if increase_fee:
             fee_rate += 0.1
-            assert ret is None
+            assert ret.error is None
         else:
             fee_rate -= 0.1
 

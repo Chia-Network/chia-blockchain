@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Set, Tuple
@@ -44,6 +45,18 @@ MIN_COST_THRESHOLD = 6_000_000
 # sum of all fees in the mempool be less than 2^63. That's the limit of sqlite's
 # integers, which we rely on for computing fee per cost as well as the fee sum
 MEMPOOL_ITEM_FEE_LIMIT = 2**50
+
+
+@dataclass
+class MempoolRemoveInfo:
+    items: List[InternalMempoolItem]
+    reason: MempoolRemoveReason
+
+
+@dataclass
+class MempoolAddInfo:
+    removals: List[MempoolRemoveInfo]
+    error: Optional[Err]
 
 
 class MempoolRemoveReason(Enum):
@@ -276,7 +289,7 @@ class Mempool:
             )
             return None
 
-    def new_tx_block(self, block_height: uint32, timestamp: uint64) -> None:
+    def new_tx_block(self, block_height: uint32, timestamp: uint64) -> MempoolRemoveInfo:
         """
         Remove all items that became invalid because of this new height and
         timestamp. (we don't know about which coins were spent in this new block
@@ -289,16 +302,17 @@ class Mempool:
             )
             to_remove = [bytes32(row[0]) for row in cursor]
 
-        self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
         self._block_height = block_height
         self._timestamp = timestamp
 
-    def remove_from_pool(self, items: List[bytes32], reason: MempoolRemoveReason) -> None:
+        return self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
+
+    def remove_from_pool(self, items: List[bytes32], reason: MempoolRemoveReason) -> MempoolRemoveInfo:
         """
         Removes an item from the mempool.
         """
         if items == []:
-            return
+            return MempoolRemoveInfo([], reason)
 
         removed_items: List[MempoolItemInfo] = []
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
@@ -314,8 +328,7 @@ class Mempool:
                         item = MempoolItemInfo(int(row[1]), int(row[2]), internal_item.height_added_to_mempool)
                         removed_items.append(item)
 
-        for name in items:
-            self._items.pop(name)
+        removed_internal_items = [self._items.pop(name) for name in items]
 
         for batch in to_batches(items, SQLITE_MAX_VARIABLE_NUMBER):
             args = ",".join(["?"] * len(batch.entries))
@@ -340,7 +353,9 @@ class Mempool:
             for iteminfo in removed_items:
                 self.fee_estimator.remove_mempool_item(info, iteminfo)
 
-    def add_to_pool(self, item: MempoolItem) -> Optional[Err]:
+        return MempoolRemoveInfo(removed_internal_items, reason)
+
+    def add_to_pool(self, item: MempoolItem) -> MempoolAddInfo:
         """
         Adds an item to the mempool by kicking out transactions (if it doesn't fit), in order of increasing fee per cost
         """
@@ -348,6 +363,8 @@ class Mempool:
         assert item.fee < MEMPOOL_ITEM_FEE_LIMIT
         assert item.npc_result.conds is not None
         assert item.cost <= self.mempool_info.max_block_clvm_cost
+
+        removals: List[MempoolRemoveInfo] = []
 
         with self._db_conn:
             # we have certain limits on transactions that will expire soon
@@ -383,10 +400,10 @@ class Mempool:
                     # we can't evict any more transactions, abort (and don't
                     # evict what we put aside in "to_remove" list)
                     if fee_per_cost > item.fee_per_cost:
-                        return Err.INVALID_FEE_LOW_FEE
+                        return MempoolAddInfo([], Err.INVALID_FEE_LOW_FEE)
                     to_remove.append(name)
 
-                self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
+                removals.append(self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED))
 
                 # if we don't find any entries, it's OK to add this entry
 
@@ -405,7 +422,7 @@ class Mempool:
                 )
                 to_remove = [bytes32(row[0]) for row in cursor]
 
-                self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL)
+                removals.append(self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL))
 
             # TODO: In the future, for the "fee_per_cost" field, opt for
             # "GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
@@ -436,7 +453,7 @@ class Mempool:
 
         info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost(), self.total_mempool_fees(), datetime.now())
         self.fee_estimator.add_mempool_item(info, MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
-        return None
+        return MempoolAddInfo(removals, None)
 
     def at_full_capacity(self, cost: int) -> bool:
         """
