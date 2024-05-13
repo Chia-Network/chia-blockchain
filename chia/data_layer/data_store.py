@@ -1460,7 +1460,7 @@ class DataStore:
                             if key_hash_frequency[hash] == 1 or (
                                 key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
                             ):
-                                old_node = await self.maybe_get_node_by_key(key, tree_id)
+                                old_node = await self.maybe_get_node_by_key(key, store_id)
                                 terminal_node_hash = await self._insert_terminal_node(key, value)
 
                                 if old_node is None:
@@ -1502,7 +1502,7 @@ class DataStore:
                     hash = key_hash(key)
                     if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
                         terminal_node_hash = await self._insert_terminal_node(key, new_value)
-                        old_node = await self.maybe_get_node_by_key(key, tree_id)
+                        old_node = await self.maybe_get_node_by_key(key, store_id)
                         if old_node is not None:
                             pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
                         else:
@@ -1522,19 +1522,19 @@ class DataStore:
                         if hash in to_update_hashes:
                             break
                         to_update_hashes.add(hash)
-                        node = await self._get_one_ancestor(hash, tree_id)
+                        node = await self._get_one_ancestor(hash, store_id)
                         if node is None:
                             break
                         hash = node.hash
                 assert latest_local_root is not None
                 assert latest_local_root.node_hash is not None
                 new_root_hash = await self.batch_upsert(
-                    tree_id,
+                    store_id,
                     latest_local_root.node_hash,
                     to_update_hashes,
                     pending_upsert_new_hashes,
                 )
-                latest_local_root = await self._insert_root(tree_id, new_root_hash, Status.COMMITTED)
+                latest_local_root = await self._insert_root(store_id, new_root_hash, Status.COMMITTED)
 
             # Start with the leaf nodes and pair them to form new nodes at the next level up, repeating this process
             # in a bottom-up fashion until a single root node remains. This constructs a balanced tree from the leaves.
