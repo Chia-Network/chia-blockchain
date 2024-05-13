@@ -205,7 +205,7 @@ def create_travel_spend(
         log.debug(
             f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
             f"{target}"
-            f"hash:{Program.to(bytes(target)).get_tree_hash()}"
+            f"hash:{shatree_atom(bytes(target))}"
         )
         # key_value_list is:
         # "p" -> poolstate as bytes

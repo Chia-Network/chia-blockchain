@@ -199,8 +199,8 @@ async def check_coin_state(wallet_node: WalletNode, coin_id: bytes32) -> bool:
     return False  # pragma: no cover
 
 
-async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:
-    return await dl.wallet_rpc.dl_latest_singleton(tree_id, True) is not None
+async def check_singleton_confirmed(dl: DataLayer, store_id: bytes32) -> bool:
+    return await dl.wallet_rpc.dl_latest_singleton(store_id, True) is not None
 
 
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:
@@ -923,7 +923,7 @@ async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
         )
         for store_setup, value_prefix in setups:
             await store_setup.data_layer.batch_insert(
-                tree_id=store_setup.id,
+                store_id=store_setup.id,
                 changelist=[
                     {
                         "action": "insert",
@@ -1752,7 +1752,7 @@ async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None
     with pytest.raises(Exception, match="store id not available"):
         await offer_setup.maker.api.make_offer(request=maker_request)
 
-    pending_root = await offer_setup.maker.data_layer.data_store.get_pending_root(tree_id=offer_setup.maker.id)
+    pending_root = await offer_setup.maker.data_layer.data_store.get_pending_root(store_id=offer_setup.maker.id)
     assert pending_root is None
 
 
@@ -2055,8 +2055,8 @@ async def test_clear_pending_roots(
 
         data_store = data_layer.data_store
 
-        tree_id = bytes32(range(32))
-        await data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+        store_id = bytes32(range(32))
+        await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
 
         key = b"\x01\x02"
         value = b"abc"
@@ -2064,20 +2064,20 @@ async def test_clear_pending_roots(
         await data_store.insert(
             key=key,
             value=value,
-            tree_id=tree_id,
+            store_id=store_id,
             reference_node_hash=None,
             side=None,
             status=Status.PENDING,
         )
 
-        pending_root = await data_store.get_pending_root(tree_id=tree_id)
+        pending_root = await data_store.get_pending_root(store_id=store_id)
         assert pending_root is not None
 
         if layer == InterfaceLayer.direct:
-            cleared_root = await data_rpc_api.clear_pending_roots({"store_id": tree_id.hex()})
+            cleared_root = await data_rpc_api.clear_pending_roots({"store_id": store_id.hex()})
         elif layer == InterfaceLayer.funcs:
             cleared_root = await clear_pending_roots(
-                store_id=tree_id,
+                store_id=store_id,
                 rpc_port=rpc_port,
                 root_path=bt.root_path,
             )
@@ -2089,7 +2089,7 @@ async def test_clear_pending_roots(
                 "data",
                 "clear_pending_roots",
                 "--id",
-                tree_id.hex(),
+                store_id.hex(),
                 "--data-rpc-port",
                 str(rpc_port),
                 "--yes",
@@ -2120,7 +2120,7 @@ async def test_clear_pending_roots(
                 net_config=bt.config,
             )
             try:
-                cleared_root = await client.clear_pending_roots(store_id=tree_id)
+                cleared_root = await client.clear_pending_roots(store_id=store_id)
             finally:
                 client.close()
                 await client.await_closed()
@@ -2153,23 +2153,23 @@ async def test_issue_15955_deadlock(
         await full_node_api.wait_for_wallet_synced(wallet_node)
 
         # create a store
-        transaction_records, tree_id = await data_layer.create_store(fee=uint64(0))
+        transaction_records, store_id = await data_layer.create_store(fee=uint64(0))
         await full_node_api.process_transaction_records(records=transaction_records)
         await full_node_api.wait_for_wallet_synced(wallet_node)
-        assert await check_singleton_confirmed(dl=data_layer, tree_id=tree_id)
+        assert await check_singleton_confirmed(dl=data_layer, store_id=store_id)
 
         # insert a key and value
         key = b"\x00"
         value = b"\x01" * 10_000
         transaction_record = await data_layer.batch_update(
-            tree_id=tree_id,
+            store_id=store_id,
             changelist=[{"action": "insert", "key": key, "value": value}],
             fee=uint64(0),
         )
         assert transaction_record is not None
         await full_node_api.process_transaction_records(records=[transaction_record])
         await full_node_api.wait_for_wallet_synced(wallet_node)
-        assert await check_singleton_confirmed(dl=data_layer, tree_id=tree_id)
+        assert await check_singleton_confirmed(dl=data_layer, store_id=store_id)
 
         # get the value a bunch through several periodic data management cycles
         concurrent_requests = 10
@@ -2183,7 +2183,7 @@ async def test_issue_15955_deadlock(
         while time.monotonic() < end:
             with anyio.fail_after(adjusted_timeout(timeout)):
                 await asyncio.gather(
-                    *(asyncio.create_task(data_layer.get_value(store_id=tree_id, key=key)) for _ in range(10))
+                    *(asyncio.create_task(data_layer.get_value(store_id=store_id, key=key)) for _ in range(10))
                 )
 
 
@@ -3294,7 +3294,7 @@ async def test_unsubmitted_batch_update(
             )
             keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
             assert keys_values == {"keys_values": []}
-            pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+            pending_root = await data_layer.data_store.get_pending_root(store_id=store_id)
             assert pending_root is not None
             assert pending_root.status == Status.PENDING_BATCH
 
@@ -3313,7 +3313,7 @@ async def test_unsubmitted_batch_update(
         for key, value in to_insert:
             assert kv_dict["0x" + key.hex()] == "0x" + value.hex()
         prev_keys_values = keys_values
-        old_root = await data_layer.data_store.get_tree_root(tree_id=store_id)
+        old_root = await data_layer.data_store.get_tree_root(store_id=store_id)
 
         key = b"e"
         value = b"\x00\x05"
@@ -3326,7 +3326,7 @@ async def test_unsubmitted_batch_update(
         await full_node_api.farm_blocks_to_puzzlehash(
             count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
         )
-        root = await data_layer.data_store.get_tree_root(tree_id=store_id)
+        root = await data_layer.data_store.get_tree_root(store_id=store_id)
         assert root == old_root
 
         key = b"f"
@@ -3342,9 +3342,9 @@ async def test_unsubmitted_batch_update(
         )
 
         await data_rpc_api.clear_pending_roots({"store_id": store_id.hex()})
-        pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+        pending_root = await data_layer.data_store.get_pending_root(store_id=store_id)
         assert pending_root is None
-        root = await data_layer.data_store.get_tree_root(tree_id=store_id)
+        root = await data_layer.data_store.get_tree_root(store_id=store_id)
         assert root == old_root
 
         key = b"g"
@@ -3363,7 +3363,7 @@ async def test_unsubmitted_batch_update(
         keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
         assert keys_values == prev_keys_values
 
-        pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+        pending_root = await data_layer.data_store.get_pending_root(store_id=store_id)
         assert pending_root is not None
         assert pending_root.status == Status.PENDING_BATCH
 
@@ -3427,7 +3427,7 @@ async def test_unsubmitted_batch_update(
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
 
-        pending_root = await data_layer.data_store.get_pending_root(tree_id=store_id)
+        pending_root = await data_layer.data_store.get_pending_root(store_id=store_id)
         assert pending_root is not None
         assert pending_root.status == Status.PENDING
 
@@ -3606,7 +3606,7 @@ async def test_multistore_update(
         with pytest.raises(Exception, match="No pending roots found to submit"):
             await data_rpc_api.submit_all_pending_roots({})
         for store_id in store_ids:
-            pending_root = await data_store.get_pending_root(tree_id=store_id)
+            pending_root = await data_store.get_pending_root(store_id=store_id)
             assert pending_root is None
 
         store_updates = []
