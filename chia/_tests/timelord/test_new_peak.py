@@ -113,7 +113,7 @@ class TestNewPeak:
                 == new_peak.reward_chain_block.get_hash()
             )
 
-    @pytest.mark.parametrize("skip_slot", [0, 1, 2])
+    @pytest.mark.parametrize("skip_slot", [0, 1, 2, 3, 10])
     @pytest.mark.anyio
     async def test_timelord_new_peak_unfinished_orphaned(
         self,
