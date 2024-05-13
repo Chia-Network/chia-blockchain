@@ -1495,7 +1495,6 @@ class DataStore:
                     if key_hash_frequency[hash] == 2 and last_action[hash] == "insert" and enable_batch_autoinsert:
                         continue
                     latest_local_root = await self.delete(key, store_id, True, Status.COMMITTED, root=latest_local_root)
-
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
