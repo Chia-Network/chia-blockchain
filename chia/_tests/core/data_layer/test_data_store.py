@@ -17,7 +17,7 @@ import aiosqlite
 import pytest
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
-from chia._tests.util.misc import BenchmarkRunner, Marks, datacases
+from chia._tests.util.misc import BenchmarkRunner, Marks, boolean_datacases, datacases
 from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
@@ -1988,6 +1988,21 @@ async def test_insert_key_already_present(data_store: DataStore, store_id: bytes
     )
     with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
         await data_store.insert(key=key, value=value, store_id=store_id, reference_node_hash=None, side=None)
+
+
+@pytest.mark.anyio
+@boolean_datacases(name="use_batch_autoinsert", false="don't use batch insert", true="batch insert")
+async def test_batch_insert_key_already_present(
+    data_store: DataStore,
+    store_id: bytes32,
+    use_batch_autoinsert: bool,
+) -> None:
+    key = b"foo"
+    value = b"bar"
+    changelist = [{"action": "insert", "key": key, "value": value}]
+    await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
+    with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
+        await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
 
 
 @pytest.mark.anyio
