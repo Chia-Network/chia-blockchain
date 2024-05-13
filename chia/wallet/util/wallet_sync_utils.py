@@ -5,7 +5,7 @@ import logging
 import random
 from typing import Any, List, Optional, Set, Tuple, Union
 
-from chia_rs import compute_merkle_set_root
+from chia_rs import compute_merkle_set_root, confirm_included_already_hashed, confirm_not_included_already_hashed
 
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.shared_protocol import Capability
@@ -36,7 +36,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
-from chia.util.merkle_set import confirm_included_already_hashed, confirm_not_included_already_hashed
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 
 log = logging.getLogger(__name__)
