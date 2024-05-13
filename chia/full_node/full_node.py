@@ -2182,7 +2182,7 @@ class FullNode:
                 for slot_hash in reversed(curr.finished_challenge_slot_hashes):
                     if slot_hash == unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash:
                         assert len(self.full_node_store.finished_sub_slots) >= 1
-                        sub_slot_start_iters = uint128(current_eos_iters - sub_slot_iters*number_of_slots)
+                        sub_slot_start_iters = uint128(current_eos_iters - sub_slot_iters * number_of_slots)
                         break
                     number_of_slots += 1
         if sub_slot_start_iters is None:
