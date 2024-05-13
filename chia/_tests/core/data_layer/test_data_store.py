@@ -2006,7 +2006,8 @@ async def test_batch_insert_key_already_present(
 
 
 @pytest.mark.anyio
-async def test_update_keys(data_store: DataStore, store_id: bytes32) -> None:
+@boolean_datacases(name="use_upsert", false="update with delete and insert", true="update with upsert")
+async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert: bool) -> None:
     num_keys = 10
     missing_keys = 50
     num_values = 10
@@ -2014,12 +2015,17 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32) -> None:
     for value in range(num_values):
         changelist: List[Dict[str, Any]] = []
         bytes_value = value.to_bytes(4, byteorder="big")
-        for key in range(num_keys + missing_keys):
-            bytes_key = key.to_bytes(4, byteorder="big")
-            changelist.append({"action": "delete", "key": bytes_key})
-        for key in range(num_keys):
-            bytes_key = key.to_bytes(4, byteorder="big")
-            changelist.append({"action": "insert", "key": bytes_key, "value": bytes_value})
+        if use_upsert:
+            for key in range(num_keys):
+                bytes_key = key.to_bytes(4, byteorder="big")
+                changelist.append({"action": "upsert", "key": bytes_key, "value": bytes_value})
+        else:
+            for key in range(num_keys + missing_keys):
+                bytes_key = key.to_bytes(4, byteorder="big")
+                changelist.append({"action": "delete", "key": bytes_key})
+            for key in range(num_keys):
+                bytes_key = key.to_bytes(4, byteorder="big")
+                changelist.append({"action": "insert", "key": bytes_key, "value": bytes_value})
 
         await data_store.insert_batch(
             store_id=store_id,
