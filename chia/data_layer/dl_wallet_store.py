@@ -389,7 +389,7 @@ class DataLayerStore:
                 )
 
             cursor = await conn.execute(
-                "SELECT * from singleton_records WHERE confirmed_at_height>? AND generation=0",
+                "SELECT launcher_id from singleton_records WHERE confirmed_at_height>? AND generation=0",
                 (height,),
             )
             rows = await cursor.fetchall()
@@ -397,7 +397,7 @@ class DataLayerStore:
             for row in rows:
                 await conn.execute(
                     "DELETE from launchers WHERE id=?",
-                    (row[1],),
+                    (row[0],),
                 )
 
             await conn.execute(
