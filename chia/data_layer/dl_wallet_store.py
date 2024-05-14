@@ -95,9 +95,6 @@ class DataLayerStore:
             )
 
             await conn.execute("CREATE TABLE IF NOT EXISTS launchers(id blob PRIMARY KEY, coin blob)")
-            await conn.execute(
-                "CREATE TABLE IF NOT EXISTS launcher_confirmations(" "id blob PRIMARY KEY," "confirmed_at_height int)"
-            )
 
             await conn.execute("CREATE INDEX IF NOT EXISTS mirrors_launcher_id_index ON mirrors(launcher_id)")
 
@@ -265,13 +262,6 @@ class DataLayerStore:
                 "INSERT OR REPLACE INTO launchers VALUES (?, ?)",
                 (launcher_id, launcher_bytes),
             )
-            await conn.execute_insert(
-                "INSERT OR REPLACE INTO launcher_confirmations (id, confirmed_at_height) VALUES (?, ?)",
-                (
-                    launcher_id,
-                    confirmed_at_height,
-                ),
-            )
 
     async def get_launcher(self, launcher_id: bytes32) -> Optional[Coin]:
         """
@@ -399,19 +389,15 @@ class DataLayerStore:
                 )
 
             cursor = await conn.execute(
-                "SELECT * from launcher_confirmations WHERE confirmed_at_height>?",
+                "SELECT * from singleton_records WHERE confirmed_at_height>? AND generation=0",
                 (height,),
             )
             rows = await cursor.fetchall()
             await cursor.close()
             for row in rows:
                 await conn.execute(
-                    "DELETE from launcher_confirmations WHERE id=?",
-                    (row[0],),
-                )
-                await conn.execute(
                     "DELETE from launchers WHERE id=?",
-                    (row[0],),
+                    (row[1],),
                 )
 
             await conn.execute(
