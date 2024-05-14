@@ -1530,7 +1530,7 @@ async def test_benchmark_batch_insert_speed(
     r.seed("shadowlands", version=2)
 
     test_size = 100
-    max_pre_size = 10_000
+    max_pre_size = 20_000
     # may not be needed if big_o already considers the effect
     # TODO: must be > 0 to avoid an issue with the log class?
     lowest_considered_n = 2000
@@ -1554,11 +1554,8 @@ async def test_benchmark_batch_insert_speed(
 
     total_inserted = 0
     pre_iter = iter(pre)
-    with benchmark_runner.assert_runtime(
+    with benchmark_runner.print_runtime(
         label="overall",
-        # TODO: this is silly
-        seconds=1,
-        enable_assertion=False,
         clock=time.monotonic,
     ):
         while True:
@@ -1566,11 +1563,8 @@ async def test_benchmark_batch_insert_speed(
             if len(pre_batch) == 0:
                 break
 
-            with benchmark_runner.assert_runtime(
+            with benchmark_runner.print_runtime(
                 label="count",
-                # TODO: this is silly
-                seconds=1,
-                enable_assertion=False,
                 clock=time.monotonic,
             ) as f:
                 await data_store.insert_batch(
@@ -1597,7 +1591,7 @@ async def test_benchmark_batch_insert_speed(
         best_class, (big_o.complexities.Constant, big_o.complexities.Linear)
     ), f"must be constant or linear: {best_class}"
 
-    coefficient_maximums = [0.5, 0.000_2, *(10**-n for n in range(1, 100))]
+    coefficient_maximums = [0.5, 0.000_2, *(10**-n for n in range(5, 100))]
 
     coefficients = best_class.coefficients()
     paired = list(zip(coefficients, coefficient_maximums))
