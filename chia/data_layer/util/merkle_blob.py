@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass
 from enum import Enum
 from typing import ClassVar, Dict, List, Protocol, Type, TypeVar, final
 
@@ -14,6 +14,7 @@ T = TypeVar("T")
 
 
 class NodeType(Enum):
+    # TODO: maybe use existing?
     root = 0
     internal = 1
     leaf = 2
@@ -67,6 +68,12 @@ def raw_node_from_blob(metadata: NodeMetadata, data: bytes) -> RawMerkleNodeProt
     return cls(*cls.struct.unpack(data))
 
 
+# TODO: allow broader bytes'ish types
+def raw_node_to_blob(raw_node: RawMerkleNodeProtocol) -> bytes:
+    # TODO: try again to indicate that the RawMerkleNodeProtocol requires the dataclass interface
+    return raw_node.struct.pack(*astuple(raw_node))  # type: ignore[call-overload]
+
+
 @final
 @dataclass(frozen=True)
 class RawRootMerkleNode:
@@ -76,7 +83,8 @@ class RawRootMerkleNode:
 
     left: int
     right: int
-    hash: bytes32
+    # TODO: maybe bytes32?  maybe that's not 'raw'
+    hash: bytes
 
 
 @final
@@ -90,7 +98,8 @@ class RawInternalMerkleNode:
     parent: int
     left: int
     right: int
-    hash: bytes32
+    # TODO: maybe bytes32?  maybe that's not 'raw'
+    hash: bytes
 
 
 @final
@@ -105,7 +114,8 @@ class RawLeafMerkleNode:
     # TODO: how/where are these mapping?
     key: int
     value: int
-    hash: bytes32
+    # TODO: maybe bytes32?  maybe that's not 'raw'
+    hash: bytes
 
 
 raw_node_classes: List[Type[RawMerkleNodeProtocol]] = [

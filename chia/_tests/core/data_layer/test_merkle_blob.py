@@ -1,24 +1,36 @@
 from __future__ import annotations
 
 import struct
-from typing import Dict, Type
+from dataclasses import dataclass
+from typing import Dict, Generic, List, Type, TypeVar, final
 
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 
+from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.data_layer.util.merkle_blob import (
     NodeMetadata,
+    RawInternalMerkleNode,
+    RawLeafMerkleNode,
     RawMerkleNodeProtocol,
+    RawRootMerkleNode,
     data_size,
     metadata_size,
     raw_node_classes,
+    raw_node_from_blob,
+    raw_node_to_blob,
     raw_node_type_to_class,
 )
 
 
-@pytest.fixture(name="raw_node_class", scope="session", params=raw_node_classes)
+@pytest.fixture(
+    name="raw_node_class",
+    scope="session",
+    params=raw_node_classes,
+    ids=[cls.type.name for cls in raw_node_classes],
+)
 def raw_node_class_fixture(request: SubRequest) -> RawMerkleNodeProtocol:
     # https://github.com/pytest-dev/pytest/issues/8763
     return request.param  # type: ignore[no-any-return]
@@ -62,3 +74,65 @@ def test_all_big_endian(class_struct: struct.Struct) -> None:
 
 
 # TODO: check all struct types against attribute types
+
+RawMerkleNodeT = TypeVar("RawMerkleNodeT", bound=RawMerkleNodeProtocol)
+
+
+reference_blob = bytes(range(data_size))
+
+
+@final
+@dataclass
+class RawNodeFromBlobCase(Generic[RawMerkleNodeT]):
+    raw: RawMerkleNodeT
+    blob_to_unpack: bytes = reference_blob
+    packed_blob_reference: bytes = reference_blob
+
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return self.raw.type.name
+
+
+reference_raw_nodes: List[DataCase] = [
+    RawNodeFromBlobCase(
+        raw=RawRootMerkleNode(
+            left=0x04050607,
+            right=0x08090A0B,
+            hash=bytes(range(12, data_size)),
+        ),
+        packed_blob_reference=b"\x00\x00\x00\x00" + reference_blob[4:],
+    ),
+    RawNodeFromBlobCase(
+        raw=RawInternalMerkleNode(
+            parent=0x00010203,
+            left=0x04050607,
+            right=0x08090A0B,
+            hash=bytes(range(12, data_size)),
+        ),
+    ),
+    RawNodeFromBlobCase(
+        raw=RawLeafMerkleNode(
+            parent=0x00010203,
+            key=0x04050607,
+            value=0x08090A0B,
+            hash=bytes(range(12, data_size)),
+        ),
+    ),
+]
+
+
+@datacases(*reference_raw_nodes)
+def test_raw_node_from_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) -> None:
+    node = raw_node_from_blob(
+        NodeMetadata(type=case.raw.type, dirty=False),
+        case.blob_to_unpack,
+    )
+    assert node == case.raw
+
+
+@datacases(*reference_raw_nodes)
+def test_raw_node_to_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) -> None:
+    blob = raw_node_to_blob(case.raw)
+    assert blob == case.packed_blob_reference
