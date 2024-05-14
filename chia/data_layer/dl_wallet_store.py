@@ -266,7 +266,7 @@ class DataLayerStore:
                 (launcher_id, launcher_bytes),
             )
             await conn.execute_insert(
-                "INSERT OR REPLACE INTO launcher_confirmations VALUES (?, ?)",
+                "INSERT OR REPLACE INTO launcher_confirmations (id, confirmed_at_height) VALUES (?, ?)",
                 (
                     launcher_id,
                     confirmed_at_height,
@@ -332,7 +332,7 @@ class DataLayerStore:
                 ),
             )
             await conn.execute_insert(
-                "INSERT OR REPLACE INTO mirror_confirmations VALUES (?, ?)",
+                "INSERT OR REPLACE INTO mirror_confirmations (coin_id, confirmed_at_height) VALUES (?, ?)",
                 (
                     mirror.coin_id,
                     mirror.confirmed_at_height,
