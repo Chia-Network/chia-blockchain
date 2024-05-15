@@ -91,6 +91,7 @@ class Mirror:
     amount: uint64
     urls: List[bytes]
     ours: bool
+    confirmed_at_height: Optional[uint32]
 
     def to_json_dict(self) -> Dict[str, Any]:
         return {
@@ -99,6 +100,7 @@ class Mirror:
             "amount": self.amount,
             "urls": [url.decode("utf8") for url in self.urls],
             "ours": self.ours,
+            "confirmed_at_height": self.confirmed_at_height,
         }
 
     @classmethod
@@ -109,6 +111,7 @@ class Mirror:
             json_dict["amount"],
             [bytes(url, "utf8") for url in json_dict["urls"]],
             json_dict["ours"],
+            json_dict["confirmed_at_height"],
         )
 
 
@@ -271,7 +274,7 @@ class DataLayerWallet:
                 )
             )
 
-        await self.wallet_state_manager.dl_store.add_launcher(spend.coin)
+        await self.wallet_state_manager.dl_store.add_launcher(spend.coin, height)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()])
         await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
 
@@ -301,7 +304,7 @@ class DataLayerWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[TransactionRecord, TransactionRecord, bytes32]:
+    ) -> Tuple[TransactionRecord, bytes32]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         """
@@ -342,26 +345,7 @@ class DataLayerWallet:
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
 
         # Delete from standard transaction so we don't push duplicate spends
-        std_record: TransactionRecord = dataclasses.replace(create_launcher_tx_record, spend_bundle=None)
-        dl_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=bytes32([2] * 32),
-            amount=uint64(1),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=full_spend,
-            additions=full_spend.additions(),
-            removals=full_spend.removals(),
-            memos=list(compute_memos(full_spend).items()),
-            wallet_id=uint32(0),  # This is being called before the wallet is created so we're using a temp ID of 0
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=full_spend.name(),
-            valid_times=parse_timelock_info(extra_conditions),
-        )
+        std_record: TransactionRecord = dataclasses.replace(create_launcher_tx_record, spend_bundle=full_spend)
         singleton_record = SingletonRecord(
             coin_id=Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), uint64(1)).name(),
             launcher_id=launcher_coin.name(),
@@ -381,7 +365,7 @@ class DataLayerWallet:
         await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record)
         await self.wallet_state_manager.add_interested_puzzle_hashes([singleton_record.launcher_id], [self.id()])
 
-        return dl_record, std_record, launcher_coin.name()
+        return std_record, launcher_coin.name()
 
     async def create_tandem_xch_tx(
         self,
@@ -850,6 +834,7 @@ class DataLayerWallet:
                         uint64(coin.amount),
                         urls,
                         ours,
+                        height,
                     )
                 )
                 await self.wallet_state_manager.add_interested_coin_ids([coin.name()])

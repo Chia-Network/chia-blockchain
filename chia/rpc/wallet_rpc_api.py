@@ -4081,7 +4081,7 @@ class WalletRpcApi:
 
         try:
             async with self.service.wallet_state_manager.lock:
-                dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
+                std_tx, launcher_id = await dl_wallet.generate_new_reporter(
                     bytes32.from_hexstr(request["root"]),
                     tx_config,
                     fee=request.get("fee", uint64(0)),
@@ -4093,7 +4093,7 @@ class WalletRpcApi:
 
         return {
             "success": True,
-            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in (dl_tx, std_tx)],
+            "transactions": [std_tx.to_json_dict_convenience(self.service.config)],
             "launcher_id": launcher_id,
         }
 
