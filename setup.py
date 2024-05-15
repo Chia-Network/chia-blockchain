@@ -55,7 +55,7 @@ dev_dependencies = [
     "pytest==8.1.1",
     "pytest-cov==5.0.0",
     "pytest-mock==3.14.0",
-    "pytest-xdist==3.5.0",
+    "pytest-xdist==3.6.1",
     "pyupgrade==3.15.2",
     "twine==5.0.0",
     "isort==5.13.2",
