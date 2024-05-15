@@ -1660,8 +1660,10 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
     batch2.append({"action": "insert", "key": keys[3], "value": keys[3]})
     assert batch1 != batch2
     await raw_data_store.insert_batch(store_id, batch1, status=Status.COMMITTED)
+    root = await raw_data_store.get_tree_root(store_id)
     await raw_data_store.insert_batch(store_id_2, batch2, status=Status.COMMITTED)
-    keys_values_before = await raw_data_store.get_keys_values(store_id_2)
+    root_2 = await raw_data_store.get_tree_root(store_id_2)
+    keys_values_before = await raw_data_store.get_keys_values(root=root_2)
     async with raw_data_store.db_wrapper.reader() as reader:
         result = await reader.execute("SELECT * FROM node")
         nodes = await result.fetchall()
@@ -1672,7 +1674,7 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
     assert [kv_nodes_before[key] for key in keys] == keys
     await raw_data_store.delete_store_data(store_id)
     # Deleting from `node` table doesn't alter other stores.
-    keys_values_after = await raw_data_store.get_keys_values(store_id_2)
+    keys_values_after = await raw_data_store.get_keys_values(root=root_2)
     assert keys_values_before == keys_values_after
     async with raw_data_store.db_wrapper.reader() as reader:
         result = await reader.execute("SELECT * FROM node")
@@ -1820,7 +1822,7 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
         root = await raw_data_store.get_pending_root(store_id)
         assert root is not None
         await raw_data_store.change_root_status(root, Status.COMMITTED)
-        kv = await raw_data_store.get_keys_values(store_id=store_id)
+        kv = await raw_data_store.get_keys_values(root=root)
         start_index = index * keys_per_pending_root
         end_index = (index + 1) * keys_per_pending_root
         assert {pair.key for pair in kv} == set(original_keys[start_index:end_index])
@@ -1851,18 +1853,19 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
             await raw_data_store.insert_batch(store_id, batch, status=Status.COMMITTED)
 
         for index, store_id in enumerate(store_ids):
+            root = await raw_data_store.get_tree_root(store_id=store_id)
             values = [
                 (value + values_offset * repetition).to_bytes(4, byteorder="big")
                 for value in range(index * num_keys, (index + 1) * num_keys)
             ]
             for key, value in zip(keys, values):
-                node = await raw_data_store.get_node_by_key(store_id=store_id, key=key)
+                node = await raw_data_store.get_node_by_key(root=root, key=key)
                 assert node.value == value
                 if random.randint(0, 4) == 0:
                     batch = [{"action": "delete", "key": key}]
                     await raw_data_store.insert_batch(store_id, batch, status=Status.COMMITTED)
                     with pytest.raises(KeyNotFoundError, match=f"Key not found: {key.hex()}"):
-                        await raw_data_store.get_node_by_key(store_id=store_id, key=key)
+                        await raw_data_store.get_node_by_key(root=root, key=key)
 
 
 @pytest.mark.anyio
@@ -1897,7 +1900,7 @@ async def test_insert_from_delta_file_correct_file_exists(
     with os.scandir(tmp_path) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == num_files + 1
-    kv_before = await data_store.get_keys_values(store_id=store_id)
+    kv_before = await data_store.get_keys_values(root=root)
     await data_store.rollback_to_generation(store_id, 0)
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
@@ -1922,7 +1925,7 @@ async def test_insert_from_delta_file_correct_file_exists(
     with os.scandir(tmp_path) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == 2 * (num_files + 1)
-    kv = await data_store.get_keys_values(store_id=store_id)
+    kv = await data_store.get_keys_values(root=root)
     assert kv == kv_before
 
 
@@ -2010,19 +2013,22 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32) -> None:
             bytes_key = key.to_bytes(4, byteorder="big")
             changelist.append({"action": "insert", "key": bytes_key, "value": bytes_value})
 
-        await data_store.insert_batch(
+        root_hash = await data_store.insert_batch(
             store_id=store_id,
             changelist=changelist,
             status=Status.COMMITTED,
         )
+        # TODO: probably make .insert_batch() return the root not the hash
+        root = await data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
+        assert root is not None
         for key in range(num_keys):
             bytes_key = key.to_bytes(4, byteorder="big")
-            node = await data_store.get_node_by_key(bytes_key, store_id)
+            node = await data_store.get_node_by_key(root=root, key=bytes_key)
             assert node.value == bytes_value
         for key in range(num_keys, num_keys + missing_keys):
             bytes_key = key.to_bytes(4, byteorder="big")
             with pytest.raises(KeyNotFoundError, match=f"Key not found: {bytes_key.hex()}"):
-                await data_store.get_node_by_key(bytes_key, store_id)
+                await data_store.get_node_by_key(root=root, key=bytes_key)
         num_keys += new_keys
 
 

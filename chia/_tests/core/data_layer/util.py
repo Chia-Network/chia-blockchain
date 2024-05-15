@@ -8,7 +8,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Literal, Optional, Union, overload
 
-from chia.data_layer.data_layer_util import NodeType, Side, Status
+from chia.data_layer.data_layer_util import NodeType, Side, Status, Root
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -185,6 +185,7 @@ class ChiaRoot:
 
 @overload
 def create_valid_node_values(
+    root: Root,
     node_type: Literal[NodeType.INTERNAL],
     left_hash: bytes32,
     right_hash: bytes32,
@@ -193,13 +194,13 @@ def create_valid_node_values(
 
 @overload
 def create_valid_node_values(
+    root: Root,
     node_type: Literal[NodeType.TERMINAL],
 ) -> Dict[str, Any]: ...
 
 
 def create_valid_node_values(
-    store_id: bytes32,
-    generation: int,
+    root: Root,
     node_type: NodeType,
     left_hash: Optional[bytes32] = None,
     right_hash: Optional[bytes32] = None,

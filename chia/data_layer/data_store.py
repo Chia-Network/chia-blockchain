@@ -340,7 +340,7 @@ class DataStore:
             "value": value,
         }
 
-        async with self.db_wrapper.writer() as writer:
+        async with self.db_wrapper.writer_maybe_transaction() as writer:
             try:
                 await writer.execute(
                     """
@@ -1123,88 +1123,6 @@ class DataStore:
 
         return new_generation
 
-    async def update_ancestor_hashes_on_insert(
-        self,
-        store_id: bytes32,
-        left: bytes32,
-        right: bytes32,
-        traversal_node_hash: bytes32,
-        ancestors: List[InternalNode],
-        status: Status,
-        # TODO: remove this?
-        root: Root,
-        terminal_hash: bytes32,
-        new_generation: int,
-    ) -> Root:
-        # create first new internal node
-        new_hash = await self._insert_internal_node(
-            store_id=store_id, generation=new_generation, parent_hash=None, left_hash=left, right_hash=right
-        )
-
-        # await _debug_dump(db=self.db_wrapper, description="before ._set_parent()")
-        # TODO: add to ._insert_internal_node()?
-        for hash in [left, right]:
-            await self._set_parent(
-                store_id=store_id,
-                generation=new_generation,
-                node_hash=hash,
-                parent_hash=new_hash,
-            )
-        await _debug_dump(db=self.db_wrapper, description="after ._set_parent()")
-
-        # create updated replacements for the rest of the internal nodes
-        for ancestor in ancestors:
-            if not isinstance(ancestor, InternalNode):
-                raise Exception(f"Expected an internal node but got: {type(ancestor).__name__}")
-
-            if ancestor.left_hash == traversal_node_hash:
-                left = new_hash
-                right = ancestor.right_hash
-            elif ancestor.right_hash == traversal_node_hash:
-                left = ancestor.left_hash
-                right = new_hash
-
-            traversal_node_hash = ancestor.hash
-
-            async with self.db_wrapper.writer() as writer:
-                await writer.execute(
-                    """
-                    DELETE FROM node
-                    WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
-                    """,
-                    {"tree_id": store_id, "generation": new_generation, "hash": ancestor.hash},
-                )
-
-            await _debug_dump(db=self.db_wrapper, description="after delete")
-
-            new_hash = await self._insert_internal_node(
-                store_id=store_id, generation=new_generation, parent_hash=None, left_hash=left, right_hash=right
-            )
-            for hash in [left, right]:
-                await self._set_parent(
-                    store_id=store_id,
-                    generation=new_generation,
-                    node_hash=hash,
-                    parent_hash=new_hash,
-                )
-            # await self._set_parent(
-            #     ,
-            #     generation=new_generation,
-            #     node_hash=child_hash,
-            #     parent_hash=new_hash,
-            # )
-            # child_hash = new_hash
-            # new_hash = t
-
-        new_root = await self._insert_root(
-            store_id=store_id,
-            node_hash=new_hash,
-            status=status,
-            generation=new_generation,
-        )
-
-        return new_root
-
     async def _set_parent(
         self,
         store_id: bytes32,
@@ -1221,6 +1139,26 @@ class DataStore:
                 WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
                 """,
                 {"tree_id": store_id, "generation": generation, "hash": node_hash, "parent": parent_hash},
+            )
+
+    async def _set_parents(
+        self,
+        store_id: bytes32,
+        generation: int,
+        node_hashes_and_parents: List[Tuple[bytes32, Optional[bytes32]]],
+    ) -> None:
+        # TODO: maybe set an sql check to only allow NULL -> blob?
+        async with self.db_wrapper.writer_maybe_transaction() as writer:
+            await writer.executemany(
+                """
+                UPDATE node
+                SET parent = :parent
+                WHERE tree_id = :tree_id AND generation = :generation AND hash = :hash
+                """,
+                (
+                    {"tree_id": store_id, "generation": generation, "hash": node_hash, "parent": parent_hash}
+                    for node_hash, parent_hash in node_hashes_and_parents
+                ),
             )
 
     async def _propagate_update_through_lineage(
@@ -1404,13 +1342,12 @@ class DataStore:
                     left_hash=left,
                     right_hash=right,
                 )
-                for side_hash in [left, right]:
-                    await self._set_parent(
-                        store_id=store_id,
-                        generation=generation,
-                        node_hash=side_hash,
-                        parent_hash=new_internal_node_hash,
-                    )
+
+                await self._set_parents(
+                    store_id=store_id,
+                    generation=generation,
+                    node_hashes_and_parents=[(left, new_internal_node_hash), (right, new_internal_node_hash)],
+                )
                 # new_internal_node = await self.get_node(
                 #     ,
                 #     generation=generation,
@@ -1619,20 +1556,21 @@ class DataStore:
 
     async def get_leaf_at_minimum_height(self, root: Root) -> TerminalNode:
         root_node = await self.get_node(root=root, node_hash=root.node_hash)
-        queue: List[Node] = [root_node]
+        queue: List[bytes32] = [root_node.hash]
         while True:
             assert len(queue) > 0
-            node = queue.pop(0)
-            if isinstance(node, InternalNode):
-                left_node = await self.get_node(root=root, node_hash=node.left_hash)
-                right_node = await self.get_node(root=root, node_hash=node.right_hash)
-                queue.append(left_node)
-                queue.append(right_node)
-            elif isinstance(node, TerminalNode):
-                return node
+            nodes = await self.get_nodes(root=root, node_hashes=queue)
+            queue = []
+            for node in nodes:
+                if isinstance(node, TerminalNode):
+                    return node
+
+                queue.append(node.left_hash)
+                queue.append(node.right_hash)
 
     async def insert_batch(
         self,
+        # TODO: should this take a root instead?
         store_id: bytes32,
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
@@ -1755,13 +1693,11 @@ class DataStore:
                         left_hash=left,
                         right_hash=right,
                     )
-                    for child in [left, right]:
-                        await self._set_parent(
-                            store_id=store_id,
-                            generation=new_generation,
-                            node_hash=child,
-                            parent_hash=internal_node_hash,
-                        )
+                    await self._set_parents(
+                        store_id=store_id,
+                        generation=new_generation,
+                        node_hashes_and_parents=[(left, internal_node_hash), (right, internal_node_hash)],
+                    )
                     new_hashes.append(internal_node_hash)
                 if len(pending_autoinsert_hashes) % 2 != 0:
                     new_hashes.append(pending_autoinsert_hashes[-1])
@@ -1798,13 +1734,11 @@ class DataStore:
                         left_hash=left,
                         right_hash=right,
                     )
-                    for child_hash in [left, right]:
-                        await self._set_parent(
-                            store_id=store_id,
-                            generation=new_generation,
-                            node_hash=child_hash,
-                            parent_hash=new_internal_node_hash,
-                        )
+                    await self._set_parents(
+                        store_id=store_id,
+                        generation=new_generation,
+                        node_hashes_and_parents=[(left, new_internal_node_hash), (right, new_internal_node_hash)],
+                    )
 
                     new_root_hash = await self._propagate_update_through_lineage(
                         root=root,
@@ -1945,6 +1879,26 @@ class DataStore:
 
         node = row_to_node(row=row)
         return node
+
+    async def get_nodes(self, root: Root, node_hashes: List[bytes32]) -> List[Node]:
+        hashes = ",".join("?" for _ in node_hashes)
+        async with self.db_wrapper.reader() as reader:
+            # TODO: handle SQLITE_MAX_VARIABLE_NUMBER
+            cursor = await reader.execute(
+                f"""
+                SELECT *
+                FROM node
+                WHERE tree_id = ? AND generation = ? AND hash IN ({hashes})
+                """,
+                [root.store_id, root.generation, *node_hashes],
+            )
+            rows = await cursor.fetchall()
+
+        # TODO: some error if we don't get them all?
+        # if row is None:
+        #     raise Exception(f"Node not found for requested hash: {node_hash.hex()}")
+
+        return [row_to_node(row=row) for row in rows]
 
     async def get_tree_as_program(self, root: Root) -> Program:
         async with self.db_wrapper.reader() as reader:
