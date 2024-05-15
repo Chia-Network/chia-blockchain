@@ -5,7 +5,7 @@ import random
 from dataclasses import replace
 from typing import Callable, List, Optional, Tuple
 
-import pkg_resources
+import importlib_resources
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
@@ -156,9 +156,8 @@ class TestKeychain:
         assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
 
     def test_bip39_test_vectors(self):
-        test_vectors_path = pkg_resources.resource_filename(chia._tests.util.__name__, "bip39_test_vectors.json")
-        with open(test_vectors_path) as f:
-            all_vectors = json.loads(f.read())
+        test_vectors_path = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
+        all_vectors = json.loads(test_vectors_path.read_text(encoding="utf-8"))
 
         for vector_list in all_vectors["english"]:
             entropy_bytes = bytes.fromhex(vector_list[0])
@@ -173,9 +172,8 @@ class TestKeychain:
         """
         Tests that the first 4 letters of each mnemonic phrase matches as if it were the full phrase
         """
-        test_vectors_path = pkg_resources.resource_filename(chia._tests.util.__name__, "bip39_test_vectors.json")
-        with open(test_vectors_path) as f:
-            all_vectors = json.load(f)
+        test_vectors_path = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
+        all_vectors = json.loads(test_vectors_path.read_text(encoding="utf-8"))
 
         for idx, [entropy_hex, full_mnemonic, seed, short_mnemonic] in enumerate(all_vectors["english"]):
             entropy_bytes = bytes.fromhex(entropy_hex)

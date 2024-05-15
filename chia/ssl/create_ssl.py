@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import pkg_resources
+import importlib_resources
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -29,8 +29,9 @@ _all_public_node_names: List[str] = ["full_node", "wallet", "farmer", "introduce
 
 
 def get_chia_ca_crt_key() -> Tuple[Any, Any]:
-    crt = pkg_resources.resource_string(__name__, "chia_ca.crt")
-    key = pkg_resources.resource_string(__name__, "chia_ca.key")
+    here = importlib_resources.files(__name__)
+    crt = here.joinpath("chia_ca.crt").read_bytes()
+    key = here.joinpath("chia_ca.key").read_bytes()
     return crt, key
 
 
