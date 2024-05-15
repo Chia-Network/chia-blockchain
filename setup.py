@@ -61,7 +61,7 @@ dev_dependencies = [
     "isort==5.13.2",
     "flake8==7.0.0",
     "mypy==1.10.0",
-    "black==24.2.0",
+    "black==24.4.2",
     "lxml==5.1.0",
     "aiohttp_cors==0.7.0",  # For blackd
     "pyinstaller==6.6.0",
