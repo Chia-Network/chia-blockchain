@@ -198,7 +198,7 @@ class TestDIDWallet:
         # Wallet2 recovers DIDWallet2 to a new set of keys
         async with wallet_node_2.wallet_state_manager.lock:
             did_wallet_2 = await DIDWallet.create_new_did_wallet_from_recovery(
-                wallet_node_2.wallet_state_manager, wallet_2, DEFAULT_TX_CONFIG, backup_data
+                wallet_node_2.wallet_state_manager, wallet_2, backup_data
             )
         coin = await did_wallet_1.get_coin()
         assert did_wallet_2.did_info.temp_coin == coin
@@ -985,7 +985,7 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), [], fee=fee
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG, [], fee=fee
             )
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
