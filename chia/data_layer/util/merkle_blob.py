@@ -14,6 +14,7 @@ KVId = NewType("KVId", int)
 
 T = TypeVar("T")
 
+# TODO: i think that in the objects i would prefer Optional...
 # TODO: this is a bit disconnected and finicky etc since i'm not using our fixed
 #       width integers (yet)
 null_parent = TreeIndex(2 ** (4 * 8) - 1)
