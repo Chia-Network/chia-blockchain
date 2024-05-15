@@ -1655,7 +1655,7 @@ class DataStore:
 
             assert latest_local_root is not None
 
-            new_generation = await self._create_new_generation()
+            new_generation = await self._create_new_generation(store_id=store_id)
 
             key_hash_frequency: Dict[bytes32, int] = {}
             first_action: Dict[bytes32, str] = {}
