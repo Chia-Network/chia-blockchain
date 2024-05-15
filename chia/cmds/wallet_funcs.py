@@ -272,7 +272,8 @@ async def send(
     excluded_coin_ids: Sequence[str],
     reuse_puzhash: Optional[bool],
     clawback_time_lock: int,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if memo is None:
             memos = None
@@ -284,19 +285,19 @@ async def send(
                 f"A transaction of amount {amount} and fee {fee} is unusual.\n"
                 f"Pass in --override if you are sure you mean to do this."
             )
-            return
+            return []
         if amount == 0:
             print("You can not send an empty transaction")
-            return
+            return []
         if clawback_time_lock < 0:
             print("Clawback time lock seconds cannot be negative.")
-            return
+            return []
         try:
             typ = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(typ)
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
-            return
+            return []
 
         final_fee: uint64 = uint64(int(fee * units["chia"]))  # fees are always in XCH mojos
         final_amount: uint64 = uint64(int(amount * mojo_per_unit))
@@ -319,6 +320,7 @@ async def send(
                     if clawback_time_lock > 0
                     else None
                 ),
+                push=push,
             )
         elif typ in {WalletType.CAT, WalletType.CRCAT}:
             print("Submitting transaction...")
@@ -334,23 +336,28 @@ async def send(
                 address,
                 final_fee,
                 memos,
+                push=push,
             )
         else:
             print("Only standard wallet and CAT wallets are supported")
-            return
+            return []
 
         tx_id = res.transaction.name
-        start = time.time()
-        while time.time() - start < 10:
-            await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(tx_id)
-            if len(tx.sent_to) > 0:
-                print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(fingerprint, tx_id))
-                return None
+        if push:
+            start = time.time()
+            while time.time() - start < 10:
+                await asyncio.sleep(0.1)
+                tx = await wallet_client.get_transaction(tx_id)
+                if len(tx.sent_to) > 0:
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, tx_id))
+                    return res.transactions
 
         print("Transaction not yet submitted to nodes")
-        print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+        if push:  # pragma: no cover
+            print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+
+        return res.transactions  # pragma: no cover
 
 
 async def get_address(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, new_address: bool) -> None:
