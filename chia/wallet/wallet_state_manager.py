@@ -536,12 +536,13 @@ class WalletStateManager:
                     await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
                         [record.puzzle_hash for record in derivation_paths]
                     )
-        if len(unhardened_keys) > 0:
-            self.state_changed("new_derivation_index", data_object={"index": last_index - 1})
-        # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
-        if mark_existing_as_used and unused > 0 and len(unhardened_keys) > 0:
-            self.log.info(f"Updating last used derivation index: {unused - 1}")
-            await self.puzzle_store.set_used_up_to(uint32(unused - 1))
+        if not target_wallet.handle_own_derivation():
+            if len(unhardened_keys) > 0:
+                self.state_changed("new_derivation_index", data_object={"index": last_index - 1})
+            # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
+            if mark_existing_as_used and unused > 0 and len(unhardened_keys) > 0:
+                self.log.info(f"Updating last used derivation index: {unused - 1}")
+                await self.puzzle_store.set_used_up_to(uint32(unused - 1))
 
     async def update_wallet_puzzle_hashes(self, wallet_id: uint32) -> None:
         derivation_paths: List[DerivationRecord] = []
