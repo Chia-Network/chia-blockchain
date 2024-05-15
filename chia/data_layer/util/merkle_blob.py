@@ -53,6 +53,7 @@ class MerkleBlob:
         return unpack_raw_node(
             metadata=metadata,
             data=self.blob[data_start:end],
+            index=index,
         )
 
     def get_lineage(self, index: TreeIndex) -> List[RawMerkleNodeProtocol]:
@@ -67,6 +68,11 @@ class MerkleBlob:
 class RawMerkleNodeProtocol(Protocol):
     struct: ClassVar[struct.Struct]
     type: ClassVar[NodeType]
+
+    def __init__(self, *args: object, index: TreeIndex) -> None: ...
+
+    @property
+    def index(self) -> TreeIndex: ...
 
     @property
     def parent(self) -> TreeIndex: ...
@@ -90,15 +96,16 @@ class NodeMetadata:
 
 
 # TODO: allow broader bytes'ish types
-def unpack_raw_node(metadata: NodeMetadata, data: bytes) -> RawMerkleNodeProtocol:
+def unpack_raw_node(index: TreeIndex, metadata: NodeMetadata, data: bytes) -> RawMerkleNodeProtocol:
     cls = raw_node_type_to_class[metadata.type]
-    return cls(*cls.struct.unpack(data))
+    return cls(*cls.struct.unpack(data), index=index)
 
 
 # TODO: allow broader bytes'ish types
 def pack_raw_node(raw_node: RawMerkleNodeProtocol) -> bytes:
+    # TODO: really hacky ignoring of the index field
     # TODO: try again to indicate that the RawMerkleNodeProtocol requires the dataclass interface
-    return raw_node.struct.pack(*astuple(raw_node))  # type: ignore[call-overload]
+    return raw_node.struct.pack(*astuple(raw_node)[:-1])  # type: ignore[call-overload]
 
 
 @final
@@ -121,6 +128,8 @@ class RawInternalMerkleNode:
     # TODO: maybe bytes32?  maybe that's not 'raw'
     # TODO: how much slower to just not store the hashes at all?
     hash: bytes
+    # TODO: this feels like a bit of a violation being aware of your location
+    index: TreeIndex
 
 
 @final
@@ -142,6 +151,8 @@ class RawLeafMerkleNode:
     key_value: KVId
     # TODO: maybe bytes32?  maybe that's not 'raw'
     hash: bytes
+    # TODO: this feels like a bit of a violation being aware of your location
+    index: TreeIndex
 
 
 metadata_size = NodeMetadata.struct.size

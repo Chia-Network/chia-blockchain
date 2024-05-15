@@ -108,6 +108,7 @@ reference_raw_nodes: List[DataCase] = [
             left=TreeIndex(0x04050607),
             right=TreeIndex(0x08090A0B),
             hash=bytes(range(12, data_size)),
+            index=TreeIndex(0),
         ),
     ),
     RawNodeFromBlobCase(
@@ -115,6 +116,7 @@ reference_raw_nodes: List[DataCase] = [
             parent=TreeIndex(0x00010203),
             key_value=KVId(0x0405060708090A0B),
             hash=bytes(range(12, data_size)),
+            index=TreeIndex(0),
         ),
     ),
 ]
@@ -123,8 +125,9 @@ reference_raw_nodes: List[DataCase] = [
 @datacases(*reference_raw_nodes)
 def test_raw_node_from_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) -> None:
     node = unpack_raw_node(
-        NodeMetadata(type=case.raw.type, dirty=False),
-        case.blob_to_unpack,
+        index=TreeIndex(0),
+        metadata=NodeMetadata(type=case.raw.type, dirty=False),
+        data=case.blob_to_unpack,
     )
     assert node == case.raw
 
@@ -141,6 +144,7 @@ def test_merkle_blob_one_leaf_loads() -> None:
         parent=null_parent,
         key_value=KVId(0x0405060708090A0B),
         hash=bytes(range(12, data_size)),
+        index=TreeIndex(0),
     )
     blob = bytearray(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(leaf))
 
@@ -156,16 +160,19 @@ def test_merkle_blob_two_leafs_loads() -> None:
         left=TreeIndex(1),
         right=TreeIndex(2),
         hash=bytes(range(12, data_size)),
+        index=TreeIndex(0),
     )
     left_leaf = RawLeafMerkleNode(
         parent=TreeIndex(0),
         key_value=KVId(0x0405060708090A0B),
         hash=bytes(range(12, data_size)),
+        index=TreeIndex(1),
     )
     right_leaf = RawLeafMerkleNode(
         parent=TreeIndex(0),
         key_value=KVId(0x1415161718191A1B),
         hash=bytes(range(12, data_size)),
+        index=TreeIndex(2),
     )
     blob = bytearray()
     blob.extend(NodeMetadata(type=NodeType.internal, dirty=True).pack() + pack_raw_node(root))
