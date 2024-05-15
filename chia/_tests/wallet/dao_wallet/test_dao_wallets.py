@@ -16,7 +16,6 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtoco
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout
@@ -960,7 +959,7 @@ async def test_dao_proposal_partial_vote(
     [funding_tx] = await dao_wallet_0.wallet_state_manager.add_pending_transactions([funding_tx])
     assert isinstance(funding_tx, TransactionRecord)
     funding_sb = funding_tx.spend_bundle
-    assert isinstance(funding_sb, SpendBundle)
+    assert funding_sb is not None
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, funding_sb.name())
     await full_node_api.process_transaction_records(records=[funding_tx])
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
@@ -1013,7 +1012,7 @@ async def test_dao_proposal_partial_vote(
     [proposal_tx] = await dao_wallet_0.wallet_state_manager.add_pending_transactions([proposal_tx])
     assert isinstance(proposal_tx, TransactionRecord)
     proposal_sb = proposal_tx.spend_bundle
-    assert isinstance(proposal_sb, SpendBundle)
+    assert proposal_sb is not None
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))

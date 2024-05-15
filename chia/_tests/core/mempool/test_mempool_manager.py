@@ -1030,7 +1030,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
     async def make_and_send_big_cost_sb(coin: Coin) -> None:
         conditions = []
         g1 = G1Element()
-        for _ in range(144):
+        for _ in range(169):
             conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 10_000_000])
         # Create a spend bundle with a big enough cost that gets it close to the limit
@@ -1040,7 +1040,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
     mempool_manager, coins = await setup_mempool_with_coins(
         coin_amounts=list(range(1_000_000_000, 1_000_000_030)),
         max_block_clvm_cost=550_000_000,
-        max_tx_clvm_cost=uint64(550_000_000 * 0.6),
+        max_tx_clvm_cost=uint64(550_000_000),
         mempool_block_buffer=20,
     )
     # Create the spend bundles with a big enough cost that they get close to the limit

@@ -207,8 +207,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
-    container:
-      image: chianetwork/rocky8-builder:latest
     timeout-minutes: 5
     strategy:
       fail-fast: false
@@ -220,6 +218,10 @@ jobs:
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
+
+      - uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - uses: chia-network/actions/create-venv@main
         id: create-venv
@@ -283,7 +285,6 @@ jobs:
           aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm s3://download.chia.net/dev/chia-blockchain-cli-${CHIA_DEV_BUILD}-1.x86_64.rpm
 
       - name: Create Checksums
-        if: env.FULL_RELEASE == 'true' || github.ref == 'refs/heads/main'
         run: |
           ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
           sha256sum "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm > "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256

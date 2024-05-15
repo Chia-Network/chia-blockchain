@@ -466,7 +466,13 @@ class WebSocketServer:
     async def get_network_info(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         network_name = self.net_config["selected_network"]
         address_prefix = self.net_config["network_overrides"]["config"][network_name]["address_prefix"]
-        response: Dict[str, Any] = {"success": True, "network_name": network_name, "network_prefix": address_prefix}
+        genesis_challenge = self.net_config["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
+        response: Dict[str, Any] = {
+            "success": True,
+            "network_name": network_name,
+            "network_prefix": address_prefix,
+            "genesis_challenge": genesis_challenge,
+        }
         return response
 
     async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
