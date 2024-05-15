@@ -149,6 +149,7 @@ def test_merkle_blob_one_leaf_loads() -> None:
 
 
 def test_merkle_blob_two_leafs_loads() -> None:
+    # TODO: break this test down into some reusable data and multiple tests
     # TODO: need to persist reference data
     root = RawInternalMerkleNode(
         parent=null_parent,
@@ -177,6 +178,9 @@ def test_merkle_blob_two_leafs_loads() -> None:
     assert merkle_blob.get_raw_node(root.right) == right_leaf
     assert merkle_blob.get_raw_node(left_leaf.parent) == root
     assert merkle_blob.get_raw_node(right_leaf.parent) == root
+
+    assert merkle_blob.get_lineage(TreeIndex(0)) == [root]
+    assert merkle_blob.get_lineage(root.left) == [left_leaf, root]
 
 
 @pytest.mark.parametrize(argnames="index", argvalues=[TreeIndex(-1), TreeIndex(1), TreeIndex(null_parent)])

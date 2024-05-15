@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import astuple, dataclass
 from enum import IntEnum
-from typing import ClassVar, Dict, List, NewType, Protocol, Type, TypeVar, final
+from typing import TYPE_CHECKING, ClassVar, Dict, List, NewType, Protocol, Type, TypeVar, cast, final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -55,10 +55,21 @@ class MerkleBlob:
             data=self.blob[data_start:end],
         )
 
+    def get_lineage(self, index: TreeIndex) -> List[RawMerkleNodeProtocol]:
+        node = self.get_raw_node(index=index)
+        lineage = [node]
+        while node.parent != null_parent:
+            node = self.get_raw_node(node.parent)
+            lineage.append(node)
+        return lineage
+
 
 class RawMerkleNodeProtocol(Protocol):
     struct: ClassVar[struct.Struct]
     type: ClassVar[NodeType]
+
+    @property
+    def parent(self) -> TreeIndex: ...
 
 
 @final
@@ -93,6 +104,12 @@ def pack_raw_node(raw_node: RawMerkleNodeProtocol) -> bytes:
 @final
 @dataclass(frozen=True)
 class RawInternalMerkleNode:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[RawMerkleNodeProtocol] = cast(
+            "RawInternalMerkleNode",
+            None,
+        )
+
     type: ClassVar[NodeType] = NodeType.internal
     # TODO: make a check for this?
     # must match attribute type and order such that cls(*struct.unpack(cls.format, blob) works
@@ -109,6 +126,12 @@ class RawInternalMerkleNode:
 @final
 @dataclass(frozen=True)
 class RawLeafMerkleNode:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[RawMerkleNodeProtocol] = cast(
+            "RawLeafMerkleNode",
+            None,
+        )
+
     type: ClassVar[NodeType] = NodeType.leaf
     # TODO: make a check for this?
     # must match attribute type and order such that cls(*struct.unpack(cls.format, blob) works
