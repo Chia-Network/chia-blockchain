@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 from dataclasses import astuple, dataclass
-from enum import Enum
+from enum import IntEnum
 from typing import ClassVar, Dict, List, NewType, Protocol, Type, TypeVar, final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -14,8 +14,17 @@ KVId = NewType("KVId", int)
 
 T = TypeVar("T")
 
+# TODO: this is a bit disconnected and finicky etc since i'm not using our fixed
+#       width integers (yet)
+null_parent = TreeIndex(2 ** (4 * 8) - 1)
 
-class NodeType(Enum):
+
+class InvalidIndexError(Exception):
+    def __init__(self, index: TreeIndex) -> None:
+        super().__init__(f"Invalid index: {index}")
+
+
+class NodeType(IntEnum):
     # TODO: maybe use existing?
     internal = 0
     leaf = 1
@@ -29,9 +38,16 @@ class MerkleBlob:
     blob: bytearray
 
     def get_raw_node(self, index: TreeIndex) -> RawMerkleNodeProtocol:
+        if index < 0 or null_parent <= index:
+            raise InvalidIndexError(index=index)
+
         metadata_start = index * spacing
         data_start = metadata_start + metadata_size
         end = data_start + data_size
+
+        if end > len(self.blob):
+            raise InvalidIndexError(index=index)
+
         metadata = NodeMetadata.unpack(self.blob[metadata_start:data_start])
         return unpack_raw_node(
             metadata=metadata,

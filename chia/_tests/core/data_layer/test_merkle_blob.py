@@ -11,17 +11,22 @@ from _pytest.fixtures import SubRequest
 
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.data_layer.util.merkle_blob import (
+    InvalidIndexError,
     KVId,
+    MerkleBlob,
     NodeMetadata,
+    NodeType,
     RawInternalMerkleNode,
     RawLeafMerkleNode,
     RawMerkleNodeProtocol,
     TreeIndex,
     data_size,
     metadata_size,
+    null_parent,
     pack_raw_node,
     raw_node_classes,
     raw_node_type_to_class,
+    spacing,
     unpack_raw_node,
 )
 
@@ -128,3 +133,55 @@ def test_raw_node_from_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) ->
 def test_raw_node_to_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) -> None:
     blob = pack_raw_node(case.raw)
     assert blob == case.packed_blob_reference
+
+
+def test_merkle_blob_one_leaf_loads() -> None:
+    # TODO: need to persist reference data
+    leaf = RawLeafMerkleNode(
+        parent=null_parent,
+        key_value=KVId(0x0405060708090A0B),
+        hash=bytes(range(12, data_size)),
+    )
+    blob = bytearray(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(leaf))
+
+    merkle_blob = MerkleBlob(blob=blob)
+    assert merkle_blob.get_raw_node(TreeIndex(0)) == leaf
+
+
+def test_merkle_blob_two_leafs_loads() -> None:
+    # TODO: need to persist reference data
+    root = RawInternalMerkleNode(
+        parent=null_parent,
+        left=TreeIndex(1),
+        right=TreeIndex(2),
+        hash=bytes(range(12, data_size)),
+    )
+    left_leaf = RawLeafMerkleNode(
+        parent=TreeIndex(0),
+        key_value=KVId(0x0405060708090A0B),
+        hash=bytes(range(12, data_size)),
+    )
+    right_leaf = RawLeafMerkleNode(
+        parent=TreeIndex(0),
+        key_value=KVId(0x1415161718191A1B),
+        hash=bytes(range(12, data_size)),
+    )
+    blob = bytearray()
+    blob.extend(NodeMetadata(type=NodeType.internal, dirty=True).pack() + pack_raw_node(root))
+    blob.extend(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(left_leaf))
+    blob.extend(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(right_leaf))
+
+    merkle_blob = MerkleBlob(blob=blob)
+    assert merkle_blob.get_raw_node(TreeIndex(0)) == root
+    assert merkle_blob.get_raw_node(root.left) == left_leaf
+    assert merkle_blob.get_raw_node(root.right) == right_leaf
+    assert merkle_blob.get_raw_node(left_leaf.parent) == root
+    assert merkle_blob.get_raw_node(right_leaf.parent) == root
+
+
+@pytest.mark.parametrize(argnames="index", argvalues=[TreeIndex(-1), TreeIndex(1), TreeIndex(null_parent)])
+def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
+    merkle_blob = MerkleBlob(blob=bytearray([0] * spacing))
+
+    with pytest.raises(InvalidIndexError):
+        merkle_blob.get_raw_node(index)
