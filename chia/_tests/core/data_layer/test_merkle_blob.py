@@ -11,17 +11,19 @@ from _pytest.fixtures import SubRequest
 
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.data_layer.util.merkle_blob import (
+    KVId,
     NodeMetadata,
     RawInternalMerkleNode,
     RawLeafMerkleNode,
     RawMerkleNodeProtocol,
     RawRootMerkleNode,
+    TreeIndex,
     data_size,
     metadata_size,
+    pack_raw_node,
     raw_node_classes,
-    raw_node_from_blob,
-    raw_node_to_blob,
     raw_node_type_to_class,
+    unpack_raw_node,
 )
 
 
@@ -98,25 +100,25 @@ class RawNodeFromBlobCase(Generic[RawMerkleNodeT]):
 reference_raw_nodes: List[DataCase] = [
     RawNodeFromBlobCase(
         raw=RawRootMerkleNode(
-            left=0x04050607,
-            right=0x08090A0B,
+            left=TreeIndex(0x04050607),
+            right=TreeIndex(0x08090A0B),
             hash=bytes(range(12, data_size)),
         ),
         packed_blob_reference=b"\x00\x00\x00\x00" + reference_blob[4:],
     ),
     RawNodeFromBlobCase(
         raw=RawInternalMerkleNode(
-            parent=0x00010203,
-            left=0x04050607,
-            right=0x08090A0B,
+            parent=TreeIndex(0x00010203),
+            left=TreeIndex(0x04050607),
+            right=TreeIndex(0x08090A0B),
             hash=bytes(range(12, data_size)),
         ),
     ),
     RawNodeFromBlobCase(
         raw=RawLeafMerkleNode(
-            parent=0x00010203,
-            key=0x04050607,
-            value=0x08090A0B,
+            parent=TreeIndex(0x00010203),
+            key=KVId(0x04050607),
+            value=KVId(0x08090A0B),
             hash=bytes(range(12, data_size)),
         ),
     ),
@@ -125,7 +127,7 @@ reference_raw_nodes: List[DataCase] = [
 
 @datacases(*reference_raw_nodes)
 def test_raw_node_from_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) -> None:
-    node = raw_node_from_blob(
+    node = unpack_raw_node(
         NodeMetadata(type=case.raw.type, dirty=False),
         case.blob_to_unpack,
     )
@@ -134,5 +136,5 @@ def test_raw_node_from_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) ->
 
 @datacases(*reference_raw_nodes)
 def test_raw_node_to_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) -> None:
-    blob = raw_node_to_blob(case.raw)
+    blob = pack_raw_node(case.raw)
     assert blob == case.packed_blob_reference

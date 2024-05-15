@@ -3,12 +3,14 @@ from __future__ import annotations
 import struct
 from dataclasses import astuple, dataclass
 from enum import Enum
-from typing import ClassVar, Dict, List, Protocol, Type, TypeVar, final
+from typing import ClassVar, Dict, List, NewType, Protocol, Type, TypeVar, final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 dirty_hash = bytes32(b"\x00" * 32)
 
+TreeIndex = NewType("TreeIndex", int)
+KVId = NewType("KVId", int)
 
 T = TypeVar("T")
 
@@ -27,12 +29,12 @@ class NodeType(Enum):
 class MerkleBlob:
     blob: bytearray
 
-    def get_raw_node(self, index: int) -> RawMerkleNodeProtocol:
+    def get_raw_node(self, index: TreeIndex) -> RawMerkleNodeProtocol:
         metadata_start = index * spacing
         data_start = metadata_start + metadata_size
         end = data_start + data_size
-        metadata = NodeMetadata(*NodeMetadata.struct.unpack(self.blob[metadata_start:data_start]))
-        return raw_node_from_blob(
+        metadata = NodeMetadata.unpack(self.blob[metadata_start:data_start])
+        return unpack_raw_node(
             metadata=metadata,
             data=self.blob[data_start:end],
         )
@@ -52,24 +54,22 @@ class NodeMetadata:
     # TODO: where should this really be?
     dirty: bool
 
+    def pack(self) -> bytes:
+        return self.struct.pack(*astuple(self))
+
     @classmethod
     def unpack(cls, blob: bytes) -> NodeMetadata:
         return cls(*cls.struct.unpack(blob))
 
 
-metadata_size = NodeMetadata.struct.size
-data_size = 44
-spacing = metadata_size + data_size
-
-
 # TODO: allow broader bytes'ish types
-def raw_node_from_blob(metadata: NodeMetadata, data: bytes) -> RawMerkleNodeProtocol:
+def unpack_raw_node(metadata: NodeMetadata, data: bytes) -> RawMerkleNodeProtocol:
     cls = raw_node_type_to_class[metadata.type]
     return cls(*cls.struct.unpack(data))
 
 
 # TODO: allow broader bytes'ish types
-def raw_node_to_blob(raw_node: RawMerkleNodeProtocol) -> bytes:
+def pack_raw_node(raw_node: RawMerkleNodeProtocol) -> bytes:
     # TODO: try again to indicate that the RawMerkleNodeProtocol requires the dataclass interface
     return raw_node.struct.pack(*astuple(raw_node))  # type: ignore[call-overload]
 
@@ -81,10 +81,15 @@ class RawRootMerkleNode:
     # must match attribute type and order such that cls(*struct.unpack(cls.format, blob) works
     struct: ClassVar[struct.Struct] = struct.Struct(">4xII32s")
 
-    left: int
-    right: int
+    left: TreeIndex
+    right: TreeIndex
     # TODO: maybe bytes32?  maybe that's not 'raw'
     hash: bytes
+
+
+metadata_size = NodeMetadata.struct.size
+data_size = RawRootMerkleNode.struct.size
+spacing = metadata_size + data_size
 
 
 @final
@@ -95,10 +100,11 @@ class RawInternalMerkleNode:
     # must match attribute type and order such that cls(*struct.unpack(cls.format, blob) works
     struct: ClassVar[struct.Struct] = struct.Struct(">III32s")
 
-    parent: int
-    left: int
-    right: int
+    parent: TreeIndex
+    left: TreeIndex
+    right: TreeIndex
     # TODO: maybe bytes32?  maybe that's not 'raw'
+    # TODO: how much slower to just not store the hashes at all?
     hash: bytes
 
 
@@ -110,10 +116,10 @@ class RawLeafMerkleNode:
     # must match attribute type and order such that cls(*struct.unpack(cls.format, blob) works
     struct: ClassVar[struct.Struct] = struct.Struct(">III32s")
 
-    parent: int
-    # TODO: how/where are these mapping?
-    key: int
-    value: int
+    parent: TreeIndex
+    # TODO: how/where are these mapping?  maybe a kv table row id?
+    key: KVId
+    value: KVId
     # TODO: maybe bytes32?  maybe that's not 'raw'
     hash: bytes
 
