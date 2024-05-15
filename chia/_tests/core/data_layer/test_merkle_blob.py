@@ -117,8 +117,7 @@ reference_raw_nodes: List[DataCase] = [
     RawNodeFromBlobCase(
         raw=RawLeafMerkleNode(
             parent=TreeIndex(0x00010203),
-            key=KVId(0x04050607),
-            value=KVId(0x08090A0B),
+            key_value=KVId(0x0405060708090A0B),
             hash=bytes(range(12, data_size)),
         ),
     ),

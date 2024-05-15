@@ -114,12 +114,11 @@ class RawLeafMerkleNode:
     type: ClassVar[NodeType] = NodeType.leaf
     # TODO: make a check for this?
     # must match attribute type and order such that cls(*struct.unpack(cls.format, blob) works
-    struct: ClassVar[struct.Struct] = struct.Struct(">III32s")
+    struct: ClassVar[struct.Struct] = struct.Struct(">IQ32s")
 
     parent: TreeIndex
     # TODO: how/where are these mapping?  maybe a kv table row id?
-    key: KVId
-    value: KVId
+    key_value: KVId
     # TODO: maybe bytes32?  maybe that's not 'raw'
     hash: bytes
 
