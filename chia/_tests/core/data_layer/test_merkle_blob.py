@@ -16,7 +16,6 @@ from chia.data_layer.util.merkle_blob import (
     RawInternalMerkleNode,
     RawLeafMerkleNode,
     RawMerkleNodeProtocol,
-    RawRootMerkleNode,
     TreeIndex,
     data_size,
     metadata_size,
@@ -98,14 +97,6 @@ class RawNodeFromBlobCase(Generic[RawMerkleNodeT]):
 
 
 reference_raw_nodes: List[DataCase] = [
-    RawNodeFromBlobCase(
-        raw=RawRootMerkleNode(
-            left=TreeIndex(0x04050607),
-            right=TreeIndex(0x08090A0B),
-            hash=bytes(range(12, data_size)),
-        ),
-        packed_blob_reference=b"\x00\x00\x00\x00" + reference_blob[4:],
-    ),
     RawNodeFromBlobCase(
         raw=RawInternalMerkleNode(
             parent=TreeIndex(0x00010203),

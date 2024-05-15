@@ -17,9 +17,8 @@ T = TypeVar("T")
 
 class NodeType(Enum):
     # TODO: maybe use existing?
-    root = 0
-    internal = 1
-    leaf = 2
+    internal = 0
+    leaf = 1
 
     # free?
 
@@ -76,24 +75,6 @@ def pack_raw_node(raw_node: RawMerkleNodeProtocol) -> bytes:
 
 @final
 @dataclass(frozen=True)
-class RawRootMerkleNode:
-    type: ClassVar[NodeType] = NodeType.root
-    # must match attribute type and order such that cls(*struct.unpack(cls.format, blob) works
-    struct: ClassVar[struct.Struct] = struct.Struct(">4xII32s")
-
-    left: TreeIndex
-    right: TreeIndex
-    # TODO: maybe bytes32?  maybe that's not 'raw'
-    hash: bytes
-
-
-metadata_size = NodeMetadata.struct.size
-data_size = RawRootMerkleNode.struct.size
-spacing = metadata_size + data_size
-
-
-@final
-@dataclass(frozen=True)
 class RawInternalMerkleNode:
     type: ClassVar[NodeType] = NodeType.internal
     # TODO: make a check for this?
@@ -123,8 +104,12 @@ class RawLeafMerkleNode:
     hash: bytes
 
 
+metadata_size = NodeMetadata.struct.size
+data_size = RawInternalMerkleNode.struct.size
+spacing = metadata_size + data_size
+
+
 raw_node_classes: List[Type[RawMerkleNodeProtocol]] = [
-    RawRootMerkleNode,
     RawInternalMerkleNode,
     RawLeafMerkleNode,
 ]
