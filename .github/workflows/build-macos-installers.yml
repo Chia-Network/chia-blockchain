@@ -423,6 +423,10 @@ jobs:
               matrix: 13
             arch:
               matrix: arm
+          - os:
+              matrix: 14
+            arch:
+              matrix: intel
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main

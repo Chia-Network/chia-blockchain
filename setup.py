@@ -24,6 +24,7 @@ dependencies = [
     "concurrent-log-handler==0.9.25",  # Concurrently log and rotate logs
     "cryptography==42.0.5",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.14.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+    "importlib-resources==6.4.0",
     "keyring==25.1.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0.1",  # Used for config file format
     "setproctitle==1.3.3",  # Gives the chia processes readable names
@@ -48,19 +49,19 @@ dev_dependencies = [
     "coverage==7.4.3",
     "diff-cover==9.0.0",
     "pre-commit==3.5.0; python_version < '3.9'",
-    "pre-commit==3.7.0; python_version >= '3.9'",
+    "pre-commit==3.7.1; python_version >= '3.9'",
     "py3createtorrent==1.2.0",
     "pylint==3.1.0",
     "pytest==8.1.1",
     "pytest-cov==5.0.0",
     "pytest-mock==3.14.0",
-    "pytest-xdist==3.5.0",
+    "pytest-xdist==3.6.1",
     "pyupgrade==3.15.2",
     "twine==5.0.0",
     "isort==5.13.2",
     "flake8==7.0.0",
     "mypy==1.10.0",
-    "black==24.2.0",
+    "black==24.4.2",
     "lxml==5.1.0",
     "aiohttp_cors==0.7.0",  # For blackd
     "pyinstaller==6.6.0",

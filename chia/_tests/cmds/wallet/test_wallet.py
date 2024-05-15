@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
-import pkg_resources
+import importlib_resources
 import pytest
 from chia_rs import Coin, G2Element
 
@@ -37,9 +38,8 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_store import GetCoinRecords
 
-test_offer_file_path: Path = Path(pkg_resources.resource_filename(__name__, "test_offer.toffer"))
-test_offer_file_name: str = str(test_offer_file_path)
-test_offer_file_bech32: str = open(test_offer_file_name).read()
+test_offer_file_path = importlib_resources.files(__name__).joinpath("test_offer.toffer")
+test_offer_file_bech32 = test_offer_file_path.read_text(encoding="utf-8")
 test_offer_id: str = "0xdfb7e8643376820ec995b0bcdb3fc1f764c16b814df5e074631263fcf1e00839"
 test_offer_id_bytes: bytes32 = bytes32.from_hexstr(test_offer_id)
 
@@ -921,7 +921,6 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
 
     inst_rpc_client = TakeOfferRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    command_args = ["wallet", "take_offer", test_offer_file_name, FINGERPRINT_ARG, "-m1", "--reuse"]
     # these are various things that should be in the output
     cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
     cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
@@ -934,7 +933,11 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         "    - accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d: 0.001 (1 mojo)",
         "Accepted offer with ID dfb7e8643376820ec995b0bcdb3fc1f764c16b814df5e074631263fcf1e00839",
     ]
-    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
+
+    with importlib_resources.as_file(test_offer_file_path) as test_offer_file_name:
+        command_args = ["wallet", "take_offer", os.fspath(test_offer_file_name), FINGERPRINT_ARG, "-m1", "--reuse"]
+        run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
+
     expected_calls: logType = {
         "cat_asset_id_to_name": [
             (cat1,),
