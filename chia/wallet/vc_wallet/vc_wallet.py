@@ -392,7 +392,7 @@ class VCWallet:
             coins.update(await self.standard_wallet.select_coins(fee, tx_config.coin_selection_config))
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
         sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
-        nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
+        nonce: bytes32 = SerializedProgram.to(sorted_coin_list).get_tree_hash()
         vc_announcement: AssertCoinAnnouncement = AssertCoinAnnouncement(asserted_id=vc.coin.name(), asserted_msg=nonce)
 
         # Assemble final bundle
