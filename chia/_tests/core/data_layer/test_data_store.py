@@ -17,7 +17,7 @@ import aiosqlite
 import pytest
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
-from chia._tests.util.misc import BenchmarkRunner, Marks, datacases
+from chia._tests.util.misc import BenchmarkRunner, Marks, boolean_datacases, datacases
 from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
@@ -1991,7 +1991,23 @@ async def test_insert_key_already_present(data_store: DataStore, store_id: bytes
 
 
 @pytest.mark.anyio
-async def test_update_keys(data_store: DataStore, store_id: bytes32) -> None:
+@boolean_datacases(name="use_batch_autoinsert", false="not optimized batch insert", true="optimized batch insert")
+async def test_batch_insert_key_already_present(
+    data_store: DataStore,
+    store_id: bytes32,
+    use_batch_autoinsert: bool,
+) -> None:
+    key = b"foo"
+    value = b"bar"
+    changelist = [{"action": "insert", "key": key, "value": value}]
+    await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
+    with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
+        await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
+
+
+@pytest.mark.anyio
+@boolean_datacases(name="use_upsert", false="update with delete and insert", true="update with upsert")
+async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert: bool) -> None:
     num_keys = 10
     missing_keys = 50
     num_values = 10
@@ -1999,12 +2015,17 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32) -> None:
     for value in range(num_values):
         changelist: List[Dict[str, Any]] = []
         bytes_value = value.to_bytes(4, byteorder="big")
-        for key in range(num_keys + missing_keys):
-            bytes_key = key.to_bytes(4, byteorder="big")
-            changelist.append({"action": "delete", "key": bytes_key})
-        for key in range(num_keys):
-            bytes_key = key.to_bytes(4, byteorder="big")
-            changelist.append({"action": "insert", "key": bytes_key, "value": bytes_value})
+        if use_upsert:
+            for key in range(num_keys):
+                bytes_key = key.to_bytes(4, byteorder="big")
+                changelist.append({"action": "upsert", "key": bytes_key, "value": bytes_value})
+        else:
+            for key in range(num_keys + missing_keys):
+                bytes_key = key.to_bytes(4, byteorder="big")
+                changelist.append({"action": "delete", "key": bytes_key})
+            for key in range(num_keys):
+                bytes_key = key.to_bytes(4, byteorder="big")
+                changelist.append({"action": "insert", "key": bytes_key, "value": bytes_value})
 
         await data_store.insert_batch(
             store_id=store_id,
