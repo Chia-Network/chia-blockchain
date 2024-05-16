@@ -1506,7 +1506,7 @@ class DataStore:
                     hash = key_hash(key)
                     if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
                         terminal_node_hash = await self._insert_terminal_node(key, new_value)
-                        old_node: Optional[TerminalNode] = None
+                        old_node: Optional[Node] = None
                         if hash in keys_values_compressed.keys_values_hashed:
                             leaf_hash = keys_values_compressed.keys_values_hashed[hash]
                             old_node = await self.get_node(leaf_hash)
