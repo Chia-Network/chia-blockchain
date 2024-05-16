@@ -530,6 +530,9 @@ class CRCATWallet(CATWallet):
                             primaries=primaries,
                             conditions=(*extra_conditions, xch_announcement, announcement),
                         )
+                    else:
+                        # TODO: what about when they are equal?
+                        raise Exception("Equality not handled")
                 else:
                     innersol = self.standard_wallet.make_solution(
                         primaries=primaries,

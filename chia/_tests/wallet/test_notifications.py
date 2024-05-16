@@ -128,6 +128,8 @@ async def test_notifications(
             msg = bytes([0] * 10001)
             AMOUNT = uint64(750000000000)
             FEE = uint64(0)
+        else:
+            raise Exception(f"Unhandled case: {case!r}")
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         if case == "allow":

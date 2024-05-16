@@ -1436,6 +1436,9 @@ class DAOWallet:
                 treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
                 delegated_solution = Program.to([])
 
+            else:
+                raise Exception(f"Unknown proposal type: {proposal_type!r}")
+
             treasury_solution = Program.to(
                 [
                     [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH.as_atom(), 0],
