@@ -1461,7 +1461,7 @@ class DataStore:
                             if key_hash_frequency[hash] == 1 or (
                                 key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
                             ):
-                                old_node: Optional[TerminalNode] = None
+                                old_node: Optional[Node] = None
                                 if hash in keys_values_compressed.keys_values_hashed:
                                     leaf_hash = keys_values_compressed.keys_values_hashed[hash]
                                     old_node = await self.get_node(leaf_hash)
