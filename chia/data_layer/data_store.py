@@ -1442,6 +1442,7 @@ class DataStore:
 
             pending_autoinsert_hashes: List[bytes32] = []
             pending_upsert_new_hashes: Dict[bytes32, bytes32] = {}
+            keys_values_compressed = await self.get_keys_values_compressed(store_id)
 
             for change in changelist:
                 if change["action"] == "insert":
@@ -1460,7 +1461,10 @@ class DataStore:
                             if key_hash_frequency[hash] == 1 or (
                                 key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
                             ):
-                                old_node = await self.maybe_get_node_by_key(key, store_id)
+                                old_node: Optional[TerminalNode] = None
+                                if hash in keys_values_compressed.keys_values_hashed:
+                                    leaf_hash = keys_values_compressed.keys_values_hashed[hash]
+                                    old_node = await self.get_node(leaf_hash)
                                 terminal_node_hash = await self._insert_terminal_node(key, value)
 
                                 if old_node is None:
@@ -1501,7 +1505,10 @@ class DataStore:
                     hash = key_hash(key)
                     if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
                         terminal_node_hash = await self._insert_terminal_node(key, new_value)
-                        old_node = await self.maybe_get_node_by_key(key, store_id)
+                        old_node: Optional[TerminalNode] = None
+                        if hash in keys_values_compressed.keys_values_hashed:
+                            leaf_hash = keys_values_compressed.keys_values_hashed[hash]
+                            old_node = await self.get_node(leaf_hash)
                         if old_node is not None:
                             pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
                         else:
