@@ -152,12 +152,12 @@ class S3Plugin:
                 return web.json_response({"uploaded": False})
 
             # Pull the store_id from the filename to make sure we only upload for configured stores
-            full_tree_id = None if full_tree_name is None else bytes32.fromhex(full_tree_name[:64])
-            diff_tree_id = bytes32.fromhex(diff_name[:64])
+            full_store_id = None if full_tree_name is None else bytes32.fromhex(full_tree_name[:64])
+            diff_store_id = bytes32.fromhex(diff_name[:64])
 
-            if full_tree_id is not None and not (full_tree_id == diff_tree_id == store_id):
+            if full_store_id is not None and not (full_store_id == diff_store_id == store_id):
                 return web.json_response({"uploaded": False})
-            if full_tree_id is None and diff_tree_id != store_id:
+            if full_store_id is None and diff_store_id != store_id:
                 return web.json_response({"uploaded": False})
 
             full_tree_path = None if full_tree_name is None else self.server_files_path.joinpath(full_tree_name)
@@ -220,11 +220,11 @@ class S3Plugin:
                 return web.json_response({"downloaded": False})
 
             # Pull the store_id from the filename to make sure we only download for configured stores
-            filename_tree_id = bytes32.fromhex(filename[:64])
+            filename_store_id = bytes32.fromhex(filename[:64])
             parse_result = urlparse(url)
             should_download = False
             for store in self.stores:
-                if store.id == filename_tree_id and parse_result.scheme == "s3" and url in store.urls:
+                if store.id == filename_store_id and parse_result.scheme == "s3" and url in store.urls:
                     should_download = True
                     break
 

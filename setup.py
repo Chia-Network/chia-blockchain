@@ -8,7 +8,7 @@ from setuptools import find_packages, setup
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.3.0",
-    "boto3==1.34.46",  # AWS S3 for DL s3 plugin
+    "boto3==1.34.100",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.4",  # timelord and vdf verification
     "chiabip158==1.5.1",  # bip158-style wallet filters
     "chiapos==2.0.4",  # proof of space
@@ -23,7 +23,7 @@ dependencies = [
     "colorlog==6.8.2",  # Adds color to logs
     "concurrent-log-handler==0.9.25",  # Concurrently log and rotate logs
     "cryptography==42.0.5",  # Python cryptography library for TLS - keyring conflict
-    "filelock==3.13.1",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+    "filelock==3.14.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==25.1.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0.1",  # Used for config file format
     "setproctitle==1.3.3",  # Gives the chia processes readable names
@@ -60,14 +60,14 @@ dev_dependencies = [
     "twine==5.0.0",
     "isort==5.13.2",
     "flake8==7.0.0",
-    "mypy==1.8.0",
+    "mypy==1.10.0",
     "black==24.2.0",
     "lxml==5.1.0",
     "aiohttp_cors==0.7.0",  # For blackd
-    "pyinstaller==6.5.0",
+    "pyinstaller==6.6.0",
     "types-aiofiles==23.2.0.20240311",
     "types-cryptography==3.3.23.2",
-    "types-pyyaml==6.0.12.12",
+    "types-pyyaml==6.0.12.20240311",
     "types-setuptools==69.1.0.20240310",
 ]
 

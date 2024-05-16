@@ -1816,7 +1816,7 @@ async def test_trade_conflict(three_wallets_prefarm):
     # pushing into mempool while already in it should fail
     [offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers([offer])
     tr2, txs2 = await trade_manager_trader.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
-    txs2 = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+    txs2 = await trade_manager_trader.wallet_state_manager.add_pending_transactions(
         txs2, additional_signing_responses=signing_response
     )
     assert await trade_manager_trader.get_coins_of_interest()

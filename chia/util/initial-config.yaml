@@ -698,6 +698,9 @@ data_layer:
   # separate log file (under logging/data_sql.log).
   log_sqlite_cmds: False
 
+  # Speeds up autoinserts. Disable to perform inserts one by one instead of in a batch.
+  enable_batch_autoinsert: True
+
   logging: *logging
 
   ssl:

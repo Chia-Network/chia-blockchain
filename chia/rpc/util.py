@@ -17,7 +17,11 @@ from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_fr
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.clvm_streamable import byte_serialize_clvm_streamable, json_serialize_with_clvm_streamable
+from chia.wallet.util.clvm_streamable import (
+    byte_serialize_clvm_streamable,
+    json_deserialize_with_clvm_streamable,
+    json_serialize_with_clvm_streamable,
+)
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
@@ -39,11 +43,15 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     async def rpc_endpoint(self, request: Dict[str, Any], *args: object, **kwargs: object) -> Dict[str, Any]:
         response_obj: Streamable = await func(
             self,
-            request_class.from_json_dict(request),
+            (
+                request_class.from_json_dict(request)
+                if not request.get("CHIP-0029", False)
+                else json_deserialize_with_clvm_streamable(request, request_hint)
+            ),
             *args,
             **kwargs,
         )
-        if not request.get("chip-29", True):
+        if not request.get("CHIP-0029", False):
             return response_obj.to_json_dict()
         else:
             response_dict = json_serialize_with_clvm_streamable(response_obj)
@@ -148,7 +156,7 @@ def tx_endpoint(
             ]
             unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(tx_records)
 
-            if not request.get("chip-29", True):
+            if not request.get("CHIP-0029", False):
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
             else:
                 response["unsigned_transactions"] = [byte_serialize_clvm_streamable(tx).hex() for tx in unsigned_txs]
