@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from chia_rs import AugSchemeMPL, G1Element
+from chia_rs import AugSchemeMPL
 from clvm import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
 
@@ -106,8 +106,8 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             continue
 
         conditions = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
-        for pk_bytes, m in pkm_pairs_for_conditions_dict(conditions, coin, agg_sig_additional_data):
-            pks.append(G1Element.from_bytes(pk_bytes))
+        for pk, m in pkm_pairs_for_conditions_dict(conditions, coin, agg_sig_additional_data):
+            pks.append(pk)
             msgs.append(m)
         print()
         cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)

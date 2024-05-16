@@ -11,7 +11,7 @@ from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, T
 
 from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF
 from chia_rs import CoinSpend as RustCoinSpend
-from chia_rs import GTElement
+from chia_rs import G1Element, GTElement
 from chia_rs import Program as RustProgram
 from chia_rs import supports_fast_forward
 from chiabip158 import PyBIP158
@@ -27,7 +27,7 @@ from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemov
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import EligibilityAndAdditions, UnspentLineageInfo
@@ -78,7 +78,7 @@ def validate_clvm_and_signature(
         if result.error is not None:
             return Err(result.error), b"", {}, time.monotonic() - start_time
 
-        pks: List[bytes48] = []
+        pks: List[G1Element] = []
         msgs: List[bytes] = []
         assert result.conds is not None
         pks, msgs = pkm_pairs(result.conds, additional_data)
