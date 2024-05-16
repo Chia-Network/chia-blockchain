@@ -329,9 +329,29 @@ class InternalNode:
         raise Exception("provided hash not present")
 
 
+@final
+@dataclass(frozen=True)
+class Store:
+    db_id: int
+    chain_id: bytes32
+
+    @classmethod
+    def from_row(cls, row: aiosqlite.Row) -> Store:
+        return cls(
+            db_id=row["db_id"],
+            chain_id = bytes32(row["chain_id"]),
+        )
+
+    def to_row(self) -> Dict[str, Any]:
+        return {
+            "db_id": self.db_id,
+            "chain_id": self.chain_id,
+        }
+
+
 @dataclass(frozen=True)
 class Root:
-    store_id: bytes32
+    store: Store
     node_hash: Optional[bytes32]
     generation: int
     status: Status

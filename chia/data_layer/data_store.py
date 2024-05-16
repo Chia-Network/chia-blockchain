@@ -12,6 +12,7 @@ import aiosqlite
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
+Store,
     DiffData,
     InsertResult,
     InternalNode,
@@ -76,23 +77,41 @@ class DataStore:
             self = cls(db_wrapper=db_wrapper)
 
             async with db_wrapper.writer() as writer:
-                # await writer.execute(
-                #     """
-                #         CREATE TABLE IF NOT EXISTS blob(
-                #             hash BLOB PRIMARY KEY NULL CHECK(length(hash) == 32),
-                #             blob BLOB
-                #         )
-                #         """
-                # )
+                await writer.execute(
+                    """
+                        CREATE TABLE IF NOT EXISTS blob(
+                            id INTEGER PRIMARY KEY,
+                            hash BLOB NOT NULL CHECK(length(hash) == 32),
+                            blob BLOB
+                        )
+                        """
+                )
                 # TODO: parent should be a reference, as should left and right.
                 #       except for the null-ness or the 00000....ness or...
                 await writer.execute(
                     f"""
+                    CREATE TABLE IF NOT EXISTS store(
+                        db_id INTEGER PRIMARY KEY,
+                        chain_id BLOB NOT NULL CHECK(length(chain_id) == 32)
+                    )
+                    """,
+                )
+                await writer.execute(
+                    f"""
+                    CREATE TABLE IF NOT EXISTS hash(
+                        id INTEGER PRIMARY KEY,
+                        blob BLOB NOT NULL CHECK(length(blob) == 32)
+                    )
+                    """,
+                )
+                await writer.execute(
+                    f"""
                     CREATE TABLE IF NOT EXISTS node(
-                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                        id INTEGER,
+                        store_db_id INTEGER NOT NULL,
                         generation INTEGER NOT NULL CHECK(generation >= 0),
-                        hash BLOB NOT NULL CHECK(length(hash) == 32),
-                        parent BLOB,
+                        hash_id INTEGER NOT NULL,
+                        parent INTEGER NOT NULL,
                         node_type INTEGER NOT NULL CHECK(
                             (
                                 node_type == {int(NodeType.INTERNAL)}
@@ -110,11 +129,15 @@ class DataStore:
                                 AND value IS NOT NULL
                             )
                         ),
-                        left BLOB,
-                        right BLOB,
-                        key BLOB,
-                        value BLOB,
-                        PRIMARY KEY(tree_id, generation, hash)
+                        left INTEGER,
+                        right INTEGER,
+                        key INTEGER,
+                        value INTEGER,
+                        PRIMARY KEY(store_db_id, generation, id),
+                        FOREIGN KEY(store_db_id) REFERENCES store(db_id),
+                        FOREIGN KEY(hash_id) REFERENCES hash(id),
+                        FOREIGN KEY(key) REFERENCES blob(id),
+                        FOREIGN KEY(value) REFERENCES blob(id)
                     )
                     """
                     # TODO: can we get some check on this?  problem being insertion then post-update-of-parent
@@ -137,12 +160,13 @@ class DataStore:
                 await writer.execute(
                     f"""
                     CREATE TABLE IF NOT EXISTS root(
-                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                        store_db_id INTEGER NOT NULL,
                         generation INTEGER NOT NULL CHECK(generation >= 0),
                         status INTEGER NOT NULL CHECK(
                             {" OR ".join(f"status == {status}" for status in Status)}
                         ),
-                        PRIMARY KEY(tree_id, generation)
+                        PRIMARY KEY(store_db_id, generation),
+                        FOREIGN KEY(store_db_id) REFERENCES store(db_id)
                     )
                     """
                 )
@@ -270,9 +294,27 @@ class DataStore:
 
         return node_hash
 
-    async def _insert_root(
+    async def _insert_store(
         self,
         store_id: bytes32,
+    ) -> Store:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
+                """
+                INSERT INTO store(chain_id)
+                VALUES(:chain_id)
+                """,
+                {"chain_id": store_id},
+            )
+
+            async with writer.execute("SELECT * FROM store WHERE ROWID = last_insert_rowid()") as cursor:
+                row = await cursor.fetchone()
+
+            return Store.from_row(row=row)
+
+    async def _insert_root(
+        self,
+        store: Store,
         # TODO: not _really_ using this
         node_hash: Optional[bytes32],
         status: Status,
@@ -281,14 +323,10 @@ class DataStore:
         generation: Optional[int] = None,
     ) -> Root:
         # TODO: should this be 'removed' and just use the new generation method?
-        # This should be replaced by an SQLite schema level check.
-        # https://github.com/Chia-Network/chia-blockchain/pull/9284
-        store_id = bytes32(store_id)
-
         async with self.db_wrapper.writer() as writer:
             if generation is None:
                 try:
-                    existing_generation = await self.get_tree_generation(store_id=store_id)
+                    existing_generation = await self.get_tree_generation(store=store)
                 except Exception as e:
                     if not str(e).startswith("No generations found for store ID:"):
                         raise
@@ -297,7 +335,7 @@ class DataStore:
                     generation = existing_generation + 1
 
             new_root = Root(
-                store_id=store_id,
+                store=store,
                 node_hash=node_hash,
                 generation=generation,
                 status=status,
@@ -305,7 +343,7 @@ class DataStore:
 
             await writer.execute(
                 """
-                INSERT INTO root(tree_id, generation, status)
+                INSERT INTO root(store_db_id, generation, status)
                 VALUES(:tree_id, :generation, :status)
                 ON CONFLICT(tree_id, generation)
                 DO UPDATE SET status = :status
@@ -590,7 +628,8 @@ class DataStore:
     )
 
     async def create_tree(self, store_id: bytes32, status: Status = Status.PENDING) -> bool:
-        await self._insert_root(store_id=store_id, node_hash=None, status=status, generation=0)
+        store = await self._insert_store(store_id=store_id)
+        await self._insert_root(store=store, node_hash=None, status=status, generation=0)
 
         return True
 
