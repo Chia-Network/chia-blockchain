@@ -142,14 +142,6 @@ jobs:
               type: arch
             arch:
               matrix: arm
-          - distribution:
-              url: "docker://ubuntu:focal"
-            arch:
-              matrix: arm
-          - distribution:
-              url: "docker://ubuntu:jammy"
-            arch:
-              matrix: arm
 
     steps:
       - name: Prepare Amazon Linux
