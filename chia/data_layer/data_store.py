@@ -1465,6 +1465,7 @@ class DataStore:
                                 if hash in keys_values_compressed.keys_values_hashed:
                                     leaf_hash = keys_values_compressed.keys_values_hashed[hash]
                                     old_node = await self.get_node(leaf_hash)
+                                    assert isinstance(old_node, TerminalNode)
                                 terminal_node_hash = await self._insert_terminal_node(key, value)
 
                                 if old_node is None:
@@ -1509,6 +1510,7 @@ class DataStore:
                         if hash in keys_values_compressed.keys_values_hashed:
                             leaf_hash = keys_values_compressed.keys_values_hashed[hash]
                             old_node = await self.get_node(leaf_hash)
+                            assert isinstance(old_node, TerminalNode)
                         if old_node is not None:
                             pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
                         else:
