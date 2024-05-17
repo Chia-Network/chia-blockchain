@@ -313,14 +313,15 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int, n
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def clawback(
-    wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: str, force: bool
-) -> None:  # pragma: no cover
+    wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: str, force: bool, push: bool
+) -> List[TransactionRecord]:
     from .wallet_funcs import spend_clawback
 
-    asyncio.run(
+    return asyncio.run(
         spend_clawback(
-            wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=Decimal(fee), tx_ids_str=tx_ids, force=force
+            wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=Decimal(fee), tx_ids_str=tx_ids, force=force, push=push
         )
     )
 

@@ -507,10 +507,21 @@ def test_clawback(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             coin_ids: List[bytes32],
             fee: int = 0,
             force: bool = False,
+            push: bool = True,
         ) -> Dict[str, Any]:
-            self.add_to_log("spend_clawback_coins", (coin_ids, fee, force))
+            self.add_to_log("spend_clawback_coins", (coin_ids, fee, force, push))
             tx_hex_list = [get_bytes32(6).hex(), get_bytes32(7).hex(), get_bytes32(8).hex()]
-            return {"transaction_ids": tx_hex_list}
+            return {
+                "transaction_ids": tx_hex_list,
+                "transactions": [
+                    STD_TX.to_json_dict_convenience(
+                        {
+                            "selected_network": "mainnet",
+                            "network_overrides": {"config": {"mainnet": {"address_prefix": "xch"}}},
+                        }
+                    )
+                ],
+            }
 
     inst_rpc_client = ClawbackWalletRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -528,7 +539,7 @@ def test_clawback(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
     run_cli_command_and_assert(capsys, root_dir, command_args, ["transaction_ids", str(r_tx_ids_hex)])
     # these are various things that should be in the output
     expected_calls: logType = {
-        "spend_clawback_coins": [(tx_ids, 1000000000000, False)],
+        "spend_clawback_coins": [(tx_ids, 1000000000000, False, True)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
