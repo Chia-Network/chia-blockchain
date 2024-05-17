@@ -25,7 +25,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util import cached_bls
+from chia.util.cached_bls import LOCAL_CACHE
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -531,7 +531,7 @@ async def validate_block_body(
     # finished blocks later.
     if validate_signature:
         force_cache: bool = isinstance(block, UnfinishedBlock)
-        if not cached_bls.aggregate_verify(
+        if not LOCAL_CACHE.aggregate_verify(
             pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, force_cache
         ):
             return Err.BAD_AGGREGATE_SIGNATURE, None

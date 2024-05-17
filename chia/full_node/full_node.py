@@ -82,8 +82,8 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import WeightProof
-from chia.util import cached_bls
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.cached_bls import LOCAL_CACHE
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import process_config_start_method
@@ -1971,7 +1971,7 @@ class FullNode:
             # guaranteed to represent a successful run
             assert npc_result.conds is not None
             pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
-            if not cached_bls.aggregate_verify(
+            if not LOCAL_CACHE.aggregate_verify(
                 pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, True
             ):
                 raise ConsensusError(Err.BAD_AGGREGATE_SIGNATURE)
