@@ -1187,8 +1187,10 @@ async def test_kv_diff_2(data_store: DataStore, store_id: bytes32) -> None:
     assert diff_1 == {DiffData(OperationType.INSERT, b"000", b"000")}
     diff_2 = await data_store.get_kv_diff(store_id, insert_result.node_hash, empty_hash)
     assert diff_2 == {DiffData(OperationType.DELETE, b"000", b"000")}
-    diff_3 = await data_store.get_kv_diff(store_id, invalid_hash, insert_result.node_hash)
-    assert diff_3 == set()
+    with pytest.raises(Exception, match=f"Unable to diff: Can't find keys and values for {invalid_hash.hex()}"):
+        await data_store.get_kv_diff(store_id, invalid_hash, insert_result.node_hash)
+    with pytest.raises(Exception, match=f"Unable to diff: Can't find keys and values for {invalid_hash.hex()}"):
+        await data_store.get_kv_diff(store_id, insert_result.node_hash, invalid_hash)
 
 
 @pytest.mark.anyio
