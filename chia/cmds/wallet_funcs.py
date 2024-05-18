@@ -904,7 +904,9 @@ async def create_did_wallet(
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         fee: int = int(d_fee * units["chia"])
         try:
-            response = await wallet_client.create_new_did_wallet(amount, fee, name)
+            response = await wallet_client.create_new_did_wallet(
+                amount, CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint), fee, name
+            )
             wallet_id = response["wallet_id"]
             my_did = response["my_did"]
             print(f"Successfully created a DID wallet with name {name} and id {wallet_id} on key {fingerprint}")

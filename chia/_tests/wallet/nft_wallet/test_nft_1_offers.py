@@ -93,7 +93,7 @@ async def test_nft_offer_sell_nft(
     await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
+        wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), DEFAULT_TX_CONFIG
     )
     spend_bundle_list = await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
         did_wallet_maker.id()
@@ -237,7 +237,7 @@ async def test_nft_offer_request_nft(
     await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
 
     did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1)
+        wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1), DEFAULT_TX_CONFIG
     )
     spend_bundle_list = await wallet_node_taker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
         did_wallet_taker.id()
@@ -379,7 +379,7 @@ async def test_nft_offer_sell_did_to_did(
     await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
+        wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), DEFAULT_TX_CONFIG
     )
     spend_bundle_list = await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
         did_wallet_maker.id()
@@ -435,7 +435,7 @@ async def test_nft_offer_sell_did_to_did(
 
     # TAKER SETUP -  WITH DID
     did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1)
+        wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1), DEFAULT_TX_CONFIG
     )
     spend_bundle_list_taker = await wallet_node_taker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
         did_wallet_taker.id()
@@ -544,7 +544,7 @@ async def test_nft_offer_sell_nft_for_cat(
     await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
+        wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), DEFAULT_TX_CONFIG
     )
     spend_bundle_list = await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
         did_wallet_maker.id()
@@ -730,7 +730,7 @@ async def test_nft_offer_request_nft_for_cat(
     await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
 
     did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1)
+        wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1), DEFAULT_TX_CONFIG
     )
     spend_bundle_list = await wallet_node_taker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
         did_wallet_taker.id()
@@ -929,7 +929,7 @@ async def test_nft_offer_sell_cancel(
     await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
+        wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), DEFAULT_TX_CONFIG
     )
     spend_bundle_list = await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
         did_wallet_maker.id()
@@ -1049,7 +1049,7 @@ async def test_nft_offer_sell_cancel_in_batch(
     await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
+        wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), DEFAULT_TX_CONFIG
     )
     spend_bundle_list = await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
         did_wallet_maker.id()
@@ -1215,8 +1215,12 @@ async def test_complex_nft_offer(
     basic_nft_wallet_maker = await NFTWallet.create_new_nft_wallet(wsm_maker, wallet_maker, name="NFT WALLET MAKER")
     basic_nft_wallet_taker = await NFTWallet.create_new_nft_wallet(wsm_taker, wallet_taker, name="NFT WALLET TAKER")
 
-    did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(wsm_maker, wallet_maker, uint64(1))
-    did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(wsm_taker, wallet_taker, uint64(1))
+    did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
+        wsm_maker, wallet_maker, uint64(1), DEFAULT_TX_CONFIG
+    )
+    did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
+        wsm_taker, wallet_taker, uint64(1), DEFAULT_TX_CONFIG
+    )
     did_spend_bundle_maker = (
         await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet_maker.id())
     )[0].spend_bundle

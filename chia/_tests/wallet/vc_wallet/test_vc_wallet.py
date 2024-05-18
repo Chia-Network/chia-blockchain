@@ -148,7 +148,11 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # Generate DID as an "authorized provider"
     did_id: bytes32 = bytes32.from_hexstr(
-        (await DIDWallet.create_new_did_wallet(wallet_node_0.wallet_state_manager, wallet_0, uint64(1))).get_my_DID()
+        (
+            await DIDWallet.create_new_did_wallet(
+                wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG
+            )
+        ).get_my_DID()
     )
 
     # Mint a VC
@@ -638,7 +642,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
 
     # Generate DID as an "authorized provider"
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
+        wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG
     )
     did_id: bytes32 = bytes32.from_hexstr(did_wallet.get_my_DID())
 

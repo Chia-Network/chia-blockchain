@@ -767,11 +767,13 @@ class WalletRpcApi:
                         wallet_state_manager,
                         main_wallet,
                         uint64(request["amount"]),
+                        tx_config,
                         backup_dids,
                         uint64(num_needed),
                         metadata,
                         did_wallet_name,
                         uint64(request.get("fee", 0)),
+                        extra_conditions=extra_conditions,
                     )
 
                     my_did_id = encode_puzzle_hash(
