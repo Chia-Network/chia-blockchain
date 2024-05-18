@@ -751,10 +751,11 @@ class DataStore:
         return internal_nodes
 
     async def get_keys_values_cursor(
-        self, reader: aiosqlite.Connection, root_hash: Optional[bytes32]
+        self, reader: aiosqlite.Connection, root_hash: Optional[bytes32], only_keys: bool = False,
     ) -> aiosqlite.Cursor:
+        select_clause = "SELECT hash, key" if only_keys else "SELECT *"
         return await reader.execute(
-            """
+            f"""
             WITH RECURSIVE
                 tree_from_root_hash(hash, node_type, left, right, key, value, depth, rights) AS (
                     SELECT node.*, 0 AS depth, 0 AS rights FROM node WHERE node.hash == :root_hash
@@ -770,7 +771,7 @@ class DataStore:
                         FROM node, tree_from_root_hash
                     WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
                 )
-            SELECT * FROM tree_from_root_hash
+            {select_clause} FROM tree_from_root_hash
             WHERE node_type == :node_type
             ORDER BY depth ASC, rights ASC
             """,
@@ -828,6 +829,21 @@ class DataStore:
                 leaf_hash_to_length[leaf_hash(node.key, node.value)] = len(node.key) + len(node.value)
 
             return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length, root_hash)
+
+    async def get_leaf_hashes_by_hashed_key(
+        self, store_id: bytes32, root_hash: Optional[bytes32] = None
+    ) -> Dict[bytes32, bytes32]:
+        result: Dict[bytes32, bytes32] = {}
+        async with self.db_wrapper.reader() as reader:
+            if root_hash is None:
+                root = await self.get_tree_root(store_id=store_id)
+                root_hash = root.node_hash
+
+            cursor = await self.get_keys_values_cursor(reader, root_hash, True)
+            async for row in cursor:
+                result[key_hash(row["key"])] = bytes32(row["hash"])
+
+        return result
 
     async def get_keys_paginated(
         self, store_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
@@ -1442,7 +1458,7 @@ class DataStore:
 
             pending_autoinsert_hashes: List[bytes32] = []
             pending_upsert_new_hashes: Dict[bytes32, bytes32] = {}
-            keys_values_compressed = await self.get_keys_values_compressed(store_id)
+            leaf_hashes = await self.get_leaf_hashes_by_hashed_key(store_id)
 
             for change in changelist:
                 if change["action"] == "insert":
@@ -1462,8 +1478,8 @@ class DataStore:
                                 key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
                             ):
                                 old_node: Optional[Node] = None
-                                if hash in keys_values_compressed.keys_values_hashed:
-                                    leaf_hash = keys_values_compressed.keys_values_hashed[hash]
+                                if hash in leaf_hashes:
+                                    leaf_hash = leaf_hashes[hash]
                                     old_node = await self.get_node(leaf_hash)
                                     assert isinstance(old_node, TerminalNode)
                                 terminal_node_hash = await self._insert_terminal_node(key, value)
@@ -1507,8 +1523,8 @@ class DataStore:
                     if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
                         terminal_node_hash = await self._insert_terminal_node(key, new_value)
                         old_node = None
-                        if hash in keys_values_compressed.keys_values_hashed:
-                            leaf_hash = keys_values_compressed.keys_values_hashed[hash]
+                        if hash in leaf_hashes:
+                            leaf_hash = leaf_hashes[hash]
                             old_node = await self.get_node(leaf_hash)
                             assert isinstance(old_node, TerminalNode)
                         if old_node is not None:
