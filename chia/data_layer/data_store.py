@@ -751,7 +751,10 @@ class DataStore:
         return internal_nodes
 
     async def get_keys_values_cursor(
-        self, reader: aiosqlite.Connection, root_hash: Optional[bytes32], only_keys: bool = False,
+        self,
+        reader: aiosqlite.Connection,
+        root_hash: Optional[bytes32],
+        only_keys: bool = False,
     ) -> aiosqlite.Cursor:
         select_clause = "SELECT hash, key" if only_keys else "SELECT *"
         return await reader.execute(
