@@ -4620,11 +4620,21 @@ class WalletRpcApi:
             "transactions": [vault_record.to_json_dict_convenience(self.service.config)],
         }
 
-    async def vault_recovery(self, request: Dict[str, Any]) -> EndpointResult:
+    async def vault_recovery(self, request: Dict[str, Any], tx_config: TXConfig = DEFAULT_TX_CONFIG) -> EndpointResult:
         """
         Initiate Vault Recovery
         """
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=Vault)
-        recovery_txs = await wallet.create_recovery_spends()
+        secp_pk = bytes.fromhex(str(request.get("secp_pk")))
+        hp_index = request.get("hp_index", 0)
+        hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(hp_index).get_tree_hash()
+        bls_str = request.get("bls_pk")
+        bls_pk = G1Element.from_bytes(bytes.fromhex(str(bls_str))) if bls_str else None
+        timelock_int = request.get("timelock")
+        timelock = uint64(timelock_int) if timelock_int else None
+        genesis_challenge = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        recovery_txs = await wallet.create_recovery_spends(
+            secp_pk, hidden_puzzle_hash, genesis_challenge, tx_config, bls_pk=bls_pk, timelock=timelock
+        )
         return {"transactions": [tx.to_json_dict_convenience(self.service.config) for tx in recovery_txs]}

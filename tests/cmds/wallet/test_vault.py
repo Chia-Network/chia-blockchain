@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from chia_rs import Coin, G2Element
+from chia_rs import Coin, G1Element, G2Element
 
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64
@@ -55,9 +55,9 @@ def test_vault_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     pk = get_bytes32(0).hex()
     recovery_pk = get_bytes32(1).hex()
-    timelock = 100
-    hidden_puzzle_index = 10
-    fee = 0.1
+    timelock = "100"
+    hidden_puzzle_index = "10"
+    fee = "0.1"
     command_args = [
         "vault",
         "create",
@@ -84,6 +84,11 @@ def test_vault_recovery(capsys: object, get_test_cli_clients: Tuple[TestRpcClien
         async def vault_recovery(
             self,
             wallet_id: uint32,
+            secp_pk: bytes,
+            hp_index: uint32,
+            tx_config: TXConfig,
+            bls_pk: Optional[G1Element] = None,
+            timelock: Optional[uint64] = None,
         ) -> List[TransactionRecord]:
             tx_rec = TransactionRecord(
                 confirmed_at_height=uint32(1),
@@ -108,9 +113,21 @@ def test_vault_recovery(capsys: object, get_test_cli_clients: Tuple[TestRpcClien
 
     inst_rpc_client = CreateVaultRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    pk = get_bytes32(0).hex()
+    recovery_pk = get_bytes32(1).hex()
+    timelock = "100"
+    hidden_puzzle_index = "10"
     command_args = [
         "vault",
         "recover",
+        "-pk",
+        pk,
+        "-rk",
+        recovery_pk,
+        "-rt",
+        timelock,
+        "-i",
+        hidden_puzzle_index,
         "-ri",
         "recovery_init.json",
         "-rf",

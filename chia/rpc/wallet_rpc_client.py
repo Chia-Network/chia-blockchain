@@ -1674,9 +1674,23 @@ class WalletRpcClient(RpcClient):
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
-    async def vault_recovery(self, wallet_id: uint32) -> List[TransactionRecord]:
+    async def vault_recovery(
+        self,
+        wallet_id: uint32,
+        secp_pk: bytes,
+        hp_index: uint32,
+        tx_config: TXConfig,
+        bls_pk: Optional[bytes] = None,
+        timelock: Optional[uint64] = None,
+    ) -> List[TransactionRecord]:
         response = await self.fetch(
             "vault_recovery",
-            {"wallet_id": wallet_id},
+            {
+                "wallet_id": wallet_id,
+                "secp_pk": secp_pk.hex(),
+                "hp_index": hp_index,
+                "bls_pk": bls_pk.hex() if bls_pk else None,
+                "timelock": timelock,
+            },
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
