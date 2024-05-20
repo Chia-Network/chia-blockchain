@@ -650,12 +650,13 @@ def did_cmd() -> None:
     show_default=True,
     callback=validate_fee,
 )
+@tx_out_cmd
 def did_create_wallet_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, name: Optional[str], amount: int, fee: str
-) -> None:
+    wallet_rpc_port: Optional[int], fingerprint: int, name: Optional[str], amount: int, fee: str, push: bool
+) -> List[TransactionRecord]:
     from .wallet_funcs import create_did_wallet
 
-    asyncio.run(create_did_wallet(wallet_rpc_port, fingerprint, Decimal(fee), name, amount))
+    return asyncio.run(create_did_wallet(wallet_rpc_port, fingerprint, Decimal(fee), name, amount, push=push))
 
 
 @did_cmd.command("sign_message", help="Sign a message by a DID")
@@ -750,12 +751,13 @@ def did_get_details_cmd(wallet_rpc_port: Optional[int], fingerprint: int, coin_i
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def did_update_metadata_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, id: int, metadata: str, reuse: bool
-) -> None:
+    wallet_rpc_port: Optional[int], fingerprint: int, id: int, metadata: str, reuse: bool, push: bool
+) -> List[TransactionRecord]:
     from .wallet_funcs import update_did_metadata
 
-    asyncio.run(update_did_metadata(wallet_rpc_port, fingerprint, id, metadata, reuse))
+    return asyncio.run(update_did_metadata(wallet_rpc_port, fingerprint, id, metadata, reuse, push=push))
 
 
 @did_cmd.command("find_lost", help="Find the did you should own and recovery the DID wallet")
@@ -830,13 +832,15 @@ def did_find_lost_cmd(
     type=str,
     required=False,
 )
+@tx_out_cmd
 def did_message_spend_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
     puzzle_announcements: Optional[str],
     coin_announcements: Optional[str],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import did_message_spend
 
     puzzle_list: List[str] = []
@@ -849,7 +853,7 @@ def did_message_spend_cmd(
                 bytes.fromhex(announcement)
         except ValueError:
             print("Invalid puzzle announcement format, should be a list of hex strings.")
-            return
+            return []
     if coin_announcements is not None:
         try:
             coin_list = coin_announcements.split(",")
@@ -858,9 +862,9 @@ def did_message_spend_cmd(
                 bytes.fromhex(announcement)
         except ValueError:
             print("Invalid coin announcement format, should be a list of hex strings.")
-            return
+            return []
 
-    asyncio.run(did_message_spend(wallet_rpc_port, fingerprint, id, puzzle_list, coin_list))
+    return asyncio.run(did_message_spend(wallet_rpc_port, fingerprint, id, puzzle_list, coin_list, push=push))
 
 
 @did_cmd.command("transfer", help="Transfer a DID")
@@ -892,6 +896,7 @@ def did_message_spend_cmd(
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def did_transfer_did(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -900,10 +905,11 @@ def did_transfer_did(
     reset_recovery: bool,
     fee: str,
     reuse: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import transfer_did
 
-    asyncio.run(
+    return asyncio.run(
         transfer_did(
             wallet_rpc_port,
             fingerprint,
@@ -912,6 +918,7 @@ def did_transfer_did(
             target_address,
             reset_recovery is False,
             True if reuse else None,
+            push=push,
         )
     )
 
