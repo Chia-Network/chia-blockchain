@@ -38,7 +38,7 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
     if with_recovery:
         bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
         bls_pk = bytes.fromhex(bls_pk_hex)
-        timelock = uint64(1000)
+        timelock = uint64(10)
     hidden_puzzle_index = uint32(0)
     res = await client.vault_create(
         SECP_PK, hidden_puzzle_index, bls_pk=bls_pk, timelock=timelock, tx_config=DEFAULT_TX_CONFIG
@@ -118,14 +118,6 @@ async def test_vault_creation(
     # get a p2_singleton
     p2_singleton_puzzle_hash = wallet.get_p2_singleton_puzzle_hash()
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(1, p2_singleton_puzzle_hash)
-
-    if with_recovery:
-        assert wallet.vault_info.recovery_info is not None
-        [recovery_spend, finish_spend] = await wallet.create_recovery_spends()
-        assert recovery_spend
-        assert finish_spend
-    else:
-        assert not wallet.vault_info.is_recoverable
 
     coins_to_create = 2
     funding_amount = uint64(1000000000)
@@ -250,6 +242,14 @@ async def test_vault_recovery(
     await setup_function(wallet_environments, with_recovery)
     env = wallet_environments.environments[0]
     assert isinstance(env.xch_wallet, Vault)
+    recovery_seed = b"recovery_chia_secp"
+    RECOVERY_SECP_SK = SigningKey.generate(curve=NIST256p, entropy=PRNG(recovery_seed), hashfunc=sha256)
+    RECOVERY_SECP_PK = RECOVERY_SECP_SK.verifying_key.to_string("compressed")
+    client = wallet_environments.environments[1].rpc_client
+    fingerprint = (await client.get_public_keys())[0]
+    bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
+    bls_pk = bytes.fromhex(bls_pk_hex)
+    timelock = uint64(10)
 
     wallet: Vault = env.xch_wallet
     await wallet.sync_vault_launcher()
@@ -289,5 +289,72 @@ async def test_vault_recovery(
         ],
     )
 
-    recovery_txs = await env.rpc_client.vault_recovery(wallet_id=wallet.id())
-    assert recovery_txs
+    [initiate_tx, finish_tx] = await env.rpc_client.vault_recovery(
+        wallet_id=wallet.id(),
+        secp_pk=RECOVERY_SECP_PK,
+        hp_index=uint32(0),
+        tx_config=DEFAULT_TX_CONFIG,
+        bls_pk=bls_pk,
+        timelock=timelock,
+    )
+    assert initiate_tx.spend_bundle is not None
+    spends = [Spend.from_coin_spend(spend) for spend in initiate_tx.spend_bundle.coin_spends]
+    signing_info = await wallet_environments.environments[1].rpc_client.gather_signing_info(GatherSigningInfo(spends))
+    signing_responses = await funding_wallet.execute_signing_instructions(signing_info.signing_instructions)
+    signed_response = await funding_wallet.apply_signatures(spends, signing_responses)
+
+    await funding_wallet.wallet_state_manager.submit_transactions([signed_response])
+
+    vault_coin = wallet.vault_info.coin
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "init": True,
+                        "set_remainder": True,
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        "set_remainder": True,
+                    }
+                },
+            ),
+        ],
+    )
+
+    recovery_coin = wallet.vault_info.coin
+    assert recovery_coin.parent_coin_info == vault_coin.name()
+
+    wallet_environments.full_node.time_per_block = 100
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
+
+    assert finish_tx.spend_bundle is not None
+    spends = [Spend.from_coin_spend(spend) for spend in finish_tx.spend_bundle.coin_spends]
+    signing_info = await wallet_environments.environments[1].rpc_client.gather_signing_info(GatherSigningInfo(spends))
+    signing_responses = await funding_wallet.execute_signing_instructions(signing_info.signing_instructions)
+    signed_response = await funding_wallet.apply_signatures(spends, signing_responses)
+    await funding_wallet.wallet_state_manager.submit_transactions([signed_response])
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "init": True,
+                        "set_remainder": True,
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        "set_remainder": True,
+                    }
+                },
+            ),
+        ],
+    )
+
+    recovered_coin = wallet.vault_info.coin
+    assert recovered_coin.parent_coin_info == recovery_coin.name()
