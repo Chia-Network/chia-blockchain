@@ -2161,7 +2161,7 @@ class TestGeneratorConditions:
         ],
     )
     def test_agg_sig_cost(self, condition, softfork_height):
-        pubkey = "0x" + bytes(G1Element()).hex()
+        pubkey = "0x" + bytes(G1Element.generator()).hex()
 
         if softfork_height >= test_constants.HARD_FORK_FIX_HEIGHT:
             generator_base_cost = 40
@@ -2219,7 +2219,7 @@ class TestGeneratorConditions:
     @pytest.mark.parametrize("extra_arg", [' "baz"', ""])
     @pytest.mark.parametrize("mempool", [True, False])
     def test_agg_sig_extra_arg(self, condition, extra_arg, mempool, softfork_height):
-        pubkey = "0x" + bytes(G1Element()).hex()
+        pubkey = "0x" + bytes(G1Element.generator()).hex()
 
         new_condition = condition in [
             ConditionOpcode.AGG_SIG_PARENT,
