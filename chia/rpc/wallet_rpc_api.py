@@ -2144,6 +2144,9 @@ class WalletRpcApi:
                         records[trade.trade_id] = trade
                         continue
 
+            if len(records) == 0:
+                break
+
             async with self.service.wallet_state_manager.lock:
                 all_txs.extend(
                     await trade_mgr.cancel_pending_offers(
