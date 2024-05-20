@@ -642,11 +642,19 @@ class TestMempoolManager:
         sb4_2 = generate_test_spend_bundle(wallet_a, coin4, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
         sb1234_2 = SpendBundle.aggregate((sb12, sb3, sb4_2))
         await send_sb(full_node_1, sb1234_2)
-        # sb1234_2 has a higher fee per cost than its conflicts and should get
-        # into mempool
-        self.assert_sb_in_pool(full_node_1, sb1234_2)
+        # sb1234_2 has a higher fee per cost than its conflicts but it conflicts
+        # with more than one item and should not get into mempool
+        self.assert_sb_not_in_pool(full_node_1, sb1234_2)
+        self.assert_sb_in_pool(full_node_1, sb12)
+        self.assert_sb_in_pool(full_node_1, sb3)
+        invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
+        # sb124_2 has a higher fee per cost than its (single) conflict and should
+        # get into the mempool
+        sb124_2 = SpendBundle.aggregate([sb12, sb4_2])
+        await send_sb(full_node_1, sb124_2)
+        self.assert_sb_in_pool(full_node_1, sb124_2)
         self.assert_sb_not_in_pool(full_node_1, sb12)
-        self.assert_sb_not_in_pool(full_node_1, sb3)
+        self.assert_sb_in_pool(full_node_1, sb3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
     @pytest.mark.anyio

@@ -1279,6 +1279,23 @@ async def test_total_fpc_decrease() -> None:
 @pytest.mark.anyio
 async def test_sufficient_total_fpc_increase() -> None:
     mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+    sb1 = make_test_spendbundle(coins[0], fee=MEMPOOL_MIN_FEE_INCREASE)
+    sb2 = make_test_spendbundle(coins[1], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
+    sb12 = SpendBundle.aggregate([sb1, sb2])
+    await send_spendbundle(mempool_manager, sb12)
+    assert_sb_in_pool(mempool_manager, sb12)
+    sb3 = make_test_spendbundle(coins[2], fee=MEMPOOL_MIN_FEE_INCREASE * 3)
+    # sb123 has a higher fee per cost than its (single) conflict and should get
+    # into the mempool
+    sb123 = SpendBundle.aggregate([sb12, sb3])
+    await send_spendbundle(mempool_manager, sb123)
+    assert_sb_in_pool(mempool_manager, sb123)
+    assert_sb_not_in_pool(mempool_manager, sb12)
+
+
+@pytest.mark.anyio
+async def test_more_than_one_conflict() -> None:
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
     sb1 = make_test_spendbundle(coins[0])
     sb2 = make_test_spendbundle(coins[1], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
     sb12 = SpendBundle.aggregate([sb1, sb2])
@@ -1286,14 +1303,16 @@ async def test_sufficient_total_fpc_increase() -> None:
     sb3 = await make_and_send_spendbundle(mempool_manager, coins[2], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
     assert_sb_in_pool(mempool_manager, sb12)
     assert_sb_in_pool(mempool_manager, sb3)
-    # sb1234 has a higher fee per cost than its conflicts and should get
-    # into the mempool
     sb4 = make_test_spendbundle(coins[3], fee=MEMPOOL_MIN_FEE_INCREASE * 3)
+    # sb1234 has a higher fee per cost than its conflicts but it conflicts
+    # with more than one item and should not get into the mempool
     sb1234 = SpendBundle.aggregate([sb12, sb3, sb4])
-    await send_spendbundle(mempool_manager, sb1234)
-    assert_sb_in_pool(mempool_manager, sb1234)
-    assert_sb_not_in_pool(mempool_manager, sb12)
-    assert_sb_not_in_pool(mempool_manager, sb3)
+    await send_spendbundle(
+        mempool_manager, sb1234, expected_result=(MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
+    )
+    assert_sb_not_in_pool(mempool_manager, sb1234)
+    assert_sb_in_pool(mempool_manager, sb12)
+    assert_sb_in_pool(mempool_manager, sb3)
 
 
 @pytest.mark.anyio
