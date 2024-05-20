@@ -9,6 +9,7 @@ import random
 import sqlite3
 import time
 import traceback
+import concurrent.futures
 from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import (
@@ -469,6 +470,27 @@ class FullNode:
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
+
+    async def _handle_transactions_with_threadpool(self) -> None:
+        self.futures = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=200) as executor:
+             while not self._shut_down:
+                item: TransactionQueueEntry = await self.transaction_queue.pop()
+                self.futures.append(concurrent.futures.submit(
+                    rust_prevalidate(
+                        item.transaction, 
+                        self.mempool_manager.max_tx_clvm_cost, 
+                        self.mempool_manager.constants, 
+                        self.mempool_manager.peak.height, 
+                        self.sync_store.get_sync_mode())
+                    )
+                )
+    async def _handle_finished_transactions_in_threadpool(self) -> None:
+        while not self._shut_down:
+            for future in concurrent.futures.as_completed(self.futures):
+                result = future.result() # blocks
+                self.process_prevalidated_spend_bundle(result)
+
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry) -> None:
         peer = entry.peer
