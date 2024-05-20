@@ -481,26 +481,39 @@ class CoinStore:
                 coin_states_dict[coin_state.coin.name()] = coin_state
 
             if include_hinted:
-                cursor = await conn.execute(
-                    f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                    f"coin_parent, amount, timestamp FROM coin_record "
-                    f"WHERE coin_name IN (SELECT coin_id FROM hints "
-                    f'WHERE hint IN ({"?," * (puzzle_hash_count - 1)}?)) '
-                    f"AND (confirmed_index>=? OR spent_index>=?) "
-                    f"{height_filter} {amount_filter}"
-                    f"ORDER BY MAX(confirmed_index, spent_index) ASC "
-                    f"LIMIT ?",
-                    (
-                        puzzle_hashes_db
-                        + (min_height, min_height)
-                        + ((min_amount.to_bytes(8, "big"),) if min_amount > 0 else ())
-                        + (max_items + 1,)
-                    ),
+                coin_ids_cursor = await conn.execute(
+                    f'SELECT coin_id FROM hints WHERE hint IN ({"?," * (puzzle_hash_count - 1)}?)', puzzle_hashes_db
                 )
+                coin_ids = [row[0] for row in await coin_ids_cursor.fetchall()]
 
-                for row in await cursor.fetchall():
-                    coin_state = self.row_to_coin_state(row)
-                    coin_states_dict[coin_state.coin.name()] = coin_state
+                if len(coin_ids) > 0:
+                    coin_ids_db = tuple(coin_ids)
+                    coin_id_count = len(coin_ids_db)
+
+                    cursor = await conn.execute(
+                        f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                        f"coin_parent, amount, timestamp FROM coin_record "
+                        f'WHERE coin_name IN ({"?," * (coin_id_count - 1)}?)',
+                        coin_ids_db,
+                    )
+
+                    for row in await cursor.fetchall():
+                        coin_state = self.row_to_coin_state(row)
+
+                        if coin_state.coin.amount < min_amount:
+                            continue
+
+                        if coin_state.spent_height is None and not include_unspent:
+                            continue
+
+                        if coin_state.spent_height is not None and not include_spent:
+                            continue
+
+                        height = max(coin_state.spent_height or uint32(0), coin_state.created_height or uint32(0))
+                        if height < min_height:
+                            continue
+
+                        coin_states_dict[coin_state.coin.name()] = coin_state
 
             coin_states = list(coin_states_dict.values())
 
@@ -508,6 +521,9 @@ class CoinStore:
                 coin_states.sort(key=lambda cr: max(cr.created_height or uint32(0), cr.spent_height or uint32(0)))
                 while len(coin_states) > max_items + 1:
                     coin_states.pop()
+
+        # We only care about the first `max_items` coin states, and another for checking the next height.
+        coin_states = coin_states[: max_items + 1]
 
         # If there aren't too many coin states, we've finished syncing these hashes.
         # There is no next height to start from, so return `None`.
