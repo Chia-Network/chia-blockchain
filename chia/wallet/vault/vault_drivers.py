@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from chia_rs import G1Element
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import DEFAULT_HIDDEN_PUZZLE, puzzle_hash_for_pk
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import DEFAULT_HIDDEN_PUZZLE
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER_HASH,
     SINGLETON_MOD,
@@ -100,14 +101,10 @@ def get_vault_full_puzzle_hash(launcher_id: bytes32, inner_puzzle_hash: bytes32)
     return puzzle_hash
 
 
-def get_recovery_conditions(bls_pk: G1Element, amount: uint64) -> Program:
-    puzzle_hash = puzzle_hash_for_pk(bls_pk)
-    recovery_conditions: Program = Program.to([[51, puzzle_hash, amount]])
-    return recovery_conditions
-
-
-def get_recovery_finish_puzzle(bls_pk: G1Element, timelock: uint64, amount: uint64) -> Program:
-    recovery_condition = get_recovery_conditions(bls_pk, amount)
+def get_recovery_finish_puzzle(
+    new_vault_inner_puzhash: bytes32, timelock: uint64, amount: uint64, memos: List[bytes]
+) -> Program:
+    recovery_condition = Program.to([[51, new_vault_inner_puzhash, amount, memos]])
     return RECOVERY_FINISH_MOD.curry(timelock, recovery_condition)
 
 
@@ -132,10 +129,61 @@ def match_vault_puzzle(mod: Program, curried_args: Program) -> bool:
     return False
 
 
+def match_recovery_puzzle(mod: Program, curried_args: Program, solution: Program) -> bool:
+    if match_vault_puzzle(mod, curried_args):
+        try:
+            delegated_puz = solution.at("rrfrf")
+            if delegated_puz.uncurry()[0] == P2_RECOVERY_MOD:
+                return True
+        except ValueError:
+            pass
+    return False
+
+
+def get_recovery_puzzle_from_spend(spend: CoinSpend) -> Program:
+    solution = spend.solution.to_program()
+    delegated_puz = solution.at("rrfrf")
+    recovery_args = delegated_puz.uncurry()[1]
+    secp_puzzle_hash = bytes32(recovery_args.at("rrf").as_atom())
+    timelock = uint64(recovery_args.at("rrrrf").as_int())
+    new_vault_condition = solution.at("rrfrrfrff")
+    new_vault_inner_puzhash = bytes32(new_vault_condition.at("rf").as_atom())
+    memos = new_vault_condition.at("rrrf")
+    recovery_finish_puzzle = get_recovery_finish_puzzle(new_vault_inner_puzhash, timelock, spend.coin.amount, memos)
+    recovery_inner_puzzle = get_recovery_inner_puzzle(secp_puzzle_hash, recovery_finish_puzzle.get_tree_hash())
+    return recovery_inner_puzzle
+
+
+def get_new_vault_info_from_spend(spend: CoinSpend) -> Tuple[bytes, bytes32, Optional[G1Element], Optional[uint64]]:
+    solution = spend.solution.to_program()
+    delegated_puz = solution.at("rrfrf")
+    conds = delegated_puz.at("rrfrrfrfr")
+    for cond in conds.as_iter():
+        if (cond.at("f").as_int() == 51) and (cond.at("rrf").as_int() == 1):
+            memos = cond.at("rrrf") if cond.list_len() == 4 else None
+            assert memos is not None
+            secp_pk = memos.at("f").as_atom()
+            hidden_puzzle_hash = memos.at("rf").as_atom()
+            if memos.list_len() > 2:
+                bls_pk = G1Element.from_bytes(memos.at("rrf").as_atom())
+                timelock = uint64(memos.at("rrrf").as_int())
+            else:
+                bls_pk = None
+                timelock = None
+            break
+    return secp_pk, hidden_puzzle_hash, bls_pk, timelock
+
+
+def match_finish_spend(spend: CoinSpend) -> bool:
+    solution = spend.solution.to_program()
+    delegated_puz = solution.at("rrfrf")
+    return delegated_puz.uncurry()[0] == RECOVERY_FINISH_MOD
+
+
 # SOLUTIONS
-def get_recovery_solution(amount: uint64, bls_pk: G1Element) -> Program:
-    recovery_conditions = get_recovery_conditions(bls_pk, amount)
-    recovery_solution: Program = Program.to([amount, recovery_conditions])
+def get_recovery_solution(new_vault_inner_puzhash: bytes32, amount: uint64, memos: List[bytes]) -> Program:
+    recovery_condition = Program.to([[51, new_vault_inner_puzhash, amount, memos]])
+    recovery_solution: Program = Program.to([amount, recovery_condition])
     return recovery_solution
 
 
