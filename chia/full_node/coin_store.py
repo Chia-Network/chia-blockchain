@@ -483,7 +483,7 @@ class CoinStore:
             if include_hinted:
                 cursor = await conn.execute(
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                    f"coin_parent, amount, timestamp FROM coin_record "
+                    f"coin_parent, amount, timestamp FROM coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
                     f"WHERE coin_name IN (SELECT coin_id FROM hints "
                     f'WHERE hint IN ({"?," * (puzzle_hash_count - 1)}?)) '
                     f"AND (confirmed_index>=? OR spent_index>=?) "
