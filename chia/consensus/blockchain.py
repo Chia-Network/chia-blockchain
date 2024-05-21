@@ -13,6 +13,8 @@ from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
+from chia_rs import BLSCache
+
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -45,7 +47,6 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.cached_bls import BLSCache
 from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash

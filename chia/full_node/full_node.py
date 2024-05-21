@@ -29,7 +29,7 @@ from typing import (
     final,
 )
 
-from chia_rs import AugSchemeMPL
+from chia_rs import AugSchemeMPL, BLSCache
 from packaging.version import Version
 
 from chia.consensus.block_body_validation import ForkInfo
@@ -86,7 +86,6 @@ from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import WeightProof
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.cached_bls import BLSCache
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import process_config_start_method
@@ -1980,7 +1979,7 @@ class FullNode:
             assert npc_result.conds is not None
             pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
             if not self._bls_cache.aggregate_verify(
-                pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, True
+                pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature
             ):
                 raise ConsensusError(Err.BAD_AGGREGATE_SIGNATURE)
 
