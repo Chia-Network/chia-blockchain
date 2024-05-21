@@ -303,7 +303,7 @@ class NFTWallet:
         tx_config: TXConfig,
         action_scope: WalletActionScope,
         did_id: Optional[bytes32] = None,
-    ) -> Tuple[bytes32, SpendBundle]:
+    ) -> Tuple[bytes32, TransactionRecord]:
         """Get DID spend with announcement created we need to transfer NFT with did with current inner hash of DID
 
         We also store `did_id` and then iterate to find the did wallet as we'd otherwise have to subscribe to
@@ -317,17 +317,16 @@ class NFTWallet:
                 self.log.debug("Found a DID wallet, checking did: %r == %r", wallet.get_my_DID(), did_id)
                 if bytes32.fromhex(wallet.get_my_DID()) == did_id:
                     self.log.debug("Creating announcement from DID for nft_ids: %s", nft_ids)
-                    did_bundle = (
-                        await wallet.create_message_spend(
-                            tx_config, action_scope, extra_conditions=(CreatePuzzleAnnouncement(id) for id in nft_ids)
-                        )
-                    ).spend_bundle
-                    self.log.debug("Sending DID announcement from puzzle: %s", did_bundle.removals())
+                    tx = await wallet.create_message_spend(
+                        tx_config, action_scope, extra_conditions=(CreatePuzzleAnnouncement(id) for id in nft_ids)
+                    )
+                    assert tx.spend_bundle is not None
+                    self.log.debug("Sending DID announcement from puzzle: %s", tx.spend_bundle.removals())
                     did_inner_hash = wallet.did_info.current_inner.get_tree_hash()
                     break
         else:
             raise ValueError(f"Missing DID Wallet for did_id: {did_id}")
-        return did_inner_hash, did_bundle
+        return did_inner_hash, tx
 
     async def generate_new_nft(
         self,
@@ -416,16 +415,24 @@ class NFTWallet:
         if tx_record.spend_bundle is None:
             raise ValueError("Couldn't produce a launcher spend")  # pragma: no cover
 
-        bundles_to_agg = [tx_record.spend_bundle, launcher_sb]
+        async with action_scope.use() as interface:
+            # This should not be looked to for best practice. Ideally, the method to generate the transaction above
+            # takes a parameter to add in extra spends. That's currently out of scope, so I'm placing this hack in rn.
+            relevant_index = interface.side_effects.transactions.index(tx_record)
+            new_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb])
+            tx_record = dataclasses.replace(
+                interface.side_effects.transactions[relevant_index], spend_bundle=new_spend, name=new_spend.name()
+            )
+            interface.side_effects.transactions[relevant_index] = tx_record
 
         # Create inner solution for eve spend
+        did_tx = None
         did_inner_hash = b""
         if did_id is not None:
             if did_id != b"":
-                did_inner_hash, did_bundle = await self.get_did_approval_info(
+                did_inner_hash, did_tx = await self.get_did_approval_info(
                     [launcher_coin.name()], tx_config, action_scope
                 )
-                bundles_to_agg.append(did_bundle)
         nft_coin = NFTCoinInfo(
             nft_id=launcher_coin.name(),
             coin=eve_coin,
@@ -445,8 +452,9 @@ class NFTWallet:
             new_did_inner_hash=did_inner_hash,
             memos=[[target_puzzle_hash]],
         )
-        txs.append(dataclasses.replace(tx_record, spend_bundle=SpendBundle.aggregate(bundles_to_agg)))
-        return txs
+        if did_tx is not None:
+            txs.append(did_tx)
+        return [*txs, tx_record]
 
     async def update_metadata(
         self,
@@ -624,38 +632,39 @@ class NFTWallet:
         )
         spend_bundle = SpendBundle.aggregate([unsigned_spend_bundle] + additional_bundles)
         if chia_tx is not None and chia_tx.spend_bundle is not None:
-            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
-            chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
             other_tx_removals: Set[Coin] = {removal for removal in chia_tx.removals}
             other_tx_additions: Set[Coin] = {addition for addition in chia_tx.additions}
         else:
             other_tx_removals = set()
             other_tx_additions = set()
 
-        tx_list = [
-            TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=puzzle_hashes[0],
-                amount=uint64(payment_sum),
-                fee_amount=fee,
-                confirmed=False,
-                sent=uint32(0),
-                spend_bundle=spend_bundle,
-                additions=list(set(spend_bundle.additions()) - other_tx_additions),
-                removals=list(set(spend_bundle.removals()) - other_tx_removals),
-                wallet_id=self.id(),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.OUTGOING_TX.value),
-                name=spend_bundle.name(),
-                memos=list(compute_memos(spend_bundle).items()),
-                valid_times=parse_timelock_info(extra_conditions),
-            ),
-        ]
+        tx = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=puzzle_hashes[0],
+            amount=uint64(payment_sum),
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=list(set(spend_bundle.additions()) - other_tx_additions),
+            removals=list(set(spend_bundle.removals()) - other_tx_removals),
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
+            memos=list(compute_memos(spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
+        )
+
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(tx)
 
         if chia_tx is not None:
-            tx_list.append(chia_tx)
+            tx_list = [tx, chia_tx]
+        else:
+            tx_list = [tx]
 
         return tx_list
 
@@ -1083,19 +1092,22 @@ class NFTWallet:
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_list, did_id)
-        did_inner_hash = b""
         nft_ids = []
-        nft_tx_record = []
-        spend_bundles = []
+        tx_records = []
         first = True
         for nft_coin_info in nft_list:
             nft_ids.append(nft_coin_info.nft_id)
-        if did_id != b"":
-            did_inner_hash, did_bundle = await self.get_did_approval_info(
-                announcement_ids, tx_config, action_scope, bytes32(did_id)
-            )
-            if len(announcement_ids) > 0:
-                spend_bundles.append(did_bundle)
+        if did_id != b"" and len(announcement_ids) > 0:
+            _, did_tx = await self.get_did_approval_info(announcement_ids, tx_config, action_scope, bytes32(did_id))
+            tx_records.append(did_tx)
+
+        for _, wallet in self.wallet_state_manager.wallets.items():
+            if wallet.type() == WalletType.DECENTRALIZED_ID:
+                if bytes32.fromhex(wallet.get_my_DID()) == did_id:
+                    did_inner_hash = wallet.did_info.current_inner.get_tree_hash()
+                    break
+        else:
+            raise ValueError(f"No DID wallet with id: {did_id.hex()}")
 
         for nft_coin_info in nft_list:
             unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
@@ -1104,7 +1116,7 @@ class NFTWallet:
             if not first:
                 fee = uint64(0)
                 extra_conditions = tuple()
-            nft_tx_record.extend(
+            tx_records.extend(
                 await self.generate_signed_transaction(
                     [uint64(nft_coin_info.coin.amount)],
                     puzzle_hashes_to_sign,
@@ -1119,17 +1131,7 @@ class NFTWallet:
             )
             first = False
 
-        refined_tx_list: List[TransactionRecord] = []
-        for tx in nft_tx_record:
-            if tx.spend_bundle is not None:
-                spend_bundles.append(tx.spend_bundle)
-            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
-
-        if len(spend_bundles) > 0:
-            spend_bundle = SpendBundle.aggregate(spend_bundles)
-            # Add all spend bundles to the first tx
-            refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
-        return refined_tx_list
+        return tx_records
 
     async def bulk_transfer_nft(
         self,
@@ -1190,12 +1192,12 @@ class NFTWallet:
         nft_id = unft.singleton_launcher_id
         puzzle_hashes_to_sign = [unft.p2_puzzle.get_tree_hash()]
         did_inner_hash = b""
-        additional_bundles = []
+        did_tx = None
         if did_id != b"":
-            did_inner_hash, did_bundle = await self.get_did_approval_info(
+            did_inner_hash, did_tx = await self.get_did_approval_info(
                 [nft_id], tx_config, action_scope, bytes32(did_id)
             )
-            additional_bundles.append(did_bundle)
+            assert did_tx.spend_bundle is not None
 
         nft_tx_record = await self.generate_signed_transaction(
             [uint64(nft_coin_info.coin.amount)],
@@ -1206,12 +1208,15 @@ class NFTWallet:
             {nft_coin_info.coin},
             new_owner=did_id,
             new_did_inner_hash=did_inner_hash,
-            additional_bundles=additional_bundles,
             extra_conditions=extra_conditions,
         )
 
         await self.update_coin_status(nft_coin_info.coin.name(), True)
         self.wallet_state_manager.state_changed("nft_coin_did_set", self.wallet_info.id)
+
+        if did_tx is not None:
+            nft_tx_record.append(did_tx)
+
         return nft_tx_record
 
     async def mint_from_did(
@@ -1317,7 +1322,7 @@ class NFTWallet:
         intermediate_coin_spends = []
         launcher_spends = []
         launcher_ids = []
-        eve_spends: List[SpendBundle] = []
+        tx_list = []
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         p2_inner_ph = p2_inner_puzzle.get_tree_hash()
 
@@ -1409,13 +1414,13 @@ class NFTWallet:
             )
             eve_sb = eve_txs[0].spend_bundle
             assert eve_sb is not None
-            eve_spends.append(eve_sb)
             # Extract Puzzle Announcement from eve spend
             eve_sol = eve_sb.coin_spends[0].solution.to_program()
             conds = eve_fullpuz.run(eve_sol)
             eve_puzzle_announcement = [x for x in conds.as_python() if int_from_bytes(x[0]) == 62][0][1]
             assertion = std_hash(eve_fullpuz.get_tree_hash() + eve_puzzle_announcement)
             puzzle_assertions.add(assertion)
+            tx_list.extend(eve_txs)
 
         # We've now created all the intermediate, launcher, eve and transfer spends.
         # Create the xch spend to fund the minting.
@@ -1498,14 +1503,23 @@ class NFTWallet:
         did_spend = make_spend(did_coin, did_full_puzzle, did_full_sol)
 
         # Collect up all the coin spends and sign them
-        list_of_coinspends = [did_spend] + intermediate_coin_spends + launcher_spends
+        list_of_coinspends = [did_spend] + intermediate_coin_spends + launcher_spends + xch_spend.coin_spends
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
 
         # Aggregate everything into a single spend bundle
-        total_spend = SpendBundle.aggregate([unsigned_spend_bundle, xch_spend, *eve_spends])
+        async with action_scope.use() as interface:
+            # This should not be looked to for best practice. I think many of the spends generated above could call
+            # wallet methods that generate transactions and prevent most of the need for this. Refactoring this function
+            # is out of scope so for now we're using this hack.
+            relevant_index = interface.side_effects.transactions.index(tx_list[0])
+            assert tx_list[0].spend_bundle is not None
+            new_spend = SpendBundle.aggregate([tx_list[0].spend_bundle, unsigned_spend_bundle])
+            tx_list[0] = dataclasses.replace(
+                interface.side_effects.transactions[relevant_index], spend_bundle=new_spend, name=new_spend.name()
+            )
+            interface.side_effects.transactions[relevant_index] = tx_list[0]
 
-        tx_record: TransactionRecord = dataclasses.replace(eve_txs[0], spend_bundle=total_spend)
-        return [tx_record]
+        return tx_list
 
     async def mint_from_xch(
         self,
@@ -1567,7 +1581,7 @@ class NFTWallet:
         intermediate_coin_spends = []
         launcher_spends = []
         launcher_ids = []
-        eve_spends: List[SpendBundle] = []
+        tx_list = []
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         p2_inner_ph = p2_inner_puzzle.get_tree_hash()
 
@@ -1654,13 +1668,13 @@ class NFTWallet:
             )
             eve_sb = eve_txs[0].spend_bundle
             assert eve_sb is not None
-            eve_spends.append(eve_sb)
             # Extract Puzzle Announcement from eve spend
             eve_sol = eve_sb.coin_spends[0].solution.to_program()
             conds = eve_fullpuz.run(eve_sol)
             eve_puzzle_announcement = [x for x in conds.as_python() if int_from_bytes(x[0]) == 62][0][1]
             assertion = std_hash(eve_fullpuz.get_tree_hash() + eve_puzzle_announcement)
             puzzle_assertions.add(assertion)
+            tx_list.extend(eve_txs)
 
         # We've now created all the intermediate, launcher, eve and transfer spends.
         # Create the xch spend to fund the minting.
@@ -1694,16 +1708,25 @@ class NFTWallet:
             else:
                 solution = self.standard_wallet.make_solution(primaries=[], conditions=(primary_announcement,))
             xch_spends.append(make_spend(xch_coin, puzzle, solution))
-        xch_spend = SpendBundle(xch_spends, G2Element())
 
-        # Collect up all the coin spends
-        list_of_coinspends = intermediate_coin_spends + launcher_spends
+        # Collect up all the coin spends and sign them
+        list_of_coinspends = intermediate_coin_spends + launcher_spends + xch_spends
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
 
         # Aggregate everything into a single spend bundle
-        total_spend = SpendBundle.aggregate([unsigned_spend_bundle, xch_spend, *eve_spends])
-        tx_record: TransactionRecord = dataclasses.replace(eve_txs[0], spend_bundle=total_spend)
-        return [tx_record]
+        async with action_scope.use() as interface:
+            # This should not be looked to for best practice. I think many of the spends generated above could call
+            # wallet methods that generate transactions and prevent most of the need for this. Refactoring this function
+            # is out of scope so for now we're using this hack.
+            relevant_index = interface.side_effects.transactions.index(tx_list[0])
+            assert tx_list[0].spend_bundle is not None
+            new_spend = SpendBundle.aggregate([tx_list[0].spend_bundle, unsigned_spend_bundle])
+            tx_list[0] = dataclasses.replace(
+                interface.side_effects.transactions[relevant_index], spend_bundle=new_spend, name=new_spend.name()
+            )
+            interface.side_effects.transactions[relevant_index] = tx_list[0]
+
+        return tx_list
 
     async def select_coins(
         self,

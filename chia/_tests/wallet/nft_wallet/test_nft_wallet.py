@@ -1486,7 +1486,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: OldSimulat
     assert len(sb.coin_spends) == 5
     tx_num = resp["tx_num"]
     assert isinstance(tx_num, int)
-    assert tx_num == 4
+    assert tx_num == 5  # 1 for each NFT being spent (3), 1 for fee tx, 1 for did tx
     coins_response = await wait_rpc_state_condition(
         30, api_0.nft_get_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: len(x["nft_list"]) == 2
     )

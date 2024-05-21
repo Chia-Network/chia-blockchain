@@ -50,6 +50,7 @@ async def test_mempool_update_performance(
         [big_transaction] = await wallet.generate_signed_transaction(
             send_amount, ph, DEFAULT_TX_CONFIG, action_scope, fee_amount
         )
+    [big_transaction], _ = await wallet.wallet_state_manager.sign_transactions([big_transaction])
     assert big_transaction.spend_bundle is not None
     status, err = await full_node.add_transaction(
         big_transaction.spend_bundle, big_transaction.spend_bundle.name(), test=True

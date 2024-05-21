@@ -6,7 +6,7 @@ import time
 import traceback
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
-from chia_rs import G1Element, G2Element
+from chia_rs import G1Element
 from typing_extensions import Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -113,6 +113,7 @@ class CATWallet:
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
+        push: bool = True,
     ) -> Tuple[CATWallet, List[TransactionRecord]]:
         self = CATWallet()
         self.standard_wallet = wallet
@@ -186,19 +187,22 @@ class CATWallet:
             fee_amount=fee,
             confirmed=False,
             sent=uint32(10),
-            spend_bundle=None,
+            spend_bundle=spend_bundle,
             additions=[cat_coin],
             removals=list(filter(lambda rem: rem.name() == cat_pid, spend_bundle.removals())),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32.secret(),
+            name=spend_bundle.name(),
             memos=[],
             valid_times=ConditionValidTimes(),
         )
-        chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle, name=spend_bundle.name())
-        tx_list = await self.wallet_state_manager.add_pending_transactions([chia_tx, cat_record])
+        tx_list = [chia_tx, cat_record]
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(cat_record)
+        if push:
+            tx_list = await self.wallet_state_manager.add_pending_transactions(tx_list)
         return self, tx_list
 
     @staticmethod
@@ -745,19 +749,8 @@ class CATWallet:
             spendable_cat_list.append(new_spendable_cat)
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
-        chia_spend_bundle = SpendBundle([], G2Element())
-        if chia_tx is not None and chia_tx.spend_bundle is not None:
-            chia_spend_bundle = chia_tx.spend_bundle
 
-        return (
-            SpendBundle.aggregate(
-                [
-                    cat_spend_bundle,
-                    chia_spend_bundle,
-                ]
-            ),
-            chia_tx,
-        )
+        return (cat_spend_bundle, chia_tx)
 
     async def generate_signed_transaction(
         self,
@@ -801,50 +794,32 @@ class CATWallet:
         else:
             other_tx_removals = set()
             other_tx_additions = set()
-        tx_list = [
-            TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=puzzle_hashes[0],
-                amount=uint64(payment_sum),
-                fee_amount=fee,
-                confirmed=False,
-                sent=uint32(0),
-                spend_bundle=spend_bundle,
-                additions=list(set(spend_bundle.additions()) - other_tx_additions),
-                removals=list(set(spend_bundle.removals()) - other_tx_removals),
-                wallet_id=self.id(),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.OUTGOING_TX.value),
-                name=spend_bundle.name(),
-                memos=list(compute_memos(spend_bundle).items()),
-                valid_times=parse_timelock_info(extra_conditions),
-            )
-        ]
+        tx = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=puzzle_hashes[0],
+            amount=uint64(payment_sum),
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=list(set(spend_bundle.additions()) - other_tx_additions),
+            removals=list(set(spend_bundle.removals()) - other_tx_removals),
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
+            memos=list(compute_memos(spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
+        )
+        tx_list = [tx]
 
         if chia_tx is not None:
-            tx_list.append(
-                TransactionRecord(
-                    confirmed_at_height=chia_tx.confirmed_at_height,
-                    created_at_time=chia_tx.created_at_time,
-                    to_puzzle_hash=chia_tx.to_puzzle_hash,
-                    amount=chia_tx.amount,
-                    fee_amount=chia_tx.fee_amount,
-                    confirmed=chia_tx.confirmed,
-                    sent=chia_tx.sent,
-                    spend_bundle=None,
-                    additions=chia_tx.additions,
-                    removals=chia_tx.removals,
-                    wallet_id=chia_tx.wallet_id,
-                    sent_to=chia_tx.sent_to,
-                    trade_id=chia_tx.trade_id,
-                    type=chia_tx.type,
-                    name=chia_tx.name,
-                    memos=[],
-                    valid_times=parse_timelock_info(extra_conditions),
-                )
-            )
+            tx_list.append(chia_tx)
+
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(tx)
 
         return tx_list
 

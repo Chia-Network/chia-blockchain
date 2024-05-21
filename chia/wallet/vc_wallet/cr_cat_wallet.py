@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 import time
 import traceback
@@ -90,6 +89,7 @@ class CRCATWallet(CATWallet):
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
+        push: bool = False,
     ) -> Tuple[CATWallet, List[TransactionRecord]]:  # pragma: no cover
         raise NotImplementedError("create_new_cat_wallet is a legacy method and is not available on CR-CAT wallets")
 
@@ -596,26 +596,7 @@ class CRCATWallet(CATWallet):
         else:
             vc_txs = []
 
-        return (
-            SpendBundle(
-                [
-                    *coin_spends,
-                    *(spend for tx in vc_txs if tx.spend_bundle is not None for spend in tx.spend_bundle.coin_spends),
-                    *(
-                        (
-                            spend
-                            for bundle in [chia_tx.spend_bundle]
-                            if bundle is not None
-                            for spend in bundle.coin_spends
-                        )
-                        if chia_tx is not None
-                        else []
-                    ),
-                ],
-                G2Element(),
-            ),
-            [*vc_txs, *([chia_tx] if chia_tx is not None else [])],
-        )
+        return (SpendBundle(coin_spends, G2Element()), [*vc_txs, *([chia_tx] if chia_tx is not None else [])])
 
     async def generate_signed_transaction(
         self,
@@ -692,7 +673,10 @@ class CRCATWallet(CATWallet):
             for i, payment in enumerate(payments)
         ]
 
-        return [*tx_list, *(dataclasses.replace(tx, spend_bundle=None) for tx in other_txs)]
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.extend(tx_list)
+
+        return [*tx_list, *other_txs]
 
     async def claim_pending_approval_balance(
         self,
@@ -785,7 +769,6 @@ class CRCATWallet(CATWallet):
             )
             if chia_tx.spend_bundle is None:
                 raise RuntimeError("Did not get spendbundle for fee transaction")  # pragma: no cover
-            claim_bundle = SpendBundle.aggregate([claim_bundle, chia_tx.spend_bundle])
         else:
             chia_tx = None
 
@@ -801,38 +784,36 @@ class CRCATWallet(CATWallet):
                 *(CreatePuzzleAnnouncement(crcat.expected_announcement()) for crcat, _ in crcats_and_puzhashes),
             ),
         )
-        claim_bundle = SpendBundle.aggregate(
-            [claim_bundle, *(tx.spend_bundle for tx in vc_txs if tx.spend_bundle is not None)]
-        )
 
-        other_txs: List[TransactionRecord] = [
-            *(dataclasses.replace(tx, spend_bundle=None) for tx in vc_txs),
-            *((dataclasses.replace(chia_tx, spend_bundle=None),) if chia_tx is not None else []),
-        ]
+        other_txs: List[TransactionRecord] = vc_txs
+        if chia_tx is not None:
+            other_txs.append(chia_tx)
         other_additions: Set[Coin] = {rem for tx in other_txs for rem in tx.additions}
         other_removals: Set[Coin] = {rem for tx in other_txs for rem in tx.removals}
-        return [
-            TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=await self.wallet_state_manager.main_wallet.get_puzzle_hash(False),
-                amount=uint64(sum(c.amount for c in coins)),
-                fee_amount=fee,
-                confirmed=False,
-                sent=uint32(0),
-                spend_bundle=claim_bundle,
-                additions=list(set(claim_bundle.additions()) - other_additions),
-                removals=list(set(claim_bundle.removals()) - other_removals),
-                wallet_id=self.id(),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.INCOMING_TX.value),
-                name=claim_bundle.name(),
-                memos=list(compute_memos(claim_bundle).items()),
-                valid_times=parse_timelock_info(extra_conditions),
-            ),
-            *other_txs,
-        ]
+        tx = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=await self.wallet_state_manager.main_wallet.get_puzzle_hash(False),
+            amount=uint64(sum(c.amount for c in coins)),
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=claim_bundle,
+            additions=list(set(claim_bundle.additions()) - other_additions),
+            removals=list(set(claim_bundle.removals()) - other_removals),
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=claim_bundle.name(),
+            memos=list(compute_memos(claim_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
+        )
+
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(tx)
+
+        return [tx, *other_txs]
 
     async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         if (

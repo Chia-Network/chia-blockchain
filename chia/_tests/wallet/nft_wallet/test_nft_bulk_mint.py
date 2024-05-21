@@ -45,7 +45,6 @@ async def test_nft_mint_from_did(
     wallet_node_1, server_1 = wallets[1]
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-    api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_0.get_new_puzzlehash()
     ph_token = bytes32.random(seeded_random)
 
@@ -123,13 +122,13 @@ async def test_nft_mint_from_did(
             mint_total=mint_total,
             fee=fee,
         )
-    sb = tx_records[0].spend_bundle
-    assert sb is not None
+    tx_records = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(tx_records)
 
-    bundle, _ = await nft_wallet_maker.wallet_state_manager.sign_bundle(sb.coin_spends)
-    await api_0.push_tx({"spend_bundle": bytes(bundle).hex()})
-
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, bundle.name())
+    for record in tx_records:
+        if record.spend_bundle is not None:
+            await time_out_assert_not_none(
+                5, full_node_api.full_node.mempool_manager.get_spendbundle, record.spend_bundle.name()
+            )
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
     await time_out_assert(30, nft_count, mint_total, nft_wallet_taker)

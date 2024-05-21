@@ -153,10 +153,9 @@ def tx_endpoint(
                 # unfortunately, this API isn't solely a tx endpoint
                 return response
 
-            tx_records: List[TransactionRecord] = [
-                TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]
-            ]
-            unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(tx_records)
+            unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(
+                action_scope.side_effects.transactions
+            )
 
             if not request.get("CHIP-0029", False):
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
@@ -166,11 +165,13 @@ def tx_endpoint(
             new_txs: List[TransactionRecord] = []
             if request.get("sign", self.service.config.get("auto_sign_txs", True)):
                 new_txs, signing_responses = await self.service.wallet_state_manager.sign_transactions(
-                    tx_records, response.get("signing_responses", []), "signing_responses" in response
+                    action_scope.side_effects.transactions,
+                    response.get("signing_responses", []),
+                    "signing_responses" in response,
                 )
                 response["signing_responses"] = [byte_serialize_clvm_streamable(r).hex() for r in signing_responses]
             else:
-                new_txs = tx_records  # pragma: no cover
+                new_txs = action_scope.side_effects.transactions  # pragma: no cover
 
             if request.get("push", push):
                 new_txs = await self.service.wallet_state_manager.add_pending_transactions(
@@ -194,14 +195,14 @@ def tx_endpoint(
                     or func.__name__ == "pw_absorb_rewards"
                 ):
                     # Theses RPCs return not "convenience" for some reason
-                    response["transaction"] = new_txs[0].to_json_dict()
+                    response["transaction"] = new_txs[-1].to_json_dict()
                 else:
                     response["transaction"] = response["transactions"][0]
             if "tx_record" in response:
                 response["tx_record"] = response["transactions"][0]
             if "fee_transaction" in response and response["fee_transaction"] is not None:
                 # Theses RPCs return not "convenience" for some reason
-                response["fee_transaction"] = new_txs[1].to_json_dict()
+                response["fee_transaction"] = next(tx for tx in new_txs if tx.wallet_id == 1).to_json_dict()
             if "transaction_id" in response:
                 response["transaction_id"] = new_txs[0].name
             if "transaction_ids" in response:

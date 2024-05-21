@@ -135,7 +135,7 @@ class GenesisById(LimitationsProgram):
         if wallet.cat_info.my_tail is None:
             await wallet.save_info(CATInfo(tail.get_tree_hash(), tail))
 
-        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
+        return tx_record, eve_spend
 
 
 class GenesisByPuzhash(LimitationsProgram):
@@ -303,7 +303,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         if wallet.cat_info.my_tail is None:
             await wallet.save_info(CATInfo(tail.get_tree_hash(), tail))
 
-        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
+        return tx_record, eve_spend
 
 
 # This should probably be much more elegant than just a dictionary with strings as identifiers

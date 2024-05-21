@@ -38,6 +38,7 @@ from chia.wallet.wallet_coin_store import GetCoinRecords
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
     result["transaction"] = TransactionRecord.from_json_dict(result["transaction"])
+    result["transactions"] = [TransactionRecord.from_json_dict_convenience(tx) for tx in result["transactions"]]
     if result["fee_transaction"]:
         result["fee_transaction"] = TransactionRecord.from_json_dict(result["fee_transaction"])
     return result

@@ -2037,17 +2037,16 @@ class WalletRpcApi:
         else:
             solver = Solver(info=maybe_marshalled_solver)
 
-        async with self.service.wallet_state_manager.new_action_scope(push=False) as action_scope:
-            peer = self.service.get_full_node_peer()
-            trade_record, tx_records = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-                offer,
-                peer,
-                tx_config,
-                action_scope,
-                fee=fee,
-                solver=solver,
-                extra_conditions=extra_conditions,
-            )
+        peer = self.service.get_full_node_peer()
+        trade_record, tx_records = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
+            offer,
+            peer,
+            tx_config,
+            action_scope,
+            fee=fee,
+            solver=solver,
+            extra_conditions=extra_conditions,
+        )
 
         return {
             "trade_record": trade_record.to_json_dict_convenience(),
@@ -2976,7 +2975,7 @@ class WalletRpcApi:
 
         vote_amount = request.get("vote_amount")
         fee = uint64(request.get("fee", 0))
-        [proposal_tx] = await dao_wallet.generate_new_proposal(
+        txs = await dao_wallet.generate_new_proposal(
             proposed_puzzle,
             tx_config,
             action_scope,
@@ -2984,9 +2983,8 @@ class WalletRpcApi:
             fee=fee,
             extra_conditions=extra_conditions,
         )
-        assert proposal_tx is not None
-        assert isinstance(proposal_tx.removals, List)
-        for coin in proposal_tx.removals:
+        assert isinstance(txs[0].removals, List)
+        for coin in txs[0].removals:
             if coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
                 proposal_id = coin.name()
                 break
@@ -2995,9 +2993,9 @@ class WalletRpcApi:
         return {
             "success": True,
             "proposal_id": proposal_id,
-            "tx_id": proposal_tx.name.hex(),
-            "tx": proposal_tx,
-            "transactions": [proposal_tx.to_json_dict_convenience(self.service.config)],
+            "tx_id": txs[0].name.hex(),
+            "tx": txs[0],
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
 
     @tx_endpoint(push=True)
@@ -3332,31 +3330,19 @@ class WalletRpcApi:
             for coin in nft_list:
                 coin_ids.append(coin.coin.name())
             first = False
-        spend_bundles: List[SpendBundle] = []
-        refined_tx_list: List[TransactionRecord] = []
-        for tx in tx_list:
-            if tx.spend_bundle is not None:
-                spend_bundles.append(tx.spend_bundle)
-            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
-        if len(spend_bundles) > 0:
-            spend_bundle = SpendBundle.aggregate(spend_bundles)
-            # Add all spend bundles to the first tx
-            refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
+        for id in coin_ids:
+            await nft_wallet.update_coin_status(id, True)
+        for wallet_id in nft_dict.keys():
+            self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
 
-            for id in coin_ids:
-                await nft_wallet.update_coin_status(id, True)
-            for wallet_id in nft_dict.keys():
-                self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
-            return {
-                "wallet_id": list(nft_dict.keys()),
-                "success": True,
-                "spend_bundle": spend_bundle,
-                "tx_num": len(refined_tx_list),
-                "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in refined_tx_list],
-            }
-        else:
-            raise ValueError("Couldn't set DID on given NFT")
+        return {
+            "wallet_id": list(nft_dict.keys()),
+            "success": True,
+            "spend_bundle": None,  # Backwards compat code in @tx_endpoint wrapper will fix this
+            "tx_num": len(tx_list),
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in tx_list],
+        }
 
     @tx_endpoint(push=True)
     async def nft_transfer_bulk(
@@ -3783,19 +3769,15 @@ class WalletRpcApi:
                 action_scope=action_scope,
                 extra_conditions=extra_conditions,
             )
-        sb = txs[0].spend_bundle
-        assert sb is not None
+        sb = SpendBundle.aggregate([tx.spend_bundle for tx in txs if tx.spend_bundle is not None])
         nft_id_list = []
         for cs in sb.coin_spends:
             if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
                 nft_id_list.append(encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config)))
-        ###
-        # Temporary signing workaround (delete when minting functions return transaction records)
-        sb, _ = await self.service.wallet_state_manager.sign_bundle(sb.coin_spends)
-        ###
+
         return {
             "success": True,
-            "spend_bundle": sb,
+            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
             "nft_id_list": nft_id_list,
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }

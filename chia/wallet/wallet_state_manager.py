@@ -1019,6 +1019,14 @@ class WalletStateManager:
                     AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
                 ),
             )
+            async with action_scope.use() as interface:
+                # This should not be looked to for best practice. Ideally, the two spend bundles can exist separately on
+                # each tx record until they are pushed. This is not very supported behavior at the moment so to avoid
+                # any potential backwards compatibility issues, we're moving the spend bundle from this TX to the main
+                relevant_index = interface.side_effects.transactions.index(chia_tx)
+                interface.side_effects.transactions[relevant_index] = dataclasses.replace(
+                    interface.side_effects.transactions[relevant_index], spend_bundle=None
+                )
             assert chia_tx.spend_bundle is not None
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
             tx_list.append(dataclasses.replace(chia_tx, spend_bundle=None))
@@ -1043,6 +1051,8 @@ class WalletStateManager:
             valid_times=parse_timelock_info(extra_conditions),
         )
         tx_list.append(tx_record)
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(tx_record)
         return tx_list
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:

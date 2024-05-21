@@ -1620,6 +1620,7 @@ async def test_identical_spend_aggregation_e2e(
             [tx] = await wallet.generate_signed_transaction(
                 uint64(200), phs[0], DEFAULT_TX_CONFIG, action_scope, primaries=other_recipients
             )
+        [tx], _ = await wallet.wallet_state_manager.sign_transactions([tx])
         assert tx.spend_bundle is not None
         await send_to_mempool(full_node_api, tx.spend_bundle)
         await farm_a_block(full_node_api, wallet_node, ph)
@@ -1644,6 +1645,7 @@ async def test_identical_spend_aggregation_e2e(
         [tx_c] = await wallet.generate_signed_transaction(
             uint64(30), ph, DEFAULT_TX_CONFIG, action_scope, coins={coins[2].coin}
         )
+    [tx_a, tx_b, tx_c], _ = await wallet.wallet_state_manager.sign_transactions([tx_a, tx_b, tx_c])
     assert tx_a.spend_bundle is not None
     assert tx_b.spend_bundle is not None
     assert tx_c.spend_bundle is not None
@@ -1661,6 +1663,7 @@ async def test_identical_spend_aggregation_e2e(
         [tx] = await wallet.generate_signed_transaction(
             uint64(200), IDENTITY_PUZZLE_HASH, DEFAULT_TX_CONFIG, action_scope, coins={coins[3].coin}
         )
+    [tx], _ = await wallet.wallet_state_manager.sign_transactions([tx])
     assert tx.spend_bundle is not None
     await send_to_mempool(full_node_api, tx.spend_bundle)
     await farm_a_block(full_node_api, wallet_node, ph)
@@ -1701,6 +1704,7 @@ async def test_identical_spend_aggregation_e2e(
             coins={coins[5].coin},
             extra_conditions=(e_announcement,),
         )
+    [tx_d, tx_f], _ = await wallet.wallet_state_manager.sign_transactions([tx_d, tx_f])
     assert tx_d.spend_bundle is not None
     assert tx_f.spend_bundle is not None
     # Create transaction E now that spends e_coin to create another eligible
@@ -1730,6 +1734,7 @@ async def test_identical_spend_aggregation_e2e(
         [tx_g] = await wallet.generate_signed_transaction(
             uint64(13), ph, DEFAULT_TX_CONFIG, action_scope, coins={g_coin}, extra_conditions=(e_announcement,)
         )
+    [tx_g], _ = await wallet.wallet_state_manager.sign_transactions([tx_g])
     assert tx_g.spend_bundle is not None
     sb_e2g = SpendBundle.aggregate([sb_e2, tx_g.spend_bundle])
     sb_e2g_name = sb_e2g.name()

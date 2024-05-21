@@ -345,10 +345,18 @@ class DataLayerWallet:
             SerializedProgram.from_program(genesis_launcher_solution),
         )
         launcher_sb: SpendBundle = SpendBundle([launcher_cs], G2Element())
-        full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
 
-        # Delete from standard transaction so we don't push duplicate spends
-        std_record: TransactionRecord = dataclasses.replace(create_launcher_tx_record, spend_bundle=full_spend)
+        async with action_scope.use() as interface:
+            # This should not be looked to for best practice. Ideally, the method to generate the transaction above
+            # takes a parameter to add in extra spends. That's currently out of scope, so I'm placing this hack in rn.
+            relevant_index = interface.side_effects.transactions.index(create_launcher_tx_record)
+            assert create_launcher_tx_record.spend_bundle is not None
+            create_launcher_tx_record = dataclasses.replace(
+                interface.side_effects.transactions[relevant_index],
+                spend_bundle=SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb]),
+            )
+            interface.side_effects.transactions[relevant_index] = create_launcher_tx_record
+
         singleton_record = SingletonRecord(
             coin_id=Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), uint64(1)).name(),
             launcher_id=launcher_coin.name(),
@@ -368,7 +376,7 @@ class DataLayerWallet:
         await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record)
         await self.wallet_state_manager.add_interested_puzzle_hashes([singleton_record.launcher_id], [self.id()])
 
-        return std_record, launcher_coin.name()
+        return create_launcher_tx_record, launcher_coin.name()
 
     async def create_tandem_xch_tx(
         self,
@@ -386,7 +394,7 @@ class DataLayerWallet:
             negative_change_allowed=False,
             extra_conditions=(announcement_to_assert,),
         )
-        assert chia_tx.spend_bundle is not None
+
         return chia_tx
 
     async def create_update_state_spend(
@@ -598,9 +606,6 @@ class DataLayerWallet:
                 action_scope,
             )
             assert chia_tx.spend_bundle is not None
-            aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
-            dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle, name=aggregate_bundle.name())
-            chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
             txs: List[TransactionRecord] = [dl_tx, chia_tx]
         else:
             txs = [dl_tx]
@@ -613,6 +618,9 @@ class DataLayerWallet:
                 await self.wallet_state_manager.dl_store.add_singleton_record(
                     second_singleton_record,
                 )
+
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(dl_tx)
 
         return txs
 
@@ -649,7 +657,7 @@ class DataLayerWallet:
         if len(amounts) != 1 or len(puzzle_hashes) != 1:
             raise ValueError("The wallet can only send one DL coin to one place at a time")
 
-        return await self.create_update_state_spend(
+        txs = await self.create_update_state_spend(
             launcher_id,
             new_root_hash,
             tx_config,
@@ -661,6 +669,8 @@ class DataLayerWallet:
             announce_new_state,
             extra_conditions,
         )
+
+        return txs
 
     async def get_spendable_singleton_info(self, launcher_id: bytes32) -> Tuple[SingletonRecord, LineageProof]:
         # First, let's make sure this is a singleton that we track and that we can spend
@@ -736,7 +746,7 @@ class DataLayerWallet:
             memos=[launcher_id, *(url for url in urls)],
             extra_conditions=extra_conditions,
         )
-        assert create_mirror_tx_record.spend_bundle is not None
+
         return [create_mirror_tx_record]
 
     async def delete_mirror(
@@ -803,6 +813,9 @@ class DataLayerWallet:
             )
         ]
 
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.extend(txs)
+
         if excess_fee > 0:
             [chia_tx] = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
                 uint64(1),
@@ -812,14 +825,7 @@ class DataLayerWallet:
                 fee=uint64(excess_fee),
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=mirror_coin.name(), asserted_msg=b"$"),),
             )
-            assert txs[0].spend_bundle is not None
-            assert chia_tx.spend_bundle is not None
-            txs = [
-                dataclasses.replace(
-                    txs[0], spend_bundle=SpendBundle.aggregate([txs[0].spend_bundle, chia_tx.spend_bundle])
-                ),
-                dataclasses.replace(chia_tx, spend_bundle=None),
-            ]
+            txs.append(chia_tx)
 
         return txs
 
@@ -1162,7 +1168,6 @@ class DataLayerWallet:
 
         offered_launchers: List[bytes32] = [k for k, v in offer_dict.items() if v < 0 and k is not None]
         fee_left_to_pay: uint64 = fee
-        all_bundles: List[SpendBundle] = []
         all_transactions: List[TransactionRecord] = []
         for launcher in offered_launchers:
             try:
@@ -1205,14 +1210,14 @@ class DataLayerWallet:
                 txs[0].spend_bundle,
                 coin_spends=[*all_other_spends, new_spend],
             )
-            all_bundles.append(new_bundle)
-            all_transactions.append(
-                dataclasses.replace(
-                    txs[0],
-                    spend_bundle=new_bundle,
-                    name=new_bundle.name(),
+            async with action_scope.use() as interface:
+                relevant_index = interface.side_effects.transactions.index(txs[0])
+                new_tx = dataclasses.replace(
+                    interface.side_effects.transactions[relevant_index], spend_bundle=new_bundle, name=new_bundle.name()
                 )
-            )
+                interface.side_effects.transactions[relevant_index] = new_tx
+
+            all_transactions.append(new_tx)
             all_transactions.extend(txs[1:])
 
         # create some dummy requested payments
@@ -1221,7 +1226,15 @@ class DataLayerWallet:
             for k, v in offer_dict.items()
             if v > 0
         }
-        return Offer(requested_payments, SpendBundle.aggregate(all_bundles), driver_dict), all_transactions
+
+        return (
+            Offer(
+                requested_payments,
+                SpendBundle.aggregate([tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None]),
+                driver_dict,
+            ),
+            all_transactions,
+        )
 
     @staticmethod
     async def finish_graftroot_solutions(offer: Offer, solver: Solver) -> Offer:

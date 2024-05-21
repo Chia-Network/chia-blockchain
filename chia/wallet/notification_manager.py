@@ -106,6 +106,7 @@ class NotificationManager:
             Program.to(None),
         )
         extra_spend_bundle = SpendBundle([notification_spend], G2Element())
+        chia_tx: TransactionRecord
         [chia_tx] = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
             amount,
             notification_hash,
@@ -120,7 +121,17 @@ class NotificationManager:
                 AssertCoinAnnouncement(asserted_id=notification_coin.name(), asserted_msg=b""),
             ),
         )
-        full_tx: TransactionRecord = dataclasses.replace(
-            chia_tx, spend_bundle=SpendBundle.aggregate([chia_tx.spend_bundle, extra_spend_bundle])
-        )
-        return full_tx
+        async with action_scope.use() as interface:
+            # This should not be looked to for best practice. Ideally, the method to generate the transaction above
+            # takes a parameter to add in extra spends. That's currently out of scope, so I'm placing this hack in rn.
+            relevant_index = interface.side_effects.transactions.index(chia_tx)
+            assert chia_tx.spend_bundle is not None
+            new_spend = SpendBundle.aggregate([chia_tx.spend_bundle, extra_spend_bundle])
+            chia_tx = dataclasses.replace(
+                interface.side_effects.transactions[relevant_index],
+                spend_bundle=new_spend,
+                name=new_spend.name(),
+            )
+            interface.side_effects.transactions[relevant_index] = chia_tx
+
+        return chia_tx

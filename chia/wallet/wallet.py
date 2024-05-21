@@ -446,27 +446,30 @@ class Wallet:
         else:
             assert output_amount == input_amount
 
-        return [
-            TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=now,
-                to_puzzle_hash=puzzle_hash,
-                amount=uint64(non_change_amount),
-                fee_amount=uint64(fee),
-                confirmed=False,
-                sent=uint32(0),
-                spend_bundle=spend_bundle,
-                additions=add_list,
-                removals=rem_list,
-                wallet_id=self.id(),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.OUTGOING_TX.value),
-                name=spend_bundle.name(),
-                memos=list(compute_memos(spend_bundle).items()),
-                valid_times=parse_timelock_info(extra_conditions),
-            )
-        ]
+        tx = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=now,
+            to_puzzle_hash=puzzle_hash,
+            amount=uint64(non_change_amount),
+            fee_amount=uint64(fee),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=add_list,
+            removals=rem_list,
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
+            memos=list(compute_memos(spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
+        )
+
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(tx)
+
+        return [tx]
 
     async def create_tandem_xch_tx(
         self,

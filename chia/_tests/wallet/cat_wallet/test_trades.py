@@ -1987,7 +1987,7 @@ async def test_trade_bad_spend(wallets_prefarm):
         tr1, txs1 = await trade_manager_taker.respond_to_offer(
             offer, peer, DEFAULT_TX_CONFIG, action_scope, fee=uint64(10)
         )
-    txs1 = await trade_manager_taker.wallet_state_manager.add_pending_transactions(txs1)
+    txs1 = await trade_manager_taker.wallet_state_manager.add_pending_transactions(txs1, sign=False)
     wallet_node_taker.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
 
     def check_wallet_cache_empty() -> bool:

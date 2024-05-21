@@ -646,9 +646,7 @@ class DIDWallet:
             )
         else:
             chia_tx = None
-        if chia_tx is not None and chia_tx.spend_bundle is not None:
-            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
-            chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
+
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -672,6 +670,9 @@ class DIDWallet:
         txs = [did_record]
         if chia_tx is not None:
             txs.append(chia_tx)
+
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(did_record)
 
         return txs
 
@@ -747,9 +748,7 @@ class DIDWallet:
             )
         else:
             chia_tx = None
-        if chia_tx is not None and chia_tx.spend_bundle is not None:
-            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
-            chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
+
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -772,6 +771,10 @@ class DIDWallet:
         txs = [did_record]
         if chia_tx is not None:
             txs.append(chia_tx)
+
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(did_record)
+
         return txs
 
     # The message spend can tests\wallet\rpc\test_wallet_rpc.py send messages and also change your innerpuz
@@ -827,7 +830,7 @@ class DIDWallet:
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        return TransactionRecord(
+        tx = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=p2_ph,
@@ -846,6 +849,9 @@ class DIDWallet:
             memos=list(compute_memos(unsigned_spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(tx)
+        return tx
 
     # This is used to cash out, or update the id_list
     async def create_exit_spend(
@@ -1310,6 +1316,8 @@ class DIDWallet:
             valid_times=ConditionValidTimes(),
         )
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(did_record)
         return [did_record, regular_record]
 
     async def generate_eve_spend(

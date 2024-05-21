@@ -554,7 +554,7 @@ async def test_create_signed_transaction(
         )
         assert len(selected_coin) == 1
 
-    tx = await wallet_1_rpc.create_signed_transaction(
+    txs = await wallet_1_rpc.create_signed_transactions(
         outputs,
         coins=selected_coin,
         fee=amount_fee,
@@ -566,10 +566,10 @@ async def test_create_signed_transaction(
         push=True,
     )
     change_expected = not selected_coin or selected_coin[0].amount - amount_total > 0
-    assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
+    assert_tx_amounts(txs[-1], outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
-    spend_bundle = tx.spend_bundle
+    spend_bundle = txs[0].spend_bundle
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
     await time_out_assert(20, get_confirmed_balance, generated_funds - amount_total, wallet_1_rpc, wallet_id)
@@ -1077,7 +1077,6 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
             ["the cat memo"],
         )
     tx_res = await client.cat_spend(cat_0_id, DEFAULT_TX_CONFIG, uint64(4), addr_1, uint64(0), ["the cat memo"])
-    assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
     assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
@@ -1087,10 +1086,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     # Test CAT spend with a fee
     tx_res = await client.cat_spend(cat_0_id, DEFAULT_TX_CONFIG, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"])
-    assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
-    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Test CAT spend with a fee and pre-specified removals / coins
@@ -1100,11 +1097,9 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     tx_res = await client.cat_spend(
         cat_0_id, DEFAULT_TX_CONFIG, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"], removals=removals
     )
-    assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
-    assert removals[0] in tx_res.removals
-    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
+    assert removals[0] in [cs.coin for cs in spend_bundle.coin_spends]
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Test unacknowledged CAT

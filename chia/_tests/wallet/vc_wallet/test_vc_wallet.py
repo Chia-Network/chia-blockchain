@@ -345,7 +345,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert await wallet_node_0.wallet_state_manager.get_wallet_for_asset_id(cr_cat_wallet_0.get_asset_id()) is not None
     wallet_1_ph = await wallet_1.get_new_puzzlehash()
     wallet_1_addr = encode_puzzle_hash(wallet_1_ph, "txch")
-    tx = await client_0.cat_spend(
+    await client_0.cat_spend(
         cr_cat_wallet_0.id(),
         wallet_environments.tx_config,
         uint64(90),
@@ -353,7 +353,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         uint64(2000000000),
         memos=["hey"],
     )
-    [tx] = await wallet_node_0.wallet_state_manager.add_pending_transactions([tx])
+    txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -414,7 +414,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         ]
     )
     assert await wallet_node_1.wallet_state_manager.wallets[env_1.dealias_wallet_id("crcat")].match_hinted_coin(
-        next(c for c in tx.additions if c.amount == 90), wallet_1_ph
+        next(c for tx in txs for c in tx.additions if c.amount == 90), wallet_1_ph
     )
     pending_tx = await client_1.get_transactions(
         env_1.dealias_wallet_id("crcat"),

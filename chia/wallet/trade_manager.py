@@ -282,7 +282,6 @@ class TradeManager:
         announcement_assertions.rotate(1)
 
         all_txs: List[TransactionRecord] = []
-        bundles: List[SpendBundle] = []
         fee_to_pay: uint64 = fee
         for trade, cancellation_coins in zip(trade_records, all_cancellation_coins):
             self.log.info(f"Secure-Cancel pending offer with id trade_id {trade.trade_id.hex()}")
@@ -335,9 +334,8 @@ class TradeManager:
                         extra_conditions=(*extra_conditions, *announcement_conditions),
                     )
                     if tx is not None and tx.spend_bundle is not None:
-                        bundles.append(tx.spend_bundle)
                         cancellation_additions.extend(tx.spend_bundle.additions())
-                        all_txs.append(dataclasses.replace(tx, spend_bundle=None))
+                        all_txs.append(tx)
                 else:
                     # ATTENTION: new_wallets
                     txs = await wallet.generate_signed_transaction(
@@ -353,40 +351,50 @@ class TradeManager:
                     )
                     for tx in txs:
                         if tx is not None and tx.spend_bundle is not None:
-                            bundles.append(tx.spend_bundle)
                             cancellation_additions.extend(tx.spend_bundle.additions())
-                            all_txs.append(dataclasses.replace(tx, spend_bundle=None))
+                        all_txs.append(tx)
                 fee_to_pay = uint64(0)
                 extra_conditions = tuple()
 
-                all_txs.append(
-                    TransactionRecord(
-                        confirmed_at_height=uint32(0),
-                        created_at_time=uint64(int(time.time())),
-                        to_puzzle_hash=new_ph,
-                        amount=uint64(coin.amount),
-                        fee_amount=fee,
-                        confirmed=False,
-                        sent=uint32(10),
-                        spend_bundle=None,
-                        additions=cancellation_additions,
-                        removals=[coin],
-                        wallet_id=wallet.id(),
-                        sent_to=[],
-                        trade_id=None,
-                        type=uint32(TransactionType.INCOMING_TX.value),
-                        name=cancellation_additions[0].name(),
-                        memos=[],
-                        valid_times=valid_times,
-                    )
+                incoming_tx = TransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=new_ph,
+                    amount=uint64(coin.amount),
+                    fee_amount=fee,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=None,
+                    additions=cancellation_additions,
+                    removals=[coin],
+                    wallet_id=wallet.id(),
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.INCOMING_TX.value),
+                    name=cancellation_additions[0].name(),
+                    memos=[],
+                    valid_times=valid_times,
                 )
+                all_txs.append(incoming_tx)
 
             await self.trade_store.set_status(trade.trade_id, TradeStatus.PENDING_CANCEL)
-        # Aggregate spend bundles to the first tx
-        if len(all_txs) > 0:
-            all_txs[0] = dataclasses.replace(all_txs[0], spend_bundle=SpendBundle.aggregate(bundles))
 
-        all_txs = [dataclasses.replace(tx, fee_amount=fee) for tx in all_txs]
+        if secure:
+            async with action_scope.use() as interface:
+                # We have to combine the spend bundle for these since they are tied with announcements
+                all_tx_names = [tx.name for tx in all_txs]
+                interface.side_effects.transactions = [
+                    tx for tx in interface.side_effects.transactions if tx.name not in all_tx_names
+                ]
+                final_spend_bundle = SpendBundle.aggregate(
+                    [tx.spend_bundle for tx in all_txs if tx.spend_bundle is not None]
+                )
+                interface.side_effects.transactions.append(
+                    dataclasses.replace(all_txs[0], spend_bundle=final_spend_bundle, name=final_spend_bundle.name())
+                )
+                interface.side_effects.transactions.extend(
+                    [dataclasses.replace(tx, spend_bundle=None, fee_amount=fee) for tx in all_txs[1:]]
+                )
 
         return all_txs
 
@@ -892,6 +900,9 @@ class TradeManager:
             memos=[],
             valid_times=ConditionValidTimes(),
         )
+
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions = [push_tx, *tx_records]
 
         return trade_record, [push_tx, *tx_records]
 
