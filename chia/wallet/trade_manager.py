@@ -377,7 +377,7 @@ class TradeManager:
                     )
                 )
 
-            await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL)
+            await self.trade_store.set_status(trade.trade_id, TradeStatus.PENDING_CANCEL)
         # Aggregate spend bundles to the first tx
         if len(all_txs) > 0:
             all_txs[0] = dataclasses.replace(all_txs[0], spend_bundle=SpendBundle.aggregate(bundles))
