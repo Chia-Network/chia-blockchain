@@ -134,10 +134,10 @@ async def test_cat_trades(
 
         # Mint some DIDs
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
+            wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), wallet_environments.tx_config
         )
         did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1)
+            wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1), wallet_environments.tx_config
         )
         did_id_maker = bytes32.from_hexstr(did_wallet_maker.get_my_DID())
         did_id_taker = bytes32.from_hexstr(did_wallet_taker.get_my_DID())

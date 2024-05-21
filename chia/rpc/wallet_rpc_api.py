@@ -767,11 +767,13 @@ class WalletRpcApi:
                         wallet_state_manager,
                         main_wallet,
                         uint64(request["amount"]),
+                        tx_config,
                         backup_dids,
                         uint64(num_needed),
                         metadata,
                         did_wallet_name,
                         uint64(request.get("fee", 0)),
+                        extra_conditions=extra_conditions,
                     )
 
                     my_did_id = encode_puzzle_hash(
@@ -4081,7 +4083,7 @@ class WalletRpcApi:
 
         try:
             async with self.service.wallet_state_manager.lock:
-                dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
+                std_tx, launcher_id = await dl_wallet.generate_new_reporter(
                     bytes32.from_hexstr(request["root"]),
                     tx_config,
                     fee=request.get("fee", uint64(0)),
@@ -4093,7 +4095,7 @@ class WalletRpcApi:
 
         return {
             "success": True,
-            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in (dl_tx, std_tx)],
+            "transactions": [std_tx.to_json_dict_convenience(self.service.config)],
             "launcher_id": launcher_id,
         }
 

@@ -22,6 +22,7 @@ def test_did_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         async def create_new_did_wallet(
             self,
             amount: int,
+            tx_config: TXConfig,
             fee: int = 0,
             name: Optional[str] = "DID Wallet",
             backup_ids: Optional[List[str]] = None,
@@ -29,7 +30,7 @@ def test_did_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         ) -> Dict[str, Union[str, int]]:
             if backup_ids is None:
                 backup_ids = []
-            self.add_to_log("create_new_did_wallet", (amount, fee, name, backup_ids, required_num))
+            self.add_to_log("create_new_did_wallet", (amount, tx_config, fee, name, backup_ids, required_num))
             return {"wallet_id": 3, "my_did": "did:chia:testdid123456"}
 
     inst_rpc_client = DidCreateRpcClient()  # pylint: disable=no-value-for-parameter
@@ -42,7 +43,7 @@ def test_did_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "create_new_did_wallet": [(3, 100000000000, "test", [], 0)],
+        "create_new_did_wallet": [(3, DEFAULT_TX_CONFIG, 100000000000, "test", [], 0)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 

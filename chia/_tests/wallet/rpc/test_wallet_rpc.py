@@ -1421,7 +1421,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await generate_funds(env.full_node.api, env.wallet_1, 5)
 
     # Create a DID wallet
-    res = await wallet_1_rpc.create_new_did_wallet(amount=1, name="Profile 1")
+    res = await wallet_1_rpc.create_new_did_wallet(amount=1, tx_config=DEFAULT_TX_CONFIG, name="Profile 1")
     assert res["success"]
     did_wallet_id_0 = res["wallet_id"]
     did_id_0 = res["my_did"]
@@ -2312,7 +2312,7 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     client: WalletRpcClient = env.wallet_1.rpc_client
     await generate_funds(full_node_api, env.wallet_1)
     wc = env.wallet_1.rpc_client
-    await wc.create_new_did_wallet(1, 0)
+    await wc.create_new_did_wallet(1, DEFAULT_TX_CONFIG, 0)
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, env.wallet_1.node)
     await time_out_assert(20, wc.get_synced)

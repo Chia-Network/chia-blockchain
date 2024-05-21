@@ -48,7 +48,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -76,11 +76,13 @@ class DIDWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         amount: uint64,
+        tx_config: TXConfig,
         backups_ids: List[bytes32] = [],
         num_of_backup_ids_needed: uint64 = None,
         metadata: Dict[str, str] = {},
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ):
         """
         Create a brand new DID wallet
@@ -138,7 +140,7 @@ class DIDWallet:
             raise ValueError("Not enough balance")
 
         try:
-            txs = await self.generate_new_decentralised_id(amount, DEFAULT_TX_CONFIG, fee)
+            txs = await self.generate_new_decentralised_id(amount, tx_config, fee, extra_conditions)
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
@@ -1198,7 +1200,11 @@ class DIDWallet:
             raise ValueError("Invalid inner DID puzzle.")
 
     async def generate_new_decentralised_id(
-        self, amount: uint64, tx_config: TXConfig, fee: uint64 = uint64(0)
+        self,
+        amount: uint64,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         """
         This must be called under the wallet state manager lock
@@ -1227,6 +1233,7 @@ class DIDWallet:
             origin_id=origin.name(),
             extra_conditions=(
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+                *extra_conditions,
             ),
         )
 

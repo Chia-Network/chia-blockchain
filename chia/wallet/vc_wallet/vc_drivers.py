@@ -329,18 +329,18 @@ class VerifiedCredential(Streamable):
     @classmethod
     def launch(
         cls: Type[_T_VerifiedCredential],
-        origin_coin: Coin,
+        origin_coins: List[Coin],
         provider_id: bytes32,
         new_inner_puzzle_hash: bytes32,
         memos: List[bytes32],
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[Program, List[CoinSpend], _T_VerifiedCredential]:
+    ) -> Tuple[List[Program], List[CoinSpend], _T_VerifiedCredential]:
         """
         Launch a VC.
 
-        origin_coin: An XCH coin that will be used to fund the spend. A coin of any amount > 1 can be used and the
-        change will automatically go back to the coin's puzzle hash.
+        origin_coins: A set of XCH coins that will be used to fund the spend. Coins of any amount > 1 can be used and
+        change will automatically go back to the first coin's puzzle hash.
         provider_id: The DID of the proof provider (the entity who is responsible for adding/removing proofs to the vc)
         new_inner_puzzle_hash: the innermost puzzle hash once the VC is created
         memos: The memos to use on the payment to the singleton
@@ -349,6 +349,7 @@ class VerifiedCredential(Streamable):
         and an instance of this class representing the expected state after all relevant spends have been pushed and
         confirmed.
         """
+        origin_coin = origin_coins[0]
         launcher_coin: Coin = generate_launcher_coin(origin_coin, uint64(1))
 
         # Create the second puzzle for the first launch
@@ -399,20 +400,23 @@ class VerifiedCredential(Streamable):
             curried_eve_singleton_hash,
             uint64(1),
         )
+        first_launcher_announcement_hash = std_hash(launcher_coin.name() + launcher_solution.get_tree_hash())
+        second_launcher_announcement_hash = std_hash(second_launcher_coin.name() + launch_dpuz.get_tree_hash())
         create_launcher_conditions = Program.to(
             [
                 [51, SINGLETON_LAUNCHER_HASH, 1],
-                [51, origin_coin.puzzle_hash, origin_coin.amount - fee - 1],
+                [51, origin_coin.puzzle_hash, sum(c.amount for c in origin_coins) - fee - 1],
                 [52, fee],
-                [61, std_hash(launcher_coin.name() + launcher_solution.get_tree_hash())],
-                [61, std_hash(second_launcher_coin.name() + launch_dpuz.get_tree_hash())],
+                [61, first_launcher_announcement_hash],
+                [61, second_launcher_announcement_hash],
                 *[cond.to_program() for cond in extra_conditions],
             ]
         )
 
-        dpuz: Program = Program.to((1, create_launcher_conditions))
+        primary_dpuz: Program = Program.to((1, create_launcher_conditions))
+        additional_dpuzs: List[Program] = [Program.to((1, [[61, second_launcher_announcement_hash]]))]
         return (
-            dpuz,
+            [primary_dpuz, *additional_dpuzs],
             [
                 make_spend(
                     launcher_coin,

@@ -2405,6 +2405,7 @@ class WalletStateManager:
         await self.nft_store.rollback_to_block(height)
         await self.coin_store.rollback_to_block(height)
         await self.interested_store.rollback_to_block(height)
+        await self.dl_store.rollback_to_block(height)
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         for record in reorged:
@@ -2589,20 +2590,20 @@ class WalletStateManager:
 
         return vc_wallet
 
-    async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
+    async def sum_hint_for_pubkey(self, pk: G1Element) -> Optional[SumHint]:
         return await self.main_wallet.sum_hint_for_pubkey(pk)
 
-    async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:
+    async def path_hint_for_pubkey(self, pk: G1Element) -> Optional[PathHint]:
         return await self.main_wallet.path_hint_for_pubkey(pk)
 
-    async def key_hints_for_pubkeys(self, pks: List[bytes]) -> KeyHints:
+    async def key_hints_for_pubkeys(self, pks: List[G1Element]) -> KeyHints:
         return KeyHints(
             [sum_hint for pk in pks for sum_hint in (await self.sum_hint_for_pubkey(pk),) if sum_hint is not None],
             [path_hint for pk in pks for path_hint in (await self.path_hint_for_pubkey(pk),) if path_hint is not None],
         )
 
     async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
-        pks: List[bytes] = []
+        pks: List[G1Element] = []
         signing_targets: List[SigningTarget] = []
         for coin_spend in coin_spends:
             _coin_spend = coin_spend.as_coin_spend()
@@ -2613,12 +2614,12 @@ class WalletStateManager:
                 self.constants.MAX_BLOCK_COST_CLVM,
             )
             # Create signature
-            for pk_bytes, msg in pkm_pairs_for_conditions_dict(
+            for pk, msg in pkm_pairs_for_conditions_dict(
                 conditions_dict, _coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
             ):
-                pks.append(pk_bytes)
-                fingerprint: bytes = G1Element.from_bytes(pk_bytes).get_fingerprint().to_bytes(4, "big")
-                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
+                pks.append(pk)
+                fingerprint: bytes = pk.get_fingerprint().to_bytes(4, "big")
+                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(bytes(pk) + msg)))
 
         return SigningInstructions(
             await self.key_hints_for_pubkeys(pks),
