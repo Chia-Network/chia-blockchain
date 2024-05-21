@@ -1996,7 +1996,7 @@ async def test_insert_key_already_present(data_store: DataStore, store_id: bytes
         key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=Status.COMMITTED
     )
     with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
-        await data_store.insert(key=key, value=value, store_id=store_id, reference_node_hash=None, side=None)
+        await data_store.insert(key=key, value=value, root=root, reference_node_hash=None, side=None)
 
 
 @pytest.mark.anyio
@@ -2043,12 +2043,12 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert:
         )
         for key in range(num_keys):
             bytes_key = key.to_bytes(4, byteorder="big")
-            node = await data_store.get_node_by_key(bytes_key, store_id)
+            node = await data_store.get_node_by_key(bytes_key, root=root)
             assert node.value == bytes_value
         for key in range(num_keys, num_keys + missing_keys):
             bytes_key = key.to_bytes(4, byteorder="big")
             with pytest.raises(KeyNotFoundError, match=f"Key not found: {bytes_key.hex()}"):
-                await data_store.get_node_by_key(bytes_key, store_id)
+                await data_store.get_node_by_key(bytes_key, root=root)
         num_keys += new_keys
 
 

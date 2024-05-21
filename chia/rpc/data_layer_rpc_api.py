@@ -585,11 +585,13 @@ class DataLayerRpcApi:
         if root is None:
             raise ValueError("no root")
 
+        store_root = await self.service.data_store.get_tree_root(store_id=request.store_id, generation=root.generation)
+
         all_proofs: List[HashOnlyProof] = []
         for key in request.keys:
-            node = await self.service.data_store.get_node_by_key(store_id=request.store_id, key=key)
+            node = await self.service.data_store.get_node_by_key(root=store_root, key=key)
             pi = await self.service.data_store.get_proof_of_inclusion_by_hash(
-                store_id=request.store_id, node_hash=node.hash, use_optimized=True
+                root=store_root, node_hash=node.hash, use_optimized=True
             )
 
             proof = HashOnlyProof.from_key_value(

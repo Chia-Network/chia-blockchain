@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
 
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
@@ -89,9 +89,9 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
                 print(f"        {dict(row)}")
 
 
-async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
-    terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
-    internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
+async def _dot_dump(data_store: DataStore, root: Root) -> str:
+    terminal_nodes = await data_store.get_keys_values(root=root)
+    internal_nodes = await data_store.get_internal_nodes(root=root)
 
     n = 8
 
@@ -313,15 +313,18 @@ class InternalNode:
         raise Exception("provided hash not present")
 
 
+T_OptionalBytes32 = TypeVar("T_OptionalBytes32", bound=Optional[bytes32])
+
+
 @dataclass(frozen=True)
-class Root:
+class Root(Generic(T_OptionalBytes32)):
     store_id: bytes32
-    node_hash: Optional[bytes32]
+    node_hash: T_OptionalBytes32
     generation: int
     status: Status
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> Root:
+    def from_row(cls, row: aiosqlite.Row) -> Root[Optional[bytes32]]:
         raw_node_hash = row["node_hash"]
         if raw_node_hash is None:
             node_hash = None
