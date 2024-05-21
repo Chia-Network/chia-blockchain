@@ -9,7 +9,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
 import click
 import yaml
@@ -107,82 +107,75 @@ def is_excluded(file_path: Path, excluded_paths: List[Path]) -> bool:
     return False
 
 
-# Define a function to find cycles within a dependency graph.
-# graph: A dictionary mapping each file to its list of dependencies.
-# excluded_paths: A list of paths that should be excluded from the cycle detection.
-# ignore_cycles_in: A list of package names where cycles, if found, should be ignored.
-# ignore_specific_edges: A dictionary of {parent: child} pairs where the search for a cycle should be abandonned
+@dataclass(frozen=True)
+class Cycle:
+    dependent_path: Path
+    dependent_package: str
+    provider_path: Path
+    provider_package: str
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.dependent_path} ({self.dependent_package}) -> "
+            f"{self.provider_path} ({self.provider_package}) -> "
+            f"({self.dependent_package})"
+        )
+
+    def possible_edge_interpretations(self) -> List[Tuple[FileOrPackage, FileOrPackage]]:
+        return [
+            # The first two parts of the cycle
+            (File(self.provider_path), File(self.dependent_path)),
+            (Package(self.provider_package), File(self.dependent_path)),
+            (File(self.provider_path), Package(self.dependent_package)),
+            (Package(self.provider_package), Package(self.dependent_package)),
+            # The second two parts
+            (Package(self.dependent_package), File(self.provider_path)),
+            (Package(self.dependent_package), Package(self.provider_package)),
+        ]
+
+
 def find_cycles(
     graph: Dict[Path, List[Path]],
+    virtual_graph: Dict[str, List[str]],
     excluded_paths: List[Path],
     ignore_cycles_in: List[str],
     ignore_specific_files: List[Path],
-    ignore_specific_edges: List[Tuple[Path, Path]],
-) -> List[List[Tuple[str, Path]]]:
-
-    # Define a nested function for recursive dependency searching.
-    # top_level_package: The name of the package at the top of the dependency tree.
-    # left_top_level: A boolean flag indicating whether we have moved beyond the top-level package in our traversal.
-    # dependency: The current dependency path being examined.
-    # already_seen: A list of dependency paths that have already been visited to avoid infinite loops.
-    def recursive_dependency_search(
-        top_level_package: str,
-        left_top_level: bool,
-        dependency: Path,
-        already_seen: Dict[Path, List[List[Tuple[str, Path]]]],
-        previous_child: Optional[Path],
-    ) -> List[List[Tuple[str, Path]]]:
-        # Check if the dependency is excluded or is part of a known problematic edge.
-        if is_excluded(dependency, excluded_paths) or (dependency, previous_child) in ignore_specific_edges:
-            return []
-
-        # Parse the dependency file to obtain its annotations.
-        chia_file = ChiaFile.parse(dependency)
-
-        # If there are no annotations, return an empty list as there's nothing to process.
-        if chia_file.annotations is None:
-            return []
-        # If the current dependency package matches the top-level package and we've left the top-level,
-        # return a list containing this dependency.
-        elif chia_file.annotations.package == top_level_package and left_top_level:
-            return [[(chia_file.annotations.package, dependency)]]
-        elif dependency in ignore_specific_files:
-            # Now that we have decided we will be recursing, we check if this file is a problematic one
-            return []
-        else:
-            # As an optimization, check if we've already cached the results of a call to this dependency
-            if dependency in already_seen:
-                return already_seen[dependency]
-
-            # Update the left_top_level flag if we have moved to a different package.
-            left_top_level = left_top_level or chia_file.annotations.package != top_level_package
-
-            # Recursively search through all dependencies of the current dependency and accumulate the results.
-            stacks = [
-                [(chia_file.annotations.package, dependency), *stack]
-                for stack in [
-                    _stack
-                    for dep in graph[dependency]
-                    for _stack in recursive_dependency_search(
-                        top_level_package, left_top_level, dep, already_seen, dependency
-                    )
-                ]
-            ]
-            already_seen[dependency] = stacks
-
-            return stacks
-
+    ignore_specific_edges: List[Tuple[FileOrPackage, FileOrPackage]],
+) -> List[Cycle]:
     # Initialize an accumulator for paths that are part of cycles.
     path_accumulator = []
     # Iterate over each package (parent) in the graph.
-    for parent in graph:
+    for dependent in graph:
         # Parse the parent package file.
-        chia_file = ChiaFile.parse(parent)
+        dependent_file = ChiaFile.parse(dependent)
         # Skip this package if it has no annotations or should be ignored in cycle detection.
-        if chia_file.annotations is None or chia_file.annotations.package in ignore_cycles_in:
+        if (
+            dependent_file.annotations is None
+            or dependent_file.annotations.package in ignore_cycles_in
+            or dependent in ignore_specific_files
+        ):
             continue
-        # Extend the path_accumulator with results from the recursive search starting from this parent.
-        path_accumulator.extend(recursive_dependency_search(chia_file.annotations.package, False, parent, {}, None))
+
+        for provider in graph[dependent]:
+            provider_file = ChiaFile.parse(provider)
+            if provider_file.annotations.package == dependent_file.annotations.package:
+                continue
+
+            if dependent_file.annotations.package not in virtual_graph[provider_file.annotations.package]:
+                continue
+
+            possible_cycle = Cycle(
+                dependent_file.path,
+                dependent_file.annotations.package,
+                provider_file.path,
+                provider_file.annotations.package,
+            )
+
+            for edge in possible_cycle.possible_edge_interpretations():
+                if edge in ignore_specific_edges:
+                    break
+            else:
+                path_accumulator.append(possible_cycle)
 
     # Format and return the accumulated paths as strings showing the cycles.
     return path_accumulator
@@ -234,11 +227,40 @@ class Config:
     ignore_specific_edges: List[Tuple[Path, Path]]  # (parent, child)
 
 
-def parse_edge(user_string: str) -> Tuple[Path, Path]:
+@dataclass(frozen=True)
+class File:
+    name: Path
+    is_file: Literal[True] = True
+
+
+@dataclass(frozen=True)
+class Package:
+    name: str
+    is_file: Literal[False] = False
+
+
+FileOrPackage = Union[File, Package]
+
+
+def parse_file_or_package(identifier: str) -> FileOrPackage:
+    if ".py" in identifier:
+        if "(" not in identifier:
+            return File(Path(identifier))
+        else:
+            return File(Path(identifier.split("(")[0].strip()))
+
+    if ".py" not in identifier and identifier[0] == "(" and identifier[-1] == ")":
+        return Package(identifier[1:-1])  # strip parens
+
+    return Package(identifier)
+
+
+def parse_edge(user_string: str) -> Tuple[FileOrPackage, FileOrPackage]:
     split_string = user_string.split("->")
-    child = Path(split_string[0].strip().split("(")[0].strip())
-    parent = Path(split_string[1].strip().split("(")[0].strip())
-    return parent, child
+    dependent_side = split_string[0].strip()
+    provider_side = split_string[1].strip()
+
+    return parse_file_or_package(provider_side), parse_file_or_package(dependent_side)
 
 
 def config(func: Callable[..., None]) -> Callable[..., None]:
@@ -360,12 +382,13 @@ def print_cycles(config: Config) -> None:
     flag = False
     for cycle in find_cycles(
         build_dependency_graph(config.directory_parameters),
+        build_virtual_dependency_graph(config.directory_parameters),
         config.directory_parameters.excluded_paths,
         config.ignore_cycles_in,
         config.ignore_specific_files,
         config.ignore_specific_edges,
     ):
-        print(" -> ".join([str(d) + f" ({p})" for p, d in cycle]))
+        print(cycle)
         flag = True
 
     if flag:
@@ -398,6 +421,7 @@ def print_cycles(config: Config) -> None:
 def check_config(config: Config) -> None:
     cycles = find_cycles(
         build_dependency_graph(config.directory_parameters),
+        build_virtual_dependency_graph(config.directory_parameters),
         config.directory_parameters.excluded_paths,
         [],
         [],
@@ -407,13 +431,9 @@ def check_config(config: Config) -> None:
     files_found = set()
     edges_found = set()
     for cycle in cycles:
-        modules_found.add(cycle[0][0])
-        for dep in cycle[1:]:
-            files_found.add(dep[1])
-        for index, dep in enumerate(cycle):
-            if index == 0:
-                continue
-            edges_found.add((dep[1], cycle[index - 1][1]))
+        modules_found.add(cycle.dependent_package)
+        files_found.add(cycle.dependent_path)
+        edges_found.update(set(cycle.possible_edge_interpretations()))
 
     for module in config.ignore_cycles_in:
         if module not in modules_found:
@@ -425,7 +445,7 @@ def check_config(config: Config) -> None:
     print()
     for edge in config.ignore_specific_edges:
         if edge not in edges_found:
-            print(f"    edge {edge[1]} -> {edge[0]} ignored but no cycles were found")
+            print(f"    edge {edge[1].name} -> {edge[0].name} ignored but no cycles were found")
 
 
 cli.add_command(find_missing_annotations)
