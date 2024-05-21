@@ -6,7 +6,7 @@ import random
 from typing import Callable, Dict, List, Optional, Tuple
 
 import pytest
-from chia_rs import G2Element
+from chia_rs import G1Element, G2Element
 from clvm.casts import int_to_bytes
 from clvm_tools import binutils
 
@@ -2161,7 +2161,7 @@ class TestGeneratorConditions:
         ],
     )
     def test_agg_sig_cost(self, condition, softfork_height):
-        pubkey = "abababababababababababababababababababababababab"
+        pubkey = "0x" + bytes(G1Element.generator()).hex()
 
         if softfork_height >= test_constants.HARD_FORK_FIX_HEIGHT:
             generator_base_cost = 40
@@ -2182,7 +2182,7 @@ class TestGeneratorConditions:
 
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
-            f'({condition[0]} "{pubkey}" "foobar") ',
+            f'({condition[0]} {pubkey} "foobar") ',
             max_cost=generator_base_cost + 117 * COST_PER_BYTE + expected_cost,
             height=softfork_height,
         )
@@ -2193,7 +2193,7 @@ class TestGeneratorConditions:
 
         # if we subtract one from max cost, this should fail
         npc_result = generator_condition_tester(
-            f'({condition[0]} "{pubkey}" "foobar") ',
+            f'({condition[0]} {pubkey} "foobar") ',
             max_cost=generator_base_cost + 117 * COST_PER_BYTE + expected_cost - 1,
             height=softfork_height,
         )
@@ -2219,7 +2219,7 @@ class TestGeneratorConditions:
     @pytest.mark.parametrize("extra_arg", [' "baz"', ""])
     @pytest.mark.parametrize("mempool", [True, False])
     def test_agg_sig_extra_arg(self, condition, extra_arg, mempool, softfork_height):
-        pubkey = "abababababababababababababababababababababababab"
+        pubkey = "0x" + bytes(G1Element.generator()).hex()
 
         new_condition = condition in [
             ConditionOpcode.AGG_SIG_PARENT,
@@ -2258,7 +2258,7 @@ class TestGeneratorConditions:
 
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
-            f'({condition[0]} "{pubkey}" "foobar"{extra_arg}) ',
+            f'({condition[0]} {pubkey} "foobar"{extra_arg}) ',
             max_cost=11000000000,
             height=softfork_height,
             mempool_mode=mempool,
