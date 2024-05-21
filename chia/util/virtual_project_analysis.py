@@ -73,8 +73,12 @@ def build_dependency_graph(dir_params: DirectoryParameters) -> Dict[Path, List[P
     return dependency_graph
 
 
-def build_virtual_dependency_graph(dir_params: DirectoryParameters) -> Dict[str, List[str]]:
-    graph = build_dependency_graph(dir_params)
+def build_virtual_dependency_graph(dir_params: DirectoryParameters, *, existing_graph: Optional[Dict[Path, List[Path]]] = None) -> Dict[str, List[str]]:
+    if existing_graph is None:
+        graph = build_dependency_graph(dir_params)
+    else:
+        graph = existing_graph
+
     virtual_graph: Dict[str, List[str]] = {}
     for file, imports in graph.items():
         root_file = ChiaFile.parse(Path(file))
@@ -113,25 +117,51 @@ class Cycle:
     dependent_package: str
     provider_path: Path
     provider_package: str
+    packages_after_provider: List[str]
 
     def __repr__(self) -> str:
-        return (
-            f"{self.dependent_path} ({self.dependent_package}) -> "
-            f"{self.provider_path} ({self.provider_package}) -> "
-            f"({self.dependent_package})"
-        )
+        return "".join((
+            f"{self.dependent_path} ({self.dependent_package}) -> ",
+            f"{self.provider_path} ({self.provider_package}) -> ",
+            *(f"({extra}) -> " for extra in self.packages_after_provider),
+        ))[:-4]
 
     def possible_edge_interpretations(self) -> List[Tuple[FileOrPackage, FileOrPackage]]:
+        edges_after_initial_files = []
+        provider = self.packages_after_provider[0]
+        for next_provider in self.packages_after_provider[1:]:
+            edges_after_initial_files.append((Package(next_provider), Package(provider)))
+            provider = next_provider
+
         return [
-            # The first two parts of the cycle
+            # Dependent -> Provider
             (File(self.provider_path), File(self.dependent_path)),
             (Package(self.provider_package), File(self.dependent_path)),
             (File(self.provider_path), Package(self.dependent_package)),
             (Package(self.provider_package), Package(self.dependent_package)),
-            # The second two parts
-            (Package(self.dependent_package), File(self.provider_path)),
-            (Package(self.dependent_package), Package(self.provider_package)),
+            # Provider -> Dependent/Other Packages
+            (Package(self.packages_after_provider[0]), File(self.provider_path)),
+            (Package(self.packages_after_provider[0]), Package(self.provider_package)),
+            # the rest
+            *edges_after_initial_files
         ]
+
+
+def find_all_dependency_paths(dependency_graph: Dict[str, List[str]], start: str, end: str) -> List[List[str]]:
+    all_paths = []
+    visited = set()
+    def dfs(current: str, target: str, path: List[str]):
+        if current in visited:
+            return
+        if current == target and len(path) > 0:
+            all_paths.append(path[1:] + [current])
+            return
+        visited.add(current)
+        for provider in sorted(dependency_graph.get(current, [])):
+            dfs(provider, target, path + [current])
+
+    dfs(start, end, [])
+    return all_paths
 
 
 def find_cycles(
@@ -145,7 +175,7 @@ def find_cycles(
     # Initialize an accumulator for paths that are part of cycles.
     path_accumulator = []
     # Iterate over each package (parent) in the graph.
-    for dependent in graph:
+    for dependent in sorted(graph):
         # Parse the parent package file.
         dependent_file = ChiaFile.parse(dependent)
         # Skip this package if it has no annotations or should be ignored in cycle detection.
@@ -156,26 +186,29 @@ def find_cycles(
         ):
             continue
 
-        for provider in graph[dependent]:
+        for provider in sorted(graph[dependent]):
             provider_file = ChiaFile.parse(provider)
             if provider_file.annotations.package == dependent_file.annotations.package:
                 continue
 
-            if dependent_file.annotations.package not in virtual_graph[provider_file.annotations.package]:
+            dependency_paths = find_all_dependency_paths(virtual_graph, provider_file.annotations.package, dependent_file.annotations.package)
+            if dependency_paths is None:
                 continue
 
-            possible_cycle = Cycle(
-                dependent_file.path,
-                dependent_file.annotations.package,
-                provider_file.path,
-                provider_file.annotations.package,
-            )
+            for dependency_path in dependency_paths:
+                possible_cycle = Cycle(
+                    dependent_file.path,
+                    dependent_file.annotations.package,
+                    provider_file.path,
+                    provider_file.annotations.package,
+                    dependency_path,
+                )
 
-            for edge in possible_cycle.possible_edge_interpretations():
-                if edge in ignore_specific_edges:
-                    break
-            else:
-                path_accumulator.append(possible_cycle)
+                for edge in possible_cycle.possible_edge_interpretations():
+                    if edge in ignore_specific_edges:
+                        break
+                else:
+                    path_accumulator.append(possible_cycle)
 
     # Format and return the accumulated paths as strings showing the cycles.
     return path_accumulator
@@ -380,9 +413,10 @@ def print_virtual_dependency_graph(config: Config) -> None:
 @config
 def print_cycles(config: Config) -> None:
     flag = False
+    graph = build_dependency_graph(config.directory_parameters)
     for cycle in find_cycles(
-        build_dependency_graph(config.directory_parameters),
-        build_virtual_dependency_graph(config.directory_parameters),
+        graph,
+        build_virtual_dependency_graph(config.directory_parameters, existing_graph=graph),
         config.directory_parameters.excluded_paths,
         config.ignore_cycles_in,
         config.ignore_specific_files,
@@ -419,9 +453,10 @@ def print_cycles(config: Config) -> None:
 )
 @config
 def check_config(config: Config) -> None:
+    graph = build_dependency_graph(config.directory_parameters)
     cycles = find_cycles(
-        build_dependency_graph(config.directory_parameters),
-        build_virtual_dependency_graph(config.directory_parameters),
+        graph,
+        build_virtual_dependency_graph(config.directory_parameters, existing_graph=graph),
         config.directory_parameters.excluded_paths,
         [],
         [],
