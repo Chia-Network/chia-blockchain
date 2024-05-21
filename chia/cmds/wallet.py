@@ -1016,6 +1016,7 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: s
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def nft_mint_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1034,7 +1035,8 @@ def nft_mint_cmd(
     fee: str,
     royalty_percentage_fraction: int,
     reuse: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import mint_nft
 
     if metadata_uris is None:
@@ -1047,7 +1049,7 @@ def nft_mint_cmd(
     else:
         license_uris_list = [lu.strip() for lu in license_uris.split(",")]
 
-    asyncio.run(
+    return asyncio.run(
         mint_nft(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -1066,6 +1068,7 @@ def nft_mint_cmd(
             d_fee=Decimal(fee),
             royalty_percentage=royalty_percentage_fraction,
             reuse_puzhash=True if reuse else None,
+            push=push,
         )
     )
 
@@ -1099,6 +1102,7 @@ def nft_mint_cmd(
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def nft_add_uri_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1109,10 +1113,11 @@ def nft_add_uri_cmd(
     license_uri: str,
     fee: str,
     reuse: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import add_uri_to_nft
 
-    asyncio.run(
+    return asyncio.run(
         add_uri_to_nft(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -1123,6 +1128,7 @@ def nft_add_uri_cmd(
             metadata_uri=metadata_uri,
             license_uri=license_uri,
             reuse_puzhash=True if reuse else None,
+            push=push,
         )
     )
 
@@ -1154,6 +1160,7 @@ def nft_add_uri_cmd(
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def nft_transfer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1162,10 +1169,11 @@ def nft_transfer_cmd(
     target_address: str,
     fee: str,
     reuse: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import transfer_nft
 
-    asyncio.run(
+    return asyncio.run(
         transfer_nft(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -1174,6 +1182,7 @@ def nft_transfer_cmd(
             nft_coin_id=nft_coin_id,
             target_address=target_address,
             reuse_puzhash=True if reuse else None,
+            push=push,
         )
     )
 
