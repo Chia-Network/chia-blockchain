@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import io
-from typing import Any, Callable, Dict, Optional, Set, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Set, Tuple, Type, TypeVar
 
 from chia_rs import ALLOW_BACKREFS, run_chia_program, tree_hash
-from clvm import SExp
 from clvm.casts import int_from_bytes
+from clvm.CLVMObject import CLVMStorage
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
+from clvm.SExp import SExp
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -18,20 +19,24 @@ from .tree_hash import sha256_treehash
 INFINITE_COST = 11000000000
 
 
+T_CLVMStorage = TypeVar("T_CLVMStorage", bound=CLVMStorage)
+T_Program = TypeVar("T_Program", bound="Program")
+
+
 class Program(SExp):
     """
     A thin wrapper around s-expression data intended to be invoked with "eval".
     """
 
     @classmethod
-    def parse(cls, f) -> Program:
+    def parse(cls: Type[T_Program], f) -> T_Program:
         return sexp_from_stream(f, cls.to)
 
     def stream(self, f):
         sexp_to_stream(self, f)
 
     @classmethod
-    def from_bytes(cls, blob: bytes) -> Program:
+    def from_bytes(cls: Type[T_Program], blob: bytes) -> T_Program:
         # this runs the program "1", which just returns the first argument.
         # the first argument is the buffer we want to parse. This effectively
         # leverages the rust parser and LazyNode, making it a lot faster to
@@ -42,10 +47,10 @@ class Program(SExp):
             50,
             ALLOW_BACKREFS,
         )
-        return Program.to(ret)
+        return cls.to(ret)
 
     @classmethod
-    def fromhex(cls, hexstr: str) -> Program:
+    def fromhex(cls: Type[T_Program], hexstr: str) -> T_Program:
         return cls.from_bytes(hexstr_to_bytes(hexstr))
 
     @classmethod
@@ -85,7 +90,7 @@ class Program(SExp):
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
 
-    def replace(self, **kwargs) -> Program:
+    def replace(self: T_Program, **kwargs: Any) -> T_Program:
         """
         Create a new program replacing the given paths (using `at` syntax).
         Example:
@@ -118,15 +123,15 @@ class Program(SExp):
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(bytes(self)))
 
-    def _run(self, max_cost: int, flags: int, args: object) -> Tuple[int, Program]:
+    def _run(self, max_cost: int, flags: int, args: Any) -> Tuple[int, Program]:
         prog_args = Program.to(args)
         cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, flags)
         return cost, Program.to(r)
 
-    def run_with_cost(self, max_cost: int, args: object) -> Tuple[int, Program]:
+    def run_with_cost(self, max_cost: int, args: Any) -> Tuple[int, Program]:
         return self._run(max_cost, 0, args)
 
-    def run(self, args: object) -> Program:
+    def run(self, args: Any) -> Program:
         cost, r = self.run_with_cost(INFINITE_COST, args)
         return r
 
@@ -153,7 +158,7 @@ class Program(SExp):
         return Program.to([2, (1, self), fixed_args])
 
     def uncurry(self) -> Tuple[Program, Program]:
-        def match(o: SExp, expected: bytes) -> None:
+        def match(o: CLVMStorage, expected: bytes) -> None:
             if o.atom != expected:
                 raise ValueError(f"expected: {expected.hex()}")
 
@@ -161,6 +166,9 @@ class Program(SExp):
             # (2 (1 . <mod>) <args>)
             ev, quoted_inner, args_list = self.as_iter()
             match(ev, b"\x02")
+            if TYPE_CHECKING:
+                # this being False is presently handled in the TypeError exception handler below
+                assert quoted_inner.pair is not None
             match(quoted_inner.pair[0], b"\x01")
             mod = quoted_inner.pair[1]
             args = []
@@ -168,6 +176,9 @@ class Program(SExp):
                 # (4 (1 . <arg>) <rest>)
                 cons, quoted_arg, rest = args_list.as_iter()
                 match(cons, b"\x04")
+                if TYPE_CHECKING:
+                    # this being False is presently handled in the TypeError exception handler below
+                    assert quoted_arg.pair is not None
                 match(quoted_arg.pair[0], b"\x01")
                 args.append(quoted_arg.pair[1])
                 args_list = rest
@@ -208,7 +219,8 @@ def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
         right = _tree_hash(node.rest(), precalculated)
         s = b"\2" + left + right
     else:
-        atom = node.as_atom()
+        # node.listp() is False so must be an atom
+        atom: bytes = node.as_atom()  # type: ignore[assignment]
         if atom in precalculated:
             return bytes32(atom)
         s = b"\1" + atom
@@ -218,10 +230,12 @@ def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
 NIL = Program.from_bytes(b"\x80")
 
 
-def _sexp_replace(sexp: SExp, to_sexp: Callable[[Any], SExp], **kwargs) -> SExp:
+# real return type is more like Union[T_Program, CastableType] when considering corner and terminal cases
+def _sexp_replace(sexp: T_CLVMStorage, to_sexp: Callable[[Any], T_Program], **kwargs: Any) -> T_Program:
     # if `kwargs == {}` then `return sexp` unchanged
     if len(kwargs) == 0:
-        return sexp
+        # yes, the terminal case is hinted incorrectly for now
+        return sexp  # type: ignore[return-value]
 
     if "" in kwargs:
         if len(kwargs) > 1:
@@ -232,7 +246,7 @@ def _sexp_replace(sexp: SExp, to_sexp: Callable[[Any], SExp], **kwargs) -> SExp:
     # Now split `kwargs` into two groups: those
     # that start with `f` and those that start with `r`
 
-    args_by_prefix: Dict[str, SExp] = {}
+    args_by_prefix: Dict[str, Dict[str, Any]] = {}
     for k, v in kwargs.items():
         c = k[0]
         if c not in "fr":
