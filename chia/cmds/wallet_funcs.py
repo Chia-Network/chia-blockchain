@@ -1423,17 +1423,20 @@ async def send_notification(
     address_str: str,
     message_hex: str,
     d_amount: Decimal,
-) -> None:
+    push: bool = True,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         address: bytes32 = decode_puzzle_hash(address_str)
         amount: uint64 = uint64(d_amount * units["chia"])
         message: bytes = bytes(message_hex, "utf8")
         fee: uint64 = uint64(d_fee * units["chia"])
 
-        tx = await wallet_client.send_notification(address, message, amount, fee)
+        tx = await wallet_client.send_notification(address, message, amount, fee, push=push)
 
-        print("Notification sent successfully.")
-        print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx.name}")
+        if push:
+            print("Notification sent successfully.")
+            print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx.name}")
+        return [tx]
 
 
 async def get_notifications(

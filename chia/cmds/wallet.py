@@ -1306,6 +1306,7 @@ def notification_cmd() -> None:
 )
 @click.option("-n", "--message", help="The message of the notification", type=str)
 @click.option("-m", "--fee", help="The fee for the transaction, in XCH", type=str)
+@tx_out_cmd
 def send_notification_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1313,10 +1314,13 @@ def send_notification_cmd(
     amount: str,
     message: str,
     fee: str,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import send_notification
 
-    asyncio.run(send_notification(wallet_rpc_port, fingerprint, Decimal(fee), to_address, message, Decimal(amount)))
+    return asyncio.run(
+        send_notification(wallet_rpc_port, fingerprint, Decimal(fee), to_address, message, Decimal(amount), push=push)
+    )
 
 
 @notification_cmd.command("get", help="Get notification(s) that are in your wallet")
