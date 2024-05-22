@@ -29,29 +29,29 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
         print(f"create_data_store: {create}")
         dic = json.loads(create.stdout)
         assert dic["success"]
-        tree_id = dic["id"]
+        store_id = dic["id"]
         key = "1a6f915513173902a7216e7d9e4a16bfd088e20683f45de3b432ce72e9cc7aa8"
         value = "ffff8353594d8083616263"
         changelist: List[Dict[str, str]] = [{"action": "insert", "key": key, "value": value}]
         print(json.dumps(changelist))
         update = chia_root.run(
-            args=["data", "update_data_store", "--id", tree_id, "--changelist", json.dumps(changelist)]
+            args=["data", "update_data_store", "--id", store_id, "--changelist", json.dumps(changelist)]
         )
         dic = json.loads(create.stdout)
         assert dic["success"]
         print(f"update_data_store: {update}")
-        completed_process = chia_root.run(args=["data", "get_value", "--id", tree_id, "--key", key])
+        completed_process = chia_root.run(args=["data", "get_value", "--id", store_id, "--key", key])
         parsed = json.loads(completed_process.stdout)
         expected = {"value": value, "success": True}
         assert parsed == expected
-        get_keys_values = chia_root.run(args=["data", "get_keys_values", "--id", tree_id])
+        get_keys_values = chia_root.run(args=["data", "get_keys_values", "--id", store_id])
         print(f"get_keys_values: {get_keys_values}")
         changelist = [{"action": "delete", "key": key}]
         update = chia_root.run(
-            args=["data", "update_data_store", "--id", tree_id, "--changelist", json.dumps(changelist)]
+            args=["data", "update_data_store", "--id", store_id, "--changelist", json.dumps(changelist)]
         )
         print(f"update_data_store: {update}")
-        completed_process = chia_root.run(args=["data", "get_value", "--id", tree_id, "--key", key])
+        completed_process = chia_root.run(args=["data", "get_value", "--id", store_id, "--key", key])
         parsed = json.loads(completed_process.stdout)
         expected = {"data": None, "success": True}
         assert parsed == expected

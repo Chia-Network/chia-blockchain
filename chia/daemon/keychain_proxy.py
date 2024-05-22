@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
 
 from aiohttp import ClientConnectorError, ClientSession
-from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, PrivateKey
 
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
@@ -30,7 +30,8 @@ from chia.util.errors import (
     KeychainMalformedResponse,
     KeychainProxyConnectionTimeout,
 )
-from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, mnemonic_to_seed
+from chia.util.keychain import Keychain, KeyData, KeyTypes, bytes_to_mnemonic, mnemonic_to_seed
+from chia.util.observation_root import ObservationRoot
 from chia.util.ws_message import WsRpcMessage
 
 
@@ -171,41 +172,47 @@ class KeychainProxy(DaemonProxy):
                 raise Exception(f"{error}")
 
     @overload
-    async def add_key(self, mnemonic_or_pk: str) -> PrivateKey: ...
+    async def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]: ...
 
     @overload
-    async def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> PrivateKey: ...
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]: ...
 
     @overload
-    async def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> PrivateKey: ...
+    async def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]
+    ) -> Tuple[PrivateKey, KeyTypes]: ...
 
     @overload
-    async def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]) -> G1Element: ...
+    async def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]
+    ) -> Tuple[ObservationRoot, KeyTypes]: ...
 
     @overload
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: bool
-    ) -> Union[PrivateKey, G1Element]: ...
+    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]: ...
 
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
-    ) -> Union[PrivateKey, G1Element]:
+    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
         """
         Forwards to Keychain.add_key()
         """
-        key: Union[PrivateKey, G1Element]
+        key: Union[PrivateKey, ObservationRoot]
+        key_type: KeyTypes
         if self.use_local_keychain():
-            key = self.keychain.add_key(mnemonic_or_pk, label, private)
+            key, key_type = self.keychain.add_key(mnemonic_or_pk, label, private)
         else:
             response, success = await self.get_response_for_request(
                 "add_key", {"mnemonic_or_pk": mnemonic_or_pk, "label": label, "private": private}
             )
             if success:
+                key_type = KeyTypes(response["data"]["key_type"])
                 if private:
                     seed = mnemonic_to_seed(mnemonic_or_pk)
                     key = AugSchemeMPL.key_gen(seed)
                 else:
-                    key = G1Element.from_bytes(hexstr_to_bytes(mnemonic_or_pk))
+                    key = KeyTypes.parse_observation_root(hexstr_to_bytes(mnemonic_or_pk), key_type)
             else:
                 error = response["data"].get("error", None)
                 if error == KEYCHAIN_ERR_KEYERROR:
@@ -215,7 +222,7 @@ class KeychainProxy(DaemonProxy):
                 else:
                     self.handle_error(response)
 
-        return key
+        return key, key_type
 
     async def check_keys(self, root_path: Path) -> None:
         """
@@ -338,20 +345,20 @@ class KeychainProxy(DaemonProxy):
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: Literal[False]
-    ) -> Optional[G1Element]: ...
+    ) -> Optional[ObservationRoot]: ...
 
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool
-    ) -> Optional[Union[PrivateKey, G1Element]]: ...
+    ) -> Optional[Union[PrivateKey, ObservationRoot]]: ...
 
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool = True
-    ) -> Optional[Union[PrivateKey, G1Element]]:
+    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
         """
         Locates and returns a private key matching the provided fingerprint
         """
-        key: Optional[Union[PrivateKey, G1Element]] = None
+        key: Optional[Union[PrivateKey, ObservationRoot]] = None
         if self.use_local_keychain():
             keys = self.keychain.get_keys(include_secrets=private)
             if len(keys) == 0:
@@ -360,12 +367,15 @@ class KeychainProxy(DaemonProxy):
                 selected_key = keys[0]
                 if fingerprint is not None:
                     for key_data in keys:
-                        if key_data.public_key.get_fingerprint() == fingerprint:
+                        if key_data.observation_root.get_fingerprint() == fingerprint:
                             selected_key = key_data
                             break
                     else:
                         raise KeychainKeyNotFound(fingerprint)
-                key = selected_key.private_key if private else selected_key.public_key
+                if private:
+                    key = selected_key.private_key if selected_key.secrets is not None else None
+                else:
+                    key = selected_key.observation_root
         else:
             response, success = await self.get_response_for_request(
                 "get_key_for_fingerprint", {"fingerprint": fingerprint, "private": private}
@@ -387,7 +397,7 @@ class KeychainProxy(DaemonProxy):
                         err = "G1Elements don't match"
                         self.log.error(f"{err}")
                 else:
-                    key = G1Element.from_bytes(bytes.fromhex(pk))
+                    key = KeyTypes.parse_observation_root(bytes.fromhex(pk), KeyTypes(response["data"]["key_type"]))
             else:
                 self.handle_error(response)
 

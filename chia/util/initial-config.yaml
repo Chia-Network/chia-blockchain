@@ -74,6 +74,7 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
       SOFT_FORK2_HEIGHT: 3000000
+      SOFT_FORK4_HEIGHT: 4465000
       # planned 2.0 release is July 26, height 2965036 on testnet
       # 1 week later
       HARD_FORK_HEIGHT: 2997292
@@ -100,6 +101,7 @@ network_overrides: &network_overrides
       # Forks activated from the beginning on this network
       HARD_FORK_HEIGHT: 0
       HARD_FORK_FIX_HEIGHT: 0
+      SOFT_FORK4_HEIGHT: 641500
       PLOT_FILTER_128_HEIGHT: 6029568
       PLOT_FILTER_64_HEIGHT: 11075328
       PLOT_FILTER_32_HEIGHT: 16121088
@@ -272,6 +274,11 @@ farmer:
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8559
+
+  # when enabled, the farmer will print a pstats profile to the
+  # root_dir/profile-farmer directory every second.
+  # analyze with python -m chia.util.profiler <path>
+  enable_profiler: False
 
   # To send a share to a pool, a proof of space must have required_iters less than this number
   pool_share_threshold: 1000
@@ -446,8 +453,9 @@ full_node:
   # from at least 3 peers, or until we've waitied this many seconds
   max_sync_wait: 30
 
-  # when enabled, the full node will print a pstats profile to the root_dir/profile every second
-  # analyze with chia/utils/profiler.py
+  # when enabled, the full node will print a pstats profile to the
+  # root_dir/profile-node directory every second.
+  # analyze with python -m chia.util.profiler <path>
   enable_profiler: False
 
   # when enabled, each time a block is validated, the python profiler is
@@ -539,6 +547,9 @@ introducer:
 wallet:
   rpc_port: 9256
 
+  # when enabled, the wallet will print a pstats profile to the
+  # root_dir/profile-wallet directory every second.
+  # analyze with python -m chia.util.profiler <path>
   enable_profiler: False
 
   enable_memory_profiler: False
@@ -682,11 +693,13 @@ data_layer:
   # TODO: what considerations are there in choosing this?
   rpc_port: 8562
   rpc_server_max_request_body_size: 26214400
-  fee: 1000000000
 
   # this is a debug and profiling facility that logs all SQLite commands to a
   # separate log file (under logging/data_sql.log).
   log_sqlite_cmds: False
+
+  # Speeds up autoinserts. Disable to perform inserts one by one instead of in a batch.
+  enable_batch_autoinsert: True
 
   logging: *logging
 

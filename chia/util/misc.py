@@ -12,13 +12,11 @@ from inspect import getframeinfo, stack
 from pathlib import Path
 from types import FrameType
 from typing import (
-    Any,
     AsyncContextManager,
     AsyncIterator,
     ClassVar,
     Collection,
     ContextManager,
-    Dict,
     Generic,
     Iterable,
     Iterator,
@@ -39,7 +37,7 @@ from typing_extensions import Protocol
 
 from chia.util.errors import InvalidPathError
 from chia.util.ints import uint16, uint32, uint64
-from chia.util.streamable import Streamable, recurse_jsonify, streamable
+from chia.util.streamable import Streamable, streamable
 
 T = TypeVar("T")
 
@@ -125,11 +123,6 @@ def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Seque
     return len(list_in) if length else list_in
 
 
-def dataclass_to_json_dict(instance: Any) -> Dict[str, Any]:
-    ret: Dict[str, Any] = recurse_jsonify(instance)
-    return ret
-
-
 def validate_directory_writable(path: Path) -> None:
     write_test_path = path / ".write_test"
     try:
@@ -175,7 +168,7 @@ def to_batches(to_split: Collection[T], batch_size: int) -> Iterator[Batch[T]]:
         raise ValueError("to_batches: batch_size must be greater than 0.")
     total_size = len(to_split)
     if total_size == 0:
-        return iter(())
+        return
 
     if isinstance(to_split, list):
         for batch_start in range(0, total_size, batch_size):
@@ -424,7 +417,12 @@ def available_logical_cores() -> int:
         assert count is not None
         return count
 
-    return len(psutil.Process().cpu_affinity())
+    cores = len(psutil.Process().cpu_affinity())
+
+    if sys.platform == "win32":
+        cores = min(61, cores)  # https://github.com/python/cpython/issues/89240
+
+    return cores
 
 
 def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:

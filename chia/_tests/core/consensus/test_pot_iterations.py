@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
-
 from pytest import raises
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -13,9 +11,9 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
 )
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
-test_constants = dataclasses.replace(DEFAULT_CONSTANTS, NUM_SPS_SUB_SLOT=uint32(32), SUB_SLOT_TIME_TARGET=300)
+test_constants = DEFAULT_CONSTANTS.replace(NUM_SPS_SUB_SLOT=uint32(32), SUB_SLOT_TIME_TARGET=uint16(300))
 
 
 class TestPotIterations:
@@ -108,7 +106,7 @@ class TestPotIterations:
                 for k, count in farmer_ks.items():
                     for farmer_index in range(count):
                         quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
-                        required_iters = calculate_iterations_quality(2**25, quality, k, difficulty, sp_hash)
+                        required_iters = calculate_iterations_quality(uint128(2**25), quality, k, difficulty, sp_hash)
                         if required_iters < sp_interval_iters:
                             wins[k] += 1
                             total_wins_in_slot += 1

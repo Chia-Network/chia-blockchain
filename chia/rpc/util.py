@@ -17,7 +17,11 @@ from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_fr
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.clvm_streamable import clvm_serialization_mode
+from chia.wallet.util.clvm_streamable import (
+    byte_serialize_clvm_streamable,
+    json_deserialize_with_clvm_streamable,
+    json_serialize_with_clvm_streamable,
+)
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
@@ -39,12 +43,21 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     async def rpc_endpoint(self, request: Dict[str, Any], *args: object, **kwargs: object) -> Dict[str, Any]:
         response_obj: Streamable = await func(
             self,
-            request_class.from_json_dict(request),
+            (
+                request_class.from_json_dict(request)
+                if not request.get("CHIP-0029", False)
+                else json_deserialize_with_clvm_streamable(request, request_hint)
+            ),
             *args,
             **kwargs,
         )
-        with clvm_serialization_mode(not request.get("full_jsonify", False)):
+        if not request.get("CHIP-0029", False):
             return response_obj.to_json_dict()
+        else:
+            response_dict = json_serialize_with_clvm_streamable(response_obj)
+            if isinstance(response_dict, str):  # pragma: no cover
+                raise ValueError("Internal Error. Marshalled endpoint was made with clvm_streamable.")
+            return response_dict
 
     return rpc_endpoint
 
@@ -96,7 +109,9 @@ def tx_endpoint(
                     excluded_coin_amounts=request.get("exclude_coin_amounts"),
                 )
             if tx_config_loader.excluded_coin_ids is None:
-                excluded_coins: Optional[List[Coin]] = request.get("exclude_coins", request.get("excluded_coins"))
+                excluded_coins: Optional[List[Dict[str, Any]]] = request.get(
+                    "exclude_coins", request.get("excluded_coins")
+                )
                 if excluded_coins is not None:
                     tx_config_loader = tx_config_loader.override(
                         excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
@@ -141,27 +156,28 @@ def tx_endpoint(
             ]
             unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(tx_records)
 
-            if request.get("full_jsonify", False):
+            if not request.get("CHIP-0029", False):
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
             else:
-                response["unsigned_transactions"] = [bytes(tx.as_program()).hex() for tx in unsigned_txs]
+                response["unsigned_transactions"] = [byte_serialize_clvm_streamable(tx).hex() for tx in unsigned_txs]
 
             new_txs: List[TransactionRecord] = []
             if request.get("sign", self.service.config.get("auto_sign_txs", True)):
                 new_txs, signing_responses = await self.service.wallet_state_manager.sign_transactions(
                     tx_records, response.get("signing_responses", []), "signing_responses" in response
                 )
-                response["transactions"] = [
-                    TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
-                ]
-                response["signing_responses"] = [bytes(r.as_program()).hex() for r in signing_responses]
+                response["signing_responses"] = [byte_serialize_clvm_streamable(r).hex() for r in signing_responses]
             else:
                 new_txs = tx_records  # pragma: no cover
 
             if request.get("push", push):
-                await self.service.wallet_state_manager.add_pending_transactions(
+                new_txs = await self.service.wallet_state_manager.add_pending_transactions(
                     new_txs, merge_spends=merge_spends, sign=False
                 )
+
+            response["transactions"] = [
+                TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
+            ]
 
             # Some backwards compatibility code
             if "transaction" in response:

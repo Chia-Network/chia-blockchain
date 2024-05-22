@@ -325,10 +325,7 @@ async def wait_for_valued_event_waiters(
 ) -> None:
     with anyio.fail_after(delay=adjusted_timeout(timeout)):
         for delay in backoff_times():
-            # ignoring the type since i'm hacking into the private attribute
-            # hopefully this is ok for testing and if it becomes invalid we
-            # will end up with an exception and can adjust then
-            if len(event._event._waiters) >= count:  # type: ignore[attr-defined]
+            if len(event._event._waiters) >= count:
                 return
             await anyio.sleep(delay)
 

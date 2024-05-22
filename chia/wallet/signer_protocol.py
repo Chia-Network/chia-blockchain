@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import List
 
 from chia.types.blockchain_format.coin import Coin as _Coin
@@ -8,19 +9,24 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
-from chia.wallet.util.clvm_streamable import ClvmStreamable
+from chia.util.streamable import Streamable
+from chia.wallet.util.clvm_streamable import clvm_streamable
 
 # This file contains the base types for communication between a wallet and an offline transaction signer.
 # These types should be compliant with CHIP-TBD
 
 
-class Coin(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class Coin(Streamable):
     parent_coin_id: bytes32
     puzzle_hash: bytes32
     amount: uint64
 
 
-class Spend(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class Spend(Streamable):
     coin: Coin
     puzzle: Program
     solution: Program
@@ -49,52 +55,72 @@ class Spend(ClvmStreamable):
         )
 
 
-class TransactionInfo(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class TransactionInfo(Streamable):
     spends: List[Spend]
 
 
-class SigningTarget(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class SigningTarget(Streamable):
     fingerprint: bytes
     message: bytes
     hook: bytes32
 
 
-class SumHint(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class SumHint(Streamable):
     fingerprints: List[bytes]
     synthetic_offset: bytes
     final_pubkey: bytes
 
 
-class PathHint(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class PathHint(Streamable):
     root_fingerprint: bytes
     path: List[uint64]
 
 
-class KeyHints(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class KeyHints(Streamable):
     sum_hints: List[SumHint]
     path_hints: List[PathHint]
 
 
-class SigningInstructions(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class SigningInstructions(Streamable):
     key_hints: KeyHints
     targets: List[SigningTarget]
 
 
-class UnsignedTransaction(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class UnsignedTransaction(Streamable):
     transaction_info: TransactionInfo
     signing_instructions: SigningInstructions
 
 
-class SigningResponse(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class SigningResponse(Streamable):
     signature: bytes
     hook: bytes32
 
 
-class Signature(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class Signature(Streamable):
     type: str
     signature: bytes
 
 
-class SignedTransaction(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class SignedTransaction(Streamable):
     transaction_info: TransactionInfo
     signatures: List[Signature]
