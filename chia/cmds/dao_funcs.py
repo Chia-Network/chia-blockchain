@@ -173,9 +173,9 @@ async def add_funds_to_treasury(
                     print(transaction_status_msg(fingerprint, res.tx_id))
                     return res.transactions
 
-        if args["push"]:  # pragma: no cover
+        if args["push"]:
             print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
-        return res.transactions  # pragma: no cover
+        return res.transactions
 
 
 async def get_treasury_balance(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -329,9 +329,9 @@ async def vote_on_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int],
                     print(transaction_status_msg(fingerprint, res.tx_id))
                     return res.transactions
 
-        if args["push"]:  # pragma: no cover
+        if args["push"]:
             print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
-        return res.transactions  # pragma: no cover
+        return res.transactions
 
 
 async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> List[TransactionRecord]:
@@ -368,9 +368,9 @@ async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
                     print(transaction_status_msg(fingerprint, res.tx_id))
                     return res.transactions
 
-        if args["push"]:  # pragma: no cover
+        if args["push"]:
             print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
-        return res.transactions  # pragma: no cover
+        return res.transactions
 
 
 async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> List[TransactionRecord]:
@@ -405,10 +405,10 @@ async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp:
                     print(transaction_status_msg(fingerprint, res.tx_id))
                     return res.transactions
 
-        if args["push"]:  # pragma: no cover
+        if args["push"]:
             print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
 
-        return res.transactions  # pragma: no cover
+        return res.transactions
 
 
 async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> List[TransactionRecord]:
@@ -440,9 +440,9 @@ async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
                     print(transaction_status_msg(fingerprint, res.tx_id))
                     return res.transactions
 
-        if args["push"]:  # pragma: no cover
+        if args["push"]:
             print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
-        return res.transactions  # pragma: no cover
+        return res.transactions
 
 
 async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> List[TransactionRecord]:
@@ -476,9 +476,9 @@ async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: 
                     print(transaction_status_msg(fingerprint, res.tx_id))
                     return res.transactions
 
-        if args["push"]:  # pragma: no cover
+        if args["push"]:
             print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
-        return res.transactions  # pragma: no cover
+        return res.transactions
 
 
 async def create_spend_proposal(
