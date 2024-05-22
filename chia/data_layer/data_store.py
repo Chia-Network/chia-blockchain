@@ -1723,12 +1723,13 @@ class DataStore:
     async def maybe_get_node_from_key_hash(
         self, leaf_hashes: Dict[bytes32, bytes32], hash: bytes32
     ) -> Optional[TerminalNode]:
-        node: Optional[Node] = None
         if hash in leaf_hashes:
             leaf_hash = leaf_hashes[hash]
             node = await self.get_node(leaf_hash)
             assert isinstance(node, TerminalNode)
-        return node
+            return node
+
+        return None
 
     async def maybe_get_node_by_key(self, key: bytes, tree_id: bytes32) -> Optional[TerminalNode]:
         try:
