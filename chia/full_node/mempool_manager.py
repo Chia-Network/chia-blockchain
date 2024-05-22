@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from concurrent.futures import Executor
-from concurrent.futures.process import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from multiprocessing.context import BaseContext
 from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, TypeVar
@@ -208,12 +208,7 @@ class MempoolManager:
         if single_threaded:
             self.pool = InlineExecutor()
         else:
-            self.pool = ProcessPoolExecutor(
-                max_workers=2,
-                mp_context=multiprocessing_context,
-                initializer=setproctitle,
-                initargs=(f"{getproctitle()}_mempool_worker",),
-            )
+            self.pool = ThreadPoolExecutor()
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecordProtocol] = None
