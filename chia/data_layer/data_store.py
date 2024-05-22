@@ -757,14 +757,16 @@ class DataStore:
         only_keys: bool = False,
     ) -> aiosqlite.Cursor:
         select_clause = "SELECT hash, key" if only_keys else "SELECT *"
+        maybe_value = "" if only_keys else "value, "
+        select_node_clause = "node.hash, node.node_type, node.left, node.right, node.key" if only_keys else "node.*"
         return await reader.execute(
             f"""
             WITH RECURSIVE
-                tree_from_root_hash(hash, node_type, left, right, key, value, depth, rights) AS (
-                    SELECT node.*, 0 AS depth, 0 AS rights FROM node WHERE node.hash == :root_hash
+                tree_from_root_hash(hash, node_type, left, right, key, {maybe_value}depth, rights) AS (
+                    SELECT {select_node_clause}, 0 AS depth, 0 AS rights FROM node WHERE node.hash == :root_hash
                     UNION ALL
                     SELECT
-                        node.*,
+                        {select_node_clause},
                         tree_from_root_hash.depth + 1 AS depth,
                         CASE
                             WHEN node.hash == tree_from_root_hash.right
@@ -1480,11 +1482,7 @@ class DataStore:
                             if key_hash_frequency[hash] == 1 or (
                                 key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
                             ):
-                                old_node: Optional[Node] = None
-                                if hash in leaf_hashes:
-                                    leaf_hash = leaf_hashes[hash]
-                                    old_node = await self.get_node(leaf_hash)
-                                    assert isinstance(old_node, TerminalNode)
+                                old_node = await self.maybe_get_node_from_key_hash(leaf_hashes, hash)
                                 terminal_node_hash = await self._insert_terminal_node(key, value)
 
                                 if old_node is None:
@@ -1525,11 +1523,7 @@ class DataStore:
                     hash = key_hash(key)
                     if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
                         terminal_node_hash = await self._insert_terminal_node(key, new_value)
-                        old_node = None
-                        if hash in leaf_hashes:
-                            leaf_hash = leaf_hashes[hash]
-                            old_node = await self.get_node(leaf_hash)
-                            assert isinstance(old_node, TerminalNode)
+                        old_node = await self.maybe_get_node_from_key_hash(leaf_hashes, hash)
                         if old_node is not None:
                             pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
                         else:
@@ -1725,6 +1719,16 @@ class DataStore:
                 raise KeyNotFoundError(key=key)
             assert isinstance(node, TerminalNode)
             return node
+
+    async def maybe_get_node_from_key_hash(
+        self, leaf_hashes: Dict[bytes32, bytes32], hash: bytes32
+    ) -> Optional[TerminalNode]:
+        node: Optional[Node] = None
+        if hash in leaf_hashes:
+            leaf_hash = leaf_hashes[hash]
+            node = await self.get_node(leaf_hash)
+            assert isinstance(node, TerminalNode)
+        return node
 
     async def maybe_get_node_by_key(self, key: bytes, tree_id: bytes32) -> Optional[TerminalNode]:
         try:
