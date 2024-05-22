@@ -20,7 +20,6 @@ from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
-from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveReason
@@ -37,6 +36,7 @@ from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util import cached_bls
+from chia.util.bundle_tools import simple_solution_generator
 from chia.util.cached_bls import LOCAL_CACHE
 from chia.util.condition_tools import pkm_pairs
 from chia.util.db_wrapper import SQLITE_INT_MAX

@@ -44,7 +44,6 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
-from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
@@ -84,6 +83,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import WeightProof
 from chia.util import cached_bls
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bundle_tools import detect_potential_template_generator
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import process_config_start_method
