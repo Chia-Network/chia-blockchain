@@ -1992,14 +1992,14 @@ class TestBodyValidation:
         # in the 2.0 hard fork, we relax the strict 2-parameters rule of
         # AGG_SIG_* conditions, in consensus mode. In mempool mode we always
         # apply strict rules.
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0 and with_garbage:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0 and with_garbage:
             expected = (AddBlockResult.NEW_PEAK, None, 2)
 
         # before the 2.0 hard fork, these conditions do not exist
         # but WalletTool still lets us create them, and aggregate them into the
         # block signature. When the pre-hard fork node sees them, the conditions
         # are ignored, but the aggregate signature is corrupt.
-        if consensus_mode != ConsensusMode.HARD_FORK_2_0 and opcode in [
+        if consensus_mode < ConsensusMode.HARD_FORK_2_0 and opcode in [
             ConditionOpcode.AGG_SIG_PARENT,
             ConditionOpcode.AGG_SIG_PUZZLE,
             ConditionOpcode.AGG_SIG_AMOUNT,
@@ -2443,7 +2443,7 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks[-1])
         generator_arg = detect_potential_template_generator(blocks[-1].height, blocks[-1].transactions_generator)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # once the hard for activates, we don't use this form of block
             # compression anymore
             assert generator_arg is None
@@ -2458,7 +2458,7 @@ class TestBodyValidation:
             previous_generator=generator_arg,
         )
         block = blocks[-1]
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # once the hard for activates, we don't use this form of block
             # compression anymore
             assert len(block.transactions_generator_ref_list) == 0
@@ -3128,7 +3128,7 @@ class TestReorgs:
     async def test_get_tx_peak_reorg(self, empty_blockchain, bt, consensus_mode: ConsensusMode):
         b = empty_blockchain
 
-        if consensus_mode == ConsensusMode.PLAIN:
+        if consensus_mode < ConsensusMode.SOFT_FORK_4:
             reorg_point = 13
         else:
             reorg_point = 12

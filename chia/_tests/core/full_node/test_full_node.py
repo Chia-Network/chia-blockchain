@@ -210,7 +210,7 @@ class TestFullNodeBlockCompression:
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
         template = detect_potential_template_generator(uint32(5), program)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
             assert template is None
@@ -246,7 +246,7 @@ class TestFullNodeBlockCompression:
         assert program is not None
         assert detect_potential_template_generator(uint32(6), program) is None
         num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
             assert num_blocks == 0
@@ -327,7 +327,7 @@ class TestFullNodeBlockCompression:
         assert program is not None
         assert detect_potential_template_generator(uint32(9), program) is None
         num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
             assert num_blocks == 0
@@ -422,7 +422,7 @@ class TestFullNodeBlockCompression:
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
         template = detect_potential_template_generator(uint32(11), program)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
             assert template is None
@@ -437,7 +437,7 @@ class TestFullNodeBlockCompression:
         assert height == len(all_blocks) - 1
 
         template = full_node_1.full_node.full_node_store.previous_generator
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
             assert template is None
