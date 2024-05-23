@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import importlib.metadata
 import json
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import aiohttp
-import pkg_resources
 import pytest
 from aiohttp import WSMessage
 from aiohttp.web_ws import WebSocketResponse
@@ -37,7 +37,7 @@ from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload, create_payload_dict
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 
-chiapos_version = pkg_resources.get_distribution("chiapos").version
+chiapos_version = importlib.metadata.version("chiapos")
 
 
 @dataclass

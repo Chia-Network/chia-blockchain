@@ -11,7 +11,7 @@ import os
 import subprocess
 from os.path import exists
 
-from pkg_resources import parse_version
+from packaging.version import Version
 
 
 #
@@ -20,22 +20,22 @@ from pkg_resources import parse_version
 # Copyright (C) 2015-2018 CERN.
 #
 def make_semver(version_str: str) -> str:
-    v = parse_version(version_str)
-    major = v._version.release[0]  # type: ignore[attr-defined]
+    v = Version(version_str)
+    major = v.release[0]
     try:
-        minor = v._version.release[1]  # type: ignore[attr-defined]
+        minor = v.release[1]
     except IndexError:
         minor = 0
     try:
-        patch = v._version.release[2]  # type: ignore[attr-defined]
+        patch = v.release[2]
     except IndexError:
         patch = 0
 
     prerelease = []
-    if v._version.pre:  # type: ignore[attr-defined]
-        prerelease.append("".join(str(x) for x in v._version.pre))  # type: ignore[attr-defined]
-    if v._version.dev:  # type: ignore[attr-defined]
-        prerelease.append("".join(str(x) for x in v._version.dev))  # type: ignore[attr-defined]
+    if v.pre:
+        prerelease.append("".join(str(x) for x in v.pre))
+    if v.dev is not None:
+        prerelease.append(f"dev{v.dev}")
 
     local = v.local
 

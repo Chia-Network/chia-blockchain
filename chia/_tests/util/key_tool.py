@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List
 
-from chia_rs import AugSchemeMPL, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia._tests.core.make_block_generator import GROUP_ORDER, int_to_public_key
 from chia.simulator.block_tools import test_constants
@@ -13,16 +13,16 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 
 @dataclass
 class KeyTool:
-    dict: Dict[bytes, int] = field(default_factory=dict)
+    dict: Dict[G1Element, int] = field(default_factory=dict)
 
     def add_secret_exponents(self, secret_exponents: List[int]) -> None:
         for _ in secret_exponents:
-            self.dict[bytes(int_to_public_key(_))] = _ % GROUP_ORDER
+            self.dict[int_to_public_key(_)] = _ % GROUP_ORDER
 
-    def sign(self, public_key: bytes, message: bytes) -> G2Element:
+    def sign(self, public_key: G1Element, message: bytes) -> G2Element:
         secret_exponent = self.dict.get(public_key)
         if not secret_exponent:
-            raise ValueError("unknown pubkey %s" % public_key.hex())
+            raise ValueError("unknown pubkey %s" % bytes(public_key).hex())
         bls_private_key = PrivateKey.from_bytes(secret_exponent.to_bytes(32, "big"))
         return AugSchemeMPL.sign(bls_private_key, message)
 

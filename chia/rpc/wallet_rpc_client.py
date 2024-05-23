@@ -409,11 +409,14 @@ class WalletRpcClient(RpcClient):
     async def create_new_did_wallet(
         self,
         amount: int,
+        tx_config: TXConfig,
         fee: int = 0,
         name: Optional[str] = "DID Wallet",
         backup_ids: List[str] = [],
         required_num: int = 0,
         push: bool = True,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Dict[str, Any]:
         request = {
             "wallet_type": "did_wallet",
@@ -424,6 +427,9 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "wallet_name": name,
             "push": push,
+            "extra_conditions": conditions_to_json_dicts(extra_conditions),
+            **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("create_new_wallet", request)
         return response

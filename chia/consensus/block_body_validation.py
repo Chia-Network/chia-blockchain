@@ -5,6 +5,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
+from chia_rs import G1Element
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -19,7 +20,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
@@ -512,7 +513,7 @@ async def validate_block_body(
             return error, None
 
     # create hash_key list for aggsig check
-    pairs_pks: List[bytes48] = []
+    pairs_pks: List[G1Element] = []
     pairs_msgs: List[bytes] = []
     if npc_result:
         assert npc_result.conds is not None

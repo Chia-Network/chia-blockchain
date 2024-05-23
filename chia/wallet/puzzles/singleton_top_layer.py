@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterator, List, Optional, Tuple, cast
+from typing import Iterator, List, Optional, Tuple
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -175,8 +175,7 @@ def generate_launcher_coin(coin: Coin, amount: uint64) -> Coin:
 # Wrap inner puzzles that are not singleton specific to strip away "truths"
 def adapt_inner_to_singleton(inner_puzzle: Program) -> Program:
     # (a (q . inner_puzzle) (r 1))
-    # TODO: Remove cast when we improve typing
-    return cast(Program, Program.to([2, (1, inner_puzzle), [6, 1]]))
+    return Program.to([2, (1, inner_puzzle), [6, 1]])
 
 
 def adapt_inner_puzzle_hash_to_singleton(inner_puzzle_hash: bytes32) -> bytes32:
@@ -240,8 +239,7 @@ def solution_for_singleton(lineage_proof: LineageProof, amount: uint64, inner_so
         parent_info = [lineage_proof.parent_name, lineage_proof.amount]
     else:
         parent_info = [lineage_proof.parent_name, lineage_proof.inner_puzzle_hash, lineage_proof.amount]
-    # TODO: Remove cast when we improve typing
-    return cast(Program, Program.to([parent_info, amount, inner_solution]))
+    return Program.to([parent_info, amount, inner_solution])
 
 
 # Create a coin that a singleton can claim
@@ -258,14 +256,12 @@ def pay_to_singleton_or_delay_puzzle(launcher_id: bytes32, delay_time: uint64, d
 
 # Solution for EITHER p2_singleton or the claiming spend case for p2_singleton_or_delayed_puzhash
 def solution_for_p2_singleton(p2_singleton_coin: Coin, singleton_inner_puzhash: bytes32) -> Program:
-    # TODO: Remove cast when we improve typing
-    return cast(Program, Program.to([singleton_inner_puzhash, p2_singleton_coin.name()]))
+    return Program.to([singleton_inner_puzhash, p2_singleton_coin.name()])
 
 
 # Solution for the delayed spend case for p2_singleton_or_delayed_puzhash
 def solution_for_p2_delayed_puzzle(output_amount: uint64) -> Program:
-    # TODO: Remove cast when we improve typing
-    return cast(Program, Program.to([output_amount, []]))
+    return Program.to([output_amount, []])
 
 
 # Get announcement conditions for singleton solution and full CoinSpend for the claimed coin

@@ -75,10 +75,9 @@ class TestClawbackLifecycle:
 
         conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
         signatures = []
-        for pk_bytes, msg in pkm_pairs_for_conditions_dict(
+        for pk, msg in pkm_pairs_for_conditions_dict(
             conditions_dict, coin_spend.coin, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
         ):
-            pk = G1Element.from_bytes(pk_bytes)
             signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
             assert AugSchemeMPL.verify(pk, msg, signature)
             signatures.append(signature)

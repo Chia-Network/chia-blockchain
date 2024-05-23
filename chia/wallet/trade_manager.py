@@ -3,7 +3,8 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
+from collections import deque
+from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
 
 from typing_extensions import Literal, Never
 
@@ -17,7 +18,14 @@ from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
-from chia.wallet.conditions import Condition, ConditionValidTimes, parse_conditions_non_consensus, parse_timelock_info
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    Condition,
+    ConditionValidTimes,
+    CreateCoinAnnouncement,
+    parse_conditions_non_consensus,
+    parse_timelock_info,
+)
 from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -242,9 +250,12 @@ class TradeManager:
     ) -> List[TransactionRecord]:
         """This will create a transaction that includes coins that were offered"""
 
-        all_txs: List[TransactionRecord] = []
-        bundles: List[SpendBundle] = []
-        fee_to_pay: uint64 = fee
+        # Need to do some pre-figuring of announcements that will be need to be made
+        announcement_nonce: bytes32 = std_hash(b"".join(trades))
+        trade_records: List[TradeRecord] = []
+        all_cancellation_coins: List[List[Coin]] = []
+        announcement_creations: Deque[CreateCoinAnnouncement] = deque()
+        announcement_assertions: Deque[AssertCoinAnnouncement] = deque()
         for trade_id in trades:
             if trade_id in trade_cache:
                 trade = trade_cache[trade_id]
@@ -256,7 +267,23 @@ class TradeManager:
                 else:
                     trade = potential_trade
 
-            self.log.info(f"Secure-Cancel pending offer with id trade_id {trade_id.hex()}")
+            cancellation_coins = Offer.from_bytes(trade.offer).get_cancellation_coins()
+            for coin in cancellation_coins:
+                creation = CreateCoinAnnouncement(msg=announcement_nonce, coin_id=coin.name())
+                announcement_creations.append(creation)
+                announcement_assertions.append(creation.corresponding_assertion())
+
+            trade_records.append(trade)
+            all_cancellation_coins.append(cancellation_coins)
+
+        # Make every coin assert the announcement from the one before them
+        announcement_assertions.rotate(1)
+
+        all_txs: List[TransactionRecord] = []
+        bundles: List[SpendBundle] = []
+        fee_to_pay: uint64 = fee
+        for trade, cancellation_coins in zip(trade_records, all_cancellation_coins):
+            self.log.info(f"Secure-Cancel pending offer with id trade_id {trade.trade_id.hex()}")
 
             if not secure:
                 self.wallet_state_manager.state_changed("offer_cancelled")
@@ -265,7 +292,7 @@ class TradeManager:
 
             cancellation_additions: List[Coin] = []
             valid_times: ConditionValidTimes = parse_timelock_info(extra_conditions)
-            for coin in Offer.from_bytes(trade.offer).get_cancellation_coins():
+            for coin in cancellation_coins:
                 wallet = await self.wallet_state_manager.get_wallet_for_coin(coin.name())
 
                 if wallet is None:
@@ -273,6 +300,14 @@ class TradeManager:
                     continue
 
                 new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
+
+                if len(trade_records) > 1 or len(cancellation_coins) > 1:
+                    announcement_conditions: Tuple[Condition, ...] = (
+                        announcement_creations.popleft(),
+                        announcement_assertions.popleft(),
+                    )
+                else:
+                    announcement_conditions = tuple()
                 # This should probably not switch on whether or not we're spending a XCH but it has to for now
                 if wallet.type() == WalletType.STANDARD_WALLET:
                     if fee_to_pay > coin.amount:
@@ -291,9 +326,10 @@ class TradeManager:
                         tx_config.override(
                             excluded_coin_ids=[],
                         ),
+                        origin_id=coin.name(),
                         fee=fee_to_pay,
                         coins=selected_coins,
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcement_conditions),
                     )
                     if tx is not None and tx.spend_bundle is not None:
                         bundles.append(tx.spend_bundle)
@@ -309,7 +345,7 @@ class TradeManager:
                         ),
                         fee=fee_to_pay,
                         coins={coin},
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcement_conditions),
                     )
                     for tx in txs:
                         if tx is not None and tx.spend_bundle is not None:
@@ -341,7 +377,7 @@ class TradeManager:
                     )
                 )
 
-            await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL)
+            await self.trade_store.set_status(trade.trade_id, TradeStatus.PENDING_CANCEL)
         # Aggregate spend bundles to the first tx
         if len(all_txs) > 0:
             all_txs[0] = dataclasses.replace(all_txs[0], spend_bundle=SpendBundle.aggregate(bundles))
