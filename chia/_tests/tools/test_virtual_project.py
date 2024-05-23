@@ -13,6 +13,8 @@ from chia.util.virtual_project_analysis import (
     ChiaFile,
     Config,
     DirectoryParameters,
+    File,
+    Package,
     build_dependency_graph,
     build_virtual_dependency_graph,
     cli,
@@ -288,9 +290,16 @@ def test_cycle_detection(prepare_mocks2: None) -> None:
         Path("/path/to/package3/module3.py"): [],
     }
     cycles = find_cycles(
-        graph, excluded_paths=[], ignore_cycles_in=[], ignore_specific_files=[], ignore_specific_edges=[]
+        graph,
+        build_virtual_dependency_graph(DirectoryParameters(dir_path=Path("path")), existing_graph=graph),
+        excluded_paths=[],
+        ignore_cycles_in=[],
+        ignore_specific_files=[],
+        ignore_specific_edges=[],
     )
-    assert len(cycles) == 1  # Expect one cycle to be detected
+    # \path\to\package1\module1.py (Package1) -> \path\to\package2\module2.py (Package2) -> (Package1)
+    # \path\to\package2\module2.py (Package2) -> \path\to\package3\module3.py (Package1) -> (Package2)
+    assert len(cycles) == 2
 
 
 def test_print_cycles(tmp_path: Path) -> None:
@@ -315,7 +324,7 @@ def test_check_config(tmp_path: Path) -> None:
     # Create some files within the chia package
     create_python_file(chia_dir, "module1.py", "# Package: one\ndef func1(): pass\nfrom chia.module2 import func2")
     create_python_file(chia_dir, "module2.py", "# Package: two\ndef func2(): pass\nfrom chia.module3 import func3")
-    create_python_file(chia_dir, "module3.py", "# Package: one\ndef func3(): pass\n")
+    create_python_file(chia_dir, "module3.py", "# Package: three\ndef func3(): pass\n")
 
     # Run the command
     runner = CliRunner()
@@ -349,6 +358,7 @@ def test_excluded_paths_handling(prepare_mocks2: None) -> None:
     }
     cycles = find_cycles(
         graph,
+        build_virtual_dependency_graph(DirectoryParameters(dir_path=Path("path")), existing_graph=graph),
         excluded_paths=[Path("/path/to/package2/module2.py")],
         ignore_cycles_in=[],
         ignore_specific_files=[],
@@ -365,9 +375,14 @@ def test_ignore_cycles_in_specific_packages(prepare_mocks2: None) -> None:
     }
     # Assuming module1.py and module3.py belong to Package1, which is ignored
     cycles = find_cycles(
-        graph, excluded_paths=[], ignore_cycles_in=["Package1"], ignore_specific_files=[], ignore_specific_edges=[]
+        graph,
+        build_virtual_dependency_graph(DirectoryParameters(dir_path=Path("path")), existing_graph=graph),
+        excluded_paths=[],
+        ignore_cycles_in=["Package1"],
+        ignore_specific_files=[],
+        ignore_specific_edges=[],
     )
-    assert len(cycles) == 0  # Cycles in Package1 are ignored
+    assert len(cycles) == 1  # Cycles in Package1 are ignored
 
 
 def test_ignore_cycles_with_specific_edges(prepare_mocks2: None) -> None:
@@ -375,13 +390,16 @@ def test_ignore_cycles_with_specific_edges(prepare_mocks2: None) -> None:
         Path("/path/to/package1/module1.py"): [Path("/path/to/package2/module2.py")],
         Path("/path/to/package2/module2.py"): [Path("/path/to/package3/module3.py")],  # Cycle here
     }
-    # Assuming module1.py and module2.py belong to Package1, which is ignored
     cycles = find_cycles(
         graph,
+        build_virtual_dependency_graph(DirectoryParameters(dir_path=Path("path")), existing_graph=graph),
         excluded_paths=[],
         ignore_cycles_in=[],
         ignore_specific_files=[],
-        ignore_specific_edges=[(Path("/path/to/package3/module3.py"), Path("/path/to/package2/module2.py"))],
+        ignore_specific_edges=[
+            (File(Path("/path/to/package2/module2.py")), File(Path("/path/to/package1/module1.py"))),
+            (Package("Package1"), File(Path("/path/to/package2/module2.py"))),
+        ],
     )
     assert len(cycles) == 0
 
@@ -391,12 +409,12 @@ def test_ignore_cycles_with_specific_files(prepare_mocks2: None) -> None:
         Path("/path/to/package1/module1.py"): [Path("/path/to/package2/module2.py")],
         Path("/path/to/package2/module2.py"): [Path("/path/to/package3/module3.py")],  # Cycle here
     }
-    # Assuming module1.py and module2.py belong to Package1, which is ignored
     cycles = find_cycles(
         graph,
+        build_virtual_dependency_graph(DirectoryParameters(dir_path=Path("path")), existing_graph=graph),
         excluded_paths=[],
         ignore_cycles_in=[],
-        ignore_specific_files=[Path("/path/to/package2/module2.py")],
+        ignore_specific_files=[Path("/path/to/package1/module1.py"), Path("/path/to/package2/module2.py")],
         ignore_specific_edges=[],
     )
     assert len(cycles) == 0
@@ -452,6 +470,7 @@ def test_config_with_yaml(create_yaml_config: Callable[[Dict[str, Any]], Path]) 
         "), "
         "ignore_cycles_in=['ignored.package'], "
         f"ignore_specific_files=[{path_type}('ignored_file.py')], "
-        f"ignore_specific_edges=[({path_type}('ignored_child'), {path_type}('ignored_parent'))]"
+        f"ignore_specific_edges=[(Package(name='ignored_child', is_file=False), "
+        f"Package(name='ignored_parent', is_file=False))]"
         ")\n"
     )
