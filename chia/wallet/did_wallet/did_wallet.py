@@ -46,14 +46,14 @@ from chia.wallet.singleton import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import MainWalletProtocol, WalletProtocol
 
 
 class DIDWallet:
@@ -65,7 +65,7 @@ class DIDWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     did_info: DIDInfo
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     base_puzzle_program: Optional[bytes]
     base_inner_puzzle_hash: Optional[bytes32]
     wallet_id: int
@@ -73,9 +73,9 @@ class DIDWallet:
     @staticmethod
     async def create_new_did_wallet(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         amount: uint64,
-        backups_ids: List = [],
+        backups_ids: List[bytes32] = [],
         num_of_backup_ids_needed: uint64 = None,
         metadata: Dict[str, str] = {},
         name: Optional[str] = None,
@@ -103,7 +103,7 @@ class DIDWallet:
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
-        std_wallet_id = self.standard_wallet.wallet_id
+        std_wallet_id = self.standard_wallet.id()
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
@@ -131,7 +131,7 @@ class DIDWallet:
             name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
         )
         self.wallet_id = self.wallet_info.id
-        std_wallet_id = self.standard_wallet.wallet_id
+        std_wallet_id = self.standard_wallet.id()
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
@@ -151,7 +151,7 @@ class DIDWallet:
     @staticmethod
     async def create_new_did_wallet_from_recovery(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         backup_data: str,
         name: Optional[str] = None,
     ):
@@ -191,7 +191,7 @@ class DIDWallet:
     @staticmethod
     async def create_new_did_wallet_from_coin_spend(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         launch_coin: Coin,
         inner_puzzle: Program,
         coin_spend: CoinSpend,
@@ -227,10 +227,10 @@ class DIDWallet:
         inner_solution: Program = full_solution.rest().rest().first()
         recovery_list: List[bytes32] = []
         backup_required: int = num_verification.as_int()
-        if recovery_list_hash != Program.to([]).get_tree_hash():
+        if recovery_list_hash != NIL_TREEHASH:
             try:
                 for did in inner_solution.rest().rest().rest().rest().rest().as_python():
-                    recovery_list.append(did[0])
+                    recovery_list.append(bytes32(did[0]))
             except Exception:
                 self.log.warning(
                     f"DID {launch_coin.name().hex()} has a recovery list hash but missing a reveal,"
@@ -266,7 +266,7 @@ class DIDWallet:
     @staticmethod
     async def create(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
         name: str = None,
     ):
@@ -529,7 +529,9 @@ class DIDWallet:
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         if self.did_info.origin_coin is None:
             # TODO: this seem dumb. Why bother with this case? Is it ever used?
-            return puzzle_for_pk(pubkey).get_tree_hash()
+            # inner puzzle: (8 . 0)
+            innerpuz_hash = shatree_pair(shatree_int(8), NIL_TREEHASH)
+            return create_singleton_puzzle_hash(innerpuz_hash, bytes32([0] * 32))
         origin_coin_name = self.did_info.origin_coin.name()
         innerpuz_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
             p2_puzhash=puzzle_hash_for_pk(pubkey),
@@ -1477,3 +1479,9 @@ class DIDWallet:
             ).get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()

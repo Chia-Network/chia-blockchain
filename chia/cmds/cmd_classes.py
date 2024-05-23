@@ -32,6 +32,8 @@ from chia.util.streamable import is_type_SpecificOptional
 
 SyncCmd = Callable[..., None]
 
+COMMAND_HELPER_ATTRIBUTE_NAME = "_is_command_helper"
+
 
 class SyncChiaCommand(Protocol):
     def run(self) -> None: ...
@@ -70,8 +72,8 @@ class HexString(click.ParamType):
             return value
         try:
             return hexstr_to_bytes(value)
-        except ValueError:
-            self.fail(f"{value} is not a valid hex string", param, ctx)
+        except ValueError as e:
+            self.fail(f"not a valid hex string: {value!r} ({e})", param, ctx)
 
 
 class HexString32(click.ParamType):
@@ -82,15 +84,21 @@ class HexString32(click.ParamType):
             return value
         try:
             return bytes32.from_hexstr(value)
-        except ValueError:
-            self.fail(f"{value} is not a valid 32-byte hex string", param, ctx)
+        except ValueError as e:
+            self.fail(f"not a valid 32-byte hex string: {value!r} ({e})", param, ctx)
 
 
-@dataclass(frozen=True)
+_CLASS_TYPES_TO_CLICK_TYPES = {
+    bytes: HexString(),
+    bytes32: HexString32(),
+}
+
+
+@dataclass
 class _CommandParsingStage:
     my_dataclass: Type[ChiaCommand]
     my_option_decorators: List[Callable[[SyncCmd], SyncCmd]]
-    my_subclasses: Dict[str, _CommandParsingStage]
+    my_members: Dict[str, _CommandParsingStage]
     my_kwarg_names: List[str]
     _needs_context: bool
 
@@ -98,12 +106,12 @@ class _CommandParsingStage:
         if self._needs_context:
             return True
         else:
-            return any([subclass.needs_context() for subclass in self.my_subclasses.values()])
+            return any(member.needs_context() for member in self.my_members.values())
 
     def get_all_option_decorators(self) -> List[Callable[[SyncCmd], SyncCmd]]:
         all_option_decorators: List[Callable[[SyncCmd], SyncCmd]] = self.my_option_decorators
-        for subclass in self.my_subclasses.values():
-            all_option_decorators.extend(subclass.get_all_option_decorators())
+        for member in self.my_members.values():
+            all_option_decorators.extend(member.get_all_option_decorators())
         return all_option_decorators
 
     def initialize_instance(self, **kwargs: Any) -> ChiaCommand:
@@ -111,8 +119,8 @@ class _CommandParsingStage:
         for kwarg_name in self.my_kwarg_names:
             kwargs_to_pass[kwarg_name] = kwargs[kwarg_name]
 
-        for subclass_arg_name, subclass in self.my_subclasses.items():
-            kwargs_to_pass[subclass_arg_name] = subclass.initialize_instance(**kwargs)
+        for member_arg_name, member in self.my_members.items():
+            kwargs_to_pass[member_arg_name] = member.initialize_instance(**kwargs)
 
         return self.my_dataclass(**kwargs_to_pass)
 
@@ -134,11 +142,20 @@ class _CommandParsingStage:
 
         return cmd_to_return
 
+    def __call__(self, *args: Any, **kwargs: Any) -> None:
+        instance = self.initialize_instance(*args, **kwargs)
+        if inspect.iscoroutinefunction(self.my_dataclass.run):
+            coro = instance.run()
+            assert coro is not None
+            asyncio.run(coro)
+        else:
+            instance.run()
+
 
 def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
     option_decorators: List[Callable[[SyncCmd], SyncCmd]] = []
     kwarg_names: List[str] = []
-    subclasses: Dict[str, _CommandParsingStage] = {}
+    members: Dict[str, _CommandParsingStage] = {}
     needs_context: bool = False
 
     hints = get_type_hints(cls)
@@ -146,29 +163,22 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
 
     for _field in _fields:
         field_name = _field.name
-        if (
-            isinstance(hints[field_name], type)
-            and hasattr(hints[field_name], "__command_helper__")
-            and hints[field_name].__command_helper__
-        ):
-            subclasses[field_name] = _generate_command_parser(hints[field_name])
-        else:
-            if field_name == "context":
-                if hints[field_name] != Context:
-                    raise ValueError("only Context can be the hint for variables named 'context'")
-                else:
-                    needs_context = True
-                    kwarg_names.append(field_name)
-                    continue
-
-            if "option_args" not in _field.metadata:
-                continue
-            option_args = _field.metadata["option_args"]
+        if getattr(hints[field_name], COMMAND_HELPER_ATTRIBUTE_NAME, False):
+            members[field_name] = _generate_command_parser(hints[field_name])
+        elif field_name == "context":
+            if hints[field_name] != Context:
+                raise ValueError("only Context can be the hint for variables named 'context'")
+            else:
+                needs_context = True
+                kwarg_names.append(field_name)
+        elif "option_args" in _field.metadata:
+            option_args: Dict[str, Any] = {"multiple": False, "required": False}
+            option_args.update(_field.metadata["option_args"])
 
             if "type" not in option_args:
                 origin = get_origin(hints[field_name])
                 if origin == collections.abc.Sequence:
-                    if "multiple" not in option_args or not option_args["multiple"]:
+                    if not option_args["multiple"]:
                         raise TypeError("Can only use Sequence with multiple=True")
                     else:
                         type_arg = get_args(hints[field_name])[0]
@@ -180,10 +190,10 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                                 f"Default {option_args['default']} is not a tuple "
                                 f"or all of its elements are not of type {type_arg}"
                             )
-                elif "multiple" in option_args:
+                elif option_args["multiple"]:
                     raise TypeError("Options with multiple=True must be Sequence[T]")
                 elif is_type_SpecificOptional(hints[field_name]):
-                    if "required" not in option_args or option_args["required"]:
+                    if option_args["required"]:
                         raise TypeError("Optional only allowed for options with required=False")
                     type_arg = get_args(hints[field_name])[0]
                     if "default" in option_args and (
@@ -193,10 +203,8 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                 elif origin is not None:
                     raise TypeError(f"Type {origin} invalid as a click type")
                 else:
-                    if hints[field_name] == bytes:
-                        type_arg = HexString()
-                    elif hints[field_name] == bytes32:
-                        type_arg = HexString32()
+                    if hints[field_name] in _CLASS_TYPES_TO_CLICK_TYPES:
+                        type_arg = _CLASS_TYPES_TO_CLICK_TYPES[hints[field_name]]
                     else:
                         type_arg = hints[field_name]
                     if "default" in option_args and not isinstance(option_args["default"], hints[field_name]):
@@ -209,14 +217,14 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                 click.option(
                     *option_args["param_decls"],
                     type=type_arg,
-                    **{k: v for k, v in option_args.items() if k not in ("param_decls", "is_command_option", "type")},
+                    **{k: v for k, v in option_args.items() if k not in ("param_decls", "type")},
                 )
             )
 
     return _CommandParsingStage(
         my_dataclass=cls,
         my_option_decorators=option_decorators,
-        my_subclasses=subclasses,
+        my_members=members,
         my_kwarg_names=kwarg_names,
         _needs_context=needs_context,
     )
@@ -225,22 +233,7 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
 def _convert_class_to_function(cls: Type[ChiaCommand]) -> SyncCmd:
     command_parser = _generate_command_parser(cls)
 
-    if inspect.iscoroutinefunction(cls.run):
-
-        async def async_base_cmd(*args: Any, **kwargs: Any) -> None:
-            await command_parser.initialize_instance(*args, **kwargs).run()  # type: ignore[misc]
-
-        def base_cmd(*args: Any, **kwargs: Any) -> None:
-            coro = async_base_cmd(*args, **kwargs)
-            assert coro is not None
-            asyncio.run(coro)
-
-    else:
-
-        def base_cmd(*args: Any, **kwargs: Any) -> None:
-            command_parser.initialize_instance(*args, **kwargs).run()
-
-    return command_parser.apply_decorators(base_cmd)
+    return command_parser.apply_decorators(command_parser)
 
 
 @dataclass_transform()
@@ -271,7 +264,7 @@ def command_helper(cls: Type[Any]) -> Type[Any]:
         new_cls = dataclass(frozen=True)(cls)  # pragma: no cover
     else:
         new_cls = dataclass(frozen=True, kw_only=True)(cls)
-    setattr(new_cls, "__command_helper__", True)
+    setattr(new_cls, COMMAND_HELPER_ATTRIBUTE_NAME, True)
     return new_cls
 
 

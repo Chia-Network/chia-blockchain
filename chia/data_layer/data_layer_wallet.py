@@ -61,10 +61,9 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -122,7 +121,7 @@ class DataLayerWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     wallet_id: uint8
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     """
     interface used by datalayer for interacting with the chain
     """
@@ -1332,6 +1331,12 @@ class DataLayerWallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return coin.amount % 2 == 1 and await self.wallet_state_manager.dl_store.get_launcher(hint) is not None
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()
 
 
 def verify_offer(

@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
-import threading
-import time
 from typing import List, Optional
 
 import click
@@ -43,7 +40,7 @@ from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
-from chia.util.streamable import ConversionError, Streamable, streamable
+from chia.util.streamable import Streamable
 from chia.wallet.conditions import AggSigMe
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import _derive_path_unhardened
@@ -74,19 +71,19 @@ from chia.wallet.util.blind_signer_tl import (
     BSTLUnsignedTransaction,
 )
 from chia.wallet.util.clvm_streamable import (
-    ClvmSerializationConfig,
-    ClvmStreamable,
     TranslationLayer,
     TranslationLayerMapping,
-    _ClvmSerializationMode,
-    clvm_serialization_mode,
+    byte_serialize_clvm_streamable,
+    clvm_streamable,
+    json_deserialize_with_clvm_streamable,
+    json_serialize_with_clvm_streamable,
 )
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
-from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_protocol import MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
-def test_signing_serialization() -> None:
+def test_unsigned_transaction_type() -> None:
     pubkey: G1Element = G1Element()
     message: bytes = b"message"
 
@@ -105,8 +102,7 @@ def test_signing_serialization() -> None:
         ),
     )
 
-    assert tx == UnsignedTransaction.from_program(Program.from_bytes(bytes(tx.as_program())))
-
+    assert tx == json_deserialize_with_clvm_streamable(json_serialize_with_clvm_streamable(tx), UnsignedTransaction)
     as_json_dict = {
         "coin": {
             "parent_coin_id": "0x" + tx.transaction_info.spends[0].coin.parent_coin_id.hex(),
@@ -117,275 +113,6 @@ def test_signing_serialization() -> None:
         "solution": "0x" + bytes(tx.transaction_info.spends[0].solution).hex(),
     }
     assert tx.transaction_info.spends[0].to_json_dict() == as_json_dict
-
-    # Test from_json_dict with the special case where it encounters the as_program serialization in the middle of JSON
-    assert tx.transaction_info.spends[0] == Spend.from_json_dict(
-        {
-            "coin": bytes(tx.transaction_info.spends[0].coin.as_program()).hex(),
-            "puzzle": bytes(tx.transaction_info.spends[0].puzzle).hex(),
-            "solution": bytes(tx.transaction_info.spends[0].solution).hex(),
-        }
-    )
-
-    # Test the optional serialization as blobs
-    with clvm_serialization_mode(True):
-        assert (
-            tx.transaction_info.spends[0].to_json_dict()
-            == bytes(tx.transaction_info.spends[0].as_program()).hex()  # type: ignore[comparison-overlap]
-        )
-
-    # Make sure it's still a dict if using a Streamable object
-    @streamable
-    @dataclasses.dataclass(frozen=True)
-    class TempStreamable(Streamable):
-        streamable_key: Spend
-
-    with clvm_serialization_mode(True):
-        assert TempStreamable(tx.transaction_info.spends[0]).to_json_dict() == {
-            "streamable_key": bytes(tx.transaction_info.spends[0].as_program()).hex()
-        }
-
-    with clvm_serialization_mode(False):
-        assert TempStreamable(tx.transaction_info.spends[0]).to_json_dict() == {"streamable_key": as_json_dict}
-
-    with clvm_serialization_mode(False):
-        assert TempStreamable(tx.transaction_info.spends[0]).to_json_dict() == {"streamable_key": as_json_dict}
-        with clvm_serialization_mode(True):
-            assert TempStreamable(tx.transaction_info.spends[0]).to_json_dict() == {
-                "streamable_key": bytes(tx.transaction_info.spends[0].as_program()).hex()
-            }
-            with clvm_serialization_mode(False):
-                assert TempStreamable(tx.transaction_info.spends[0]).to_json_dict() == {"streamable_key": as_json_dict}
-
-    streamable_blob = bytes(tx.transaction_info.spends[0])
-    with clvm_serialization_mode(True):
-        clvm_streamable_blob = bytes(tx.transaction_info.spends[0])
-
-    assert streamable_blob != clvm_streamable_blob
-    Spend.from_bytes(streamable_blob)
-    Spend.from_bytes(clvm_streamable_blob)
-    assert Spend.from_bytes(streamable_blob) == Spend.from_bytes(clvm_streamable_blob) == tx.transaction_info.spends[0]
-
-    with clvm_serialization_mode(False):
-        assert bytes(tx.transaction_info.spends[0]) == streamable_blob
-
-    inside_streamable_blob = bytes(TempStreamable(tx.transaction_info.spends[0]))
-    with clvm_serialization_mode(True):
-        inside_clvm_streamable_blob = bytes(TempStreamable(tx.transaction_info.spends[0]))
-
-    assert inside_streamable_blob != inside_clvm_streamable_blob
-    assert (
-        TempStreamable.from_bytes(inside_streamable_blob)
-        == TempStreamable.from_bytes(inside_clvm_streamable_blob)
-        == TempStreamable(tx.transaction_info.spends[0])
-    )
-
-    # Test some json loading errors
-
-    with pytest.raises(ConversionError):
-        Spend.from_json_dict("blah")
-    with pytest.raises(ConversionError):
-        UnsignedTransaction.from_json_dict(streamable_blob.hex())
-
-
-def test_serialization_config_thread_safe() -> None:
-    def get_and_check_config(use: bool, wait_before: int, wait_after: int) -> None:
-        with clvm_serialization_mode(use):
-            time.sleep(wait_before)
-            assert _ClvmSerializationMode.get_config() == ClvmSerializationConfig(use)
-            time.sleep(wait_after)
-        assert _ClvmSerializationMode.get_config() == ClvmSerializationConfig()
-
-    thread_1 = threading.Thread(target=get_and_check_config, args=(True, 0, 2))
-    thread_2 = threading.Thread(target=get_and_check_config, args=(False, 1, 3))
-    thread_3 = threading.Thread(target=get_and_check_config, args=(True, 2, 4))
-    thread_4 = threading.Thread(target=get_and_check_config, args=(False, 3, 5))
-
-    thread_1.start()
-    thread_2.start()
-    thread_3.start()
-    thread_4.start()
-
-    thread_1.join()
-    thread_2.join()
-    thread_3.join()
-    thread_4.join()
-
-
-@pytest.mark.anyio
-async def test_serialization_config_coroutine_safe() -> None:
-    async def get_and_check_config(use: bool, wait_before: int, wait_after: int) -> None:
-        with clvm_serialization_mode(use):
-            await asyncio.sleep(wait_before)
-            assert _ClvmSerializationMode.get_config() == ClvmSerializationConfig(use)
-            await asyncio.sleep(wait_after)
-        assert _ClvmSerializationMode.get_config() == ClvmSerializationConfig()
-
-    await get_and_check_config(True, 0, 2)
-    await get_and_check_config(False, 1, 3)
-    await get_and_check_config(True, 2, 4)
-    await get_and_check_config(False, 3, 5)
-
-
-class FooSpend(ClvmStreamable):
-    coin: Coin
-    blah: Program
-    blah_also: Program = dataclasses.field(metadata=dict(key="solution"))  # pylint: disable=invalid-field-call
-
-    @staticmethod
-    def from_wallet_api(_from: Spend) -> FooSpend:
-        return FooSpend(
-            _from.coin,
-            _from.puzzle,
-            _from.solution,
-        )
-
-    @staticmethod
-    def to_wallet_api(_from: FooSpend) -> Spend:
-        return Spend(
-            _from.coin,
-            _from.blah,
-            _from.blah_also,
-        )
-
-
-def test_translation_layer() -> None:
-    FOO_TRANSLATION = TranslationLayer(
-        [
-            TranslationLayerMapping(
-                Spend,
-                FooSpend,
-                FooSpend.from_wallet_api,
-                FooSpend.to_wallet_api,
-            )
-        ]
-    )
-
-    coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
-    spend = Spend(
-        coin,
-        Program.to(1),
-        Program.to([]),
-    )
-
-    with clvm_serialization_mode(True):
-        spend_bytes = bytes(spend)
-
-    spend_program = Program.from_bytes(spend_bytes)
-    assert spend_program.at("ff") == Program.to("coin")
-    assert spend_program.at("rff") == Program.to("puzzle")
-    assert spend_program.at("rrff") == Program.to("solution")
-
-    with clvm_serialization_mode(True, FOO_TRANSLATION):
-        foo_spend_bytes = bytes(spend)
-        assert foo_spend_bytes.hex() == spend.to_json_dict()  # type: ignore[comparison-overlap]
-        assert spend == Spend.from_bytes(foo_spend_bytes)
-        assert spend == Spend.from_json_dict(foo_spend_bytes.hex())
-
-    # Deserialization should only work now if using the translation layer
-    with pytest.raises(Exception):
-        Spend.from_bytes(foo_spend_bytes)
-    with pytest.raises(Exception):
-        Spend.from_json_dict(foo_spend_bytes.hex())
-
-    assert foo_spend_bytes != spend_bytes
-    foo_spend_program = Program.from_bytes(foo_spend_bytes)
-    assert foo_spend_program.at("ff") == Program.to("coin")
-    assert foo_spend_program.at("rff") == Program.to("blah")
-    assert foo_spend_program.at("rrff") == Program.to("solution")
-
-    # Test that types not registered with translation layer are serialized properly
-    with clvm_serialization_mode(True):
-        coin_bytes = bytes(coin)
-        coin_json = coin.to_json_dict()
-    with clvm_serialization_mode(True, FOO_TRANSLATION):
-        assert coin_bytes == bytes(coin)
-        assert Coin.from_bytes(coin_bytes) == coin
-        assert Coin.from_json_dict(coin_json) == coin
-
-    # Test a TranslationLayer edge case (no mapping for serialized object)
-    foo_spend = FooSpend.from_wallet_api(spend)
-    assert foo_spend == TranslationLayer([]).deserialize_from_translation(foo_spend)
-
-
-def test_blind_signer_translation_layer() -> None:
-    sum_hints: List[SumHint] = [
-        SumHint([b"a", b"b", b"c"], b"offset", b"final"),
-        SumHint([b"c", b"b", b"a"], b"offset2", b"final"),
-    ]
-    path_hints: List[PathHint] = [
-        PathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
-        PathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
-    ]
-    signing_targets: List[SigningTarget] = [
-        SigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
-        SigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
-    ]
-
-    instructions: SigningInstructions = SigningInstructions(
-        KeyHints(sum_hints, path_hints),
-        signing_targets,
-    )
-    transaction: UnsignedTransaction = UnsignedTransaction(
-        TransactionInfo([]),
-        instructions,
-    )
-    signing_response: SigningResponse = SigningResponse(
-        b"signature",
-        bytes32([1] * 32),
-    )
-
-    bstl_sum_hints: List[BSTLSumHint] = [
-        BSTLSumHint([b"a", b"b", b"c"], b"offset", b"final"),
-        BSTLSumHint([b"c", b"b", b"a"], b"offset2", b"final"),
-    ]
-    bstl_path_hints: List[BSTLPathHint] = [
-        BSTLPathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
-        BSTLPathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
-    ]
-    bstl_signing_targets: List[BSTLSigningTarget] = [
-        BSTLSigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
-        BSTLSigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
-    ]
-
-    BSTLSigningInstructions(
-        bstl_sum_hints,
-        bstl_path_hints,
-        bstl_signing_targets,
-    )
-    bstl_transaction: BSTLUnsignedTransaction = BSTLUnsignedTransaction(
-        bstl_sum_hints,
-        bstl_path_hints,
-        bstl_signing_targets,
-    )
-    bstl_signing_response: BSTLSigningResponse = BSTLSigningResponse(
-        b"signature",
-        bytes32([1] * 32),
-    )
-    with clvm_serialization_mode(True, None):
-        bstl_transaction_bytes = bytes(bstl_transaction)
-        bstl_signing_response_bytes = bytes(bstl_signing_response)
-
-    with clvm_serialization_mode(True, BLIND_SIGNER_TRANSLATION):
-        transaction_bytes = bytes(transaction)
-        signing_response_bytes = bytes(signing_response)
-        assert transaction_bytes == bstl_transaction_bytes == bytes(bstl_transaction)
-        assert signing_response_bytes == bstl_signing_response_bytes == bytes(bstl_signing_response)
-
-    # Deserialization should only work now if using the translation layer
-    with pytest.raises(Exception):
-        UnsignedTransaction.from_bytes(transaction_bytes)
-    with pytest.raises(Exception):
-        SigningResponse.from_bytes(signing_response_bytes)
-
-    assert BSTLUnsignedTransaction.from_bytes(transaction_bytes) == bstl_transaction
-    assert BSTLSigningResponse.from_bytes(signing_response_bytes) == bstl_signing_response
-    with clvm_serialization_mode(True, BLIND_SIGNER_TRANSLATION):
-        assert UnsignedTransaction.from_bytes(transaction_bytes) == transaction
-        assert SigningResponse.from_bytes(signing_response_bytes) == signing_response
-
-    assert Program.from_bytes(transaction_bytes).at("ff") == Program.to("s")
-    assert Program.from_bytes(signing_response_bytes).at("ff") == Program.to("s")
 
 
 @pytest.mark.parametrize(
@@ -402,7 +129,7 @@ def test_blind_signer_translation_layer() -> None:
 )
 @pytest.mark.anyio
 async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFramework) -> None:
-    wallet: Wallet = wallet_environments.environments[0].xch_wallet
+    wallet: MainWalletProtocol = wallet_environments.environments[0].xch_wallet
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
 
@@ -442,7 +169,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     ]
     assert utx.signing_instructions.key_hints.path_hints == [
         PathHint(
-            wallet_state_manager.root_pubkey.get_fingerprint().to_bytes(4, "big"),
+            wallet_state_manager.observation_root.get_fingerprint().to_bytes(4, "big"),
             [uint64(12381), uint64(8444), uint64(2), uint64(derivation_record.index)],
         )
     ]
@@ -563,12 +290,11 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     request = GatherSigningInfo(
         [Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]
     ).to_json_dict()
-    response_dict = await wallet_rpc.fetch("gather_signing_info", {"translation": "chip-TBD", **request})
-    with pytest.raises(Exception):
-        GatherSigningInfoResponse.from_json_dict(response_dict)
-    with clvm_serialization_mode(True, translation_layer=BLIND_SIGNER_TRANSLATION):
-        response: GatherSigningInfoResponse = GatherSigningInfoResponse.from_json_dict(response_dict)
-        assert response.signing_instructions == not_our_utx.signing_instructions
+    response_dict = await wallet_rpc.fetch("gather_signing_info", {"translation": "chip-0029", **request})
+    response: GatherSigningInfoResponse = json_deserialize_with_clvm_streamable(
+        response_dict, GatherSigningInfoResponse, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
+    assert response.signing_instructions == not_our_utx.signing_instructions
 
 
 @pytest.mark.parametrize(
@@ -585,7 +311,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
 )
 @pytest.mark.anyio
 async def test_p2blsdohp_execute_signing_instructions(wallet_environments: WalletTestFramework) -> None:
-    wallet: Wallet = wallet_environments.environments[0].xch_wallet
+    wallet: MainWalletProtocol = wallet_environments.environments[0].xch_wallet
     root_sk: PrivateKey = wallet.wallet_state_manager.get_master_private_key()
     root_pk: G1Element = root_sk.get_g1()
     root_fingerprint: bytes = root_pk.get_fingerprint().to_bytes(4, "big")
@@ -775,6 +501,83 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
     assert signing_responses == [SigningResponse(bytes(AugSchemeMPL.sign(other_sk, test_name, sum_pk)), test_name)]
 
 
+def test_blind_signer_translation_layer() -> None:
+    sum_hints: List[SumHint] = [
+        SumHint([b"a", b"b", b"c"], b"offset", b"final"),
+        SumHint([b"c", b"b", b"a"], b"offset2", b"final"),
+    ]
+    path_hints: List[PathHint] = [
+        PathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
+        PathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
+    ]
+    signing_targets: List[SigningTarget] = [
+        SigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
+        SigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
+    ]
+
+    instructions: SigningInstructions = SigningInstructions(
+        KeyHints(sum_hints, path_hints),
+        signing_targets,
+    )
+    transaction: UnsignedTransaction = UnsignedTransaction(
+        TransactionInfo([]),
+        instructions,
+    )
+    signing_response: SigningResponse = SigningResponse(
+        b"signature",
+        bytes32([1] * 32),
+    )
+
+    bstl_sum_hints: List[BSTLSumHint] = [
+        BSTLSumHint([b"a", b"b", b"c"], b"offset", b"final"),
+        BSTLSumHint([b"c", b"b", b"a"], b"offset2", b"final"),
+    ]
+    bstl_path_hints: List[BSTLPathHint] = [
+        BSTLPathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
+        BSTLPathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
+    ]
+    bstl_signing_targets: List[BSTLSigningTarget] = [
+        BSTLSigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
+        BSTLSigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
+    ]
+
+    BSTLSigningInstructions(
+        bstl_sum_hints,
+        bstl_path_hints,
+        bstl_signing_targets,
+    )
+    bstl_transaction: BSTLUnsignedTransaction = BSTLUnsignedTransaction(
+        bstl_sum_hints,
+        bstl_path_hints,
+        bstl_signing_targets,
+    )
+    bstl_signing_response: BSTLSigningResponse = BSTLSigningResponse(
+        b"signature",
+        bytes32([1] * 32),
+    )
+    bstl_transaction_json = json_serialize_with_clvm_streamable(bstl_transaction)
+    bstl_signing_response_json = json_serialize_with_clvm_streamable(bstl_signing_response)
+    assert bstl_transaction_json == json_serialize_with_clvm_streamable(
+        transaction, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
+    assert bstl_signing_response_json == json_serialize_with_clvm_streamable(
+        signing_response, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
+
+    assert (
+        json_deserialize_with_clvm_streamable(
+            bstl_transaction_json, UnsignedTransaction, translation_layer=BLIND_SIGNER_TRANSLATION
+        )
+        == transaction
+    )
+    assert (
+        json_deserialize_with_clvm_streamable(
+            bstl_signing_response_json, SigningResponse, translation_layer=BLIND_SIGNER_TRANSLATION
+        )
+        == signing_response
+    )
+
+
 @pytest.mark.parametrize(
     "wallet_environments",
     [
@@ -789,12 +592,12 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
 )
 @pytest.mark.anyio
 async def test_signer_commands(wallet_environments: WalletTestFramework) -> None:
-    wallet: Wallet = wallet_environments.environments[0].xch_wallet
+    wallet: MainWalletProtocol = wallet_environments.environments[0].xch_wallet
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
     client_info: WalletClientInfo = WalletClientInfo(
         wallet_rpc,
-        wallet_state_manager.root_pubkey.get_fingerprint(),
+        wallet_state_manager.observation_root.get_fingerprint(),
         wallet_state_manager.config,
     )
 
@@ -809,7 +612,7 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
         await GatherSigningInfoCMD(
             rpc_info=NeedsWalletRPC(client_info=client_info),
             sp_out=SPOut(
-                translation="chip-TBD",
+                translation="CHIP-0028",
                 output_format="file",
                 output_file=["./temp-si"],
             ),
@@ -819,11 +622,11 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
         await ExecuteSigningInstructionsCMD(
             rpc_info=NeedsWalletRPC(client_info=client_info),
             sp_in=SPIn(
-                translation="chip-TBD",
+                translation="CHIP-0028",
                 signer_protocol_input=["./temp-si"],
             ),
             sp_out=SPOut(
-                translation="chip-TBD",
+                translation="CHIP-0028",
                 output_format="file",
                 output_file=["./temp-sr"],
             ),
@@ -833,7 +636,7 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
             rpc_info=NeedsWalletRPC(client_info=client_info),
             txs_in=TransactionsIn(transaction_file_in="./temp-tb"),
             sp_in=SPIn(
-                translation="chip-TBD",
+                translation="CHIP-0028",
                 signer_protocol_input=["./temp-sr"],
             ),
             txs_out=TransactionsOut(transaction_file_out="./temp-stb"),
@@ -967,7 +770,9 @@ def test_transactions_out() -> None:
             file.read() == bytes(TransactionBundle([STD_TX]))
 
 
-class FooCoin(ClvmStreamable):
+@clvm_streamable
+@dataclasses.dataclass(frozen=True)
+class FooCoin(Streamable):
     amount: uint64
 
     @staticmethod
@@ -996,7 +801,7 @@ FOO_COIN_TRANSLATION = TranslationLayer(
 
 
 def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setitem(ALL_TRANSLATION_LAYERS, "chip-TBD", FOO_COIN_TRANSLATION)
+    monkeypatch.setitem(ALL_TRANSLATION_LAYERS, "CHIP-0028", FOO_COIN_TRANSLATION)
 
     @click.group()
     def cmd() -> None:
@@ -1012,12 +817,10 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem():
         with open("some file", "wb") as file:
-            with clvm_serialization_mode(use=True):
-                file.write(bytes(coin))
+            file.write(byte_serialize_clvm_streamable(coin))
 
         with open("some file2", "wb") as file:
-            with clvm_serialization_mode(use=True):
-                file.write(bytes(coin))
+            file.write(byte_serialize_clvm_streamable(coin))
 
         result = runner.invoke(
             cmd,
@@ -1028,12 +831,10 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with runner.isolated_filesystem():
         with open("some file", "wb") as file:
-            with clvm_serialization_mode(use=True, translation_layer=FOO_COIN_TRANSLATION):
-                file.write(bytes(coin))
+            file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
 
             with open("some file2", "wb") as file:
-                with clvm_serialization_mode(use=True, translation_layer=FOO_COIN_TRANSLATION):
-                    file.write(bytes(coin))
+                file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
 
         result = runner.invoke(
             cmd, ["temp_cmd", "--signer-protocol-input", "some file", "--signer-protocol-input", "some file2"]
@@ -1048,7 +849,7 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
                 "--signer-protocol-input",
                 "some file2",
                 "--translation",
-                "chip-TBD",
+                "CHIP-0028",
             ],
             catch_exceptions=False,
         )
@@ -1056,15 +857,14 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setitem(ALL_TRANSLATION_LAYERS, "chip-TBD", FOO_COIN_TRANSLATION)
+    monkeypatch.setitem(ALL_TRANSLATION_LAYERS, "CHIP-0028", FOO_COIN_TRANSLATION)
 
     @click.group()
     def cmd() -> None:
         pass
 
     coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
-    with clvm_serialization_mode(use=True):
-        coin_bytes = bytes(coin)
+    coin_bytes = byte_serialize_clvm_streamable(coin)
 
     @chia_command(cmd, "temp_cmd", "blah")
     class TempCMD(SPOut):
@@ -1101,11 +901,11 @@ def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
         assert result.output != ""  # separate test for QrCodeDisplay
 
         result = runner.invoke(
-            cmd, ["temp_cmd", "--output-format", "hex", "--translation", "chip-TBD"], catch_exceptions=False
+            cmd, ["temp_cmd", "--output-format", "hex", "--translation", "CHIP-0028"], catch_exceptions=False
         )
         assert result.output.strip() != coin_bytes.hex()
-        with clvm_serialization_mode(use=True, translation_layer=ALL_TRANSLATION_LAYERS["chip-TBD"]):
-            assert result.output.strip() == bytes(coin).hex() + "\n" + bytes(coin).hex()
+        coin_hex = byte_serialize_clvm_streamable(coin, translation_layer=ALL_TRANSLATION_LAYERS["CHIP-0028"]).hex()
+        assert result.output.strip() == coin_hex + "\n" + coin_hex
 
 
 def test_qr_code_display() -> None:

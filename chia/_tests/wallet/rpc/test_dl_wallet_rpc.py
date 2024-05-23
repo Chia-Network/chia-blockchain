@@ -5,7 +5,6 @@ import logging
 
 import pytest
 
-from chia._tests.conftest import ConsensusMode
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
@@ -23,7 +22,6 @@ log = logging.getLogger(__name__)
 
 
 class TestWalletRpc:
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
     async def test_wallet_make_transaction(
@@ -177,7 +175,8 @@ class TestWalletRpc:
                     launcher_id: next_root,
                     launcher_id_2: next_root,
                     launcher_id_3: next_root,
-                }
+                },
+                uint64(0),
             )
 
             for i in range(0, 5):
@@ -224,7 +223,6 @@ class TestWalletRpc:
             await client.await_closed()
             await client_2.await_closed()
 
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
     async def test_wallet_dl_verify_proof(

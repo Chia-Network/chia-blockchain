@@ -20,9 +20,10 @@ from chia.cmds.wallet import wallet_cmd
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.rpc.wallet_request_types import ApplySignatures, ExecuteSigningInstructions, GatherSigningInfo
 from chia.types.spend_bundle import SpendBundle
+from chia.util.streamable import Streamable
 from chia.wallet.signer_protocol import SignedTransaction, SigningInstructions, SigningResponse, Spend
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.clvm_streamable import ClvmStreamable, clvm_serialization_mode
+from chia.wallet.util.clvm_streamable import byte_deserialize_clvm_streamable, byte_serialize_clvm_streamable
 
 
 def _clear_screen() -> None:
@@ -121,13 +122,13 @@ class _SPTranslation:
     translation: str = option(
         "--translation",
         "-c",
-        type=click.Choice(["none", "chip-TBD"]),
+        type=click.Choice(["none", "CHIP-0028"]),
         default="none",
         help="Wallet Signer Protocol CHIP to use for translation of output",
     )
 
 
-_T_ClvmStreamable = TypeVar("_T_ClvmStreamable", bound=ClvmStreamable)
+_T_ClvmStreamable = TypeVar("_T_ClvmStreamable", bound=Streamable)
 
 
 @command_helper
@@ -145,10 +146,15 @@ class SPIn(_SPTranslation):
         final_list: List[_T_ClvmStreamable] = []
         for filename in self.signer_protocol_input:  # pylint: disable=not-an-iterable
             with open(Path(filename), "rb") as file:
-                with clvm_serialization_mode(
-                    True, ALL_TRANSLATION_LAYERS[self.translation] if self.translation != "none" else None
-                ):
-                    final_list.append(typ.from_bytes(file.read()))
+                final_list.append(
+                    byte_deserialize_clvm_streamable(
+                        file.read(),
+                        typ,
+                        translation_layer=(
+                            ALL_TRANSLATION_LAYERS[self.translation] if self.translation != "none" else None
+                        ),
+                    )
+                )
 
         return final_list
 
@@ -170,29 +176,29 @@ class SPOut(QrCodeDisplay, _SPTranslation):
         help="The file(s) to output to (if --output-format=file)",
     )
 
-    def handle_clvm_output(self, outputs: List[ClvmStreamable]) -> None:
-        with clvm_serialization_mode(
-            True, ALL_TRANSLATION_LAYERS[self.translation] if self.translation != "none" else None
-        ):
-            if self.output_format == "hex":
-                for output in outputs:
-                    print(bytes(output).hex())
-            if self.output_format == "file":
-                if len(self.output_file) == 0:
-                    print("--output-format=file specifed without any --output-file")
-                    return
-                elif len(self.output_file) != len(outputs):
-                    print(
-                        "Incorrect number of file outputs specified, "
-                        f"expected: {len(outputs)} got {len(self.output_file)}"
-                    )
-                    return
-                else:
-                    for filename, output in zip(self.output_file, outputs):
-                        with open(Path(filename), "wb") as file:
-                            file.write(bytes(output))
-            if self.output_format == "qr":
-                self.display_qr_codes([bytes(output) for output in outputs])
+    def handle_clvm_output(self, outputs: List[Streamable]) -> None:
+        translation_layer = ALL_TRANSLATION_LAYERS[self.translation] if self.translation != "none" else None
+        if self.output_format == "hex":
+            for output in outputs:
+                print(byte_serialize_clvm_streamable(output, translation_layer=translation_layer).hex())
+        if self.output_format == "file":
+            if len(self.output_file) == 0:
+                print("--output-format=file specifed without any --output-file")
+                return
+            elif len(self.output_file) != len(outputs):
+                print(
+                    "Incorrect number of file outputs specified, "
+                    f"expected: {len(outputs)} got {len(self.output_file)}"
+                )
+                return
+            else:
+                for filename, output in zip(self.output_file, outputs):
+                    with open(Path(filename), "wb") as file:
+                        file.write(byte_serialize_clvm_streamable(output, translation_layer=translation_layer))
+        if self.output_format == "qr":
+            self.display_qr_codes(
+                [byte_serialize_clvm_streamable(output, translation_layer=translation_layer) for output in outputs]
+            )
 
 
 @chia_command(

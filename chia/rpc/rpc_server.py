@@ -253,7 +253,8 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     async def get_network_info(self, _: Dict[str, Any]) -> EndpointResult:
         network_name = self.net_config["selected_network"]
         address_prefix = self.net_config["network_overrides"]["config"][network_name]["address_prefix"]
-        return {"network_name": network_name, "network_prefix": address_prefix}
+        genesis_challenge = self.net_config["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
+        return {"network_name": network_name, "network_prefix": address_prefix, "genesis_challenge": genesis_challenge}
 
     async def get_connections(self, request: Dict[str, Any]) -> EndpointResult:
         request_node_type: Optional[NodeType] = None

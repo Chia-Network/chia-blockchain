@@ -54,10 +54,9 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -75,7 +74,7 @@ def not_ephemeral_additions(sp: SpendBundle) -> List[Coin]:
         removals.add(cs.coin)
 
     additions: List[Coin] = []
-    max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+    max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
     for cs in sp.coin_spends:
         coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
         max_cost -= cost
@@ -95,7 +94,7 @@ class CATWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     cat_info: CATInfo
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     lineage_store: CATLineageStore
 
     @staticmethod
@@ -105,7 +104,7 @@ class CATWallet:
     @staticmethod
     async def create_new_cat_wallet(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         cat_tail_info: Dict[str, Any],
         amount: uint64,
         tx_config: TXConfig,
@@ -115,7 +114,7 @@ class CATWallet:
         self = CATWallet()
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
-        std_wallet_id = self.standard_wallet.wallet_id
+        std_wallet_id = self.standard_wallet.id()
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
@@ -201,7 +200,7 @@ class CATWallet:
     @staticmethod
     async def get_or_create_wallet_for_cat(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         limitations_program_hash_hex: str,
         name: Optional[str] = None,
     ) -> CATWallet:
@@ -254,7 +253,7 @@ class CATWallet:
     async def create_from_puzzle_info(
         cls,
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
         # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
@@ -280,7 +279,7 @@ class CATWallet:
     @staticmethod
     async def create(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
     ) -> CATWallet:
         self = CATWallet()
@@ -391,8 +390,8 @@ class CATWallet:
                     if cat_curried_args is not None:
                         cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
                         parent_coin_data = CATCoinData(
-                            cat_mod_hash.atom,
-                            tail_program_hash.atom,
+                            bytes32(cat_mod_hash.as_atom()),
+                            bytes32(tail_program_hash.as_atom()),
                             cat_inner_puzzle,
                             coin_state[0].coin.parent_coin_info,
                             uint64(coin_state[0].coin.amount),
@@ -884,3 +883,9 @@ class CATWallet:
             construct_cat_puzzle(CAT_MOD, self.cat_info.limitations_program_hash, hint).get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()

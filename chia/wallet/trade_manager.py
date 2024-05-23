@@ -37,8 +37,8 @@ from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_protocol import WalletProtocol
 
 OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 
@@ -436,7 +436,7 @@ class TradeManager:
         if solver is None:
             solver = Solver({})
         try:
-            coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
+            coins_to_offer: Dict[Union[int, bytes32], Set[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
             offer_dict_no_ints: Dict[Optional[bytes32], int] = {}
             for id, amount in offer_dict.items():
@@ -553,7 +553,7 @@ class TradeManager:
                         Offer.ph(),
                         tx_config,
                         fee=fee_left_to_pay,
-                        coins=set(selected_coins),
+                        coins=selected_coins,
                         extra_conditions=(*extra_conditions, *announcements_to_assert),
                     )
                     all_transactions.append(tx)
@@ -567,7 +567,7 @@ class TradeManager:
                         [Offer.ph()],
                         tx_config,
                         fee=fee_left_to_pay,
-                        coins=set(selected_coins),
+                        coins=selected_coins,
                         extra_conditions=(*extra_conditions, *announcements_to_assert),
                     )
                     all_transactions.extend(txs)
@@ -578,7 +578,7 @@ class TradeManager:
                         [Offer.ph()],
                         tx_config,
                         fee=fee_left_to_pay,
-                        coins=set(selected_coins),
+                        coins=selected_coins,
                         extra_conditions=(*extra_conditions, *announcements_to_assert),
                         add_authorizations_to_cr_cats=False,
                     )
@@ -604,7 +604,7 @@ class TradeManager:
             if key is None:
                 continue
             # ATTENTION: new_wallets
-            exists: Optional[Wallet] = await wsm.get_wallet_for_puzzle_info(offer.driver_dict[key])
+            exists: Optional[WalletProtocol[Any]] = await wsm.get_wallet_for_puzzle_info(offer.driver_dict[key])
             if exists is None:
                 await wsm.create_wallet_for_puzzle_info(offer.driver_dict[key])
 

@@ -20,8 +20,6 @@ from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.start_service import Service
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_full_node_rpc_api import SimulatorFullNodeRpcApi
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.wallet.wallet_node import WalletNode
@@ -33,6 +31,5 @@ FarmerService = Service[Farmer, FarmerAPI, FarmerRpcApi]
 FullNodeService = Service[FullNode, FullNodeAPI, FullNodeRpcApi]
 HarvesterService = Service[Harvester, HarvesterAPI, HarvesterRpcApi]
 IntroducerService = Service[Introducer, IntroducerAPI, FullNodeRpcApi]
-SimulatorFullNodeService = Service[FullNode, FullNodeSimulator, SimulatorFullNodeRpcApi]
 TimelordService = Service[Timelord, TimelordAPI, TimelordRpcApi]
 WalletService = Service[WalletNode, WalletNodeAPI, WalletRpcApi]

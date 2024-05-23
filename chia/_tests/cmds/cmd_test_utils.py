@@ -254,8 +254,9 @@ class TestWalletRpcClient(TestRpcClient):
         tx_config: TXConfig,
         coins: Optional[List[Coin]] = None,
         fee: uint64 = uint64(0),
+        push: bool = True,
     ) -> SendTransactionMultiResponse:
-        self.add_to_log("send_transaction_multi", (wallet_id, additions, tx_config, coins, fee))
+        self.add_to_log("send_transaction_multi", (wallet_id, additions, tx_config, coins, fee, push))
         name = bytes32([2] * 32)
         return SendTransactionMultiResponse(
             [STD_UTX],

@@ -49,13 +49,13 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.payment import Payment
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_protocol import MainWalletProtocol
 
 IDENTITY_PUZZLE = SerializedProgram.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
@@ -166,9 +166,9 @@ async def setup_mempool_with_coins(
 
     constants = DEFAULT_CONSTANTS
     if max_block_clvm_cost is not None:
-        constants = dataclasses.replace(constants, MAX_BLOCK_COST_CLVM=max_block_clvm_cost)
+        constants = constants.replace(MAX_BLOCK_COST_CLVM=uint64(max_block_clvm_cost))
     if mempool_block_buffer is not None:
-        constants = dataclasses.replace(constants, MEMPOOL_BLOCK_BUFFER=mempool_block_buffer)
+        constants = constants.replace(MEMPOOL_BLOCK_BUFFER=uint8(mempool_block_buffer))
     mempool_manager = await instantiate_mempool_manager(
         get_coin_records, constants=constants, max_tx_clvm_cost=max_tx_clvm_cost
     )
@@ -1030,7 +1030,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
     async def make_and_send_big_cost_sb(coin: Coin) -> None:
         conditions = []
         g1 = G1Element()
-        for _ in range(144):
+        for _ in range(169):
             conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 10_000_000])
         # Create a spend bundle with a big enough cost that gets it close to the limit
@@ -1040,7 +1040,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
     mempool_manager, coins = await setup_mempool_with_coins(
         coin_amounts=list(range(1_000_000_000, 1_000_000_030)),
         max_block_clvm_cost=550_000_000,
-        max_tx_clvm_cost=uint64(550_000_000 * 0.6),
+        max_tx_clvm_cost=uint64(550_000_000),
         mempool_block_buffer=20,
     )
     # Create the spend bundles with a big enough cost that they get close to the limit
@@ -1578,7 +1578,7 @@ async def test_identical_spend_aggregation_e2e(
 
     async def make_setup_and_coins(
         full_node_api: FullNodeSimulator, wallet_node: WalletNode
-    ) -> Tuple[Wallet, list[WalletCoinRecord], bytes32]:
+    ) -> Tuple[MainWalletProtocol, list[WalletCoinRecord], bytes32]:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         phs = [await wallet.get_new_puzzlehash() for _ in range(3)]

@@ -75,7 +75,7 @@ async def test_wsm_sign_transaction() -> None:
             wsm.puzzle_store = await WalletPuzzleStore.create(db)
             wsm.constants = DEFAULT_CONSTANTS
             wsm.private_key = top_sk
-            wsm.root_pubkey = top_sk.get_g1()
+            wsm.observation_root = top_sk.get_g1()
             wsm.user_store = await WalletUserStore.create(db)
             wallet_info = await wsm.user_store.get_wallet_by_id(1)
             assert wallet_info is not None

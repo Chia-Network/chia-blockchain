@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Union
 import pytest
 from chia_rs import G2Element
 
-from chia._tests.conftest import SOFTFORK_HEIGHTS, ConsensusMode
+from chia._tests.conftest import SOFTFORK_HEIGHTS
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia._tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
@@ -45,7 +45,6 @@ async def get_trade_and_status(trade_manager: TradeManager, trade: TradeRecord) 
 # We do not test aggregation in a number of cases because it's not correlated with a lot of these parameters.
 # So to avoid the overhead of start up for identical tests, we only change the softfork param for the tests that use it.
 # To pin down the behavior that we intend to eventually deprecate, it only gets one test case.
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.anyio
 @pytest.mark.parametrize(
     "wallet_environments,credential_restricted,active_softfork_height",
@@ -1760,7 +1759,6 @@ async def test_trade_cancellation_balance_check(wallets_prefarm):
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_trade_conflict(three_wallets_prefarm):
@@ -1818,7 +1816,7 @@ async def test_trade_conflict(three_wallets_prefarm):
     # pushing into mempool while already in it should fail
     [offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers([offer])
     tr2, txs2 = await trade_manager_trader.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
-    txs2 = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+    txs2 = await trade_manager_trader.wallet_state_manager.add_pending_transactions(
         txs2, additional_signing_responses=signing_response
     )
     assert await trade_manager_trader.get_coins_of_interest()

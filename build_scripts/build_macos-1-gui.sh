@@ -19,8 +19,8 @@ npm ci
 npm run build
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "npm run build failed!"
-	exit $LAST_EXIT_CODE
+  echo >&2 "npm run build failed!"
+  exit $LAST_EXIT_CODE
 fi
 
 # Remove unused packages
@@ -40,8 +40,8 @@ rm -rf packages/wallets
 cd ./packages/gui/node_modules || exit 1
 echo "Remove unused node_modules in the gui package to make cache slim more"
 rm -rf electron/dist # ~186MB
-rm -rf "@mui" # ~71MB
-rm -rf typescript # ~63MB
+rm -rf "@mui"        # ~71MB
+rm -rf typescript    # ~63MB
 
 # Remove `packages/gui/node_modules/@chia-network` because it causes an error on later `electron-packager` command
 rm -rf "@chia-network"

@@ -66,6 +66,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain
 from chia.util.misc import to_batches
+from chia.util.observation_root import ObservationRoot
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.streamable import Streamable, streamable
@@ -229,7 +230,7 @@ class WalletNode:
             cache.clear_after_height(reorg_height)
 
     @overload
-    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[G1Element]: ...
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[ObservationRoot]: ...
 
     @overload
     async def get_key_for_fingerprint(
@@ -239,20 +240,20 @@ class WalletNode:
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: Literal[False]
-    ) -> Optional[G1Element]: ...
+    ) -> Optional[ObservationRoot]: ...
 
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool
-    ) -> Optional[Union[PrivateKey, G1Element]]: ...
+    ) -> Optional[Union[PrivateKey, ObservationRoot]]: ...
 
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool = False
-    ) -> Optional[Union[PrivateKey, G1Element]]:
+    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
             # Returns first key if fingerprint is None
-            key: Optional[Union[PrivateKey, G1Element]] = await keychain_proxy.get_key_for_fingerprint(
+            key: Optional[Union[PrivateKey, ObservationRoot]] = await keychain_proxy.get_key_for_fingerprint(
                 fingerprint, private=private
             )
         except KeychainIsEmpty:
@@ -271,22 +272,24 @@ class WalletNode:
 
         return key
 
-    async def get_key(self, fingerprint: Optional[int], private: bool = True) -> Optional[Union[PrivateKey, G1Element]]:
+    async def get_key(
+        self, fingerprint: Optional[int], private: bool = True
+    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
         """
         Attempt to get the private key for the given fingerprint. If the fingerprint is None,
         get_key_for_fingerprint() will return the first private key. Similarly, if a key isn't
         returned for the provided fingerprint, the first key will be returned.
         """
-        key: Optional[Union[PrivateKey, G1Element]] = await self.get_key_for_fingerprint(fingerprint, private=private)
+        key: Optional[Union[PrivateKey, ObservationRoot]] = await self.get_key_for_fingerprint(
+            fingerprint, private=private
+        )
 
-        if key is None and fingerprint is not None:
-            key = await self.get_key_for_fingerprint(None, private=private)
-            if key is not None:
-                if isinstance(key, PrivateKey):
-                    fp = key.get_g1().get_fingerprint()
-                else:
-                    fp = key.get_fingerprint()
-                self.log.info(f"Using first key found (fingerprint: {fp})")
+        if fingerprint is None and key is not None:
+            if isinstance(key, PrivateKey):
+                fp = key.get_g1().get_fingerprint()
+            else:
+                fp = key.get_fingerprint()
+            self.log.info(f"Using first key found (fingerprint: {fp})")
 
         return key
 
@@ -407,24 +410,24 @@ class WalletNode:
         #   got Future <Future pending> attached to a different loop
         self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
         if not fingerprint:
-            fingerprint = self.get_last_used_fingerprint()
+            fingerprint = await self.get_last_used_fingerprint_if_exists()
         multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
         multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
         self.synced_peers = set()
         private_key = await self.get_key(fingerprint, private=True)
         if private_key is None:
-            public_key = await self.get_key(fingerprint, private=False)
+            observation_root = await self.get_key(fingerprint, private=False)
         else:
             assert isinstance(private_key, PrivateKey)
-            public_key = private_key.get_g1()
-        if public_key is None:
+            observation_root = private_key.get_g1()
+        if observation_root is None:
             self.log_out()
             return False
-        assert isinstance(public_key, G1Element)
+        assert not isinstance(observation_root, PrivateKey)
         # override with private key fetched in case it's different from what was passed
         if fingerprint is None:
-            fingerprint = public_key.get_fingerprint()
+            fingerprint = observation_root.get_fingerprint()
         if self.config.get("enable_profiler", False):
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
@@ -448,7 +451,7 @@ class WalletNode:
             self.server,
             self.root_path,
             self,
-            public_key,
+            observation_root,
         )
 
         if self.state_changed_callback is not None:
@@ -693,6 +696,12 @@ class WalletNode:
             self.log.exception("Non-fatal: Unable to read last used fingerprint.")
         return fingerprint
 
+    async def get_last_used_fingerprint_if_exists(self) -> Optional[int]:
+        fingerprint = self.get_last_used_fingerprint()
+        if fingerprint is not None and await self.get_key_for_fingerprint(fingerprint) is None:
+            fingerprint = None
+        return fingerprint
+
     def get_last_used_fingerprint_path(self) -> Path:
         db_path: Path = path_from_root(self.root_path, self.config["database_path"])
         fingerprint_path = db_path.parent / "last_used_fingerprint"
@@ -716,7 +725,7 @@ class WalletNode:
             self.wallet_peers = WalletPeers(
                 self.server,
                 self.config["target_peer_count"],
-                self.root_path / Path(self.config["wallet_peers_file_path"]),
+                self.root_path / Path(self.config.get("wallet_peers_file_path", "wallet/db/wallet_peers.dat")),
                 self.config["introducer_peer"],
                 self.config.get("dns_servers", ["dns-introducer.chia.net"]),
                 self.config["peer_connect_interval"],
@@ -1682,6 +1691,10 @@ class WalletNode:
         if not self.is_trusted(peer):
             valid_list = []
             for coin in coin_state.coin_states:
+                if coin.coin.name() not in coin_names:
+                    await peer.close(9999)
+                    self.log.warning(f"Peer {peer.peer_node_id} sent us an unrequested coin state. Banning.")
+                    raise PeerRequestException(f"Peer sent us unrequested coin state {coin}")
                 valid = await self.validate_received_state_from_peer(
                     coin, peer, self.get_cache_for_peer(peer), fork_height
                 )

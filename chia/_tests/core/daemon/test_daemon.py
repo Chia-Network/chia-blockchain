@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 import aiohttp
 import pkg_resources
 import pytest
+from aiohttp import WSMessage
 from aiohttp.web_ws import WebSocketResponse
 from chia_rs import G1Element
 from pytest_mock import MockerFixture
@@ -31,7 +32,7 @@ from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_full_node
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
-from chia.util.keychain import Keychain, KeyData, supports_os_passphrase_storage
+from chia.util.keychain import Keychain, KeyData, KeyTypes, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 from chia.util.ws_message import create_payload, create_payload_dict
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
@@ -236,6 +237,7 @@ plotter_request_ref = {
 def add_private_key_response_data(fingerprint: int) -> Dict[str, object]:
     return {
         "success": True,
+        "key_type": KeyTypes.G1_ELEMENT.value,
         "fingerprint": fingerprint,
     }
 
@@ -597,6 +599,7 @@ async def test_get_network_info(daemon_client_with_config_and_keys: DaemonProxy)
         "success": True,
         "network_name": "testnet0",
         "network_prefix": "txch",
+        "genesis_challenge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     }
 
 
@@ -2064,17 +2067,32 @@ async def test_plotter_stop_plotting(
     payload = dict_to_json_str(payload_rpc)
     await ws.send_str(payload)
 
-    # 3) removing
-    response = await ws.receive()
-    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "REMOVING")
+    responses: List[WSMessage] = []
 
-    # 4) Finished
-    response = await ws.receive()
-    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "FINISHED")
+    # 3, 4, and 5)
+    #   Removing
+    #   Finished
+    #   Finally, get the "ack" for the stop_plotting payload
+    for _ in range(3):
+        responses.append(await ws.receive())
 
-    # 5) Finally, get the "ack" for the stop_plotting payload
-    response = await ws.receive()
-    assert_response(response, {"success": True}, stop_plotting_request_id)
+    state_changes: List[WSMessage] = []
+    finished: List[WSMessage] = []
+
+    for response in responses:
+        message = json.loads(response.data.strip())
+        command = message.get("command")
+        if command == "state_changed":
+            state_changes.append(response)
+        else:
+            finished.append(response)
+
+    assert len(state_changes) == 2
+    assert len(finished) == 1
+
+    assert_plot_queue_response(state_changes[0], "state_changed", "state_changed", plot_id, "REMOVING")
+    assert_plot_queue_response(state_changes[1], "state_changed", "state_changed", plot_id, "FINISHED")
+    assert_response(finished[0], {"success": True}, stop_plotting_request_id)
 
 
 @datacases(

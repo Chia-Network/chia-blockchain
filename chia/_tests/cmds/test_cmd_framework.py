@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import textwrap
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -63,9 +64,17 @@ def test_cmd_bases() -> None:
         ["--help"],
         catch_exceptions=False,
     )
-    assert result.output == (
-        "Usage: cmd [OPTIONS] COMMAND [ARGS]...\n\nOptions:\n  --help  Show this "
-        "message and exit.\n\nCommands:\n  temp_cmd        blah\n  temp_cmd_async  blah\n"
+    assert result.output == textwrap.dedent(
+        """\
+        Usage: cmd [OPTIONS] COMMAND [ARGS]...
+
+        Options:
+          --help  Show this message and exit.
+
+        Commands:
+          temp_cmd        blah
+          temp_cmd_async  blah
+        """
     )
     result = runner.invoke(
         cmd,
@@ -207,14 +216,6 @@ def test_typing() -> None:
     check_click_parsing(TempCMDOptional(optional=1), "--optional", "1")
 
     # Test optional failure
-    with pytest.raises(TypeError):
-
-        @chia_command(cmd, "temp_cmd_optional_bad", "blah")
-        class TempCMDOptionalBad:
-            optional: Optional[int] = option("--optional")
-
-            def run(self) -> None: ...
-
     with pytest.raises(TypeError):
 
         @chia_command(cmd, "temp_cmd_optional_bad", "blah")
@@ -392,3 +393,8 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
 
     async with expected_command.rpc_info.wallet_rpc(consume_errors=False) as client_info:
         assert await client_info.client.get_logged_in_fingerprint() == fingerprint
+
+    # We don't care about setting the correct arg type here
+    test_present_client_info = TempCMD(rpc_info=NeedsWalletRPC(client_info="hello world"))  # type: ignore[arg-type]
+    async with test_present_client_info.rpc_info.wallet_rpc(consume_errors=False) as client_info:
+        assert client_info == "hello world"  # type: ignore[comparison-overlap]

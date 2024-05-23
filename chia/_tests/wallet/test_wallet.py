@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Tuple
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
-from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.server.server import ChiaServer
@@ -1280,7 +1279,6 @@ class TestWalletSimulator:
             }
         )
 
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
     async def test_wallet_send_to_three_peers(
@@ -1894,7 +1892,6 @@ class TestWalletSimulator:
     async def test_address_sliding_window(self, wallet_environments: WalletTestFramework) -> None:
         full_node_api = wallet_environments.full_node
         env = wallet_environments.environments[0]
-        wsm = env.wallet_state_manager
         wallet = env.xch_wallet
 
         peak = full_node_api.full_node.blockchain.get_peak_height()
@@ -1902,7 +1899,7 @@ class TestWalletSimulator:
 
         puzzle_hashes = []
         for i in range(211):
-            pubkey = master_sk_to_wallet_sk(wsm.get_master_private_key(), uint32(i)).get_g1()
+            pubkey = master_sk_to_wallet_sk(wallet.wallet_state_manager.get_master_private_key(), uint32(i)).get_g1()
             puzzle: Program = wallet.puzzle_for_pk(pubkey)
             puzzle_hash: bytes32 = puzzle.get_tree_hash()
             puzzle_hashes.append(puzzle_hash)
