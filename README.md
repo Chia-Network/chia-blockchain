@@ -6,16 +6,17 @@
 | -------- | ---------- | ------- |
 [![Latest Release][badge-release]][link-latest] <br /> [![Latest RC][badge-rc]][link-release] <br /> [![Latest Beta][badge-beta]][link-release] | [![Coverage][badge-coverage]][link-coverage] <br /> [![Downloads][badge-downloads]][link-downloads] <br /> [![Commits][badge-commits]][link-commits] <br /> [![Contributers][badge-contributers]][link-contributers] | [![Discord][badge-discord]][link-discord] <br /> [![YouTube][badge-youtube]][link-youtube] <br /> [![Reddit][badge-reddit]][link-reddit] <br /> [![Twitter][badge-twitter]][link-twitter]
 
-Chia is a modern cryptocurrency built from scratch, designed to be efficient, decentralized, and secure. Here are some of the features and benefits:
-* [Proof of space and time][link-consensus] based consensus which allows anyone to farm with commodity hardware
-* Very easy to use full node and farmer GUI and cli (thousands of nodes active on mainnet)
-* [Chia seeder][link-seeder], which maintains a list of reliable nodes within the Chia network via a built-in DNS server.
-* Simplified UTXO based transaction model, with small on-chain state
-* Lisp-style Turing-complete functional [programming language][link-chialisp] for money related use cases
-* BLS keys and aggregate signatures (only one signature per block)
-* [Pooling protocol][link-pool] that allows farmers to have control of making blocks
-* Support for light clients with fast, objective syncing
-* A growing community of farmers and developers around the world
+Chia represents a contemporary digital currency developed from the ground up, aiming for efficiency, decentralization, and robust security. Here's an overview of its key attributes and advantages:
+
+- Utilizes a Proof of Space and Time consensus mechanism, enabling farming with standard hardware.
+- Boasts user-friendly full node and farmer interfaces, with thousands of nodes active on the mainnet.
+- Incorporates the Chia seeder, which maintains a roster of dependable nodes via an integrated DNS server.
+- Features a streamlined UTXO-based transaction model, minimizing on-chain state.
+- Employs a Lisp-style Turing-complete functional programming language tailored for financial applications.
+- Implements BLS keys and aggregate signatures, ensuring one signature per block.
+- Introduces a pooling protocol, granting farmers control over block production.
+- Offers support for light clients, facilitating swift and objective syncing.
+- Flourishes with a global community of farmers and developers continually expanding its ecosystem.
 
 Please check out the [Chia website][link-chia], the [Intro to Chia][link-intro], and [FAQ][link-faq] for information on this project.
 
