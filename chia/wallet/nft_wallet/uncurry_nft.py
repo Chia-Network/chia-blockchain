@@ -155,15 +155,17 @@ class UncurriedNFT(Streamable):
             if mod == NFT_OWNERSHIP_LAYER:
                 supports_did = True
                 log.debug("Parsing ownership layer")
-                _, current_did, transfer_program, p2_puzzle = ol_args.as_iter()
-                transfer_program_mod, transfer_program_args = transfer_program.uncurry()
-                _, royalty_address_p, royalty_percentage = transfer_program_args.as_iter()
-                royalty_percentage = uint16(royalty_percentage.as_int())
-                royalty_address = royalty_address_p.atom
-                current_did = current_did.atom
-                if current_did == b"":
+                _, current_did_p, transfer_program, p2_puzzle = ol_args.as_iter()
+                _, transfer_program_args = transfer_program.uncurry()
+                _, royalty_address_p, royalty_percentage_p = transfer_program_args.as_iter()
+                royalty_percentage = uint16(royalty_percentage_p.as_int())
+                royalty_address = bytes32(royalty_address_p.as_atom())
+                current_did_atom = current_did_p.as_atom()
+                if current_did_atom == b"":
                     # For unassigned NFT, set owner DID to None
                     current_did = None
+                else:
+                    current_did = bytes32(current_did_atom)
             else:
                 log.debug("Creating a standard NFT puzzle")
                 p2_puzzle = inner_puzzle
@@ -172,11 +174,11 @@ class UncurriedNFT(Streamable):
             return None
 
         return cls(
-            nft_mod_hash=bytes32(nft_mod_hash.atom),
+            nft_mod_hash=bytes32(nft_mod_hash.as_atom()),
             nft_state_layer=nft_state_layer,
             singleton_struct=singleton_struct,
             singleton_mod_hash=singleton_mod_hash,
-            singleton_launcher_id=singleton_launcher_id.atom,
+            singleton_launcher_id=bytes32(singleton_launcher_id.as_atom()),
             launcher_puzhash=launcher_puzhash,
             metadata=metadata,
             data_uris=data_uris,

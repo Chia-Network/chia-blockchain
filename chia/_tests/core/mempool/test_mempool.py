@@ -81,7 +81,7 @@ def wallet_a(bt):
 
 
 def generate_test_spend_bundle(
-    wallet_a: WalletTool,
+    wallet: WalletTool,
     coin: Coin,
     condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
     fee: uint64 = uint64(0),
@@ -90,7 +90,7 @@ def generate_test_spend_bundle(
 ) -> SpendBundle:
     if condition_dic is None:
         condition_dic = {}
-    transaction = wallet_a.generate_signed_transaction(amount, new_puzzle_hash, coin, condition_dic, fee)
+    transaction = wallet.generate_signed_transaction(amount, new_puzzle_hash, coin, condition_dic, fee)
     assert transaction is not None
     return transaction
 
@@ -209,7 +209,7 @@ class TestPendingTxCache:
 
         txs = c.drain(161)
         assert len(txs) == 2
-        for name, tx in txs.items():
+        for tx in txs.values():
             assert tx.assert_height == 50
 
     def test_item_limit(self):
@@ -365,6 +365,18 @@ async def next_block(full_node_1, wallet_a, bt) -> Coin:
 
 co = ConditionOpcode
 mis = MempoolInclusionStatus
+
+
+async def send_sb(node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
+    tx = wallet_protocol.SendTransaction(sb)
+    return await node.send_transaction(tx, test=True)
+
+
+async def gen_and_send_sb(node: FullNodeAPI, wallet: WalletTool, coin: Coin, fee: uint64 = uint64(0)) -> SpendBundle:
+    sb = generate_test_spend_bundle(wallet=wallet, coin=coin, fee=fee)
+    assert sb is not None
+    await send_sb(node, sb)
+    return sb
 
 
 class TestMempoolManager:
@@ -548,17 +560,6 @@ class TestMempoolManager:
         assert sb2 is None
         assert status == MempoolInclusionStatus.PENDING
 
-    async def send_sb(self, node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
-        tx = wallet_protocol.SendTransaction(sb)
-        return await node.send_transaction(tx, test=True)
-
-    async def gen_and_send_sb(self, node, peer, *args, **kwargs):
-        sb = generate_test_spend_bundle(*args, **kwargs)
-        assert sb is not None
-
-        await self.send_sb(node, sb)
-        return sb
-
     def assert_sb_in_pool(self, node, sb):
         assert sb == node.full_node.mempool_manager.get_spendbundle(sb.name())
 
@@ -579,7 +580,7 @@ class TestMempoolManager:
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+        await connect_and_get_peer(server_1, server_2, self_hostname)
 
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
         for block in blocks:
@@ -591,15 +592,15 @@ class TestMempoolManager:
         coins = iter(blocks[-2].get_included_reward_coins())
         coin3, coin4 = next(coins), next(coins)
 
-        sb1_1 = await self.gen_and_send_sb(full_node_1, peer, wallet_a, coin1)
-        sb1_2 = await self.gen_and_send_sb(full_node_1, peer, wallet_a, coin1, fee=uint64(1))
+        sb1_1 = await gen_and_send_sb(full_node_1, wallet_a, coin1)
+        sb1_2 = await gen_and_send_sb(full_node_1, wallet_a, coin1, fee=uint64(1))
 
         # Fee increase is insufficient, the old spendbundle must stay
         self.assert_sb_in_pool(full_node_1, sb1_1)
         self.assert_sb_not_in_pool(full_node_1, sb1_2)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
-        sb1_3 = await self.gen_and_send_sb(full_node_1, peer, wallet_a, coin1, fee=MEMPOOL_MIN_FEE_INCREASE)
+        sb1_3 = await gen_and_send_sb(full_node_1, wallet_a, coin1, fee=MEMPOOL_MIN_FEE_INCREASE)
 
         # Fee increase is sufficiently high, sb1_1 gets replaced with sb1_3
         self.assert_sb_not_in_pool(full_node_1, sb1_1)
@@ -608,7 +609,7 @@ class TestMempoolManager:
 
         sb2 = generate_test_spend_bundle(wallet_a, coin2, fee=MEMPOOL_MIN_FEE_INCREASE)
         sb12 = SpendBundle.aggregate((sb2, sb1_3))
-        await self.send_sb(full_node_1, sb12)
+        await send_sb(full_node_1, sb12)
 
         # Aggregated spendbundle sb12 replaces sb1_3 since it spends a superset
         # of coins spent in sb1_3
@@ -618,7 +619,7 @@ class TestMempoolManager:
 
         sb3 = generate_test_spend_bundle(wallet_a, coin3, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
         sb23 = SpendBundle.aggregate((sb2, sb3))
-        await self.send_sb(full_node_1, sb23)
+        await send_sb(full_node_1, sb23)
 
         # sb23 must not replace existing sb12 as the former does not spend all
         # coins that are spent in the latter (specifically, coin1)
@@ -626,21 +627,21 @@ class TestMempoolManager:
         self.assert_sb_not_in_pool(full_node_1, sb23)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
-        await self.send_sb(full_node_1, sb3)
+        await send_sb(full_node_1, sb3)
         # Adding non-conflicting sb3 should succeed
         self.assert_sb_in_pool(full_node_1, sb3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_1 = generate_test_spend_bundle(wallet_a, coin4, fee=MEMPOOL_MIN_FEE_INCREASE)
         sb1234_1 = SpendBundle.aggregate((sb12, sb3, sb4_1))
-        await self.send_sb(full_node_1, sb1234_1)
+        await send_sb(full_node_1, sb1234_1)
         # sb1234_1 should not be in pool as it decreases total fees per cost
         self.assert_sb_not_in_pool(full_node_1, sb1234_1)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_2 = generate_test_spend_bundle(wallet_a, coin4, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
         sb1234_2 = SpendBundle.aggregate((sb12, sb3, sb4_2))
-        await self.send_sb(full_node_1, sb1234_2)
+        await send_sb(full_node_1, sb1234_2)
         # sb1234_2 has a higher fee per cost than its conflicts and should get
         # into mempool
         self.assert_sb_in_pool(full_node_1, sb1234_2)
@@ -673,7 +674,7 @@ class TestMempoolManager:
         sb: SpendBundle = generate_test_spend_bundle(wallet_a, coin1)
         assert sb.aggregated_signature != G2Element.generator()
         sb = dataclasses.replace(sb, aggregated_signature=G2Element.generator())
-        res: Optional[Message] = await self.send_sb(full_node_1, sb)
+        res: Optional[Message] = await send_sb(full_node_1, sb)
         assert res is not None
         ack: TransactionAck = TransactionAck.from_bytes(res.data)
         assert ack.status == MempoolInclusionStatus.FAILED.value
@@ -992,7 +993,6 @@ class TestMempoolManager:
     @pytest.mark.anyio
     async def test_assert_height_pending(self, one_node_one_block, wallet_a):
         full_node_1, server_1, bt = one_node_one_block
-        print(full_node_1.full_node.blockchain.get_peak())
         current_height = full_node_1.full_node.blockchain.get_peak().height
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(current_height + 4)])
@@ -2370,6 +2370,28 @@ class TestGeneratorConditions:
 
         assert npc_result.error == expect_error
 
+    @pytest.mark.parametrize("mempool", [True, False])
+    @pytest.mark.parametrize(
+        "condition, expect_error",
+        [
+            ('(66 0 "foo") (67 0 "bar")', Err.MESSAGE_NOT_SENT_OR_RECEIVED.value),
+            ('(66 0 "foo") (67 0 "foo")', None),
+        ],
+    )
+    def test_message_condition(
+        self, mempool: bool, condition: str, expect_error: Optional[int], softfork_height: uint32
+    ):
+        npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
+        print(npc_result)
+
+        # the message conditions are only activated with soft fork 4, so
+        # before then there are no errors.
+        # In mempool mode, the message conditions activated immediately.
+        if softfork_height < test_constants.SOFT_FORK4_HEIGHT and not mempool:
+            expect_error = None
+
+        assert npc_result.error == expect_error
+
 
 # the tests below are malicious generator programs
 
@@ -2669,11 +2691,6 @@ class TestMaliciousGenerators:
         assert spend_bundle is not None
         res = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
         assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
-
-
-@pytest.fixture(name="softfork", scope="function", params=[False, True])
-def softfork_fixture(request):
-    return request.param
 
 
 coins = make_test_coins()

@@ -59,6 +59,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     uncurry_proposal,
     uncurry_treasury,
 )
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import (
     get_inner_puzzle_from_singleton,
@@ -72,9 +73,9 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import MainWalletProtocol
 
 
 class DAOWallet:
@@ -110,13 +111,13 @@ class DAOWallet:
     wallet_info: WalletInfo
     dao_info: DAOInfo
     dao_rules: DAORules
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     wallet_id: uint32
 
     @staticmethod
     async def create_new_dao_and_wallet(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         amount_of_cats: uint64,
         dao_rules: DAORules,
         tx_config: TXConfig,
@@ -146,7 +147,7 @@ class DAOWallet:
 
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
-        std_wallet_id = self.standard_wallet.wallet_id
+        std_wallet_id = self.standard_wallet.id()
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount_of_cats > bal:
             raise ValueError(f"Your balance of {bal} mojos is not enough to create {amount_of_cats} CATs")
@@ -170,7 +171,7 @@ class DAOWallet:
             name, WalletType.DAO.value, info_as_string
         )
         self.wallet_id = self.wallet_info.id
-        std_wallet_id = self.standard_wallet.wallet_id
+        std_wallet_id = self.standard_wallet.id()
 
         try:
             txs = await self.generate_new_dao(
@@ -203,7 +204,7 @@ class DAOWallet:
     @staticmethod
     async def create_new_dao_wallet_for_existing_dao(
         wallet_state_manager: Any,
-        main_wallet: Wallet,
+        main_wallet: MainWalletProtocol,
         treasury_id: bytes32,
         filter_amount: uint64 = uint64(1),
         name: Optional[str] = None,
@@ -269,7 +270,7 @@ class DAOWallet:
     @staticmethod
     async def create(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
     ) -> DAOWallet:
@@ -345,7 +346,7 @@ class DAOWallet:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
-        There is no need for max/min coin amount or excluded amount becuase the dao treasury should
+        There is no need for max/min coin amount or excluded amount because the dao treasury should
         always be a single coin with amount 1
         """
         spendable_amount: uint128 = await self.get_spendable_balance()
@@ -846,7 +847,7 @@ class DAOWallet:
         vote_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         coins = await self.standard_wallet.select_coins(
             uint64(fee + dao_rules.proposal_minimum_amount),
@@ -953,7 +954,7 @@ class DAOWallet:
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
-        return record
+        return [record]
 
     async def generate_proposal_eve_spend(
         self,
@@ -1028,7 +1029,7 @@ class DAOWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
         proposal_info = None
         for pi in self.dao_info.proposals_list:
@@ -1136,7 +1137,7 @@ class DAOWallet:
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
-        return record
+        return [record]
 
     async def create_proposal_close_spend(
         self,
@@ -1289,7 +1290,9 @@ class DAOWallet:
                             assert tail_reconstruction.get_tree_hash() == cat_tail_hash
                             assert isinstance(self.dao_info.current_treasury_coin, Coin)
                             cat_launcher_coin = Coin(
-                                self.dao_info.current_treasury_coin.name(), cat_launcher.get_tree_hash(), mint_amount
+                                self.dao_info.current_treasury_coin.name(),
+                                cat_launcher.get_tree_hash(),
+                                uint64(mint_amount),
                             )
                             full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puzzle)
 
@@ -1302,7 +1305,7 @@ class DAOWallet:
                                 ]
                             )
                             coin_spends.append(make_spend(cat_launcher_coin, cat_launcher, solution))
-                            eve_coin = Coin(cat_launcher_coin.name(), full_puz.get_tree_hash(), mint_amount)
+                            eve_coin = Coin(cat_launcher_coin.name(), full_puz.get_tree_hash(), uint64(mint_amount))
                             tail_solution = Program.to([cat_launcher_coin.parent_coin_info, cat_launcher_coin.amount])
                             solution = Program.to([mint_amount, tail_reconstruction, tail_solution])
                             new_spendable_cat = SpendableCAT(
@@ -1533,7 +1536,7 @@ class DAOWallet:
     ) -> List[TransactionRecord]:
         if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
-            wallet: Wallet = funding_wallet  # type: ignore[assignment]
+            wallet: MainWalletProtocol = funding_wallet  # type: ignore[assignment]
             return await wallet.generate_signed_transaction(
                 amount,
                 p2_singleton_puzhash,
@@ -2116,3 +2119,9 @@ class DAOWallet:
             raise ValueError(f"Unsupported spend in DAO Wallet: {self.id()}")
 
         return True
+
+    def handle_own_derivation(self) -> bool:  # pragma: no cover
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()

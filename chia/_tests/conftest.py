@@ -61,6 +61,7 @@ from chia.simulator.setup_services import (
     setup_seeder,
     setup_timelord,
 )
+from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
@@ -72,14 +73,13 @@ from chia.types.aliases import (
     FarmerService,
     FullNodeService,
     HarvesterService,
-    SimulatorFullNodeService,
     TimelordService,
     WalletService,
 )
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
@@ -190,11 +190,12 @@ def get_keychain():
 class ConsensusMode(Enum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
+    SOFT_FORK_4 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_4],
 )
 def consensus_mode(request):
     return request.param
@@ -204,9 +205,12 @@ def consensus_mode(request):
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
+    if consensus_mode == ConsensusMode.SOFT_FORK_4:
+        return test_constants.replace(
+            SOFT_FORK4_HEIGHT=uint32(2),
+        )
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
-        return dataclasses.replace(
-            test_constants,
+        return test_constants.replace(
             HARD_FORK_HEIGHT=uint32(2),
             HARD_FORK_FIX_HEIGHT=uint32(2),
             PLOT_FILTER_128_HEIGHT=uint32(10),
@@ -260,7 +264,7 @@ def db_version(request) -> int:
     return request.param
 
 
-SOFTFORK_HEIGHTS = [1000000, 5496000, 5496100]
+SOFTFORK_HEIGHTS = [1000000, 5496000, 5496100, 5716000]
 
 
 @pytest.fixture(scope="function", params=SOFTFORK_HEIGHTS)
@@ -569,7 +573,9 @@ async def two_nodes(db_version: int, self_hostname, blockchain_constants: Consen
 
 
 @pytest.fixture(scope="function")
-async def setup_two_nodes_fixture(db_version: int, blockchain_constants: ConsensusConstants):
+async def setup_two_nodes_fixture(
+    db_version: int, blockchain_constants: ConsensusConstants
+) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
     async with setup_simulators_and_wallets(2, 0, blockchain_constants, db_version=db_version) as new:
         yield make_old_setup_simulators_and_wallets(new=new)
 
@@ -592,7 +598,7 @@ async def wallet_nodes(blockchain_constants, consensus_mode):
     async with setup_simulators_and_wallets(
         2,
         1,
-        dataclasses.replace(blockchain_constants, MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
+        blockchain_constants.replace(MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
     ) as new:
         (nodes, wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
@@ -1179,9 +1185,8 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
         BlockTools,
     ]
 ]:
-    zero_bit_plot_filter_consts = dataclasses.replace(
-        test_constants_modified,
-        NUMBER_ZERO_BITS_PLOT_FILTER=0,
+    zero_bit_plot_filter_consts = test_constants_modified.replace(
+        NUMBER_ZERO_BITS_PLOT_FILTER=uint8(0),
         NUM_SPS_SUB_SLOT=uint32(8),
     )
 

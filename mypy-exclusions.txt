@@ -18,7 +18,6 @@ chia.ssl.create_ssl
 chia.timelord.timelord_api
 chia.timelord.timelord_launcher
 chia.types.blockchain_format.program
-chia.wallet.chialisp
 chia.wallet.did_wallet.did_wallet
 chia.wallet.key_val_store
 chia.wallet.payment
@@ -98,7 +97,6 @@ chia._tests.util.time_out_assert
 chia._tests.wallet.cat_wallet.test_trades
 chia._tests.wallet.did_wallet.test_did
 chia._tests.wallet.rpc.test_wallet_rpc
-chia._tests.wallet.test_chialisp
 chia._tests.wallet.test_taproot
 chia._tests.wallet.test_wallet_interested_store
 chia._tests.wallet.test_wallet_key_val_store

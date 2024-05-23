@@ -4,7 +4,7 @@ import pathlib
 import sys
 from typing import Any, Dict, Optional
 
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI
@@ -37,7 +37,7 @@ def create_farmer_service(
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
     update_testnet_overrides(network_id, overrides)
-    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
     farmer = Farmer(
         root_path, service_config, config_pool, consensus_constants=updated_constants, local_keychain=keychain

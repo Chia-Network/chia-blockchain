@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 
+# TODO: publish wheels for these
 excepted_packages = {
     "dnslib",  # pure python
     "chialisp_loader",

@@ -28,8 +28,8 @@ from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_protocol import MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -42,7 +42,7 @@ default = _Default()
 timeout_per_block = 5
 
 
-async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet, timeout: Optional[float] = 5):
+async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: MainWalletProtocol, timeout: Optional[float] = 5):
     """Wait until all of the specified coins are simultaneously reported as spendable
     by the wallet.
 
@@ -332,7 +332,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def farm_blocks_to_wallet(
         self,
         count: int,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         timeout: Union[None, _Default, float] = default,
         _wait_for_synced: bool = True,
     ) -> int:
@@ -404,7 +404,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def farm_rewards_to_wallet(
         self,
         amount: int,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         timeout: Union[None, _Default, float] = default,
     ) -> int:
         """Farm at least the requested amount of mojos to the passed wallet. Extra
@@ -600,7 +600,7 @@ class FullNodeSimulator(FullNodeAPI):
                 if len(coin_set) == 0:
                     return
 
-    async def process_all_wallet_transactions(self, wallet: Wallet, timeout: Optional[float] = 5) -> None:
+    async def process_all_wallet_transactions(self, wallet: MainWalletProtocol, timeout: Optional[float] = 5) -> None:
         # TODO: Maybe something could be done around waiting for the tx to enter the
         #       mempool.  Maybe not, might be too many races or such.
         wallet_state_manager: Optional[WalletStateManager] = wallet.wallet_state_manager
@@ -643,7 +643,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def create_coins_with_amounts(
         self,
         amounts: List[uint64],
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         per_transaction_record_group: int = 50,
         timeout: Union[None, float] = 15,
     ) -> Set[Coin]:

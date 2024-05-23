@@ -55,10 +55,9 @@ from chia.wallet.vc_wallet.cr_cat_drivers import (
 )
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -69,7 +68,7 @@ class CRCATWallet(CATWallet):
     log: logging.Logger
     wallet_info: WalletInfo
     info: CRCATInfo
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
 
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash_hex: str) -> str:
@@ -82,7 +81,7 @@ class CRCATWallet(CATWallet):
     @staticmethod
     async def create_new_cat_wallet(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         cat_tail_info: Dict[str, Any],
         amount: uint64,
         tx_config: TXConfig,
@@ -94,7 +93,7 @@ class CRCATWallet(CATWallet):
     @staticmethod
     async def get_or_create_wallet_for_cat(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         limitations_program_hash_hex: str,
         name: Optional[str] = None,
         authorized_providers: Optional[List[bytes32]] = None,
@@ -130,7 +129,7 @@ class CRCATWallet(CATWallet):
     async def create_from_puzzle_info(
         cls,
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
         # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
@@ -151,7 +150,7 @@ class CRCATWallet(CATWallet):
     @staticmethod
     async def create(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
     ) -> CRCATWallet:
         self = CRCATWallet()

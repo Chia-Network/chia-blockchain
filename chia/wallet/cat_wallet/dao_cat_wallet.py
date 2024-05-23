@@ -30,6 +30,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_innerpuz_from_lockup_puzzle,
     get_lockup_puzzle,
 )
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
@@ -38,9 +39,9 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import MainWalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -60,7 +61,7 @@ class DAOCATWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     dao_cat_info: DAOCATInfo
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     cost_of_single_tx: Optional[int]
     lineage_store: CATLineageStore
 
@@ -71,7 +72,7 @@ class DAOCATWallet:
     @staticmethod
     async def create(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
     ) -> DAOCATWallet:
         self = DAOCATWallet()
@@ -92,7 +93,7 @@ class DAOCATWallet:
     @staticmethod
     async def get_or_create_wallet_for_cat(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         limitations_program_hash_hex: str,
         name: Optional[str] = None,
     ) -> DAOCATWallet:
@@ -396,7 +397,7 @@ class DAOCATWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
@@ -493,7 +494,7 @@ class DAOCATWallet:
             new_locked_coins,
         )
         await self.save_info(dao_cat_info)
-        return record
+        return [record]
 
     async def remove_active_proposal(
         self, proposal_id_list: List[bytes32], tx_config: TXConfig, fee: uint64 = uint64(0)
@@ -670,3 +671,9 @@ class DAOCATWallet:
 
     def get_name(self) -> str:
         return self.wallet_info.name
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()

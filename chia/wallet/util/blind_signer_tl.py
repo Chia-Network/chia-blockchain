@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import field
+from dataclasses import dataclass, field
 from typing import List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.util.streamable import Streamable
 from chia.wallet.signer_protocol import (
     KeyHints,
     PathHint,
@@ -15,13 +16,15 @@ from chia.wallet.signer_protocol import (
     TransactionInfo,
     UnsignedTransaction,
 )
-from chia.wallet.util.clvm_streamable import ClvmStreamable, TranslationLayer, TranslationLayerMapping
+from chia.wallet.util.clvm_streamable import TranslationLayer, TranslationLayerMapping, clvm_streamable
 
 # Pylint doesn't understand that these classes are in fact dataclasses
 # pylint: disable=invalid-field-call
 
 
-class BSTLSigningTarget(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class BSTLSigningTarget(Streamable):
     fingerprint: bytes = field(metadata=dict(key="f"))
     message: bytes = field(metadata=dict(key="m"))
     hook: bytes32 = field(metadata=dict(key="h"))
@@ -35,7 +38,9 @@ class BSTLSigningTarget(ClvmStreamable):
         return SigningTarget(**_from.__dict__)
 
 
-class BSTLSumHint(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class BSTLSumHint(Streamable):
     fingerprints: List[bytes] = field(metadata=dict(key="f"))
     synthetic_offset: bytes = field(metadata=dict(key="o"))
     final_pubkey: bytes = field(metadata=dict(key="p"))
@@ -49,7 +54,9 @@ class BSTLSumHint(ClvmStreamable):
         return SumHint(**_from.__dict__)
 
 
-class BSTLPathHint(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class BSTLPathHint(Streamable):
     root_fingerprint: bytes = field(metadata=dict(key="f"))
     path: List[uint64] = field(metadata=dict(key="p"))
 
@@ -62,7 +69,9 @@ class BSTLPathHint(ClvmStreamable):
         return PathHint(**_from.__dict__)
 
 
-class BSTLSigningInstructions(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class BSTLSigningInstructions(Streamable):
     sum_hints: List[BSTLSumHint] = field(metadata=dict(key="s"))
     path_hints: List[BSTLPathHint] = field(metadata=dict(key="p"))
     targets: List[BSTLSigningTarget] = field(metadata=dict(key="t"))
@@ -86,7 +95,9 @@ class BSTLSigningInstructions(ClvmStreamable):
         )
 
 
-class BSTLUnsignedTransaction(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class BSTLUnsignedTransaction(Streamable):
     sum_hints: List[BSTLSumHint] = field(metadata=dict(key="s"))
     path_hints: List[BSTLPathHint] = field(metadata=dict(key="p"))
     targets: List[BSTLSigningTarget] = field(metadata=dict(key="t"))
@@ -116,7 +127,9 @@ class BSTLUnsignedTransaction(ClvmStreamable):
         )
 
 
-class BSTLSigningResponse(ClvmStreamable):
+@clvm_streamable
+@dataclass(frozen=True)
+class BSTLSigningResponse(Streamable):
     signature: bytes = field(metadata=dict(key="s"))
     hook: bytes32 = field(metadata=dict(key="h"))
 

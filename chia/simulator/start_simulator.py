@@ -13,7 +13,6 @@ from chia.server.start_service import Service, async_run
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_full_node_rpc_api import SimulatorFullNodeRpcApi
-from chia.types.aliases import SimulatorFullNodeService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.chia_logging import initialize_logging
@@ -21,6 +20,8 @@ from chia.util.config import load_config, load_config_cli, override_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 from chia.util.misc import SignalHandlers
+
+SimulatorFullNodeService = Service[FullNode, FullNodeSimulator, SimulatorFullNodeRpcApi]
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")

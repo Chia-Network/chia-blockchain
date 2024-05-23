@@ -18,6 +18,7 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.vc_wallet.vc_store import VCRecord
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
@@ -158,7 +159,9 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
 
     @classmethod
     def from_json_dict(cls: Type[_T_OfferEndpointResponse], json_dict: Dict[str, Any]) -> _T_OfferEndpointResponse:
-        tx_endpoint: TransactionEndpointResponse = TransactionEndpointResponse.from_json_dict(json_dict)
+        tx_endpoint: TransactionEndpointResponse = json_deserialize_with_clvm_streamable(
+            json_dict, TransactionEndpointResponse
+        )
         offer: Offer = Offer.from_bech32(json_dict["offer"])
 
         return cls(

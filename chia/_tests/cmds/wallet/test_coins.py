@@ -135,6 +135,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
                     Coin(get_bytes32(3), get_bytes32(4), uint64(1234560000)),
                 ],
                 1000000000,
+                True,
             ),
             (
                 1,
@@ -152,6 +153,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
                     Coin(get_bytes32(5), get_bytes32(6), uint64(300000000000)),
                 ],
                 1000000000,
+                True,
             ),
         ],
     }
@@ -213,6 +215,7 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
                 DEFAULT_TX_CONFIG,
                 [Coin(get_bytes32(1), get_bytes32(2), uint64(100000000000))],
                 1000000000,
+                True,
             )
         ],
     }
