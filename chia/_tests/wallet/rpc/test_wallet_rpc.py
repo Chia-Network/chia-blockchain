@@ -83,6 +83,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.blind_signer_tl import BLIND_SIGNER_TRANSLATION
 from chia.wallet.util.clvm_streamable import byte_deserialize_clvm_streamable
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import AmountFilter, HashFilter, TransactionTypeFilter
@@ -341,13 +342,16 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
             "exclude_coins": [non_existent_coin.to_json_dict()],
             "reuse_puzhash": True,
             "CHIP-0029": True,
+            "translation": "CHIP-0028",
             "push": True,
         },
     )
     assert response["success"]
     tx = TransactionRecord.from_json_dict_convenience(response["transactions"][0])
     [
-        byte_deserialize_clvm_streamable(bytes.fromhex(utx), UnsignedTransaction)
+        byte_deserialize_clvm_streamable(
+            bytes.fromhex(utx), UnsignedTransaction, translation_layer=BLIND_SIGNER_TRANSLATION
+        )
         for utx in response["unsigned_transactions"]
     ]
     assert tx == dataclasses.replace(tx_no_push, created_at_time=tx.created_at_time)

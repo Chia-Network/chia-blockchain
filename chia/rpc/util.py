@@ -171,14 +171,36 @@ def tx_endpoint(
             ]
             unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(tx_records)
 
-            response["unsigned_transactions"] = unsigned_txs
+            if request.get("CHIP-0029", False):
+                response["unsigned_transactions"] = [
+                    json_serialize_with_clvm_streamable(
+                        tx,
+                        translation_layer=(
+                            ALL_TRANSLATION_LAYERS[request["translation"]] if "translation" in request else None
+                        ),
+                    )
+                    for tx in unsigned_txs
+                ]
+            else:
+                response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
 
             new_txs: List[TransactionRecord] = []
             if request.get("sign", self.service.config.get("auto_sign_txs", True)):
                 new_txs, signing_responses = await self.service.wallet_state_manager.sign_transactions(
                     tx_records, response.get("signing_responses", []), "signing_responses" in response
                 )
-                response["signing_responses"] = signing_responses
+                if request.get("CHIP-0029", False):
+                    response["signing_responses"] = [
+                        json_serialize_with_clvm_streamable(
+                            sr,
+                            translation_layer=(
+                                ALL_TRANSLATION_LAYERS[request["translation"]] if "translation" in request else None
+                            ),
+                        )
+                        for sr in signing_responses
+                    ]
+                else:
+                    response["signing_responses"] = [sr.to_json_dict() for sr in signing_responses]
             else:
                 new_txs = tx_records  # pragma: no cover
 
