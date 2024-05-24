@@ -66,7 +66,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     SOFT_FORK4_HEIGHT=uint32(5716000),
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
-    HARD_FORK_FIX_HEIGHT=uint32(5496000),
+    HARD_FORK_FIX_HEIGHT=uint32(0),
     # June 2027
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     # June 2030
@@ -80,14 +80,10 @@ def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None
     if network_id == "testnet10":
         # activate softforks immediately on testnet
         # these numbers are supposed to match initial-config.yaml
-        if "SOFT_FORK2_HEIGHT" not in overrides:
-            overrides["SOFT_FORK2_HEIGHT"] = 3000000
         if "SOFT_FORK4_HEIGHT" not in overrides:
             overrides["SOFT_FORK4_HEIGHT"] = 4465000
         if "HARD_FORK_HEIGHT" not in overrides:
             overrides["HARD_FORK_HEIGHT"] = 2997292
-        if "HARD_FORK_FIX_HEIGHT" not in overrides:
-            overrides["HARD_FORK_FIX_HEIGHT"] = 3426000
         if "PLOT_FILTER_128_HEIGHT" not in overrides:
             overrides["PLOT_FILTER_128_HEIGHT"] = 3061804
         if "PLOT_FILTER_64_HEIGHT" not in overrides:

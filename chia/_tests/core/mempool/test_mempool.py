@@ -2122,7 +2122,7 @@ class TestGeneratorConditions:
         # CREATE_COIN
         puzzle_hash = "abababababababababababababababab"
 
-        if softfork_height >= test_constants.HARD_FORK_FIX_HEIGHT:
+        if softfork_height >= test_constants.HARD_FORK_HEIGHT:
             generator_base_cost = 40
         else:
             generator_base_cost = 20470
@@ -2163,7 +2163,7 @@ class TestGeneratorConditions:
     def test_agg_sig_cost(self, condition, softfork_height):
         pubkey = "0x" + bytes(G1Element.generator()).hex()
 
-        if softfork_height >= test_constants.HARD_FORK_FIX_HEIGHT:
+        if softfork_height >= test_constants.HARD_FORK_HEIGHT:
             generator_base_cost = 40
         else:
             generator_base_cost = 20512

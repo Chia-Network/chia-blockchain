@@ -73,13 +73,10 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
-      SOFT_FORK2_HEIGHT: 3000000
       SOFT_FORK4_HEIGHT: 4465000
       # planned 2.0 release is July 26, height 2965036 on testnet
       # 1 week later
       HARD_FORK_HEIGHT: 2997292
-      # November 2023
-      HARD_FORK_FIX_HEIGHT: 3426000
       # another 2 weeks later
       PLOT_FILTER_128_HEIGHT: 3061804
       # 3 years later
@@ -100,7 +97,6 @@ network_overrides: &network_overrides
       SUB_SLOT_ITERS_STARTING: 67108864
       # Forks activated from the beginning on this network
       HARD_FORK_HEIGHT: 0
-      HARD_FORK_FIX_HEIGHT: 0
       SOFT_FORK4_HEIGHT: 641500
       PLOT_FILTER_128_HEIGHT: 6029568
       PLOT_FILTER_64_HEIGHT: 11075328
