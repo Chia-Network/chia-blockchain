@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
@@ -459,9 +460,11 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
             assert tx_record.to_puzzle_hash == cat_2_hash
             assert tx_record.spend_bundle is not None
             assert len(tx_record.spend_bundle.coin_spends) == 2
+            old_puzhash: Optional[str] = None
             for cs in tx_record.spend_bundle.coin_spends:
                 if cs.coin.amount == 100:
                     old_puzhash = cs.coin.puzzle_hash.hex()
+            assert old_puzhash is not None
             new_puzhash = [c.puzzle_hash.hex() for c in tx_record.additions]
             assert old_puzhash in new_puzhash
 

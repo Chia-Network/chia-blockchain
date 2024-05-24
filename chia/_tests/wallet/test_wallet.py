@@ -1695,6 +1695,7 @@ class TestWalletSimulator:
         for cs in tx.spend_bundle.coin_spends:
             if compute_additions(cs) == []:
                 stolen_cs = cs
+        # TODO: what about when nothing matches?  stolen_cs will be undefined
         # get a legit signature
         stolen_sb, _ = await wallet.wallet_state_manager.sign_bundle([stolen_cs])
         name = stolen_sb.name()
