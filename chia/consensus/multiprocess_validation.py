@@ -8,7 +8,7 @@ from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
 
-from chia_rs import AugSchemeMPL, G1Element
+from chia_rs import AugSchemeMPL
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -126,10 +126,8 @@ def batch_pre_validate_blocks(
                     if npc_result is not None and block.transactions_info is not None:
                         assert npc_result.conds
                         pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
-                        # Using AugSchemeMPL.aggregate_verify, so it's safe to use from_bytes_unchecked
-                        pks_objects: List[G1Element] = [G1Element.from_bytes_unchecked(pk) for pk in pairs_pks]
                         if not AugSchemeMPL.aggregate_verify(
-                            pks_objects, pairs_msgs, block.transactions_info.aggregated_signature
+                            pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature
                         ):
                             error_int = uint16(Err.BAD_AGGREGATE_SIGNATURE.value)
                         else:

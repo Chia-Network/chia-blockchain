@@ -1448,7 +1448,7 @@ class WalletStateManager:
         """
         wallet_identifier = None
         # DID ID determines which NFT wallet should process the NFT
-        new_did_id = None
+        new_did_id: Optional[bytes32] = None
         old_did_id = None
         # P2 puzzle hash determines if we should ignore the NFT
         uncurried_nft: UncurriedNFT = nft_data.uncurried_nft
@@ -1458,12 +1458,14 @@ class WalletStateManager:
             nft_data.parent_coin_spend.solution,
         )
         if uncurried_nft.supports_did:
-            new_did_id = get_new_owner_did(uncurried_nft, nft_data.parent_coin_spend.solution.to_program())
+            _new_did_id = get_new_owner_did(uncurried_nft, nft_data.parent_coin_spend.solution.to_program())
             old_did_id = uncurried_nft.owner_did
-            if new_did_id is None:
+            if _new_did_id is None:
                 new_did_id = old_did_id
-            if new_did_id == b"":
+            elif _new_did_id == b"":
                 new_did_id = None
+            else:
+                new_did_id = _new_did_id
         self.log.debug(
             "Handling NFT: %s， old DID:%s, new DID:%s, old P2:%s, new P2:%s",
             nft_data.parent_coin_spend,
@@ -2612,11 +2614,12 @@ class WalletStateManager:
                 self.constants.MAX_BLOCK_COST_CLVM,
             )
             # Create signature
-            for pk_bytes, msg in pkm_pairs_for_conditions_dict(
+            for pk, msg in pkm_pairs_for_conditions_dict(
                 conditions_dict, _coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
             ):
+                pk_bytes = bytes(pk)
                 pks.append(pk_bytes)
-                fingerprint: bytes = G1Element.from_bytes(pk_bytes).get_fingerprint().to_bytes(4, "big")
+                fingerprint: bytes = pk.get_fingerprint().to_bytes(4, "big")
                 signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
 
         return SigningInstructions(

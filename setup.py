@@ -12,9 +12,9 @@ dependencies = [
     "chiavdf==1.1.4",  # timelord and vdf verification
     "chiabip158==1.5.1",  # bip158-style wallet filters
     "chiapos==2.0.4",  # proof of space
-    "clvm==0.9.9",
+    "clvm==0.9.10",
     "clvm_tools==0.4.9",  # Currying, Program.to, other conveniences
-    "chia_rs==0.7.0",
+    "chia_rs==0.8.0",
     "clvm-tools-rs==0.1.40",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.9.4",  # HTTP server for full node rpc
     "aiosqlite==0.20.0",  # asyncio wrapper for sqlite, to store blocks
@@ -35,7 +35,7 @@ dependencies = [
     "dnslib==0.9.24",  # dns lib
     "typing-extensions==4.11.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
-    "packaging==23.2",
+    "packaging==24.0",
     "psutil==5.9.4",
     "hsms==0.3.1",
 ]
@@ -62,9 +62,10 @@ dev_dependencies = [
     "flake8==7.0.0",
     "mypy==1.10.0",
     "black==24.4.2",
-    "lxml==5.1.0",
+    "lxml==5.2.2",
     "aiohttp_cors==0.7.0",  # For blackd
     "pyinstaller==6.6.0",
+    "setuptools<70",  # TODO: remove - https://github.com/pypa/setuptools/issues/4374
     "types-aiofiles==23.2.0.20240311",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.20240311",

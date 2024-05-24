@@ -7,8 +7,8 @@ from typing import Any, List
 
 import pytest
 from chia_rs import ALLOW_BACKREFS
-from clvm import SExp
 from clvm.serialize import sexp_from_stream
+from clvm.SExp import SExp
 from clvm_tools import binutils
 
 from chia._tests.core.make_block_generator import make_spend_bundle

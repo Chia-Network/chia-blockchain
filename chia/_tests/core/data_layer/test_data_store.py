@@ -17,7 +17,7 @@ import aiosqlite
 import pytest
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
-from chia._tests.util.misc import BenchmarkRunner, Marks, datacases
+from chia._tests.util.misc import BenchmarkRunner, Marks, boolean_datacases, datacases
 from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
@@ -259,7 +259,7 @@ async def test_build_a_tree(
     example = await create_example(data_store, store_id)
 
     await _debug_dump(db=data_store.db_wrapper, description="final")
-    actual = await data_store.get_tree_as_program(store_id=store_id)
+    actual = await data_store.get_tree_as_nodes(store_id=store_id)
     # print("actual  ", actual.as_python())
     # print("expected", example.expected.as_python())
     assert actual == example.expected
@@ -745,30 +745,28 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, store_id: bytes32
 async def test_delete_from_left_both_terminal(data_store: DataStore, store_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, store_id=store_id)
 
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (
-                    (b"\x02", b"\x12\x02"),
-                    (b"\x03", b"\x13\x03"),
-                ),
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            left=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+                right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
             ),
-            (
-                (b"\x05", b"\x15\x05"),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
+            right=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x02", value=b"\x12\x02"),
+                right=TerminalNode.from_key_value(key=b"\x03", value=b"\x13\x03"),
+            ),
+        ),
+        right=InternalNode.from_child_nodes(
+            left=TerminalNode.from_key_value(key=b"\x05", value=b"\x15\x05"),
+            right=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x06", value=b"\x16\x06"),
+                right=TerminalNode.from_key_value(key=b"\x07", value=b"\x17\x07"),
             ),
         ),
     )
 
     await data_store.delete(key=b"\x04", store_id=store_id, status=Status.COMMITTED)
-    result = await data_store.get_tree_as_program(store_id=store_id)
+    result = await data_store.get_tree_as_nodes(store_id=store_id)
 
     assert result == expected
 
@@ -777,28 +775,26 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, store_id: b
 async def test_delete_from_left_other_not_terminal(data_store: DataStore, store_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, store_id=store_id)
 
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (
-                    (b"\x02", b"\x12\x02"),
-                    (b"\x03", b"\x13\x03"),
-                ),
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            left=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+                right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
             ),
-            (
-                (b"\x06", b"\x16\x06"),
-                (b"\x07", b"\x17\x07"),
+            right=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x02", value=b"\x12\x02"),
+                right=TerminalNode.from_key_value(key=b"\x03", value=b"\x13\x03"),
             ),
+        ),
+        right=InternalNode.from_child_nodes(
+            left=TerminalNode.from_key_value(key=b"\x06", value=b"\x16\x06"),
+            right=TerminalNode.from_key_value(key=b"\x07", value=b"\x17\x07"),
         ),
     )
 
     await data_store.delete(key=b"\x04", store_id=store_id, status=Status.COMMITTED)
     await data_store.delete(key=b"\x05", store_id=store_id, status=Status.COMMITTED)
-    result = await data_store.get_tree_as_program(store_id=store_id)
+    result = await data_store.get_tree_as_nodes(store_id=store_id)
 
     assert result == expected
 
@@ -807,30 +803,28 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, store_
 async def test_delete_from_right_both_terminal(data_store: DataStore, store_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, store_id=store_id)
 
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (b"\x02", b"\x12\x02"),
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            left=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+                right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
             ),
-            (
-                (
-                    (b"\x04", b"\x14\x04"),
-                    (b"\x05", b"\x15\x05"),
-                ),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
+            right=TerminalNode.from_key_value(key=b"\x02", value=b"\x12\x02"),
+        ),
+        right=InternalNode.from_child_nodes(
+            left=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x04", value=b"\x14\x04"),
+                right=TerminalNode.from_key_value(key=b"\x05", value=b"\x15\x05"),
+            ),
+            right=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x06", value=b"\x16\x06"),
+                right=TerminalNode.from_key_value(key=b"\x07", value=b"\x17\x07"),
             ),
         ),
     )
 
     await data_store.delete(key=b"\x03", store_id=store_id, status=Status.COMMITTED)
-    result = await data_store.get_tree_as_program(store_id=store_id)
+    result = await data_store.get_tree_as_nodes(store_id=store_id)
 
     assert result == expected
 
@@ -839,28 +833,26 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, store_id: 
 async def test_delete_from_right_other_not_terminal(data_store: DataStore, store_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, store_id=store_id)
 
-    expected = Program.to(
-        (
-            (
-                (b"\x00", b"\x10\x00"),
-                (b"\x01", b"\x11\x01"),
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+            right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
+        ),
+        right=InternalNode.from_child_nodes(
+            left=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x04", value=b"\x14\x04"),
+                right=TerminalNode.from_key_value(key=b"\x05", value=b"\x15\x05"),
             ),
-            (
-                (
-                    (b"\x04", b"\x14\x04"),
-                    (b"\x05", b"\x15\x05"),
-                ),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
+            right=InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x06", value=b"\x16\x06"),
+                right=TerminalNode.from_key_value(key=b"\x07", value=b"\x17\x07"),
             ),
         ),
     )
 
     await data_store.delete(key=b"\x03", store_id=store_id, status=Status.COMMITTED)
     await data_store.delete(key=b"\x02", store_id=store_id, status=Status.COMMITTED)
-    result = await data_store.get_tree_as_program(store_id=store_id)
+    result = await data_store.get_tree_as_nodes(store_id=store_id)
 
     assert result == expected
 
@@ -1189,8 +1181,10 @@ async def test_kv_diff_2(data_store: DataStore, store_id: bytes32) -> None:
     assert diff_1 == {DiffData(OperationType.INSERT, b"000", b"000")}
     diff_2 = await data_store.get_kv_diff(store_id, insert_result.node_hash, empty_hash)
     assert diff_2 == {DiffData(OperationType.DELETE, b"000", b"000")}
-    diff_3 = await data_store.get_kv_diff(store_id, invalid_hash, insert_result.node_hash)
-    assert diff_3 == set()
+    with pytest.raises(Exception, match=f"Unable to diff: Can't find keys and values for {invalid_hash.hex()}"):
+        await data_store.get_kv_diff(store_id, invalid_hash, insert_result.node_hash)
+    with pytest.raises(Exception, match=f"Unable to diff: Can't find keys and values for {invalid_hash.hex()}"):
+        await data_store.get_kv_diff(store_id, insert_result.node_hash, invalid_hash)
 
 
 @pytest.mark.anyio
@@ -1993,7 +1987,23 @@ async def test_insert_key_already_present(data_store: DataStore, store_id: bytes
 
 
 @pytest.mark.anyio
-async def test_update_keys(data_store: DataStore, store_id: bytes32) -> None:
+@boolean_datacases(name="use_batch_autoinsert", false="not optimized batch insert", true="optimized batch insert")
+async def test_batch_insert_key_already_present(
+    data_store: DataStore,
+    store_id: bytes32,
+    use_batch_autoinsert: bool,
+) -> None:
+    key = b"foo"
+    value = b"bar"
+    changelist = [{"action": "insert", "key": key, "value": value}]
+    await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
+    with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
+        await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
+
+
+@pytest.mark.anyio
+@boolean_datacases(name="use_upsert", false="update with delete and insert", true="update with upsert")
+async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert: bool) -> None:
     num_keys = 10
     missing_keys = 50
     num_values = 10
@@ -2001,12 +2011,17 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32) -> None:
     for value in range(num_values):
         changelist: List[Dict[str, Any]] = []
         bytes_value = value.to_bytes(4, byteorder="big")
-        for key in range(num_keys + missing_keys):
-            bytes_key = key.to_bytes(4, byteorder="big")
-            changelist.append({"action": "delete", "key": bytes_key})
-        for key in range(num_keys):
-            bytes_key = key.to_bytes(4, byteorder="big")
-            changelist.append({"action": "insert", "key": bytes_key, "value": bytes_value})
+        if use_upsert:
+            for key in range(num_keys):
+                bytes_key = key.to_bytes(4, byteorder="big")
+                changelist.append({"action": "upsert", "key": bytes_key, "value": bytes_value})
+        else:
+            for key in range(num_keys + missing_keys):
+                bytes_key = key.to_bytes(4, byteorder="big")
+                changelist.append({"action": "delete", "key": bytes_key})
+            for key in range(num_keys):
+                bytes_key = key.to_bytes(4, byteorder="big")
+                changelist.append({"action": "insert", "key": bytes_key, "value": bytes_value})
 
         await data_store.insert_batch(
             store_id=store_id,
