@@ -1291,7 +1291,7 @@ def validate_recent_blocks(
         log.info("did not find two challenges in recent chain")
         return False, []
 
-    if len(summaries) > 2 and validated_block_count < last_blocks_to_validate / 2:
+    if len(summaries) > 2 and validated_block_count < constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
         log.info("did not validate enough blocks in recent chain part")
         return False, []
 
