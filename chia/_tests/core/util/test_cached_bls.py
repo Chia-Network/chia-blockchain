@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from chia_rs import AugSchemeMPL
 
-from chia.util.cached_bls import LOCAL_CACHE, BLSCache
+from chia.util.cached_bls import BLSCache
 from chia.util.hash import std_hash
+
+LOCAL_CACHE = BLSCache(50000)
 
 
 def test_cached_bls():

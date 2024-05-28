@@ -32,7 +32,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util.cached_bls import LOCAL_CACHE, BLSCache
+from chia.util.cached_bls import BLSCache
 from chia.util.condition_tools import pkm_pairs
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
@@ -284,7 +284,11 @@ class MempoolManager:
             self.seen_bundle_hashes.pop(bundle_hash)
 
     async def pre_validate_spendbundle(
-        self, new_spend: SpendBundle, new_spend_bytes: Optional[bytes], spend_name: bytes32
+        self,
+        new_spend: SpendBundle,
+        new_spend_bytes: Optional[bytes],
+        spend_name: bytes32,
+        bls_cache: Optional[BLSCache] = None,
     ) -> NPCResult:
         """
         Errors are included within the cached_result.
@@ -313,7 +317,8 @@ class MempoolManager:
 
         if err is not None:
             raise ValidationError(err)
-        LOCAL_CACHE.update(new_cache_entries)
+        if bls_cache is not None:
+            bls_cache.update(new_cache_entries)
 
         ret: NPCResult = NPCResult.from_bytes(cached_result_bytes)
         log.log(

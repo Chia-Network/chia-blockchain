@@ -82,7 +82,7 @@ async def _validate_and_add_block(
         result,
         err,
         _,
-    ) = await blockchain.add_block(block, results, fork_info=fork_info)
+    ) = await blockchain.add_block(block, results, None, fork_info=fork_info)
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != AddBlockResult.INVALID_BLOCK:

@@ -69,7 +69,3 @@ class BLSCache:
 
     def items(self) -> List[Tuple[bytes32, bytes]]:
         return [(key, value.to_bytes()) for key, value in self.cache.cache.items()]
-
-
-# Increasing this number will increase RAM usage, but decrease BLS validation time for blocks and unfinished blocks.
-LOCAL_CACHE = BLSCache(50000)
