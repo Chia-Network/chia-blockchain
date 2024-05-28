@@ -42,7 +42,7 @@ fingerprint = uint32(1310648153)
 public_key = G1Element.from_bytes(
     bytes.fromhex("b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4")
 )
-bech32_pubkey = "bls12381g11kkk0xkvmcha9mgwqpakv84du79tqmmm8w79h759gcde6s0mcwc2std39p2mhdcu29yhzvc5qpxhvg2p44f5"
+bech32_pubkey = "bls12381kkk0xkvmcha9mgwqpakv84du79tqmmm8w79h759gcde6s0mcwc2std39p2mhdcu29yhzvc5qpxhvgmknyl7"
 
 
 class TestKeychain:

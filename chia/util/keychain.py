@@ -374,7 +374,7 @@ class Keychain:
             fingerprint = pk.get_fingerprint()
         else:
             index = self._get_free_private_key_index()
-            if mnemonic_or_pk.startswith("bls12381g1"):
+            if mnemonic_or_pk.startswith("bls1238"):
                 _, data = bech32_decode(mnemonic_or_pk, max_length=94)
                 assert data is not None
                 pk_bytes = bytes(convertbits(data, 5, 8, False))
