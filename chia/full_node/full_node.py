@@ -2010,6 +2010,9 @@ class FullNode:
         pre_validation_log = (
             f"pre_validation time {pre_validation_time:0.4f}, " if pre_validation_time is not None else ""
         )
+        block_duration_in_seconds = (
+            receive_time - self.signage_point_times[block.reward_chain_block.signage_point_index]
+        )
         if farmed_block is True:
             self.log.info(
                 f"🍀 ️Farmed unfinished_block {block_hash}, SP: {block.reward_chain_block.signage_point_index}, "
@@ -2029,7 +2032,7 @@ class FullNode:
             self.log.info(
                 f"Added unfinished_block {block_hash}, not farmed by us,"
                 f" SP: {block.reward_chain_block.signage_point_index} farmer response time: "
-                f"{receive_time - self.signage_point_times[block.reward_chain_block.signage_point_index]:0.4f}, "
+                f"{block_duration_in_seconds:0.4f}, "
                 f"Pool pk {encode_puzzle_hash(block.foliage.foliage_block_data.pool_target.puzzle_hash, 'xch')}, "
                 f"validation time: {validation_time:0.4f} seconds, {pre_validation_log}"
                 f"cost: {block.transactions_info.cost if block.transactions_info else 'None'}"
@@ -2091,7 +2094,15 @@ class FullNode:
         await self.server.send_to_all_if([msg], NodeType.FULL_NODE, old_clients, peer_id)
         await self.server.send_to_all_if([msg2], NodeType.FULL_NODE, new_clients, peer_id)
 
-        self._state_changed("unfinished_block")
+        self._state_changed(
+            "unfinished_block",
+            {
+                "block_duration_in_seconds": block_duration_in_seconds,
+                "validation_time_in_seconds": validation_time,
+                "pre_validation_time_in_seconds": pre_validation_time,
+                "unfinished_block": block.to_json_dict(),
+            },
+        )
 
     async def new_infusion_point_vdf(
         self, request: timelord_protocol.NewInfusionPointVDF, timelord_peer: Optional[WSChiaConnection] = None
