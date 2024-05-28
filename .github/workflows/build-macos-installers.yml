@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   version:
-    uses: .github/workflows/reflow-version.yml
+    uses: ./.github/workflows/reflow-version.yml
 
   build:
     name: Build ${{ matrix.os.name }} DMG
