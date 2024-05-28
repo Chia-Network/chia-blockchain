@@ -2864,32 +2864,28 @@ async def test_pagination_rpcs(
         )
         assert diff_res == diff_reference
 
-        diff_res = await data_rpc_api.get_kv_diff(
-            {
-                "id": store_id.hex(),
-                "hash_1": hash1.hex(),
-                "hash_2": bytes32([0] * 31 + [1]).hex(),
-                "page": 0,
-                "max_page_size": 10,
-            }
-        )
-        empty_diff_reference = {
-            "total_pages": 1,
-            "total_bytes": 0,
-            "diff": [],
-        }
-        assert diff_res == empty_diff_reference
+        invalid_hash = bytes32([0] * 31 + [1])
+        with pytest.raises(Exception, match=f"Unable to diff: Can't find keys and values for {invalid_hash.hex()}"):
+            await data_rpc_api.get_kv_diff(
+                {
+                    "id": store_id.hex(),
+                    "hash_1": hash1.hex(),
+                    "hash_2": invalid_hash.hex(),
+                    "page": 0,
+                    "max_page_size": 10,
+                }
+            )
 
-        diff_res = await data_rpc_api.get_kv_diff(
-            {
-                "id": store_id.hex(),
-                "hash_1": bytes32([0] * 31 + [1]).hex(),
-                "hash_2": hash2.hex(),
-                "page": 0,
-                "max_page_size": 10,
-            }
-        )
-        assert diff_res == empty_diff_reference
+        with pytest.raises(Exception, match=f"Unable to diff: Can't find keys and values for {invalid_hash.hex()}"):
+            diff_res = await data_rpc_api.get_kv_diff(
+                {
+                    "id": store_id.hex(),
+                    "hash_1": invalid_hash.hex(),
+                    "hash_2": hash2.hex(),
+                    "page": 0,
+                    "max_page_size": 10,
+                }
+            )
 
         new_value = b"\x02\x02"
         changelist = [{"action": "upsert", "key": key6.hex(), "value": new_value.hex()}]

@@ -140,13 +140,13 @@ class TestConditions:
         conditions = Program.to(assemble(f"(({opcode} 1337))"))
         additions, removals, new_block = await check_conditions(bt, conditions)
 
-        if consensus_mode != ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode < ConsensusMode.HARD_FORK_2_0:
             # before the hard fork, all unknown conditions have 0 cost
             expected_cost = 0
 
         # once the hard fork activates, blocks no longer pay the cost of the ROM
         # generator (which includes hashing all puzzles).
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             block_base_cost = 756064
         else:
             block_base_cost = 761056
@@ -167,7 +167,7 @@ class TestConditions:
         conditions = Program.to(assemble(condition))
         additions, removals, new_block = await check_conditions(bt, conditions)
 
-        if consensus_mode != ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode < ConsensusMode.HARD_FORK_2_0:
             # the SOFTFORK condition is not recognized before the hard fork
             expected_cost = 0
             block_base_cost = 737056
@@ -376,7 +376,7 @@ class TestConditions:
         pre-v2-softfork, and rejects more than the announcement limit afterward.
         """
 
-        if condition1.startswith("(66") and consensus_mode != ConsensusMode.SOFT_FORK_4:
+        if condition1.startswith("(66") and consensus_mode < ConsensusMode.SOFT_FORK_4:
             # The message conditions aren't enabled until Soft-fork 3, so there
             # won't be any errors unless it's activated
             expect_err = None
@@ -459,7 +459,7 @@ class TestConditions:
         coin = blocks[-2].get_included_reward_coins()[0]
         conditions = Program.to(assemble("(" + conds.format(coin="0x" + coin.name().hex()) + ")"))
         # before the softfork has activated, it's all allowed
-        if consensus_mode.value < ConsensusMode.SOFT_FORK_4.value:
+        if consensus_mode < ConsensusMode.SOFT_FORK_4:
             expected = None
 
         await check_conditions(bt, conditions, expected_err=expected)

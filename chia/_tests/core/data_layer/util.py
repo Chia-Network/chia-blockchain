@@ -8,7 +8,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Literal, Optional, Union, overload
 
-from chia.data_layer.data_layer_util import NodeType, Side, Status
+from chia.data_layer.data_layer_util import InternalNode, Node, NodeType, Side, Status, TerminalNode
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -47,21 +47,19 @@ async def general_insert(
 
 @dataclass(frozen=True)
 class Example:
-    expected: Program
+    expected: Node
     terminal_nodes: List[bytes32]
 
 
 async def add_0123_example(data_store: DataStore, store_id: bytes32) -> Example:
-    expected = Program.to(
-        (
-            (
-                (b"\x00", b"\x10\x00"),
-                (b"\x01", b"\x11\x01"),
-            ),
-            (
-                (b"\x02", b"\x12\x02"),
-                (b"\x03", b"\x13\x03"),
-            ),
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+            right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
+        ),
+        right=InternalNode.from_child_nodes(
+            left=TerminalNode.from_key_value(key=b"\x02", value=b"\x12\x02"),
+            right=TerminalNode.from_key_value(key=b"\x03", value=b"\x13\x03"),
         ),
     )
 
@@ -76,27 +74,25 @@ async def add_0123_example(data_store: DataStore, store_id: bytes32) -> Example:
 
 
 async def add_01234567_example(data_store: DataStore, store_id: bytes32) -> Example:
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (
-                    (b"\x02", b"\x12\x02"),
-                    (b"\x03", b"\x13\x03"),
-                ),
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+                right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
             ),
-            (
-                (
-                    (b"\x04", b"\x14\x04"),
-                    (b"\x05", b"\x15\x05"),
-                ),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
+            InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x02", value=b"\x12\x02"),
+                right=TerminalNode.from_key_value(key=b"\x03", value=b"\x13\x03"),
+            ),
+        ),
+        right=InternalNode.from_child_nodes(
+            InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x04", value=b"\x14\x04"),
+                right=TerminalNode.from_key_value(key=b"\x05", value=b"\x15\x05"),
+            ),
+            InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x06", value=b"\x16\x06"),
+                right=TerminalNode.from_key_value(key=b"\x07", value=b"\x17\x07"),
             ),
         ),
     )

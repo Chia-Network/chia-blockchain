@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 
 import pytest
 from chia_rs import G2Element
@@ -32,8 +32,7 @@ acs_ph = acs.get_tree_hash()
 
 # Some methods mapping strings to CATs
 def str_to_tail(tail_str: str) -> Program:
-    # TODO: Remove cast when we improve typing
-    return cast(Program, Program.to([3, [], [1, tail_str], []]))
+    return Program.to([3, [], [1, tail_str], []])
 
 
 def str_to_tail_hash(tail_str: str) -> bytes32:
@@ -118,10 +117,10 @@ def generate_secure_bundle(
     offered_amount: uint64,
     tail_str: Optional[str] = None,
 ) -> SpendBundle:
-    announcement_assertions = [a.to_program() for a in announcements]
+    announcement_assertions: List[Program] = [a.to_program() for a in announcements]
     selected_coin_amount = sum([c.amount for c in selected_coins])
     non_primaries = [] if len(selected_coins) < 2 else selected_coins[1:]
-    inner_solution: List[List[Any]] = [
+    inner_solution: List[Any] = [
         [51, Offer.ph(), offered_amount],  # Offered coin
         [51, acs_ph, uint64(selected_coin_amount - offered_amount)],  # Change
         *announcement_assertions,
