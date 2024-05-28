@@ -44,6 +44,7 @@ jobs:
   build:
     name: Build ${{ matrix.os.name }} DMG
     runs-on: ${{ matrix.os.runs-on }}
+    needs: version
     timeout-minutes: 90
     strategy:
       fail-fast: false

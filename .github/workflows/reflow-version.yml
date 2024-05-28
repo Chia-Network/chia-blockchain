@@ -2,6 +2,11 @@ name: identify version
 
 on:
   workflow_call:
+    outputs:
+      chia-installer-version:
+        value: ${{ jobs.version.outputs.chia-installer-version }}
+      tag-type:
+        value: ${{ jobs.version.outputs.tag-type }}
 
 jobs:
   version:
