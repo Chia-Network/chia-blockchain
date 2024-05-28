@@ -9,11 +9,7 @@ from dataclasses import dataclass
 from multiprocessing.context import BaseContext
 from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, TypeVar
 
-from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF
-from chia_rs import CoinSpend as RustCoinSpend
-from chia_rs import G1Element, GTElement
-from chia_rs import Program as RustProgram
-from chia_rs import supports_fast_forward
+from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, G1Element, GTElement, supports_fast_forward
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
@@ -461,13 +457,7 @@ class MempoolManager:
                 coin_id,
                 EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], is_eligible_for_ff=False),
             )
-            # We can't just go with the eligible for fast forward flag, we need to validate
-            rust_coin_spend = RustCoinSpend(
-                coin=coin_spend.coin,
-                puzzle_reveal=RustProgram.from_bytes(bytes(coin_spend.puzzle_reveal)),
-                solution=RustProgram.from_bytes(bytes(coin_spend.solution)),
-            )
-            mark_as_fast_forward = eligibility_info.is_eligible_for_ff and supports_fast_forward(rust_coin_spend)
+            mark_as_fast_forward = eligibility_info.is_eligible_for_ff and supports_fast_forward(coin_spend)
             # We are now able to check eligibility of both dedup and fast forward
             if not (eligibility_info.is_eligible_for_dedup or mark_as_fast_forward):
                 non_eligible_coin_ids.append(coin_id)
