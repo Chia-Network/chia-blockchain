@@ -895,7 +895,8 @@ async def print_balances(
 
         print(" ")
         trusted_peers: dict[str, str] = config["wallet"].get("trusted_peers", {})
-        await print_connections(wallet_client, trusted_peers)
+        trusted_cidrs: List[str] = config["wallet"].get("trusted_cidrs", [])
+        await print_connections(wallet_client, trusted_peers, trusted_cidrs)
 
 
 async def create_did_wallet(
