@@ -147,7 +147,10 @@ def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Netw
 
 
 def is_trusted_cidr(peer_host: str, trusted_cidrs: List[str]) -> bool:
-    ip_obj = ipaddress.ip_address(peer_host)
+    try:
+        ip_obj = ipaddress.ip_address(peer_host)
+    except ValueError:
+        return False
 
     for cidr in trusted_cidrs:
         network = ipaddress.ip_network(cidr)
