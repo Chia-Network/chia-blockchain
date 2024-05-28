@@ -61,6 +61,7 @@ jobs:
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
+      SETUPTOOLS_SCM_PRETEND_VERSION_FOR_chia-blockchain: ${{ needs.version.outputs.chia-installer-version }}
       TAG_TYPE: ${{ needs.version.outputs.tag-type }}
 
     steps:
