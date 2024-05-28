@@ -232,6 +232,7 @@ jobs:
     name: Publish ${{ matrix.os.name }} DMG
     runs-on: ubuntu-latest
     needs:
+      - version
       - build
     timeout-minutes: 5
     strategy:
