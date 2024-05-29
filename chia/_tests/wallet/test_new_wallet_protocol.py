@@ -5,12 +5,14 @@ from dataclasses import dataclass
 from random import Random
 from typing import AsyncGenerator, Dict, List, Optional, OrderedDict, Set, Tuple
 
+from anyio import sleep
 import pytest
-from chia_rs import Coin, CoinState
+from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, FullBlock, G2Element, Program
 
 from chia._tests.connection_utils import add_dummy_connection
 from chia.full_node.coin_store import CoinStore
 from chia.protocols import wallet_protocol
+from chia.protocols.shared_protocol import Capability
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator import simulator_protocol
@@ -20,21 +22,33 @@ from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.aliases import WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.peer_info import PeerInfo
+from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
+
+
+IDENTITY_PUZZLE = Program.to(1)
+IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 OneNode = Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]
 
 
 async def connect_to_simulator(
-    one_node: OneNode, self_hostname: str
+    one_node: OneNode, self_hostname: str, mempool_updates: bool = False
 ) -> Tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]:
     [full_node_service], _, _ = one_node
 
     full_node_api = full_node_service._api
     fn_server = full_node_api.server
 
-    incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 41723, NodeType.WALLET)
+    incoming_queue, peer_id = await add_dummy_connection(
+        fn_server,
+        self_hostname,
+        41723,
+        NodeType.WALLET,
+        additional_capabilities=[(uint16(Capability.MEMPOOL_UPDATES), "1")] if mempool_updates else [],
+    )
     peer = fn_server.all_connections[peer_id]
 
     return full_node_api, incoming_queue, peer
@@ -760,3 +774,56 @@ async def test_sync_puzzle_state(
             for include_hinted in [True, False]:
                 for min_amount in [0, 100000, 500000000]:
                     await run_test(include_spent, include_unspent, include_hinted, uint64(min_amount))
+
+
+@pytest.mark.anyio
+async def test_subscribed_mempool_items(
+    one_node: OneNode, self_hostname: str, default_400_blocks: List[FullBlock]
+) -> None:
+    simulator, queue, peer = await connect_to_simulator(one_node, self_hostname, mempool_updates=True)
+    subs = simulator.full_node.subscriptions
+    coin_store = simulator.full_node.coin_store
+    genesis_challenge = simulator.full_node.constants.GENESIS_CHALLENGE
+
+    print("ZZZ")
+
+    await simulator.full_node.add_block(default_400_blocks[0])
+
+    print("YYY")
+
+    await simulator.full_node.add_block_batch(default_400_blocks[1:], PeerInfo("0.0.0.0", 0), None)
+
+    print("XXX")
+
+    ph1 = IDENTITY_PUZZLE_HASH
+    coin1 = Coin(bytes32(b"\0" * 32), ph1, uint64(1000))
+
+    await coin_store._add_coin_records([CoinRecord(coin1, uint32(1), uint32(0), False, uint64(10000))])
+
+    print("AAA")
+
+    print("BBB")
+
+    # Request coin state
+    resp = await simulator.request_coin_state(
+        wallet_protocol.RequestCoinState([coin1.name()], None, genesis_challenge, True), peer
+    )
+    assert resp is not None
+
+    print("CCC")
+
+    response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
+    assert response.coin_ids == [coin1.name()]
+
+    # Add mempool item
+    solution = Program.to([])
+    bundle = SpendBundle([CoinSpend(coin1, IDENTITY_PUZZLE, solution)], AugSchemeMPL.aggregate([]))
+    result = await simulator.full_node.add_transaction(bundle, bundle.name())
+    print("X", result)
+
+    print("Y", simulator.auto_farm)
+    print("Z", simulator.full_node.mempool_manager.get_spendbundle(bundle.name()))
+    await sleep(5.0)
+
+    print(queue)
+    assert False
