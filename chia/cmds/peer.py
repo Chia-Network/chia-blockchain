@@ -13,11 +13,14 @@ from chia.cmds.peer_funcs import peer_async
     "-p",
     "--rpc-port",
     help=(
-        "Set the port where the farmer, wallet, full node or harvester "
+        "Set the port where the farmer, wallet, full node, or harvester "
         "is hosting the RPC interface. See the rpc_port in config.yaml"
     ),
     type=int,
     default=None,
+)
+@click.option(
+    "-w", "--wide", help="Display wide output with additional columns", is_flag=True, type=bool, default=False
 )
 @click.option(
     "-c", "--connections", help="List connections to the specified service", is_flag=True, type=bool, default=False
@@ -26,15 +29,18 @@ from chia.cmds.peer_funcs import peer_async
 @click.option(
     "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
 )
+@click.option("-j", "--json", "json_output", help="Output in JSON format", is_flag=True, type=bool, default=False)
 @click.argument("node_type", type=click.Choice(list(NODE_TYPES.keys())), nargs=1, required=True)
 @click.pass_context
 def peer_cmd(
     ctx: click.Context,
     rpc_port: Optional[int],
+    wide: bool,
     connections: bool,
     add_connection: str,
     remove_connection: str,
     node_type: str,
+    json_output: bool,
 ) -> None:
     import asyncio
 
@@ -46,5 +52,7 @@ def peer_cmd(
             connections,
             add_connection,
             remove_connection,
+            json_output,
+            wide,
         )
     )
