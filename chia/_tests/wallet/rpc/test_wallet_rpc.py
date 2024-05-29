@@ -408,8 +408,8 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
     full_node_api: FullNodeSimulator = env.full_node.api
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
-    async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        cat_wallet, tx_records = await CATWallet.create_new_cat_wallet(
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager,
             wallet,
             {"identifier": "genesis_by_id"},
@@ -417,7 +417,7 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
             DEFAULT_TX_CONFIG,
             action_scope,
         )
-    await full_node_api.wait_transaction_records_entered_mempool(tx_records)
+    await full_node_api.wait_transaction_records_entered_mempool(action_scope.side_effects.transactions)
     await full_node_api.wait_for_wallet_synced(wallet_node)
     await assert_get_balance(wallet_rpc_client, wallet_node, wallet)
     await assert_get_balance(wallet_rpc_client, wallet_node, cat_wallet)
@@ -458,18 +458,17 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     await generate_funds(full_node_api, env.wallet_1)
 
     fee_amount = 100
-    async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        [tx] = await wallet.generate_signed_transaction(
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await wallet.generate_signed_transaction(
             amount=uint64(5),
             puzzle_hash=bytes32([0] * 32),
             tx_config=DEFAULT_TX_CONFIG,
             action_scope=action_scope,
             fee=uint64(fee_amount),
         )
-    [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
     our_ph = await wallet.get_new_puzzlehash()
-    await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+    await full_node_api.wait_transaction_records_entered_mempool(records=action_scope.side_effects.transactions)
     await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 

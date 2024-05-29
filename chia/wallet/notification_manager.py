@@ -16,7 +16,6 @@ from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition
 from chia.wallet.notification_store import Notification, NotificationStore
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos_for_spend
 from chia.wallet.util.notifications import construct_notification
 from chia.wallet.util.tx_config import TXConfig
@@ -92,7 +91,7 @@ class NotificationManager:
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> None:
         coins: Set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(
             uint64(amount + fee), tx_config.coin_selection_config
         )
@@ -106,8 +105,7 @@ class NotificationManager:
             Program.to(None),
         )
         extra_spend_bundle = SpendBundle([notification_spend], G2Element())
-        chia_tx: TransactionRecord
-        [chia_tx] = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
+        await self.wallet_state_manager.main_wallet.generate_signed_transaction(
             amount,
             notification_hash,
             tx_config,
@@ -124,14 +122,12 @@ class NotificationManager:
         async with action_scope.use() as interface:
             # This should not be looked to for best practice. Ideally, the method to generate the transaction above
             # takes a parameter to add in extra spends. That's currently out of scope, so I'm placing this hack in rn.
-            relevant_index = interface.side_effects.transactions.index(chia_tx)
-            assert chia_tx.spend_bundle is not None
-            new_spend = SpendBundle.aggregate([chia_tx.spend_bundle, extra_spend_bundle])
-            chia_tx = dataclasses.replace(
-                interface.side_effects.transactions[relevant_index],
-                spend_bundle=new_spend,
-                name=new_spend.name(),
+            if interface.side_effects.transactions[0].spend_bundle is None:
+                new_spend = extra_spend_bundle
+            else:
+                new_spend = SpendBundle.aggregate(
+                    [interface.side_effects.transactions[0].spend_bundle, extra_spend_bundle]
+                )
+            interface.side_effects.transactions[0] = dataclasses.replace(
+                interface.side_effects.transactions[0], spend_bundle=new_spend, name=new_spend.name()
             )
-            interface.side_effects.transactions[relevant_index] = chia_tx
-
-        return chia_tx

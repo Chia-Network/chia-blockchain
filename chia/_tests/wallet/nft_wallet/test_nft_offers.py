@@ -102,10 +102,9 @@ async def test_nft_offer_with_fee(
         ]
     )
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await nft_wallet_maker.generate_new_nft(metadata, tx_config, action_scope)
-    txs = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
-    for tx in txs:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await nft_wallet_maker.generate_new_nft(metadata, tx_config, action_scope)
+    for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
                 20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
@@ -315,10 +314,9 @@ async def test_nft_offer_cancellations(
         ]
     )
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG, action_scope)
-    txs = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
-    for tx in txs:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG, action_scope)
+    for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
                 20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
@@ -440,10 +438,9 @@ async def test_nft_offer_with_metadata_update(
         ]
     )
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG, action_scope)
-    txs = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
-    for tx in txs:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG, action_scope)
+    for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
                 20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
@@ -460,13 +457,12 @@ async def test_nft_offer_with_metadata_update(
     url_to_add = "https://new_url.com"
     key = "mu"
     fee_for_update = uint64(10)
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await nft_wallet_maker.update_metadata(
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await nft_wallet_maker.update_metadata(
             nft_to_update, key, url_to_add, DEFAULT_TX_CONFIG, action_scope, fee=fee_for_update
         )
     mempool_mgr = full_node_api.full_node.mempool_manager
-    txs = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
-    for tx in txs:
+    for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(20, mempool_mgr.get_spendbundle, tx.spend_bundle.name())
 
@@ -597,10 +593,9 @@ async def test_nft_offer_nft_for_cat(
         ]
     )
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await nft_wallet_maker.generate_new_nft(metadata, tx_config, action_scope)
-    txs = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
-    for tx in txs:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await nft_wallet_maker.generate_new_nft(metadata, tx_config, action_scope)
+    for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
                 20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
@@ -615,7 +610,7 @@ async def test_nft_offer_nft_for_cat(
     # Create two new CATs and wallets for maker and taker
     cats_to_mint = 10000
     async with wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
+        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             wallet_node_0.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -628,7 +623,7 @@ async def test_nft_offer_nft_for_cat(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
     async with wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        cat_wallet_taker, _ = await CATWallet.create_new_cat_wallet(
+        cat_wallet_taker = await CATWallet.create_new_cat_wallet(
             wallet_node_1.wallet_state_manager,
             wallet_taker,
             {"identifier": "genesis_by_id"},
@@ -875,10 +870,9 @@ async def test_nft_offer_nft_for_nft(
         ]
     )
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG, action_scope)
-    txs = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
-    for tx in txs:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG, action_scope)
+    for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
                 20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
@@ -891,10 +885,9 @@ async def test_nft_offer_nft_for_nft(
         ]
     )
 
-    async with nft_wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await nft_wallet_taker.generate_new_nft(metadata_2, DEFAULT_TX_CONFIG, action_scope)
-    txs = await nft_wallet_taker.wallet_state_manager.add_pending_transactions(txs)
-    for tx in txs:
+    async with nft_wallet_taker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await nft_wallet_taker.generate_new_nft(metadata_2, DEFAULT_TX_CONFIG, action_scope)
+    for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
                 20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
@@ -1033,10 +1026,9 @@ async def test_nft_offer_nft0_and_xch_for_cat(
         ]
     )
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await nft_wallet_maker.generate_new_nft(metadata, tx_config, action_scope)
-    txs = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
-    for tx in txs:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await nft_wallet_maker.generate_new_nft(metadata, tx_config, action_scope)
+    for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
                 20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
@@ -1051,7 +1043,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     # Create two new CATs and wallets for maker and taker
     cats_to_mint = 10000
     async with wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
+        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             wallet_node_0.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -1064,7 +1056,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
     async with wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        cat_wallet_taker, _ = await CATWallet.create_new_cat_wallet(
+        cat_wallet_taker = await CATWallet.create_new_cat_wallet(
             wallet_node_1.wallet_state_manager,
             wallet_taker,
             {"identifier": "genesis_by_id"},

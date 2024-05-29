@@ -142,12 +142,10 @@ class DIDWallet:
             raise ValueError("Not enough balance")
 
         try:
-            txs = await self.generate_new_decentralised_id(amount, tx_config, action_scope, fee, extra_conditions)
+            await self.generate_new_decentralised_id(amount, tx_config, action_scope, fee, extra_conditions)
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
-
-        await self.wallet_state_manager.add_pending_transactions(txs)
 
         await self.wallet_state_manager.add_new_wallet(self)
 
@@ -559,8 +557,6 @@ class DIDWallet:
         return core.hex()
 
     async def set_name(self, new_name: str):
-        import dataclasses
-
         new_info = dataclasses.replace(self.wallet_info, name=new_name)
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
@@ -574,7 +570,7 @@ class DIDWallet:
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> List[TransactionRecord]:
+    ) -> None:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
@@ -638,14 +634,12 @@ class DIDWallet:
         spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         if fee > 0:
             coin_name = coin.name()
-            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
+            await self.standard_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
-        else:
-            chia_tx = None
 
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -667,14 +661,8 @@ class DIDWallet:
             valid_times=parse_timelock_info(extra_conditions),
         )
 
-        txs = [did_record]
-        if chia_tx is not None:
-            txs.append(chia_tx)
-
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(did_record)
-
-        return txs
 
     async def transfer_did(
         self,
@@ -684,7 +672,7 @@ class DIDWallet:
         tx_config: TXConfig,
         action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> List[TransactionRecord]:
+    ) -> None:
         """
         Transfer the current DID to another owner
         :param new_puzhash: New owner's p2_puzzle
@@ -740,14 +728,12 @@ class DIDWallet:
         spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         if fee > 0:
             coin_name = coin.name()
-            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
+            await self.standard_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
-        else:
-            chia_tx = None
 
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -768,14 +754,9 @@ class DIDWallet:
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
-        txs = [did_record]
-        if chia_tx is not None:
-            txs.append(chia_tx)
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(did_record)
-
-        return txs
 
     # The message spend can tests\wallet\rpc\test_wallet_rpc.py send messages and also change your innerpuz
     async def create_message_spend(
@@ -783,7 +764,7 @@ class DIDWallet:
         tx_config: TXConfig,
         action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> None:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
@@ -851,7 +832,6 @@ class DIDWallet:
         )
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(tx)
-        return tx
 
     # This is used to cash out, or update the id_list
     async def create_exit_spend(
@@ -918,7 +898,7 @@ class DIDWallet:
         tx_config: TXConfig,
         action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[TransactionRecord, SpendBundle, str]:
+    ) -> Tuple[SpendBundle, str]:
         """
         Create an attestment
         TODO:
@@ -990,9 +970,11 @@ class DIDWallet:
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(did_record)
         attest_str: str = f"{self.get_my_DID()}:{bytes(message_spend_bundle).hex()}:{coin.parent_coin_info.hex()}:"
         attest_str += f"{self.did_info.current_inner.get_tree_hash().hex()}:{coin.amount}"
-        return did_record, message_spend_bundle, attest_str
+        return message_spend_bundle, attest_str
 
     async def get_info_for_recovery(self) -> Optional[Tuple[bytes32, bytes32, uint64]]:
         assert self.did_info.current_inner is not None
@@ -1225,7 +1207,7 @@ class DIDWallet:
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> List[TransactionRecord]:
+    ) -> None:
         """
         This must be called under the wallet state manager lock
         """
@@ -1243,7 +1225,7 @@ class DIDWallet:
 
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
 
-        [tx_record] = await self.standard_wallet.generate_signed_transaction(
+        await self.standard_wallet.generate_signed_transaction(
             amount=amount,
             puzzle_hash=genesis_launcher_puz.get_tree_hash(),
             tx_config=tx_config,
@@ -1291,8 +1273,7 @@ class DIDWallet:
         )
         await self.save_info(did_info)
         eve_spend = await self.generate_eve_spend(eve_coin, did_full_puz, did_inner)
-        assert tx_record.spend_bundle is not None
-        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
+        full_spend = SpendBundle.aggregate([eve_spend, launcher_sb])
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
 
@@ -1315,10 +1296,8 @@ class DIDWallet:
             memos=[],
             valid_times=ConditionValidTimes(),
         )
-        regular_record = dataclasses.replace(tx_record, spend_bundle=None)
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(did_record)
-        return [did_record, regular_record]
 
     async def generate_eve_spend(
         self,

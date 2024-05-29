@@ -147,7 +147,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     }
 
     # Generate DID as an "authorized provider"
-    async with wallet_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
         did_id: bytes32 = bytes32.from_hexstr(
             (
                 await DIDWallet.create_new_did_wallet(
@@ -642,7 +642,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     }
 
     # Generate DID as an "authorized provider"
-    async with wallet_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
         did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
             wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
         )
@@ -683,11 +683,9 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
             )
 
     # Send the DID to oblivion
-    async with did_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await did_wallet.transfer_did(
-            bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config, action_scope
-        )
-    txs = await did_wallet.wallet_state_manager.add_pending_transactions(txs)
+    async with did_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config, action_scope)
+
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(

@@ -62,24 +62,22 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     fee = uint64(1_999_999_999_999)
 
-    async with dl_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        std_record, launcher_id_maker = await dl_wallet_maker.generate_new_reporter(
+    async with dl_wallet_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        launcher_id_maker = await dl_wallet_maker.generate_new_reporter(
             maker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
         )
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker) is not None
-    [std_record] = await wsm_maker.add_pending_transactions([std_record])
-    await full_node_api.process_transaction_records(records=[std_record])
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     maker_funds -= fee
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker, maker_root)
 
-    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        std_record, launcher_id_taker = await dl_wallet_taker.generate_new_reporter(
+    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        launcher_id_taker = await dl_wallet_taker.generate_new_reporter(
             taker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
         )
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker) is not None
-    [std_record] = await wsm_taker.add_pending_transactions([std_record])
-    await full_node_api.process_transaction_records(records=[std_record])
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     taker_funds -= fee
     taker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker, taker_root)
@@ -239,12 +237,11 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 2)
 
-    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await dl_wallet_taker.create_update_state_spend(
+    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await dl_wallet_taker.create_update_state_spend(
             launcher_id_taker, bytes32([2] * 32), DEFAULT_TX_CONFIG, action_scope
         )
-    txs = await wallet_node_taker.wallet_state_manager.add_pending_transactions(txs)
-    await full_node_api.process_transaction_records(records=txs)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
 
 @pytest.mark.parametrize(
@@ -263,16 +260,14 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     ROWS = [bytes32([i] * 32) for i in range(0, 10)]
     root, _ = build_merkle_tree(ROWS)
 
-    async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        std_record, launcher_id = await dl_wallet.generate_new_reporter(root, DEFAULT_TX_CONFIG, action_scope)
+    async with dl_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        launcher_id = await dl_wallet.generate_new_reporter(root, DEFAULT_TX_CONFIG, action_scope)
     assert await dl_wallet.get_latest_singleton(launcher_id) is not None
-    [std_record] = await wsm.add_pending_transactions([std_record])
-    await full_node_api.process_transaction_records(records=[std_record])
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, root)
-    async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        std_record_2, launcher_id_2 = await dl_wallet.generate_new_reporter(root, DEFAULT_TX_CONFIG, action_scope)
-    [std_record_2] = await wsm.add_pending_transactions([std_record_2])
-    await full_node_api.process_transaction_records(records=[std_record_2])
+    async with dl_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        launcher_id_2 = await dl_wallet.generate_new_reporter(root, DEFAULT_TX_CONFIG, action_scope)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     trade_manager = wsm.trade_manager
 
@@ -340,44 +335,40 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     fee = uint64(1_999_999_999_999)
 
-    async with dl_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        std_record, launcher_id_maker_1 = await dl_wallet_maker.generate_new_reporter(
+    async with dl_wallet_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        launcher_id_maker_1 = await dl_wallet_maker.generate_new_reporter(
             maker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
         )
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_1) is not None
-    [std_record] = await wsm_maker.add_pending_transactions([std_record])
-    await full_node_api.process_transaction_records(records=[std_record])
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     maker_funds -= fee
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker_1, maker_root)
-    async with dl_wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        std_record, launcher_id_maker_2 = await dl_wallet_maker.generate_new_reporter(
+    async with dl_wallet_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        launcher_id_maker_2 = await dl_wallet_maker.generate_new_reporter(
             maker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
         )
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_2) is not None
-    [std_record] = await wsm_maker.add_pending_transactions([std_record])
-    await full_node_api.process_transaction_records(records=[std_record])
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     maker_funds -= fee
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker_2, maker_root)
 
-    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        std_record, launcher_id_taker_1 = await dl_wallet_taker.generate_new_reporter(
+    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        launcher_id_taker_1 = await dl_wallet_taker.generate_new_reporter(
             taker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
         )
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_1) is not None
-    [std_record] = await wsm_taker.add_pending_transactions([std_record])
-    await full_node_api.process_transaction_records(records=[std_record])
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     taker_funds -= fee
     taker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker_1, taker_root)
-    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        std_record, launcher_id_taker_2 = await dl_wallet_taker.generate_new_reporter(
+    async with dl_wallet_taker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        launcher_id_taker_2 = await dl_wallet_taker.generate_new_reporter(
             taker_root, DEFAULT_TX_CONFIG, action_scope, fee=fee
         )
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_2) is not None
-    [std_record] = await wsm_taker.add_pending_transactions([std_record])
-    await full_node_api.process_transaction_records(records=[std_record])
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     taker_funds -= fee
     taker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker_2, taker_root)
