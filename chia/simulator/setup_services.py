@@ -14,7 +14,7 @@ from typing import Any, AsyncGenerator, AsyncIterator, Dict, Iterator, List, Opt
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
-from chia.protocols.shared_protocol import Capability, capabilities
+from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
 from chia.server.outbound_message import NodeType
@@ -71,7 +71,7 @@ def get_capabilities(disable_capabilities_values: Optional[List[Capability]]) ->
                 disable_capabilities_values.remove(Capability.BASE)
 
             updated_capabilities = []
-            for capability in capabilities:
+            for capability in default_capabilities[NodeType.FULL_NODE]:
                 if Capability(int(capability[0])) in disable_capabilities_values:
                     # "0" means capability is disabled
                     updated_capabilities.append((capability[0], "0"))
@@ -80,7 +80,7 @@ def get_capabilities(disable_capabilities_values: Optional[List[Capability]]) ->
             return updated_capabilities
         except Exception:
             logging.getLogger(__name__).exception("Error disabling capabilities, defaulting to all capabilities")
-    return capabilities.copy()
+    return default_capabilities[NodeType.FULL_NODE].copy()
 
 
 @asynccontextmanager

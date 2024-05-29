@@ -34,7 +34,7 @@ from chia.protocols import full_node_protocol as fnp
 from chia.protocols import timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, capabilities
+from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
@@ -2178,9 +2178,9 @@ class TestFullNodeProtocol:
         argnames=["custom_capabilities", "expect_success"],
         argvalues=[
             # standard
-            [capabilities, True],
+            [default_capabilities[NodeType.FULL_NODE], True],
             # an additional enabled but unknown capability
-            [[*capabilities, (uint16(max(Capability) + 1), "1")], True],
+            [[*default_capabilities[NodeType.FULL_NODE], (uint16(max(Capability) + 1), "1")], True],
             # no capability, not even Chia mainnet
             # TODO: shouldn't we fail without Capability.BASE?
             [[], True],

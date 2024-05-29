@@ -37,16 +37,27 @@ class Capability(IntEnum):
     RATE_LIMITS_V2 = 3
 
     # a node can handle a None response and not wait the full timeout
+    # capability removed but functionality is still supported
     NONE_RESPONSE = 4
 
 
-# "1" means capability is enabled
-capabilities = [
+# These are the default capabilities used in all outgoing handshakes.
+# "1" means the capability is supported and enabled.
+_capabilities: List[Tuple[uint16, str]] = [
     (uint16(Capability.BASE.value), "1"),
     (uint16(Capability.BLOCK_HEADERS.value), "1"),
     (uint16(Capability.RATE_LIMITS_V2.value), "1"),
-    # (uint16(Capability.NONE_RESPONSE.value), "1"), # capability removed but functionality is still supported
 ]
+
+default_capabilities = {
+    NodeType.FULL_NODE: _capabilities,
+    NodeType.HARVESTER: _capabilities,
+    NodeType.FARMER: _capabilities,
+    NodeType.TIMELORD: _capabilities,
+    NodeType.INTRODUCER: _capabilities,
+    NodeType.WALLET: _capabilities,
+    NodeType.DATA_LAYER: _capabilities,
+}
 
 
 @streamable
