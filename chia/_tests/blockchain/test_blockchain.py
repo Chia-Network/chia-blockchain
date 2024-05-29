@@ -3224,6 +3224,8 @@ class TestBodyValidation:
 
         # Bad signature fails during add_block
         await _validate_and_add_block(b, last_block, expected_error=Err.BAD_AGGREGATE_SIGNATURE)
+        # Also test the same case but when using BLSCache
+        await _validate_and_add_block(b, last_block, expected_error=Err.BAD_AGGREGATE_SIGNATURE, use_bls_cache=True)
 
         # Bad signature also fails in prevalidation
         preval_results = await b.pre_validate_blocks_multiprocessing([last_block], {}, validate_signatures=True)
