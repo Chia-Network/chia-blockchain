@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
-from more_itertools import partition
 
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from chia._tests.core.mempool.test_mempool_manager import (
@@ -277,10 +276,11 @@ async def make_and_send_spend_bundle(
 
 async def get_singleton_and_remaining_coins(sim: SpendSim) -> Tuple[Coin, List[Coin]]:
     coins = await sim.all_non_reward_coins()
-    singletons, remaining_coins = partition(lambda coin: coin.amount % 2 == 0, coins)
-    singletons_list = list(singletons)
-    assert len(singletons_list) == 1
-    return singletons_list[0], list(remaining_coins)
+    singletons = [coin for coin in coins if coin.amount & 1]
+    assert len(singletons) == 1
+    singleton = singletons[0]
+    coins.remove(singleton)
+    return singleton, coins
 
 
 def make_singleton_coin_spend(

@@ -223,7 +223,7 @@ class Wallet:
     def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:
         python_program = solution.as_python()
         python_program[1].append(condition)
-        return cast(Program, Program.to(python_program))
+        return Program.to(python_program)
 
     async def select_coins(
         self,
@@ -513,9 +513,10 @@ class Wallet:
                 return True
         return False
 
-    async def sum_hint_for_pubkey(self, pk: G1Element) -> Optional[SumHint]:
+    async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
+        pk_parsed: G1Element = G1Element.from_bytes(pk)
         dr: Optional[DerivationRecord] = await self.wallet_state_manager.puzzle_store.record_for_puzzle_hash(
-            puzzle_hash_for_synthetic_public_key(pk)
+            puzzle_hash_for_synthetic_public_key(pk_parsed)
         )
         if dr is None:
             return None
@@ -525,11 +526,12 @@ class Wallet:
             pk,
         )
 
-    async def path_hint_for_pubkey(self, pk: G1Element) -> Optional[PathHint]:
-        index: Optional[uint32] = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pk)
+    async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:
+        pk_parsed: G1Element = G1Element.from_bytes(pk)
+        index: Optional[uint32] = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pk_parsed)
         if index is None:
             index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
-                puzzle_hash_for_synthetic_public_key(pk)
+                puzzle_hash_for_synthetic_public_key(pk_parsed)
             )
         root_pubkey: bytes = self.wallet_state_manager.root_pubkey.get_fingerprint().to_bytes(4, "big")
         if index is None:
@@ -539,7 +541,7 @@ class Wallet:
                     try_owner_sk = master_sk_to_singleton_owner_sk(
                         self.wallet_state_manager.private_key, uint32(pool_wallet_index)
                     )
-                    if try_owner_sk.get_g1() == pk:
+                    if try_owner_sk.get_g1() == pk_parsed:
                         return PathHint(
                             root_pubkey,
                             [uint64(12381), uint64(8444), uint64(5), uint64(pool_wallet_index)],
@@ -609,7 +611,7 @@ class Wallet:
             offset_pk = offset_sk.get_g1()
             pk_lookup[offset_pk.get_fingerprint()] = offset_pk
             sk_lookup[offset_pk.get_fingerprint()] = offset_sk
-            final_pubkey: G1Element = sum_hint.final_pubkey
+            final_pubkey: G1Element = G1Element.from_bytes(sum_hint.final_pubkey)
             final_fingerprint: int = final_pubkey.get_fingerprint()
             pk_lookup[final_fingerprint] = final_pubkey
             sum_hint_lookup[final_fingerprint] = [*fingerprints_we_have, offset_pk.get_fingerprint()]

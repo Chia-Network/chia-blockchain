@@ -16,8 +16,11 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle import SpendBundle
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.conditions import CreateCoinAnnouncement, parse_conditions_non_consensus
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -1698,6 +1701,51 @@ async def test_trade_cancellation(wallets_prefarm):
     txs = await trade_manager_maker.cancel_pending_offers(
         [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=uint64(0), secure=True
     )
+    txs = await wallet_maker.wallet_state_manager.add_pending_transactions(txs)
+    await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
+    await full_node.process_transaction_records(records=txs)
+
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
+
+    # Now let's test the case where two coins need to be spent in order to cancel
+    chia_and_cat_for_something = {
+        wallet_maker.id(): -5,
+        cat_wallet_maker.id(): -6,
+        bytes32([0] * 32): 1,  # Doesn't matter
+    }
+
+    # Now we're going to create the other way around for test coverage sake
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
+        chia_and_cat_for_something,
+        DEFAULT_TX_CONFIG,
+        driver_dict={bytes32([0] * 32): PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + bytes(32).hex()})},
+    )
+    assert error is None
+    assert success is True
+    assert trade_make is not None
+
+    txs = await trade_manager_maker.cancel_pending_offers(
+        [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=uint64(0), secure=True
+    )
+
+    # Check an announcement ring has been created
+    total_spend = SpendBundle.aggregate([tx.spend_bundle for tx in txs if tx.spend_bundle is not None])
+    all_conditions: List[Program] = []
+    creations: List[CreateCoinAnnouncement] = []
+    announcement_nonce = std_hash(trade_make.trade_id)
+    for spend in total_spend.coin_spends:
+        all_conditions.extend(
+            [
+                c.to_program()
+                for c in parse_conditions_non_consensus(
+                    spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_iter(), abstractions=False
+                )
+            ]
+        )
+        creations.append(CreateCoinAnnouncement(msg=announcement_nonce, coin_id=spend.coin.name()))
+    for creation in creations:
+        assert creation.corresponding_assertion().to_program() in all_conditions
+
     txs = await wallet_maker.wallet_state_manager.add_pending_transactions(txs)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
     await full_node.process_transaction_records(records=txs)

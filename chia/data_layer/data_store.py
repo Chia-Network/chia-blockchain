@@ -845,16 +845,15 @@ class DataStore:
         if old_root is None:
             raise Exception(f"no generation found for:\n  store ID: {store_id.hex()}\n  root hash: {hash1.hex()}")
         old_pairs = await self.get_keys_values_compressed(root=old_root)
+        if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
+            raise Exception(f"Unable to diff: Can't find keys and values for {hash1}")
 
         new_root = await self.get_last_tree_root_by_hash(store_id=store_id, hash=hash2)
         if new_root is None:
             raise Exception(f"no generation found for:\n  store ID: {store_id.hex()}\n  root hash: {hash2.hex()}")
         new_pairs = await self.get_keys_values_compressed(root=new_root)
-
-        if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
-            return KVDiffPaginationData(1, 0, [])
         if len(new_pairs.keys_values_hashed) == 0 and hash2 != bytes32([0] * 32):
-            return KVDiffPaginationData(1, 0, [])
+            raise Exception(f"Unable to diff: Can't find keys and values for {hash2}")
 
         old_pairs_leaf_hashes = {v for v in old_pairs.keys_values_hashed.values()}
         new_pairs_leaf_hashes = {v for v in new_pairs.keys_values_hashed.values()}
@@ -1016,7 +1015,8 @@ class DataStore:
                 root=root,
             )
             ancestors_2: List[InternalNode] = await self.get_ancestors(
-                node_hash=node_hash, root=root,
+                node_hash=node_hash,
+                root=root,
             )
             if ancestors != ancestors_2:
                 raise RuntimeError("Ancestors optimized didn't produce the expected result.")
@@ -1411,7 +1411,11 @@ class DataStore:
                                         pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
                                 continue
                         insert_result = await self.autoinsert(
-                            key, value, latest_local_root, True, Status.COMMITTED,
+                            key,
+                            value,
+                            latest_local_root,
+                            True,
+                            Status.COMMITTED,
                         )
                         latest_local_root = insert_result.root
                         assert latest_local_root is not None
@@ -1671,7 +1675,7 @@ class DataStore:
         node = row_to_node(row=row)
         return node
 
-    async def get_tree_as_program(self, store_id: bytes32) -> Program:
+    async def get_tree_as_nodes(self, store_id: bytes32) -> Node:
         async with self.db_wrapper.reader() as reader:
             root = await self.get_tree_root(store_id=store_id)
             # TODO: consider actual proper behavior
@@ -1695,16 +1699,12 @@ class DataStore:
             hash_to_node: Dict[bytes32, Node] = {}
             for node in reversed(nodes):
                 if isinstance(node, InternalNode):
-                    node = replace(node, pair=(hash_to_node[node.left_hash], hash_to_node[node.right_hash]))
+                    node = replace(node, left=hash_to_node[node.left_hash], right=hash_to_node[node.right_hash])
                 hash_to_node[node.hash] = node
 
             root_node = hash_to_node[root_node.hash]
-            # TODO: Remove ignore when done.
-            #       https://github.com/Chia-Network/clvm/pull/102
-            #       https://github.com/Chia-Network/clvm/pull/106
-            program: Program = Program.to(root_node)
 
-        return program
+        return root_node
 
     async def get_proof_of_inclusion_by_hash(
         self,
@@ -2066,11 +2066,13 @@ class DataStore:
     ) -> Set[DiffData]:
         async with self.db_wrapper.reader():
             old_pairs = set(await self.get_keys_values(store_id, hash_1))
-            new_pairs = set(await self.get_keys_values(store_id, hash_2))
             if len(old_pairs) == 0 and hash_1 != bytes32([0] * 32):
-                return set()
+                raise Exception(f"Unable to diff: Can't find keys and values for {hash_1}")
+
+            new_pairs = set(await self.get_keys_values(store_id, hash_2))
             if len(new_pairs) == 0 and hash_2 != bytes32([0] * 32):
-                return set()
+                raise Exception(f"Unable to diff: Can't find keys and values for {hash_2}")
+
             insertions = {
                 DiffData(type=OperationType.INSERT, key=node.key, value=node.value)
                 for node in new_pairs

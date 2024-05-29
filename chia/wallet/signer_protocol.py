@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from chia_rs import G1Element
-
 from chia.types.blockchain_format.coin import Coin as _Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -76,7 +74,7 @@ class SigningTarget(Streamable):
 class SumHint(Streamable):
     fingerprints: List[bytes]
     synthetic_offset: bytes
-    final_pubkey: G1Element
+    final_pubkey: bytes
 
 
 @clvm_streamable

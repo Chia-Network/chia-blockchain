@@ -12,9 +12,9 @@ dependencies = [
     "chiavdf==1.1.4",  # timelord and vdf verification
     "chiabip158==1.5.1",  # bip158-style wallet filters
     "chiapos==2.0.4",  # proof of space
-    "clvm==0.9.9",
+    "clvm==0.9.10",
     "clvm_tools==0.4.9",  # Currying, Program.to, other conveniences
-    "chia_rs==0.8.0",
+    "chia_rs==0.9.0",
     "clvm-tools-rs==0.1.40",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.9.4",  # HTTP server for full node rpc
     "aiosqlite==0.20.0",  # asyncio wrapper for sqlite, to store blocks
@@ -45,7 +45,6 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "big-o==0.11.0",
     "build==1.2.1",
     "coverage==7.4.3",
     "diff-cover==9.0.0",

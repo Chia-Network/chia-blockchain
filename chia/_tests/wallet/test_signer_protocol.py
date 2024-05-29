@@ -122,7 +122,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         SumHint(
             [pubkey.get_fingerprint().to_bytes(4, "big")],
             calculate_synthetic_offset(pubkey, DEFAULT_HIDDEN_PUZZLE_HASH).to_bytes(32, "big"),
-            G1Element.from_bytes(wallet_state_manager.main_wallet.puzzle_for_pk(pubkey).uncurry()[1].at("f").as_atom()),
+            wallet_state_manager.main_wallet.puzzle_for_pk(pubkey).uncurry()[1].at("f").as_atom(),
         )
     ]
     assert utx.signing_instructions.key_hints.path_hints == [
@@ -144,7 +144,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
 
     # Now test that we can partially sign a transaction
     ACS: Program = Program.to(1)
-    ACS_PH: Program = Program.to(1).get_tree_hash()
+    ACS_PH = Program.to(1).get_tree_hash()
     not_our_private_key: PrivateKey = PrivateKey.from_bytes(bytes([1] * 32))
     not_our_pubkey: G1Element = not_our_private_key.get_g1()
     not_our_message: bytes = b"not our message"
@@ -184,7 +184,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
                     not_our_signing_instructions.key_hints,
                     sum_hints=[
                         *not_our_signing_instructions.key_hints.sum_hints,
-                        SumHint([bytes(not_our_pubkey)], std_hash(b"sum hint only"), G1Element()),
+                        SumHint([bytes(not_our_pubkey)], std_hash(b"sum hint only"), bytes(G1Element())),
                     ],
                 ),
             )
@@ -284,7 +284,7 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
     sum_pk: G1Element = other_sk.get_g1() + root_pk
     signing_instructions: SigningInstructions = SigningInstructions(
         KeyHints(
-            [SumHint([root_fingerprint], test_name, sum_pk)],
+            [SumHint([root_fingerprint], test_name, bytes(sum_pk))],
             [],
         ),
         [SigningTarget(sum_pk.get_fingerprint().to_bytes(4, "big"), test_name, test_name)],
@@ -335,7 +335,7 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
     sum_pk = child_sk.get_g1() + other_sk.get_g1()
     signing_instructions = SigningInstructions(
         KeyHints(
-            [SumHint([child_sk.get_g1().get_fingerprint().to_bytes(4, "big")], test_name, sum_pk)],
+            [SumHint([child_sk.get_g1().get_fingerprint().to_bytes(4, "big")], test_name, bytes(sum_pk))],
             [PathHint(root_fingerprint, [uint64(1), uint64(2), uint64(3), uint64(4)])],
         ),
         [SigningTarget(sum_pk.get_fingerprint().to_bytes(4, "big"), test_name, test_name)],
@@ -370,8 +370,8 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
         SigningInstructions(
             KeyHints(
                 [
-                    SumHint([child_sk.get_g1().get_fingerprint().to_bytes(4, "big")], test_name, sum_pk),
-                    SumHint([child_sk_2.get_g1().get_fingerprint().to_bytes(4, "big")], test_name_2, sum_pk_2),
+                    SumHint([child_sk.get_g1().get_fingerprint().to_bytes(4, "big")], test_name, bytes(sum_pk)),
+                    SumHint([child_sk_2.get_g1().get_fingerprint().to_bytes(4, "big")], test_name_2, bytes(sum_pk_2)),
                 ],
                 [
                     PathHint(root_fingerprint, [uint64(1), uint64(2), uint64(3), uint64(4)]),
@@ -412,7 +412,7 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
     )
     unknown_sum_hint = SigningInstructions(
         KeyHints(
-            [SumHint([b"unknown fingerprint"], b"", G1Element())],
+            [SumHint([b"unknown fingerprint"], b"", bytes(G1Element()))],
             [],
         ),
         [],
@@ -439,7 +439,7 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
     signing_responses = await wallet.execute_signing_instructions(
         SigningInstructions(
             KeyHints(
-                [SumHint([root_fingerprint], test_name, sum_pk)],
+                [SumHint([root_fingerprint], test_name, bytes(sum_pk))],
                 [],
             ),
             [SigningTarget(sum_pk.get_fingerprint().to_bytes(4, "big"), test_name, test_name)],

@@ -2144,6 +2144,9 @@ class WalletRpcApi:
                         records[trade.trade_id] = trade
                         continue
 
+            if len(records) == 0:
+                break
+
             async with self.service.wallet_state_manager.lock:
                 all_txs.extend(
                     await trade_mgr.cancel_pending_offers(
@@ -2247,7 +2250,7 @@ class WalletRpcApi:
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
-        launcher_id = singleton_struct.rest().first().as_atom()
+        launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         uncurried_p2 = uncurry_puzzle(p2_puzzle)
         (public_key,) = uncurried_p2.args.as_iter()
         memos = compute_memos(SpendBundle([coin_spend], G2Element()))
@@ -2258,7 +2261,7 @@ class WalletRpcApi:
                 hints.append(memo.hex())
         return {
             "success": True,
-            "did_id": encode_puzzle_hash(bytes32(launcher_id), AddressType.DID.hrp(self.service.config)),
+            "did_id": encode_puzzle_hash(launcher_id, AddressType.DID.hrp(self.service.config)),
             "latest_coin": coin_state.coin.name().hex(),
             "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
             "public_key": public_key.as_atom().hex(),

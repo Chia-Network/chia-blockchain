@@ -1448,7 +1448,7 @@ class WalletStateManager:
         """
         wallet_identifier = None
         # DID ID determines which NFT wallet should process the NFT
-        new_did_id = None
+        new_did_id: Optional[bytes32] = None
         old_did_id = None
         # P2 puzzle hash determines if we should ignore the NFT
         uncurried_nft: UncurriedNFT = nft_data.uncurried_nft
@@ -1458,12 +1458,14 @@ class WalletStateManager:
             nft_data.parent_coin_spend.solution,
         )
         if uncurried_nft.supports_did:
-            new_did_id = get_new_owner_did(uncurried_nft, nft_data.parent_coin_spend.solution.to_program())
+            _new_did_id = get_new_owner_did(uncurried_nft, nft_data.parent_coin_spend.solution.to_program())
             old_did_id = uncurried_nft.owner_did
-            if new_did_id is None:
+            if _new_did_id is None:
                 new_did_id = old_did_id
-            if new_did_id == b"":
+            elif _new_did_id == b"":
                 new_did_id = None
+            else:
+                new_did_id = _new_did_id
         self.log.debug(
             "Handling NFT: %s， old DID:%s, new DID:%s, old P2:%s, new P2:%s",
             nft_data.parent_coin_spend,
@@ -2588,20 +2590,20 @@ class WalletStateManager:
 
         return vc_wallet
 
-    async def sum_hint_for_pubkey(self, pk: G1Element) -> Optional[SumHint]:
+    async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
         return await self.main_wallet.sum_hint_for_pubkey(pk)
 
-    async def path_hint_for_pubkey(self, pk: G1Element) -> Optional[PathHint]:
+    async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:
         return await self.main_wallet.path_hint_for_pubkey(pk)
 
-    async def key_hints_for_pubkeys(self, pks: List[G1Element]) -> KeyHints:
+    async def key_hints_for_pubkeys(self, pks: List[bytes]) -> KeyHints:
         return KeyHints(
             [sum_hint for pk in pks for sum_hint in (await self.sum_hint_for_pubkey(pk),) if sum_hint is not None],
             [path_hint for pk in pks for path_hint in (await self.path_hint_for_pubkey(pk),) if path_hint is not None],
         )
 
     async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
-        pks: List[G1Element] = []
+        pks: List[bytes] = []
         signing_targets: List[SigningTarget] = []
         for coin_spend in coin_spends:
             _coin_spend = coin_spend.as_coin_spend()
@@ -2615,9 +2617,10 @@ class WalletStateManager:
             for pk, msg in pkm_pairs_for_conditions_dict(
                 conditions_dict, _coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
             ):
-                pks.append(pk)
+                pk_bytes = bytes(pk)
+                pks.append(pk_bytes)
                 fingerprint: bytes = pk.get_fingerprint().to_bytes(4, "big")
-                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(bytes(pk) + msg)))
+                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
 
         return SigningInstructions(
             await self.key_hints_for_pubkeys(pks),

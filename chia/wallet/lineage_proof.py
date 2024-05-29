@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -52,8 +52,7 @@ class LineageProof(Streamable):
             final_list.append(self.inner_puzzle_hash)
         if self.amount is not None:
             final_list.append(self.amount)
-        # TODO: Remove cast when we improve typing
-        return cast(Program, Program.to(final_list))
+        return Program.to(final_list)
 
     def is_none(self) -> bool:
         return all([self.parent_name is None, self.inner_puzzle_hash is None, self.amount is None])
