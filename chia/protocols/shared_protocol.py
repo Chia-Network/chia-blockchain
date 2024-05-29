@@ -40,6 +40,15 @@ class Capability(IntEnum):
     NONE_RESPONSE = 4
 
 
+# "1" means capability is enabled
+capabilities = [
+    (uint16(Capability.BASE.value), "1"),
+    (uint16(Capability.BLOCK_HEADERS.value), "1"),
+    (uint16(Capability.RATE_LIMITS_V2.value), "1"),
+    # (uint16(Capability.NONE_RESPONSE.value), "1"), # capability removed but functionality is still supported
+]
+
+
 @streamable
 @dataclass(frozen=True)
 class Handshake(Streamable):
@@ -49,15 +58,6 @@ class Handshake(Streamable):
     server_port: uint16
     node_type: uint8
     capabilities: List[Tuple[uint16, str]]
-
-
-# "1" means capability is enabled
-capabilities = [
-    (uint16(Capability.BASE.value), "1"),
-    (uint16(Capability.BLOCK_HEADERS.value), "1"),
-    (uint16(Capability.RATE_LIMITS_V2.value), "1"),
-    # (uint16(Capability.NONE_RESPONSE.value), "1"), # capability removed but functionality is still supported
-]
 
 
 @streamable
