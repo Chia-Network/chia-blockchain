@@ -6,7 +6,7 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
 import aiosqlite
 
@@ -46,6 +46,8 @@ log = logging.getLogger(__name__)
 
 # TODO: review exceptions for values that shouldn't be displayed
 # TODO: pick exception types other than Exception
+
+T_OptionalBytes32 = TypeVar("T_OptionalBytes32", bound=Optional[bytes32])
 
 
 @dataclass
@@ -218,10 +220,10 @@ class DataStore:
     async def _insert_root(
         self,
         store_id: bytes32,
-        node_hash: Optional[bytes32],
+        node_hash: T_OptionalBytes32,
         status: Status,
         generation: Optional[int] = None,
-    ) -> Root:
+    ) -> Root[T_OptionalBytes32]:
         # This should be replaced by an SQLite schema level check.
         # https://github.com/Chia-Network/chia-blockchain/pull/9284
         store_id = bytes32(store_id)
@@ -418,7 +420,7 @@ class DataStore:
 
         return node_hash
 
-    async def get_pending_root(self, store_id: bytes32) -> Optional[Root]:
+    async def get_pending_root(self, store_id: bytes32) -> Optional[Root[Optional[bytes32]]]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 """
@@ -443,7 +445,7 @@ class DataStore:
 
         return Root.from_row(row=row)
 
-    async def clear_pending_roots(self, store_id: bytes32) -> Optional[Root]:
+    async def clear_pending_roots(self, store_id: bytes32) -> Optional[Root[Optional[bytes32]]]:
         async with self.db_wrapper.writer() as writer:
             pending_root = await self.get_pending_root(store_id=store_id)
 
@@ -465,7 +467,7 @@ class DataStore:
             for _ in range(shift_size):
                 await self._insert_root(store_id=store_id, node_hash=root.node_hash, status=Status.COMMITTED)
 
-    async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> None:
+    async def change_root_status(self, root: Root[Optional[bytes32]], status: Status = Status.PENDING) -> None:
         async with self.db_wrapper.writer() as writer:
             await writer.execute(
                 "UPDATE root SET status = ? WHERE tree_id=? and generation = ?",
@@ -501,7 +503,7 @@ class DataStore:
             cursor = await reader.execute("SELECT * FROM root ORDER BY tree_id, generation")
             roots = [Root.from_row(row=row) async for row in cursor]
 
-            roots_by_tree: Dict[bytes32, List[Root]] = defaultdict(list)
+            roots_by_tree: Dict[bytes32, List[Root[Optional[bytes32]]]] = defaultdict(list)
             for root in roots:
                 roots_by_tree[root.store_id].append(root)
 
@@ -573,7 +575,7 @@ class DataStore:
 
         raise Exception(f"No generations found for store ID: {store_id.hex()}")
 
-    async def get_tree_root(self, store_id: bytes32, generation: Optional[int] = None) -> Root:
+    async def get_tree_root(self, store_id: bytes32, generation: Optional[int] = None) -> Root[Optional[bytes32]]:
         async with self.db_wrapper.reader() as reader:
             if generation is None:
                 generation = await self.get_tree_generation(store_id=store_id)
@@ -593,7 +595,7 @@ class DataStore:
 
         return Root.from_row(row=row)
 
-    async def get_all_pending_batches_roots(self) -> List[Root]:
+    async def get_all_pending_batches_roots(self) -> List[Root[Optional[bytes32]]]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 """
@@ -619,7 +621,9 @@ class DataStore:
             return False
         return True
 
-    async def get_roots_between(self, store_id: bytes32, generation_begin: int, generation_end: int) -> List[Root]:
+    async def get_roots_between(
+        self, store_id: bytes32, generation_begin: int, generation_end: int
+    ) -> List[Root[Optional[bytes32]]]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id "
@@ -632,7 +636,7 @@ class DataStore:
 
     async def get_last_tree_root_by_hash(
         self, store_id: bytes32, hash: Optional[bytes32], max_generation: Optional[int] = None
-    ) -> Optional[Root]:
+    ) -> Optional[Root[Optional[bytes32]]]:
         async with self.db_wrapper.reader() as reader:
             max_generation_str = f"AND generation < {max_generation} " if max_generation is not None else ""
             node_hash_str = "AND node_hash == :node_hash " if hash is not None else "AND node_hash is NULL "
@@ -652,7 +656,7 @@ class DataStore:
     async def get_ancestors(
         self,
         node_hash: bytes32,
-        root: Root,
+        root: Root[Optional[bytes32]],
     ) -> List[InternalNode]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
@@ -689,7 +693,7 @@ class DataStore:
     async def get_ancestors_optimized(
         self,
         node_hash: bytes32,
-        root: Root,
+        root: Root[Optional[bytes32]],
     ) -> List[InternalNode]:
         async with self.db_wrapper.reader():
             nodes = []
@@ -710,7 +714,7 @@ class DataStore:
 
             return nodes
 
-    async def get_internal_nodes(self, root: Root) -> List[InternalNode]:
+    async def get_internal_nodes(self, root: Root[Optional[bytes32]]) -> List[InternalNode]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 """
@@ -736,7 +740,9 @@ class DataStore:
 
         return internal_nodes
 
-    async def get_keys_values_cursor(self, reader: aiosqlite.Connection, root: Root) -> aiosqlite.Cursor:
+    async def get_keys_values_cursor(
+        self, reader: aiosqlite.Connection, root: Root[Optional[bytes32]]
+    ) -> aiosqlite.Cursor:
         return await reader.execute(
             """
             WITH RECURSIVE
@@ -761,7 +767,7 @@ class DataStore:
             {"root_hash": root.node_hash, "node_type": NodeType.TERMINAL},
         )
 
-    async def get_keys_values(self, root: Root) -> List[TerminalNode]:
+    async def get_keys_values(self, root: Root[Optional[bytes32]]) -> List[TerminalNode]:
         async with self.db_wrapper.reader() as reader:
             cursor = await self.get_keys_values_cursor(reader, root)
             terminal_nodes: List[TerminalNode] = []
@@ -785,7 +791,7 @@ class DataStore:
 
         return terminal_nodes
 
-    async def get_keys_values_compressed(self, root: Root) -> KeysValuesCompressed:
+    async def get_keys_values_compressed(self, root: Root[Optional[bytes32]]) -> KeysValuesCompressed:
         async with self.db_wrapper.reader() as reader:
             cursor = await self.get_keys_values_cursor(reader, root)
             keys_values_hashed: Dict[bytes32, bytes32] = {}
@@ -803,7 +809,9 @@ class DataStore:
 
             return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length, root.node_hash)
 
-    async def get_keys_paginated(self, page: int, max_page_size: int, root: Root) -> KeysPaginationData:
+    async def get_keys_paginated(
+        self, page: int, max_page_size: int, root: Root[Optional[bytes32]]
+    ) -> KeysPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(root=root)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
 
@@ -821,7 +829,9 @@ class DataStore:
             keys_values_compressed.root_hash,
         )
 
-    async def get_keys_values_paginated(self, page: int, max_page_size: int, root: Root) -> KeysValuesPaginationData:
+    async def get_keys_values_paginated(
+        self, page: int, max_page_size: int, root: Root[Optional[bytes32]]
+    ) -> KeysValuesPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(root=root)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
 
@@ -895,7 +905,7 @@ class DataStore:
 
         return NodeType(raw_node_type["node_type"])
 
-    async def get_terminal_node_for_seed(self, seed: bytes32, root: Root) -> Optional[bytes32]:
+    async def get_terminal_node_for_seed(self, seed: bytes32, root: Root[Optional[bytes32]]) -> Optional[bytes32]:
         path = "".join(reversed("".join(f"{b:08b}" for b in seed)))
         async with self.db_wrapper.reader() as reader:
             async with reader.execute(
@@ -946,7 +956,7 @@ class DataStore:
         self,
         key: bytes,
         value: bytes,
-        root: Root,
+        root: Root[Optional[bytes32]],
         use_optimized: bool = True,
         status: Status = Status.PENDING,
     ) -> InsertResult:
@@ -976,7 +986,7 @@ class DataStore:
     #     pairs = await self.get_keys_values(root=root)
     #     return {node.key: node.value for node in pairs}
 
-    async def get_keys(self, root: Root) -> List[bytes]:
+    async def get_keys(self, root: Root[Optional[bytes32]]) -> List[bytes]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 """
@@ -1001,7 +1011,7 @@ class DataStore:
     async def get_ancestors_common(
         self,
         node_hash: bytes32,
-        root: Root,
+        root: Root[Optional[bytes32]],
         use_optimized: bool = True,
     ) -> List[InternalNode]:
         if use_optimized:
@@ -1032,8 +1042,8 @@ class DataStore:
         traversal_node_hash: bytes32,
         ancestors: List[InternalNode],
         status: Status,
-        root: Root,
-    ) -> Root:
+        root: Root[Optional[bytes32]],
+    ) -> Root[bytes32]:
         # update ancestors after inserting root, to keep table constraints.
         insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
         new_generation = root.generation + 1
@@ -1075,7 +1085,7 @@ class DataStore:
         self,
         key: bytes,
         value: bytes,
-        root: Root,
+        root: Root[Optional[bytes32]],
         reference_node_hash: Optional[bytes32],
         side: Optional[Side],
         use_optimized: bool = True,
@@ -1143,7 +1153,7 @@ class DataStore:
     async def delete(
         self,
         key: bytes,
-        root: Root,
+        root: Root[Optional[bytes32]],
         use_optimized: bool = True,
         status: Status = Status.PENDING,
     ) -> Optional[Root]:
@@ -1220,7 +1230,7 @@ class DataStore:
         self,
         key: bytes,
         new_value: bytes,
-        root: Root,
+        root: Root[Optional[bytes32]],
         use_optimized: bool = True,
         status: Status = Status.PENDING,
     ) -> InsertResult:
@@ -1307,7 +1317,9 @@ class DataStore:
         else:
             await writer.execute(query, params)
 
-    async def get_leaf_at_minimum_height(self, root: Root, hash_to_parent: Dict[bytes32, InternalNode]) -> TerminalNode:
+    async def get_leaf_at_minimum_height(
+        self, root: Root[Optional[bytes32]], hash_to_parent: Dict[bytes32, InternalNode]
+    ) -> TerminalNode:
         # TODO: something better?
         assert root.node_hash is not None
         root_node = await self.get_node(root.node_hash)
@@ -1545,7 +1557,7 @@ class DataStore:
     async def _get_one_ancestor(
         self,
         node_hash: bytes32,
-        root: Root,
+        root: Root[Optional[bytes32]],
     ) -> Optional[InternalNode]:
         async with self.db_wrapper.reader() as reader:
             if generation is None:
@@ -1650,7 +1662,7 @@ class DataStore:
     async def get_node_by_key(
         self,
         key: bytes,
-        root: Root,
+        root: Root[Optional[bytes32]],
     ) -> TerminalNode:
         # TODO: maybe bad to remove this presumed optimization
         # if root_hash is None:
@@ -1709,7 +1721,7 @@ class DataStore:
     async def get_proof_of_inclusion_by_hash(
         self,
         node_hash: bytes32,
-        root: Root,
+        root: Root[Optional[bytes32]],
         use_optimized: bool = False,
     ) -> ProofOfInclusion:
         """Collect the information for a proof of inclusion of a hash in the Merkle
@@ -1773,7 +1785,7 @@ class DataStore:
 
     async def write_tree_to_file(
         self,
-        root: Root,
+        root: Root[Optional[bytes32]],
         node_hash: bytes32,
         store_id: bytes32,
         deltas_only: bool,
