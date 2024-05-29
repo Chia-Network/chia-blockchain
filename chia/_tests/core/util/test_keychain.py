@@ -42,6 +42,7 @@ fingerprint = uint32(1310648153)
 public_key = G1Element.from_bytes(
     bytes.fromhex("b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4")
 )
+bech32_pubkey = "bls12381kkk0xkvmcha9mgwqpakv84du79tqmmm8w79h759gcde6s0mcwc2std39p2mhdcu29yhzvc5qpxhvgmknyl7"
 
 
 class TestKeychain:
@@ -94,6 +95,12 @@ class TestKeychain:
         kc.delete_all_keys()
         assert kc._get_free_private_key_index() == 0
         assert len(kc.get_all_private_keys()) == 0
+
+        kc.add_key(bech32_pubkey, label=None, private=False)
+        all_pks = kc.get_all_public_keys()
+        assert len(all_pks) == 1
+        assert all_pks[0] == public_key
+        kc.delete_all_keys()
 
         kc.add_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
         kc.add_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
