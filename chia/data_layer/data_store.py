@@ -1633,7 +1633,7 @@ class DataStore:
             if root.node_hash is None:
                 return
 
-            cursor = await writer.execute(
+            await writer.execute(
                 """
                 WITH RECURSIVE tree_from_root_hash AS (
                     SELECT
