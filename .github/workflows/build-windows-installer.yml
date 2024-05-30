@@ -435,7 +435,8 @@ jobs:
           INSTALL_PATH: ${{ github.workspace }}\installed
         run: |
           & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"
-
+    
+      # Testing to see how long the plot takes
       - name: Test generation of a k25 plot
         env:
           INSTALL_PATH: ${{ github.workspace }}\installed
