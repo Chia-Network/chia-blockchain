@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 from chia_rs import (
     AGG_SIG_ARGS,
     ALLOW_BACKREFS,
+    DISALLOW_INFINITY_G1,
     ENABLE_BLS_OPS_OUTSIDE_GUARD,
     ENABLE_FIXED_DIV,
     ENABLE_MESSAGE_CONDITIONS,
@@ -47,6 +48,9 @@ def get_flags_for_height_and_constants(height: int, constants: ConsensusConstant
 
     if height >= constants.SOFT_FORK4_HEIGHT:
         flags = flags | ENABLE_MESSAGE_CONDITIONS
+
+    if height >= constants.SOFT_FORK5_HEIGHT:
+        flags = flags | DISALLOW_INFINITY_G1
 
     if height >= constants.HARD_FORK_HEIGHT:
         # the hard-fork initiated with 2.0. To activate June 2024

@@ -24,6 +24,7 @@ def test_testnet11() -> None:
     update_testnet_overrides("testnet11", overrides)
     assert overrides == {
         "SOFT_FORK4_HEIGHT": 641500,
+        "SOFT_FORK5_HEIGHT": 1340000,
     }
 
 
