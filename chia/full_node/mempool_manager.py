@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from multiprocessing.context import BaseContext
 from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, TypeVar
 
-from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, G1Element, GTElement, supports_fast_forward
+from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, G1Element, supports_fast_forward
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
@@ -32,14 +32,12 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util import cached_bls
-from chia.util.cached_bls import LOCAL_CACHE
+from chia.util.cached_bls import BLSCache
 from chia.util.condition_tools import pkm_pairs
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint32, uint64
-from chia.util.lru_cache import LRUCache
 from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
@@ -53,7 +51,7 @@ MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
 # the constants through here
 def validate_clvm_and_signature(
     spend_bundle_bytes: bytes, max_cost: int, constants: ConsensusConstants, height: uint32
-) -> Tuple[Optional[Err], bytes, Dict[bytes32, bytes], float]:
+) -> Tuple[Optional[Err], bytes, List[Tuple[bytes32, bytes]], float]:
     """
     Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
     in order to validate the heavy parts of a transaction in a different thread. Returns an optional error,
@@ -72,7 +70,7 @@ def validate_clvm_and_signature(
         )
 
         if result.error is not None:
-            return Err(result.error), b"", {}, time.monotonic() - start_time
+            return Err(result.error), b"", [], time.monotonic() - start_time
 
         pks: List[G1Element] = []
         msgs: List[bytes] = []
@@ -80,16 +78,14 @@ def validate_clvm_and_signature(
         pks, msgs = pkm_pairs(result.conds, additional_data)
 
         # Verify aggregated signature
-        cache: LRUCache[bytes32, GTElement] = LRUCache(10000)
-        if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
-            return Err.BAD_AGGREGATE_SIGNATURE, b"", {}, time.monotonic() - start_time
-        new_cache_entries: Dict[bytes32, bytes] = {}
-        for k, v in cache.cache.items():
-            new_cache_entries[k] = bytes(v)
+        cache = BLSCache(10000)
+        if not cache.aggregate_verify(pks, msgs, bundle.aggregated_signature, True):
+            return Err.BAD_AGGREGATE_SIGNATURE, b"", [], time.monotonic() - start_time
+        new_cache_entries: List[Tuple[bytes32, bytes]] = cache.items()
     except ValidationError as e:
-        return e.code, b"", {}, time.monotonic() - start_time
+        return e.code, b"", [], time.monotonic() - start_time
     except Exception:
-        return Err.UNKNOWN, b"", {}, time.monotonic() - start_time
+        return Err.UNKNOWN, b"", [], time.monotonic() - start_time
 
     return None, bytes(result), new_cache_entries, time.monotonic() - start_time
 
@@ -288,7 +284,11 @@ class MempoolManager:
             self.seen_bundle_hashes.pop(bundle_hash)
 
     async def pre_validate_spendbundle(
-        self, new_spend: SpendBundle, new_spend_bytes: Optional[bytes], spend_name: bytes32
+        self,
+        new_spend: SpendBundle,
+        new_spend_bytes: Optional[bytes],
+        spend_name: bytes32,
+        bls_cache: Optional[BLSCache] = None,
     ) -> NPCResult:
         """
         Errors are included within the cached_result.
@@ -317,8 +317,9 @@ class MempoolManager:
 
         if err is not None:
             raise ValidationError(err)
-        for cache_entry_key, cached_entry_value in new_cache_entries.items():
-            LOCAL_CACHE.put(cache_entry_key, GTElement.from_bytes_unchecked(cached_entry_value))
+        if bls_cache is not None:
+            bls_cache.update(new_cache_entries)
+
         ret: NPCResult = NPCResult.from_bytes(cached_result_bytes)
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,

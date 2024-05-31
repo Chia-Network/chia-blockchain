@@ -427,7 +427,7 @@ async def add_test_blocks_into_full_node(blocks: List[FullBlock], full_node: Ful
     )
     assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)
     for i in range(len(blocks)):
-        r, _, _ = await full_node.blockchain.add_block(blocks[i], pre_validation_results[i])
+        r, _, _ = await full_node.blockchain.add_block(blocks[i], pre_validation_results[i], None)
         assert r == AddBlockResult.NEW_PEAK
 
 
