@@ -2048,3 +2048,43 @@ async def test_migration_unknown_version(data_store: DataStore) -> None:
         )
     with pytest.raises(Exception, match="Unknown version"):
         await data_store.migrate_db()
+
+
+@pytest.mark.anyio
+async def test_build_ancestor_table(data_store: DataStore, store_id: bytes32) -> None:
+    num_values = 1000
+    changelist: List[Dict[str, Any]] = []
+    for value in range(num_values):
+        value_bytes = value.to_bytes(4, byteorder="big")
+        changelist.append({"action": "upsert", "key": value_bytes, "value": value_bytes})
+    await data_store.insert_batch(
+        store_id=store_id,
+        changelist=changelist,
+        status=Status.PENDING,
+    )
+
+    pending_root = await data_store.get_pending_root(store_id=store_id)
+    await data_store.change_root_status(pending_root, Status.COMMITTED)
+    await data_store.build_ancestor_table_for_latest_root(store_id=store_id)
+
+    ancestors: Dict[bytes32, Optional[bytes32]] = {}
+    ancestors[pending_root.node_hash] = None
+    root_node = await data_store.get_node(pending_root.node_hash)
+    queue: List[Node] = [root_node]
+
+    while queue:
+        node = queue.pop(0)
+        if isinstance(node, InternalNode):
+            left_node = await data_store.get_node(node.left_hash)
+            right_node = await data_store.get_node(node.right_hash)
+            ancestors[left_node.hash] = node.hash
+            ancestors[right_node.hash] = node.hash
+            queue.append(left_node)
+            queue.append(right_node)
+
+    for node_hash, ancestor_hash in ancestors.items():
+        ancestor_node = await data_store._get_one_ancestor(node_hash, store_id)
+        if ancestor_hash is None:
+            assert ancestor_node is None
+        else:
+            assert ancestor_node.hash == ancestor_hash
