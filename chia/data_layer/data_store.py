@@ -1638,22 +1638,16 @@ class DataStore:
                 WITH RECURSIVE tree_from_root_hash AS (
                     SELECT
                         node.hash,
-                        node.node_type,
                         node.left,
                         node.right,
-                        node.key,
-                        node.value,
                         NULL AS ancestor
                     FROM node
                     WHERE node.hash = :root_hash
                     UNION ALL
                     SELECT
                         node.hash,
-                        node.node_type,
                         node.left,
                         node.right,
-                        node.key,
-                        node.value,
                         tree_from_root_hash.hash AS ancestor
                     FROM node
                     JOIN tree_from_root_hash ON node.hash = tree_from_root_hash.left
