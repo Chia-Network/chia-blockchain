@@ -2066,6 +2066,7 @@ async def test_build_ancestor_table(data_store: DataStore, store_id: bytes32) ->
 
     pending_root = await data_store.get_pending_root(store_id=store_id)
     assert pending_root is not None
+    assert pending_root.node_hash is not None
     await data_store.change_root_status(pending_root, Status.COMMITTED)
     await data_store.build_ancestor_table_for_latest_root(store_id=store_id)
 
