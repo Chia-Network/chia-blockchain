@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, cast
 
 import aiohttp
 import aiosqlite
@@ -22,6 +22,7 @@ from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, T
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
+    Node,
     NodeType,
     OperationType,
     ProofOfInclusion,
