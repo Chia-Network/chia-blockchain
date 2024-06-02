@@ -1900,6 +1900,8 @@ class FullNodeAPI:
         if Capability.MEMPOOL_UPDATES not in peer.peer_capabilities:
             return
 
+        start_time = time.monotonic()
+
         async with self.full_node.db_wrapper.reader() as conn:
             transaction_ids = set(
                 self.full_node.mempool_manager.mempool.transaction_ids_matching_puzzle_hashes(
@@ -1924,22 +1926,35 @@ class FullNodeAPI:
                 self.full_node.mempool_manager.mempool.transaction_ids_matching_coin_ids(hinted_coin_ids)
             )
 
-        if len(transaction_ids) == 0:
-            return
+        if len(transaction_ids) > 0:
+            message = wallet_protocol.SubscribedMempoolItems(list(transaction_ids))
+            await peer.send_message(make_msg(ProtocolMessageTypes.subscribed_mempool_items, message))
 
-        message = wallet_protocol.SubscribedMempoolItems(list(transaction_ids))
-        await peer.send_message(make_msg(ProtocolMessageTypes.subscribed_mempool_items, message))
+        total_time = time.monotonic() - start_time
+
+        self.log.log(
+            logging.DEBUG if total_time < 2.0 else logging.WARNING,
+            f"Sending initial mempool items to peer {peer.peer_node_id} took {total_time:.4f}s",
+        )
 
     async def mempool_updates_for_coin_ids(self, peer: WSChiaConnection, coin_ids: Set[bytes32]) -> None:
         if Capability.MEMPOOL_UPDATES not in peer.peer_capabilities:
             return
 
-        transaction_ids = self.full_node.mempool_manager.mempool.transaction_ids_matching_coin_ids(coin_ids)
-        if len(transaction_ids) == 0:
-            return
+        start_time = time.monotonic()
 
-        message = wallet_protocol.SubscribedMempoolItems(list(transaction_ids))
-        await peer.send_message(make_msg(ProtocolMessageTypes.subscribed_mempool_items, message))
+        transaction_ids = self.full_node.mempool_manager.mempool.transaction_ids_matching_coin_ids(coin_ids)
+
+        if len(transaction_ids) > 0:
+            message = wallet_protocol.SubscribedMempoolItems(list(transaction_ids))
+            await peer.send_message(make_msg(ProtocolMessageTypes.subscribed_mempool_items, message))
+
+        total_time = time.monotonic() - start_time
+
+        self.log.log(
+            logging.DEBUG if total_time < 2.0 else logging.WARNING,
+            f"Sending initial mempool items to peer {peer.peer_node_id} took {total_time:.4f}s",
+        )
 
     def max_subscriptions(self, peer: WSChiaConnection) -> int:
         if self.is_trusted(peer):

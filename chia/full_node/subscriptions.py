@@ -226,10 +226,10 @@ def peers_for_spend_bundle(
 
         for puzzle_hash, amount, memo in spend.create_coin:
             coin_ids.add(Coin(spend.coin_id, puzzle_hash, uint64(amount)).name())
-            coin_ids.add(bytes32(puzzle_hash))
+            puzzle_hashes.add(bytes32(puzzle_hash))
 
             if memo is not None and len(memo) == 32:
-                coin_ids.add(bytes32(memo))
+                puzzle_hashes.add(bytes32(memo))
 
     peers: Set[bytes32] = set()
 

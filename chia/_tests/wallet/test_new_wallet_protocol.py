@@ -5,13 +5,13 @@ from dataclasses import dataclass
 from random import Random
 from typing import AsyncGenerator, Dict, List, Optional, OrderedDict, Set, Tuple
 
-from anyio import sleep
 import pytest
-from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, FullBlock, G2Element, Program
+from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, FullBlock, Program
 
 from chia._tests.connection_utils import add_dummy_connection
 from chia.full_node.coin_store import CoinStore
 from chia.protocols import wallet_protocol
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ws_connection import WSChiaConnection
@@ -22,11 +22,9 @@ from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.aliases import WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
-
 
 IDENTITY_PUZZLE = Program.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
@@ -783,47 +781,32 @@ async def test_subscribed_mempool_items(
     simulator, queue, peer = await connect_to_simulator(one_node, self_hostname, mempool_updates=True)
     subs = simulator.full_node.subscriptions
     coin_store = simulator.full_node.coin_store
-    genesis_challenge = simulator.full_node.constants.GENESIS_CHALLENGE
-
-    print("ZZZ")
 
     await simulator.full_node.add_block(default_400_blocks[0])
-
-    print("YYY")
-
-    await simulator.full_node.add_block_batch(default_400_blocks[1:], PeerInfo("0.0.0.0", 0), None)
-
-    print("XXX")
 
     ph1 = IDENTITY_PUZZLE_HASH
     coin1 = Coin(bytes32(b"\0" * 32), ph1, uint64(1000))
 
+    # Add coin and subscription
     await coin_store._add_coin_records([CoinRecord(coin1, uint32(1), uint32(0), False, uint64(10000))])
-
-    print("AAA")
-
-    print("BBB")
-
-    # Request coin state
-    resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState([coin1.name()], None, genesis_challenge, True), peer
-    )
-    assert resp is not None
-
-    print("CCC")
-
-    response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
-    assert response.coin_ids == [coin1.name()]
+    subs.add_coin_subscriptions(peer.peer_node_id, [coin1.name()], 1)
 
     # Add mempool item
     solution = Program.to([])
     bundle = SpendBundle([CoinSpend(coin1, IDENTITY_PUZZLE, solution)], AugSchemeMPL.aggregate([]))
-    result = await simulator.full_node.add_transaction(bundle, bundle.name())
-    print("X", result)
+    await simulator.full_node.add_transaction(bundle, bundle.name())
 
-    print("Y", simulator.auto_farm)
-    print("Z", simulator.full_node.mempool_manager.get_spendbundle(bundle.name()))
-    await sleep(5.0)
+    msg1 = await queue.get()
+    msg2 = await queue.get()
 
-    print(queue)
-    assert False
+    found: Optional[Message] = None
+
+    for msg in [msg1, msg2]:
+        if msg.type == ProtocolMessageTypes.mempool_item_added.value:
+            found = msg
+            break
+
+    assert found is not None
+
+    update = wallet_protocol.MempoolItemAdded.from_bytes(found.data)
+    assert update.transaction_id == bundle.name()

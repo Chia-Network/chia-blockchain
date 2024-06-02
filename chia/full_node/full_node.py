@@ -1602,7 +1602,7 @@ class FullNode:
 
         if self.sync_store.get_sync_mode() is False:
             await self.send_peak_to_timelords(block)
-            await self.broadcast_removed_tx(ppp_result.mempool_removals, peer)
+            await self.broadcast_removed_tx(ppp_result.mempool_removals)
 
             # Tell full nodes about the new peak
             msg = make_msg(
@@ -2373,7 +2373,7 @@ class FullNode:
                 # vector.
                 mempool_item = self.mempool_manager.get_mempool_item(spend_name)
                 assert mempool_item is not None
-                await self.broadcast_removed_tx(info.removals, current_peer=peer)
+                await self.broadcast_removed_tx(info.removals)
                 await self.broadcast_added_tx(mempool_item, current_peer=peer)
 
                 if self.simulator_transaction_callback is not None:  # callback
@@ -2389,6 +2389,7 @@ class FullNode:
     ) -> None:
         assert mempool_item.fee >= 0
         assert mempool_item.cost is not None
+
         new_tx = full_node_protocol.NewTransaction(
             mempool_item.name,
             mempool_item.cost,
@@ -2405,45 +2406,72 @@ class FullNode:
         if conds is None:
             return
 
+        start_time = time.monotonic()
+
         hints_for_removals = await self.hint_store.get_hints([bytes32(spend.coin_id) for spend in conds.spends])
-        peers = peers_for_spend_bundle(self.subscriptions, conds, set(hints_for_removals))
+        peer_ids = peers_for_spend_bundle(self.subscriptions, conds, set(hints_for_removals))
 
-        for peer_id in peers:
-            peer = self.server.all_connections.get(peer_id)
+        peers = [
+            peer
+            for peer_id in peer_ids
+            if (peer := self.server.all_connections.get(peer_id)) is not None
+            and peer.has_capability(Capability.MEMPOOL_UPDATES)
+        ]
 
-            if peer is None or not peer.has_capability(Capability.MEMPOOL_UPDATES):
-                continue
-
+        for peer in peers:
             msg = make_msg(ProtocolMessageTypes.mempool_item_added, wallet_protocol.MempoolItemAdded(mempool_item.name))
             await peer.send_message(msg)
 
-    async def broadcast_removed_tx(
-        self, mempool_removals: List[MempoolRemoveInfo], current_peer: Optional[WSChiaConnection]
-    ) -> None:
+        total_time = time.monotonic() - start_time
+
+        self.log.log(
+            logging.DEBUG if total_time < 0.5 else logging.WARNING,
+            f"Broadcasting added transaction {mempool_item.name} to {len(peers)} peers took {total_time:.4f}s",
+        )
+
+    async def broadcast_removed_tx(self, mempool_removals: List[MempoolRemoveInfo]) -> None:
+        total_removals = sum([len(r.items) for r in mempool_removals])
+        if total_removals == 0:
+            return
+
+        start_time = time.monotonic()
+
+        self.log.debug(f"Broadcasting {total_removals} removed transactions to peers")
+
         removals_to_send: Dict[bytes32, List[bytes32]] = dict()
 
         for removal_info in mempool_removals:
             for internal_mempool_item in removal_info.items:
                 conds = internal_mempool_item.npc_result.conds
                 if conds is None:
-                    return
+                    continue
 
                 hints_for_removals = await self.hint_store.get_hints([bytes32(spend.coin_id) for spend in conds.spends])
-                peers = peers_for_spend_bundle(self.subscriptions, conds, set(hints_for_removals))
+                peer_ids = peers_for_spend_bundle(self.subscriptions, conds, set(hints_for_removals))
 
-                transaction_id: Optional[bytes32] = None
+                peers = [
+                    peer
+                    for peer_id in peer_ids
+                    if (peer := self.server.all_connections.get(peer_id)) is not None
+                    and peer.has_capability(Capability.MEMPOOL_UPDATES)
+                ]
 
-                if len(peers) > 0:
-                    transaction_id = internal_mempool_item.spend_bundle.name()
+                if len(peers) == 0:
+                    continue
 
-                for peer_id in peers:
-                    peer = self.server.all_connections.get(peer_id)
+                transaction_id = internal_mempool_item.spend_bundle.name()
 
+                self.log.debug(
+                    f"Broadcasting removed transaction {transaction_id} to "
+                    f"wallet peers {[peer.peer_node_id for peer in peers]}"
+                )
+
+                for peer in peers:
                     if peer is None or not peer.has_capability(Capability.MEMPOOL_UPDATES):
                         continue
 
                     assert transaction_id is not None
-                    removals_to_send.get(peer_id, []).append(transaction_id)
+                    removals_to_send.setdefault(peer.peer_node_id, []).append(transaction_id)
 
         for peer_id, removals in removals_to_send.items():
             peer = self.server.all_connections.get(peer_id)
@@ -2453,6 +2481,13 @@ class FullNode:
 
             msg = make_msg(ProtocolMessageTypes.mempool_items_removed, wallet_protocol.MempoolItemsRemoved(removals))
             await peer.send_message(msg)
+
+        total_time = time.monotonic() - start_time
+
+        self.log.log(
+            logging.DEBUG if total_time < 0.5 else logging.WARNING,
+            f"Broadcasting {total_removals} removed transactions to {len(peers)} peers took {total_time:.4f}s",
+        )
 
     async def _needs_compact_proof(
         self, vdf_info: VDFInfo, header_block: HeaderBlock, field_vdf: CompressibleVDFField

@@ -210,7 +210,7 @@ class Mempool:
                 found_addition = False
 
                 for puzzle_hash, _amount, memo in spend.create_coin:
-                    if puzzle_hash in puzzle_hash or (include_hints and memo is not None and memo in puzzle_hashes):
+                    if puzzle_hash in puzzle_hashes or (include_hints and memo is not None and memo in puzzle_hashes):
                         transaction_ids.append(transaction_id)
                         found_addition = True
                         break
