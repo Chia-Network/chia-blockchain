@@ -791,14 +791,45 @@ async def assert_mempool_added(queue: Queue[Message], consume: int, transaction_
     assert set(added) == transaction_ids
 
 
-@pytest.mark.anyio
-async def test_spent_coin_id_mempool_update(one_node: OneNode, self_hostname: str) -> None:
+Mpu = Tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]
+
+
+@pytest.fixture
+async def mpu_setup(one_node: OneNode, self_hostname: str) -> Mpu:
     simulator, queue, peer = await connect_to_simulator(one_node, self_hostname, mempool_updates=True)
+
+    await simulator.farm_blocks_to_puzzlehash(1)
+    await queue.get()
+
+    for i in range(10):
+        puzzle = Program.to(2)
+        ph = puzzle.get_tree_hash()
+        coin = Coin(std_hash(b"unrelated coin id" + i.to_bytes(4, "big")), ph, uint64(1))
+        hint = std_hash(b"unrelated hint" + i.to_bytes(4, "big"))
+
+        await simulator.full_node.coin_store._add_coin_records(
+            [CoinRecord(coin, uint32(1), uint32(0), False, uint64(i * 10000))]
+        )
+        await simulator.full_node.hint_store.add_hints([(coin.name(), hint)])
+
+        solution = Program.to([[]])
+        bundle = SpendBundle([CoinSpend(coin, puzzle, solution)], AugSchemeMPL.aggregate([]))
+        tx_resp = await simulator.send_transaction(wallet_protocol.SendTransaction(bundle))
+        assert tx_resp is not None
+
+        ack = wallet_protocol.TransactionAck.from_bytes(tx_resp.data)
+        assert ack.error is None
+        assert ack.status == int(MempoolInclusionStatus.SUCCESS)
+
+    return simulator, queue, peer
+
+
+@pytest.mark.anyio
+async def test_spent_coin_id_mempool_update(mpu_setup: Mpu) -> None:
+    simulator, queue, peer = mpu_setup
     full_node = simulator.full_node
     genesis = full_node.blockchain.constants.GENESIS_CHALLENGE
     assert genesis is not None
-
-    await simulator.farm_blocks_to_puzzlehash(1)
 
     ph = IDENTITY_PUZZLE_HASH
     coin = Coin(bytes32(b"\0" * 32), ph, uint64(1000))
@@ -826,7 +857,7 @@ async def test_spent_coin_id_mempool_update(one_node: OneNode, self_hostname: st
     assert ack.error is None
     assert ack.status == int(MempoolInclusionStatus.SUCCESS)
 
-    await assert_mempool_added(queue, 2, {bundle.name()})
+    await assert_mempool_added(queue, 1, {bundle.name()})
 
     # Check mempool
     await simulator.wait_bundle_ids_in_mempool([bundle.name()])
@@ -846,13 +877,11 @@ async def test_spent_coin_id_mempool_update(one_node: OneNode, self_hostname: st
 
 
 @pytest.mark.anyio
-async def test_spent_puzzle_hash_mempool_update(one_node: OneNode, self_hostname: str) -> None:
-    simulator, queue, peer = await connect_to_simulator(one_node, self_hostname, mempool_updates=True)
+async def test_spent_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
+    simulator, queue, peer = mpu_setup
     full_node = simulator.full_node
     genesis = full_node.blockchain.constants.GENESIS_CHALLENGE
     assert genesis is not None
-
-    await simulator.farm_blocks_to_puzzlehash(1)
 
     ph = IDENTITY_PUZZLE_HASH
     coin = Coin(bytes32(b"\0" * 32), ph, uint64(1000))
@@ -881,7 +910,7 @@ async def test_spent_puzzle_hash_mempool_update(one_node: OneNode, self_hostname
     assert ack.error is None
     assert ack.status == int(MempoolInclusionStatus.SUCCESS)
 
-    await assert_mempool_added(queue, 2, {bundle.name()})
+    await assert_mempool_added(queue, 1, {bundle.name()})
 
     # Check mempool
     await simulator.wait_bundle_ids_in_mempool([bundle.name()])
@@ -901,13 +930,11 @@ async def test_spent_puzzle_hash_mempool_update(one_node: OneNode, self_hostname
 
 
 @pytest.mark.anyio
-async def test_spent_hint_mempool_update(one_node: OneNode, self_hostname: str) -> None:
-    simulator, queue, peer = await connect_to_simulator(one_node, self_hostname, mempool_updates=True)
+async def test_spent_hint_mempool_update(mpu_setup: Mpu) -> None:
+    simulator, queue, peer = mpu_setup
     full_node = simulator.full_node
     genesis = full_node.blockchain.constants.GENESIS_CHALLENGE
     assert genesis is not None
-
-    await simulator.farm_blocks_to_puzzlehash(1)
 
     ph = IDENTITY_PUZZLE_HASH
     coin = Coin(bytes32(b"\0" * 32), ph, uint64(1000))
@@ -938,7 +965,7 @@ async def test_spent_hint_mempool_update(one_node: OneNode, self_hostname: str) 
     assert ack.error is None
     assert ack.status == int(MempoolInclusionStatus.SUCCESS)
 
-    await assert_mempool_added(queue, 2, {bundle.name()})
+    await assert_mempool_added(queue, 1, {bundle.name()})
 
     # Check mempool
     await simulator.wait_bundle_ids_in_mempool([bundle.name()])
