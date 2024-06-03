@@ -1515,10 +1515,13 @@ async def test_clear_pending_roots_returns_root(
 
 
 @pytest.mark.anyio
+@pytest.mark.only_this
+@pytest.mark.parametrize("repeat", range(10))
 async def test_benchmark_batch_insert_speed(
     data_store: DataStore,
     store_id: bytes32,
     benchmark_runner: BenchmarkRunner,
+    repeat: int,
 ) -> None:
     r = random.Random()
     r.seed("shadowlands", version=2)
